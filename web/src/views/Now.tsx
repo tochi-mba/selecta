@@ -24,6 +24,7 @@ import { ViewProps } from './shared';
 import { PlayedTransitions, playedKey, StemSurfacesContext } from './liveTransitions';
 import { FirstHandoff } from './FirstHandoff';
 import { Strip, StripPlaceholder } from './NowStrip';
+import { CoverArt } from './CoverArt';
 
 /** Fit the complete music title to its actual column, not the viewport.
  * Keep it in the accessibility tree and allow more lines at extreme zoom. */
@@ -563,7 +564,7 @@ function TransitionTruth({ seam, ready, names, live = false, pair }: { seam: Vie
 }
 
 export function Now(props: ViewProps) {
-  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request, analysisAvailable, visualizerAvailable, waveformOf, noticeAction } = props;
+  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request, analysisAvailable, visualizerAvailable, waveformOf, noticeAction, listenQueue } = props;
   // ADR-0462: the song detail read and the rating/swap writes go through the injected request.
   const { get, post } = useApi(request);
   const requests = useContext(RequestsContext);
@@ -742,6 +743,7 @@ export function Now(props: ViewProps) {
       <div className="listen-layout">
         <div className="listen-main">
           <header className="listen-identity">
+            {item && !stage && <CoverArt seed={item.song_id} songId={item.song_id} size="hero" />}
             <p className="eyebrow">{eyebrow}</p>
             <TrackTitle title={songTitle(item)} songId={item?.song_id} stage={stage} />
             {item && <RequestTag item={item} />}
@@ -800,6 +802,7 @@ export function Now(props: ViewProps) {
               <p className="eyebrow">Up Next</p>
               {editing ? (
                 <button className="next-song" onClick={() => setView('Edit')}>
+                  <CoverArt seed={next.song_id} songId={next.song_id} />
                   <b>{next.title}</b>
                   <span>{next.artist}</span>
                   <RequestTag item={next} />
@@ -807,6 +810,7 @@ export function Now(props: ViewProps) {
                 </button>
               ) : (
                 <div className="next-song">
+                  <CoverArt seed={next.song_id} songId={next.song_id} />
                   <b>{next.title}</b>
                   <span>{next.artist}</span>
                   <RequestTag item={next} />
@@ -828,6 +832,7 @@ export function Now(props: ViewProps) {
               {editing && <button onClick={() => setView('Edit')}>Add more songs</button>}
             </section>
           ))}
+          {!stage && listenQueue}
 
           {!stage && controls && (
             <details className="dj-controls view-options" open={djControlsOpen} onToggle={(event) => setDjControlsOpen(event.currentTarget.open)}>

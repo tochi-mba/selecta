@@ -86,7 +86,7 @@ export function RuntimeApp() {
   if (!clientId) {
     return <RuntimeMessage title="Cloud sign-in needs configuration" detail="Set VITE_WORKOS_CLIENT_ID for this Cloud web build." />;
   }
-  return <Suspense fallback={<RuntimeMessage title="Starting SelectaDJ Cloud" detail="Preparing your workspace…" />}><CloudRoot clientId={clientId} /></Suspense>;
+  return <Suspense fallback={<main className="gate gate-loading" aria-busy="true"><div className="gate-wait"><BrandMark className="gate-pulse" /><p role="status">Starting SelectaDJ…</p></div></main>}><CloudRoot clientId={clientId} /></Suspense>;
 }
 
 function RuntimeMessage({ title, detail, children }: { title: string; detail: string; children?: ReactNode }) {

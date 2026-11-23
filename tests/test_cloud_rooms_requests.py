@@ -110,17 +110,28 @@ def test_without_a_crate_any_mix_ready_song_can_be_asked_for(rooms):
 # ---- the limits
 
 
-def test_a_guest_has_one_request_waiting_at_a_time(rooms):
-    _, guest = _room(rooms)
+def test_a_guest_has_three_requests_waiting_at_a_time_by_default(rooms):
+    _, guest = _room(rooms, request_mode="approve")
+    first = rooms.request(guest.guest_token, 1).request
+    rooms.request(guest.guest_token, 2)
+    rooms.request(guest.guest_token, 3)
+    refusal = _refused(Refusal.GUEST_PENDING_LIMIT, rooms.request, guest.guest_token, 4)
+    assert refusal.message.startswith("You have 3 songs waiting, the most this room allows")
+    rooms.withdraw(guest.guest_token, first.id)
+    assert rooms.request(guest.guest_token, 4).request.song_id == 4
+
+
+def test_a_guest_with_one_waiting_allowed_asks_again_once_it_plays(rooms):
+    _, guest = _room(rooms, pending_per_guest=1)
     first = rooms.request(guest.guest_token, 1).request
     refusal = _refused(Refusal.GUEST_PENDING_LIMIT, rooms.request, guest.guest_token, 2)
-    assert refusal.message == "You already have a request waiting."
+    assert refusal.message.startswith("You have 1 song waiting")
     play(rooms, first.song_request_id)
     assert rooms.request(guest.guest_token, 2).request.song_id == 2
 
 
-def test_a_guest_can_ask_three_times_an_hour(rooms, clock):
-    _, guest = _room(rooms)
+def test_a_guest_can_ask_as_often_an_hour_as_the_host_allows(rooms, clock):
+    _, guest = _room(rooms, requests_per_guest_per_hour=3)
     first_at = clock.now
     for song in (1, 2, 3):
         asked = rooms.request(guest.guest_token, song).request
@@ -130,26 +141,46 @@ def test_a_guest_can_ask_three_times_an_hour(rooms, clock):
     refusal = _refused(Refusal.GUEST_HOURLY_LIMIT, rooms.request, guest.guest_token, 4)
 
     assert refusal.retry_after_s == pytest.approx(first_at + HOUR - clock.now)
+    assert refusal.message.startswith("You've asked for 3 songs in the last hour")
+    assert "about 30 min" in refusal.message
     clock.advance(refusal.retry_after_s)
     assert rooms.request(guest.guest_token, 4).request.song_id == 4
 
 
+def test_a_guest_can_ask_twenty_times_an_hour_by_default(rooms):
+    _, guest = _room(rooms, request_mode="approve")
+    for song in range(1, 21):
+        asked = rooms.request(guest.guest_token, song).request
+        rooms.withdraw(guest.guest_token, asked.id)
+    _refused(Refusal.GUEST_HOURLY_LIMIT, rooms.request, guest.guest_token, 21)
+
+
+def test_with_no_hourly_limit_only_the_waiting_limit_holds(rooms):
+    _, guest = _room(rooms, request_mode="approve", requests_per_guest_per_hour=0)
+    for song in range(1, 31):
+        asked = rooms.request(guest.guest_token, song).request
+        rooms.withdraw(guest.guest_token, asked.id)
+    assert rooms.request(guest.guest_token, 31).request.song_id == 31
+
+
 def test_withdrawn_and_passed_asks_still_count_towards_the_hour(rooms):
-    opened, guest = _room(rooms, request_mode="approve")
+    opened, guest = _room(rooms, request_mode="approve", requests_per_guest_per_hour=3)
     for song in (1, 2, 3):
         asked = rooms.request(guest.guest_token, song).request
         rooms.withdraw(guest.guest_token, asked.id)
     _refused(Refusal.GUEST_HOURLY_LIMIT, rooms.request, guest.guest_token, 4)
 
 
-def test_at_most_twenty_requests_wait_in_a_room(rooms):
-    opened = rooms.open_room(HOST, "Party", {"request_mode": "approve"})
-    for song in range(1, 21):
+def test_at_most_fifty_requests_wait_in_a_room(rooms):
+    opened = rooms.open_room(HOST, "Party", {"request_mode": "approve", "pending_per_guest": 20})
+    for start in (1, 21, 41):
         guest = rooms.join(opened.code, None)
-        rooms.request(guest.guest_token, song)
+        for song in range(start, min(start + 20, 51)):
+            rooms.request(guest.guest_token, song)
     latecomer = rooms.join(opened.code, None)
-    refusal = _refused(Refusal.ROOM_BUSY, rooms.request, latecomer.guest_token, 21)
-    assert "Try again" in refusal.message
+    refusal = _refused(Refusal.ROOM_BUSY, rooms.request, latecomer.guest_token, 51)
+    assert refusal.message.startswith("50 requests are waiting in this room")
+    assert "ask again" in refusal.message
 
 
 def test_the_host_can_raise_the_per_guest_limits(rooms):
@@ -159,8 +190,8 @@ def test_the_host_can_raise_the_per_guest_limits(rooms):
     _refused(Refusal.GUEST_PENDING_LIMIT, rooms.request, guest.guest_token, 3)
 
 
-def test_a_song_that_played_in_the_room_can_not_be_asked_for_again_for_an_hour(rooms, clock):
-    opened, guest = _room(rooms)
+def test_a_song_that_played_in_the_room_waits_out_the_replay_cooldown(rooms, clock):
+    opened, guest = _room(rooms, replay_cooldown_minutes=60)
     asked = rooms.request(guest.guest_token, 8).request
     play(rooms, asked.song_request_id)
     other = rooms.join(opened.code, None)
@@ -168,7 +199,9 @@ def test_a_song_that_played_in_the_room_can_not_be_asked_for_again_for_an_hour(r
 
     refusal = _refused(Refusal.COOLDOWN, rooms.request, other.guest_token, 8)
 
-    assert refusal.message == "Played recently, try again later."
+    assert refusal.message == (
+        "That song played 10 min ago. It can be asked for again in about 50 min."
+    )
     assert refusal.retry_after_s == pytest.approx(50 * 60)
     clock.advance(50 * 60)
     assert rooms.request(other.guest_token, 8).request.status is RequestStatus.ACCEPTED
@@ -176,10 +209,10 @@ def test_a_song_that_played_in_the_room_can_not_be_asked_for_again_for_an_hour(r
 
 def test_a_song_that_played_in_the_host_s_own_mix_is_cooling_down_too(rooms, clock):
     _, guest = _room(rooms)
-    rooms.catalog.played[8] = clock.now - 20 * 60
+    rooms.catalog.played[8] = clock.now - 5 * 60
     refusal = _refused(Refusal.COOLDOWN, rooms.request, guest.guest_token, 8)
-    assert refusal.retry_after_s == pytest.approx(40 * 60)
-    rooms.catalog.played[8] = clock.now - 61 * 60
+    assert refusal.retry_after_s == pytest.approx(15 * 60), "twenty minutes by default"
+    rooms.catalog.played[8] = clock.now - 21 * 60
     assert rooms.request(guest.guest_token, 8).request.song_id == 8
 
 
@@ -384,7 +417,7 @@ def test_a_request_that_can_not_fit_waits_for_the_host_to_try_again(rooms, clock
 def test_re_approving_an_unfit_request_is_refused_when_the_guest_has_their_limit_waiting(
     rooms,
 ):
-    opened, guest = _room(rooms)
+    opened, guest = _room(rooms, pending_per_guest=1)
     asked = rooms.request(guest.guest_token, 5).request
     rooms.record_outcome(HOST, asked.song_request_id, "unfit")
     rooms.request(guest.guest_token, 6)

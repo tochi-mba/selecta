@@ -26,6 +26,18 @@ const INVENTORY: Record<string, Severity> = {
   'dialog-exit': 'answers-you',
   'drawer-exit': 'answers-you',
   'toast-exit': 'answers-you',
+  // the Room display (display.css): new songs settle in; an always-on screen drifts very slowly
+  // while it waits for the next song, so a still picture never burns into the TV
+  'd-arrive': 'arrives',
+  'd-drift': 'waiting',
+  // the guest page (guest.css)
+  'g-settle': 'arrives',
+  'g-draw': 'answers-you', // the tick drawn when a song is chosen or sent
+  'g-pop': 'answers-you', // a vote pressed
+  'g-flash': 'arrives', // a request whose state just changed
+  'g-breathe': 'waiting', // a request waiting for the host, loading outlines
+  'g-working': 'waiting', // a busy button
+  'g-eq': 'waiting', // the playing-now bars while the music plays
 };
 
 const SRC = join(process.cwd(), 'src');

@@ -88,7 +88,7 @@ test('the local-first shell destinations pass WCAG AA at 320 px and desktop, bot
   expect(found).toEqual([]);
 });
 
-test('the local-first shell is usable by keyboard alone: visible focus, More opens, the cutover note dismisses', async ({ page, request }) => {
+test('the local-first shell is usable by keyboard alone: visible focus, the account menu opens, the cutover note dismisses', async ({ page, request }) => {
   await localFirst(page, request, listener('bf-keys'));
   await page.goto('/listen');
   const note = page.getByRole('region', { name: 'Nothing has changed for you' });
@@ -97,13 +97,15 @@ test('the local-first shell is usable by keyboard alone: visible focus, More ope
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
 
-  // More, by keyboard, and its account places as links.
-  const more = page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'More' }).first();
-  await more.focus();
+  // The account menu, by keyboard, and its account places as menu items.
+  const opener = page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Account: / });
+  await opener.focus();
   await page.keyboard.press('Enter');
-  const places = page.getByRole('navigation', { name: 'More' });
-  await expect(places.getByRole('link', { name: 'Account' })).toBeVisible();
+  const places = page.getByRole('menu', { name: 'Account' });
+  await expect(places.getByRole('menuitem', { name: 'Account' })).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(places).toHaveCount(0);
+  await expect(opener).toBeFocused();
 
   // The cutover note's buttons are named and it goes away from the keyboard.
   await note.getByRole('button', { name: 'Got it' }).focus();

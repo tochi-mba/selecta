@@ -48,4 +48,8 @@ def test_catalogue_reads_while_the_rooms_transaction_holds_the_write_lock(sqlite
 def test_production_request_check_has_no_dev_only_hook():
     source = inspect.getsource(requesting)
     assert "is_requestable_in_transaction" not in source
-    assert "ctx.catalog.is_requestable(room.workspace_id, song_id)" in source
+    assert "ctx.catalog.is_requestable(workspace_id, song_id)" in source
+    # the library is read before the room's transaction opens, in a single and a multi-song ask
+    for asked in (requesting.request, requesting.request_many):
+        body = inspect.getsource(asked)
+        assert body.index("_look_up(") < body.index("with transaction(")

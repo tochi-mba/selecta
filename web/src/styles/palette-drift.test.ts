@@ -18,6 +18,9 @@ function resolve(name: string, seen: string[] = []): string | undefined {
   return alias ? resolve(alias, [...seen, name]) : value;
 }
 
+// guest/main.ts writes the on-screen keyboard's height and the Send bar's height here
+const RUNTIME: Record<string, string[]> = { 'guest/guest.css': ['--kb', '--bar'] };
+
 const normal = (value: string) => value.replace(/\s+/g, ' ').trim().toLowerCase();
 
 describe.each(['guest/guest.css', 'display/display.css'])('%s mini-palette', (file) => {
@@ -31,6 +34,8 @@ describe.each(['guest/guest.css', 'display/display.css'])('%s mini-palette', (fi
     const blocks = [...sheet.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/:root\s*\{([^}]*)\}/g)].map((match) => match[1]);
     const declared = blocks.flatMap((body) => [...body.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((match) => ({ name: match[1], value: match[2].trim() })));
     const unsourced = declared.filter((item) => !/^var\(--[\w-]+\)$/.test(item.value))
+      // not design tokens: lengths the page's script writes at run time, starting at zero
+      .filter((item) => !(RUNTIME[file]?.includes(item.name) && item.value === '0px'))
       .filter((item) => !copies.some((copy) => copy.name === item.name && normal(copy.value) === normal(item.value)));
     expect(unsourced.map((item) => `${item.name}: ${item.value}`)).toEqual([]);
   });

@@ -44,7 +44,7 @@ export function NumberField({ label, help, value, min, max, disabled, onSave }: 
         onBlur={commit}
         onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commit(); } }}
       />
-      <p className="room-help" id={`${id}-help`}>{help} From {min} to {max}.</p>
+      <p className="room-help" id={`${id}-help`}>{help} {min} to {max}.</p>
     </div>
   );
 }
@@ -70,20 +70,20 @@ export function RoomLimits({ settings, bounds, save }: {
     <div className="room-limits" data-testid="room-limits">
       <NumberField
         label="Songs a guest can have waiting at once"
-        help="At this many, a guest waits until one of their songs is added, passed on or withdrawn."
+        help="After that, a guest waits until one of their songs is added or passed on."
         value={waiting} min={waitingMin} max={waitingMax}
         onSave={(value) => save({ pending_per_guest: value })}
       />
       <NumberField
         label="Songs a guest can ask for per hour"
-        help={noHourly ? 'No hourly limit: only the waiting limit above holds a guest back.' : 'Counts every song a guest asked for in the last 60 minutes.'}
+        help={noHourly ? 'Only the waiting limit above holds a guest back.' : 'Counts every song a guest asked for in the last 60 minutes.'}
         value={noHourly ? lastHourly : hourly} min={1} max={hourlyMax} disabled={noHourly}
         onSave={(value) => save({ requests_per_guest_per_hour: value })}
       />
       <label className="room-check">
         <input type="checkbox" checked={noHourly} onChange={(event) => save({ requests_per_guest_per_hour: event.target.checked ? 0 : lastHourly })} /> No hourly limit
       </label>
-      {plan && <p className="room-help">Your plan sets the room itself: {plan}.</p>}
+      {plan && <p className="room-help">Your plan allows {plan}.</p>}
     </div>
   );
 }

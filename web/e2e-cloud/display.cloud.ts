@@ -39,7 +39,8 @@ test('a paired display shows the room and survives a new code', async ({ browser
   await guest.goto(joinPath);
   await guest.getByRole('button', { name: 'Join the room' }).click();
   await guest.getByLabel("Search the host's songs").fill('Song 7');
-  await guest.getByRole('button', { name: 'Request Song 7 - Artist 0' }).click();
+  await guest.getByRole('button', { name: 'Choose Song 7 - Artist 0' }).click();
+  await guest.getByRole('button', { name: 'Send request', exact: true }).click();
   await expect(screen.locator('#d-upcoming')).toContainText('Song 7 - Artist 0', { timeout: 15_000 });
 
   // A new code: the old one stops working, and the paired screen shows the new QR by itself.
@@ -61,8 +62,8 @@ test('a paired display shows the room and survives a new code', async ({ browser
   expect(viaDisplay.status()).toBe(401);
 
   // Ending the room ends the display.
-  await host.getByRole('button', { name: 'End room' }).click();
-  await host.getByRole('button', { name: 'End room' }).click();
+  await host.getByRole('button', { name: 'Close room' }).click();
+  await host.getByRole('alertdialog', { name: 'Close Garden party?' }).getByRole('button', { name: 'Close room' }).click();
   await expect(screen.getByRole('heading', { name: /has ended/ })).toBeVisible({ timeout: 15_000 });
   await Promise.all([phone.close(), tv.close(), hostContext.close()]);
 });

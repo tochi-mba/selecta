@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
+import './cloudMusic.css';
 import { openEngineAudio, type AudioSession } from './onboarding/deps';
 import { ROUTE_CHECKS } from './onboarding/steps';
 
@@ -56,22 +57,26 @@ export function SoundCheck({ open = openEngineAudio, now = () => Date.now() / 10
   const heardNothing = () => setPhase('heard_nothing');
   const again = phase === 'asking' || phase === 'heard_nothing';
   return (
-    <section className="sound-check" aria-label="Sound check">
-      <button ref={playButton} type="button" className={again ? undefined : 'primary'} onClick={play} aria-busy={phase === 'playing' || undefined} aria-disabled={phase === 'playing' || undefined}>
-        <Icon name="volume" size="toolbar" /> {phase === 'playing' ? 'Playing the check tone…' : again ? 'Play the tone again' : 'Play check tone'}
-      </button>
-      {phase === 'ready' && <p className="hint">A short, quiet tone. It plays over the music.</p>}
-      {problem && <p className="warn" role="alert">{problem}</p>}
-      {phase === 'asking' && (
-        <div className="row wrap" role="group" aria-label="Did you hear the tone?">
-          <span>Did you hear it?</span>
-          <button ref={yes} type="button" onClick={heard}><Icon name="check" size="toolbar" /> Yes</button>
-          <button type="button" onClick={heardNothing}>No</button>
-        </div>
-      )}
+    <section className="sound-check banner" data-tone="warn" data-phase={phase} aria-label="Sound check">
+      <Icon name="volume" />
+      <p className="banner-text">
+        <b>Sound not confirmed.</b>{' '}
+        <span>{phase === 'asking' ? 'Did you hear the tone?' : phase === 'playing' ? 'A short, quiet tone is playing over the music.' : phase === 'heard_nothing' ? 'Check the list below, then try again.' : 'Play a short tone to check this device.'}</span>
+      </p>
+      <div className="banner-actions">
+        {phase === 'asking' && (
+          <span className="row" role="group" aria-label="Did you hear the tone?">
+            <button ref={yes} type="button" className="small primary" onClick={heard}><Icon name="check" size="toolbar" /> Yes</button>
+            <button type="button" className="small" onClick={heardNothing}>No</button>
+          </span>
+        )}
+        <button ref={playButton} type="button" className={again ? 'small quiet' : 'small'} onClick={play} aria-busy={phase === 'playing' || undefined} aria-disabled={phase === 'playing' || undefined}>
+          {phase === 'playing' ? 'Playing tone…' : again ? 'Play it again' : 'Check sound'}
+        </button>
+      </div>
+      {problem && <p className="warn sound-check-more" role="alert">{problem}</p>}
       {phase === 'heard_nothing' && (
-        <div className="sound-check-help" role="status">
-          <p><b>Let’s find the sound.</b> Check these, then play the tone again:</p>
+        <div className="sound-check-help sound-check-more" role="status">
           <ul>{[...ROUTE_CHECKS.any, ...ROUTE_CHECKS.system].map((check) => <li key={check}>{check}</li>)}</ul>
         </div>
       )}

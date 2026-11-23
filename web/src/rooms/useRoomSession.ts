@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 // The host's room session, held by the shell and not by the Rooms page (flag `rooms`).
 //
@@ -57,6 +57,57 @@ const askers = new Map<string, string>();
 // the open room's id as last read: null when no room is open, undefined before the first read
 let openRoom: string | null | undefined;
 
+/** The open room's requests as last read, for every place that lists them (the Rooms page and
+ * the Requests drawer show the same rows from this one copy). `done` is what left the accepted
+ * list since this browser started watching, newest first: added to the mix or let go. */
+export type RoomDone = RoomAsk & { at: number };
+export type RoomLive = { id: string; name: string; code: string | null; inbox: RoomAsk[]; coming: RoomAsk[]; done: RoomDone[] };
+type RoomRead = { room: { id: string; name: string }; code: string | null; inbox: RoomAsk[]; coming_up: RoomAsk[] };
+const DONE_KEPT = 12;
+let liveRoom: RoomLive | null = null;
+const watchers = new Set<() => void>();
+const watch = (listener: () => void) => { watchers.add(listener); return () => { watchers.delete(listener); }; };
+
+/** Take in a read of the open room (or null: no room is open). The shell's session and the
+ * Rooms page both read the room; whichever read is newest is what every list shows. */
+export function noteRoom(panel: RoomRead | null) {
+  let next: RoomLive | null = null;
+  if (!panel) {
+    openRoom = null;
+    askers.clear();
+  } else {
+    openRoom = panel.room.id;
+    askers.clear();
+    for (const ask of [...panel.inbox, ...panel.coming_up]) if (ask.nickname) askers.set(ask.request_id, ask.nickname);
+    const before = liveRoom && liveRoom.id === panel.room.id ? liveRoom : null;
+    const still = new Set([...panel.inbox, ...panel.coming_up].map((ask) => ask.request_id));
+    const left = (before?.coming ?? []).filter((ask) => !still.has(ask.request_id)).map((ask) => ({ ...ask, at: Date.now() }));
+    const brief = (ask: RoomAsk): RoomAsk => ({ request_id: ask.request_id, song: ask.song && { song_id: ask.song.song_id, title: ask.song.title, artist: ask.song.artist }, nickname: ask.nickname, votes: ask.votes });
+    next = {
+      id: panel.room.id, name: panel.room.name, code: panel.code,
+      inbox: panel.inbox.map(brief), coming: panel.coming_up.map(brief),
+      // one a late read brought back is waiting again, and one that left twice is listed once
+      done: [...left, ...(before?.done ?? []).filter((ask) => !still.has(ask.request_id) && !left.some((gone) => gone.request_id === ask.request_id))].slice(0, DONE_KEPT),
+    };
+  }
+  if (JSON.stringify(next) === JSON.stringify(liveRoom)) return;
+  liveRoom = next;
+  for (const listener of watchers) listener();
+}
+
+/** The open room's requests, kept current by `noteRoom`; null when no room is open. */
+export function useRoomLive(): RoomLive | null {
+  return useSyncExternalStore(watch, () => liveRoom, () => null);
+}
+
+/** What the host can do to a room request from any page: say yes to one waiting for approval,
+ * or pass on one. Set while the shell's room session runs; null when it doesn't. */
+export type RoomControl = { approve: (requestId: string) => Promise<void>; pass: (requestId: string) => Promise<void> };
+let control: RoomControl | null = null;
+export function roomControl(): RoomControl | null {
+  return control;
+}
+
 /** The id of the room that is open now, null when none is, undefined while that isn't known
  * (no read yet, or Rooms is off). The Requests drawer drops a closed room's requests by it. */
 export function openRoomId(): string | null | undefined {
@@ -81,6 +132,14 @@ export function useRoomSession({ api, workspaceId, enabled, onAsked }: {
   useEffect(() => {
     if (!enabled) { openRoom = undefined; setSession(null); return undefined; }
     let live = true;
+    const tell = async (requestId: string, what: 'approve' | 'pass') => {
+      if (!liveRoom) return;
+      const read = await api<RoomRead>(`/rooms/${encodeURIComponent(liveRoom.id)}/requests/${encodeURIComponent(requestId)}/${what}`, { method: 'POST' }, workspaceId);
+      if (read?.room) noteRoom(read);
+      window.dispatchEvent(new Event(ROOM_EVENT));
+    };
+    const mine: RoomControl = { approve: (id) => tell(id, 'approve'), pass: (id) => tell(id, 'pass') };
+    control = mine;
     let timer = 0;
     let reading = false;
     let again = false;
@@ -101,14 +160,11 @@ export function useRoomSession({ api, workspaceId, enabled, onAsked }: {
         if (!panel) {
           seen = { room: '', approve: new Set(), add: new Set() };
           open = false;
-          openRoom = null;
-          askers.clear();
+          noteRoom(null);
           setSession(null);
         } else {
           open = true;
-          openRoom = panel.room.id;
-          askers.clear();
-          for (const ask of [...panel.inbox, ...panel.coming_up]) if (ask.nickname) askers.set(ask.request_id, ask.nickname);
+          noteRoom(panel);
           const first = seen === null || seen.room !== panel.room.id;
           const before = first ? { room: panel.room.id, approve: new Set<string>(), add: new Set<string>() } : seen!;
           if (!first) {
@@ -154,6 +210,7 @@ export function useRoomSession({ api, workspaceId, enabled, onAsked }: {
     void read();
     return () => {
       live = false;
+      if (control === mine) control = null;
       window.clearTimeout(timer);
       window.clearTimeout(soon);
       window.removeEventListener(ROOM_EVENT, changed);

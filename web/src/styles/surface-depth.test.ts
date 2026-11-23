@@ -54,7 +54,7 @@ describe('overlay depth (MP-0276-06)', () => {
 
 describe('corners and line weights (MP-0276-03)', () => {
   it('takes every radius from the role scale', () => {
-    const allowed = /^(?:0|50%|inherit|var\(--radius(?:-sm|-pill|-mark|-hair)?\)(?: var\(--radius(?:-sm|-hair)?\))*(?: 0)*|calc\(var\(--radius\) \* 1\.5\)|0 var\(--radius-sm\) var\(--radius-sm\) 0|var\(--radius\) var\(--radius\) 0 0|var\(--radius-hair\) var\(--radius-hair\) 0 0)$/;
+    const allowed = /^(?:0|50%|inherit|var\(--radius(?:-sm|-pill|-mark|-hair)?\)(?: var\(--radius(?:-sm|-hair)?\))*(?: 0)*|calc\(var\(--radius\) \* 1\.5\)|0 var\(--radius-sm\) var\(--radius-sm\) 0|var\(--radius\) var\(--radius\) 0 0|0 0 var\(--radius\) var\(--radius\)|var\(--radius-hair\) var\(--radius-hair\) 0 0)$/;
     const off = declarations(/border-radius/).filter((item) => !allowed.test(item.value))
       // the drawn tie between two words in a seam diagram is a curve, not a corner
       .filter((item) => !(item.selector === '.music-seam-diagram.words .word-tie' && item.value === '40%'));

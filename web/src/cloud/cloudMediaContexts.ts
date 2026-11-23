@@ -37,6 +37,14 @@ export const CLOUD_MEDIA_CONTEXTS: MediaContext[] = [
     file: 'cloud/venue/probeSuite.ts', count: 1, kind: 'audio element',
     owner: 'Venue capability probe: a detached element asked canPlayType for each codec, never given a source or played. Silent; never takes focus.',
   },
+  {
+    file: 'cloud/BrowserHarmonicMatches.tsx', count: 1, kind: 'audio element',
+    owner: 'Harmonic matches preview: plays a short excerpt of each side of a match on a press, then stops. Never plays alongside the mix by itself.',
+  },
+  {
+    file: 'cloud/CloudWorkspace.tsx', count: 1, kind: 'audio context',
+    owner: 'Workspace > Diagnostics capability check: made inside the press, probed and closed at once. Silent; never takes focus.',
+  },
 ];
 
 /** What counts as making a media context, matched against source with comments removed. */

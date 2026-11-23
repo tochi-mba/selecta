@@ -3,7 +3,7 @@ import { LibrarySong } from '../api';
 import { clock, etaWords } from '../lib';
 import { availabilityFacts } from '../state/availability';
 import { trackReadiness } from '../state/readiness';
-import { Action, Menu, Status } from '../ui/controls';
+import { Action, Menu, Status, type StatusKind } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SongMotif } from '../ui/MusicObjects';
 
@@ -48,13 +48,25 @@ export type LibraryRowProps = {
   neverFlag: boolean;
   /** songs here are analysed (local mode); a browser library shows only the length */
   measured?: boolean;
+  /** browser-first Cloud's row: one line, one status chip that says whether it plays here */
+  browser?: boolean;
+};
+
+/** The one chip a browser row shows: whether the song plays here, or the step that makes it. */
+const HERE: Record<string, { kind: StatusKind; words: string }> = {
+  here: { kind: 'ready', words: 'Ready' },
+  hosted: { kind: 'ready', words: 'Ready' },
+  reauth: { kind: 'needs-action', words: 'Allow again to play here' },
+  reconnect: { kind: 'needs-action', words: 'Choose again to play here' },
+  elsewhere: { kind: 'unavailable', words: 'On another device' },
+  nowhere: { kind: 'failed', words: 'Missing' },
 };
 
 const lineWords = (place: number) => place < 0 ? 'Analyse now' : place === 0 ? 'Analysing…' : `Waiting, ${place} ahead`;
 
 export const LibraryRow = memo(function LibraryRow({
   song, page, actions, selectable, selected, selectionFull, searching, failed, building, duplicate, sharedTitle,
-  inMix, searched, playing, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true,
+  inMix, searched, playing, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true, browser = false,
 }: LibraryRowProps) {
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
@@ -62,6 +74,49 @@ export const LibraryRow = memo(function LibraryRow({
   const name = duplicate ? `${title} (song ${song.id})` : title;
   const spoken = duplicate || !sharedTitle ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
   const queued = linePlace >= 0;
+  if (browser) {
+    const artist = song.artist ?? 'Unknown artist';
+    const chip = facts.setAside || song.never
+      ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
+      : song.availability && HERE[song.availability]
+        ? { ...HERE[song.availability], why: where?.reason ?? '' }
+        : { kind: facts.kind, words: facts.words, why: facts.reason };
+    return (
+      <li data-library-page={page} className={`song-row lw-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`}>
+        {selectable && <label className="library-batch-check lw-check">
+          <input type="checkbox" aria-label={`Select ${name} by ${artist}`}
+            checked={selected} disabled={searching || selectionFull && !selected}
+            aria-disabled={failed || undefined}
+            onChange={(event) => { if (!failed) actions.toggle(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
+        </label>}
+        <button className="link song-open lw-open" onClick={() => actions.open(song.id)} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
+          <SongMotif songId={song.id} />
+          <span className="lw-song">
+            <b dir="auto" title={title}>{title}</b>
+            <span dir="auto" title={artist}>{artist}{searched && song.match ? ` · ${song.match}` : ''}</span>
+          </span>
+        </button>
+        <span className="lw-length">{clock(song.duration)}</span>
+        <span className="lw-state">
+          <Status kind={chip.kind} title={chip.why || undefined}>{chip.words}</Status>
+          {chip.why && chip.kind !== 'ready' && <small className="lw-why">{chip.why}</small>}
+        </span>
+        <div className="song-actions lw-actions">
+          {facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
+          {((!facts.setAside && neverFlag) || facts.canAdd) && (
+            <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
+              <Action role="menuitem" run={() => actions.open(song.id)}>Song details</Action>
+              {facts.canAdd && <Action role="menuitem" disabled={inMix || searching} run={() => actions.add(song, false)}>{inMix ? 'Already in current mix' : 'Add to current mix'}</Action>}
+              {facts.canAdd && playing && <Action role="menuitem" disabled={inMix || searching} run={() => actions.add(song, true)}>Play next</Action>}
+              {!facts.setAside && neverFlag && <Action role="menuitemcheckbox" aria-checked={song.never} run={() => actions.never(song)} title="SelectaDJ won’t pick this when it builds a mix">
+                {song.never ? 'Never: on' : 'Never play'}
+              </Action>}
+            </Menu>
+          )}
+        </div>
+      </li>
+    );
+  }
   return (
     <li data-library-page={page} className={`song-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`}>
       <div className="song-name">

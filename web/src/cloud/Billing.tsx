@@ -1,15 +1,16 @@
 import { useId, useState } from 'react';
 import { accountFlagOn, FlagId } from '../flags';
-import { Account, lockedTo, planName } from './api';
+import { Account, bytes, holdsHostedStorage, lockedTo, planName } from './api';
+import { Badge, Notice, SettingsCard } from './AccountLayout';
 import { CheckoutPhase, Consent, consentComplete, NO_CONSENT } from './checkout';
-import { Meters } from './Meters';
+import { hasMeters, Meters } from './Meters';
 import { useNeedsConnection } from './connection';
 import { Icon } from '../ui/Icon';
 
 // Plan & billing (docs/saas/11-ui-ux.md §11.1): the current plan, the usage meters, and the way
-// to change plan. A free account subscribes through Checkout, after the three UK consents; a paid
-// one upgrades, downgrades or cancels in the Stripe portal, where proration and period-end
-// downgrades are handled.
+// to change plan, each in its own titled card. A free account picks a plan, ticks the three UK
+// consents and continues to Checkout with one button; a paid one upgrades, downgrades or cancels
+// in the Stripe portal, where proration and period-end downgrades are handled.
 
 type Interval = 'month' | 'year';
 type Paid = 'standard' | 'premium';
@@ -57,9 +58,21 @@ function axisShown(axis: Axis, account: Account) {
   return accountFlagOn(axis.flag, account.features);
 }
 
+function shownAxes(plan: Paid, account: Account) {
+  return LOCAL_FIRST_AXES[plan].axes.filter((axis) => axisShown(axis, account));
+}
+
+function AxisList({ axes, cols }: { axes: Axis[]; cols?: boolean }) {
+  return (
+    <ul className="acct-includes cloud-plan-axes" data-cols={cols && axes.length > 1 ? '2' : undefined}>
+      {axes.map((axis) => <li key={axis.name}><Icon name="check" size="compact" /><span><b>{axis.name}</b> {axis.words}</span></li>)}
+    </ul>
+  );
+}
+
 function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
   const sells = LOCAL_FIRST_AXES[plan];
-  const axes = sells.axes.filter((axis) => axisShown(axis, account));
+  const axes = shownAxes(plan, account);
   const rooms = axes.some((axis) => axis.name === 'Rooms');
   const lucy = axes.some((axis) => axis.name === 'Lucy');
   const headline = plan === 'premium'
@@ -68,9 +81,7 @@ function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
   return (
     <>
       <strong className="cloud-plan-headline">{headline}</strong>
-      <ul className="cloud-plan-axes">
-        {axes.map((axis) => <li key={axis.name}><Icon name="check" size="compact" /><span><b>{axis.name}</b> {axis.words}</span></li>)}
-      </ul>
+      <AxisList axes={axes} />
     </>
   );
 }
@@ -80,6 +91,19 @@ function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
 function aboutPlan(plan: (typeof PLANS)[number], account: Account) {
   const rooms = accountFlagOn('rooms', account.features) || Boolean(lockedTo(account, 'rooms'));
   return plan.id === 'premium' && !rooms ? 'Priority processing.' : plan.about;
+}
+
+/** What the plan this account is on includes, in plain words. Only things the account can
+ * actually see: storage for an account that holds any, Lucy where Lucy is on. */
+function currentIncludes(account: Account, local: boolean): Axis[] {
+  const plan = account.entitlement.plan;
+  if (local && (plan === 'standard' || plan === 'premium')) return shownAxes(plan, account);
+  const lines: Axis[] = [];
+  if (holdsHostedStorage(account)) lines.push({ name: 'Storage', words: `${bytes(account.usage?.storage.limit_bytes ?? account.entitlement.storage_limit_bytes)} for your music.` });
+  if (account.lucy && accountFlagOn('lucy', account.features)) lines.push({ name: 'Lucy', words: `${account.lucy.tier}.` });
+  const sold = PLANS.find((item) => item.id === plan);
+  if (sold && !local) lines.push({ name: 'Extras', words: aboutPlan(sold, account) });
+  return lines;
 }
 
 /** A price as its figure and its period ("£6.99" and "/ month"), so the figure can be read at a glance. */
@@ -96,7 +120,12 @@ export function CheckoutStatus({ phase, account }: { phase: CheckoutPhase; accou
     slow: 'Your payment is still being confirmed. This page will show your new plan as soon as it is.',
     cancelled: 'Checkout was cancelled. Your plan hasn’t changed.',
   }[phase];
-  return <div className={`cloud-feedback cloud-checkout-${phase}`} role="status" aria-busy={phase === 'confirming' || undefined}>{words}</div>;
+  const tone = ({ confirming: 'info', confirmed: 'ok', slow: 'warn', cancelled: 'info' } as const)[phase];
+  return (
+    <div className={`cloud-checkout-status cloud-checkout-${phase}`} aria-busy={phase === 'confirming' || undefined}>
+      <Notice tone={tone} icon={phase === 'confirming' ? 'clock' : undefined}>{words}</Notice>
+    </div>
+  );
 }
 
 export function ConsentForm({ consent, onChange, version }: { consent: Consent; onChange: (next: Consent) => void; version: string }) {
@@ -104,7 +133,7 @@ export function ConsentForm({ consent, onChange, version }: { consent: Consent; 
   const tick = (key: keyof Consent) => (event: React.ChangeEvent<HTMLInputElement>) => onChange({ ...consent, [key]: event.target.checked });
   return (
     <fieldset className="cloud-legal" aria-describedby={`${id}-about`}>
-      <legend><h2>Before subscribing</h2></legend>
+      <legend><h3>Before subscribing</h3></legend>
       <p id={`${id}-about`}>UK law gives you 14 days to cancel a digital subscription. If you ask us to start now, you can use SelectaDJ Cloud straight away, and you may lose that right once the service has been fully provided. Tick each box to agree.</p>
       <label><input type="checkbox" checked={consent.terms} onChange={tick('terms')} /> I agree to the subscription terms.</label>
       <label><input type="checkbox" checked={consent.immediate} onChange={tick('immediate')} /> I ask for access to start immediately.</label>
@@ -129,6 +158,9 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
 }) {
   const [interval, setInterval] = useState<Interval>('month');
   const [consent, setConsent] = useState<Consent>(NO_CONSENT);
+  const [chosen, setChosen] = useState<Paid>('premium');
+  // which of the two portal buttons was pressed, so only that one says it is opening
+  const [pressed, setPressed] = useState<'change' | 'invoices' | null>(null);
   const paid = account.entitlement.plan !== 'free';
   // Each way to change plan is its own feature: with one off, it's gone from the page.
   const checkout = accountFlagOn('billing.checkout', account.features);
@@ -138,52 +170,79 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   const ready = consentComplete(consent) && Boolean(consentVersion) && !busy && !offline;
   const confirming = phase === 'confirming';
   const local = localFirst ?? sellsLocalFirst(account);
+  const includes = currentIncludes(account, local);
+  const choice = PLANS.find((plan) => plan.id === chosen)!;
+  const price = (plan: (typeof PLANS)[number]) => (interval === 'month' ? plan.month : plan.year);
+  const openPortal = (from: 'change' | 'invoices') => { setPressed(from); onPortal(); };
+  const opening = (from: 'change' | 'invoices') => busy && pressed === from;
   return (
     <div className="cloud-billing">
       <CheckoutStatus phase={phase} account={account} />
-      <section className="cloud-card cloud-current-plan">
-        <div>
-          <p className="cloud-eyebrow">Current plan</p>
-          <h2>{planName(account)}</h2>
-          {account.lucy && accountFlagOn('lucy', account.features) && <p>Includes {account.lucy.tier}.</p>}
-        </div>
-        {paid && portal && <button className="primary" disabled={busy || !!offline} aria-busy={busy || undefined} onClick={onPortal}>{busy ? 'Opening the billing portal…' : 'Change plan or cancel'}</button>}
+      <SettingsCard
+        id="cloud-plan"
+        className="cloud-current-plan"
+        title="Your plan"
+        about="What you are on now, and what it includes."
+        actions={paid && portal && <button type="button" className="primary" disabled={!!offline} aria-disabled={busy || undefined} aria-busy={opening('change') || undefined} onClick={() => { if (!busy) openPortal('change'); }}>{opening('change') ? 'Opening…' : 'Change plan'}</button>}
+      >
+        <div className="acct-card-titles"><p className="acct-plan-name">{planName(account)}</p><Badge tone="accent">Current plan</Badge></div>
+        {includes.length > 0 && <AxisList axes={includes} cols />}
+        {paid
+          ? portal && <p className="acct-plan-foot">{local
+            ? 'Upgrades start straight away and are prorated. Downgrades start at the end of the period, and your music and mixes stay exactly as they are.'
+            : 'Upgrades start straight away and are prorated. Downgrades start at the end of the period; a library bigger than the new plan stays playable and nothing is deleted.'}</p>
+          : checkout && <p className="acct-plan-foot">Upgrade whenever you like. You can change or cancel at any time.</p>}
         {offline && <p className="needs-connection">{offline}</p>}
-      </section>
-      <h2 className="cloud-section-title">This period’s usage</h2>
-      <Meters account={account} />
-      {paid
-        ? portal && <section className="cloud-card cloud-plan-note" aria-labelledby="cloud-plan-note-title"><h2 id="cloud-plan-note-title">Changing your plan</h2><p>{local
-          ? 'Upgrades start now and are prorated. Downgrades take effect at the end of the period, and your music and mixes stay exactly as they are. Payment details and invoices are in the same secure Stripe portal.'
-          : 'Upgrades start now and are prorated. Downgrades take effect at the end of the period; if your library is then bigger than the new plan, it stays playable and nothing is deleted. Payment details and invoices are in the same secure Stripe portal.'}</p></section>
-        : checkout && !confirming && <>
-          <h2 className="cloud-section-title">Upgrade your plan</h2>
-          <ConsentForm consent={consent} onChange={setConsent} version={consentVersion} />
-          <div className="cloud-plans-heading">
-            <p className="cloud-hint" role="status">{consentComplete(consent) ? 'Choose a plan to open secure checkout.' : 'Tick all three boxes above to choose a plan.'}</p>
+      </SettingsCard>
+      {hasMeters(account) && (
+        <SettingsCard id="cloud-usage" title="Usage" about="What you have used so far, and when each allowance starts again.">
+          <Meters account={account} />
+        </SettingsCard>
+      )}
+      {paid && portal && (
+        <SettingsCard
+          id="cloud-payments"
+          className="cloud-plan-note"
+          title="Payment and invoices"
+          about="Your card, receipts and invoices are kept in the secure Stripe billing portal. Cancelling is there too."
+          actions={<button type="button" disabled={!!offline} aria-disabled={busy || undefined} aria-busy={opening('invoices') || undefined} onClick={() => { if (!busy) openPortal('invoices'); }}>{opening('invoices') ? 'Opening…' : 'Open billing portal'}</button>}
+        />
+      )}
+      {!paid && checkout && !confirming && (
+        <SettingsCard
+          id="cloud-upgrade"
+          title="Upgrade your plan"
+          about="Pick a plan, then continue to secure checkout."
+          actions={(
             <div className="cloud-interval" role="group" aria-label="Billing interval">
-              <button aria-pressed={interval === 'month'} onClick={() => setInterval('month')}>Monthly</button>
-              <button aria-pressed={interval === 'year'} onClick={() => setInterval('year')}>Annual</button>
+              <button type="button" aria-pressed={interval === 'month'} onClick={() => setInterval('month')}>Monthly</button>
+              <button type="button" aria-pressed={interval === 'year'} onClick={() => setInterval('year')}>Annual</button>
             </div>
-          </div>
-          <div className="cloud-plan-grid">
+          )}
+        >
+          <div className="cloud-plan-grid" role="radiogroup" aria-label="Plan">
             {PLANS.map((plan) => (
-              <section key={plan.id} className={`cloud-plan-card ${plan.featured ? 'featured' : ''}`} aria-label={plan.name}>
-                <p className="cloud-eyebrow">{local ? LOCAL_FIRST_AXES[plan.id].eyebrow : plan.featured ? 'Most room to play' : 'For your growing library'}</p>
-                <h2>{plan.name}</h2>
+              <label key={plan.id} className={`cloud-plan-card ${plan.featured ? 'featured' : ''}`} data-chosen={chosen === plan.id || undefined}>
+                <span className="cloud-plan-pick">
+                  <input type="radio" name="cloud-plan" value={plan.id} checked={chosen === plan.id} onChange={() => setChosen(plan.id)} />
+                  <span className="cloud-plan-title">{plan.name}</span>
+                  <span className="cloud-plan-kind">{local ? LOCAL_FIRST_AXES[plan.id].eyebrow : plan.featured ? 'Most room to play' : 'For your growing library'}</span>
+                </span>
+                <Price words={price(plan)} />
                 {local
-                  ? <><Price words={interval === 'month' ? plan.month : plan.year} /><LocalFirstPlan plan={plan.id} account={account} /></>
-                  : <><Price words={interval === 'month' ? plan.month : plan.year} />
-                    <strong className="cloud-plan-headline">{plan.storage}</strong>
-                    <p>{aboutPlan(plan, account)}</p></>}
-                <button className={plan.featured ? 'primary' : ''} disabled={!ready} onClick={() => onCheckout(plan.id, interval, consent)}>Choose {plan.name}</button>
-              </section>
+                  ? <LocalFirstPlan plan={plan.id} account={account} />
+                  : <><strong className="cloud-plan-headline">{plan.storage}</strong><p>{aboutPlan(plan, account)}</p></>}
+              </label>
             ))}
           </div>
+          <ConsentForm consent={consent} onChange={setConsent} version={consentVersion} />
+          <div className="acct-plans-head">
+            <p className="cloud-hint" role="status">{busy && consentComplete(consent) ? 'Opening secure checkout…' : consentComplete(consent) ? `${choice.name}, ${price(choice)}. Payment is taken by Stripe.` : 'Tick all three boxes to continue.'}</p>
+            <button type="button" className="primary" disabled={!ready} aria-busy={(busy && consentComplete(consent)) || undefined} onClick={() => onCheckout(chosen, interval, consent)}>{busy && consentComplete(consent) ? 'Opening checkout…' : `Continue with ${choice.name}`}</button>
+          </div>
           {offline && <p className="needs-connection">{offline}</p>}
-          {/* a slow checkout answer otherwise looks like nothing happened (2026-11-12 flow walk) */}
-          {busy && consentComplete(consent) && <p className="cloud-hint" role="status">Opening secure checkout…</p>}
-        </>}
+        </SettingsCard>
+      )}
       {blocked && !local && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading lifts the pause on uploads and exports as soon as your new plan is confirmed.</p>}
     </div>
   );

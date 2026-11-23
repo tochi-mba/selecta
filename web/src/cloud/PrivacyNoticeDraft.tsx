@@ -1,3 +1,4 @@
+import { Badge, Notice, SettingsCard } from './AccountLayout';
 import { DRAFT_BANNER, PRIVACY_NOTICE_DRAFT } from './privacyNoticeDraftText';
 
 /** The draft privacy notice under Settings, behind the off-by-default `cloud.privacy_notice_draft`
@@ -11,16 +12,14 @@ export function showsPrivacyDraft(features: Record<string, boolean> | undefined)
 
 export function PrivacyNoticeDraft() {
   return (
-    <section className="cloud-card cloud-prose" aria-labelledby="cloud-privacy-draft-title">
-      <p className="cloud-eyebrow">Privacy notice (draft)</p>
-      <h2 id="cloud-privacy-draft-title">Privacy notice</h2>
-      <p role="note"><strong>{DRAFT_BANNER}</strong></p>
+    <SettingsCard id="cloud-privacy-draft" className="cloud-prose" title="Privacy notice" badge={<Badge tone="warn">Draft</Badge>}>
+      <Notice tone="warn" role="note"><strong>{DRAFT_BANNER}</strong></Notice>
       {PRIVACY_NOTICE_DRAFT.map((section) => (
         <div key={section.heading}>
-          <h3>{section.heading}</h3>
+          <h4>{section.heading}</h4>
           {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
         </div>
       ))}
-    </section>
+    </SettingsCard>
   );
 }

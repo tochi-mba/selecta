@@ -2,29 +2,44 @@
 .playing-bar-where { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline; }
 .playing-bar-song { color: var(--text-soft); overflow-wrap: anywhere; }
 .playing-bar-controls, .playing-bar-ask { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-.playing-bar button, .devices-panel button { min-height: 44px; min-width: 44px; }
+.playing-bar button { min-height: 44px; min-width: 44px; }
 .playing-bar-warning { border-left: var(--marker) solid var(--status-action); padding-left: var(--space-2); margin: 0; }
 .playing-bar-message:empty { display: none; }
 .playing-bar-message, .playing-bar-error, .playing-bar-output { margin: 0; }
-.playing-bar-error, .devices-error { color: var(--danger); }
+.playing-bar-error { color: var(--danger); }
 .playing-bar-notices { display: grid; gap: var(--space-1); }
 .playing-bar-notices p { margin: 0; }
 .playing-bar-notices button { margin-left: var(--space-2); }
-.devices-panel { display: grid; gap: var(--space-3); }
-.devices-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
-.devices-head h2 { margin: 0; }
-.devices-count { font: var(--type-counter); color: var(--text-soft); }
-.cloud-card p.devices-help,
-.cloud-card p.devices-notice,
-.cloud-card p.devices-error { margin: 0; }
-.cloud-card p.devices-notice { color: var(--text); }
-.cloud-card p.devices-error { color: var(--danger); }
+
+/* Account > Devices: one row per signed-in browser inside the settings card (cloud/account.css):
+   what it is, its name, when it was last used, and its two actions at the right. */
+.devices-count { font-variant-numeric: tabular-nums; }
 .devices-list { list-style: none; margin: 0; padding: 0; }
-.devices-list li { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; padding: var(--space-3) 0; border-top: var(--separator) solid var(--edge-decorative); }
-.devices-list li:last-child { padding-bottom: 0; }
-.devices-main { flex: 1 1 14rem; min-width: 0; display: grid; gap: var(--space-1); }
+.devices-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-top: var(--separator) solid var(--edge-decorative);
+}
+.devices-list > .devices-row:last-child,
+.devices-loading > .devices-row:last-child { padding-bottom: 0; }
+.devices-icon {
+  display: grid;
+  place-items: center;
+  inline-size: var(--control-height);
+  block-size: var(--control-height);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  color: var(--text-soft);
+}
+.devices-row[data-this] .devices-icon { background: var(--surface-selected); color: var(--text); box-shadow: inset 0 0 0 var(--separator) var(--edge-selected); }
+.devices-row[data-out] .devices-main,
+.devices-row[data-out] .devices-icon { opacity: 0.6; }
+.devices-main { min-width: 0; display: grid; gap: var(--space-hair); }
 .devices-name { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-width: 0; }
-.devices-name strong { font: var(--type-song); overflow-wrap: anywhere; min-width: 0; }
+.devices-name strong { font: var(--type-song); font-size: var(--text-sm); overflow-wrap: anywhere; min-width: 0; }
 /* which row is the browser in hand: a mark and words, never colour alone */
 .devices-this {
   display: inline-flex;
@@ -40,15 +55,24 @@
 }
 .devices-seen { display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); color: var(--text-soft); font: var(--type-meta); }
 /* the dot trails its own fact, so a wrapped line never starts with one */
-.devices-seen > span:not(:last-child)::after { content: '\00b7'; margin-left: var(--space-2); }
-.devices-help { color: var(--text-soft); }
-.devices-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
-.devices-list form { flex: 1 1 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); align-items: center; }
-.devices-list form label { grid-column: 1 / -1; font: var(--type-label); }
-.devices-list form input { min-width: 0; width: 100%; }
-.devices-list form .devices-error { grid-column: 1 / -1; }
+.devices-seen > span:not(:last-child)::after { content: '\00b7'; margin-left: var(--space-2); color: var(--text-soft); }
+.devices-seen > span[data-live] { color: var(--status-ready); }
+.devices-actions { display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
+.devices-row > form { grid-column: 2 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); align-items: center; }
+.devices-row > form input { min-width: 0; width: 100%; box-sizing: border-box; }
+.devices-row > form .devices-error { grid-column: 1 / -1; margin: 0; }
+.devices-error { color: var(--danger); font: var(--type-meta); }
+.devices-loading { display: grid; }
+.devices-loading .devices-main { gap: var(--space-2); }
+.devices-loading .devices-icon { height: var(--control-height); border-radius: var(--radius-sm); }
+.devices-loading .devices-skeleton-name { inline-size: 11rem; max-inline-size: 60%; }
+.devices-loading .devices-skeleton-meta { inline-size: 17rem; max-inline-size: 90%; }
+.devices-empty.empty-state.boxed { padding: var(--space-5) var(--space-4); }
 @media (max-width: 640px) {
-  .devices-list form { grid-template-columns: 1fr; }
-  .devices-actions { width: 100%; }
-  .devices-actions > button { flex: 1; }
+  .devices-row { grid-template-columns: auto minmax(0, 1fr); }
+  .devices-row > .devices-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--space-2); }
+  .devices-row > .devices-actions > button { min-height: 44px; border-color: var(--edge-interactive); color: var(--text); }
+  .devices-row > form { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); }
+  .devices-row > form .devices-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .devices-row > form .devices-actions > button { min-height: 44px; }
 }

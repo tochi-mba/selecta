@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { showToast } from '../../ui/toasts';
+import { Badge, Notice, SettingsCard } from '../AccountLayout';
 import { messageOf } from '../api';
 
 /**
@@ -58,6 +60,7 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
     try {
       await request(`${BASE}/${path}`, { method: 'POST' });
       setNote(path === 'join' ? 'You are in. Browser-first Cloud is on for your account.' : 'You have left. Your account is back to the usual Cloud.');
+      showToast(path === 'join' ? 'You joined Labs.' : 'You left Labs.');
       onChanged?.();
     } catch (error) {
       setProblem(messageOf(error, 'That did not work. Try again in a moment.'));
@@ -73,6 +76,7 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
     try {
       await request(`${BASE}/feedback`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: feedback.trim() }) });
       setFeedback(''); setNote('Thanks. The SelectaDJ team reads every note.');
+      showToast('Feedback sent. Thank you.');
     } catch (error) {
       // the draft stays exactly as written, so nothing has to be typed again
       setProblem(messageOf(error, 'Your note did not send. Try again in a moment.'));
@@ -81,14 +85,17 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
 
   if (!status || (!status.labs_open && !status.enrolled)) return null;
   return (
-    <section className="cloud-card cloud-labs" aria-label="Labs: browser-first Cloud">
-      <p className="cloud-eyebrow">Preview</p>
-      <h2>Labs: browser-first Cloud</h2>
-      <p>Your music stays on your own devices and plays in this browser. It is a preview, and you can leave at any time.</p>
-      {status.enrolled && !status.on && <p role="status">You are in Labs, but browser-first Cloud is paused for your account right now.</p>}
-      {status.enrolled
-        ? <div className="cloud-actions"><button ref={main} type="button" aria-disabled={busy || undefined} onClick={() => { if (!busy) setAsking(true); }}>Leave Labs</button></div>
-        : <div className="cloud-actions"><button ref={main} type="button" className="primary" aria-disabled={busy || undefined} onClick={() => { if (!busy) void act('join'); }}>Join Labs</button></div>}
+    <SettingsCard
+      id="cloud-labs"
+      className="cloud-labs"
+      title="Labs: browser-first Cloud"
+      badge={<Badge tone={status.enrolled ? 'accent' : undefined}>{status.enrolled ? 'You are in' : 'Preview'}</Badge>}
+      about="Your music stays on your own devices and plays in this browser. It is a preview, and you can leave at any time."
+      actions={status.enrolled
+        ? <button ref={main} type="button" aria-disabled={busy || undefined} onClick={() => { if (!busy) setAsking(true); }}>Leave Labs</button>
+        : <button ref={main} type="button" className="primary" aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => { if (!busy) void act('join'); }}>{busy ? 'Joining…' : 'Join Labs'}</button>}
+    >
+      {status.enrolled && !status.on && <Notice tone="warn">You are in Labs, but browser-first Cloud is paused for your account right now.</Notice>}
       {status.enrolled && status.labs_open && (
         <div className="cloud-labs-feedback">
           <label htmlFor="cloud-labs-feedback">Tell us what you noticed</label>
@@ -96,8 +103,8 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
           <div className="cloud-actions"><button type="button" disabled={busy || !feedback.trim()} onClick={() => void send()}>Send feedback</button></div>
         </div>
       )}
-      {note && <p role="status">{note}</p>}
-      {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
+      {note && <Notice tone="ok">{note}</Notice>}
+      {problem && <Notice tone="danger" role="alert">{problem}</Notice>}
       {asking && (
         <ConfirmDialog
           title="Leave Labs?"
@@ -110,6 +117,6 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
           onClose={() => setAsking(false)}
         />
       )}
-    </section>
+    </SettingsCard>
   );
 }

@@ -45,6 +45,13 @@ const paths = {
   system: 'M3 5h18v12H3ZM8 21h8M12 17v4',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3',
   thread: 'M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0',
+  users: 'M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M21 19v-1a4 4 0 0 0-3-3.8M15.5 4.2a3 3 0 0 1 0 5.6',
+  user: 'M19 20v-1a5 5 0 0 0-5-5h-4a5 5 0 0 0-5 5v1M12 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7',
+  signout: 'M9 20H5V4h4M15 16l4-4-4-4M19 12H9',
+  card: 'M3 6h18v12H3ZM3 10h18',
+  phone: 'M8 3h8v18H8ZM11 18h2',
+  tablet: 'M5 3h14v18H5ZM11 18h2',
+  download: 'M12 4v11M7 11l5 5 5-5M5 20h14',
 } as const;
 
 export type IconName = keyof typeof paths;

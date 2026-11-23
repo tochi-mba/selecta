@@ -11,6 +11,7 @@ import { orderOf } from '../state/readiness';
 import { operationId } from '../state/async';
 import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { SearchField } from '../ui/primitives';
+import { BrowserLibraryEmpty, BrowserLibraryHead, BrowserLibraryMeta, BrowserLibraryToolbar, type LibraryBrowserChrome } from './LibraryBrowser';
 import { LibraryRow, LibraryRowActions } from './LibraryRow';
 import { hasEarlyLibrary, libraryUrl, takeEarlyLibrary } from './libraryPrefetch';
 import { ViewProps } from './shared';
@@ -50,8 +51,9 @@ const pagesFrom = (text: string | null) => {
 };
 
 /** `lead`: what a shell puts first under the header, such as connecting music again in a browser.
- * `tail`: what it puts after the songs, inside the same page column. */
-export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead, tail }: ViewProps & { lead?: ReactNode; tail?: ReactNode }) {
+ * `tail`: what it puts after the songs, inside the same page column.
+ * `browser`: browser-first Cloud's frame (header, toolbar, selection bar); local mode never sets it. */
+export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead, tail, browser }: ViewProps & { lead?: ReactNode; tail?: ReactNode; browser?: LibraryBrowserChrome }) {
   // ADR-0462: every read and write on this page goes through the injected request.
   const { get, post } = useApi(request);
   const query = useQueryParam('q') ?? '';
@@ -574,8 +576,12 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const batch = on('library.batch') && (on('library.priority') || on('library.never_play'));
 
   return (
-    <main className="page library density" id="main">
-      <header className="library-head">
+    <main className={`page library density${browser ? ' library-browser' : ''}`} id="main">
+      {browser && (
+        <BrowserLibraryHead songs={counts.music} playable={counts.ready} setAside={counts.set_aside} action={browser.action}
+          onSetAside={() => setAddressQuery({ show: 'set_aside', pages: null }, { push: true })} />
+      )}
+      {!browser && <header className="library-head">
         <div className="library-head-line">
         <h1 className="display small">Library</h1>
         <p className="library-summary">
@@ -592,9 +598,17 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </p>
         </div>
         <p className="library-readiness-help">{words().libraryReadyMeaning}</p>
-      </header>
+      </header>}
       {lead}
-      <div className="library-find">
+      {browser && (
+        <BrowserLibraryToolbar typed={typed} onTyped={setTyped}
+          filters={visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => ({ name: option.name, label: option.name === 'all' ? 'All' : option.label }))}
+          filter={filter} onFilter={(name) => setAddressQuery({ show: name === 'all' ? null : name, pages: null }, { push: true })}
+          sorts={SORTS.filter((option) => analysisAvailable || option.name !== 'tempo')} sort={sort}
+          onSort={(name) => setAddressQuery({ sort: name === 'title' ? null : name, pages: null }, { push: true })}
+          cards={cardLayout} onCards={(cards) => setPrefs({ libraryLayout: cards ? 'cards' : 'list' })} cardsOffered={on('library.card_view')} />
+      )}
+      {!browser && <><div className="library-find">
         <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search titles, artists, remixes, credits or recording ID" />
         <label className="library-sort">
           Sort by
@@ -620,7 +634,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           </button>
         ))}
         {(filter !== 'all' || query) && <button type="button" className="quiet" onClick={() => { setTyped(''); setAddressQuery({ q: null, show: null, pages: null }, { push: true }); }}>Clear all filters</button>}
-      </div>
+      </div></>}
       {filter === 'not_yet' && left > 0 && (
         <div className="row wrap analyse-all">
           <span className="hint">
@@ -637,8 +651,29 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           phone it is still on screen beside the search that changed it */}
       {/* The status stays mounted while a new search or filter loads, so a screen reader hears the new
           count: a live region that is removed and added again is never announced (NVDA, 2026-11-12). */}
-      <p className="hint library-count" role="status">{committedRows === null ? '' : committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>
-      {batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
+      {browser && (
+        <BrowserLibraryMeta
+          countWords={committedRows === null ? '' : committedRows.length < total ? `Showing ${committedRows.length.toLocaleString()} of ${total.toLocaleString()} songs` : `${total.toLocaleString()} song${total === 1 ? '' : 's'}`}
+          updating={searching} selected={visibleSelected.length} selectRef={selectionEntryRef}
+          canSelect={batch && !!committedRows?.length && filter !== 'set_aside'}
+          onSelectAll={() => { if (committedRows && !searching && !failed) setBatchSelection({ identity: selectionIdentity, ids: committedRows.slice(0, 200).map((song) => song.id) }); }}
+          onClear={() => { setBatchSelection({ identity: selectionIdentity, ids: [] }); selectionEntryRef.current?.focus(); }}>
+          {on('library.never_play') && (
+            <>
+              <button type="button" disabled={searching || failed} onClick={() => askBatch('never')}>Never play</button>
+              <button type="button" disabled={searching || failed} onClick={() => askBatch('allow')}>Allow in mixes</button>
+            </>
+          )}
+          {on('library.priority') && analysisAvailable && (
+            <>
+              <button type="button" disabled={searching || failed} onClick={() => askBatch('prioritize')}>Prioritize</button>
+              <button type="button" disabled={searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
+            </>
+          )}
+        </BrowserLibraryMeta>
+      )}
+      {!browser && <p className="hint library-count" role="status">{committedRows === null ? '' : committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
+      {!browser && batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
             <button ref={selectionEntryRef} disabled={searching || failed} onClick={() => setBatchSelection({
@@ -672,11 +707,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           )}
         </section>
       )}
-      {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
+      {!browser && searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
       {failed && committedRows === null && <Problem retry={load}><span>Couldn’t load your library. Your songs are fine.</span>{serverFault && <span className="library-fault"> Something went wrong inside SelectaDJ, not your connection.</span>}</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
-      {committedRows?.length === 0 && !failed && (
+      {browser && committedRows?.length === 0 && !failed && (
+        <BrowserLibraryEmpty query={query} filterLabel={filter === 'all' ? null : FILTERS.find((option) => option.name === filter)?.label ?? filter}
+          onClearSearch={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}
+          onShowAll={() => setAddressQuery({ show: null, pages: null }, { push: true })} />
+      )}
+      {!browser && committedRows?.length === 0 && !failed && (
         <section className="empty-state">
           <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
           <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while SelectaDJ scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once SelectaDJ has analysed it. Show all songs to see how far each one has got.' : !query && filter !== 'all' ? `No song is in ${FILTERS.find((option) => option.name === filter)?.label ?? filter} right now. Show all songs to see the rest of your library.` : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
@@ -699,10 +739,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       )}
       {!!committedRows?.length && !cardLayout && (
         <div className="library-column-head" aria-hidden="true">
-          <span>Song and artist</span>
+          <span>{browser ? 'Song' : 'Song and artist'}</span>
           <span>{analysisAvailable ? 'Tempo · Key · Length' : 'Length'}</span>
-          <span>Mix readiness</span>
-          <span>Actions</span>
+          <span>{browser ? 'Plays here' : 'Mix readiness'}</span>
+          <span>{browser ? '' : 'Actions'}</span>
         </div>
       )}
       <ul ref={listRef} className={`rows library-rows ${cardLayout ? 'library-cards' : ''}`} aria-busy={searching}>
@@ -713,7 +753,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             duplicate={duplicateIds.has(song.id)} sharedTitle={sharedTitles.has(song.title ?? 'Untitled')}
             inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}
             linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
-            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} />
+            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} browser={!!browser} />
         ))}
       </ul>
       {pageProblem && <p role="alert" className="warn">{pageProblem}</p>}

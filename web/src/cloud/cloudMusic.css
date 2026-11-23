@@ -1,0 +1,371 @@
+/* The music pages as the browser-first Cloud shell draws them: Listen, Make a Mix, My Mixes and
+   the editor. Every rule is scoped to `.shell[data-mode='cloud']`, so the local app, which shares
+   these views, is untouched. Loaded by the Cloud-only components (SoundCheck, LocalFirstEmpty,
+   SavedBrowserMixes, QuickMix). Values come from styles/tokens.css. */
+
+/* ---------- Cover tiles ---------- */
+.shell[data-mode='cloud'] .cover-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: linear-gradient(var(--art-turn, 135deg), color-mix(in srgb, var(--accent) 45%, var(--surface-control)), var(--surface-control));
+  overflow: hidden;
+}
+@supports (color: oklch(from red l c h)) {
+  .shell[data-mode='cloud'] .cover-art {
+    color: oklch(from var(--accent) 0.97 0.03 calc(h + var(--art-hue, 0)));
+    background: linear-gradient(var(--art-turn, 135deg), oklch(from var(--accent) 0.6 0.15 calc(h + var(--art-hue, 0))), oklch(from var(--accent) 0.3 0.1 calc(h + var(--art-hue, 0) + 55)));
+  }
+}
+.shell[data-mode='cloud'] .cover-art .song-motif { width: 62%; height: 62%; margin: 0; color: inherit; }
+.shell[data-mode='cloud'] .cover-art .ui-icon { width: 45%; height: 45%; }
+.shell[data-mode='cloud'] .cover-art[data-size='small'] { width: 36px; }
+@media (forced-colors: active) {
+  .shell[data-mode='cloud'] .cover-art { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
+}
+
+/* ---------- Banners on the music pages: one line, one action ---------- */
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--text-soft);
+  font-size: var(--text-sm);
+}
+.shell[data-mode='cloud'] .now .notice { margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); font-size: var(--text-sm); }
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner[data-tone='warn'] { border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border)); }
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner > .ui-icon { color: var(--status-warning); }
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner-text { margin: 0; max-inline-size: none; }
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner-text b { color: var(--text); }
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner-actions { display: flex; align-items: center; gap: var(--space-2); }
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner-actions .row { gap: var(--space-2); }
+.shell[data-mode='cloud'] .now .sound-check-more { grid-column: 1 / -1; margin: 0; }
+.shell[data-mode='cloud'] .now .sound-check-help ul { margin: 0; }
+/* the player's own sentence stays for a screen reader; the sound check beside it says it to the eye */
+.shell[data-mode='cloud'] .now .notice:has(+ .sound-check) { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 560px) {
+  .shell[data-mode='cloud'] :is(.now, .mixes) .banner { grid-template-columns: auto minmax(0, 1fr); }
+  .shell[data-mode='cloud'] :is(.now, .mixes) .banner-actions { grid-column: 1 / -1; }
+  .shell[data-mode='cloud'] :is(.now, .mixes) .banner-actions > :is(button, a.button):only-child { flex: 1 1 auto; }
+}
+
+/* ---------- Listen: a now-playing screen ---------- */
+.shell[data-mode='cloud'] .now:not(.stage) .listen-identity {
+  --art: clamp(112px, 13vw, 168px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(var(--art) + var(--space-5) * 2);
+  padding: var(--space-5);
+  padding-inline-start: calc(var(--art) + var(--space-5) * 2);
+  border-radius: var(--radius);
+}
+.shell[data-mode='cloud'] .now:not(.stage) .listen-identity::before { content: none; }
+.shell[data-mode='cloud'] .now .listen-identity > .cover-art {
+  position: absolute;
+  inset-block-start: var(--space-5);
+  inset-inline-start: var(--space-5);
+  width: var(--art);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-raised);
+}
+.shell[data-mode='cloud'] .now .track-title .song-motif { display: none; }
+.shell[data-mode='cloud'] .now .listen-identity .eyebrow { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: var(--space-2); }
+.shell[data-mode='cloud'] .now .listen-identity .artist { margin-bottom: 0; color: var(--text-soft); }
+.shell[data-mode='cloud'] .now.in-seam:not(.stage) .listen-identity { border-color: color-mix(in srgb, var(--playing) 55%, var(--border)); }
+
+@media (min-width: 761px) {
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-3) var(--space-4);
+  }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > * { grid-column: 1 / -1; order: 6; margin-block: 0; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .listen-identity { order: 1; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > :is(.strip, .skeleton-strip) { order: 2; margin-top: var(--space-5); }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .seek-note { order: 3; min-height: 0; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .transport { order: 4; grid-column: 1; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .transport-more { order: 4; grid-column: 2; justify-content: flex-end; flex-wrap: nowrap; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > :is(.notice, .banner) { order: 5; }
+}
+.shell[data-mode='cloud'] .now .transport { gap: var(--space-3); min-height: 0; }
+.shell[data-mode='cloud'] .now .transport button:not(.primary) { width: 48px; height: 48px; padding: 0; border-radius: var(--radius-pill); border-color: transparent; background: none; }
+.shell[data-mode='cloud'] .now .transport button:not(.primary):hover:not(:disabled) { background: var(--surface-control); }
+.shell[data-mode='cloud'] .now .transport .primary.big { min-width: 168px; min-height: 52px; border-radius: var(--radius-pill); font-size: var(--text-md); }
+.shell[data-mode='cloud'] .now .transport-more > button,
+.shell[data-mode='cloud'] .now .transport-more > .tooltip-anchor > button { border-color: transparent; background: none; color: var(--text-soft); }
+.shell[data-mode='cloud'] .now .transport-more > button:hover:not(:disabled),
+.shell[data-mode='cloud'] .now .transport-more > .tooltip-anchor > button:hover:not(:disabled) { background: var(--surface-control); color: var(--text); }
+.shell[data-mode='cloud'] .now .volume input { width: 112px; }
+.shell[data-mode='cloud'] .now .volume button.icon { border-color: transparent; background: none; }
+/* the seek bar: the clock sits under the bar, elapsed and total together */
+.shell[data-mode='cloud'] .now .strip { height: 84px; }
+.shell[data-mode='cloud'] .now .strip .time { top: auto; bottom: 0; }
+.shell[data-mode='cloud'] .now .strip .peaks .played { stroke: var(--accent); }
+.shell[data-mode='cloud'] .now .strip .playhead { background: var(--accent); }
+.shell[data-mode='cloud'] .now .music-visualizer { height: 64px; }
+
+/* what is coming: one panel, three parts */
+.shell[data-mode='cloud'] .now:not(.stage) .listen-side {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+.shell[data-mode='cloud'] .now:not(.stage) .listen-side > * { margin: 0; min-width: 0; }
+.shell[data-mode='cloud'] .now:not(.stage) .listen-side > * + * { padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.shell[data-mode='cloud'] .now:not(.stage) .listen-side .handoff { padding: 0; border-width: 0; border-radius: 0; background: none; }
+.shell[data-mode='cloud'] .now .next-song {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2);
+  margin-inline: calc(var(--space-2) * -1);
+  width: calc(100% + var(--space-2) * 2);
+  max-width: none;
+  border-color: transparent;
+  background: none;
+}
+.shell[data-mode='cloud'] .now button.next-song:hover { background: var(--surface-control); border-color: transparent; }
+.shell[data-mode='cloud'] .now .next-song > .cover-art { grid-row: 1 / span 3; width: 56px; }
+.shell[data-mode='cloud'] .now .next-song > :not(.cover-art) { grid-column: 2; }
+.shell[data-mode='cloud'] .now .next-song b { font: var(--type-song); }
+.shell[data-mode='cloud'] .now .next-song .next-edit-hint { margin-top: 0; font-weight: 400; }
+.shell[data-mode='cloud'] .now .transition-truth { margin: var(--space-2) 0 0; }
+.shell[data-mode='cloud'] .now .next-steer-open { margin-top: var(--space-2); }
+.shell[data-mode='cloud'] .listen-queue .eyebrow { margin: 0 0 var(--space-2); }
+.shell[data-mode='cloud'] .listen-queue ol { list-style: none; margin: 0 calc(var(--space-2) * -1); padding: 0; display: grid; }
+.shell[data-mode='cloud'] .queue-row {
+  display: grid;
+  grid-template-columns: 1.5em auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-1) var(--space-2);
+  border-color: transparent;
+  background: none;
+  text-align: start;
+}
+.shell[data-mode='cloud'] .queue-row:hover:not(:disabled) { background: var(--surface-control); border-color: transparent; }
+.shell[data-mode='cloud'] .queue-place { color: var(--text-soft); font: var(--type-meta); font-variant-numeric: tabular-nums; text-align: center; }
+.shell[data-mode='cloud'] .queue-words { display: grid; min-width: 0; }
+.shell[data-mode='cloud'] .queue-words > * { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.shell[data-mode='cloud'] .queue-words b { font: var(--type-song); font-size: var(--text-sm); }
+.shell[data-mode='cloud'] .queue-words span,
+.shell[data-mode='cloud'] .queue-row small { color: var(--text-soft); font: var(--type-meta); font-variant-numeric: tabular-nums; }
+.shell[data-mode='cloud'] .queue-play { color: var(--text-soft); opacity: 0; transition: opacity var(--motion-fast) var(--motion-ease); }
+.shell[data-mode='cloud'] .queue-row:is(:hover, :focus-visible) .queue-play { opacity: 1; }
+.shell[data-mode='cloud'] .listen-queue > button { margin-top: var(--space-1); }
+.shell[data-mode='cloud'] .now .dj-controls > summary { min-height: var(--control-height); display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+.shell[data-mode='cloud'] .now .queue-sources-list { padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); font-size: var(--text-sm); }
+.shell[data-mode='cloud'] .now .queue-sources-list ol { list-style: none; margin: var(--space-2) 0; padding: 0; display: grid; gap: var(--space-1); }
+.shell[data-mode='cloud'] .now .queue-sources-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); }
+.shell[data-mode='cloud'] .now .queue-sources-list li span { color: var(--text-soft); }
+
+@media (max-width: 760px) {
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-identity { --art: 84px; padding: var(--space-4); padding-inline-start: calc(var(--art) + var(--space-4) * 2); min-height: calc(var(--art) + var(--space-4) * 2); }
+  .shell[data-mode='cloud'] .now .listen-identity > .cover-art { inset-block-start: var(--space-4); inset-inline-start: var(--space-4); }
+  .shell[data-mode='cloud'] .now .transport-more { justify-content: space-between; }
+}
+
+/* ---------- Guided empty pages: Make a Mix and Listen before music is connected ---------- */
+.shell[data-mode='cloud'] .music-empty {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  max-width: none;
+  padding: var(--space-7) var(--space-5) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(ellipse 60% 70% at 50% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%),
+    var(--surface-raised);
+  text-align: center;
+}
+.shell[data-mode='cloud'] .music-empty > * { margin-block: 0; }
+.shell[data-mode='cloud'] .music-empty .empty-state-icon { width: 56px; height: 56px; margin-bottom: var(--space-3); border-radius: var(--radius-pill); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--surface-control)); color: var(--text); }
+.shell[data-mode='cloud'] .music-empty :is(h2, h3) { font: var(--type-section); }
+.shell[data-mode='cloud'] .music-empty p { max-width: 52ch; color: var(--text-soft); font-size: var(--text-md); line-height: 1.5; }
+.shell[data-mode='cloud'] .music-empty .empty-state-actions { margin-top: var(--space-4); }
+.shell[data-mode='cloud'] .music-empty .setup-steps {
+  justify-content: center;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-6) 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+.shell[data-mode='cloud'] .music-empty .setup-steps li + li::before { margin-inline-start: 0; }
+@media (max-width: 560px) {
+  .shell[data-mode='cloud'] .music-empty { padding: var(--space-6) var(--space-4) var(--space-5); }
+  .shell[data-mode='cloud'] .music-empty .empty-state-actions { align-self: stretch; width: 100%; }
+  .shell[data-mode='cloud'] .music-empty .empty-state-actions > * { flex: 1 1 100%; justify-content: center; text-align: center; }
+  .shell[data-mode='cloud'] .music-empty .setup-steps { justify-content: space-between; gap: var(--space-2); }
+}
+
+/* ---------- Make a Mix: three steps and one Play ---------- */
+.shell[data-mode='cloud'] .quick-mix { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); overflow: hidden; margin-bottom: var(--space-5); }
+.shell[data-mode='cloud'] .quick-steps { list-style: none; margin: 0; padding: 0; }
+.shell[data-mode='cloud'] .quick-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-5);
+}
+.shell[data-mode='cloud'] .quick-step + .quick-step { border-top: 1px solid var(--border); }
+.shell[data-mode='cloud'] .quick-step-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font: var(--type-label);
+  font-variant-numeric: tabular-nums;
+}
+.shell[data-mode='cloud'] .quick-step[data-done] .quick-step-mark { border-color: var(--status-ready); color: var(--status-ready); }
+.shell[data-mode='cloud'] .quick-step-body { display: grid; gap: var(--space-1); min-width: 0; }
+.shell[data-mode='cloud'] .quick-step-body > * { margin: 0; }
+.shell[data-mode='cloud'] .quick-step h3 { display: flex; align-items: center; gap: var(--space-2); min-height: 28px; font: var(--weight-strong) var(--text-md) / 1.3 var(--body); }
+.shell[data-mode='cloud'] .quick-step p { color: var(--text-soft); font-size: var(--text-sm); }
+.shell[data-mode='cloud'] .quick-step > :is(button, a.button) { align-self: center; }
+.shell[data-mode='cloud'] .choice-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-2); }
+.shell[data-mode='cloud'] .choice-card {
+  position: relative;
+  display: grid;
+  gap: var(--space-hair);
+  justify-items: start;
+  min-height: 72px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  text-align: start;
+  transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
+}
+.shell[data-mode='cloud'] .choice-card:hover:not(:disabled) { border-color: var(--edge-interactive); }
+.shell[data-mode='cloud'] .choice-card b { font: var(--weight-strong) var(--text-md) / 1.3 var(--body); }
+.shell[data-mode='cloud'] .choice-card > span:not(.choice-card-check) { color: var(--text-soft); font-size: var(--text-sm); }
+.shell[data-mode='cloud'] .choice-card[aria-pressed='true'] { border-color: var(--selected); background: var(--surface-selected); color: var(--text); box-shadow: 0 0 0 1px var(--selected); }
+.shell[data-mode='cloud'] .choice-card-check {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: transparent;
+}
+.shell[data-mode='cloud'] .choice-card[aria-pressed='true'] .choice-card-check { border-color: var(--primary-edge); background: var(--primary-fill); color: var(--primary-ink); }
+.shell[data-mode='cloud'] .quick-play {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--surface-control);
+}
+.shell[data-mode='cloud'] .quick-play-words { display: grid; gap: var(--space-hair); flex: 1 1 280px; min-width: 0; }
+.shell[data-mode='cloud'] .quick-play-words > * { margin: 0; }
+.shell[data-mode='cloud'] .quick-play-words b { font: var(--weight-strong) var(--text-md) / 1.3 var(--body); }
+.shell[data-mode='cloud'] .quick-play-words span { color: var(--text-soft); font-size: var(--text-sm); }
+.shell[data-mode='cloud'] .quick-play .primary.big { min-width: 168px; min-height: 52px; border-radius: var(--radius-pill); justify-content: center; }
+.shell[data-mode='cloud'] .quick-mix > :is(.hint, .warn) { margin: 0; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); }
+.shell[data-mode='cloud'] .quick-mix-more { margin: 0 0 var(--space-5); }
+/* the current mix under the builder: one quiet row */
+.shell[data-mode='cloud'] .mixes:not(.my-mixes) .carry-on { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); padding: var(--space-4) var(--space-5); border-radius: var(--radius); }
+.shell[data-mode='cloud'] .mixes:not(.my-mixes) .carry-on .mix-identity { display: none; }
+.shell[data-mode='cloud'] .mixes:not(.my-mixes) .carry-on h2 { font: var(--weight-strong) var(--text-md) / 1.3 var(--body); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* the two ways and the setting scopes are reference, not the page: they close up under it */
+.shell[data-mode='cloud'] .mixes .mix-intents > h2,
+.shell[data-mode='cloud'] .mixes .mix-intent-pair { display: none; }
+.shell[data-mode='cloud'] .mixes .mix-intents { margin: 0; padding: 0; border: 0; background: none; }
+@media (max-width: 560px) {
+  .shell[data-mode='cloud'] .quick-step { grid-template-columns: auto minmax(0, 1fr); padding: var(--space-4); }
+  .shell[data-mode='cloud'] .quick-step > :is(button, a.button) { grid-column: 2; justify-self: start; }
+  .shell[data-mode='cloud'] .choice-cards { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+  .shell[data-mode='cloud'] .choice-card { grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 56px; padding-inline-end: var(--space-7); }
+  .shell[data-mode='cloud'] .choice-card-check { inset-block-start: 50%; translate: 0 -50%; inset-inline-end: var(--space-3); }
+  .shell[data-mode='cloud'] .quick-play { padding: var(--space-4); }
+  .shell[data-mode='cloud'] .quick-play .primary.big { flex: 1 1 100%; }
+}
+
+/* ---------- My Mixes: one clean list ---------- */
+.shell[data-mode='cloud'] .saved-mixes .section-title { display: flex; align-items: center; gap: var(--space-2); }
+.shell[data-mode='cloud'] .mix-rows { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); }
+.shell[data-mode='cloud'] .mix-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-height: 72px;
+  padding: var(--space-3) var(--space-4);
+  transition: background-color var(--motion-fast) var(--motion-ease);
+}
+.shell[data-mode='cloud'] .mix-row + .mix-row { border-top: 1px solid var(--border); }
+.shell[data-mode='cloud'] .mix-row:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+.shell[data-mode='cloud'] .mix-row:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+.shell[data-mode='cloud'] .mix-row:only-child { border-radius: var(--radius); }
+.shell[data-mode='cloud'] .mix-row:hover { background: color-mix(in srgb, var(--surface-control) 55%, transparent); }
+.shell[data-mode='cloud'] .mix-row[data-current] { background: var(--surface-selected); box-shadow: inset var(--marker) 0 0 var(--playing); }
+.shell[data-mode='cloud'] .mix-row > .cover-art { width: 48px; }
+.shell[data-mode='cloud'] .mix-row-words { display: grid; gap: var(--space-hair); min-width: 0; }
+.shell[data-mode='cloud'] .mix-row-name { font: var(--type-song); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; unicode-bidi: plaintext; }
+.shell[data-mode='cloud'] .mix-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-hair) var(--space-2); color: var(--text-soft); font: var(--type-meta); }
+.shell[data-mode='cloud'] .mix-row-meta > span:not(.badge) + span:not(.badge)::before { content: '·'; margin-inline-end: var(--space-2); }
+.shell[data-mode='cloud'] .mix-row-actions { display: flex; align-items: center; gap: var(--space-2); }
+.shell[data-mode='cloud'] .mix-row-actions > button { min-height: 36px; padding-block: var(--space-1); }
+.shell[data-mode='cloud'] .mix-row-actions > .mix-row-play { border-color: var(--border-strong); font-weight: 600; }
+.shell[data-mode='cloud'] .mix-row-actions > .mix-row-play:hover:not(:disabled) { border-color: var(--text); background: var(--surface-control); }
+.shell[data-mode='cloud'] .mix-row .rename-draft { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.shell[data-mode='cloud'] .mix-row .rename-draft input { flex: 1 1 220px; min-width: 0; min-height: 36px; }
+.shell[data-mode='cloud'] .mix-row .rename-draft .warn { flex: 1 1 100%; margin: 0; }
+@media (max-width: 640px) {
+  .shell[data-mode='cloud'] .mix-row { grid-template-columns: auto minmax(0, 1fr); padding: var(--space-3); }
+  .shell[data-mode='cloud'] .mix-row-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .shell[data-mode='cloud'] .mix-row-actions { grid-column: 1 / -1; }
+  .shell[data-mode='cloud'] .mix-row-actions > button:first-child { flex: 1 1 auto; justify-content: center; }
+  .shell[data-mode='cloud'] .mix-row-actions > button { min-height: 44px; }
+  .shell[data-mode='cloud'] .saved-mixes .section-head > button { flex: 1 1 100%; }
+}
+
+/* ---------- The editor: tidy rows, a clear handle, the transition as one line ---------- */
+.shell[data-mode='cloud'] .page.mix .mix-head .display { font: var(--type-section); font-size: var(--text-2xl); overflow-wrap: anywhere; }
+.shell[data-mode='cloud'] .page.mix .mix-head .lede { font-size: var(--text-sm); }
+.shell[data-mode='cloud'] .page.mix .timeline .song { padding: var(--space-2) var(--space-3); border-radius: var(--radius); transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease); }
+.shell[data-mode='cloud'] .page.mix .timeline .song:hover { border-color: var(--edge-interactive); }
+.shell[data-mode='cloud'] .page.mix .timeline .grip { color: var(--text-soft); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-control); }
+.shell[data-mode='cloud'] .page.mix .timeline .grip:hover { color: var(--text); border-color: var(--edge-interactive); }
+.shell[data-mode='cloud'] .page.mix .timeline .song-actions { align-self: center; flex-wrap: nowrap; }
+.shell[data-mode='cloud'] .page.mix .timeline .song-actions > button:not(:first-child),
+.shell[data-mode='cloud'] .page.mix .timeline .song-actions .menu > button { border-color: transparent; background: none; color: var(--text-soft); }
+.shell[data-mode='cloud'] .page.mix .timeline .song-actions > button:not(:first-child):hover:not(:disabled),
+.shell[data-mode='cloud'] .page.mix .timeline .song-actions .menu > button:hover { background: var(--surface-control); color: var(--text); }
+.shell[data-mode='cloud'] .page.mix .timeline .seam { padding-block: var(--space-1); }
+.shell[data-mode='cloud'] .page.mix .timeline .seam .music-seam-diagram.is-plan { display: none; }
+.shell[data-mode='cloud'] .page.mix .timeline .seam-name b { font: var(--type-meta); color: var(--text-soft); }
+.shell[data-mode='cloud'] .page.mix .timeline .seam-move select { min-height: 36px; }

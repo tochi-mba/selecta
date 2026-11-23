@@ -183,7 +183,7 @@
 .cloud-meter-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: baseline; align-content: start; }
 .cloud-meter-card > * { grid-column: 1 / -1; }
 .cloud-card.cloud-meter-card > p.cloud-meter-name { grid-column: 1; margin: 0; font: var(--type-label); font-size: var(--text-sm); color: var(--text); }
-.cloud-meter-card > h2 { grid-column: 2; margin: 0; font: var(--type-counter); font-size: var(--text-md); color: var(--text); text-align: end; }
+.cloud-meter-card > :is(h2, h3) { grid-column: 2; margin: 0; font: var(--type-counter); font-size: var(--text-md); color: var(--text); text-align: end; }
 .cloud-meter-card.warn { border-color: var(--status-warning); }
 .cloud-card p.cloud-meter-reset,
 .cloud-card p.cloud-meter-free,
@@ -199,7 +199,7 @@
 }
 .cloud-meters > .cloud-meter-card { border: 0; border-radius: 0; background: none; padding: var(--space-4) 0; }
 .cloud-meters > .cloud-meter-card + .cloud-meter-card { border-top: var(--separator) solid var(--edge-decorative); }
-.cloud-meters > .cloud-meter-card.warn h2 { color: var(--danger); }
+.cloud-meters > .cloud-meter-card.warn :is(h2, h3) { color: var(--danger); }
 .lucy-cloud-meter p { margin: 0 0 var(--space-dense); }
 .cloud-section-title { margin: var(--space-3) 0 0; font: var(--type-section); }
 .cloud-over-quota {
@@ -310,13 +310,12 @@
 .cloud-confirm[data-tone='plain'] { border-inline-start-color: var(--edge-interactive); }
 .cloud-card .cloud-confirm p { margin: 0; color: var(--text); }
 .cloud-confirm .cloud-actions { margin: var(--space-3) 0 0; }
-.cloud-not-found .cloud-actions { margin-bottom: 0; }
-/* Lucy's choices on the Account page: plain rows under two small headings, not boxes in a box */
-.cloud-card.lucy-settings fieldset { border: 0; padding: 0; margin: var(--space-4) 0 0; background: none; }
-.cloud-card.lucy-settings legend { padding: 0; margin: 0 0 var(--space-1); font: var(--type-label); color: var(--text-soft); }
-.cloud-card.lucy-settings label.choice { border: 0; border-radius: 0; background: none; box-shadow: none; padding: var(--space-2) 0; margin: 0; width: auto; }
-.cloud-card.lucy-settings .lucy-cloud-meter { margin-top: var(--space-3); }
-.cloud-card.lucy-settings form > .row { margin-top: var(--space-4); }
+/* an address no page answers: a mark, what happened, and the two ways back */
+.cloud-not-found { display: grid; justify-items: start; gap: var(--space-2); max-width: 40rem; padding: var(--space-6); }
+.cloud-not-found > * { margin: 0; }
+.cloud-not-found h2 { font: var(--type-section); overflow-wrap: anywhere; }
+.cloud-not-found-icon { display: grid; place-items: center; inline-size: 40px; block-size: 40px; margin-bottom: var(--space-2); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius-sm); background: var(--surface-control); color: var(--text-soft); }
+.cloud-not-found .cloud-actions { margin: var(--space-3) 0 0; }
 /* Labs, the device check and the draft notice: the same card rhythm as the rest of Account */
 .cloud-labs-feedback { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
 .cloud-labs-feedback label { font: var(--type-label); }

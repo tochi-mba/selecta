@@ -20,8 +20,8 @@ def test_the_defaults_are_the_ones_the_proposal_set_out():
     assert defaults.join_mode is JoinMode.ANYONE
     assert defaults.request_mode is RequestMode.AUTO
     assert defaults.crate_song_ids is None and defaults.crate is None
-    assert (defaults.pending_per_guest, defaults.requests_per_guest_per_hour) == (1, 3)
-    assert (defaults.replay_cooldown_minutes, defaults.pending_per_room) == (60, 20)
+    assert (defaults.pending_per_guest, defaults.requests_per_guest_per_hour) == (3, 20)
+    assert (defaults.replay_cooldown_minutes, defaults.pending_per_room) == (20, 50)
     assert defaults.votes and not defaults.names_shown and not defaults.display
     assert (defaults.max_hours, defaults.no_speaker_minutes) == (12.0, 60)
     assert (defaults.renders_per_hour, defaults.max_guests) == (60, 100)
@@ -85,6 +85,23 @@ def test_every_number_is_held_inside_its_range(name, bounds):
     assert getattr(too_low, name) == low
     assert getattr(too_high, name) == high
     assert type(getattr(too_low, name)) is type(getattr(RoomSettings(), name))
+
+
+def test_the_host_sets_one_to_twenty_waiting_and_up_to_sixty_an_hour():
+    assert BOUNDS["pending_per_guest"] == (1, 20)
+    assert BOUNDS["requests_per_guest_per_hour"] == (0, 60)
+    for asked, held in ((0, 1), (1, 1), (12, 12), (20, 20), (21, 20)):
+        assert RoomSettings.from_json({"pending_per_guest": asked}).pending_per_guest == held
+    for asked, held in ((1, 1), (45, 45), (60, 60), (61, 60), (-5, 0)):
+        hourly = RoomSettings.from_json({"requests_per_guest_per_hour": asked})
+        assert hourly.requests_per_guest_per_hour == held
+
+
+def test_zero_an_hour_means_no_hourly_limit_and_survives_a_round_trip():
+    unlimited = RoomSettings.from_json({"requests_per_guest_per_hour": 0})
+    assert unlimited.requests_per_guest_per_hour == 0
+    assert unlimited.checked() is unlimited, "0 is a choice, not a value to pull up"
+    assert RoomSettings.from_json(unlimited.to_json()) == unlimited
 
 
 def test_a_crate_keeps_each_song_once_in_the_order_given():

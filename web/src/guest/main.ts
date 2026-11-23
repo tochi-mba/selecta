@@ -5,10 +5,13 @@
 // fails if its JavaScript passes 100 KB. The guest token lives in an HttpOnly cookie the page
 // can't read; the page only remembers which room id its code opened, to find its way back.
 //
-// A guest can choose several songs and send them together. The page says how many more they can
-// add ("You can add 2 more"), and when the room's limit is reached it says which limit and when
-// it frees up, in the server's own words (`limit_text`). The server decides what is added: each
-// song of a batch comes back added or with its reason.
+// A guest taps a song to add it (the whole row is the button; a second tap takes it out). The row
+// changes at once, and a bar fixed to the bottom of the screen counts what is chosen and holds
+// Send. Sending shows progress, then "Sent", and the songs appear under "Your requests" with a
+// status that follows the host. The page says how many more can be added, and when the room's
+// limit is reached it says which limit and when it frees up, in the server's own words
+// (`limit_text`). The server decides what is added: each song of a batch comes back added or
+// with its reason, which stays on that song's row.
 //
 // Each read of the room also tells the host this guest is here, so the page reads it every 5 s
 // while it's on screen. If the signal or the server drops, it says "Reconnecting..." and keeps
@@ -16,11 +19,12 @@
 // cookie, so the guest is back in the room by themselves. There's no leave-on-close beacon: a
 // reload or a phone switching apps fires the same events, and leaving would put them out.
 
-import { ApiError, call, h, patch, replace, Song, songLength, songLine, store } from '../rooms/dom';
+import { ApiError, call, h, patch, replace, Song, songLine, store } from '../rooms/dom';
+import { art, bars, chip, empty, icon, IconName, outlineRow, songText, Tone } from './parts';
 import './guest.css';
 
 type Item = { request_id: string; song: Song | null; status: string; votes: number; nickname: string | null; voted: boolean; mine: boolean };
-type Mine = { request_id: string; song: Song | null; status: string; text: string; votes: number };
+type Mine = { request_id: string; song: Song | null; status: string; text: string; votes: number; minutes_until?: number | null };
 type View = {
   room_name: string; room_status: string; guest_status: string; nickname: string;
   votes_on: boolean; requests_open: boolean; music_paused: boolean;
@@ -71,7 +75,7 @@ const whyWords = (song: Song) => { const why = whyNot.get(song.song_id); return 
 function watchWaits(): void {
   window.clearTimeout(whyTimer);
   const next = Math.min(...[...whyNot.values()].map((why) => why.until ?? Infinity).filter((until) => until > Date.now()));
-  if (Number.isFinite(next)) whyTimer = window.setTimeout(() => { drawResults(); drawBasket(); watchWaits(); }, Math.min(next - Date.now() + 250, 2 ** 30));
+  if (Number.isFinite(next)) whyTimer = window.setTimeout(() => { drawResults(); drawBar(); watchWaits(); }, Math.min(next - Date.now() + 250, 2 ** 30));
 }
 // the songs chosen but not sent yet, and the last search answer they were chosen from
 let basket: Song[] = [];
@@ -113,57 +117,80 @@ const base = () => `/api/guest/rooms/${encodeURIComponent(roomId ?? '')}`;
 /** Props for a button whose tap is being answered: it stays focusable, says it is busy, and its handler ignores taps. */
 const working = (on: boolean): Record<string, string> => (on ? { 'aria-busy': 'true', 'aria-disabled': 'true' } : {});
 
-/** A check mark that draws itself in (guest.css). Drawn, not typed, so no font can change it. */
-function check(): Element {
-  const space = 'http://www.w3.org/2000/svg';
-  const mark = document.createElementNS(space, 'svg');
-  mark.setAttribute('class', 'g-check');
-  mark.setAttribute('viewBox', '0 0 16 16');
-  mark.setAttribute('aria-hidden', 'true');
-  const line = document.createElementNS(space, 'path');
-  line.setAttribute('d', 'M3 8.5l3.2 3.2L13 5');
-  line.setAttribute('pathLength', '1');
-  mark.append(line);
-  return mark;
+/** The parts that float over every screen, made when first needed: the notice at the bottom and
+ * the connection banner at the top. They live beside the page, so no screen change removes them. */
+function overlays(): void {
+  if (document.getElementById('g-dock')) return;
+  document.body.append(
+    h('div', { className: 'g-net', id: 'g-net', role: 'status' }, h('i', { className: 'g-spin', 'aria-hidden': 'true' }), icon('check'), h('span', { id: 'g-net-text' })),
+    h('div', { className: 'g-dock', id: 'g-dock' }, h('div', { className: 'g-toast', onclick: () => say('') }, h('p', { id: 'g-notice', className: 'g-notice', role: 'status' }))));
 }
 
 /** Say what just happened in the notice that floats over the bottom of the page (a live region),
  * so a line arriving never moves what is under a thumb. It clears itself after long enough to
- * read it, except while the page is reconnecting. */
+ * read it. */
 function say(text: string): void {
   notice = text;
   window.clearTimeout(noticeTimer);
-  const live = document.getElementById('g-notice');
-  if (!live) return;
-  live.textContent = text;
+  overlays();
+  const live = document.getElementById('g-notice') as HTMLElement;
+  // the words stay while the notice slides away, so it never empties in view
+  if (text) live.textContent = text;
   const dock = document.getElementById('g-dock');
   if (text) dock?.setAttribute('data-open', ''); else dock?.removeAttribute('data-open');
-  if (text && text !== RECONNECTING) noticeTimer = window.setTimeout(() => say(''), Math.min(15_000, 4000 + text.length * 60));
+  if (text) noticeTimer = window.setTimeout(() => say(''), Math.min(15_000, 4000 + text.length * 60));
 }
 
+/** The connection banner at the top of the screen: "Reconnecting..." while the room can't be
+ * reached, "Back in the room" for a moment when it can again. */
+let netTimer = 0;
+function connection(state: 'down' | 'back' | 'ok'): void {
+  overlays();
+  const banner = document.getElementById('g-net') as HTMLElement;
+  if (state === 'back' && banner.getAttribute('data-state') !== 'down') return;
+  window.clearTimeout(netTimer);
+  if (state === 'ok') { banner.removeAttribute('data-state'); return; }
+  banner.setAttribute('data-state', state);
+  (document.getElementById('g-net-text') as HTMLElement).textContent = state === 'back' ? 'Back in the room' : navigator.onLine === false ? "You're offline. Reconnecting..." : RECONNECTING;
+  if (state === 'back') netTimer = window.setTimeout(() => connection('ok'), 2500);
+}
+
+/** A whole-screen card: the join, nickname, left and closed screens. */
 function screen(title: string, text: string, ...extra: (Node | null)[]): void {
   window.clearTimeout(timer);
   const same = root.querySelector('.g-card > h1')?.textContent === title;
   const heading = h('h1', { tabindex: -1 }, title);
-  replace(root, h('section', { className: 'g-card' }, h('p', { className: 'g-eyebrow' }, 'SelectaDJ room'), heading, h('p', {}, text), ...extra));
+  replace(root, h('section', { className: 'g-card' }, brand(), heading, text ? h('p', { className: 'g-lede' }, text) : null, ...extra));
   // a new screen is said by moving to its heading; one drawn again (a retry) leaves focus alone
   if (!same) heading.focus({ preventScroll: true });
 }
 
+/** The product's mark and name, small, over a screen's title. */
+function brand(): HTMLElement {
+  return h('p', { className: 'g-brandline' }, h('i', { className: 'g-mark', 'aria-hidden': 'true' }), 'SelectaDJ');
+}
+
+/** A screen that is a full stop (closed, removed, off): a drawn mark over the title. */
+function stop(mark: IconName, title: string, text: string, ...extra: (Node | null)[]): void {
+  screen(title, text, ...extra);
+  root.querySelector('.g-card')?.prepend(h('span', { className: 'g-empty-mark g-stop-mark', 'aria-hidden': 'true' }, icon(mark)));
+}
+
 function joinScreen(error = ''): void {
   if (!code) {
-    screen('No room code', 'Scan the QR code at the party, or type the link you were given.');
+    stop('search', 'No room code', 'Scan the QR code at the party, or open the link you were given.');
     return;
   }
-  const button = h('button', { className: 'g-primary', type: 'button', onclick: () => void join(button as HTMLButtonElement) }, 'Join the room');
+  const button = h('button', { className: 'g-primary g-big', type: 'button', onclick: () => void join(button as HTMLButtonElement) }, 'Join the room');
   screen(
     'Request a song',
-    "You'll see what's playing and can ask for songs. Nothing plays on your phone.",
-    h('p', { className: 'g-eyebrow' }, 'Room code'),
-    h('p', { className: 'g-code' }, shown(code)),
+    "See what's playing and ask the host for songs. Nothing plays on your phone.",
+    h('p', { className: 'g-codebox' }, h('span', { className: 'g-eyebrow' }, 'Room code'), h('span', { className: 'g-code' }, shown(code))),
     error ? h('p', { className: 'g-error', role: 'alert' }, error) : null,
     button,
-    h('p', { className: 'g-small' }, 'SelectaDJ keeps a random guest id, a scrambled form of your network address, your nickname and your requests, and deletes them 30 days after the room closes. No tracking, no account.'),
+    h('p', { className: 'g-small g-center' }, "You'll get a nickname you can change. No account needed."),
+    h('details', { className: 'g-keeps' }, h('summary', {}, 'What SelectaDJ keeps'),
+      h('p', { className: 'g-small' }, 'A random guest id, a scrambled form of your network address, your nickname and your requests. They are deleted 30 days after the room closes. No tracking.')),
   );
   (button as HTMLButtonElement).focus();
 }
@@ -199,9 +226,8 @@ async function refresh(): Promise<void> {
     const fresh = await call<View>(base());
     // the guest left (or rejoined elsewhere) while this read was on its way: it no longer applies
     if (roomId !== asked) return;
-    const wasDown = failures > 0;
     failures = 0;
-    if (wasDown && notice === RECONNECTING) say('Back in the room.');
+    connection('back');
     if ((confirming() || fresh.nickname_confirm) && (overlapped || epoch !== nameEpoch)) { schedule(); return; }
     if (!newer(ticket)) { schedule(); return; }
     view = fresh;
@@ -210,12 +236,12 @@ async function refresh(): Promise<void> {
   } catch (error) {
     if (roomId !== asked) return;
     const problem = error as ApiError;
-    if (problem.code === 'flag_off') { screen('Rooms are off', problem.message); return; }
+    if (problem.code === 'flag_off') { stop('off', 'Rooms are off', problem.message); return; }
     if (problem.status === 401) { store(roomKey, null); roomId = null; joinScreen(); return; }
-    if (problem.code === 'banned') { store(roomKey, null); screen("You can't join this room", 'The host has removed you from this room.'); return; }
-    if (problem.status === 410) { screen('This room has ended', 'Thanks for coming. The host has closed this room.'); return; }
+    if (problem.code === 'banned') { store(roomKey, null); stop('lock', "You can't join this room", 'The host has removed you from this room.'); return; }
+    if (problem.status === 410) { closed(null); return; }
     failures += 1;
-    if (view) { draw(); say(RECONNECTING); } else screen(RECONNECTING, problem.message);
+    if (view) { draw(); connection('down'); } else screen(RECONNECTING, `${problem.message} This page keeps trying.`, h('p', { className: 'g-waitline' }, h('i', { className: 'g-spin', 'aria-hidden': 'true' }), 'Trying again'));
     schedule();
   }
 }
@@ -224,8 +250,15 @@ function section(title: string, ...children: (Node | null)[]): HTMLElement {
   return h('section', { className: 'g-section', 'aria-label': title, 'data-key': title }, h('h2', {}, title), ...children);
 }
 
+/** A song in a list: its tile, its two lines, then whatever the list adds (a vote, a name). */
 function songItem(song: Song | null, key: string | undefined, ...extra: (Node | string | null)[]): HTMLElement {
-  return h('li', { 'data-key': key }, h('span', { className: 'g-song' }, h('strong', {}, song?.title ?? 'A song'), h('span', { className: 'g-muted' }, song ? `${song.artist} · ${songLength(song.length_s)}` : '')), ...extra);
+  return h('li', { className: 'g-item', 'data-key': key }, art(song), songText(song), ...extra);
+}
+
+/** The room is over: thanks, and what became of the songs this guest asked for. */
+function closed(v: View | null): void {
+  connection('ok');
+  stop('moon', 'This room has closed', 'Thanks for coming. The host has ended the party.', v?.my_requests.length ? myRequests(v) : null);
 }
 
 function voteButton(item: Item): HTMLElement | null {
@@ -283,8 +316,8 @@ function shell(): Record<string, HTMLElement> {
   let opened = false;
   if (!page) {
     const leaving = h('button', { type: 'button', className: 'g-quiet', onclick: () => void leave(leaving) }, 'Leave room');
-    // my requests sit right under the search, where the guest just asked; the notice floats over
-    // the bottom of the page (tap it to put it away)
+    // what's playing, then the search, then my requests right under it, where the guest just
+    // asked; the bar of chosen songs is fixed to the bottom of the screen
     page = h('div', { id: 'g-shell' },
       h('header', { className: 'g-head', id: 'g-head' }),
       h('div', { id: 'g-banners' }),
@@ -293,9 +326,9 @@ function shell(): Record<string, HTMLElement> {
       h('div', { id: 'g-mine' }),
       h('div', { id: 'g-lists' }),
       h('p', { className: 'g-leave' }, leaving),
-      h('div', { className: 'g-dock', id: 'g-dock', 'data-open': notice ? true : undefined },
-        h('div', { className: 'g-toast', onclick: () => say('') }, h('p', { id: 'g-notice', className: 'g-notice', role: 'status' }, notice))));
+      h('div', { className: 'g-bar', id: 'g-bar' }));
     replace(root, page);
+    overlays();
     opened = true;
   }
   const part = (id: string) => document.getElementById(id) as HTMLElement;
@@ -311,42 +344,49 @@ function draw(): void {
   // ADR-0422: a poll landing while the guest is picking a nickname mustn't close the picker
   if (picking && confirming()) return;
   const v = view;
-  if (v.room_status === 'ended') {
-    screen('This room has ended', 'Thanks for coming. The host has closed this room.', v.my_requests.length ? myRequests(v) : null);
-    return;
-  }
+  if (v.room_status === 'ended') { closed(v); return; }
   const parts = shell();
   const changed = statusChanges(v);
   patch(parts.head,
-    h('p', { className: 'g-eyebrow' }, 'SelectaDJ room'),
+    h('div', { className: 'g-topline' }, brand(), nameLine(v)),
     h('h1', { id: 'g-name', tabindex: -1 }, v.room_name),
-    v.nickname_confirm ? nameLine(v) : h('p', { className: 'g-muted' }, `You're ${v.nickname}. `, h('button', { type: 'button', className: 'g-link', ...working(busy.has('nicknames')), onclick: () => void nicknames() }, 'Change nickname')),
     v.nickname_confirm && nameSave?.state === 'failed' ? h('p', { className: 'g-error', role: 'alert' }, `${nameSave.name} wasn't saved. ${nameSave.error ?? ''}`.trim(), ' ', h('button', { type: 'button', className: 'g-link', onclick: () => void saveNickname(nameSave?.name ?? '') }, 'Try again')) : null);
-  patch(parts.banners,
-    v.guest_status === 'pending' ? h('p', { className: 'g-banner' }, "The host hasn't let you in yet. This page will update when they do.") : null,
-    v.music_paused ? h('p', { className: 'g-banner' }, "Nothing is playing right now. You can still ask for songs: the host sees each one and adds it to the mix.") : null);
   const active = v.guest_status === 'active';
-  // always a title line and a line under it, so the page below never moves when a song starts
-  patch(parts.now, active
-    ? h('section', { className: 'g-section', 'aria-label': 'Now playing', 'data-key': 'Now playing' },
-      h('h2', {}, h('span', { className: 'g-eq', 'aria-hidden': 'true', 'data-on': Boolean(v.now_playing) && !v.music_paused }, h('i'), h('i'), h('i')), 'Now playing'),
-      h('p', { className: v.now_playing ? 'g-now' : 'g-now g-muted' }, v.now_playing ? v.now_playing.title : 'No song yet'),
-      h('p', { className: 'g-now-by' }, v.now_playing ? v.now_playing.artist : "The song that's playing shows here."))
-    : null);
+  patch(parts.banners,
+    v.guest_status === 'pending' ? h('div', { className: 'g-section g-waiting', role: 'status' }, h('i', { className: 'g-spin', 'aria-hidden': 'true' }), h('p', {}, h('strong', {}, 'Waiting for the host to let you in'), h('span', { className: 'g-muted' }, 'This page opens by itself when they do.'))) : null);
+  patch(parts.now, active ? nowPlaying(v) : null);
   parts.search.hidden = !(active && v.requests_open);
-  if (!parts.search.hidden) { drawResults(); drawBasket(); }
+  if (!parts.search.hidden) drawResults();
+  drawBar();
   patch(parts.lists,
-    active && !v.requests_open ? section('Requests', h('p', { className: 'g-muted' }, 'Requests are off in this room.')) : null,
-    active && v.up_next.length ? section('Up next', h('ol', { className: 'g-list' }, ...v.up_next.slice(0, 3).map((song, index) => songItem(song, `next-${index}-${song.song_id}`)))) : null,
-    active && v.coming_up.length ? section('Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.request_id, item.nickname ? h('span', { className: 'g-muted' }, item.nickname) : null, voteButton(item))))) : null,
+    active && !v.requests_open ? h('section', { className: 'g-section', 'data-key': 'Requests', 'aria-label': 'Requests' }, empty('lock', 'Requests are off in this room', 'The host is choosing the music for now.')) : null,
+    active && v.coming_up.length ? section('Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.request_id, item.nickname ? h('span', { className: 'g-by' }, item.nickname) : null, voteButton(item))))) : null,
     active && v.waiting.length ? section('Waiting for the host', h('ul', { className: 'g-list' }, ...v.waiting.map((item) => songItem(item.song, item.request_id, voteButton(item))))) : null);
   // nothing shows here until the guest has asked for something
   patch(parts.mine, active && v.my_requests.length ? myRequests(v) : null);
   if (changed) say(changed);
 }
 
+/** What's playing, with what comes after it in the same card. It always has its tile and two
+ * lines, so the page below never moves when a song starts. */
+function nowPlaying(v: View): HTMLElement {
+  const song = v.now_playing;
+  const playing = Boolean(song) && !v.music_paused;
+  return h('section', { className: 'g-section g-hero', 'aria-label': 'Now playing', 'data-key': 'Now playing', 'data-on': playing },
+    h('div', { className: 'g-hero-now' },
+      art(song, 'lg'),
+      h('div', { className: 'g-hero-text' },
+        h('h2', {}, bars(playing), song && v.music_paused ? 'Paused' : 'Now playing'),
+        h('p', { className: song ? 'g-now' : 'g-now g-muted' }, song ? song.title : 'Nothing playing yet'),
+        h('p', { className: 'g-now-by' }, song ? song.artist : 'Ask for a song and the host adds it to the mix.'))),
+    v.up_next.length ? h('div', { className: 'g-next', 'data-key': 'next' },
+      h('h2', {}, 'Up next'),
+      h('ol', { className: 'g-list' }, ...v.up_next.slice(0, 3).map((next, index) => songItem(next, `next-${index}-${next.song_id}`)))) : null);
+}
+
 /** Note which of my requests changed status since the last look: they are lit for a moment, and
  * the newest change is returned in words for the notice. */
+let looked = false;
 function statusChanges(v: View): string {
   const now = Date.now();
   let said = '';
@@ -357,56 +397,81 @@ function statusChanges(v: View): string {
       // their own withdrawal is said by the button they tapped
       if (item.status !== 'withdrawn') said = `${item.song?.title ?? 'Your request'}: ${item.text}.`;
     }
+    // a request first seen here was just sent: it arrives lit, and Sent says the rest
+    if (!before && looked && PENDING.includes(item.status)) lit.set(item.request_id, now + LIT_MS);
     seen.set(item.request_id, item.status);
   }
+  looked = true;
   for (const [id, until] of lit) if (until <= now) lit.delete(id);
   return said;
 }
 
+/** A request's status as a short chip, and anything more the host's words add under it. */
+function statusOf(item: Mine, v: View): { kind: Tone; label: string; detail: string } {
+  const id = item.song?.song_id;
+  const going = id !== undefined && (item.status === 'accepted' || item.status === 'played');
+  if (going && v.now_playing?.song_id === id) return { kind: 'live', label: 'Playing now', detail: '' };
+  if (going && v.up_next.some((song) => song.song_id === id)) return { kind: 'next', label: 'Up next', detail: '' };
+  const rest = (text: string, label: string) => { const more = text.replace(new RegExp(`^${label}[.,]?\\s*`), ''); return more ? more[0].toUpperCase() + more.slice(1) : ''; };
+  switch (item.status) {
+    case 'sent': return { kind: 'wait', label: 'Waiting for the host', detail: '' };
+    case 'accepted': return { kind: 'ok', label: 'Accepted', detail: rest(item.text, 'Accepted') };
+    case 'played': return { kind: 'done', label: item.text || 'Played', detail: '' };
+    case 'passed': case 'unfit': return { kind: 'no', label: 'Not this time', detail: item.text };
+    case 'withdrawn': return { kind: 'gone', label: 'Withdrawn', detail: rest(item.text, 'Withdrawn') };
+    default: return { kind: 'gone', label: item.text, detail: '' };
+  }
+}
+
 function myRequests(v: View): HTMLElement {
-  return section('My requests', h('ul', { className: 'g-list' }, ...v.my_requests.map((item) => {
-    const leaving = busy.has(`withdraw:${item.request_id}`);
-    const row = songItem(item.song, item.request_id,
-      PENDING.includes(item.status)
-        ? h('button', { type: 'button', className: 'g-quiet', ...working(leaving), 'aria-label': `Withdraw ${songLine(item.song)}`, onclick: () => void withdraw(item.request_id) }, leaving ? 'Withdrawing...' : 'Withdraw')
-        : null,
-      h('p', { className: `g-status g-${item.status}` }, item.text));
-    if (lit.has(item.request_id)) row.className = 'g-changed';
-    return row;
-  })));
+  return h('section', { className: 'g-section', id: 'g-requests', 'aria-label': 'Your requests', 'data-key': 'Your requests' },
+    h('h2', {}, 'Your requests', h('span', { className: 'g-tally' }, String(v.my_requests.length))),
+    h('ul', { className: 'g-list' }, ...v.my_requests.map((item) => {
+      const leaving = busy.has(`withdraw:${item.request_id}`);
+      const status = statusOf(item, v);
+      return h('li', { className: lit.has(item.request_id) ? 'g-item g-request g-changed' : 'g-item g-request', 'data-key': item.request_id, 'data-status': item.status },
+        art(item.song),
+        songText(item.song,
+          h('span', { className: 'g-status' }, chip(status.kind, status.label)),
+          status.detail ? h('span', { className: 'g-detail' }, status.detail) : null),
+        PENDING.includes(item.status)
+          ? h('button', { type: 'button', className: 'g-quiet g-small-button', ...working(leaving), 'aria-label': `Withdraw ${songLine(item.song)}`, onclick: () => void withdraw(item.request_id) }, leaving ? 'Withdrawing...' : 'Withdraw')
+          : null);
+    })));
 }
 
 function searchPanel(): HTMLElement {
   const results = h('ul', { className: 'g-list', id: 'g-results', 'aria-label': 'Songs found' });
   const input = h('input', {
     id: 'g-q', type: 'search', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false',
-    enterkeyhint: 'search', placeholder: 'Title or artist', maxlength: 100, 'aria-describedby': 'g-hint',
+    enterkeyhint: 'search', placeholder: 'Search by title or artist', maxlength: 100, 'aria-describedby': 'g-hint',
   }) as HTMLInputElement;
+  const clear = h('button', { type: 'button', className: 'g-clear', id: 'g-clear', 'aria-label': 'Clear the search', hidden: true, onclick: () => { input.value = ''; ask(0); input.focus(); } }, icon('x'));
   // the box stays at the top of the screen while the results scroll under it (guest.css)
   const panel = h('section', { className: 'g-section', id: 'g-search', 'aria-label': 'Request a song' },
-    h('h2', {}, 'Request a song'),
-    h('div', { className: 'g-search-box' }, h('label', { for: 'g-q' }, 'Search the host\'s songs'), input),
-    h('p', { className: 'g-hint', id: 'g-hint' }, 'Type two or more letters, then choose the songs you want.'),
+    h('h2', {}, h('label', { for: 'g-q' }, 'Request a song')),
+    h('div', { className: 'g-search-box' }, icon('search'), input, clear),
+    h('p', { className: 'g-hint', id: 'g-hint' }),
     // said to a screen reader as results come and go; the notice is kept for what the guest did
     h('p', { className: 'g-sr', id: 'g-found', 'aria-live': 'polite' }),
-    results,
-    h('div', { id: 'g-basket' }));
+    results);
   let wait = 0;
   // typing waits a moment before asking; Enter asks at once. Either way the list answers the
   // keystroke straight away, with the outline of the rows to come.
   const ask = (delay: number) => {
     window.clearTimeout(wait);
     const query = input.value.trim();
+    clear.hidden = !input.value;
     searchError = '';
     if (query.length < 2) { searchSeq += 1; searching = false; found = []; foundFor = ''; drawResults(); return; }
     searching = true;
     drawResults();
     wait = window.setTimeout(() => void search(query), delay);
   };
-  input.addEventListener('input', () => ask(250));
-  input.addEventListener('keydown', (event) => { if ((event as KeyboardEvent).key === 'Enter') { event.preventDefault(); ask(0); } });
+  input.addEventListener('input', () => ask(200));
+  input.addEventListener('keydown', (event) => { if ((event as KeyboardEvent).key === 'Enter') { event.preventDefault(); ask(0); input.blur(); } });
   // on a phone the keyboard takes half the screen: bring the search to the top, so the results
-  // and their buttons sit between the box and the keyboard
+  // sit between the box and the keyboard
   input.addEventListener('focus', () => {
     if (!window.matchMedia?.('(pointer: coarse)').matches) return;
     const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -418,8 +483,6 @@ function searchPanel(): HTMLElement {
 /** Whether this song is already one of my requests that's waiting or coming up. */
 const asked = (song: Song) => Boolean(view?.my_requests.some((item) => item.song?.song_id === song.song_id && PENDING.includes(item.status)));
 
-const outlineRow = (index: number) => h('li', { className: 'g-skel', 'data-key': `skel-${index}`, 'aria-hidden': 'true' }, h('span', { className: 'g-song' }, h('i'), h('i')), h('i'));
-
 function chosen(song: Song): boolean {
   return basket.some((one) => one.song_id === song.song_id);
 }
@@ -429,77 +492,137 @@ function choose(song: Song): void {
   // taking a song out puts its reason away, unless it is a wait that still holds (the search row says it)
   if (chosen(song) && !waitingOn(song)) whyNot.delete(song.song_id);
   basket = chosen(song) ? basket.filter((one) => one.song_id !== song.song_id) : [...basket, song];
+  sent = null;
   drawResults();
-  drawBasket();
+  drawBar();
 }
 
-// Each match has one button: Choose puts it in the basket, Chosen takes it back out. Once the
-// basket holds as many as the room still allows, the rest can't be chosen.
+// A tap that can't add the song still answers: the row shakes its head and says why under itself.
+let told: { id: number; text: string; turn: number } | null = null;
+let toldTimer = 0;
+function tell(song: Song, text: string): void {
+  told = { id: song.song_id, text, turn: (told?.turn ?? 0) + 1 };
+  window.clearTimeout(toldTimer);
+  toldTimer = window.setTimeout(() => { told = null; drawResults(); }, 5000);
+  drawResults();
+}
+
+/** One tap on a song's row: add it, or take it back out, or say why it can't be added now. */
+function tap(song: Song): void {
+  if (sending) return;
+  const picked = chosen(song);
+  if (!picked && asked(song)) { tell(song, "It's already in your requests."); return; }
+  if (!picked && waitingOn(song)) { tell(song, whyWords(song)); return; }
+  if (!picked && basket.length >= leftNow()) {
+    tell(song, leftNow() <= 0 ? (view?.limit_text || "You can't ask for more songs right now.") : `You can ask for ${songsWord(leftNow())} right now. Take one out to swap it for this.`);
+    return;
+  }
+  told = null;
+  choose(song);
+}
+
+// Each match is one button, the whole row: a tap adds the song (the row tints, its tile fills with
+// a check, "Add" becomes "Added"), a second tap takes it out. A row that can't be added says why.
+function resultRow(song: Song): HTMLElement {
+  const picked = chosen(song);
+  const mine = !picked && asked(song);
+  const held = !picked && !mine && waitingOn(song);
+  const full = !picked && !mine && !held && basket.length >= leftNow();
+  const state = picked ? 'picked' : mine ? 'asked' : held ? 'held' : full ? 'full' : 'idle';
+  const why = told?.id === song.song_id ? told.text : held || (picked && whyNot.has(song.song_id)) ? whyWords(song) : '';
+  const words = picked ? 'Added' : mine ? 'Requested' : held ? 'Not now' : 'Add';
+  return h('li', { className: 'g-row', 'data-key': `found-${song.song_id}`, 'data-state': state, 'data-told': told?.id === song.song_id ? String(told.turn % 2) : undefined },
+    h('button', {
+      type: 'button', className: 'g-pick', 'aria-pressed': mine || held ? undefined : String(picked),
+      'aria-label': picked ? `Added: ${songLine(song)}. Press to remove` : mine ? `Requested: ${songLine(song)}` : `Add ${songLine(song)}`,
+      'aria-disabled': mine || held || full ? 'true' : undefined, 'aria-describedby': why ? `g-why-${song.song_id}` : undefined,
+      onclick: () => tap(song),
+    },
+    art(song, '', h('span', { className: 'g-art-check' }, icon('check'))),
+    songText(song),
+    h('span', { className: 'g-add' }, h('span', { className: 'g-add-pill' }, icon('plus'), icon('check'), words), picked ? h('span', { className: 'g-add-hint' }, 'Tap to remove') : null)),
+    why ? h('p', { className: waitingOn(song) || told?.id === song.song_id ? 'g-why' : 'g-why g-why-ready', id: `g-why-${song.song_id}`, role: 'status' }, why) : null);
+}
+
 function drawResults(): void {
   const results = document.getElementById('g-results');
-  if (!results) return;
+  if (!results || !view) return;
   if (searching) results.setAttribute('aria-busy', 'true'); else results.removeAttribute('aria-busy');
-  const full = basket.length >= leftNow();
   let rows: HTMLElement[] = [];
   let said = '';
   if (searchError) {
     // what went wrong, and one way on
     const again = () => { searchError = ''; searching = true; drawResults(); void search((document.getElementById('g-q') as HTMLInputElement).value.trim()); };
-    rows = [h('li', { className: 'g-empty', 'data-key': 'error' }, h('strong', {}, "The search didn't go through."), `${searchError} `, h('button', { type: 'button', className: 'g-link', onclick: again }, 'Try again'))];
+    rows = [h('li', { className: 'g-plain', 'data-key': 'error' }, empty('off', "The search didn't go through", searchError), h('button', { type: 'button', className: 'g-quiet g-small-button', onclick: again }, 'Try again'))];
     said = `The search didn't go through. ${searchError}`;
   } else if (found.length) {
-    rows = found.map((song) => {
-      // a song already asked for says so, and can't be chosen twice
-      if (asked(song) && !chosen(song)) {
-        return songItem(song, `found-${song.song_id}`, h('button', { type: 'button', className: 'g-quiet g-small-button', 'data-done': true, 'aria-disabled': 'true', 'aria-label': `Requested ${songLine(song)}` }, check(), 'Requested'));
-      }
-      const picked = chosen(song);
-      // a song that can't be asked for yet says why on its row, in place of Choose
-      if (!picked && waitingOn(song)) return songItem(song, `found-${song.song_id}`, h('p', { className: 'g-why' }, whyWords(song)));
-      return songItem(song, `found-${song.song_id}`, h('button', {
-        type: 'button', className: `${picked ? 'g-quiet' : 'g-primary'} g-small-button`, 'aria-pressed': String(picked),
-        'aria-label': `${picked ? 'Chosen, press to take out' : 'Choose'} ${songLine(song)}`,
-        disabled: !picked && full,
-        onclick: () => choose(song),
-      }, picked ? check() : null, picked ? 'Chosen' : 'Choose'));
-    });
+    rows = found.map(resultRow);
     said = searching ? '' : `${songsWord(found.length)} found.`;
   } else if (searching) {
-    rows = [0, 1, 2].map(outlineRow);
+    rows = [0, 1, 2, 3].map(outlineRow);
     said = 'Searching...';
   } else if (foundFor) {
-    rows = [h('li', { className: 'g-empty', 'data-key': 'empty' }, h('strong', {}, `No songs match "${foundFor}".`), "Check the spelling, or try the artist's name.")];
+    rows = [h('li', { className: 'g-plain', 'data-key': 'empty' }, empty('search', `No songs match "${foundFor}"`, "Check the spelling, or try the artist's name."))];
     said = `No songs match "${foundFor}".`;
   }
   patch(results, ...rows);
+  // under the box: how many songs can still be asked for, or the room's limit in its own words
   const hint = document.getElementById('g-hint');
-  if (hint) hint.hidden = rows.length > 0 || basket.length > 0;
+  if (hint) {
+    const left = leftNow();
+    const limited = left <= 0;
+    hint.className = limited ? 'g-hint g-limit' : 'g-hint';
+    if (limited) hint.setAttribute('role', 'status'); else hint.removeAttribute('role');
+    patch(hint, limited ? icon('clock') : null, h('span', {}, limited ? (view.limit_text || "You can't ask for more songs right now.") : rows.length ? (searching ? 'Searching...' : found.length ? `${songsWord(found.length)}. Tap one to add it.` : '') : view.requests_left === undefined ? "Find a song in the host's music and tap it to add it." : `Find a song in the host's music and tap it. You can ask for ${songsWord(left)}.`));
+  }
   const live = document.getElementById('g-found');
   if (live && live.textContent !== said) live.textContent = said;
 }
 
-function drawBasket(): void {
-  const target = document.getElementById('g-basket');
-  if (!target || !view) return;
+// The bar fixed to the bottom of the screen, above the on-screen keyboard: how many songs are
+// chosen (press it to see them and take any out), and Send. After sending it says "Sent" for a
+// moment. `sent` is that message; `listOpen` is whether the chosen songs are showing.
+let sent: { title: string; text: string } | null = null;
+let sentTimer = 0;
+let listOpen = false;
+
+function drawBar(): void {
+  const bar = document.getElementById('g-bar');
+  if (!bar || !view) return;
+  const count = view.guest_status === 'active' && view.requests_open ? basket.length : 0;
   const left = leftNow();
-  const room = left - basket.length;
+  const room = left - count;
   const words = left <= 0
     ? (view.limit_text || "You can't ask for more songs right now.")
-    : room > 0 ? `You can add ${room} more.` : "That's as many as you can ask for right now.";
-  patch(target,
-    basket.length ? h('ul', { className: 'g-list', 'data-key': 'chosen' }, ...basket.map((song) => songItem(song, `chosen-${song.song_id}`,
-      h('button', { type: 'button', className: 'g-quiet', 'aria-label': `Take out ${songLine(song)}`, onclick: () => choose(song) }, 'Take out'),
+    : room > 0 ? `You can add ${room} more` : "That's as many as you can ask for right now";
+  if (!count) listOpen = false;
+  patch(bar,
+    count && listOpen ? h('ul', { className: 'g-list g-chosen', id: 'g-chosen', 'data-key': 'chosen', 'aria-label': 'Chosen songs' }, ...basket.map((song) => h('li', { className: 'g-item', 'data-key': `chosen-${song.song_id}` },
+      art(song),
       // why it was not added last time, kept here until it is taken out or sent again
-      whyNot.has(song.song_id) ? h('p', { className: waitingOn(song) ? 'g-why' : 'g-why g-why-ready', role: 'status' }, whyWords(song)) : null))) : null,
-    // the count and Send stay in reach at the bottom of the screen, above the keyboard (guest.css)
-    h('div', { className: 'g-send', 'data-key': 'bar', 'data-on': basket.length > 0 },
-      h('p', { className: left <= 0 ? 'g-banner' : 'g-muted', 'data-key': 'left', role: left <= 0 ? 'status' : undefined },
-        basket.length ? `${songsWord(basket.length)} chosen. ` : '', words),
-      basket.length ? h('button', { type: 'button', className: 'g-primary', 'data-key': 'send', 'aria-busy': sending ? 'true' : undefined, disabled: sending || left <= 0 || basket.every(waitingOn), onclick: () => void sendBasket() },
-        sending ? 'Sending...' : basket.length === 1 ? 'Send request' : 'Send requests') : null));
-  // the notice floats above that bar, never over it
-  const bar = target.querySelector<HTMLElement>('.g-send');
-  document.documentElement.style.setProperty('--bar', `${basket.length && bar ? bar.offsetHeight : 0}px`);
+      songText(song, whyNot.has(song.song_id) ? h('span', { className: waitingOn(song) ? 'g-why' : 'g-why g-why-ready', role: 'status' }, whyWords(song)) : null),
+      h('button', { type: 'button', className: 'g-quiet g-small-button', 'aria-label': `Remove ${songLine(song)}`, onclick: () => choose(song) }, 'Remove')))) : null,
+    count ? h('div', { className: 'g-bar-row', 'data-key': 'row' },
+      h('button', { type: 'button', className: 'g-count', 'aria-expanded': String(listOpen), 'aria-controls': 'g-chosen', onclick: () => { listOpen = !listOpen; drawBar(); } },
+        // a new number is a new node, so it pops each time the count changes
+        h('span', { className: 'g-badge', 'data-key': `count-${count}` }, String(count)),
+        h('span', { className: 'g-count-text' }, h('strong', {}, count === 1 ? 'song chosen' : 'songs chosen'), h('span', { className: left <= 0 ? 'g-count-sub g-error' : 'g-count-sub' }, words)),
+        icon('up')),
+      h('button', { type: 'button', className: 'g-primary g-send', id: 'g-send', 'aria-busy': sending ? 'true' : undefined, disabled: sending || left <= 0 || basket.every(waitingOn), onclick: () => void sendBasket() },
+        sending ? 'Sending...' : count === 1 ? 'Send request' : 'Send requests'))
+    : sent ? h('div', { className: 'g-sent', 'data-key': 'sent', role: 'status' },
+      h('span', { className: 'g-tick', 'aria-hidden': 'true' }, icon('check')),
+      h('p', {}, h('strong', {}, sent.title), ' ', sent.text),
+      h('button', { type: 'button', className: 'g-quiet g-small-button', onclick: () => { document.getElementById('g-requests')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); done(); } }, 'View')) : null);
+  if (count || sent) bar.setAttribute('data-open', ''); else bar.removeAttribute('data-open');
+  // the page ends above the bar and the notice floats above it, never under it
+  document.documentElement.style.setProperty('--bar', `${count || sent ? bar.offsetHeight : 0}px`);
+}
+
+function done(): void {
+  window.clearTimeout(sentTimer);
+  sent = null;
+  drawBar();
 }
 
 async function sendBasket(): Promise<void> {
@@ -509,7 +632,7 @@ async function sendBasket(): Promise<void> {
   if (sending || !songs.length) return;
   const ticket = ++reads;
   sending = true;
-  drawBasket();
+  drawBar();
   try {
     const answer = await call<{ results: Sent[]; room: View }>(`${base()}/requests/batch`, { method: 'POST', body: JSON.stringify({ song_ids: songs.map((song) => song.song_id) }) });
     const added = answer.results.filter((one) => one.added);
@@ -523,17 +646,30 @@ async function sendBasket(): Promise<void> {
     }
     watchWaits();
     sending = false;
+    window.clearTimeout(sentTimer);
+    sent = added.length ? {
+      title: 'Sent.',
+      text: votes === added.length ? (votes === 1 ? 'Someone asked for it already, so it counts as your vote.' : 'They were asked for already, so they count as your votes.')
+        : `The host will add ${added.length === 1 ? 'it' : 'them'} to the mix.`,
+    } : null;
+    if (sent) sentTimer = window.setTimeout(done, 6000);
+    // everything went: the search is put away, so "Your requests" is what the guest sees next
+    if (added.length && !basket.length) {
+      const input = document.getElementById('g-q') as HTMLInputElement | null;
+      if (input) { input.value = ''; input.blur(); }
+      const clear = document.getElementById('g-clear');
+      if (clear) clear.hidden = true;
+      searchSeq += 1; searching = false; found = []; foundFor = '';
+    }
+    if (basket.length) listOpen = true;
     if (newer(ticket)) view = answer.room;
     draw();
-    say([
-      added.length ? `Sent ${songsWord(added.length)}.` : '',
-      votes ? `${songsWord(votes)} had been asked for already, so ${votes === 1 ? 'it counts' : 'they count'} as your vote.` : '',
-      refused.length === 1 ? "1 song wasn't added: the reason is under it." : refused.length ? `${songsWord(refused.length)} weren't added: the reason is under each one.` : '',
-    ].filter(Boolean).join(' '));
+    if (added.length && !basket.length) document.getElementById('g-requests')?.scrollIntoView?.({ block: 'nearest' });
+    if (refused.length) say(refused.length === 1 ? "1 song wasn't added. The reason is under it." : `${songsWord(refused.length)} weren't added. The reason is under each one.`);
   } catch (error) {
     sending = false;
-    drawBasket();
-    say((error as Error).message);
+    drawBar();
+    say(`Not sent. ${(error as Error).message}`);
     if ((error as ApiError).status === 401) void refresh();
   }
 }
@@ -570,7 +706,7 @@ async function nicknames(): Promise<void> {
         (event.currentTarget as HTMLElement).setAttribute('aria-busy', 'true');
         pick(name);
       } }, name))),
-      h('button', { type: 'button', className: 'g-quiet', onclick: () => { picking = false; close(); schedule(); } }, 'Keep my nickname'));
+      h('button', { type: 'button', className: 'g-quiet g-big', onclick: () => { picking = false; close(); schedule(); } }, `Keep ${view?.nickname ?? 'my nickname'}`));
     (root.querySelector('.g-choice') as HTMLElement | null)?.focus();
   } catch (error) {
     draw();
@@ -578,16 +714,16 @@ async function nicknames(): Promise<void> {
   }
 }
 
-// ADR-0422: the name line says which nickname the server has, and whether a change is on its way.
+// The nickname is a button in the room's header: press it to pick another. ADR-0422: with
+// rooms.nickname_confirm it also says whether a change is on its way or saved.
 function nameLine(v: View): HTMLElement {
-  const change = h('button', { type: 'button', className: 'g-link', ...working(busy.has('nicknames')), onclick: () => void nicknames(), disabled: nameSave?.state === 'saving' }, 'Change nickname');
-  if (nameSave?.state === 'saving') {
-    return h('p', { className: 'g-muted', 'aria-busy': 'true', 'data-nickname': 'saving' }, `You're ${v.nickname}. Saving ${nameSave.name}... `, change);
-  }
-  if (nameSave?.state === 'saved' && nameSave.name === v.nickname) {
-    return h('p', { className: 'g-muted', 'data-nickname': 'saved' }, `You're ${v.nickname}. Saved. `, change);
-  }
-  return h('p', { className: 'g-muted', 'data-nickname': nameSave?.state === 'failed' ? 'failed' : 'confirmed' }, `You're ${v.nickname}. `, change);
+  const state = !v.nickname_confirm ? undefined : nameSave?.state === 'saving' ? 'saving' : nameSave?.state === 'saved' && nameSave.name === v.nickname ? 'saved' : nameSave?.state === 'failed' ? 'failed' : 'confirmed';
+  const saving = state === 'saving';
+  return h('button', {
+    type: 'button', className: 'g-name', 'data-nickname': state, ...working(busy.has('nicknames') || saving), disabled: saving,
+    'aria-label': saving ? `You're ${v.nickname}. Saving ${nameSave?.name}...` : `You're ${v.nickname}${state === 'saved' ? '. Saved' : ''}. Change nickname`,
+    onclick: () => void nicknames(),
+  }, state === 'saved' ? icon('check') : icon('person'), h('span', { className: 'g-name-text' }, saving ? `Saving ${nameSave?.name}...` : v.nickname), saving ? null : h('span', { className: 'g-name-change' }, state === 'saved' ? 'Saved' : 'Change'));
 }
 
 async function saveNickname(name: string): Promise<void> {
@@ -624,6 +760,7 @@ async function leave(button: HTMLElement): Promise<void> {
   busy.add('leave');
   button.setAttribute('aria-busy', 'true');
   button.setAttribute('aria-disabled', 'true');
+  button.textContent = 'Leaving...';
   try {
     await call(`${base()}/leave`, { method: 'POST' });
   } catch { /* leaving locally is enough if the server can't be reached */ }
@@ -633,7 +770,10 @@ async function leave(button: HTMLElement): Promise<void> {
   view = null;
   basket = [];
   found = [];
-  screen('You left the room', 'The host still sees the songs you asked for.', h('button', { type: 'button', className: 'g-primary', onclick: () => joinScreen() }, 'Join again'));
+  sent = null;
+  connection('ok');
+  say('');
+  screen('You left the room', 'The host still sees the songs you asked for.', h('button', { type: 'button', className: 'g-primary g-big', onclick: () => joinScreen() }, 'Join again'));
 }
 
 // The on-screen keyboard covers the bottom of the page without resizing it. Its height goes to the
@@ -651,5 +791,7 @@ if (new URLSearchParams(location.search).get('at') === 'venue') {
 } else {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && roomId) void refresh(); });
   window.addEventListener('online', () => { if (roomId) void refresh(); });
+  // the phone says it lost its signal: say so at once, without waiting for the next read to fail
+  window.addEventListener('offline', () => { if (roomId && view) { failures = Math.max(1, failures); connection('down'); } });
   void refresh();
 }

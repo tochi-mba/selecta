@@ -52,6 +52,8 @@ export type ViewProps = {
   /** What a shell puts straight under Listen's notice: the control the notice asks for, such as
    * the browser's sound check while nobody has confirmed hearing this device. */
   noticeAction?: ReactNode;
+  /** What a shell lists under Up Next on Listen: the songs after the next one (browser-first Cloud). */
+  listenQueue?: ReactNode;
   /** Whether this person has made a mix before, from somewhere that outlives this browser (browser-first
    * Cloud: the account's saved recipes). Local mode leaves it out and this browser's own note decides. */
   startedAMix?: boolean;

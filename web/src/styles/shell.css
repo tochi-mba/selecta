@@ -742,3 +742,6 @@ dl.keys dd { overflow-wrap: anywhere; }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs a { flex: 0 0 auto; white-space: nowrap; }
 }
+
+/* The Cloud frame's own look (side bar groups, account menu, top bar, phone bar, More sheet, mini
+   player, notices and footer) is styles/cloud-shell.css. */

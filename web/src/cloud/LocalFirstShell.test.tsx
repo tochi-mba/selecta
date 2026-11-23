@@ -96,9 +96,10 @@ describe('which shell an account gets', () => {
     const main = await screen.findByRole('navigation', { name: 'Main' });
     for (const label of ['Listen', 'Make a Mix', 'My Mixes', 'Library']) expect(main.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Cloud workspace' })).toBeNull();
-    // the browser Workspace (cloud.workspace) is linked from the rail, beside More
+    // the browser Workspace (cloud.workspace) is linked from the rail; More is for phones only
     expect(main.querySelector('a[aria-label="Workspace"]')).toHaveAttribute('href', '/workshop');
-    expect(main.querySelector('[aria-label="More"]')).not.toBeNull();
+    expect(main.querySelector('button.nav-more-mobile')).not.toBeNull();
+    expect(main.querySelector('button[aria-label="More"]')).toBeNull();
   });
 
   it('keeps Workspace out of the rail with cloud.workspace off', async () => {
@@ -108,7 +109,25 @@ describe('which shell an account gets', () => {
     render(<CloudApp />);
     const main = await screen.findByRole('navigation', { name: 'Main' });
     expect(main.querySelector('[aria-label="Workspace"]')).toBeNull();
-    expect(main.querySelector('[aria-label="More"]')).not.toBeNull();
+    expect(main.querySelector('button.nav-more-mobile')).not.toBeNull();
+  });
+});
+
+describe('the side bar account menu', () => {
+  it('lists the account pages and Sign out at the foot of the side bar', async () => {
+    account = withExperience(true, false, true);
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/library');
+    render(<CloudApp />);
+    const main = await screen.findByRole('navigation', { name: 'Main' });
+    const opener = within(main).getByRole('button', { name: /^Account: / });
+    expect(opener).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(opener);
+    const menu = screen.getByRole('menu', { name: 'Account' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent?.trim())).toEqual(['Account', 'Plan & billing', 'Sign out']);
+    expect(within(menu).getByRole('menuitem', { name: 'Plan & billing' })).toHaveAttribute('href', '/account/billing');
+    fireEvent.keyDown(menu, { key: 'Escape' });
+    expect(screen.queryByRole('menu', { name: 'Account' })).toBeNull();
   });
 });
 
@@ -119,7 +138,8 @@ describe('Workspace in the local-first shell (cloud.workspace)', () => {
   });
   const openMore = async () => {
     const main = await screen.findByRole('navigation', { name: 'Main' });
-    fireEvent.click(main.querySelector('button[aria-label="More"]')!);
+    // the phone's More (a computer lists these places in the side bar and the account menu)
+    fireEvent.click(main.querySelector('button.nav-more-mobile')!);
     return screen.findByRole('navigation', { name: 'More' });
   };
 

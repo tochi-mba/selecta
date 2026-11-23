@@ -121,6 +121,8 @@
 .carry-on.prominent { padding: var(--space-5); border-color: var(--border-strong); box-shadow: inset var(--marker) 0 0 var(--playing); }
 .carry-on.prominent h2 { font: var(--type-section); font-size: var(--text-xl); margin-block: var(--space-1); }
 
+/* A cover tile (views/CoverArt.tsx) is drawn only by the Cloud sheet, cloud/cloudMusic.css */
+.cover-art { display: none; }
 /* Listen: who and what first, what's coming beside it */
 .now { outline: none; }
 .now:focus { outline: none; }

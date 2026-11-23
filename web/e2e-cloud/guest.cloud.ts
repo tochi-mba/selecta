@@ -52,14 +52,18 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await page.getByRole('button', { name: 'Join the room' }).click();
   await expect(page.getByRole('heading', { name: 'Garden party' })).toBeVisible({ timeout: 30_000 });
   // No speaker device is playing yet, and the page says so.
-  await expect(page.getByText("The music's paused")).toBeVisible();
+  await expect(page.getByText('Nothing is playing right now. You can still ask for songs')).toBeVisible();
   // The host's identity never reaches a guest.
   await expect(page.locator('body')).not.toContainText('alice@example.test');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 
+  // Songs are chosen into a basket, then sent together.
   await page.getByLabel("Search the host's songs").fill('Song 12');
-  await page.getByRole('button', { name: 'Request Song 12 - Artist 5' }).click();
-  await expect(page.getByRole('status')).toContainText('Sent: Song 12.', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Choose Song 12 - Artist 5' }).click();
+  await expect(page.getByRole('button', { name: 'Chosen, press to take out Song 12 - Artist 5' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Send request', exact: true }).click();
+  await expect(page.locator('#g-notice')).toContainText('Sent 1 song.', { timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Requested Song 12 - Artist 5' })).toBeVisible();
   const mine = page.getByRole('region', { name: 'My requests' });
   await expect(mine).toContainText('Song 12');
   await expect(mine).toContainText('Accepted');
@@ -80,15 +84,17 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await second.page.waitForTimeout(500);
   await expect(unvote).toBeFocused();
   await second.page.getByLabel("Search the host's songs").fill('Song 12');
-  await second.page.getByRole('button', { name: 'Request Song 12 - Artist 5' }).click();
-  await expect(second.page.getByRole('status')).toContainText(/already|vote/, { timeout: 30_000 });
+  await second.page.getByRole('button', { name: 'Choose Song 12 - Artist 5' }).click();
+  await second.page.getByRole('button', { name: 'Send request', exact: true }).click();
+  await expect(second.page.locator('#g-notice')).toContainText('counts as your vote', { timeout: 30_000 });
 
   // The host asks to approve each request and passes on one: the guest is told honestly.
-  await host.getByLabel('Requests', { exact: true }).selectOption('approve');
-  await expect(host.locator('.room-said')).toHaveText('Saved.');
+  await host.getByLabel('When a guest asks for a song').selectOption('approve');
+  await expect(host.locator('.room-saved', { hasText: 'Saved' })).toBeVisible();
   await second.page.getByLabel("Search the host's songs").fill('Song 20');
-  await second.page.getByRole('button', { name: 'Request Song 20 - Artist 6' }).click();
-  await expect(second.page.getByRole('region', { name: 'My requests' })).toContainText('Sent', { timeout: 30_000 });
+  await second.page.getByRole('button', { name: 'Choose Song 20 - Artist 6' }).click();
+  await second.page.getByRole('button', { name: 'Send request', exact: true }).click();
+  await expect(second.page.getByRole('region', { name: 'My requests' })).toContainText('Waiting for the host to approve it', { timeout: 30_000 });
   await host.getByRole('button', { name: 'Pass on Song 20 - Artist 6' }).click();
   await expect(second.page.getByRole('region', { name: 'My requests' })).toContainText('The host passed on this one', { timeout: 30_000 });
 
@@ -96,9 +102,9 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await second.page.getByRole('button', { name: 'Leave room' }).click();
   await expect(second.page.getByRole('heading', { name: 'You left the room' })).toBeVisible({ timeout: 30_000 });
 
-  // The host ends the room and the first guest's page says so by itself.
-  await host.getByRole('button', { name: 'End room' }).click();
-  await host.getByRole('button', { name: 'End room' }).click();
+  // The host closes the room and the first guest's page says so by itself.
+  await host.getByRole('button', { name: 'Close room' }).click();
+  await host.getByRole('alertdialog', { name: 'Close Garden party?' }).getByRole('button', { name: 'Close room' }).click();
   await expect(page.getByRole('heading', { name: 'This room has ended' })).toBeVisible({ timeout: 40_000 });
 
   await Promise.all([context.close(), second.context.close(), hostContext.close()]);

@@ -15,6 +15,8 @@ context appears in a file that is not registered there with the same count.
 | Session speaker | `web/src/devices/PlayingBar.tsx` (driven by `devices/audioSpeaker.ts`, `devices/usePlaybackDevice.ts`) | `<audio preload="auto">` | The "Playing on ..." bar; holds the playback lease while it is the speaker | Lives on the Listen page only; leaving Listen unmounts it, stops the sound and lets the lease lapse | Lives in the dock from the first Listen visit; keeps the lease and the sound across pages; focus `device`; media failures recover (`cloud/recoveringSpeaker.ts`) |
 | Device check | `web/src/devices/DeviceCheck.tsx` | `AudioContext` | Settings > Device check | Reads the sample rate, closes the context | Unchanged; silent, never takes focus |
 | Venue codec probe | `web/src/cloud/venue/probeSuite.ts` | `new Audio()` | Venue posture check (`cloud.venue_tablet`); asks `canPlayType` per codec | Not present | Detached, never given a source or played; silent, never takes focus |
+| Harmonic matches preview | `web/src/cloud/BrowserHarmonicMatches.tsx` | `<audio preload="none">` | Library > Harmonic matches; plays the two excerpts of a match on a press, then stops | Not present | Unchanged; one short preview at a time |
+| Diagnostics capability check | `web/src/cloud/CloudWorkspace.tsx` | `AudioContext` | Workspace > Diagnostics; made inside the press and closed at once | Not present | Unchanged; silent, never takes focus |
 
 Not Cloud media contexts, listed so nobody adds them by mistake:
 

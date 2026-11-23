@@ -1,27 +1,32 @@
-import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { cloneElement, isValidElement, ReactElement, ReactNode, Ref, useEffect, useRef, useState } from 'react';
 import type { Status as AppStatus } from '../api';
-import { FLAG_IDS, flagOn, useFlags } from '../flags';
+import { useFlags } from '../flags';
 import { forgetFolder, recallFolder, storageSpace, type MediaStore, type StorageSpace, type StoredFolderHandle } from '../media';
-import { ENGINE_VERSION, probeCapability, type ProbeResult } from '../engine/probe';
 import type { WorkshopTab } from '../router';
-import { Action, Skeleton, Status, type StatusKind } from '../ui/controls';
+import { PageLink } from '../shell/PageLink';
+import { Action, Skeleton, Status } from '../ui/controls';
+import { Icon, type IconName } from '../ui/Icon';
 import { LinkTabs } from '../ui/primitives';
 import { InterfaceChoices } from '../views/InterfaceChoices';
+import { BrowserDiagnostics, type PlaybackFacts } from './BrowserDiagnostics';
 import { DeviceDataCard } from './DeviceDataCard';
-import { summaryWords } from './ConnectMusic';
+import { summaryWords, type ConnectMusicHandle } from './ConnectMusic';
+import { checkedWords, formatCount } from './ImportStatus';
 import { useImportSession } from './importSession';
+import { useResumeOffer } from './importResume';
 import { bytes } from './api';
 import { OnlyOnYourComputer } from './LocalFirstEmpty';
-import { readPersistState, type PersistState } from './persistence';
+import { readPersistState, subscribePersist, type PersistState } from './persistence';
 import { StorageCard } from './StorageCard';
+import './libraryWorkspace.css';
 
 /** Workspace in browser-first Cloud (`cloud.workspace`).
  *
  * Local mode's Workspace is this computer's server: analysis, folders on disk, learning and the
  * server's diagnostics. A browser has none of that, so this page keeps only the tabs it can fill
- * truthfully: what the library holds and what this browser is doing in the background, how music
- * is connected here, this browser's storage, and what this browser can do. Analysis and Learning
- * are not tabs here at all; their addresses say they belong to SelectaDJ on a computer.
+ * truthfully: what the library holds and what needs the member, how music is connected here, this
+ * browser's storage, and what this browser can do. Analysis and Learning are not tabs here at all;
+ * their addresses say they belong to SelectaDJ on a computer.
  */
 
 const TABS: { tab: WorkshopTab; label: string; path: string }[] = [
@@ -31,8 +36,20 @@ const TABS: { tab: WorkshopTab; label: string; path: string }[] = [
   { tab: 'diagnostics', label: 'Diagnostics', path: '/workshop/diagnostics' },
 ];
 
+const SUBS: Partial<Record<WorkshopTab, string>> = {
+  overview: 'Your music at a glance, and anything that needs you.',
+  sources: 'Where your music comes from on this device.',
+  storage: 'What SelectaDJ keeps in this browser.',
+  diagnostics: 'Whether this browser can do everything SelectaDJ needs.',
+};
+
 export type FileCheck = { running: boolean; at: number | null };
-export type PlaybackFacts = { refusal: string | null; speaker: string | null; phase: string };
+export type { PlaybackFacts };
+
+/** The shell's Connect music, drawn here in another form and reachable from this page's buttons. */
+function connectAs(connect: ReactNode, variant: 'card' | 'status', ref: Ref<ConnectMusicHandle>): ReactNode {
+  return isValidElement(connect) ? cloneElement(connect as ReactElement<{ variant?: string; ref?: Ref<ConnectMusicHandle> }>, { variant, ref }) : connect;
+}
 
 export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, stems, stemsShown, measuringKeys, savedMixes, fileCheck, playback }: {
   tab: WorkshopTab;
@@ -65,28 +82,48 @@ export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, s
   }
   const here = TABS.find((item) => item.tab === tab)?.path ?? '/workshop';
   return (
-    <main className="page browse workspace" id="main">
-      <h1 className="display small">Workspace</h1>
+    <main className="page browse workspace lw-workspace" id="main">
+      <header className="page-header">
+        <div className="page-header-text">
+          <h1 className="display small">Workspace</h1>
+          <p className="page-lead">{SUBS[tab]}</p>
+        </div>
+        {tab !== 'sources' && <div className="page-header-actions"><PageLink to="/workshop/sources" className={`button${tab === 'overview' ? ' primary' : ''}`}><Icon name="plus" size="toolbar" />Connect music</PageLink></div>}
+      </header>
       <LinkTabs label="Workspace" items={TABS} current={here} />
-      {tab === 'overview' && <Overview status={status} workspaceId={workspaceId} savedMixes={savedMixes} fileCheck={fileCheck} stemsShown={stemsShown} measuringKeys={measuringKeys} />}
-      {tab === 'sources' && <>{connect}<RememberedFolder workspaceId={workspaceId} /></>}
+      {tab === 'overview' && <Overview status={status} workspaceId={workspaceId} connect={connect} degraded={degraded} savedMixes={savedMixes} fileCheck={fileCheck} stemsShown={stemsShown} measuringKeys={measuringKeys} />}
+      {tab === 'sources' && <Sources status={status} workspaceId={workspaceId} connect={connect} />}
       {tab === 'storage' && (
-        <>
+        <div className="lw-stack">
           <StorageCard degraded={degraded} />
           {stems}
           {on('cloud.local_media') && <DeviceDataCard workspaceId={workspaceId} onCleared={() => window.location.reload()} />}
-        </>
+        </div>
       )}
-      {tab === 'diagnostics' && <BrowserDiagnostics openStore={openStore} playback={playback} />}
+      {tab === 'diagnostics' && <div className="lw-stack"><BrowserDiagnostics openStore={openStore} playback={playback} /></div>}
     </main>
   );
 }
 
 const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-function Overview({ status, workspaceId, savedMixes, fileCheck, stemsShown, measuringKeys }: {
+function Tile({ to, label, value, detail }: { to: string; label: string; value: ReactNode; detail?: string }) {
+  return (
+    <PageLink to={to} className="lw-tile">
+      <span className="lw-tile-label">{label}</span>
+      <strong>{value ?? <i className="lw-tile-wait" aria-label="Loading" />}</strong>
+      <span className="lw-tile-detail">{detail}</span>
+    </PageLink>
+  );
+}
+
+type Need = { key: string; icon: IconName; title: string; words: string; action: ReactNode };
+
+function Overview({ status, workspaceId, connect, degraded, savedMixes, fileCheck, stemsShown, measuringKeys }: {
   status: AppStatus;
   workspaceId: string;
+  connect: ReactNode;
+  degraded: boolean;
   savedMixes: number | null;
   fileCheck: FileCheck;
   stemsShown: boolean;
@@ -94,199 +131,157 @@ function Overview({ status, workspaceId, savedMixes, fileCheck, stemsShown, meas
 }) {
   const { counts } = status;
   const importing = useImportSession(workspaceId);
-  const checked = importing.registered + importing.failures.length;
+  const interrupted = useResumeOffer(workspaceId);
+  const handle = useRef<ConnectMusicHandle>(null);
+  const [space, setSpace] = useState<StorageSpace | null>(null);
+  const [persist, setPersist] = useState<PersistState | null>(null);
+  useEffect(() => {
+    let live = true;
+    void storageSpace().then((found) => { if (live) setSpace(found); }, () => undefined);
+    void readPersistState().then((found) => { if (live) setPersist(found); }, () => undefined);
+    const stop = subscribePersist((answer) => { if (live) setPersist(answer); });
+    return () => { live = false; stop(); };
+  }, []);
+  const songs = counts.music ?? 0;
+  const playable = counts.ready ?? 0;
+  const missing = counts.missing ?? 0;
+  const running = importing.phase === 'running';
+
+  const needs: Need[] = [];
+  if (songs === 0 && !running) {
+    needs.push({ key: 'empty', icon: 'music', title: 'Add your music', words: 'Choose the folder your songs are in. Your files stay on this device.', action: <button type="button" className="primary" onClick={() => handle.current?.chooseFolder()}>Choose a folder</button> });
+  } else if (playable < songs - missing && !running && !interrupted) {
+    needs.push({
+      key: 'choose', icon: 'folder',
+      title: playable === 0 ? 'Your songs are not open in this browser yet' : `${formatCount(songs - missing - playable)} songs are not open in this browser`,
+      words: 'Choose your folder again to play them here. Songs on your other devices stay listed.',
+      action: <button type="button" onClick={() => handle.current?.chooseFolder()}>Choose your folder again</button>,
+    });
+  }
+  if (missing > 0) {
+    needs.push({ key: 'missing', icon: 'warning', title: `${formatCount(missing)} ${missing === 1 ? 'song is' : 'songs are'} missing from every device`, words: 'Connect the folder they are in to bring them back.', action: <PageLink to="/library?show=attention" className="button">Show them</PageLink> });
+  }
+  if (degraded) {
+    needs.push({ key: 'degraded', icon: 'warning', title: 'This browser is not keeping your song list', words: 'You will need to choose your songs again next visit. A private window often causes this.', action: <PageLink to="/workshop/diagnostics" className="button">See why</PageLink> });
+  } else if (songs > 0 && (persist === 'not_granted' || persist === 'refused')) {
+    needs.push({ key: 'persist', icon: 'lock', title: 'The browser may clear SelectaDJ’s details', words: 'If this device runs short of space. Your music files are never affected.', action: <PageLink to="/workshop/storage" className="button">Review storage</PageLink> });
+  }
+
+  const activity: ReactNode[] = [];
+  if ((importing.phase === 'finished' || importing.phase === 'paused') && importing.summary) {
+    activity.push(<Status key="import" kind={importing.phase === 'paused' ? 'paused' : 'ready'}>{`Last added: ${summaryWords(importing.summary)}`}</Status>);
+  }
+  if (running) activity.push(<Status key="running" kind="working">{`Adding your music: ${checkedWords(importing)}.`}</Status>);
+  activity.push(fileCheck.running
+    ? <Status key="check" kind="working">Checking which songs can play here.</Status>
+    : fileCheck.at
+      ? <Status key="check" kind="ready">{`Songs checked at ${clock(fileCheck.at)}.`}</Status>
+      : <Status key="check" kind="queued">Songs not checked yet this visit.</Status>);
+  if (measuringKeys) activity.push(<Status key="keys" kind="working">Measuring song keys for Harmonic matches.</Status>);
+
   return (
-    <>
-      <div className="metrics">
-        <div><strong>{counts.music ?? 0}</strong><span>songs in your library</span></div>
-        <div><strong>{counts.ready ?? 0}</strong><span>can play in this browser</span></div>
-        {(counts.missing ?? 0) > 0 && <div><strong>{counts.missing}</strong><span>missing from every device right now</span></div>}
-        <div><strong>{savedMixes ?? '…'}</strong><span>{savedMixes === 1 ? 'saved mix' : 'saved mixes'}</span></div>
+    <div className="lw-stack">
+      <div className="lw-tiles">
+        <Tile to="/library" label="Songs" value={formatCount(songs)} detail="in your library" />
+        <Tile to="/library?show=ready" label="Playable here" value={formatCount(playable)} detail={songs ? `of ${formatCount(songs)} in this browser` : 'in this browser'} />
+        <Tile to="/workshop/storage" label="Storage used" value={space === null ? null : space.supported ? bytes(space.usage ?? 0) : 'Not known'} detail={space?.supported ? `of ${bytes(space.quota ?? 0)} allowed` : 'in this browser'} />
+        <Tile to="/mixes/mine" label="Saved mixes" value={savedMixes === null ? null : formatCount(savedMixes)} detail="in My Mixes" />
       </div>
-      <section className="panel stack" aria-labelledby="cloud-background-title">
-        <h2 id="cloud-background-title">In the background</h2>
-        <p className="hint">What this browser is doing for SelectaDJ while this page is open. It stops when the page closes.</p>
-        <ul className="diagnostic-facts">
-          {importing.phase === 'running' && (
-            <li><Status kind="working">{`Connecting music: ${checked} of ${importing.total ?? '…'} files checked so far.`}</Status></li>
+      {/* progress, an interrupted import and results show here too, and own the pickers */}
+      {connectAs(connect, 'status', handle)}
+      <div className="lw-columns">
+        <section className="ui-card" aria-labelledby="cloud-needs-title">
+          <h2 className="section-title" id="cloud-needs-title">Needs attention</h2>
+          {needs.length === 0 ? (
+            <p className="lw-clear"><span className="lw-clear-mark" aria-hidden="true"><Icon name="check" size="toolbar" /></span>Nothing needs you. Your music is ready.</p>
+          ) : (
+            <ul className="lw-needs">
+              {needs.map((need) => (
+                <li key={need.key}>
+                  <span className="lw-need-mark" aria-hidden="true"><Icon name={need.icon} size="toolbar" /></span>
+                  <div><b>{need.title}</b><span>{need.words}</span></div>
+                  {need.action}
+                </li>
+              ))}
+            </ul>
           )}
-          {(importing.phase === 'finished' || importing.phase === 'paused') && importing.summary && (
-            <li><Status kind={importing.phase === 'paused' ? 'paused' : 'ready'}>{`Last import: ${summaryWords(importing.summary)}`}</Status></li>
-          )}
-          {importing.phase === 'failed' && <li><Status kind="failed">{importing.error || 'The last import stopped.'}</Status></li>}
-          {importing.phase === 'idle' && <li><Status kind="ready">No music is being connected right now.</Status></li>}
-          <li>
-            {fileCheck.running
-              ? <Status kind="working">Checking which connected songs this browser can still open.</Status>
-              : fileCheck.at
-                ? <Status kind="ready">{`Checked which connected songs this browser can open at ${clock(fileCheck.at)}. It checks again about twice a day while SelectaDJ is open.`}</Status>
-                : <Status kind="queued">The check of which connected songs this browser can open has not finished yet.</Status>}
-          </li>
-          {measuringKeys && <li><Status kind="working">For Harmonic matches, this browser measures each song’s key from its file here, one song at a time, and more slowly while a mix plays.</Status></li>}
-          {stemsShown && <li><Status kind="planned">Stem splitting for this browser is under Storage.</Status></li>}
-        </ul>
-      </section>
+        </section>
+        <section className="ui-card" aria-labelledby="cloud-background-title">
+          <h2 className="section-title" id="cloud-background-title">Activity</h2>
+          <ul className="lw-activity diagnostic-facts">
+            {activity.map((line, index) => <li key={index}>{line}</li>)}
+          </ul>
+          {stemsShown && <p className="hint">Stem splitting is under <PageLink to="/workshop/storage">Storage</PageLink>.</p>}
+        </section>
+      </div>
       <InterfaceChoices classicNav={false} />
-      <section className="panel stack about-app" aria-labelledby="about-app-title">
-        <h2 id="about-app-title">About</h2>
-        <p className="hint">SelectaDJ is a REX Technologies product.</p>
-      </section>
-    </>
+      <p className="hint about-app lw-about">SelectaDJ is a REX Technologies product.</p>
+    </div>
   );
 }
 
-/** The folder this browser remembers for carrying on an interrupted import. */
-function RememberedFolder({ workspaceId }: { workspaceId: string }) {
+/** Where music comes from in this browser: the way to add more, the folder this browser remembers,
+ * and how much of the library is open here. */
+function Sources({ status, workspaceId, connect }: { status: AppStatus; workspaceId: string; connect: ReactNode }) {
+  const handle = useRef<ConnectMusicHandle>(null);
   const [folder, setFolder] = useState<StoredFolderHandle | null | undefined>(undefined);
   const [access, setAccess] = useState<string | null>(null);
+  const live = useImportSession(workspaceId);
+  // a folder chosen on this page is remembered straight away, so the list reads again as an import starts and ends
   useEffect(() => {
-    let live = true;
+    let current = true;
     void recallFolder(workspaceId).then(async (found) => {
-      if (!live) return;
+      if (!current) return;
       setFolder(found ?? null);
       try {
         const state = found?.queryPermission ? await found.queryPermission({ mode: 'read' }) : null;
-        if (live) setAccess(state);
+        if (current) setAccess(state);
       } catch { /* the browser would not say; nothing is claimed */ }
-    }, () => { if (live) setFolder(null); });
-    return () => { live = false; };
-  }, [workspaceId]);
-  if (folder === undefined) return null;
+    }, () => { if (current) setFolder(null); });
+    return () => { current = false; };
+  }, [workspaceId, live.phase]);
+  const songs = status.counts.music ?? 0;
+  const playable = status.counts.ready ?? 0;
   return (
-    <section className="panel stack" aria-labelledby="remembered-folder-title">
-      <h2 id="remembered-folder-title">Remembered folder</h2>
-      {folder ? (
-        <>
-          <p>
-            {`This browser remembers ${folder.name}, the last folder you chose, so an import that stops part way can carry on.`}
-            {access === 'granted' ? ' It may read it now.' : access ? ' It will ask your permission again before reading it.' : ''}
-          </p>
-          <p className="hint">To add new songs from it, choose the folder again above. Forgetting it removes nothing from your library.</p>
-          <div className="row wrap">
-            <Action run={async () => { await forgetFolder(workspaceId); setFolder(null); }}>Forget this folder</Action>
-          </div>
-        </>
-      ) : (
-        <p className="hint">No folder is remembered in this browser. When you choose a folder above, it is remembered here so an interrupted import can carry on.</p>
-      )}
-    </section>
-  );
-}
-
-type Fact = { key: string; kind: StatusKind; words: string };
-type Gathered = {
-  facts: Fact[];
-  summary: Record<string, unknown>;
-};
-
-const yes = (ok: boolean): StatusKind => (ok ? 'ready' : 'unavailable');
-
-async function opfsWorks(): Promise<boolean | null> {
-  const storage = typeof navigator === 'undefined' ? undefined : navigator.storage as (StorageManager & { getDirectory?: () => Promise<unknown> }) | undefined;
-  if (!storage?.getDirectory) return null;
-  try { await storage.getDirectory(); return true; } catch { return false; }
-}
-
-async function gather(openStore: () => Promise<MediaStore>, playback: PlaybackFacts, probe: ProbeResult | null): Promise<Gathered> {
-  const hasAudio = typeof AudioContext !== 'undefined';
-  // `in` on the prototype never calls the accessor, so it cannot throw "Illegal invocation"
-  const hasWorklet = hasAudio && 'audioWorklet' in AudioContext.prototype;
-  const folderPicker = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
-  const isolated = typeof window !== 'undefined' && window.crossOriginIsolated === true;
-  const online = typeof navigator === 'undefined' ? null : navigator.onLine;
-  const [space, persist, opfs, index] = await Promise.all([
-    storageSpace().catch((): StorageSpace => ({ supported: false, reason: 'The browser would not say.' })),
-    readPersistState().catch((): PersistState => 'unsupported'),
-    opfsWorks(),
-    openStore().then((opened) => ({ opened: true, degraded: opened.degraded })).catch(() => ({ opened: false, degraded: true })),
-  ]);
-  const off = FLAG_IDS.filter((id) => !flagOn(id));
-  const facts: Fact[] = [
-    { key: 'audio', kind: yes(hasAudio && hasWorklet), words: hasAudio && hasWorklet ? 'This browser has Web Audio with AudioWorklet, which SelectaDJ mixes with.' : hasAudio ? 'This browser has Web Audio but no AudioWorklet, so it cannot mix here.' : 'This browser has no Web Audio, so it cannot play mixes here.' },
-    probe
-      ? (probe.ok
-        ? { key: 'probe', kind: 'ready', words: `The audio check ran at ${probe.sampleRate} Hz with ${probe.schedulingMisses} scheduling ${probe.schedulingMisses === 1 ? 'gap' : 'gaps'} in ${probe.blocks} blocks. This shows audio runs here, not that your speakers are on.` }
-        : { key: 'probe', kind: 'failed', words: `The audio check did not pass: ${probe.reason}` })
-      : { key: 'probe', kind: 'planned', words: 'The audio check has not run yet in this visit.' },
-    playback.refusal
-      ? { key: 'playback', kind: 'blocked', words: `Playing here was refused: ${playback.refusal}` }
-      : { key: 'playback', kind: 'ready', words: playback.speaker === 'elsewhere' ? 'Another device is the speaker; this browser is controlling it.' : playback.speaker === 'here' ? `This browser is the speaker (${playback.phase}).` : 'No device is playing right now.' },
-    { key: 'index', kind: index.opened && !index.degraded ? 'ready' : 'warning', words: index.opened && !index.degraded ? 'The list of connected songs is kept in this browser (IndexedDB).' : 'This browser is not keeping the list of connected songs, so they need connecting again next visit.' },
-    { key: 'opfs', kind: opfs === null ? 'unavailable' : yes(opfs), words: opfs === null ? 'This browser has no private file storage (OPFS).' : opfs ? 'Private file storage (OPFS) opens.' : 'Private file storage (OPFS) did not open.' },
-    { key: 'persist', kind: persist === 'granted' ? 'ready' : 'warning', words: persist === 'granted' ? 'The browser has agreed to keep SelectaDJ’s details on this device.' : 'The browser may clear SelectaDJ’s details if the device runs short of space.' },
-    { key: 'space', kind: space.supported ? 'ready' : 'unavailable', words: space.supported ? `Browser storage in use: ${bytes(space.usage ?? 0)} of ${bytes(space.quota ?? 0)} allowed.` : space.reason ?? 'The browser does not say how much storage SelectaDJ may use.' },
-    { key: 'folders', kind: yes(folderPicker), words: folderPicker ? 'Folders can be chosen and remembered here.' : 'Folders cannot be remembered here; songs are chosen each visit.' },
-    { key: 'online', kind: online === false ? 'warning' : 'ready', words: online === false ? 'This browser says it is offline.' : 'This browser says it is online.' },
-  ];
-  const summary = {
-    engine: ENGINE_VERSION,
-    web_audio: hasAudio,
-    audio_worklet: hasWorklet,
-    audio_check: probe ? (probe.ok ? { ok: true, sample_rate: probe.sampleRate, scheduling_misses: probe.schedulingMisses, blocks: probe.blocks } : { ok: false, reason: probe.reason }) : 'not run',
-    playback: { refused: playback.refusal, speaker: playback.speaker, phase: playback.phase },
-    indexeddb: index,
-    opfs,
-    persistence: persist,
-    storage: space.supported ? { usage_mb: Math.round((space.usage ?? 0) / 100_000) / 10, quota_mb: Math.round((space.quota ?? 0) / 1_000_000) } : 'not reported',
-    folder_picker: folderPicker,
-    cross_origin_isolated: isolated,
-    online,
-    flags_off: off,
-  };
-  return { facts, summary };
-}
-
-/** What this browser can do for SelectaDJ, measured here. The copied summary holds no names,
- * emails, folder or song names, account or device ids: only capabilities and states. */
-function BrowserDiagnostics({ openStore, playback }: { openStore: () => Promise<MediaStore>; playback: PlaybackFacts }) {
-  const [probe, setProbe] = useState<ProbeResult | null>(null);
-  const [gathered, setGathered] = useState<Gathered | null>(null);
-  const [copied, setCopied] = useState(false);
-  const load = useCallback(async () => {
-    setGathered(await gather(openStore, playback, probe));
-    setCopied(false);
-  }, [openStore, playback.refusal, playback.speaker, playback.phase, probe]);
-  useEffect(() => { void load(); }, [load]);
-  const runCheck = async () => {
-    if (typeof AudioContext === 'undefined') {
-      setProbe({ ok: false, state: 'unsupported_here', reason: 'This browser has no Web Audio.' });
-      return;
-    }
-    // made inside the press, so the browser lets it start; closed again straight after
-    const context = new AudioContext();
-    try {
-      await context.resume().catch(() => undefined);
-      setProbe(await probeCapability(context));
-    } catch (problem) {
-      setProbe({ ok: false, state: 'unsupported_here', reason: (problem as Error)?.message || 'unknown reason' });
-    } finally {
-      void context.close().catch(() => undefined);
-    }
-  };
-  if (!gathered) return <section className="panel stack"><h2>Diagnostics</h2><Skeleton variant="rows" lines={6} label="Checking this browser" /></section>;
-  const text = JSON.stringify(gathered.summary, null, 2);
-  const canCopy = typeof navigator !== 'undefined' && typeof navigator.clipboard?.writeText === 'function';
-  return (
-    <section className="panel stack" aria-labelledby="browser-diagnostics-title">
-      <h2 id="browser-diagnostics-title">Diagnostics</h2>
-      <p className="hint">What this browser can do for SelectaDJ, checked here. Nothing is sent anywhere unless you copy it and share it yourself.</p>
-      <ul className="diagnostic-facts">
-        {gathered.facts.map((fact) => <li key={fact.key}><Status kind={fact.kind}>{fact.words}</Status></li>)}
-      </ul>
-      <details className="diagnostic-raw">
-        <summary>Details to copy for support</summary>
-        <pre className="diagnostics" tabIndex={0}>{text}</pre>
-      </details>
-      <p className="hint">The copy holds only what this browser can do and how SelectaDJ is set up in it. It has no names, emails, songs, folders or account details.</p>
-      <div className="row wrap">
-        <Action run={runCheck}>{probe ? 'Run the audio check again' : 'Run the audio check'}</Action>
-        {canCopy && (
-          <Action run={async () => { await navigator.clipboard.writeText(text); setCopied(true); }}>
-            {copied ? 'Copied' : 'Copy'}
-          </Action>
+    <div className="lw-stack">
+      {connectAs(connect, 'card', handle)}
+      <section className="ui-card" aria-labelledby="remembered-folder-title">
+        <h2 className="section-title" id="remembered-folder-title">Connected in this browser</h2>
+        {folder === undefined ? <Skeleton variant="rows" lines={2} label="Looking for your folder" /> : (
+          <ul className="lw-sources">
+            {folder && (
+              <li>
+                <span className="lw-source-mark" aria-hidden="true"><Icon name="folder" /></span>
+                <div>
+                  <b dir="auto">{folder.name}</b>
+                  <span>{access === 'granted' ? 'Folder. This browser can read it now.' : access ? 'Folder. The browser asks your permission before reading it again.' : 'Folder remembered in this browser.'}</span>
+                </div>
+                <div className="lw-source-actions">
+                  <button type="button" onClick={() => handle.current?.chooseFolder()}>Add new songs</button>
+                  <Action className="quiet" working="Forgetting…" title="Removes nothing from your library" run={async () => { await forgetFolder(workspaceId); setFolder(null); }}>Forget</Action>
+                </div>
+              </li>
+            )}
+            {songs > 0 && (
+              <li>
+                <span className="lw-source-mark" aria-hidden="true"><Icon name="music" /></span>
+                <div>
+                  <b>{`${formatCount(playable)} of ${formatCount(songs)} songs open here`}</b>
+                  <span>{playable < songs ? 'The rest are on your other devices, or need choosing again in this browser.' : 'Every song in your library can play in this browser.'}</span>
+                </div>
+                <div className="lw-source-actions"><PageLink to="/library" className="button">Open Library</PageLink></div>
+              </li>
+            )}
+            {!folder && songs === 0 && (
+              <li className="lw-sources-empty">
+                <span className="lw-source-mark" aria-hidden="true"><Icon name="folder" /></span>
+                <div><b>No music connected yet</b><span>Choose a folder above and it is remembered here.</span></div>
+              </li>
+            )}
+          </ul>
         )}
-        <Action run={load}>Check again</Action>
-      </div>
-    </section>
+        {folder === null && songs > 0 && <p className="hint">No folder is remembered in this browser. Choose a folder above and it is remembered, so adding music can carry on after an interruption.</p>}
+      </section>
+    </div>
   );
 }

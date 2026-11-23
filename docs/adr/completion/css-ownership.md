@@ -44,6 +44,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `business/staff/staff.css` | venue staff playback controls and zone selection | `business/staff/StaffControlDeck.tsx` |
 | `business/switcher/switcher.css` | workspace switcher menu and context display band | `business/switcher/WorkspaceSwitcher.tsx` |
 | `cloud/makeCloudMix.css` | Cloud mix creation interface layout and controls | `cloud/MakeCloudMix.tsx` |
+| `cloud/connection.css` | the connection banner and the buttons that wait for the server while offline | `cloud/ConnectionBanner.tsx`, `rooms/RoomPanel.tsx` |
 | `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
 | `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
 
@@ -116,9 +117,11 @@ wins, and the row says which.
 | `max-width: 560px` | `style.css` | Listen handoff countdown stacks |
 | `max-width: 560px` | `styles/polish.css` | skeleton rows stack their name and details at phone widths |
 | `max-width: 560px` | `styles/shell.css` | job list one column, phone seam indent |
+| `max-width: 480px` | `styles/boot.css` | runtime, welcome and onboarding actions stack full width on a phone |
 | `max-width: 520px` | `style.css` | steering, destination and energy-arc stops one column; request rows |
 | `max-width: 520px` | `styles/foundation.css` | setup steps: a finished step shows only its tick, so the steps take one line (MP-0282-07) |
 | `max-width: 520px` | `styles/listening.css` | energy-arc stop labels |
+| `max-width: 520px` | `styles/shell.css` | page tabs stay on one row that scrolls sideways on a phone |
 | `max-width: 420px` | `styles/listening.css` | Listen view inner padding |
 | `max-width: 420px` | `styles/lucy.css` | Lucy song actions wrap |
 | `max-width: 420px` | `styles/polish.css` | Make a Mix path padding |

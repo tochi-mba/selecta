@@ -25,7 +25,7 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `next` | Go to the next song | standard | `shell/Shell.tsx`, `views/Now.tsx`, `harness/CloudGallery.tsx` | `aria-label` "Next song" and `title` |
 | `previous` | Go back a song | standard | `views/Now.tsx` | `aria-label` "Previous song" and `title` |
 | `backspace` | Take back the last PIN digit on the staff keypad | standard | `business/staff/PinKeypad.tsx` | `aria-label` and `title` "Back one digit" |
-| `volume` | Sound is on; press to mute; play the sound-check tone | standard, toolbar | `shell/Shell.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx` | `aria-label` and `title`, or the button's words |
+| `volume` | Sound is on; press to mute; play the sound-check tone | standard, toolbar | `shell/Shell.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx`, `cloud/SoundCheck.tsx` | `aria-label` and `title`, or the button's words |
 | `muted` | Sound is off; press to restore | standard | `shell/Shell.tsx` | `aria-label` and `title` |
 | `music` | Listen destination; choosing music files to import; decorative art beside the hero and the library rows | standard, toolbar, hero | `shell/manifest.ts`, `cloud/onboarding/steps.tsx`, `harness/CloudGallery.tsx`, `cloud/CloudApp.tsx`, `cloud/Library.tsx` | The destination label, or the button's words; the decorative uses are aria-hidden |
 | `mixes` | My Mixes and classic Mixes destination | standard | `shell/manifest.ts` | The destination label |
@@ -34,11 +34,11 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `settings` | Workspace destination; Lucy settings; the Cloud More menu | standard, toolbar | `shell/manifest.ts`, `shell/Shell.tsx`, `views/Lucy.tsx` | The destination label; the button's words |
 | `edit` | Open the editor or edit one part | standard, toolbar | `shell/Shell.tsx`, `views/EditorStory.tsx`, `ui/ControlGallery.tsx` | The link or button words; gallery `aria-label` |
 | `close` | Close, dismiss, cancel or remove; a failed status mark | standard, toolbar, compact | `ui/controls.tsx`, `ui/primitives.tsx`, `ui/toasts.tsx`, `views/Lucy.tsx`, `views/LucyProposal.tsx`, `views/Mix.tsx`, `views/Requests.tsx`, `cloud/migration/CutoverNotice.tsx` | `aria-label` and `title`, or the status words |
-| `check` | Done, passed or ready | compact, toolbar | `ui/controls.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx`, `views/Requests.tsx`, `views/SeamInspector.tsx`, `views/Setup.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx`, `harness/CloudGallery.tsx` | The words beside it; a finished setup step's "(done)" |
+| `check` | Done, passed or ready | compact, toolbar | `ui/controls.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx`, `views/Requests.tsx`, `views/SeamInspector.tsx`, `views/Setup.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx`, `harness/CloudGallery.tsx`, `cloud/Billing.tsx`, `cloud/LocalFirstEmpty.tsx`, `cloud/SoundCheck.tsx`, `devices/DevicesPanel.tsx`, `rooms/RoomPanel.tsx`, `rooms/RoomSettings.tsx` | The words beside it; a finished setup step's "(done)" |
 | `warning` | Needs attention, blocked or a failed check | standard, compact, toolbar | `shell/Shell.tsx`, `ui/controls.tsx`, `views/Mix.tsx`, `views/SeamInspector.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenueFallback.tsx`, `harness/CloudGallery.tsx` | The link `aria-label`, button words, status words or the heading beside it |
 | `clock` | Queued status mark | compact | `ui/controls.tsx` | The status words |
 | `minus` | Unavailable status mark | compact | `ui/controls.tsx`, `cloud/onboarding/OnboardingSpine.tsx` | The status words |
-| `more` | Open a row's menu | standard | `cloud/SavedBrowserMixes.tsx`, `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LibraryRow.tsx`, `views/LucyHistory.tsx` | Hidden words in the trigger, and `title` |
+| `more` | Open a row's menu | standard | `cloud/SavedBrowserMixes.tsx`, `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LibraryRow.tsx`, `views/LucyHistory.tsx`, `rooms/RoomPanel.tsx`, `shell/Shell.tsx` | Hidden words in the trigger, and `title` |
 | `help` | Keyboard shortcuts | standard | `shell/Shell.tsx` | `aria-label` and `title` |
 | `up` | Move up; collapse a disclosure | standard, toolbar | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/LucySongs.tsx` | `aria-label` and `title`, or the disclosure words |
 | `down` | Move down; expand a disclosure or menu | standard, toolbar, compact | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx` | `aria-label` and `title`, or the disclosure or menu words |
@@ -62,6 +62,13 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `system` | Match this computer's theme | standard | `ui/ThemeChoice.tsx` | The option words, or the trigger's hidden words and `title` |
 | `mic` | Speak instead of typing | standard | `views/LucyComposer.tsx` | Hidden words and `title` |
 | `thread` | Lucy's mark | hero | `views/Lucy.tsx` | The Lucy heading beside it |
+| `users` | Rooms, in the Cloud side bar and phone More menu | standard | `shell/Shell.tsx` | The destination label |
+| `user` | Account, in the Cloud account menu | standard | `shell/Shell.tsx` | The destination label |
+| `signout` | Sign out, in the Cloud account menu and phone More menu | standard | `shell/Shell.tsx` | The button's words |
+| `card` | Plan & billing, in the Cloud account menu | standard | `shell/Shell.tsx` | The destination label |
+| `phone` | A phone, in the list of signed-in devices | standard | `devices/DevicesPanel.tsx` | The device's name beside it |
+| `tablet` | A tablet, in the list of signed-in devices | standard | `devices/DevicesPanel.tsx` | The device's name beside it |
+| `download` | Download, on the account export button | toolbar | `cloud/AccountData.tsx` | The button's words |
 
 ## Gaps, badges, states and targets (MP-0277-03 to -08)
 

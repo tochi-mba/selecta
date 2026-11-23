@@ -12,9 +12,11 @@ import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
 import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
-import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
+import { SettingsLayout, settingsPlaces } from './AccountLayout';
+import { AccountPage, AccountStrip } from './AccountPage';
+export { AccountStrip } from './AccountPage';
+import { AccountProblem, accountProblem } from './accountStates';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
-import { keptImportWaiting } from './importSession';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
@@ -22,7 +24,9 @@ import { checkoutBody, Consent, consentVersionFor, useCheckoutReturn } from './c
 import { CloudTransportDock, singleAudioOwner } from './CloudTransportDock';
 import { ACCOUNT_STATES_FLAG, BUSINESS_FLAG, BUSINESS_JOIN_PATH, isBusinessPath, resolveRoute } from './cloudRoutes';
 import { parseBusinessPath } from '../business/context';
-import { AccountProblemNote, AccountProblemPage, NotFound, SuspendedPanel } from './CloudStates';
+import { AccountProblemNote, NotFound, SuspendedPanel } from './CloudStates';
+import { AccountProblemPage, BlockedAccount, GateLoading, OfflineWait, SignInAgain, VerifyEmail, WorkspaceCheck } from './Gate';
+import { Welcome } from './Welcome';
 import { CloudEvent, useCloudEvents } from './events';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { LIBRARY_STATES_FLAG } from './libraryState';
@@ -37,7 +41,6 @@ import { ReconciliationPanel } from './migration/ReconciliationPanel';
 import { navigate, useLocationText } from '../router';
 import { Action, LiveRegion, Section } from '../ui/controls';
 import { Toaster } from '../ui/toasts';
-import { BrandMark } from '../ui/BrandMark';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DeviceDataCard } from './DeviceDataCard';
 import { forgetWorkspaceOnDevice } from './deviceData';
@@ -316,7 +319,7 @@ export function CloudApp() {
   const checkout = useCheckoutReturn(account, refreshAccount);
   const consentVersion = consentVersionFor(account);
 
-  const startSignIn = () => void signIn({ state: { returnTo: `${window.location.pathname}${window.location.search}` } });
+  const startSignIn = () => signIn({ state: { returnTo: `${window.location.pathname}${window.location.search}` } });
 
   const completeOnboarding = async (event: FormEvent) => {
     event.preventDefault();
@@ -449,25 +452,25 @@ export function CloudApp() {
     }
   };
 
-  if (isLoading) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p role="status">Checking your sign-in…</p></main>;
-  if (waitingOffline) return <main className="cloud-runtime-message cloud-offline-wait"><BrandMark className="cloud-mark" /><h1>You’re offline</h1><p>SelectaDJ needs the connection for a moment to check your sign-in. Everything on this device is kept, and this page opens by itself when you’re back online.</p><ConnectionBanner /></main>;
+  if (isLoading) return <GateLoading label="Checking your sign-in…" />;
+  if (waitingOffline) return <OfflineWait />;
   if (!user && (offlineMode || offlineUsable)) {
     return (
-      <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
+      <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
         {offlineMode && account
           ? <LocalFirstShell api={api} account={account} more={() => <p className="needs-connection">This needs the internet. You’ll be signed in again when the connection is back.</p>} offlineReadOnly />
-          : <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}
+          : <GateLoading label="Opening SelectaDJ…" />}
       </Suspense>
     );
   }
-  if (!user) return <main className="cloud-welcome"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your account.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
-  if (signInAgain) return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>Sign in again to carry on</h1><p>Your sign-in ended. Everything on this device is kept, including your songs, your mixes and any import in progress, which carries on after you sign in.</p><div className="cloud-actions"><button className="primary" onClick={startSignIn}>Sign in again</button></div></main>;
-  if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => void restartSignIn()} />;
+  if (!user) return <Welcome problem={signInProblem} onSignIn={startSignIn} onSignUp={() => signUp()} />;
+  if (signInAgain) return <SignInAgain onSignIn={startSignIn} />;
+  if (blocked) return <BlockedAccount code={blocked} distinct={exact} email={user.email} onSignOut={() => restartSignIn()} />;
   if (!user.emailVerified) return <VerifyEmail email={user.email} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
-  if (needsOnboarding) return <main className="cloud-onboarding"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">One quick check</p><h1>Set up your SelectaDJ workspace</h1><p>Your music stays on your own devices. SelectaDJ plans the mixes and plays them here.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><div className="cloud-actions"><button className="primary" disabled={!ageConfirmed || busy('onboarding')} aria-busy={busy('onboarding') || undefined}>{busy('onboarding') ? 'Creating your workspace…' : 'Create workspace'}</button></div></form><Feedback error={error} notice="" /><p className="cloud-signed-in-note">Signed in as <strong>{user.email}</strong>. Not you? <button type="button" onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></p></main>;
+  if (needsOnboarding) return <WorkspaceCheck email={user.email} confirmed={ageConfirmed} onConfirmed={setAgeConfirmed} busy={busy('onboarding')} error={error} onSubmit={(event) => void completeOnboarding(event)} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
 
   // No account could be read at all: say why, instead of an empty workspace (AV-0420-03).
-  if (exact && !account && problem) return <AccountProblemPage kind={problem.kind} retrying={retrying} onRetry={() => void retryAccount()} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
+  if (exact && !account && problem) return <AccountProblemPage kind={problem.kind} retrying={retrying} email={user.email} onRetry={() => void retryAccount()} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
 
   if ((exact ? route.kind === 'admin' : inAdmin) && showsAdmin(account)) {
     const leave = () => { setInAdmin(false); window.history.pushState({}, '', '/'); setPage('home'); setPath('/'); };
@@ -505,8 +508,35 @@ export function CloudApp() {
   const goShell = (next: Page) => navigate(PATHS[next]);
   // the shared shells have no rail, so the account page says who is signed in and offers leaving
   const framed = localFirst || hostedShell;
-  const settingsPanel = account ? <div className="cloud-settings">{framed && <AccountStrip email={user.email} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />}{framed && businessEntry}{framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />}{localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />}<AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} withAudio={holdsHostedStorage(account)} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features) && <LucyCloudSettings request={workspaceRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>}{(flagOn('cloud.local_first_labs') || account.experience?.local_first === true) && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{localFirst && flagOn('cloud.local_media') && !flagOn('cloud.workspace') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />}{(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount()} />}</div> : null;
-  const billing = account && <Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />;
+  // Account, Plan & billing and Devices share one section list; the legacy frame has no pages for it.
+  const lucySettings = !!account && accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features);
+  const labsShown = !!account && (flagOn('cloud.local_first_labs') || account.experience?.local_first === true);
+  const venueSetup = flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy');
+  const places = account && framed ? settingsPlaces({ devices: flagOn('devices'), lucy: lucySettings, advanced: showsDeviceCheck(account.features) || flagOn('cloud.venue_tablet') || labsShown || venueSetup }) : undefined;
+  const settingsPanel = account ? <AccountPage
+    places={places}
+    profile={[
+      <AccountStrip email={user.email} plan={planName(account)} workspace={account.workspace.name} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />,
+      framed && businessEntry,
+      framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />,
+      !framed && flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />,
+    ]}
+    lucy={[lucySettings && <LucyCloudSettings request={workspaceRequest} features={account.features} />]}
+    data={[
+      <AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} withAudio={holdsHostedStorage(account)} />,
+      localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />,
+      localFirst && flagOn('cloud.local_media') && !flagOn('cloud.workspace') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />,
+      showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />,
+    ]}
+    advanced={[
+      labsShown && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />,
+      showsDeviceCheck(account.features) && <DeviceCheck />,
+      flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>,
+      venueSetup && <VenueSetup api={api} workspaceId={account.workspace.id} />,
+    ]}
+    danger={[(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={signOutEverywhere} onDelete={deleteAccount} />]}
+  /> : null;
+  const billing = account && <SettingsLayout current="billing" places={places}><Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} /></SettingsLayout>;
   const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
   // The account places behind More, one drawing for both shared shells.
   const morePanel = (id: MoreDestinationId): ReactNode => {
@@ -514,7 +544,7 @@ export function CloudApp() {
     switch (id) {
       case 'account': return settingsPanel;
       case 'billing': return billing;
-      case 'devices': return <DevicesPanel api={api} workspaceId={account.workspace.id} titled={false} />;
+      case 'devices': return <SettingsLayout current="devices" places={places}><DevicesPanel api={api} workspaceId={account.workspace.id} titled={false} /></SettingsLayout>;
       case 'rooms': return <RoomPanel api={api} workspaceId={account.workspace.id} locked={account.feature_locks.rooms} votesOn={flagOn('rooms.votes')} displayOn={flagOn('rooms.display')} playHereOn={flagOn('devices')} freshOnly={account.features['rooms.nickname_confirm'] === true} />;
       case 'uploads': return uploads;
       case 'workspace': return null;
@@ -536,8 +566,8 @@ export function CloudApp() {
   // shared shell. With either off, everything below renders exactly as before.
   if (account && localFirst) {
     return (
-      <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
-        <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} />
+      <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
+        <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
       </Suspense>
     );
   }
@@ -554,9 +584,10 @@ export function CloudApp() {
       }
     };
     return (
-      <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
+      <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
         <HostedShell
           account={account}
+          signedIn={{ email: user.email, plan: planName(account), onSignOut: signOutHere }}
           page={hostedPage}
           notices={<>{shellNotices}{shellFeedback}</>}
           dock={singleAudioOwner(account) ? (view) => <CloudTransportDock api={api} account={account} page={dockPage(view)} reload={libraryVersion} /> : undefined}
@@ -615,63 +646,9 @@ export function CloudApp() {
   );
 }
 
-/** Who is signed in, for the local-first shell's Account panel (the hosted frame shows it in its rail). */
-export function AccountStrip({ email, onSignOut, onStaffConsole }: { email: string; onSignOut: () => void; onStaffConsole?: () => void }) {
-  return (
-    <section className="cloud-card cloud-account-strip" aria-label="Signed in as">
-      <div>
-        <p className="cloud-eyebrow cloud-caps">Signed in as</p>
-        <p className="cloud-account-email">{email}</p>
-      </div>
-      <div className="cloud-actions">
-        {onStaffConsole && <button onClick={onStaffConsole}>Staff console</button>}
-        <button className="quiet" onClick={onSignOut}>Sign out</button>
-      </div>
-    </section>
-  );
-}
-
 /** Who makes SelectaDJ, shown once at the foot of Cloud pages. */
 export function CloudCredit() {
   return <span className="cloud-credit">SelectaDJ is a REX Technologies product. © {new Date().getFullYear()} REX Technologies</span>;
-}
-
-/** Remembers, across the reload, that the member said they had verified, so a page that comes back
- * unchanged can say the address still isn't verified instead of looking as if nothing happened. */
-const VERIFY_ASKED = 'selecta.cloud.verify-asked';
-
-function VerifyEmail({ email, onSignOut }: { email: string; onSignOut: () => void }) {
-  const [asked] = useState(() => { try { return sessionStorage.getItem(VERIFY_ASKED) === email; } catch { return false; } });
-  const check = () => {
-    try { sessionStorage.setItem(VERIFY_ASKED, email); } catch { /* the page still reloads */ }
-    window.location.reload();
-  };
-  return (
-    <main className="cloud-runtime-message">
-      <BrandMark className="cloud-mark" />
-      <p className="cloud-eyebrow cloud-caps">One more step</p>
-      <h1>Verify your email</h1>
-      <p>Open the verification email sent to <strong>{email}</strong> and follow its link, then come back to this page.</p>
-      {asked && <p className="cloud-feedback" role="status">That address isn’t verified yet. Open the link in the email, then check again.</p>}
-      <div className="cloud-actions">
-        <button className="primary" onClick={check}>I’ve verified my email</button>
-        <button onClick={onSignOut}>Sign out</button>
-      </div>
-      <p className="cloud-hint">Can’t find the email? Look in your spam or junk folder.</p>
-    </main>
-  );
-}
-
-function BlockedAccount({ code, distinct, onSignOut }: { code: BlockedCode; distinct: boolean; onSignOut: () => void }) {
-  const message = blockedMessage(code, distinct);
-  const signIn = code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired';
-  return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>{message.title}</h1><p>{message.detail}</p>
-    {signIn && keptImportWaiting() && <p>Your music import is kept on this device and carries on after you sign in.</p>}
-    <div className="cloud-actions">
-      {code === 'verified_email_required' && <button className="primary" onClick={() => window.location.reload()}>I’ve verified my email</button>}
-      <button className={signIn ? 'primary' : undefined} onClick={onSignOut}>{signIn ? 'Sign in again' : 'Sign out'}</button>
-    </div>
-  </main>;
 }
 
 function Feedback({ error, notice }: { error: string; notice: string }) {

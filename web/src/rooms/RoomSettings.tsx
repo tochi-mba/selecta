@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import { Action } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { Field } from '../ui/primitives';
 import { NumberField, RoomLimits, type LimitBounds, type LimitSettings } from './RoomLimits';
@@ -6,6 +7,7 @@ import { NumberField, RoomLimits, type LimitBounds, type LimitSettings } from '.
 // The host's room settings, grouped under plain headings: Who can join, Requests, Limits. Each
 // change is saved the moment it is made; the group it belongs to says "Saved" beside its heading
 // once the server has answered, so the host knows it took without looking for a Save button.
+// Locking the room is here too (and in the room's menu): it is the quickest way to stop new guests.
 
 export type RoomSettingsValue = {
   join_mode: string; request_mode: string; votes: boolean; names_shown: boolean; display: boolean;
@@ -19,16 +21,16 @@ const JOIN_HELP: Record<string, string> = {
   locked: 'Nobody new can join. Guests already here stay.',
 };
 const REQUEST_HELP: Record<string, string> = {
-  auto: 'Every request goes straight to your Requests list, ready for you to add to the mix.',
-  approve: 'Each request waits on this page until you approve it or pass on it.',
+  auto: 'Every request is accepted and waits for you to add it to the mix.',
+  approve: 'Each request waits until you approve it or pass on it.',
   off: 'Guests can see what is playing but can’t ask for songs.',
 };
 const REPLAY_RANGE: [number, number] = [0, 24 * 60];
 
-function Group({ title, saved, children }: { title: string; saved: boolean; children: ReactNode }) {
+export function SettingsSection({ title, saved, wide, children }: { title: string; saved: boolean; wide?: boolean; children: ReactNode }) {
   const id = useId();
   return (
-    <div className="room-group" role="group" aria-labelledby={id}>
+    <div className={wide ? 'room-group room-group-wide' : 'room-group'} role="group" aria-labelledby={id}>
       <header className="room-group-head">
         <h4 id={id}>{title}</h4>
         {/* always in the page, so the change is announced when the words arrive */}
@@ -39,13 +41,20 @@ function Group({ title, saved, children }: { title: string; saved: boolean; chil
   );
 }
 
-export function RoomSettings({ settings, bounds, votesOn, saved, save }: {
+const Group = SettingsSection;
+
+export function RoomSettings({ settings, bounds, votesOn, saved, save, locked, onLock, children }: {
   settings: RoomSettingsValue;
   bounds?: LimitBounds;
   votesOn: boolean;
   /** the group whose last change the server has just kept */
   saved: SettingsGroup | null;
   save: (change: Partial<RoomSettingsValue>, group: SettingsGroup) => void;
+  /** the room is locked now: nobody new can join until it is unlocked */
+  locked: boolean;
+  onLock: () => Promise<unknown>;
+  /** one more group after Limits (display screens) */
+  children?: ReactNode;
 }) {
   const replay = settings.replay_cooldown_minutes ?? 20;
   return (
@@ -64,6 +73,10 @@ export function RoomSettings({ settings, bounds, votesOn, saved, save }: {
           <input type="checkbox" checked={settings.names_shown} onChange={(event) => save({ names_shown: event.target.checked }, 'join')} /> Show guest nicknames to everyone
         </label>
         <p className="room-help">{settings.names_shown ? 'Guests see who asked for each song.' : 'Only you see who asked for each song.'}</p>
+        <div className="room-setting-row">
+          <span><b>{locked ? 'Room is locked' : 'Lock the room'}</b><span className="room-help">{locked ? 'Nobody new can join until you unlock it.' : 'Stops anyone new joining. Guests already here stay.'}</span></span>
+          <Action type="button" run={onLock} working={locked ? 'Unlocking…' : 'Locking…'}><Icon name="lock" size="toolbar" /> {locked ? 'Unlock' : 'Lock room'}</Action>
+        </div>
       </Group>
 
       <Group title="Requests" saved={saved === 'requests'}>
@@ -97,6 +110,7 @@ export function RoomSettings({ settings, bounds, votesOn, saved, save }: {
           />
         </Group>
       )}
+      {children}
     </div>
   );
 }

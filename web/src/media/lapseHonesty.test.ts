@@ -96,6 +96,8 @@ describe('import snapshot on account switch', () => {
     });
     expect(importSnapshotFor('ws-a').folder).toBe('A folder');
     expect(importSnapshotFor('ws-b').phase).toBe('idle');
+    // the run starts once this tab holds the import claim, a moment later
+    await vi.waitFor(() => expect(finish).not.toBeNull());
     finish!();
     await run;
     expect(importSnapshotFor('ws-a').phase).toBe('finished');

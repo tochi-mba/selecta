@@ -18,6 +18,7 @@ import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
 import { ViewProps } from './shared';
 import { words } from '../copy';
+import { QuickMix } from '../cloud/QuickMix';
 
 const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 
@@ -192,14 +193,33 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const firstMix = !mix.length && !startedAMix && !hasStartedAMix();
   return (
     <main className="page mixes" id="main">
-      {firstMix && <SetupSteps stage="listen" />}
-      <h1 className="display small">Make a Mix</h1>
+      {firstMix && analysisAvailable && <SetupSteps stage="listen" />}
+      {analysisAvailable ? <h1 className="display small">Make a Mix</h1> : (
+        <header className="page-header">
+          <div className="page-header-text">
+            <h1 className="display small">Make a Mix</h1>
+            <p className="page-lead">Choose a length and press Play. SelectaDJ lines up your songs and blends each one into the next.</p>
+          </div>
+        </header>
+      )}
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
-      {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
+      {mix.length > 0 && analysisAvailable && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
       {/* in a browser the page is short (one pick, no feelings), so Play leads and the guide follows it */}
       {on('mixes.intent_language') && !firstMix && analysisAvailable && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix={false} />}
 
-      <div className="mix-paths" role="group" aria-label="Ways to make a mix">
+      {!analysisAvailable && (
+        <QuickMix
+          hero={hero} pending={!cards && !cardsFailed} playable={readyCount} total={counts.music} songs={songs} onSongs={setSongs}
+          building={building.startsWith('pick')} blocked={!!building && !building.startsWith('pick')}
+          onPlay={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
+          shape={shaping ? { summary: buildSummary(status.steering), open: () => setCustomizing(true) } : undefined}
+          replacing={replacing ? `Takes over from “${mixName}”, which stays in My Mixes.` : undefined}
+          problem={problem ? <p className="warn" role="alert">{problem}</p> : undefined}
+        />
+      )}
+      {!analysisAvailable && on('lucy') && <p className="quick-mix-more"><PageLink to="/mixes/lucy" className="button">Plan a mix with Lucy</PageLink></p>}
+      {!analysisAvailable && mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} analysisAvailable={false} />}
+      {analysisAvailable && <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
         {/* MP-0282-07: on the first run the notice under Play already says the library is ready */}
         {!firstMix && <p className="eyebrow">Quick Play · Tap and play</p>}
@@ -261,9 +281,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <p className="hint">Optional. Nothing is sent, saved or played until you choose to do it. Quick Play does not use Lucy.</p>
       </section>
       )}
-      </div>
+      </div>}
 
-      {problem && <p className="warn" role="alert">{problem}</p>}
+      {problem && analysisAvailable && <p className="warn" role="alert">{problem}</p>}
       {on('mixes.intent_language') && !firstMix && !analysisAvailable && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix />}
 
       {/* Loaded and empty reflows away: a header with no feelings under it promises nothing
@@ -384,15 +404,6 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           ) : (
             <Action run={analyse}>Analyse the rest</Action>
           )}
-        </section>
-      )}
-
-      {!analysisAvailable && readyCount < counts.music && (
-        <section className="nudge" aria-label="Songs available on this device">
-          <p>
-            <b>{readyCount} of {counts.music} songs can play on this device.</b> Connect more music from your Library to add variety. Browser mixes work out transitions as they play, so audio analysis is not required.
-          </p>
-          <PageLink className="button" to="/library">See your library</PageLink>
         </section>
       )}
 

@@ -151,6 +151,65 @@ describe('the playback session on a device', () => {
     } finally { hook.unmount(); }
   });
 
+  // A press on a song on a device that isn't the speaker yet (LocalFirstPlayer.playFrom) names
+  // where to begin: the new speaker starts there, not where the session was last left.
+  function takeOver(label: string) {
+    let taken = false;
+    const heard: string[] = [];
+    const speaker: Speaker = {
+      start: vi.fn(async () => undefined), stop: vi.fn(), pause: vi.fn(), resume: vi.fn(),
+      position: () => null, active: () => false,
+    };
+    const left = session({ active_device_id: 'd2', song_index: 2, offset_ms: 10_000, anchor_at: 1000, seq: 4 });
+    const ours = session({ active_device_id: 'd1', song_index: 2, offset_ms: 10_000, anchor_at: 1000, seq: 5, lease_expires_at: Date.now() / 1000 + 60 });
+    const api = (async (path: string, init?: RequestInit) => {
+      heard.push(path);
+      if (path === '/devices') return { device: {
+        id: 'd1', name: 'This laptop', kind: 'laptop', signed_in: true,
+        this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [],
+      }, notice: null };
+      if (path === '/playback/reconnect') return { action: 'stop_moved', session: left, message: null };
+      if (path === '/playback/take-over') {
+        expect(JSON.parse(String(init?.body))).toMatchObject({ device_id: 'd1', start_playing: true });
+        taken = true;
+        return { session: ours, previous_device: null, server_time: 1001 };
+      }
+      if (path.startsWith('/playback/session')) return {
+        session: taken ? ours : left, speaker: taken ? 'here' : 'elsewhere', speaker_device_id: taken ? 'd1' : 'd2',
+        speaker_name: taken ? 'This laptop' : 'Tablet', ask_before_playing_here: !taken, server_time: 1001,
+      };
+      if (path === '/playback/heartbeat') return { outcome: 'ok', session: ours, server_time: 1001 };
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    const hook = renderHook(() => usePlaybackDevice({ api, workspaceId: `ws-start-at-${label}`, speaker }));
+    return { hook, speaker, heard };
+  }
+
+  it('starts a new speaker at the point the press asked for', async () => {
+    const { hook, speaker, heard } = takeOver('given');
+    try {
+      await waitFor(() => expect(hook.result.current.view?.speaker).toBe('elsewhere'));
+      await act(async () => { await hook.result.current.playHere(undefined, { song_index: 0, offset_ms: 4000 }); });
+      expect(heard).toContain('/playback/take-over');
+      expect(speaker.start).toHaveBeenCalledTimes(1);
+      // song 0 at 4 s, playing; never song 2 at the session's 10 s and onwards
+      expect(speaker.start).toHaveBeenCalledWith(0, 4000, true);
+    } finally { hook.unmount(); }
+  });
+
+  it('without a start point, a new speaker carries on from the session', async () => {
+    const { hook, speaker } = takeOver('carried');
+    try {
+      await waitFor(() => expect(hook.result.current.view?.speaker).toBe('elsewhere'));
+      await act(async () => { await hook.result.current.playHere(); });
+      expect(speaker.start).toHaveBeenCalledTimes(1);
+      const [index, offset, playing] = (speaker.start as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(index).toBe(2);
+      expect(offset).toBeGreaterThanOrEqual(10_000);
+      expect(playing).toBe(true);
+    } finally { hook.unmount(); }
+  });
+
   it('tears the speaker down when the page lets it go', () => {
     const speaker: Speaker = { start: async () => {}, stop: vi.fn(), pause: () => {}, resume: () => {}, position: () => null, active: () => false, dispose: vi.fn() };
     const api = (() => new Promise(() => {})) as Api;

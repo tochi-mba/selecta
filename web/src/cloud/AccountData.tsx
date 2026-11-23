@@ -1,5 +1,12 @@
-import { KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { apiOrigin, CloudError, messageOf } from './api';
+import { useId, useState } from 'react';
+import { Action, Dialog } from '../ui/controls';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { ELLIPSIS } from '../ui/format';
+import { Icon } from '../ui/Icon';
+import { Meter } from '../ui/Meter';
+import { showToast } from '../ui/toasts';
+import { Notice, SettingsCard, SettingsRow } from './AccountLayout';
+import { apiOrigin, bytes, CloudError, messageOf } from './api';
 import { useNeedsConnection } from './connection';
 
 // Download my data (docs/saas/11-ui-ux.md §11.1, ADR-0412): one ZIP with the original files,
@@ -8,7 +15,27 @@ import { useNeedsConnection } from './connection';
 
 export const EXPORT_FILE = 'selectadj-account-export.zip';
 
-export async function downloadExport(token: string, workspaceId: string, fetchImpl: typeof fetch = fetch) {
+/** How far a download has got: bytes so far, and the whole size when the server says it. */
+export type ExportProgress = { received: number; total: number | null };
+
+async function readAll(response: Response, onProgress?: (progress: ExportProgress) => void): Promise<Blob> {
+  const reader = onProgress && response.body?.getReader ? response.body.getReader() : null;
+  if (!reader) return response.blob();
+  const size = Number(response.headers?.get('Content-Length'));
+  const total = Number.isFinite(size) && size > 0 ? size : null;
+  const parts: BlobPart[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value);
+    received += value.byteLength;
+    onProgress?.({ received, total });
+  }
+  return new Blob(parts, { type: response.headers?.get('Content-Type') ?? 'application/zip' });
+}
+
+export async function downloadExport(token: string, workspaceId: string, fetchImpl: typeof fetch = fetch, onProgress?: (progress: ExportProgress) => void) {
   const response = await fetchImpl(`${apiOrigin}/api/account/export`, {
     headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': workspaceId },
   });
@@ -16,7 +43,7 @@ export async function downloadExport(token: string, workspaceId: string, fetchIm
     const payload = await response.json().catch(() => null);
     throw new CloudError(messageOf(payload, `Export failed (${response.status}).`), response.status);
   }
-  const blob = await response.blob();
+  const blob = await readAll(response, onProgress);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -37,81 +64,104 @@ export function settingsWords(features: Record<string, boolean> = {}) {
 
 export function AccountData({ token, workspaceId, features, withAudio = true }: { token: () => Promise<string>; workspaceId: string; features?: Record<string, boolean>; withAudio?: boolean }) {
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [progress, setProgress] = useState<ExportProgress | null>(null);
+  const [done, setDone] = useState<number | null>(null);
   const [problem, setProblem] = useState('');
   // cloud.offline_shell: the export is made by the server, so it waits for the connection
   const offline = useNeedsConnection();
   const start = async () => {
-    setBusy(true); setProblem(''); setNotice('Preparing your export…');
+    if (busy) return;
+    setBusy(true); setProblem(''); setDone(null); setProgress(null);
     try {
-      await downloadExport(await token(), workspaceId);
-      setNotice('Your export has downloaded. It holds your original files, settings.json and mixes.json.');
-    } catch (error) { setProblem((error as Error).message); setNotice(''); }
-    finally { setBusy(false); }
+      const size = await downloadExport(await token(), workspaceId, fetch, setProgress);
+      setDone(size);
+      showToast('Your export has downloaded.');
+    } catch (error) { setProblem((error as Error).message); }
+    finally { setBusy(false); setProgress(null); }
   };
+  const label = !busy ? 'Download my data' : progress ? `Downloading${ELLIPSIS}` : `Preparing${ELLIPSIS}`;
+  const progressWords = progress ? (progress.total ? `${bytes(progress.received)} of ${bytes(progress.total)}` : `${bytes(progress.received)} so far`) : 'Putting your file together';
   return (
-    <section className="cloud-card" aria-labelledby="cloud-data-title">
-      <p className="cloud-eyebrow">Your data</p>
-      <h2 id="cloud-data-title">Download a copy</h2>
-      <p>{withAudio ? <>One ZIP file with your original audio, your settings ({settingsWords(features)}) as settings.json, and what Cloud keeps about your mixes as mixes.json.</> : <>One ZIP file with your settings ({settingsWords(features)}) as settings.json and what Cloud keeps about your mixes as mixes.json. Your music files stay on your devices, so they are not in it.</>} Mix revisions themselves aren’t stored in Cloud yet.</p>
-      <div className="cloud-actions"><button className="primary" disabled={busy || !!offline} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button></div>
+    <SettingsCard
+      id="cloud-data"
+      title="Download a copy"
+      about="Everything SelectaDJ keeps for your account, in one ZIP file."
+      busy={busy}
+      actions={<button type="button" disabled={!!offline} aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => void start()}>{!busy && <Icon name="download" size="toolbar" />}{label}</button>}
+    >
+      <ul className="acct-includes" aria-label="What is in the file">
+        {withAudio && <li><Icon name="check" size="compact" /><span><b>Your original audio</b>, exactly as you added it.</span></li>}
+        <li><Icon name="check" size="compact" /><span><b>Your settings</b> ({settingsWords(features)}), as settings.json.</span></li>
+        <li><Icon name="check" size="compact" /><span><b>Your mixes</b>, as mixes.json: what SelectaDJ Cloud keeps about each one.</span></li>
+        {!withAudio && <li data-kept="no"><Icon name="minus" size="compact" /><span><b>Not your music files.</b> They stay on your own devices, so they are not in it.</span></li>}
+      </ul>
+      {busy && <div className="acct-progress"><Meter label="Your export" value={progress?.total ? progress.received : undefined} max={progress?.total ?? 100} valueText={progressWords} /></div>}
       {offline && <p className="needs-connection">{offline}</p>}
-      {notice && !busy && <p role="status">{notice}</p>}
-      {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
-    </section>
+      {done !== null && !busy && <Notice tone="ok">{`Your export has downloaded (${bytes(done)}). Look for ${EXPORT_FILE} in your downloads.`}</Notice>}
+      {problem && <Notice tone="danger" role="alert" action={<button type="button" className="small" onClick={() => void start()}>Try again</button>}><strong>The export did not download</strong><span>{problem}</span></Notice>}
+    </SettingsCard>
   );
 }
 
 // Leaving and deleting (ADR-0420, AV-0420-04). With `cloud.account_states` on, "Sign out
 // everywhere" and "Delete account" leave the always-visible rail and live here, at the foot of
-// Settings, below the routine choices. Neither is a primary button, and each asks once more in
-// the page, with the safe choice focused and Escape backing out.
+// Settings, below the routine choices and set apart from them. Neither is a primary button, and
+// each asks once more in a dialog that names what will happen, with the safe choice focused.
 
 type Confirming = 'everywhere' | 'delete' | null;
 
 export function AccountDanger({ busy, onSignOutEverywhere, onDelete }: {
   busy: boolean;
-  onSignOutEverywhere: () => void;
-  onDelete: () => void;
+  onSignOutEverywhere: () => Promise<unknown> | void;
+  onDelete: () => Promise<unknown> | void;
 }) {
   const [confirming, setConfirming] = useState<Confirming>(null);
   const offline = useNeedsConnection();
-  const keep = useRef<HTMLButtonElement>(null);
-  const everywhere = useRef<HTMLButtonElement>(null);
-  const remove = useRef<HTMLButtonElement>(null);
-  const last = useRef<Confirming>(null);
-  useEffect(() => {
-    if (confirming) keep.current?.focus();
-    else if (last.current) (last.current === 'delete' ? remove : everywhere).current?.focus();
-    last.current = confirming ?? last.current;
-  }, [confirming]);
-  const back = () => setConfirming(null);
-  const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.stopPropagation(); back(); } };
+  const deleteBody = useId();
+  const close = () => setConfirming(null);
   return (
-    <section className="cloud-card cloud-danger" aria-labelledby="cloud-danger-title">
-      <p className="cloud-eyebrow">Leaving or deleting</p>
-      <h2 id="cloud-danger-title">Sign-in and account removal</h2>
+    <SettingsCard id="cloud-danger" tone="danger" title="Leave or delete" about="These end your sign-ins or remove your account. Each one asks you to confirm first.">
       {offline && <p className="needs-connection">{offline}</p>}
-      <div className="cloud-danger-row">
-        <div><h3>Sign out everywhere</h3><p>Ends every sign-in, on every device and browser, including this one.</p></div>
-        <button ref={everywhere} className="cloud-quiet" disabled={busy || !!offline} aria-expanded={confirming === 'everywhere'} onClick={() => setConfirming('everywhere')}>Sign out everywhere…</button>
+      <div className="acct-rows">
+        <SettingsRow title="Sign out everywhere" about="Ends every sign-in, on every device and browser, including this one.">
+          <Action type="button" disabled={!!offline} busy={busy || confirming === 'everywhere'} aria-haspopup="dialog" run={() => setConfirming('everywhere')}><Icon name="signout" size="toolbar" />Sign out everywhere</Action>
+        </SettingsRow>
+        <SettingsRow title="Delete account" about="Signs you out at once and hides your account. It is erased for good after 30 days.">
+          <Action type="button" className="destructive" disabled={!!offline} busy={busy || confirming === 'delete'} aria-haspopup="dialog" run={() => setConfirming('delete')}><Icon name="trash" size="toolbar" />Delete account</Action>
+        </SettingsRow>
       </div>
       {confirming === 'everywhere' && (
-        <div className="cloud-confirm" data-tone="plain" role="group" aria-label="Confirm signing out everywhere" onKeyDown={escape}>
-          <p>Every device will need to sign in again. Music playing on another device stops.</p>
-          <div className="cloud-actions"><button ref={keep} onClick={back}>Stay signed in</button><button className="cloud-danger-action" disabled={busy} onClick={() => { back(); onSignOutEverywhere(); }}>Sign out everywhere</button></div>
-        </div>
+        <ConfirmDialog
+          title="Sign out everywhere?"
+          body="Every device and browser is signed out, including this one, and any music playing stops. You will need to sign in again on each."
+          confirmLabel="Sign out everywhere"
+          cancelLabel="Stay signed in"
+          working={`Signing out${ELLIPSIS}`}
+          onConfirm={() => onSignOutEverywhere()}
+          onClose={close}
+        />
       )}
-      <div className="cloud-danger-row">
-        <div><h3>Delete account</h3><p>Hides your account and signs you out at once. Final erasure happens after a 30-day recovery window.</p></div>
-        <button ref={remove} className="cloud-quiet cloud-danger-text" disabled={busy || !!offline} aria-expanded={confirming === 'delete'} onClick={() => setConfirming('delete')}>Delete account…</button>
-      </div>
       {confirming === 'delete' && (
-        <div className="cloud-confirm" role="group" aria-label="Confirm deleting your account" onKeyDown={escape}>
-          <p>Delete your SelectaDJ Cloud account? You will be signed out immediately. Download your data first if you want a copy. Contact SelectaDJ support within 30 days to keep it.</p>
-          <div className="cloud-actions"><button ref={keep} onClick={back}>Keep my account</button><button className="cloud-danger-action" disabled={busy} onClick={() => { back(); onDelete(); }}>Delete my account</button></div>
-        </div>
+        <Dialog
+          title="Delete your SelectaDJ account?"
+          onClose={close}
+          className="confirm-dialog"
+          role={'alertdialog' as const}
+          describedBy={deleteBody}
+          footer={(
+            <>
+              <button type="button" onClick={close} data-autofocus>Keep my account</button>
+              <Action type="button" className="destructive" working={`Deleting${ELLIPSIS}`} run={async () => { await onDelete(); close(); }}>Delete my account</Action>
+            </>
+          )}
+        >
+          <div id={deleteBody} className="confirm-dialog-body">
+            <p>You are signed out on every device straight away, and your account, mixes and settings are hidden.</p>
+            <p>After 30 days they are erased for good. Until then, SelectaDJ support can bring your account back.</p>
+            <p className="hint">Want a copy first? Keep your account, then use Download my data.</p>
+          </div>
+        </Dialog>
       )}
-    </section>
+    </SettingsCard>
   );
 }
