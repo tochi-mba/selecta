@@ -24,6 +24,8 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
   const [items, setItems] = useState<BrowserDiscovery[]>([]);
   const [progress, setProgress] = useState<ProfileProgress | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const loadedRef = useRef(false);
+  loadedRef.current = loaded;
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState('');
   const [skipped, setSkipped] = useState<number[]>([]);
@@ -45,7 +47,11 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
       setProgress(measured);
       setLoaded(true);
       setError('');
-    }).catch(() => { if (here.current && seen === changes.current) setError('Couldn’t load these. Try again in a moment.'); });
+    }).catch(() => {
+      if (!here.current || seen !== changes.current) return;
+      // pairs already on screen stay put; a failed refresh says nothing and the next poll tries again
+      setError(loadedRef.current ? '' : 'Couldn’t load these. Try again in a moment.');
+    });
   }, [get]);
   useEffect(() => {
     here.current = true;

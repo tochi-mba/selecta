@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { browserName, capabilities, currentFacts, deviceKind } from './deviceInfo';
 import { holdWakeLock, WakeLockHold } from './wakeLock';
+import { flagOn } from '../flags';
+import { isOnline, onReconnect } from '../cloud/connection';
 
 // This browser as a playback device, and the account's one playback session (ADR-0415).
 //
@@ -11,6 +13,11 @@ import { holdWakeLock, WakeLockHold } from './wakeLock';
 //   speaker to have heard and faded before it starts: a short gap, never two speakers at once.
 // - A remote's buttons send commands with the sequence they were based on and a fresh
 //   idempotency key; a stale press redraws from the server and asks to try again.
+// - cloud.offline_playback: when heartbeats fail because SelectaDJ can't be reached (no network,
+//   a timeout, the service down), not because the server refused or another device took over,
+//   the speaker keeps playing its own files and queue past the lease ("adrift"). Pause, skip,
+//   seek and volume act on this device at once. When the connection is back it reconciles with
+//   /playback/reconnect; if another device took over meanwhile it stops here and says so.
 
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 export type Warning = { code: string; text: string };
@@ -119,6 +126,20 @@ export const REMOTE_POLL_MS = 2000;
 export const FADE_MS = 1000;
 /** The old speaker hears within SPEAKER_POLL_MS and fades over FADE_MS; wait a little more. */
 export const START_DELAY_MS = SPEAKER_POLL_MS + FADE_MS + 400;
+/** Said when this device kept playing offline and found another device had taken over. */
+export const TAKEN_OVER_WHILE_OFFLINE = 'Another device took over while this one was offline, so playback stopped here.';
+
+const offlinePlaybackOn = () => flagOn('cloud.offline_playback');
+/** The presses a speaker can carry out on its own while offline. */
+const LOCAL_PRESSES = new Set(['play', 'pause', 'skip', 'seek', 'set_volume']);
+/** A failure that means SelectaDJ could not be reached or answer just now, not a refusal. */
+export function couldNotReach(problem: unknown): boolean {
+  if (!isOnline()) return true;
+  const status = (problem as { status?: unknown } | null)?.status;
+  // no answer at all (fetch's TypeError, an abort or timeout), or the service down or busy
+  if (typeof status !== 'number') return problem instanceof TypeError || ['AbortError', 'TimeoutError', 'OfflineError'].includes(String((problem as { name?: unknown } | null)?.name));
+  return status === 0 || status === 408 || status === 429 || status >= 500;
+}
 
 const storedKey = (workspaceId: string) => `selecta.device.${workspaceId}`;
 function stored(workspaceId: string): string | null {
@@ -169,7 +190,20 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   };
   const wake = useRef<WakeLockHold | null>(null);
   const wakeWasHeld = useRef(false);
-  const deviceId = device?.id ?? null;
+  // cloud.offline_playback: playing on past the lease while SelectaDJ can't be reached
+  const adrift = useRef(false);
+  const beatTrouble = useRef(false);
+  const reconciling = useRef(false);
+  // a volume set here while offline, sent once the connection is back
+  const heldVolume = useRef<number | null>(null);
+  // the speaker an offline start made, until it reaches this hook as the `speaker` prop
+  const offlineSpeaker = useRef<Speaker | null>(null);
+  const [offline, setOffline] = useState(false);
+  const [offlineNotice, setOfflineNotice] = useState('');
+  // offline at page open: the id this browser registered before stands in until it can register
+  const [standIn, setStandIn] = useState<string | null>(null);
+  const [registerTry, setRegisterTry] = useState(0);
+  const deviceId = device?.id ?? standIn;
 
   useEffect(() => {
     let current = true;
@@ -184,9 +218,21 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       setDevice(made.device);
       window.dispatchEvent(new CustomEvent(DEVICE_REGISTERED, { detail: made.device.id }));
       setNotice(made.notice ?? '');
-    }).catch((problem: Error) => { if (current) setError(problem.message); });
+    }).catch((problem: Error) => {
+      if (!current) return;
+      if (offlinePlaybackOn() && couldNotReach(problem)) {
+        setStandIn(stored(workspaceId));
+        return;
+      }
+      setError(problem.message);
+    });
     return () => { current = false; };
-  }, [api, workspaceId]);
+  }, [api, workspaceId, registerTry]);
+  // registered later, once the connection is back
+  useEffect(() => {
+    if (device) return;
+    return onReconnect(() => setRegisterTry((count) => count + 1));
+  }, [device]);
 
   const serverNow = () => Date.now() / 1000 + clockOffset.current;
 
@@ -198,6 +244,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const becomeRemote = useCallback((why: string, fadeMs = FADE_MS) => {
     if (!speaking.current) return;
     speaking.current = false;
+    adrift.current = false;
+    beatTrouble.current = false;
+    setOffline(false);
     envelopeKey.current = null;
     leaseDeadline.current = null;
     expiredSpeaker.current = false;
@@ -263,6 +312,82 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     }
   }, [api, deviceId, speaker, startSpeaking, workspaceId]);
 
+  /** A volume set here while offline goes to the session once the connection is back. */
+  const sendHeldVolume = useCallback(async () => {
+    const volume = heldVolume.current;
+    const session = viewSnapshot.current?.session;
+    if (volume === null || !deviceId) return;
+    if (!remoteControl || !session) { heldVolume.current = null; return; }
+    try {
+      await api('/playback/commands', {
+        method: 'POST',
+        body: JSON.stringify({ device_id: deviceId, command: 'set_volume', args: { volume }, based_on_seq: session.seq, fence: session.fence, ttl_seconds: 60, idempotency_key: newKey() }),
+      }, workspaceId);
+      if (heldVolume.current === volume) heldVolume.current = null;
+    } catch (problem) {
+      // still unreachable: kept for the next return; refused: the session's volume stands
+      if (!couldNotReach(problem)) heldVolume.current = null;
+    }
+  }, [api, deviceId, remoteControl, workspaceId]);
+
+  /** Back from playing offline: settle the lease with the server, or stop here if another device
+   * took over meanwhile. Music keeps going while this runs; nothing restarts. */
+  const reconcile = useCallback(async () => {
+    if (!adrift.current || reconciling.current || !deviceId || !speaker || !isOnline()) return;
+    reconciling.current = true;
+    const carryOn = (session: SessionState, key: string | null | undefined) => {
+      adrift.current = false;
+      beatTrouble.current = false;
+      setOffline(false);
+      adopt(session);
+      learnKey(key);
+      leaseDeadline.current = session.lease_expires_at;
+      void sendHeldVolume();
+    };
+    const stopHere = (why: string) => {
+      heldVolume.current = null;
+      setOfflineNotice(why);
+      becomeRemote(why);
+    };
+    try {
+      const answer = await api<{ action: string; session: SessionState | null; message: string | null; reason?: string | null; moved_to_name?: string | null; envelope_key?: string | null }>(
+        '/playback/reconnect', { method: 'POST', body: JSON.stringify({ device_id: deviceId }) }, workspaceId,
+      );
+      if (!adrift.current) return;
+      if (answer.action === 'continue' && answer.session) return carryOn(answer.session, answer.envelope_key);
+      if (answer.reason === 'signed_out') return stopHere(answer.message ?? 'This device was signed out, so playback stopped.');
+      // Nobody held the lease (this device started offline, or no one else played): a heartbeat
+      // takes it only when no other device holds a live one and this one's fence is current.
+      const at = speaker.position();
+      if (at) {
+        const sentAt = Date.now();
+        const beat = await api<{ outcome: string; session: SessionState; server_time: number; envelope_key?: string | null }>('/playback/heartbeat', {
+          method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }), ...outputReport(speaker) }),
+        }, workspaceId);
+        learnClock(sentAt, beat.server_time);
+        if (!adrift.current) return;
+        if (beat.outcome !== 'refused') {
+          appliedSeq.current = Math.max(appliedSeq.current, beat.session.seq);
+          return carryOn(beat.session, beat.envelope_key);
+        }
+      }
+      stopHere(answer.moved_to_name ? `${answer.moved_to_name} took over while this device was offline, so playback stopped here.` : TAKEN_OVER_WHILE_OFFLINE);
+    } catch (problem) {
+      if (!adrift.current) return;
+      // still can't reach SelectaDJ: keep playing and try again on the next return
+      if (couldNotReach(problem)) return;
+      const status = (problem as { status?: number }).status;
+      stopHere(status === 403 ? 'This device was signed out, so playback stopped.' : 'SelectaDJ couldn’t confirm this device should keep playing, so playback stopped here.');
+    } finally {
+      reconciling.current = false;
+    }
+  }, [api, becomeRemote, deviceId, sendHeldVolume, speaker, workspaceId]);
+  const reconcileRef = useRef(reconcile);
+  reconcileRef.current = reconcile;
+  useEffect(() => onReconnect(() => void reconcileRef.current()), []);
+  // a stand-in id swapped for the registered one, or a speaker that arrives later, tries again
+  useEffect(() => { if (adrift.current) void reconcile(); }, [reconcile]);
+
   const poll = useCallback(async (forDecision = false): Promise<SessionView | null> => {
     if (!deviceId) return null;
     const requestId = ++latestPoll.current;
@@ -279,6 +404,11 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       viewSnapshot.current = next;
       setView(next);
       if (!commandRefused.current) setError('');
+      // playing on offline: the reconnect decides who speaks, never a session read alone
+      if (adrift.current) {
+        void reconcileRef.current();
+        return next;
+      }
       if (expiredSpeaker.current) {
         if (next.speaker === 'here') void recoverExpired();
         else {
@@ -299,7 +429,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       if (requestId !== latestPoll.current) return null;
       const status = (problem as { status?: number }).status;
       if (status === 403) becomeRemote('This device was signed out, so playback stopped.');
-      setError((problem as Error).message);
+      // offline is said once by the connection banner, not as a raw error under the player
+      if (!(offlinePlaybackOn() && couldNotReach(problem))) setError((problem as Error).message);
       return null;
     }
   }, [api, becomeRemote, deviceId, follow, recoverExpired, workspaceId]);
@@ -342,7 +473,19 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   useEffect(() => {
     if (!deviceId) return;
     const timer = window.setInterval(() => {
+      if (adrift.current) {
+        if (isOnline()) void reconcileRef.current();
+        return;
+      }
       if (speaking.current && leaseDeadline.current !== null && serverNow() >= leaseDeadline.current) {
+        // cloud.offline_playback: the lease lapsed only because SelectaDJ can't be reached, so
+        // this device keeps playing its own files and settles up when the connection is back
+        if (offlinePlaybackOn() && (beatTrouble.current || !isOnline())) {
+          adrift.current = true;
+          setOffline(true);
+          if (isOnline()) void reconcileRef.current();
+          return;
+        }
         becomeRemote('Playback stopped because this device could not renew its audio lease.', 0);
         expiredSpeaker.current = true;
       }
@@ -381,26 +524,35 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         };
       })();
       if (!at) return;
+      // adrift: the reconnect settles the lease first, then heartbeats carry on
+      if (adrift.current) { if (isOnline()) void reconcileRef.current(); return; }
       const sentAt = Date.now();
       try {
         const answer = await api<{ outcome: string; session: SessionState; server_time: number; envelope_key?: string | null }>('/playback/heartbeat', {
           method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }), ...outputReport(speaker) }),
         }, workspaceId);
         learnClock(sentAt, answer.server_time);
+        beatTrouble.current = false;
+        if (!adrift.current) setOffline(false);
         if (answer.outcome !== 'refused') {
           leaseDeadline.current = answer.session.lease_expires_at;
           adopt(answer.session);
           learnKey(answer.envelope_key);
+          if (heldVolume.current !== null) void sendHeldVolume();
         }
         if (answer.outcome === 'refused') {
           // Another device took over: the session says which, so the message can name it.
           await poll();
           becomeRemote('Playback moved to another device');
         }
-      } catch { /* the lease outlives a missed heartbeat; the next one tries again */ }
+      } catch (problem) {
+        // the lease outlives a missed heartbeat; the next one tries again. A miss because
+        // SelectaDJ can't be reached lets this device play on past the lease (cloud.offline_playback).
+        beatTrouble.current = couldNotReach(problem);
+      }
     }, HEARTBEAT_MS);
     return () => window.clearInterval(beat);
-  }, [api, becomeRemote, deviceId, poll, speaker, workspaceId]);
+  }, [api, becomeRemote, deviceId, poll, sendHeldVolume, speaker, workspaceId]);
 
   useEffect(() => () => {
     expiredSpeaker.current = false;
@@ -453,6 +605,29 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
 
   /** Sends a press; true when the server took it, false when it was refused or never sent. */
   const send = useCallback(async (name: string, args?: Record<string, unknown>): Promise<boolean> => {
+    // cloud.offline_playback: while SelectaDJ can't be reached, this speaker's own presses act
+    // here at once; its next heartbeat after the return tells the session where the music is
+    const sound = speaker ?? offlineSpeaker.current;
+    const hereOffline = () => offlinePlaybackOn() && speaking.current && !!sound && LOCAL_PRESSES.has(name);
+    const actHere = async () => {
+      if (!sound) return false;
+      const at = sound.position();
+      if (name === 'pause') sound.pause();
+      else if (name === 'play') sound.resume();
+      else if (name === 'skip') await sound.start((at?.song_index ?? 0) + 1, 0, true);
+      else if (name === 'seek') await sound.start(Number(args?.song_index ?? at?.song_index ?? 0), Number(args?.offset_ms ?? 0), true);
+      else if (name === 'set_volume') {
+        const volume = Math.max(0, Math.min(100, Number(args?.volume ?? 100)));
+        sound.setVolume?.(volume / 100);
+        heldVolume.current = volume;
+      }
+      if (!adrift.current) beatTrouble.current = true;
+      setOffline(true);
+      commandRefused.current = false;
+      setError('');
+      return true;
+    };
+    if (hereOffline() && (adrift.current || !isOnline())) return actHere();
     if (!deviceId || !view?.session) return false;
     try {
       await api('/playback/commands', {
@@ -471,6 +646,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       setError('');
       return true;
     } catch (problem) {
+      if (hereOffline() && couldNotReach(problem)) return actHere();
       const code = (problem as { code?: string }).code;
       commandRefused.current = true;
       setError(code && RETRY_CODES.has(code) ? "Something changed just then. Here's where it is now; try again." : (problem as Error).message);
@@ -478,8 +654,30 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     } finally {
       void poll();
     }
-  }, [api, deviceId, poll, view?.session, workspaceId]);
+  }, [api, deviceId, poll, speaker, view?.session, workspaceId]);
   const command = useCallback(async (name: string, args?: Record<string, unknown>) => { await send(name, args); }, [send]);
+
+  /** cloud.offline_playback: start this device's own files with no connection. There is no lease
+   * to take, so the device plays "adrift" and settles with the server when the connection is
+   * back: it keeps playing if no other device holds a live lease, and stops here if one does.
+   * `using` is a speaker made by the same press, before it reaches this hook as a prop. */
+  const playOffline = useCallback(async (songIndex: number, offsetMs: number, using?: Speaker | null): Promise<boolean> => {
+    const sound = using ?? speaker;
+    if (!offlinePlaybackOn() || !sound || isOnline()) return false;
+    speaking.current = true;
+    adrift.current = true;
+    expiredSpeaker.current = false;
+    leaseDeadline.current = null;
+    setOffline(true);
+    setOfflineNotice('');
+    setMessage('');
+    setError('');
+    offlineSpeaker.current = sound;
+    if (!wake.current) wake.current = holdWakeLock();
+    wakeWasHeld.current = false;
+    await sound.start(songIndex, offsetMs, true);
+    return true;
+  }, [speaker]);
 
   // ADR-0461: the speaker checks each delivered command against its own fence and the server's
   // clock, carries it out by following the session, then acks what it actually did. A command
@@ -537,5 +735,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     return () => window.removeEventListener(PLAYBACK_COMMAND_EVENT, hear);
   }, [handleCommand]);
 
-  return { device, notice, view, message, starting, error, playHere, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, send, serverNow, isSpeaker: () => speaking.current };
+  return { device, notice, view, message, starting, error, playHere, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, send, serverNow, isSpeaker: () => speaking.current,
+    /** cloud.offline_playback: playing on while SelectaDJ can't be reached, and what was said when that ended. */
+    offline, offlineNotice, playOffline, heldVolume: () => heldVolume.current };
 }

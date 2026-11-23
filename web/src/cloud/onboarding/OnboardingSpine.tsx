@@ -4,7 +4,8 @@ import { flagOn, useFlag } from '../../flags';
 import { rememberFolder, type DirectoryHandleLike, type ImportSource } from '../../media';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { Icon, IconName } from '../../ui/Icon';
-import { cancelImportSession, startImportSession, useImportSession } from '../importSession';
+import { cancelImportSession, readImportMarker, startImportSession, useImportSession } from '../importSession';
+import { preloadImportCode } from '../../media/importer';
 import { AudioSession, defaultDeps, SpineDeps } from './deps';
 import { FRESH, loadState, previousStep, saveState, settleVerifyLater, SpineState, STEP_TITLES, StepId, StepOutcome, STEPS } from './state';
 import { CapabilityStep, ConnectStep, KeepAwakeStep, OutputStep, RemoteStep, SoundcheckStep, StartStep, StepProps, VerifyStep } from './steps';
@@ -44,6 +45,9 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   const heading = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
   const [restarting, setRestarting] = useState(false);
+  const resilient = useFlag('cloud.resilient_import');
+  // load the fingerprinting code before any import, so going offline never fails every file
+  useEffect(() => { if (flagOn('cloud.resilient_import')) preloadImportCode(); }, []);
 
   // With `cloud.progressive_import` on, the import belongs to the session and outlives this
   // spine (the shell cancels it when the shell itself goes); off, leaving the spine stops it.
@@ -91,7 +95,12 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
     change({ ...state, step: 'verify', outcomes, imported: undefined });
     const folder = isFolder(source) ? source.name : undefined;
     if (isFolder(source)) void rememberFolder(workspaceId, source);
-    void startImportSession({ source, run: deps.importMusic, workspaceId, folder });
+    // cloud.resilient_import: the same music picked again carries an interrupted import on,
+    // skipping everything already done
+    void startImportSession({
+      source, run: deps.importMusic, workspaceId, folder,
+      ...(flagOn('cloud.resilient_import') ? { kind: isFolder(source) ? 'folder' as const : 'files' as const, resume: readImportMarker(workspaceId) } : {}),
+    });
   };
   // Carry on while checking continues: verify stays unsettled until the import finishes.
   const continueEarly = () => change({ ...state, step: 'capability' });
@@ -141,8 +150,8 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
       <h2 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>{STEP_TITLES[step]}</h2>
       <StepList state={state} />
       <div className="cloud-card cloud-spine-step" data-step={step}>
-        {step === 'connect' && <ConnectStep {...props} onPick={startImport} />}
-        {step === 'verify' && <VerifyStep {...props} live={live} earlyContinue={progressive} onStop={cancelImportSession} onContinueEarly={continueEarly} />}
+        {step === 'connect' && !(resilient && live.phase === 'running') && <ConnectStep {...props} onPick={startImport} workspaceId={workspaceId} />}
+        {(step === 'verify' || (step === 'connect' && resilient && live.phase === 'running')) && <VerifyStep {...props} live={live} earlyContinue={progressive} onStop={cancelImportSession} onContinueEarly={continueEarly} />}
         {step === 'capability' && <CapabilityStep {...props} />}
         {step === 'output' && <OutputStep {...props} />}
         {step === 'start' && <StartStep {...props} />}

@@ -51,8 +51,14 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.venue.last-heard.<workspace>` | local | `web/src/cloud/venue/deps.ts` | When a person last confirmed hearing the venue check tone, shown only as history and never trusted as a current check (Cloud, ADR-0460) | Cloud |
 | `selecta.venue.record.<workspace>` | local | `web/src/cloud/venue/deps.ts` | The newest capability record measured on this device, filed under its full tuple (Cloud, ADR-0460) | Cloud |
 | `selecta-requests:<workspace>` | local | `web/src/cloud/localFirstRequests.ts` | The songs asked for under Request a song in a browser mix, and which room requests this browser has already placed, so a reload keeps the queue (Cloud, ADR-0462) | Requests |
+| `selecta-requests-room:<workspace>` | local | `web/src/cloud/localFirstRequests.ts` | The last room request list the server answered, so Request a song still shows it while the connection is down (Cloud, `cloud.offline_shell`) | Requests |
+| `selecta.account-snapshot` | local | `web/src/cloud/offlineCache.ts` | The signed-in person's last account answer (user id, when, account), so a page opened offline still knows its workspace and features; forgotten with the workspace's device data (Cloud, `cloud.offline_shell`) | Cloud |
+| `selecta-mix-outbox-alias:<workspace>` | local | `web/src/cloud/outbox.ts` | Local mix ids matched to the server's once a queued create or edit lands, so later queued changes and a reloaded tab find the right mix (Cloud, `cloud.mix_outbox`) | My Mixes |
+| `selecta-mix-outbox-notices:<workspace>` | local | `web/src/cloud/outbox.ts` | The last few plain notices about queued mix changes the server turned down, shown once and then removed (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
 | `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
+
+IndexedDB databases added for interruption-safe Cloud (not localStorage keys, so not rows above): `selecta-mix-outbox` (`web/src/cloud/outbox.ts`, mix creates and edits made offline, sent on reconnect, `cloud.mix_outbox`), `selecta-media-catalogue-<workspace>` (`web/src/cloud/offlineCache.ts`, the last catalogue answer for the offline Library, `cloud.offline_shell`) and the import journal `selecta-media-journal-ws-<workspace>` (`web/src/media/importJournal.ts`, files already checked by an import, `cloud.resilient_import`).
 
 ## API side effects
 
@@ -112,6 +118,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 |---|---|
 | `POST /api/scan` | Reads a music folder into the library |
 | `POST /api/scan/cancel` | Stops a folder read; what is in stays |
+| `POST /api/library/lyrics/again` | Starts an interrupted lyric lookup again (`library.scan_resume`); with durable jobs it queues at most one more |
 | `POST /api/library/check` | Checks the library for moved or changed files now |
 | `POST /api/analysis/start` | Starts analysis |
 | `POST /api/analysis/stop` | Pauses analysis |
@@ -140,6 +147,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 |---|---|
 | `POST /api/exports/jobs` | Starts a frozen export job (idempotent with `x-operation-id`) |
 | `DELETE /api/exports/jobs/{job_id}` | Cancels a waiting export |
+| `POST /api/exports/jobs/{job_id}/again` | Starts an interrupted export again, once, as a new job from its frozen songs and transitions (`library.scan_resume`); with durable jobs nothing is started |
 
 ### Workspace and setup (`src/selecta/routes/system.py`) - Workspace, Onboarding, Listen
 

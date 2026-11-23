@@ -26,6 +26,9 @@ const TIMER = /window\.setInterval\(|\buseVisiblePoll\(|\bevery:\s*[\w\d]/;
 const OWN_CLIENTS = [
   'RuntimeApp.tsx', 'admin/adminApi.ts', 'api.ts', 'cloud/CloudApp.tsx',
   'cloud/devAuthKit.tsx',
+  // the connection store's own probe of /api/status, which must not go through the request layer
+  // it reports to (cloud.offline_shell)
+  'cloud/connection.ts',
   'devcloud/authkit.tsx',
   'cloud/hostedMedia.ts', 'devices/audioSpeaker.ts',
   // the stem model file, a one-off static download with Range resume, not an API call

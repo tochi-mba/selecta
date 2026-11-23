@@ -54,7 +54,8 @@ test('a new member carries on while the import finishes, and verify still settle
   await expect(page.getByRole('heading', { level: 2, name: 'Connect your music' })).toBeVisible();
   await page.getByLabel('Choose music files').setInputFiles(files(30));
   await expect(page.getByRole('heading', { level: 2, name: 'Check your music' })).toBeVisible();
-  await expect(page.getByText(/checked so far/)).toBeVisible();
+  // cloud.resilient_import: real counts in the shared words
+  await expect(page.getByText(/Checking your music: \d+( of 30)? checked\./).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Continue while it finishes' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Check this device' })).toBeVisible();
@@ -87,14 +88,16 @@ test('an import abandoned by a reload offers to carry on, and picking again dupl
 
   await page.reload();
   held.release();
-  await expect(page.getByRole('note').filter({ hasText: 'An import stopped part way last time.' })).toContainText('nothing is duplicated');
+  // cloud.resilient_import: picked files are gone after a reload by the browser's design, so the
+  // offer asks for them again and says everything already done is skipped
+  await expect(page.getByRole('note').filter({ hasText: 'Your import stopped part way' })).toContainText('skips everything already done');
   await expect(songCount(page, 5)).toBeVisible();
   await page.locator('.connect-music input[accept="audio/*"]').setInputFiles(music);
   await expect(page.locator('.connect-music').getByText(/songs connected/)).toBeVisible({ timeout: 60_000 });
   // each file once: the five registered before the reload were recognised, not added again
   await expect(songCount(page, 12)).toBeVisible();});
 
-test('an interrupted folder import carries on over the remembered folder', async ({ page, request }) => {
+test('an interrupted folder import carries on by itself over the remembered folder', async ({ page, request }) => {
   const user = listener('onb-folder');
   const { workspace_id: workspace } = await seeded(request, user, { local_songs: 1 });
   await asLocalFirst(page, user);
@@ -124,12 +127,11 @@ test('an interrupted folder import carries on over the remembered folder', async
       writing.onerror = () => reject(writing.error);
     });
     db.close();
-    localStorage.setItem(`selecta.import.${workspace}`, JSON.stringify({ version: 1, folder: 'Crates', startedAt: Date.now(), total: 6, registered: 0 }));
+    localStorage.setItem(`selecta.import.${workspace}`, JSON.stringify({ version: 1, folder: 'Crates', startedAt: Date.now(), total: 6, registered: 0, kind: 'folder', checked: 0 }));
   }, { workspace, music });
 
   await page.goto('/library');
-  await expect(page.getByRole('note').filter({ hasText: 'An import of Crates was interrupted.' })).toBeVisible();
-  await page.getByRole('button', { name: 'Keep checking Crates' }).click();
+  // cloud.resilient_import: the folder's permission is still granted, so it carries on with no press
   await expect(page.getByText('6 songs connected.', { exact: true })).toBeVisible({ timeout: 60_000 });
   await expect(songCount(page, 7)).toBeVisible();
 });

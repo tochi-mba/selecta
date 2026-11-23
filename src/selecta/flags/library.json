@@ -88,6 +88,16 @@
       "about": "How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds.",
       "surfaces": ["workshop.analysis", "library"],
       "cli": ["timings"]
+    },
+    "library.scan_resume": {
+      "label": "Scans carry on after a stop",
+      "about": "A library scan saves its progress as it goes, so a scan interrupted by closing SelectaDJ or the computer carries on where it stopped. An interrupted export or lyric lookup is offered again.",
+      "modes": ["local"],
+      "routes": ["GET /api/library/interrupted", "POST /api/library/lyrics/again", "POST /api/exports/jobs/{job_id}/again"],
+      "surfaces": ["workshop"],
+      "default": true,
+      "kind": "release",
+      "owner": "library"
     }
   }
 }

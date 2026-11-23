@@ -5,6 +5,8 @@ import { mixFamily, type PlayableSong } from './localFirstMixes';
 import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscoveries';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 import { requestsFamily } from './localFirstRequests';
+import { readCached, writeCached } from './offlineCache';
+import { canHeal, classify } from './resilientRequest';
 
 /** The local-first shell's request adapter (ADR-0462 "one adapter per route family").
  *
@@ -62,6 +64,15 @@ export type AvailabilitySources = {
   /** The workspace whose song requests this browser keeps (localFirstRequests.ts); with the
    * recipe store, Request a song works here. */
   workspaceId?: string;
+  /** `cloud.offline_shell`: keep the last catalogue in this browser and serve it, merged with
+   * `deviceSongs`, while SelectaDJ cannot be reached. Needs `workspaceId`. */
+  offline?: {
+    /** The songs in this device's own index, in catalogue shape. */
+    deviceSongs?: () => Promise<CatalogueSong[]>;
+    /** Told where each catalogue read came from: the server, or this device (with when the
+     * server last answered, null when it never has here). */
+    onServed?: (from: { cached: false } | { cached: true; at: number | null }) => void;
+  };
 };
 export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number> };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
@@ -144,6 +155,15 @@ export function statusFrom(songs: CatalogueSong[], known: Availability = NO_AVAI
   };
 }
 
+const CATALOGUE_KEY = 'catalogue';
+
+/** The kept catalogue with this device's own songs added: a song imported here after the last
+ * server answer is still in the Library offline. The kept row wins where both have it. */
+export function mergeSongs(kept: readonly CatalogueSong[], device: readonly CatalogueSong[]): CatalogueSong[] {
+  const known = new Set(kept.map((song) => song.id));
+  return [...kept, ...device.filter((song) => !known.has(song.id))];
+}
+
 /** The current mix before a recipe store has answered, or without one. */
 export const EMPTY_MIX: MixData = { mix: [], name: 'Current mix', can_undo: false };
 
@@ -151,11 +171,39 @@ export const EMPTY_MIX: MixData = { mix: [], name: 'Current mix', can_undo: fals
 export function localFirstRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
   let catalogue: Promise<CatalogueSong[]> | null = null;
   let readAt = 0;
+  // `cloud.offline_shell`: the server's answer is kept here, and served back (with this device's
+  // own songs) when the server cannot be reached; a refusal or an ended sign-in still throws
+  const keep = sources.offline && sources.workspaceId ? { ...sources.offline, workspaceId: sources.workspaceId } : null;
+  let keptCount = -1;
+  let keptAt = 0;
+  const fromServer = async (): Promise<CatalogueSong[]> => {
+    if (!keep) return readCatalogue(cloud);
+    try {
+      const list = await readCatalogue(cloud);
+      // kept when it changed size, and otherwise at most once a minute
+      if (list.length !== keptCount || Date.now() - keptAt > 60_000) {
+        keptCount = list.length;
+        keptAt = Date.now();
+        void writeCached(keep.workspaceId, CATALOGUE_KEY, list);
+      }
+      keep.onServed?.({ cached: false });
+      return list;
+    } catch (problem) {
+      if (!canHeal(classify(problem))) throw problem;
+      const [kept, device] = await Promise.all([
+        readCached<CatalogueSong[]>(keep.workspaceId, CATALOGUE_KEY),
+        keep.deviceSongs?.().catch(() => []) ?? Promise.resolve([]),
+      ]);
+      if (!kept && !device.length) throw problem;
+      keep.onServed?.({ cached: true, at: kept?.at ?? null });
+      return mergeSongs(kept?.value ?? [], device);
+    }
+  };
   // one catalogue read serves a burst of requests (status, the library page, a search)
   const songs = () => {
     if (!catalogue || performance.now() - readAt > 3000) {
       readAt = performance.now();
-      catalogue = readCatalogue(cloud);
+      catalogue = fromServer();
       catalogue.catch(() => { catalogue = null; });
     }
     return catalogue;

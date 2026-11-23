@@ -1,9 +1,10 @@
 /** Whether this device may split stems right now (ADR-0459 Tier 3).
  *
  * Three device checks, each with a plain reason:
- * - Crash guard: a marker is written before inference and removed after. A page that loads and
- *   finds it still there knows the last attempt took the page down, and stems stay off here
- *   until the member chooses to try again.
+ * - Crash guard: a marker is written before inference and removed after, and
+ *   also on `pagehide` when the page closes normally. A page that loads and finds it still
+ *   there knows the last attempt took the page down, and stems stay off here until the member
+ *   chooses to try again.
  * - Benchmark ('stem-worker-roundtrip-v1'): a short synthetic window through the real worker.
  *   Supported only when separation runs at most 0.5 s per second of audio (twice realtime), on
  *   this device, with this model, within 30 days.
@@ -73,14 +74,35 @@ export function crashGuardState(store: KeyValueStore | null = defaultStore()): C
   return { clear: false, reason: CRASH_REASON, at: typeof at === 'number' ? at : null };
 }
 
+/** The stores whose marker a normal page close should clear. */
+const armedStores = new Set<KeyValueStore>();
+let pageHideWatched = false;
+
+/** A normal close (tab closed, reload, navigating away) fires `pagehide`; a page the browser
+ * killed mid-separation does not. Clearing the marker there means only a real crash trips the
+ * guard, so closing the tab during a split never turns stems off on this device. */
+function watchPageHide(): void {
+  if (pageHideWatched || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
+  pageHideWatched = true;
+  window.addEventListener('pagehide', () => {
+    for (const store of armedStores) safely(() => store.removeItem(GUARD_KEY), undefined);
+    armedStores.clear();
+  });
+}
+
 /** Set just before inference starts. */
 export function armCrashGuard(store: KeyValueStore | null = defaultStore(), now = Date.now()): void {
-  if (store) safely(() => store.setItem(GUARD_KEY, JSON.stringify({ at: now, implementation: STEM_MODEL.implementation })), undefined);
+  if (!store) return;
+  safely(() => store.setItem(GUARD_KEY, JSON.stringify({ at: now, implementation: STEM_MODEL.implementation })), undefined);
+  armedStores.add(store);
+  watchPageHide();
 }
 
 /** Cleared as soon as inference ends, whether it succeeded, failed or was cancelled. */
 export function disarmCrashGuard(store: KeyValueStore | null = defaultStore()): void {
-  if (store) safely(() => store.removeItem(GUARD_KEY), undefined);
+  if (!store) return;
+  safely(() => store.removeItem(GUARD_KEY), undefined);
+  armedStores.delete(store);
 }
 
 /** The member chose "try again" in the UI. */

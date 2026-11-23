@@ -299,7 +299,8 @@ function heldImport() {
 const pickOne = (user: ReturnType<typeof userEvent.setup>) => user.upload(screen.getByLabelText('Choose music files'), new File(['x'], 'one.mp3', { type: 'audio/mpeg' }));
 
 describe('verify never blocks (progressive import)', () => {
-  it('counts against the total once it is known, and names the file being read', async () => {
+  it('with cloud.resilient_import off, counts against the total once it is known, and names the file being read', async () => {
+    setAccountFeatures({ 'cloud.resilient_import': false });
     const user = userEvent.setup();
     const held = heldImport();
     setup({ importMusic: held.importMusic });
@@ -370,8 +371,25 @@ describe('verify never blocks (progressive import)', () => {
     setup({ importMusic: held.importMusic });
     await pickOne(user);
     await user.click(await screen.findByRole('button', { name: 'Stop here' }));
+    // cloud.resilient_import: the one press that throws progress away asks first
+    expect(held.signal()?.aborted).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Stop the import' }));
     expect(held.signal()?.aborted).toBe(true);
     expect(await screen.findByText(/You stopped part way/)).toBeVisible();
+  });
+
+  it('counts what was checked with the resilient import on, and names the file being read', async () => {
+    const user = userEvent.setup();
+    const held = heldImport();
+    setup({ importMusic: held.importMusic });
+    await pickOne(user);
+    await heading('Check your music');
+    held.emit({ kind: 'collected', total: 3, skipped: 0 });
+    held.emit({ kind: 'checked', name: 'one.mp3', resumed: false });
+    expect(screen.getByText('Checking your music: 1 of 3 checked.')).toBeVisible();
+    expect(screen.getByRole('progressbar', { name: 'Checking your music' })).toHaveAttribute('aria-valuenow', '1');
+    expect(screen.getByText('Now: one.mp3')).toBeVisible();
+    noForbiddenWords();
   });
 
   it('keeps importing when the spine unmounts with cloud.progressive_import on', async () => {

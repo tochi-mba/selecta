@@ -1,5 +1,5 @@
 import { LoginRequiredError, useAuth } from '@workos-inc/authkit-react';
-import { FormEvent, lazy, ReactNode, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
@@ -13,6 +13,7 @@ import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
 import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
+import { keptImportWaiting } from './importSession';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
@@ -40,6 +41,11 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DeviceDataCard } from './DeviceDataCard';
 import { forgetWorkspaceOnDevice } from './deviceData';
 import type { HostedView } from './HostedShell';
+import { onReconnect, reportOk, useConnection } from './connection';
+import { ConnectionBanner } from './ConnectionBanner';
+import { forgetAccountSnapshot, rememberAccount, rememberedAccount } from './offlineCache';
+import { syncOfflineShell } from './offlineShell';
+import { canHeal, classify, resilient } from './resilientRequest';
 import './cloud.css';
 // Shared business styles are scoped to .biz and loaded by the Cloud shell.
 import '../business/business.css';
@@ -96,6 +102,8 @@ export function pageFor(pathname: string): Page {
   return 'home';
 }
 
+const OFFLINE_SHELL = 'cloud.offline_shell';
+
 const PATHS: Record<Page, string> ={ home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
 const sharedLabel = (id: 'listen' | 'library') => DESTINATIONS.find((destination) => destination.id === id)!.label;
 const LABELS: Record<Page, string> = { home: 'Overview', listen: sharedLabel('listen'), library: sharedLabel('library'), uploads: 'Add music', billing: 'Plan & billing', settings: 'Settings' };
@@ -109,7 +117,15 @@ function dockPage(view: HostedView): Page {
 const TITLES: Record<Page, string> = { home: 'Your music workspace', listen: 'Listen', library: 'Your library', uploads: 'Add music', billing: 'Plan & billing', settings: 'Account settings' };
 
 export function CloudApp() {
-  const { isLoading, user, getAccessToken, signIn, signUp, signOut } = useAuth();
+  const { isLoading, user, getAccessToken, signIn, signUp, signOut: authSignOut } = useAuth();
+  // Every way out (sign out, sign out everywhere, delete, sign in again) forgets the account kept
+  // for an offline open first (cloud.offline_shell privacy: only while signed in, only the last).
+  // Every way out forgets the kept offline account. AuthKit's signOut is overloaded, so the wrapper
+  // keeps its whole type instead of only its last signature.
+  const signOut = useCallback(((...args: unknown[]) => {
+    forgetAccountSnapshot();
+    return (authSignOut as (...given: unknown[]) => unknown)(...args);
+  }) as typeof authSignOut, [authSignOut]);
   const [account, setAccount] = useState<Account | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [blocked, setBlocked] = useState<BlockedCode | null>(null);
@@ -132,7 +148,7 @@ export function CloudApp() {
     if (signInProblem) window.history.replaceState({}, '', withoutCallbackError(window.location.pathname, window.location.search, window.location.hash));
   }, [signInProblem]);
 
-  const api = useCallback(async <T,>(path: string, init: RequestInit = {}, workspaceId?: string): Promise<T> => {
+  const rawApi = useCallback(async <T,>(path: string, init: RequestInit = {}, workspaceId?: string): Promise<T> => {
     const token = await getAccessToken();
     const headers = new Headers(init.headers);
     headers.set('Authorization', `Bearer ${token}`);
@@ -150,6 +166,16 @@ export function CloudApp() {
     }
     return payload as T;
   }, [getAccessToken]);
+  // `cloud.offline_shell`: every call goes through the resilient request layer, which feeds the
+  // one connection state and says failures in plain words (resilientRequest.ts). Decided at call
+  // time, so the client keeps its identity when the account's flags arrive.
+  const api = useMemo(() => {
+    const layered = resilient(rawApi);
+    return (<T,>(path: string, init?: RequestInit, workspaceId?: string): Promise<T> => (flagOn(OFFLINE_SHELL) ? layered<T>(path, init, workspaceId) : rawApi<T>(path, init, workspaceId)));
+  }, [rawApi]);
+  const connectionNow = useConnection();
+  const shownAccount = useRef(account);
+  shownAccount.current = account;
 
   // A token getter that keeps its identity across renders, for the business app's event stream
   // (a new function every render would reconnect the stream every render).
@@ -166,7 +192,10 @@ export function CloudApp() {
   }, []);
   const busy = (operation: Operation) => running.has(operation);
 
-  const refreshAccount = useCallback(async () => {
+  const [signInAgain, setSignInAgain] = useState(false);
+  const loginRetry = useRef(0);
+  useEffect(() => () => window.clearTimeout(loginRetry.current), []);
+  const refreshAccount = useCallback(async (): Promise<void> => {
     if (!user) return;
     try {
       const next = await api<Account>('/account');
@@ -175,10 +204,32 @@ export function CloudApp() {
       setAccount(next);
       setNeedsOnboarding(false);
       setProblem(null);
+      setSignInAgain(false);
+      loginRetry.current = 0;
+      if (flagOn(OFFLINE_SHELL)) rememberAccount(user.id, next);
     } catch (problem) {
       // During the sign-in redirect AuthKit can report a user a moment before it holds a token.
       // That is not an account problem: AuthKit's own state decides what shows next.
-      if (problem instanceof LoginRequiredError) return;
+      // If it still has no token a moment later, the sign-in has lapsed: say so and offer one
+      // way back. Nothing on this device is cleared (songs, mixes, the import journal).
+      if (problem instanceof LoginRequiredError) {
+        if (loginRetry.current) { setSignInAgain(true); return; }
+        loginRetry.current = window.setTimeout(() => void refreshAccount(), 1500);
+        return;
+      }
+      // Offline or the service down (`cloud.offline_shell`): keep the account already shown, or
+      // open with the one this device last saw; the connection banner says what is happening and
+      // the account is read again when the connection is back.
+      if (flagOn(OFFLINE_SHELL) && canHeal(classify(problem))) {
+        const kept = shownAccount.current ? { value: shownAccount.current } : rememberedAccount(user.id);
+        if (kept) {
+          if (!shownAccount.current) {
+            setAccountFeatures(kept.value.features);
+            setAccount(kept.value);
+          }
+          return;
+        }
+      }
       if (problem instanceof CloudError && problem.status === 409 && problem.code === 'not_onboarded') {
         setNeedsOnboarding(true);
         setAccountFeatures(null);
@@ -217,6 +268,46 @@ export function CloudApp() {
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);
   const stream = useCloudEvents({ token: getAccessToken, workspaceId: account?.workspace.id ?? null, onEvent, refresh: refreshAll });
+  // a live event stream is the connection answering; coming back reads the account again
+  useEffect(() => { if (stream === 'live' && flagOn(OFFLINE_SHELL)) reportOk(); }, [stream]);
+  useEffect(() => onReconnect(() => { if (flagOn(OFFLINE_SHELL)) void refreshAccount(); }), [refreshAccount]);
+  // the app-shell service worker, only in Cloud with the flag on; off, it is removed
+  const offlineShellOn = account !== null && flagOn(OFFLINE_SHELL);
+  useEffect(() => { if (account) void syncOfflineShell(offlineShellOn); }, [account, offlineShellOn]);
+  // Opened with no connection: AuthKit cannot renew the sign-in until it is back, so a member who
+  // has used SelectaDJ here is told that plainly instead of seeing the welcome page, and the page
+  // opens by itself on reconnect.
+  const connectionDown = flagOn(OFFLINE_SHELL) && connectionNow.status !== 'online';
+  // A local-first account opens the browser shell from the account this device last saw, in an
+  // explicit offline mode: the library from this device, local files play, mixes are queued, and
+  // anything only the server can do waits with its reason. Any other account waits on a page.
+  const offlineCandidate = !isLoading && !user && connectionDown ? rememberedAccount() : null;
+  const offlineUsable = offlineCandidate !== null && localFirstDecided(offlineCandidate.value);
+  const [offlineMode, setOfflineMode] = useState(false);
+  useEffect(() => {
+    if (!offlineUsable || offlineMode || !offlineCandidate) return;
+    setAccountFeatures(offlineCandidate.value.features);
+    setAccount(offlineCandidate.value);
+    setOfflineMode(true);
+  }, [offlineUsable, offlineMode, offlineCandidate]);
+  // Signed in again: the normal path takes over with the same shell still mounted, and the
+  // account is read fresh. AuthKit is asked on reconnect; if it says the sign-in has ended, the
+  // offline mode closes and the sign-in page shows.
+  useEffect(() => { if (user && offlineMode) setOfflineMode(false); }, [user, offlineMode]);
+  useEffect(() => {
+    if (!offlineMode || user) return undefined;
+    return onReconnect(() => {
+      getAccessToken().catch((problem: unknown) => {
+        if (classify(problem) !== 'signed_out') return;
+        forgetAccountSnapshot();
+        setOfflineMode(false);
+        setAccountFeatures(null);
+        setAccount(null);
+      });
+    });
+  }, [offlineMode, user, getAccessToken]);
+  const waitingOffline = !isLoading && !user && !offlineMode && offlineCandidate !== null && !offlineUsable;
+  useEffect(() => (waitingOffline ? onReconnect(() => window.location.reload()) : undefined), [waitingOffline]);
 
   const checkout = useCheckoutReturn(account, refreshAccount);
   const consentVersion = consentVersionFor(account);
@@ -355,7 +446,18 @@ export function CloudApp() {
   };
 
   if (isLoading) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Checking your sign-in…</p></main>;
+  if (waitingOffline) return <main className="cloud-runtime-message cloud-offline-wait"><BrandMark className="cloud-mark" /><h1>You’re offline</h1><p>SelectaDJ needs the connection for a moment to check your sign-in. Everything on this device is kept, and this page opens by itself when you’re back online.</p><ConnectionBanner /></main>;
+  if (!user && (offlineMode || offlineUsable)) {
+    return (
+      <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
+        {offlineMode && account
+          ? <LocalFirstShell api={api} account={account} more={() => <p className="needs-connection">This needs the internet. You’ll be signed in again when the connection is back.</p>} offlineReadOnly />
+          : <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}
+      </Suspense>
+    );
+  }
   if (!user) return <main className="cloud-welcome"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
+  if (signInAgain) return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>Sign in again to carry on</h1><p>Your sign-in ended. Everything on this device is kept, including your songs, your mixes and any import in progress, which carries on after you sign in.</p><button className="primary" onClick={startSignIn}>Sign in again</button></main>;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => void restartSignIn()} />;
   if (!user.emailVerified) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
   if (needsOnboarding) return <main className="cloud-onboarding"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">One quick check</p><h1>Set up your SelectaDJ workspace</h1><p>Your music stays on your own devices. SelectaDJ plans the mixes and plays them here.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy('onboarding')} aria-busy={busy('onboarding') || undefined}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
@@ -415,11 +517,14 @@ export function CloudApp() {
     }
   };
   // The hosted frame's account notices, in a shared shell's banner slot (one source for every frame).
+  // The local-first shell draws its own connection banner, which also says when its library is
+  // served from this device.
   const shellNotices = account && <>
+    {flagOn(OFFLINE_SHELL) && !localFirst && <ConnectionBanner />}
     {account.user.suspended && (exact ? <SuspendedPanel go={goShell} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
     {problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
     <OverQuotaBanner account={account} go={goShell} />
-    {stream === 'polling' && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
+    {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
   </>;
   const shellFeedback = <Feedback error={problem && error === problem.message ? '' : error} notice={notice} />;
 
@@ -482,7 +587,8 @@ export function CloudApp() {
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         <OverQuotaBanner account={account} go={choosePage} />
-        {stream === 'polling' && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
+        {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
+        {flagOn(OFFLINE_SHELL) && <ConnectionBanner />}
         <Feedback error={exact && problem && error === problem.message ? '' : error} notice={notice} />
         {notFound && <NotFound path={path} go={choosePage} />}
         {account && singleAudioOwner(account) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} />}
@@ -526,7 +632,9 @@ export function CloudCredit() {
 
 function BlockedAccount({ code, distinct, onSignOut }: { code: BlockedCode; distinct: boolean; onSignOut: () => void }) {
   const message = blockedMessage(code, distinct);
+  const signIn = code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired';
   return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>{message.title}</h1><p>{message.detail}</p>
+    {signIn && keptImportWaiting() && <p>Your music import is kept on this device and carries on after you sign in.</p>}
     {code === 'verified_email_required' && <button onClick={() => window.location.reload()}>I’ve verified my email</button>}
     <button onClick={onSignOut}>{code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired' ? 'Sign in again' : 'Sign out'}</button>
   </main>;

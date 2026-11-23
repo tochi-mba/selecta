@@ -92,7 +92,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     if (ids.length < BROWSER_MIX_NEEDS) {
       throw refuse(`A mix needs at least ${BROWSER_MIX_NEEDS} songs you can play on this device. Connect more music first.`, 'not_enough_songs');
     }
-    const recipe = await store.create(mixNameFor(all, ids), ids);
+    const recipe = await store.create(mixNameFor(all, ids), ids, all);
     // Save draft keeps it in My Mixes without touching what's playing, as local mode's does
     if (asDraft) return { id: 0, mix_id: recipe.mix_id, name: recipe.name, count: ids.length };
     store.setCurrent(recipe.mix_id);
@@ -141,7 +141,8 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     if (next.length < BROWSER_MIX_NEEDS) {
       throw refuse(`A browser mix keeps at least ${BROWSER_MIX_NEEDS} songs. To start over, clear the mix instead.`, 'too_few_songs');
     }
-    return asMixData(await store.edit(id, recipe.revision, { songIds: next }));
+    // the songs' names come along, so an edit made offline shows them before the server answers
+    return asMixData(await store.edit(id, recipe.revision, { songIds: next }, await songs()));
   };
 
   // the move into one song (cloud.browser_moves): the same route local mode's editor posts to

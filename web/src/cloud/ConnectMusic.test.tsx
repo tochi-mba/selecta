@@ -74,7 +74,8 @@ describe('Connect Music', () => {
     expect(summaryWords({ ...SUMMARY, paused: true })).toMatch(/browser storage is full/);
   });
 
-  it('shows the session’s progress against the counted total, every failure, then the summary', async () => {
+  it('with cloud.resilient_import off, shows the session’s progress against the counted total, every failure, then the summary', async () => {
+    setAccountFeatures({ 'cloud.resilient_import': false });
     const run = controlledImport();
     mount(run.importer);
     await pick(['one.mp3', 'two.mp3']);
@@ -102,7 +103,8 @@ describe('Connect Music', () => {
     expect(screen.getByText('Choose songs')).toBeVisible();
   });
 
-  it('cancels mid-import through the session', async () => {
+  it('with cloud.resilient_import off, cancels mid-import through the session', async () => {
+    setAccountFeatures({ 'cloud.resilient_import': false });
     const run = controlledImport();
     mount(run.importer);
     await pick(['one.mp3']);
@@ -132,7 +134,8 @@ describe('Connect Music', () => {
     expect(run.options()?.signal?.aborted).toBe(true);
   });
 
-  it('offers to carry on an interrupted folder import, after the browser allows it again', async () => {
+  it('with cloud.resilient_import off, offers to carry on an interrupted folder import, after the browser allows it again', async () => {
+    setAccountFeatures({ 'cloud.resilient_import': false });
     localStorage.setItem(importMarkerKey(WS), JSON.stringify({ version: 1, folder: 'Crates', startedAt: 1, total: 40, registered: 10 }));
     const requestPermission = vi.fn(async () => 'granted');
     const handle = { kind: 'directory', name: 'Crates', values: async function* () {}, requestPermission };
@@ -148,7 +151,8 @@ describe('Connect Music', () => {
     expect(await screen.findByText(/files checked so far/)).toBeVisible();
   });
 
-  it('asks for the folder again when the browser refuses it', async () => {
+  it('with cloud.resilient_import off, asks for the folder again when the browser refuses it', async () => {
+    setAccountFeatures({ 'cloud.resilient_import': false });
     localStorage.setItem(importMarkerKey(WS), JSON.stringify({ version: 1, folder: 'Crates', startedAt: 1, total: null, registered: 3 }));
     media.folder = { kind: 'directory', name: 'Crates', values: async function* () {}, requestPermission: async () => 'denied' } satisfies StoredFolderHandle;
     const run = controlledImport();
@@ -159,7 +163,8 @@ describe('Connect Music', () => {
     expect(screen.getByText('Choose songs')).toBeVisible();
   });
 
-  it('forgets an interrupted import on request', async () => {
+  it('with cloud.resilient_import off, forgets an interrupted import on request', async () => {
+    setAccountFeatures({ 'cloud.resilient_import': false });
     localStorage.setItem(importMarkerKey(WS), JSON.stringify({ version: 1, folder: 'Crates', startedAt: 1, total: 4, registered: 2 }));
     media.folder = { kind: 'directory', name: 'Crates', values: async function* () {} };
     mount();
@@ -169,7 +174,8 @@ describe('Connect Music', () => {
     expect(screen.queryByRole('note')).toBeNull();
   });
 
-  it('without a remembered folder, says picking the same music again duplicates nothing', async () => {
+  it('with cloud.resilient_import off, without a remembered folder, says picking the same music again duplicates nothing', async () => {
+    setAccountFeatures({ 'cloud.resilient_import': false });
     localStorage.setItem(importMarkerKey(WS), JSON.stringify({ version: 1, folder: null, startedAt: 1, total: 4, registered: 2 }));
     mount();
     expect(await screen.findByRole('note')).toHaveTextContent('An import stopped part way last time. Anything already checked is in your library. Choose the same folder or files again and SelectaDJ will recognise them; nothing is duplicated.');
@@ -182,6 +188,51 @@ describe('Connect Music', () => {
     mount();
     expect(await screen.findByText('Choose songs')).toBeVisible();
     expect(screen.queryByRole('note')).toBeNull();
+  });
+
+  it('shows checked counts and what carries on if the tab closes (cloud.resilient_import)', async () => {
+    const run = controlledImport();
+    mount(run.importer);
+    await pick(['one.mp3', 'two.mp3']);
+    await waitFor(() => expect(run.importer).toHaveBeenCalled());
+    // the journalled runner: a journal, patient retry and the registered device for availability
+    expect(run.options()?.journal).toBeDefined();
+    expect(run.options()?.retry).toBeTypeOf('function');
+    expect(run.options()?.reportDevice).toBeTypeOf('function');
+    act(() => {
+      run.progress({ kind: 'collected', total: 2, skipped: 0 });
+      run.progress({ kind: 'checked', name: 'one.mp3', resumed: false });
+    });
+    expect(screen.getByText('Checking your music: 1 of 2 checked.')).toBeVisible();
+    expect(screen.getByText('If this tab closes, the import carries on from 1 next time you open SelectaDJ.')).toBeVisible();
+    act(() => run.progress({ kind: 'waiting', wait: { why: 'offline', retryAt: null } }));
+    expect(screen.getByRole('status')).toHaveTextContent('Offline. 1 of 2 checked. Carries on when you’re back online.');
+    expect(screen.getByRole('progressbar', { name: 'Files checked' })).toHaveAttribute('value', '1');
+  });
+
+  it('Cancel asks first, and only a confirmed stop clears the record (cloud.resilient_import)', async () => {
+    const run = controlledImport();
+    mount(run.importer);
+    await pick(['one.mp3']);
+    await waitFor(() => expect(run.importer).toHaveBeenCalled());
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Keep importing' }));
+    expect(run.options()?.signal?.aborted).toBe(false);
+    expect(readImportMarker(WS)).not.toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Stop the import' }));
+    expect(run.options()?.signal?.aborted).toBe(true);
+    expect(await screen.findByText(/^Stopped\./)).toBeVisible();
+    expect(readImportMarker(WS)).toBeNull();
+  });
+
+  it('a stopped import says what is kept with Try again, never the raw error (cloud.resilient_import)', async () => {
+    const importer = vi.fn(async () => { throw new TypeError('Failed to fetch'); });
+    mount(importer);
+    await pick(['one.mp3']);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Everything already checked is kept');
+    expect(screen.queryByText(/failed to fetch/i)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible();
   });
 
   it('lists songs whose permission lapsed and allows each again from a press', async () => {

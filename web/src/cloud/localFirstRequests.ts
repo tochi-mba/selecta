@@ -40,6 +40,18 @@ if (typeof window !== 'undefined') window.addEventListener(ROOM_REQUEST_EVENT, (
 const ROOM_REFRESH_MS = 30_000;
 
 const queueKey = (workspaceId: string) => `selecta-requests:${workspaceId}`;
+// the last room list the server gave, so the panel still shows it while the connection is down
+const roomKey = (workspaceId: string) => `selecta-requests-room:${workspaceId}`;
+
+function lastRoom(workspaceId: string): RoomRequest[] {
+  try {
+    const kept = JSON.parse(window.localStorage.getItem(roomKey(workspaceId)) ?? 'null') as unknown;
+    return Array.isArray(kept) ? kept as RoomRequest[] : [];
+  } catch { return []; }
+}
+function keepRoom(workspaceId: string, room: RoomRequest[]) {
+  try { window.localStorage.setItem(roomKey(workspaceId), JSON.stringify(room)); } catch { /* kept for this visit only */ }
+}
 
 function load(workspaceId: string): Saved {
   try {
@@ -87,15 +99,28 @@ export function requestsFamily({ cloud, workspaceId, songs, send }: {
       roomsVersion = roomVersion;
       roomsAt = performance.now();
       // no Rooms here (off for this account, or not set up) is an empty list, not a broken panel
-      rooms = cloud<{ requests: RoomRequest[] }>('/room-requests').then((answer) => answer.requests ?? []).catch(() => []);
+      // offline, the last room list stands in rather than the room's requests vanishing
+      rooms = cloud<{ requests: RoomRequest[] }>('/room-requests')
+        .then((answer) => { const room = answer.requests ?? []; keepRoom(workspaceId, room); return room; })
+        .catch(() => { rooms = null; return lastRoom(workspaceId); });
     }
     return rooms;
   };
   const roomChanged = () => { rooms = null; };
+  // the last song list read, so a dropped connection keeps the panel's titles on screen
+  let lastSongs: PlayableSong[] | null = null;
+  const knownSongs = async (): Promise<PlayableSong[]> => {
+    try {
+      lastSongs = await songs();
+    } catch (problem) {
+      if (!lastSongs) throw problem;
+    }
+    return lastSongs;
+  };
 
   /** Every waiting request, this browser's own first, then the room's in the order they came. */
   const rows = async (): Promise<{ rows: RequestRow[]; saved: Saved; room: RoomRequest[] }> => {
-    const [all, room] = await Promise.all([songs(), roomRequests()]);
+    const [all, room] = await Promise.all([knownSongs(), roomRequests()]);
     const saved = load(workspaceId);
     // a room request gets a number of its own here, kept so its row keeps its place on screen
     const kept: Record<string, number> = {};

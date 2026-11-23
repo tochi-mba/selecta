@@ -5,7 +5,14 @@ import { LinkIfThere } from '../shell/PageLink';
 import { Action, Skeleton, Status, StatusKind } from '../ui/controls';
 import { cancelExport, isExportActive, refreshExports, useExports } from './exportStore';
 import { words } from '../copy';
-import { useRequest } from '../requestContext';
+import { flagOn } from '../flags';
+import { clientForRequest, useRequest } from '../requestContext';
+
+/** An interrupted export, started again from exactly what it froze. */
+async function startAgain(id: string, request: ReturnType<typeof useRequest>): Promise<void> {
+  await clientForRequest(request).post<ExportJob>(`/exports/jobs/${encodeURIComponent(id)}/again`);
+  await refreshExports(request);
+}
 
 const STATES: Record<ExportJobState, { kind: StatusKind; words: string }> = {
   preparing: { kind: 'working', words: 'Preparing transitions' },
@@ -37,7 +44,8 @@ function snapshotWords(job: ExportJob): string {
 function Row({ job, request }: { job: ExportJob; request: ReturnType<typeof useRequest> }) {
   const stage = exportStage(job);
   const editor = job.scope === 'draft' && job.draft !== null ? `/mixes/drafts/${job.draft}/edit` : '/mix/current/edit';
-  const needsAnother = ['failed', 'interrupted', 'expired', 'cancelled'].includes(job.state);
+  const again = job.state === 'interrupted' && (job as ExportJob & { can_start_again?: boolean }).can_start_again === true && flagOn('library.scan_resume');
+  const needsAnother = !again && ['failed', 'interrupted', 'expired', 'cancelled'].includes(job.state);
   return (
     <li className="export-job" data-state={job.state}>
       <div className="export-job-name">
@@ -49,7 +57,14 @@ function Row({ job, request }: { job: ExportJob; request: ReturnType<typeof useR
         {job.state === 'preparing' ? `, ${job.seams_ready} of ${job.seams_total} ready` : ''}
       </Status>
       {job.state === 'preparing' && job.quiet_seconds > 600 && <p><Status kind="blocked">Nothing has finished for a while. Rendering may be waiting on your current mix or on storage room.</Status></p>}
-      {job.error && <p className="warn">{job.error}</p>}
+      {job.error && !again && <p className="warn">{job.error}</p>}
+      {/* library.scan_resume: the same frozen songs and transitions, started again in one press */}
+      {again && (
+        <div className="row wrap">
+          <p className="warn">Your export was interrupted. Start it again?</p>
+          <Action working="Starting…" run={() => startAgain(job.id, request)}>Start it again</Action>
+        </div>
+      )}
       <details className="export-snapshot">
         <summary>View frozen export contents ({job.songs.length} songs, {job.seams.length} transitions)</summary>
         <p className="hint">

@@ -4,6 +4,7 @@ import * as provider from '../dsp/seamProvider';
 import { LOAD_NEXT_WITHIN } from '../engine/scheduler';
 import { browserMovesAllowed, browserMovesOn, browserStemMovesAllowed } from './browserMoves';
 import { flagOn } from '../flags';
+import { isOnline } from './connection';
 import { armCrashGuard, disarmCrashGuard, spawnStemsWorker, STEM_MODEL_ARTEFACT, StemPrefetcher, stemWindow, workerSeparator, type Observable, type PrefetchState } from '../dsp/stems';
 import type { StemReading } from '../dsp/stemSchedule';
 import { stemsFlagOn, stemsLicenceHold } from './stems/flag';
@@ -55,6 +56,9 @@ export type PlayerFacts = {
   said: string;
   /** The seam most recently scheduled on this device's engine, if any. */
   seam?: SeamRecord | null;
+  /** cloud.offline_playback: a volume (0 to 100) set here while offline, which wins over the
+   * session's last word until it has been sent. */
+  heldVolume?: number | null;
 };
 
 /** The one-vocabulary status for these facts (copy.ts), or null when nothing is playing. */
@@ -95,6 +99,7 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
   // only a schedule this device's engine was handed, out of the song playing here, counts
   const seam = facts.speaking && facts.seam && facts.seam.fromIndex === position ? facts.seam.schedule : null;
   const songTime = offsetMs / 1000;
+  const level = facts.heldVolume ?? facts.view?.session?.volume;
   return {
     phase,
     position,
@@ -105,10 +110,8 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
     notice: facts.said || facts.engine?.notice || words,
     nextReady: !!seam,
     lastSeamKey: null,
-    volume: facts.view?.session?.volume == null
-      ? sound.volume
-      : Math.max(0, Math.min(1, facts.view.session.volume / 100)),
-    muted: facts.view?.session?.volume === 0 || sound.muted,
+    volume: level == null ? sound.volume : Math.max(0, Math.min(1, level / 100)),
+    muted: level === 0 || sound.muted,
   };
 }
 
@@ -140,7 +143,7 @@ export class LocalFirstPlayer implements PlayerLike {
     // what the last press said stays until the next press replaces it
     this.facts = { ...facts, said: this.facts.said };
     this.actions = actions;
-    const sessionVolume = facts.view?.session?.volume;
+    const sessionVolume = facts.heldVolume ?? facts.view?.session?.volume;
     if (typeof sessionVolume === 'number' && Number.isFinite(sessionVolume)) {
       this.sound.volume = Math.max(0, Math.min(1, sessionVolume / 100));
       this.sound.muted = this.sound.volume === 0;
@@ -177,6 +180,11 @@ export class LocalFirstPlayer implements PlayerLike {
     if (timeless(next) === timeless(this.state) && Math.abs(next.songTime - this.state.songTime) < 0.2) return;
     this.state = next;
     this.onChange(next);
+  }
+
+  /** Say a sentence about playback (a stop after playing offline) until the next press. */
+  say(text: string): void {
+    this.publish(text);
   }
 
   /** The bounded playback clock: re-reads the facts so played time moves at the tick rate. */
@@ -377,6 +385,8 @@ export const SEAMS_KEPT = 128;
 /** A jump to the transition lands this long before the seam starts. */
 export const JUMP_LEAD_SECONDS = 4;
 
+const offlinePlaybackOn = () => flagOn('cloud.offline_playback');
+
 /** The hook the local-first shell uses: one stable LocalFirstPlayer over the device session. */
 /** Worker calibration is device evidence (ADR-0457): measured on this device, at most 30 days
  * old. It is remembered per device identity, re-measured in the background when missing or
@@ -512,6 +522,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     // Open the AudioContext synchronously from the player's press, before the session fetch.
     // iOS Safari and autoplay policies may reject play() if setup waits on network first.
     const needsSpeaker = !speaker;
+    let madeSpeaker: BrowserSpeaker | null = null;
     if (needsSpeaker) {
       const measured = calibration.current;
       if (measured && !measured.record && measured.measuring) await measured.measuring;
@@ -527,8 +538,18 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
       }
       if (!made.speaker) return 'SelectaDJ could not open audio in this browser. Try again.';
       setSpeaker(made.speaker);
+      madeSpeaker = made.speaker;
     }
     const latest = await pb.refreshSession();
+    if (!latest && offlinePlaybackOn() && !isOnline()) {
+      // cloud.offline_playback: no connection, so this device plays its own files and settles
+      // with the server when it is back (usePlaybackDevice.playOffline)
+      const made = needsSpeaker ? madeSpeaker : speaker;
+      const session = pb.view?.session ?? null;
+      const index = session && session.state !== 'stopped' && session.song_index < songs.current.length ? session.song_index : 0;
+      const offset = session && index === session.song_index ? extrapolate(session, pb.serverNow()) : 0;
+      if (await pb.playOffline(index, offset, made)) return '';
+    }
     if (!latest) {
       // A failed account refresh does not leave a newly opened AudioContext around. The member
       // can retry from a fresh press, which also renews the browser's gesture authorization.
@@ -558,10 +579,13 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   const facts: PlayerFacts = {
     mix, view: pb.view, speaking: pb.isSpeaker(), here: speaker?.position() ?? null, engine, refusal,
     serverNow: pb.serverNow(), said: '', seam: seams[seams.length - 1] ?? null,
+    heldVolume: offlinePlaybackOn() ? pb.heldVolume() : null,
   };
   const player = useMemo(() => new LocalFirstPlayer(facts, actions), []);
   // facts change every render; the player tells its listener only when the state moved
   useEffect(() => { player.update(facts, actions); });
+  // playing offline ended because another device took over (or the sign-in ended): say so
+  useEffect(() => { if (pb.offlineNotice) player.say(pb.offlineNotice); }, [player, pb.offlineNotice]);
   // While this device speaks, a real clock moves the played time forward; render-driven
   // updates alone would either freeze the strip or loop (see publish).
   const speaking = pb.isSpeaker();

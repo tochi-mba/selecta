@@ -41,7 +41,8 @@ export const ACCOUNT_PROBLEMS: Record<AccountProblem, { title: string; detail: s
  * (fetch's TypeError, or the browser saying it's offline) is "offline"; a 5xx is the server's. */
 export function accountProblem(error: unknown, online: boolean = typeof navigator === 'undefined' ? true : navigator.onLine): AccountProblem {
   if (!online) return 'offline';
-  if (error instanceof CloudError) return error.status >= 500 ? 'server' : 'unexpected';
+  // status 0 is the request layer's own no-answer (resilientRequest.ts: offline or timed out)
+  if (error instanceof CloudError) return error.status === 0 ? 'offline' : error.status >= 500 ? 'server' : 'unexpected';
   return error instanceof TypeError ? 'offline' : 'unexpected';
 }
 

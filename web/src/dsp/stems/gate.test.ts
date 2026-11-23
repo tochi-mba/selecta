@@ -41,6 +41,28 @@ const calibration = (overrides: Partial<StemCalibration> = {}): StemCalibration 
 });
 
 describe('crash guard', () => {
+  it('a normal close (pagehide) mid-split clears the marker, so only a real crash trips the guard', () => {
+    const store = memoryStore();
+    armCrashGuard(store, NOW);
+    expect(store.map.size).toBe(1);
+    window.dispatchEvent(new Event('pagehide'));
+    expect(store.map.size).toBe(0);
+    expect(noticeCrashOnLoad(store, NOW)).toEqual({ clear: true });
+  });
+
+  it('pagehide leaves alone a store whose split already ended, and a page that died keeps its marker', () => {
+    const ended = memoryStore();
+    armCrashGuard(ended, NOW);
+    disarmCrashGuard(ended);
+    ended.setItem('unrelated', 'kept');
+    window.dispatchEvent(new Event('pagehide'));
+    expect(ended.map.get('unrelated')).toBe('kept');
+    // no pagehide: the browser killed the page mid-separation
+    const killed = memoryStore();
+    armCrashGuard(killed, NOW);
+    expect(noticeCrashOnLoad(killed, NOW)).toMatchObject({ clear: false, reason: CRASH_REASON });
+  });
+
   it('a marker left by a page that died trips the guard until the member retries', () => {
     const store = memoryStore();
     expect(noticeCrashOnLoad(store, NOW)).toEqual({ clear: true });

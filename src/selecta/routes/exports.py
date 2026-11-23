@@ -26,7 +26,7 @@ from pathlib import Path
 
 from fastapi import HTTPException, Request
 
-from selecta import mix
+from selecta import flags, mix
 from selecta.config import SAMPLE_RATE
 from selecta.export_validation import verify_export
 from selecta.seams import request_from
@@ -39,6 +39,8 @@ JOBS_KEPT = 50
 ROUGH_FLAC_BYTES_PER_SECOND = SAMPLE_RATE * 2
 NO_ROOM = "There isn't enough free space on this drive to save the file."
 JOB_ID = re.compile(r"^[0-9a-f]{32}$")
+# what a job froze when it started, so an interrupted one can start again from exactly that
+SNAPSHOT_KEYS = ("scope", "draft", "mix_name", "songs", "seams", "seconds_estimate", "revision")
 # On Windows, replacing a file someone is reading, or reading one being replaced, is refused for
 # the moment it takes. A job's file is looked at every second or so as it's written, so they meet.
 BUSY_FILE_TRIES = 50
@@ -111,6 +113,12 @@ def add_routes(app, ctx) -> None:
             if not (settings.home / "exports" / Path(name).name).exists():
                 shown["state"] = "expired"
         shown["can_cancel"] = shown["state"] == "preparing"
+        # library.scan_resume: an interrupted export is offered again, once, from what it froze
+        shown["can_start_again"] = (
+            shown["state"] == "interrupted"
+            and not shown.get("started_again_as")
+            and flags.on("library.scan_resume")
+        )
         shown["quiet_seconds"] = (
             round(time.time() - shown["last_progress_at"]) if shown["state"] in ACTIVE else 0
         )
@@ -316,37 +324,62 @@ def add_routes(app, ctx) -> None:
                     return as_shown(previous)
         with connect() as conn:
             snapshot = snapshot_of(conn, draft)
-            with lock:
-                for job in every_job():
-                    if job["id"] in running and same_snapshot(job, snapshot):
-                        return as_shown(job)
-                job_id = uuid.uuid4().hex
-                now = time.time()
-                job = {
-                    **snapshot,
-                    "id": job_id,
-                    "operation": operation,
-                    "state": "preparing",
-                    "name": f"selecta-mix-{time.strftime('%Y%m%d-%H%M%S')}-{job_id[:6]}.flac",
-                    "seams_total": len(snapshot["seams"]),
-                    "seams_ready": 0,
-                    "created_at": now,
-                    "last_progress_at": now,
-                    "seconds": None,
-                    "checksum": None,
-                    "error": None,
-                }
-                cancel = threading.Event()
-                running[job_id] = cancel
-                save(job)
+        return begin(snapshot, operation)
+
+    def begin(snapshot: dict, operation: str | None) -> dict:
+        """Start a job for this frozen snapshot, or answer with one already saving the same."""
+        with lock:
+            for job in every_job():
+                if job["id"] in running and same_snapshot(job, snapshot):
+                    return as_shown(job)
+            job_id = uuid.uuid4().hex
+            now = time.time()
+            job = {
+                **snapshot,
+                "id": job_id,
+                "operation": operation,
+                "state": "preparing",
+                "name": f"selecta-mix-{time.strftime('%Y%m%d-%H%M%S')}-{job_id[:6]}.flac",
+                "seams_total": len(snapshot["seams"]),
+                "seams_ready": 0,
+                "created_at": now,
+                "last_progress_at": now,
+                "seconds": None,
+                "checksum": None,
+                "error": None,
+            }
+            cancel = threading.Event()
+            running[job_id] = cancel
+            save(job)
         forget_old_records()
         threading.Thread(target=run, args=(job, cancel), daemon=True).start()
         return as_shown(job)
 
+    @app.post("/api/exports/jobs/{job_id}/again")
+    def start_again(job_id: str) -> dict:
+        """'Your export was interrupted. Start it again?' A new job from the same frozen songs and
+        transitions, so it saves what the first one set out to, whatever the mix is now."""
+        if durable is not None:
+            # never offered in this mode (the list says can_start_again is false); answer with
+            # the export as it stands, which the job host is already carrying on
+            return {**durable.record(durable_or_404(job_id)), "can_start_again": False}
+        job = job_or_404(job_id)
+        shown = as_shown(job)
+        if not shown["can_start_again"]:
+            raise HTTPException(409, "Only an interrupted export can be started again.")
+        again = begin({key: job.get(key) for key in SNAPSHOT_KEYS}, None)
+        save({**(read(job_id) or shown), "started_again_as": again["id"]})
+        return again
+
     @app.get("/api/exports/jobs")
     def list_exports() -> dict:
         if durable is not None:
-            return {"jobs": [durable.record(job) for job in durable.every()]}
+            # the durable job host resumes an interrupted export itself: nothing to offer again
+            return {
+                "jobs": [
+                    {**durable.record(job), "can_start_again": False} for job in durable.every()
+                ]
+            }
         return {"jobs": [as_shown(job) for job in every_job()]}
 
     def job_or_404(job_id: str) -> dict:

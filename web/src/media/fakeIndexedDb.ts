@@ -53,6 +53,7 @@ class FakeConnection {
           get: (key: IDBValidKey) => request(() => store.rows.get(key)),
           delete: (key: IDBValidKey) => request(() => { store.rows.delete(key); return undefined; }),
           getAll: () => request(() => [...store.rows.values()]),
+          clear: () => request(() => { store.rows.clear(); return undefined; }),
         };
       },
     };

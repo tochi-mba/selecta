@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
-import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, runImport, type ImportEvent, type ImportSource, type LapsedWhy, type MediaResolver } from '../media';
+import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -28,7 +28,7 @@ import { Now } from '../views/Now';
 import { RequestsContext, RequestsPanel, useRequests, waitingRequestCount } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
-import { ConnectMusic, mediaDeviceId, registeredDeviceId } from './ConnectMusic';
+import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
 import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CloudWorkspace } from './CloudWorkspace';
@@ -47,9 +47,13 @@ import { browserStorage, onboardingFinished, recordImportOutcome } from './onboa
 import { ImportChip } from './ImportChip';
 import { StorageCard } from './StorageCard';
 import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
+import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
 import { profilesBySong, startTonalProfiler, tonalStore } from './tonalProfiles';
+import { onReconnect } from './connection';
+import { ConnectionBanner } from './ConnectionBanner';
+import { plainMessage } from './resilientRequest';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -100,7 +104,7 @@ const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit
 const IDLE = (): void => {};
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 
-export function LocalFirstShell({ api, account, more, notices, feedback }: {
+export function LocalFirstShell({ api, account, more, notices, feedback, offlineReadOnly = false }: {
   api: Api;
   account: Account;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */
@@ -109,6 +113,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
    * by CloudApp from the same sources as the hosted frame, shown first in the banner. */
   notices?: ReactNode;
   feedback?: ReactNode;
+  /** cloud.offline_shell: opened offline from the account this device last saw, before AuthKit
+   * could sign in again. The banner says so; server-only actions wait with their reason. */
+  offlineReadOnly?: boolean;
 }) {
   const workspaceId = account.workspace.id;
   const on = useFlags();
@@ -203,6 +210,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   }, [recipes]);
   // Harmonic matches (cloud.browser_harmonic): key profiles measured here, kept in this browser
   const browserHarmonic = on('cloud.browser_harmonic');
+  const offlineShell = on('cloud.offline_shell');
+  // where the library shown came from: null from the server, or this device's kept copy
+  const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
   const tonal = useMemo(() => tonalStore(workspaceId), [workspaceId]);
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
@@ -236,7 +246,16 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     } : undefined,
     // Request a song: this browser's requests per workspace, and the room's from the server
     workspaceId,
-  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal]);
+    // cloud.offline_shell: the last catalogue is kept here and served, with this device's own
+    // songs, while SelectaDJ cannot be reached; the banner says the library is from this device
+    offline: offlineShell ? {
+      deviceSongs: async () => (await (await openStore()).all()).map((song) => ({
+        id: song.songId, content_sha256: song.identity.content_sha256, title: song.identity.title, artist: song.identity.artist,
+        album: song.identity.album ?? null, duration_s: song.identity.duration_s ?? null, available_on: 1,
+      })),
+      onServed: (from) => setServedFrom(from.cached ? { at: from.at } : null),
+    } : undefined,
+  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell]);
   const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
   // imports register through the adapted request, so each landed batch reads a fresh catalogue
   const media = useMemo(() => mediaRequest(request), [request]);
@@ -273,9 +292,15 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const refreshStatus = useCallback(() => {
     request<Status>('/status')
       .then((next) => { setStatus(next); setStatusProblem(''); })
-      .catch((error: Error) => setStatusProblem(error.message));
-  }, [request]);
-  const refreshMix = useCallback(() => { request<MixData>('/mix').then(setData).catch(() => undefined); }, [request]);
+      .catch((error: Error) => setStatusProblem(offlineShell ? plainMessage(error) : error.message));
+  }, [request, offlineShell]);
+  // cloud.offline_shell: a mix that could not be read says so with a retry, never an empty mix
+  const [mixProblem, setMixProblem] = useState(false);
+  const refreshMix = useCallback(() => {
+    request<MixData>('/mix').then((next) => { setData(next); setMixProblem(false); }).catch(() => { if (offlineShell) setMixProblem(true); });
+  }, [request, offlineShell]);
+  // back online: read the library and the mix again
+  useEffect(() => (offlineShell ? onReconnect(() => { refreshStatus(); refreshMix(); }) : undefined), [offlineShell, refreshStatus, refreshMix]);
   refreshStatusRef.current = refreshStatus;
   useEffect(() => { refreshStatus(); refreshMix(); void sweepLapsed(true); }, [refreshStatus, refreshMix, sweepLapsed]);
   useEffect(() => {
@@ -322,6 +347,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     return () => { setFlags(null); };
   }, [browserHarmonic]);
 
+  // cloud.offline_playback: said once when playing offline ended because another device took over
+  const [takeoverSeen, setTakeoverSeen] = useState('');
   const { player, refusal, device: playback, seams: scheduled, prefetch } = useLocalFirstPlayer({
     api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver,
   });
@@ -442,10 +469,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   // The spine must import into the same index instance this shell reads (memory mirror and
   // session files are per-instance), or freshly connected songs read as on another device
   // until the page reloads.
+  // cloud.resilient_import: the runner journals, retries and skips what an interrupted run did
+  // (off, it is the plain import); the shell also carries an interrupted import on by itself
   const spineDeps = useMemo(() => ({
-    importMusic: async (source: ImportSource, onProgress: (event: ImportEvent) => void, signal: AbortSignal) =>
-      runImport({ source, request: media, store: await openStore(), deviceId: mediaDeviceId(workspaceId), onProgress, signal }),
+    importMusic: importRunnerFor({ request: media, openStore, workspaceId }),
   }), [media, openStore, workspaceId]);
+  useImportCarryOn({ request: media, openStore, workspaceId });
   const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {
@@ -456,7 +485,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       return <main className="page" id="main"><h1 className="display small">{item.label}</h1><div className="stack">{more(item.id)}</div></main>;
     }
     if (!shared) {
-      return <main className="page" id="main" aria-busy={!statusProblem}><h1 className="display small">{describeRoute(route).title}</h1>{statusProblem ? <p role="alert">{statusProblem}</p> : <Skeleton variant="rows" lines={4} label="Opening your library" />}</main>;
+      return <main className="page" id="main" aria-busy={!statusProblem}><h1 className="display small">{describeRoute(route).title}</h1>{statusProblem ? (offlineShell ? <StatusProblem words={statusProblem} onRetry={() => { setStatusProblem(''); refreshStatus(); refreshMix(); }} /> : <p role="alert">{statusProblem}</p>) : <Skeleton variant="rows" lines={4} label="Opening your library" />}</main>;
     }
     if (newMember) {
       return (
@@ -514,7 +543,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         return (
           <>
             {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
-            {data.mix.length ? <Now {...shared} /> : <ListenEmpty connected={connected} />}
+            {data.mix.length ? <Now {...shared} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} />}
             {on('cloud.local_media') && data.mix.length > 0 && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} />}
           </>
         );
@@ -522,6 +551,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         // Saved browser mixes are opened as the current mix from My Mixes, so only the current
         // mix has an editor here.
         if (route.draft !== null) return <OnlyOnYourComputer title="Editing a saved draft" nearest={{ label: 'My Mixes', path: '/mixes/mine' }} />;
+        if (mixProblem && !data.mix.length) return <MixProblem onRetry={refreshMix} />;
         return <Mix {...shared} key="current" />;
       case 'missing':
         return <OnlyOnYourComputer title="That page" nearest={{ label: 'Library', path: '/library' }} />;
@@ -558,7 +588,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         onCommands={controls.onCommands}
         mode="cloud"
         more={moreItems}
-        banner={<>{notices}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section>
@@ -591,6 +621,28 @@ function ThisDevice({ openStore, children }: { openStore: () => Promise<MediaSto
       <h1 className="display small">This device</h1>
       <StorageCard degraded={degraded} />
       {children}
+    </main>
+  );
+}
+
+/** The library could not be opened (cloud.offline_shell): plain words and one way on. */
+function StatusProblem({ words, onRetry }: { words: string; onRetry: () => void }) {
+  return (
+    <div className="stack" role="alert">
+      <p>SelectaDJ couldn’t open your library. {words}</p>
+      <div><button type="button" onClick={onRetry}>Try again</button></div>
+    </div>
+  );
+}
+
+/** The current mix could not be read (cloud.offline_shell): never shown as an empty mix. */
+function MixProblem({ onRetry }: { onRetry: () => void }) {
+  return (
+    <main className="page" id="main">
+      <div className="stack" role="alert">
+        <p>SelectaDJ couldn’t load your mix. It is still saved; try again, or wait for the connection to come back.</p>
+        <div><button type="button" onClick={onRetry}>Try again</button></div>
+      </div>
     </main>
   );
 }

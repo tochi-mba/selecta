@@ -222,8 +222,18 @@ export type DiscoveriesFamily = {
 export function discoveriesFamily(sources: DiscoveriesSources): DiscoveriesFamily {
   // one pass per change in what is measured: polls in between reuse it
   let cached: { signature: string; rows: BrowserDiscovery[] } | null = null;
+  // the last song list read: offline, pairs already found stay on screen
+  let lastSongs: DiscoverySong[] | null = null;
+  const knownSongs = async (): Promise<DiscoverySong[]> => {
+    try {
+      lastSongs = await sources.songs();
+    } catch (problem) {
+      if (!lastSongs) throw problem;
+    }
+    return lastSongs;
+  };
   const candidates = async (): Promise<BrowserDiscovery[]> => {
-    const [songs, measured] = await Promise.all([sources.songs(), sources.profiles()]);
+    const [songs, measured] = await Promise.all([knownSongs(), sources.profiles()]);
     const signature = `${songs.filter((song) => song.playable).map((song) => song.id).join(',')}|${[...measured.profiles.keys()].sort((a, b) => a - b).join(',')}`;
     if (cached?.signature !== signature) cached = { signature, rows: findMatches(songs, measured.profiles) };
     return cached.rows;

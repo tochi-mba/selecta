@@ -128,6 +128,46 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.resilient_import": {
+      "label": "Import that survives interruptions",
+      "about": "A durable import journal in this browser: it retries, waits for the connection, and carries on after a reload or sign-in without re-reading finished files.",
+      "requires": ["cloud.local_media"],
+      "surfaces": ["cloud.settings"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.offline_shell": {
+      "label": "Cloud opens offline",
+      "about": "The app opens without a connection and the library shows what this device already knows.",
+      "requires": ["cloud.local_first"],
+      "surfaces": ["cloud.settings"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.offline_playback": {
+      "label": "Playback through a dropped connection",
+      "about": "A playing device keeps playing its own files while the connection is down and settles the playback lease when it returns.",
+      "requires": ["devices.browser_player"],
+      "surfaces": ["cloud.settings"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.mix_outbox": {
+      "label": "Mix changes wait for the connection",
+      "about": "Mixes made or edited offline are kept in this browser and sent when the connection returns.",
+      "requires": ["cloud.local_first"],
+      "surfaces": ["cloud.settings"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.hosted_shell": {
       "label": "Hosted Cloud on the shared shell",
       "about": "Draws the hosted Cloud pages (overview, Listen, Make a Mix, Library and the account places in More) inside the same shell as browser-first Cloud; the legacy side rail remains when off.",

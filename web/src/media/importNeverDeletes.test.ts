@@ -22,13 +22,18 @@ const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/
 
 describe('the import path never deletes or moves a member file', () => {
   it('has no destructive call in the importer or the hashing it uses', () => {
-    for (const name of ['importer.ts', 'identity.ts', 'tags.ts']) {
+    // the journalled path (cloud.resilient_import) writes only its own IndexedDB journal
+    for (const name of ['importer.ts', 'identity.ts', 'tags.ts', 'importJournal.ts', 'journalledImport.ts']) {
       expect(code(source(name)).match(DESTRUCTIVE) ?? [], name).toEqual([]);
     }
     // The importer reaches only identity, the tag reader and the store (never a file-system helper).
     expect([...code(source('tags.ts')).matchAll(/from '([^']+)'/g)]).toEqual([]);
     const imports = [...code(source('importer.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
-    expect([...new Set(imports)].sort()).toEqual(['./identity', './store', './tags']);
+    expect([...new Set(imports)].sort()).toEqual(['./identity', './importJournal', './journalledImport', './store', './tags']);
+    const journalled = [...code(source('journalledImport.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
+    expect([...new Set(journalled)].sort()).toEqual(['./identity', './importJournal', './importer', './store']);
+    const journal = [...code(source('importJournal.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
+    expect([...new Set(journal)].sort()).toEqual(['./importer', './store']);
   });
 
   it('keeps the store\'s only file removal inside its own OPFS cache, never on a member handle', () => {

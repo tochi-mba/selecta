@@ -1,5 +1,6 @@
 import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { apiOrigin, CloudError, messageOf } from './api';
+import { useNeedsConnection } from './connection';
 
 // Download my data (docs/saas/11-ui-ux.md §11.1, ADR-0412): one ZIP with the original files,
 // settings.json and mixes.json. It is a download, so it keeps working while the account is over
@@ -38,6 +39,8 @@ export function AccountData({ token, workspaceId, features, withAudio = true }: 
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [problem, setProblem] = useState('');
+  // cloud.offline_shell: the export is made by the server, so it waits for the connection
+  const offline = useNeedsConnection();
   const start = async () => {
     setBusy(true); setProblem(''); setNotice('Preparing your export…');
     try {
@@ -51,7 +54,8 @@ export function AccountData({ token, workspaceId, features, withAudio = true }: 
       <p className="cloud-eyebrow">Your data</p>
       <h2 id="cloud-data-title">Download a copy</h2>
       <p>{withAudio ? <>One ZIP file with your original audio, your settings ({settingsWords(features)}) as settings.json, and what Cloud keeps about your mixes as mixes.json.</> : <>One ZIP file with your settings ({settingsWords(features)}) as settings.json and what Cloud keeps about your mixes as mixes.json. Your music files stay on your devices, so they are not in it.</>} Mix revisions themselves aren’t stored in Cloud yet.</p>
-      <button className="primary" disabled={busy} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button>
+      <button className="primary" disabled={busy || !!offline} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button>
+      {offline && <p className="needs-connection">{offline}</p>}
       {notice && <p role="status">{notice}</p>}
       {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
     </section>
@@ -71,6 +75,7 @@ export function AccountDanger({ busy, onSignOutEverywhere, onDelete }: {
   onDelete: () => void;
 }) {
   const [confirming, setConfirming] = useState<Confirming>(null);
+  const offline = useNeedsConnection();
   const keep = useRef<HTMLButtonElement>(null);
   const everywhere = useRef<HTMLButtonElement>(null);
   const remove = useRef<HTMLButtonElement>(null);
@@ -86,9 +91,10 @@ export function AccountDanger({ busy, onSignOutEverywhere, onDelete }: {
     <section className="cloud-card cloud-danger" aria-labelledby="cloud-danger-title">
       <p className="cloud-eyebrow">Leaving or deleting</p>
       <h2 id="cloud-danger-title">Sign-in and account removal</h2>
+      {offline && <p className="needs-connection">{offline}</p>}
       <div className="cloud-danger-row">
         <div><h3>Sign out everywhere</h3><p>Ends every sign-in, on every device and browser, including this one.</p></div>
-        <button ref={everywhere} className="cloud-quiet" disabled={busy} aria-expanded={confirming === 'everywhere'} onClick={() => setConfirming('everywhere')}>Sign out everywhere…</button>
+        <button ref={everywhere} className="cloud-quiet" disabled={busy || !!offline} aria-expanded={confirming === 'everywhere'} onClick={() => setConfirming('everywhere')}>Sign out everywhere…</button>
       </div>
       {confirming === 'everywhere' && (
         <div className="cloud-confirm" role="group" aria-label="Confirm signing out everywhere" onKeyDown={escape}>
@@ -98,7 +104,7 @@ export function AccountDanger({ busy, onSignOutEverywhere, onDelete }: {
       )}
       <div className="cloud-danger-row">
         <div><h3>Delete account</h3><p>Hides your account and signs you out at once. Final erasure happens after a 30-day recovery window.</p></div>
-        <button ref={remove} className="cloud-quiet cloud-danger-text" disabled={busy} aria-expanded={confirming === 'delete'} onClick={() => setConfirming('delete')}>Delete account…</button>
+        <button ref={remove} className="cloud-quiet cloud-danger-text" disabled={busy || !!offline} aria-expanded={confirming === 'delete'} onClick={() => setConfirming('delete')}>Delete account…</button>
       </div>
       {confirming === 'delete' && (
         <div className="cloud-confirm" role="group" aria-label="Confirm deleting your account" onKeyDown={escape}>

@@ -33,6 +33,9 @@ from selecta.library.relevance import match_label
 from selecta.library.scan import ScanStopped
 from selecta.library.search_cache import RankedSearches
 
+LYRICS_KEY = "lyrics_lookup_in_progress"
+"""library.scan_resume: set while a lyric lookup runs; left after a restart, it is offered again."""
+
 
 class BatchEntry(BaseModel):
     id: int
@@ -60,19 +63,27 @@ def add_routes(app, ctx) -> None:
 
     @app.post("/api/scan")
     def scan(body: ScanRequest) -> dict:
-        from selecta.library.scan import scan_folder
-
         folder = Path(body.folder).expanduser()
         if not folder.is_dir():
             raise HTTPException(400, "That folder doesn't exist on this PC.")
         if background.scan.get("status") == "running":
             return background.scan
+        return start_scan(folder)
+
+    def start_scan(folder: Path, resumed: dict | None = None) -> dict:
+        """Read a folder on a thread. With library.scan_resume the folder is remembered at the
+        start and songs are saved in batches, so a restart carries on (resume_interrupted_scan)."""
+        from selecta.library.scan import scan_folder
+
         background.scan_stop.clear()
+        checkpoint = flags.on("library.scan_resume")
 
         def run() -> None:
             conn = connect()
             try:
-                report = scan_folder(conn, folder, should_stop=background.scan_stop.is_set)
+                report = scan_folder(
+                    conn, folder, should_stop=background.scan_stop.is_set, checkpoint=checkpoint
+                )
                 remember_folder(conn, folder)
                 background.scan = {
                     "status": "done",
@@ -91,8 +102,29 @@ def add_routes(app, ctx) -> None:
                 conn.close()
 
         background.scan = {"status": "running", "folder": str(folder)}
+        if resumed is not None:
+            # the Workspace says "A scan was interrupted. Carrying on from N of M files."
+            background.scan["resumed"] = {
+                "done": int(resumed.get("done") or 0),
+                "found": resumed.get("found"),
+            }
         threading.Thread(target=run, daemon=True).start()
         return background.scan
+
+    def resume_interrupted_scan() -> None:
+        """A scan cut off by closing SelectaDJ or the computer carries on by itself at startup.
+        A folder that isn't there right now (an unplugged drive) waits for the next start."""
+        if not flags.on("library.scan_resume"):
+            return
+        from selecta.library.scan import interrupted_scan
+
+        with connect() as conn:
+            state = interrupted_scan(conn)
+        if state is None or background.scan.get("status") == "running":
+            return
+        folder = Path(state["folder"])
+        if folder.is_dir():
+            start_scan(folder, resumed=state)
 
     @app.post("/api/scan/cancel")
     def cancel_scan() -> dict:
@@ -102,9 +134,12 @@ def add_routes(app, ctx) -> None:
             background.scan_stop.set()
         return background.scan
 
+    lyrics_running = threading.Event()
+
     def look_up_lyrics() -> None:
         """Lyrics for every song that has none yet, unless lyric lookup is turned off, in which
-        case nothing is sent anywhere."""
+        case nothing is sent anywhere. With library.scan_resume a lookup cut off by a restart is
+        remembered, and the Workspace offers to start it again."""
         if not flags.on("lyrics.lookup"):
             return
         work = getattr(ctx, "work", None)
@@ -113,13 +148,78 @@ def add_routes(app, ctx) -> None:
 
             ask_for_lyrics(work)
             return
-        subprocess.run(
-            [sys.executable, "-m", "selecta.cli", "lyrics"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env={**os.environ, "SELECTA_HOME": str(settings.home)},
-            check=False,
-        )
+        marking = flags.on("library.scan_resume")
+        lyrics_running.set()
+        try:
+            if marking:
+                with connect() as conn:
+                    db.set_preference(conn, LYRICS_KEY, {"at": time.time()})
+            subprocess.run(
+                [sys.executable, "-m", "selecta.cli", "lyrics"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env={**os.environ, "SELECTA_HOME": str(settings.home)},
+                check=False,
+            )
+            if marking:
+                with connect() as conn:
+                    conn.execute("DELETE FROM preferences WHERE key = ?", (LYRICS_KEY,))
+                    conn.commit()
+        finally:
+            lyrics_running.clear()
+
+    @app.get("/api/library/interrupted")
+    def interrupted_work() -> dict:
+        """What a restart cut off: a lyric lookup to offer again, and the scan carrying on."""
+        from selecta.library.scan import interrupted_scan
+
+        with connect() as conn:
+            lyrics = db.preference(conn, LYRICS_KEY, None) is not None
+            scan_state = interrupted_scan(conn)
+        work = getattr(ctx, "work", None)
+        if work is not None:
+            # core.durable_local_jobs: the job host resumes exports and lyric lookups itself,
+            # so nothing is offered again; the Workspace only says what is carrying on
+            return {"lyrics": False, "scan": scan_state, "carrying_on": carrying_on(work)}
+        return {
+            "lyrics": lyrics and not lyrics_running.is_set() and flags.on("lyrics.lookup"),
+            "scan": scan_state,
+            "carrying_on": {"lyrics": False, "exports": 0},
+        }
+
+    def carrying_on(work) -> dict:
+        """Lyric lookups and exports queued or under way in the durable job host."""
+        import sqlalchemy as sa
+
+        from selecta.work.model import TERMINAL
+        from selecta.work.schema import jobs as jobs_table
+        from selecta.workers.local_exports import EXPORT_JOB
+        from selecta.workers.local_host import LOCAL_WORKSPACE
+
+        with work.store.engine.connect() as connection:
+            rows = connection.execute(
+                sa.select(jobs_table.c.type, sa.func.count())
+                .where(
+                    jobs_table.c.workspace_id == LOCAL_WORKSPACE,
+                    jobs_table.c.type.in_(["lyrics.fetch", EXPORT_JOB]),
+                    jobs_table.c.state.not_in([str(state) for state in TERMINAL]),
+                )
+                .group_by(jobs_table.c.type)
+            ).all()
+        counts = {kind: number for kind, number in rows}
+        return {"lyrics": bool(counts.get("lyrics.fetch")), "exports": counts.get(EXPORT_JOB, 0)}
+
+    @app.post("/api/library/lyrics/again")
+    def lyrics_again() -> dict:
+        """'Looking up lyrics was interrupted. Start it again?'"""
+        if not flags.on("lyrics.lookup"):
+            raise HTTPException(409, "Lyric lookup is turned off, so nothing is sent anywhere.")
+        if getattr(ctx, "work", None) is not None:
+            look_up_lyrics()  # durable jobs: queued at most once more, never twice at once
+            return {"started": True}
+        if not lyrics_running.is_set():
+            threading.Thread(target=look_up_lyrics, daemon=True).start()
+        return {"started": True}
 
     def remember_folder(conn: sqlite3.Connection, folder: Path) -> None:
         folders = db.preference(conn, "library_folders", [])
@@ -180,6 +280,10 @@ def add_routes(app, ctx) -> None:
                 background.analysis = background.analyse()
 
     def watch_for_new_songs() -> None:
+        try:
+            resume_interrupted_scan()
+        except (OSError, sqlite3.Error, ValueError, RuntimeError):
+            pass  # the scan state stays, and is tried again at the next start
         time.sleep(FIRST_LOOK_SECONDS)
         while True:
             try:

@@ -52,6 +52,9 @@ export const POLLING: readonly PollRule[] = [
   { file: 'rooms/RoomPanel.tsx', reads: '/rooms/current', everyMs: 3000, hidden: 'pauses', why: 'useVisiblePoll: the host panel reads the room only while it is on screen, and at once on return (W3 adoption)' },
   { file: 'cloud/BrowserHarmonicMatches.tsx', reads: '/discoveries, /discoveries/progress (answered in this browser)', everyMs: 15000, hidden: 'pauses', why: 'useVisiblePoll; songs are measured in spare time, so new pairs turn up while the page is open, and both reads are answered from this browser, never a server (cloud.browser_harmonic)' },
   { file: 'cloud/localFirstPlayer.ts', reads: null, everyMs: 500, hidden: 'continues', why: 'redraws the browser player position only; never reads the server (ADR-0457)' },
+  { file: 'cloud/ConnectionBanner.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down to the next connection try and clears "Back online" only while either shows; the probe itself is connection.ts (cloud.offline_shell)' },
+  { file: 'cloud/ImportChip.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down "Trying again in 8 s" only while an import waits for the service; never reads the server (cloud.resilient_import)' },
+  { file: 'cloud/ImportStatus.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down "Trying again in 8 s" only while an import waits for the service; never reads the server (cloud.resilient_import)' },
   { file: 'engine/scheduler.ts', reads: null, everyMs: 'audio clock tick', hidden: 'continues', why: 'schedules the next song and seam on the audio clock while music plays in a hidden tab (ADR-0457)' },
 ];
 
