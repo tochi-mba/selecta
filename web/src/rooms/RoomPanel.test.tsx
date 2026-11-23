@@ -46,8 +46,10 @@ describe('room panel presence', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByTestId('room-guests-heading')).toHaveTextContent('Guests (1 here, 1 away)');
     const rows = screen.getAllByTestId('room-guest');
-    expect(rows[0]).toHaveTextContent('Creative Lemur · Here now');
-    expect(rows[1]).toHaveTextContent('Quiet Otter · Away · last seen 5 min ago');
+    expect(rows[0]).toHaveTextContent('Creative Lemur');
+    expect(within(rows[0]).getByTestId('room-guest-presence')).toHaveTextContent('Here now');
+    expect(rows[1]).toHaveTextContent('Quiet Otter');
+    expect(within(rows[1]).getByTestId('room-guest-presence')).toHaveTextContent('Away · last seen 5 min ago');
   });
 
   it('puts guests gone longer than 30 minutes in a collapsed group', async () => {

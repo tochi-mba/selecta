@@ -109,6 +109,7 @@
     "views/Links.tsx": "needs a discovery card; Add both to is opened in web/e2e/mp-0292-discovery.e2e.ts and web/e2e/gp-0260-back-state.e2e.ts",
     "views/LucyHistory.tsx": "needs a Lucy conversation; Rename, Archive and Delete are opened in src/views/LucyLx.test.tsx",
     "views/LucyProposal.tsx": "needs a revised Lucy proposal; the revision menu is opened in src/views/LucyLx.test.tsx",
+    "rooms/RoomPanel.tsx": "needs an open room with a guest; Remove and Ban are opened from the guest's Options menu in src/rooms/RoomPanel.test.tsx",
     "ui/ControlGallery.tsx": "the component gallery's own sample menu, not a product action",
     "ui/gallery/GalleryParts.tsx": "the component gallery's specimen menu (Plain item, Danger item), not a product action; opened in web/e2e/mp-0279-component-gallery.e2e.ts",
     "business/staff/ZoneSwitcher.tsx": "The five-zone menu opens and changes zones in src/business/menuCoverage.test.tsx",

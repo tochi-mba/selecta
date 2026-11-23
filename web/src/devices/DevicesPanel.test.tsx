@@ -70,6 +70,6 @@ describe('busy labels (L3)', () => {
     }
     expect(devicesSource).toContain('`Signing out${ELLIPSIS}`');
     expect(playingSource).toContain('`Moving${ELLIPSIS}`');
-    expect(roomSource).toContain('`Ending${ELLIPSIS}`');
+    expect(roomSource).toContain('`Opening${ELLIPSIS}`');
   });
 });

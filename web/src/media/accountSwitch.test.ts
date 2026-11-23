@@ -143,6 +143,8 @@ describe('import progress belongs to its workspace', () => {
     bindImportWorkspace('ws-b');
     expect(importSnapshot().phase).toBe('idle');
     expect(importSnapshot().folder).toBeNull();
+    // the run starts once this tab holds the import claim, a moment later
+    await vi.waitFor(() => expect(finish).not.toBeNull());
     finish!();
     await run;
     expect(importSnapshot().folder).toBeNull();
