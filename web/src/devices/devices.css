@@ -24,7 +24,6 @@
 @media (max-width: 640px) {
   .shell[data-mode='cloud'] .shell-banners > .playing-bar-notices { padding-block: var(--space-2); }
   .shell[data-mode='cloud'] .shell-banners:has(> .playing-bar-notices) { padding-top: var(--space-2); }
-  .playing-bar-notices .notice-actions button { min-height: calc(var(--control-height) - var(--space-2)); }
   .playing-bar-notices > p, .notice-unavailable > p { flex: 1 1 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .notice-why { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .notice-actions { margin-inline-start: 0; }
