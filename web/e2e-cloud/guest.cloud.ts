@@ -8,6 +8,25 @@ import { endRooms, hostWithRoom, slowPhone } from './helpers';
 
 test.beforeEach(async ({ page }) => { await endRooms(page); });
 
+test('a directly opened guest link survives refresh without a signed-in session', async ({ browser }) => {
+  const { context: hostContext, joinPath } = await hostWithRoom(browser);
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    const response = await page.goto(joinPath);
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('#guest')).toBeVisible();
+    await expect(page.locator('#root')).toHaveCount(0); // not the signed-in React shell
+    await expect(page.getByRole('heading', { name: 'Request a song' })).toBeVisible();
+    await page.getByRole('button', { name: 'Join the room' }).click();
+    await expect(page.getByRole('heading', { name: 'Garden party' })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Garden party' })).toBeVisible();
+  } finally {
+    await Promise.all([context.close(), hostContext.close()]);
+  }
+});
+
 test('a guest joins, requests, votes and follows their requests on a slow phone', async ({ browser }) => {
   const { context: hostContext, host, joinPath } = await hostWithRoom(browser);
   const { context, page } = await slowPhone(browser);
