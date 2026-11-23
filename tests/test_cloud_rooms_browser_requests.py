@@ -222,7 +222,7 @@ def test_a_request_left_waiting_by_an_ended_room_can_still_be_let_go(party):
         conn.execute(
             sa.update(rooms_table).where(rooms_table.c.id == room_id).values(status="ended")
         )
-    assert [entry["id"] for entry in waiting(party)] == [request_id]
+    assert waiting(party) == [], "a closed room's requests are never listed"
 
     answer = party.client.post(f"{WAITING}/{request_id}/dismiss", headers=auth(ALICE))
     assert answer.status_code == 200, answer.text
@@ -234,6 +234,47 @@ def test_a_request_left_waiting_by_an_ended_room_can_still_be_let_go(party):
         "action": "withdrawn",
         "song_request_id": planner_id,
     }
+
+
+def test_only_requests_from_open_rooms_are_listed(party):
+    party.speaker_on(ALICE)
+    first = party.open_room(ALICE)
+    old_id = ask(join(party, first["code"]), first["room"]["id"], 3)
+    assert [entry["id"] for entry in waiting(party)] == [old_id]
+
+    ended = party.client.post(f"/api/rooms/{first['room']['id']}/end", headers=auth(ALICE))
+    assert ended.status_code == 200, ended.text
+    assert waiting(party) == []
+
+    second = party.open_room(ALICE)
+    new_id = ask(join(party, second["code"]), second["room"]["id"], 8)
+    assert [entry["id"] for entry in waiting(party)] == [new_id]
+
+
+def test_ending_a_room_withdraws_the_requests_the_host_never_added(party):
+    party.speaker_on(ALICE)
+    opened = party.open_room(ALICE)
+    room_id = opened["room"]["id"]
+    guest = join(party, opened["code"])
+    added = ask(guest, room_id, 2)
+    left = ask(join(party, opened["code"]), room_id, 6)
+    assert party.client.post(f"{WAITING}/{added}/played", headers=auth(ALICE)).status_code == 200
+
+    ended = party.client.post(f"/api/rooms/{room_id}/end", headers=auth(ALICE))
+    assert ended.status_code == 200, ended.text
+
+    workspace_id = party.workspaces[ALICE]
+    rows = {row["id"]: row for row in request_rows(party.engine, workspace_id)}
+    assert rows[added]["status"] == RequestStatus.PLAYED.value, "what was added stays played"
+    assert (rows[left]["status"], rows[left]["reason"]) == (
+        RequestStatus.WITHDRAWN.value,
+        "room_ended",
+    )
+    assert announced(party.engine, workspace_id)[-1] == {
+        "action": "withdrawn",
+        "song_request_id": browser_request_id(room_id, 6),
+    }
+    assert waiting(party) == []
 
 
 def test_an_unknown_request_is_not_found(party):
