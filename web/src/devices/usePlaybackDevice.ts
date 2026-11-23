@@ -50,6 +50,8 @@ export const PLAYBACK_COMMAND_EVENT = 'selecta-playback-command';
 export const SPEAKER_COMMANDS = new Set(['play', 'pause', 'skip', 'seek', 'set_programme', 'set_volume']);
 /** Commands that move the speaker to a (possibly missing) track. */
 const MOVES_TRACK = new Set(['skip', 'seek', 'set_programme']);
+/** The most songs a session's programme may hold (the server's MAX_PROGRAMME). */
+export const MAX_PROGRAMME = 1000;
 /** A refused press the controller answers by redrawing from where the music is now. */
 export const RETRY_CODES = new Set(['stale_command', 'superseded_command', 'expired_command']);
 
@@ -181,6 +183,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const claiming = useRef(false);
   const speaking = useRef(false);
   const appliedSeq = useRef(-1);
+  /** True while this speaker's own set_programme is on its way: see publishProgramme. */
+  const publishing = useRef(false);
   // ADR-0461: the newest fence this device has seen, sent with heartbeats and checked on commands.
   const fence = useRef<number | null>(null);
   const acked = useRef(new Set<string>());
@@ -277,6 +281,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!speaker || session.seq <= appliedSeq.current) return;
     appliedSeq.current = session.seq;
     if (!remoteControl) return;
+    // this speaker is telling the session its own programme: nothing for it to move to
+    if (publishing.current) return;
     if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
@@ -664,6 +670,45 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   }, [api, deviceId, poll, speaker, view?.session, workspaceId]);
   const command = useCallback(async (name: string, args?: Record<string, unknown>) => { await send(name, args); }, [send]);
 
+  /** The speaker tells the session which songs it is playing, in order, as catalogue ids, so
+   * another signed-in device can show them and steer (devices.remote_control). The session then
+   * says the song at `songIndex` has just begun; this device does not jump to that (it is already
+   * playing it) and its next heartbeat reports where the music really is. True when the session
+   * took the programme. */
+  const publishProgramme = useCallback(async (songs: readonly number[], songIndex: number): Promise<boolean> => {
+    if (!deviceId || !remoteControl || !speaking.current || adrift.current || publishing.current) return false;
+    if (!songs.length || songs.length > MAX_PROGRAMME) return false;
+    publishing.current = true;
+    // where the music is by the engine's own account, when it can say; else what the caller saw
+    const at = speaker?.position()?.song_index ?? songIndex;
+    try {
+      const post = (session: SessionState) => api<{ status: string; applied_seq: number | null }>('/playback/commands', {
+        method: 'POST',
+        body: JSON.stringify({
+          device_id: deviceId, command: 'set_programme',
+          args: { songs, song_index: Math.max(0, Math.min(songs.length - 1, Math.round(at))) },
+          based_on_seq: session.seq, fence: session.fence, ttl_seconds: 60, idempotency_key: newKey(),
+        }),
+      }, workspaceId);
+      let session = viewSnapshot.current?.session ?? null;
+      for (let attempt = 0; attempt < 2 && session; attempt += 1) {
+        try {
+          const answer = await post(session);
+          if (typeof answer.applied_seq === 'number') appliedSeq.current = Math.max(appliedSeq.current, answer.applied_seq);
+          return answer.status === 'applied';
+        } catch (problem) {
+          // the session moved on between the read and the press: read it again and try once more
+          if (!RETRY_CODES.has((problem as { code?: string }).code ?? '')) return false;
+          const fresh = await poll(true);
+          session = fresh?.speaker === 'here' ? fresh.session : null;
+        }
+      }
+      return false;
+    } finally {
+      publishing.current = false;
+    }
+  }, [api, deviceId, poll, remoteControl, speaker, workspaceId]);
+
   /** cloud.offline_playback: start this device's own files with no connection. There is no lease
    * to take, so the device plays "adrift" and settles with the server when the connection is
    * back: it keeps playing if no other device holds a live lease, and stops here if one does.
@@ -742,7 +787,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     return () => window.removeEventListener(PLAYBACK_COMMAND_EVENT, hear);
   }, [handleCommand]);
 
-  return { device, notice, view, message, starting, error, playHere, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, send, serverNow, isSpeaker: () => speaking.current,
+  return { device, notice, view, message, starting, error, playHere, publishProgramme, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, send, serverNow, isSpeaker: () => speaking.current,
     /** cloud.offline_playback: playing on while SelectaDJ can't be reached, and what was said when that ended. */
     offline, offlineNotice, playOffline, heldVolume: () => heldVolume.current };
 }

@@ -714,6 +714,8 @@ def create_cloud_app(
             "usage": usage,
             "billing": {
                 "consent_version": os.environ.get("SELECTA_CHECKOUT_CONSENT_VERSION", "").strip(),
+                # false: the page shows the plans for information, with no way to start a payment
+                "checkout_available": billing_api.checkout_available(),
             },
             "lucy": {"tier": meters.lucy_tier(plan)},
             "features": decisions.snapshot(),

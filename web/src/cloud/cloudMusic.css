@@ -224,7 +224,11 @@
   .shell[data-mode='cloud'] .music-empty { padding: var(--space-6) var(--space-4) var(--space-5); }
   .shell[data-mode='cloud'] .music-empty .empty-state-actions { align-self: stretch; width: 100%; }
   .shell[data-mode='cloud'] .music-empty .empty-state-actions > * { flex: 1 1 100%; justify-content: center; text-align: center; }
-  .shell[data-mode='cloud'] .music-empty .setup-steps { justify-content: space-between; gap: var(--space-2); }
+  /* three equal columns, each number over its name: no step can drop to a line of its own */
+  .shell[data-mode='cloud'] .music-empty .setup-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: var(--space-2); }
+  /* each column has room for its name, so a finished step keeps it under its tick */
+  .shell[data-mode='cloud'] .music-empty .setup-steps li.done .setup-step-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+  .shell[data-mode='cloud'] .music-empty .setup-steps li { flex-direction: column; gap: var(--space-dense); min-width: 0; font-size: var(--text-xs); line-height: 1.3; text-align: center; }
 }
 
 /* ---------- Make a Mix: three steps and one Play ---------- */
@@ -351,6 +355,10 @@
 .shell[data-mode='cloud'] .mix-row-actions .menu > button:hover { background: var(--surface-control); color: var(--text); }
 .shell[data-mode='cloud'] .mix-row-actions > .mix-row-play { border-color: var(--border-strong); font-weight: 600; }
 .shell[data-mode='cloud'] .mix-row-actions > .mix-row-play:hover:not(:disabled) { border-color: var(--text); background: var(--surface-control); }
+/* a finger gets full-size targets at any width (a phone on its side keeps the wide row) */
+@media (pointer: coarse) {
+  .shell[data-mode='cloud'] .mix-row-actions > button, .shell[data-mode='cloud'] .mix-row-actions .menu > button { min-height: 44px; min-width: 44px; }
+}
 .shell[data-mode='cloud'] .mix-row .rename-draft { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .shell[data-mode='cloud'] .mix-row .rename-draft input { flex: 1 1 220px; min-width: 0; min-height: 36px; }
 .shell[data-mode='cloud'] .mix-row .rename-draft .warn { flex: 1 1 100%; margin: 0; }

@@ -251,6 +251,59 @@ def test_only_requests_from_open_rooms_are_listed(party):
     assert [entry["id"] for entry in waiting(party)] == [new_id]
 
 
+class FlakyBrowserPlanner(BrowserPlanner):
+    """The browser planner on a day it is not up yet: every hand-over fails until `up`."""
+
+    up = False
+
+    def submit(self, workspace_id, song_id, *, source="room", room_id, guest_id):
+        if not self.up:
+            raise RuntimeError("The cloud request planner isn't available yet")
+        return super().submit(
+            workspace_id, song_id, source=source, room_id=room_id, guest_id=guest_id
+        )
+
+
+def test_a_request_whose_hand_over_failed_reaches_the_list_when_the_host_reads_it(cloud_engine):
+    """A failed hand-over left the request accepted with no planner id, and nothing ran the
+    hand-over again in a quiet room: the room counted it and the host's list never had it.
+    Reading the list hands it over, once."""
+    planner = FlakyBrowserPlanner(cloud_engine)
+    built = make_party(cloud_engine, planner=planner)
+    try:
+        opened = built.open_room(ALICE)
+        room_id = opened["room"]["id"]
+        workspace_id = built.workspaces[ALICE]
+        first = ask(join(built, opened["code"]), room_id, 5)
+        second = ask(join(built, opened["code"]), room_id, 7)
+        # stranded: accepted, never handed over, and no room action is coming
+        rows = request_rows(cloud_engine, workspace_id)
+        assert [row["status"] for row in rows] == [RequestStatus.ACCEPTED.value] * 2
+        assert [row["song_request_id"] for row in rows] == [None, None]
+        assert announced(cloud_engine, workspace_id) == []
+        # while the planner is still down the read answers, and leaves them to try again
+        assert waiting(built) == []
+        assert [row["song_request_id"] for row in request_rows(cloud_engine, workspace_id)] == [
+            None,
+            None,
+        ]
+
+        planner.up = True
+        assert sorted(entry["id"] for entry in waiting(built)) == sorted([first, second])
+        rows = request_rows(cloud_engine, workspace_id)
+        handed = {row["song_id"]: row["song_request_id"] for row in rows}
+        assert handed == {5: browser_request_id(room_id, 5), 7: browser_request_id(room_id, 7)}
+        events = announced(cloud_engine, workspace_id)
+        assert sorted(event["song_id"] for event in events) == [5, 7]
+
+        # asked again every couple of seconds: nothing is handed over or announced twice
+        for _ in range(3):
+            assert len(waiting(built)) == 2
+        assert announced(cloud_engine, workspace_id) == events
+    finally:
+        built.client.__exit__(None, None, None)
+
+
 def test_ending_a_room_withdraws_the_requests_the_host_never_added(party):
     party.speaker_on(ALICE)
     opened = party.open_room(ALICE)

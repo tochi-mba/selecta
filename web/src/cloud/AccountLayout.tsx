@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { navigate } from '../router';
 import { Icon, IconName } from '../ui/Icon';
 import './account.css';
@@ -84,9 +84,20 @@ export function SettingsLayout({ current, places, children }: {
     return () => { window.clearInterval(timer); document.removeEventListener('scroll', read, { capture: true }); };
   }, [onAccount, places]);
 
+  // On a phone the list is one scrolling row: keep the current section's pill whole and in view,
+  // never cut off at the row's edge. Only the row scrolls; the page stays where it is.
+  const active = onAccount ? inView : current;
+  const row = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const list = row.current;
+    const pill = list?.querySelector<HTMLElement>('[aria-current]');
+    if (!list || !pill || list.scrollWidth <= list.clientWidth) return;
+    const room = (list.clientWidth - pill.offsetWidth) / 2;
+    list.scrollTo?.({ left: Math.max(0, pill.offsetLeft - room), behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }, [active]);
+
   if (!places) return <div className="acct"><div className="acct-content">{children}</div></div>;
 
-  const active = onAccount ? inView : current;
   const open = (place: SettingsPlace) => {
     if (place.path === ACCOUNT_PATH && onAccount) {
       if (place.anchor) { showAnchor(place.anchor); setInView(place.id); }
@@ -97,7 +108,7 @@ export function SettingsLayout({ current, places, children }: {
   };
   return (
     <div className="acct acct-layout">
-      <nav className="acct-nav" aria-label="Settings sections">
+      <nav className="acct-nav" aria-label="Settings sections" ref={row}>
         {places.filter((place) => !onAccount || !empty.includes(place.id)).map((place) => (
           <a
             key={place.id}

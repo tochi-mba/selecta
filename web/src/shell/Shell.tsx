@@ -129,7 +129,7 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
             <Icon name="warning" /><span className="count">{attention}</span>
           </PageLink>
         )}
-        {on('app.shortcuts') && <button className="context-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={onHelp}><Icon name="help" /></button>}
+        {on('app.shortcuts') && <button className="context-button context-help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={onHelp}><Icon name="help" /></button>}
       </div>
     </header>
   );

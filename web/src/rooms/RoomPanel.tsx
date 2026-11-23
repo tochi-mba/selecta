@@ -261,7 +261,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         </div>
         <div className="room-head-actions">
           <Action type="button" run={copy}><CopyWords copied={copied}>Copy link</CopyWords></Action>
-          <button type="button" onClick={() => setQrOpen(true)}><Icon name="expand" size="toolbar" /> Show QR full screen</button>
+          <button type="button" onClick={() => setQrOpen(true)}><Icon name="expand" size="toolbar" /> Show QR<span className="room-qr-more"> full screen</span></button>
           <Menu className="room-menu" title="Room options" label={<><Icon name="more" /><VisuallyHidden>Room options</VisuallyHidden></>}>
             <MenuItem onClick={() => void lock()}>{isLocked ? 'Unlock room' : 'Lock room'}</MenuItem>
             <MenuItem onClick={() => newCode(false)}>Make a new code</MenuItem>

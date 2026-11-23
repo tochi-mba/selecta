@@ -1,4 +1,4 @@
-import { act, cleanup, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { alternativeCommand, ControllerNotices } from './ControllerNotices';
@@ -104,6 +104,35 @@ describe('the speaker with a lease key', () => {
   });
 });
 
+describe('the speaker tells the session its programme (devices.remote_control)', () => {
+  it('sends its songs as set_programme and keeps playing where it is, not from the start the session then reports', async () => {
+    let now = session({ seq: 4, song_index: 2, offset_ms: 90_000 });
+    const sent: Record<string, unknown>[] = [];
+    const base = speakerServer(() => now);
+    const api = (async (path: string, init?: RequestInit) => {
+      if (path === '/playback/commands') {
+        const body = JSON.parse(String(init?.body)) as { args: { songs: number[]; song_index: number } };
+        sent.push(body);
+        // as the server applies it: the programme, the song named, and "it has just begun"
+        now = session({ seq: 5, song_index: body.args.song_index, offset_ms: 0, programme: body.args.songs.map((song_id) => ({ song_id, sha256: 'c'.repeat(64) })) });
+        return { status: 'applied', applied_seq: 5, session: now };
+      }
+      return base.api(path, init);
+    }) as Api;
+    const speaker = speakerWith(() => ({ song_index: 2, offset_ms: 90_000, state: 'playing' }));
+    const hook = renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws', speaker }));
+    await waitFor(() => expect(hook.result.current.isSpeaker()).toBe(true));
+    const startsBefore = (speaker.start as ReturnType<typeof vi.fn>).mock.calls.length;
+    await act(async () => { expect(await hook.result.current.publishProgramme([11, 12, 13], 2)).toBe(true); });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ device_id: 'me', command: 'set_programme', args: { songs: [11, 12, 13], song_index: 2 }, based_on_seq: 4, fence: 7 });
+    // the session now says song 3 has just begun; the speaker is a minute and a half into it and stays there
+    await act(async () => { await hook.result.current.refreshSession(); });
+    expect((speaker.start as ReturnType<typeof vi.fn>).mock.calls.length).toBe(startsBefore);
+    hook.unmount();
+  });
+});
+
 const notices = (over: Partial<Notices> = {}): Notices => ({ missed: [], waiting: [], unavailable: [], ...over });
 const press = (id: string, command: string, reason: string) => ({ command_id: id, command, issued_by: 'phone', reason, created_at: 1, expires_at: 2, resolved_at: null }) as Notices['missed'][number];
 
@@ -118,13 +147,17 @@ describe('what controllers are told (BF-0461-04/05)', () => {
     const send = vi.fn();
     const programme = [{ song_id: 5, sha256: 'a'.repeat(64) }, { song_id: 6, sha256: 'b'.repeat(64) }];
     const current = session({ programme });
-    const unavailable = { command_id: 'u', command: 'skip', issued_by: 'phone', acked_at: 1, song_id: 5, alternatives: [
+    const unavailable = { command_id: 'u', command: 'skip', issued_by: 'phone', acked_at: clock(), song_id: 5, alternatives: [
       { song_id: 9, title: 'Copy', artist: 'A', programme_index: null, same_song: true },
       { song_id: 6, title: 'Next', artist: 'B', programme_index: 1, same_song: false },
     ] };
     render(createElement(ControllerNotices, { notices: notices({ unavailable: [unavailable] }), speakerName: 'Bar tablet', session: current, send }));
-    expect(screen.getByTestId('unavailable-here').textContent).toContain("Bar tablet doesn't have that song on this device.");
-    screen.getByRole('button', { name: 'Copy - A (another copy)' }).click();
+    // one line and two actions; the alternatives open in a sheet
+    expect(screen.getByTestId('unavailable-here').textContent).toBe('Bar tablet couldn’t play “Copy”: its file isn’t there.Choose anotherDismiss');
+    expect(screen.queryByTestId('unavailable-alternatives')).toBeNull();
+    act(() => { screen.getByRole('button', { name: 'Choose another' }).click(); });
+    expect(within(screen.getByTestId('unavailable-alternatives')).getAllByRole('button')).toHaveLength(2);
+    act(() => { screen.getByRole('button', { name: 'Copy - A (another copy)' }).click(); });
     expect(send).toHaveBeenCalledWith('set_programme', { songs: [9, 6], song_index: 0 });
     expect(alternativeCommand(unavailable.alternatives[1], 5, current)).toEqual({ name: 'skip', args: { song_index: 1 } });
     await waitFor(() => expect(screen.queryByTestId('unavailable-here')).toBeNull());

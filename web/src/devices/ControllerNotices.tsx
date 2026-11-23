@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Sheet } from '../ui/controls';
 import type { Alternative, HeldPress, Notices, SessionState } from './usePlaybackDevice';
 
 // What a controller is told about presses that did not simply happen (ADR-0461):
@@ -41,6 +42,7 @@ export function alternativeCommand(alternative: Alternative, missing: number | n
 
 export function ControllerNotices({ notices, speakerName, session, send }: { notices: Notices | null | undefined; speakerName: string | null; session: SessionState | null; send: (name: string, args?: Record<string, unknown>) => void }) {
   const [dismissed, setDismissed] = useState<Set<string>>(seenBefore);
+  const [choosing, setChoosing] = useState(false);
   if (!notices) return null;
   const fresh = (press: { command_id: string }) => !dismissed.has(press.command_id);
   const waiting = notices.waiting.filter(fresh);
@@ -49,6 +51,14 @@ export function ControllerNotices({ notices, speakerName, session, send }: { not
   const unavailable = notices.unavailable.filter(fresh).filter(recent)[0];
   if (!waiting.length && !missed.length && !unavailable) return null;
   const who = speakerName ?? 'The speaker';
+  // the songs that can stand in for the one the speaker could not play, each with its command
+  const choices = (unavailable?.alternatives ?? []).flatMap((alternative) => {
+    const next = alternativeCommand(alternative, unavailable!.song_id, session);
+    return next ? [{ alternative, next }] : [];
+  });
+  // another copy of the same song carries its title; otherwise the notice cannot name it
+  const sameSong = unavailable?.alternatives.find((alternative) => alternative.same_song);
+  const missingName = sameSong ? `“${sameSong.title}”` : 'that song';
   const dismiss = (ids: string[]) => setDismissed((was) => { const next = new Set([...was, ...ids]); rememberSeen(next); return next; });
   return (
     <div className="playing-bar-notices" data-testid="controller-notices">
@@ -62,19 +72,27 @@ export function ControllerNotices({ notices, speakerName, session, send }: { not
         </p>
       )}
       {unavailable && (
-        <div data-testid="unavailable-here">
-          <p>{`${who} couldn't play that song: its file isn't on that device.`}{unavailable.alternatives.length ? ' Play one of these instead?' : ''}</p>
-          {unavailable.alternatives.map((alternative) => {
-            const next = alternativeCommand(alternative, unavailable.song_id, session);
-            if (!next) return null;
-            return (
-              <button key={alternative.song_id} type="button" onClick={() => { send(next.name, next.args); dismiss([unavailable.command_id]); }}>
-                {`${alternative.title} - ${alternative.artist}${alternative.same_song ? ' (another copy)' : ''}`}
-              </button>
-            );
-          })}
-          <button type="button" onClick={() => dismiss([unavailable.command_id])}>Dismiss</button>
+        <div data-testid="unavailable-here" className="notice-unavailable">
+          <p title={`${who} couldn’t play ${missingName}: its file isn’t there.`}>{`${who} couldn’t play ${missingName}`}<span className="notice-why">: its file isn’t there</span>.</p>
+          <div className="notice-actions">
+            {choices.length > 0 && <button type="button" aria-haspopup="dialog" onClick={() => setChoosing(true)}>Choose another</button>}
+            <button type="button" onClick={() => dismiss([unavailable.command_id])}>Dismiss</button>
+          </div>
         </div>
+      )}
+      {unavailable && choosing && choices.length > 0 && (
+        <Sheet title="Play another song" onClose={() => setChoosing(false)}>
+          <ul className="notice-alternatives" data-testid="unavailable-alternatives">
+            {choices.map(({ alternative, next }) => (
+              <li key={alternative.song_id}>
+                <button type="button" aria-label={`${alternative.title} - ${alternative.artist}${alternative.same_song ? ' (another copy)' : ''}`} onClick={() => { send(next.name, next.args); setChoosing(false); dismiss([unavailable.command_id]); }}>
+                  <b dir="auto">{alternative.title}</b>
+                  <span dir="auto">{alternative.artist}{alternative.same_song ? ' (another copy)' : ''}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
       )}
     </div>
   );

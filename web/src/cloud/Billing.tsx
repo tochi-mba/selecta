@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { accountFlagOn, FlagId } from '../flags';
 import { Account, bytes, holdsHostedStorage, lockedTo, planName } from './api';
 import { Badge, Notice, SettingsCard } from './AccountLayout';
-import { CheckoutPhase, Consent, consentComplete, NO_CONSENT } from './checkout';
+import { checkoutAvailable, CheckoutPhase, Consent, consentComplete, NO_CONSENT, UPGRADES_NOT_OPEN } from './checkout';
 import { hasMeters, Meters } from './Meters';
 import { useNeedsConnection } from './connection';
 import { Icon } from '../ui/Icon';
@@ -114,6 +114,26 @@ function Price({ words }: { words: string }) {
   return <p className="cloud-price">{figure}{period && <small> / {period}</small>}</p>;
 }
 
+/** The amount in a price ("£59 / year" is 59) with what is written before it ("£"), or null. */
+function amountOf(words: string): { before: string; amount: number } | null {
+  const found = words.match(/^([^\d]*)(\d+(?:\.\d+)?)/);
+  if (!found) return null;
+  const amount = Number(found[2]);
+  return Number.isFinite(amount) && amount > 0 ? { before: found[1], amount } : null;
+}
+
+/** What paying yearly comes to against paying monthly, worked out from the two prices on the
+ * card: "£4.92 a month, billed yearly. Save £24.88." The saving is only said when there is one,
+ * and nothing at all when either price cannot be read. */
+export function yearlyComparison(month: string, year: string): string | null {
+  const monthly = amountOf(month);
+  const yearly = amountOf(year);
+  if (!monthly || !yearly || monthly.before !== yearly.before) return null;
+  const money = (amount: number) => `${yearly.before}${amount.toFixed(2)}`;
+  const saved = Math.round((monthly.amount * 12 - yearly.amount) * 100) / 100;
+  return `${money(yearly.amount / 12)} a month, billed yearly.${saved > 0 ? ` Save ${money(saved)}.` : ''}`;
+}
+
 export function CheckoutStatus({ phase, account }: { phase: CheckoutPhase; account: Account }) {
   if (phase === 'idle') return null;
   const words = {
@@ -147,8 +167,10 @@ export function ConsentForm({ consent, onChange, version }: { consent: Consent; 
   );
 }
 
-export function Billing({ account, busy, phase, consentVersion, onCheckout, onPortal, blocked, localFirst }: {
+export function Billing({ account, busy, phase, consentVersion, onCheckout, onPortal, blocked, localFirst, error }: {
   account: Account;
+  /** Why the last press of Continue did not open Checkout, in plain words; shown beside the button. */
+  error?: string;
   /** Sell the local-first axes instead of storage. Read from the account's experience when left out. */
   localFirst?: boolean;
   busy: boolean;
@@ -171,6 +193,8 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   const offline = useNeedsConnection();
   const ready = consentComplete(consent) && Boolean(consentVersion) && !busy && !offline;
   const confirming = phase === 'confirming';
+  // the server says when this site cannot start a payment at all (no Stripe key or prices)
+  const open = checkoutAvailable(account);
   const local = localFirst ?? sellsLocalFirst(account);
   const includes = currentIncludes(account, local);
   const choice = PLANS.find((plan) => plan.id === chosen)!;
@@ -192,7 +216,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           ? portal && <p className="acct-plan-foot">{local
             ? 'Upgrades start straight away and are prorated. Downgrades start at the end of the period, and your music and mixes stay exactly as they are.'
             : 'Upgrades start straight away and are prorated. Downgrades start at the end of the period; a library bigger than the new plan stays playable and nothing is deleted.'}</p>
-          : checkout && <p className="acct-plan-foot">Upgrade whenever you like. You can change or cancel at any time.</p>}
+          : checkout && open && <p className="acct-plan-foot">Upgrade whenever you like. You can change or cancel at any time.</p>}
         {offline && <p className="needs-connection">{offline}</p>}
       </SettingsCard>
       {hasMeters(account) && (
@@ -213,7 +237,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
         <SettingsCard
           id="cloud-upgrade"
           title="Upgrade your plan"
-          about="Pick a plan, then continue to secure checkout."
+          about={open ? 'Pick a plan, then continue to secure checkout.' : 'What each plan adds.'}
           actions={(
             <div className="cloud-interval" role="group" aria-label="Billing interval">
               <button type="button" aria-pressed={interval === 'month'} onClick={() => setInterval('month')}>Monthly</button>
@@ -221,27 +245,36 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
             </div>
           )}
         >
-          <div className="cloud-plan-grid" role="radiogroup" aria-label="Plan">
+          {/* a site that cannot start a payment shows the plans to read, with nothing to choose */}
+          <div className="cloud-plan-grid" role={open ? 'radiogroup' : 'group'} aria-label={open ? 'Plan' : 'Plans'} data-info={!open || undefined}>
             {PLANS.map((plan) => (
-              <label key={plan.id} className={`cloud-plan-card ${plan.featured ? 'featured' : ''}`} data-chosen={chosen === plan.id || undefined}>
+              <label key={plan.id} className={`cloud-plan-card ${plan.featured ? 'featured' : ''}`} data-chosen={(open && chosen === plan.id) || undefined}>
                 <span className="cloud-plan-pick">
-                  <input type="radio" name="cloud-plan" value={plan.id} checked={chosen === plan.id} onChange={() => setChosen(plan.id)} />
+                  {open && <input type="radio" name="cloud-plan" value={plan.id} checked={chosen === plan.id} onChange={() => setChosen(plan.id)} />}
                   <span className="cloud-plan-title">{plan.name}</span>
                   <span className="cloud-plan-kind">{local ? LOCAL_FIRST_AXES[plan.id].eyebrow : plan.featured ? 'Most room to play' : 'For your growing library'}</span>
                 </span>
                 <Price words={price(plan)} />
+                {interval === 'year' && yearlyComparison(plan.month, plan.year) && <p className="cloud-price-note">{yearlyComparison(plan.month, plan.year)}</p>}
                 {local
                   ? <LocalFirstPlan plan={plan.id} account={account} />
                   : <><strong className="cloud-plan-headline">{plan.storage}</strong><p>{aboutPlan(plan, account)}</p></>}
               </label>
             ))}
           </div>
-          <ConsentForm consent={consent} onChange={setConsent} version={consentVersion} />
-          <div className="acct-plans-head">
-            <p className="cloud-hint" role="status">{busy && consentComplete(consent) ? 'Opening secure checkout…' : consentComplete(consent) ? `${choice.name}, ${price(choice)}. Payment is taken by Stripe.` : 'Tick all three boxes to continue.'}</p>
-            <button type="button" className="primary" disabled={!ready} aria-busy={(busy && consentComplete(consent)) || undefined} onClick={() => onCheckout(chosen, interval, consent)}>{busy && consentComplete(consent) ? 'Opening checkout…' : `Continue with ${choice.name}`}</button>
-          </div>
-          {offline && <p className="needs-connection">{offline}</p>}
+          {open ? (
+            <>
+              <ConsentForm consent={consent} onChange={setConsent} version={consentVersion} />
+              <div className="acct-plans-head">
+                {/* why the last press did not open Checkout is said here, beside the button */}
+                {error && !busy
+                  ? <p className="cloud-hint cloud-inline-error" role="alert">{error}</p>
+                  : <p className="cloud-hint" role="status">{busy && consentComplete(consent) ? 'Opening secure checkout…' : consentComplete(consent) ? `${choice.name}, ${price(choice)}. Payment is taken by Stripe.` : 'Tick all three boxes to continue.'}</p>}
+                <button type="button" className="primary" disabled={!ready} aria-busy={(busy && consentComplete(consent)) || undefined} onClick={() => onCheckout(chosen, interval, consent)}>{busy && consentComplete(consent) ? 'Opening checkout…' : `Continue with ${choice.name}`}</button>
+              </div>
+              {offline && <p className="needs-connection">{offline}</p>}
+            </>
+          ) : <p className="cloud-hint" data-testid="upgrades-not-open">{UPGRADES_NOT_OPEN}</p>}
         </SettingsCard>
       )}
       {blocked && !local && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading lifts the pause on uploads and exports as soon as your new plan is confirmed.</p>}
