@@ -20,6 +20,7 @@ from selecta.rooms.lifecycle import room_code
 from selecta.rooms.ordering import inbox_order
 from selecta.rooms.planning import queue_order, renders_left
 from selecta.rooms.ports import NowPlaying, SongSummary
+from selecta.rooms.requesting import Allowance, allowance
 from selecta.rooms.schema import display_pairings, room_guests, room_requests, room_votes
 from selecta.rooms.settings import RequestMode, RoomSettings
 from selecta.rooms.store import (
@@ -46,12 +47,18 @@ GUEST_ONLINE_SECONDS = 60.0
 DISPLAY_ONLINE_SECONDS = 30.0
 
 STATUS_TEXT = {
-    RequestStatus.SENT: "Sent",
+    RequestStatus.SENT: "Waiting for the host to approve it",
     RequestStatus.ACCEPTED: "Accepted",
     RequestStatus.PASSED: "The host passed on this one",
     RequestStatus.UNFIT: "Can't fit this into the mix right now",
     RequestStatus.PLAYED: "Played",
     RequestStatus.WITHDRAWN: "Withdrawn",
+}
+# When the host adds each request to the mix by hand (the browser-first planner), the server
+# knows when it went in, not when it is heard, and says only that.
+HOST_ADDS_TEXT = {
+    RequestStatus.ACCEPTED: "Accepted. Waiting for the host to add it to the mix",
+    RequestStatus.PLAYED: "Added to the mix",
 }
 WITHDRAWN_TEXT = {
     "guest": "You withdrew this",
@@ -91,6 +98,11 @@ class GuestView:
     votes_on: bool
     requests_open: bool
     music_paused: bool  # no speaker online: "The music's paused"
+    # what the room's limits leave this guest now, and the limit in words when that is nothing
+    requests_left: int = 0
+    per_guest: int = 0
+    limit_text: str = ""
+    limit_retry_s: float | None = None
     now_playing: SongSummary | None = None
     up_next: tuple[SongSummary, ...] = ()
     coming_up: tuple[UpcomingItem, ...] = ()  # accepted, in the order they'll reach the mix
@@ -131,6 +143,7 @@ class HostView:
     renders_left: int
     music_paused: bool
     displays: int  # paired screens, online or not
+    renders_apply: bool = True  # False when the host's browser is the planner: nothing renders
     screens: tuple[ScreenSummary, ...] = ()
     now: float = 0.0  # the server's clock, so "last seen 5 min ago" ignores the host's clock
 
@@ -223,6 +236,11 @@ def guest_view(ctx: RoomContext, guest_token: str, *, now: float | None = None) 
         ).scalars()
         voted = set(voted)
         names = nickname_map(conn, room)
+        left = (
+            allowance(conn, room, guest, now)
+            if room.live and guest.status is GuestStatus.ACTIVE
+            else Allowance(0)
+        )
     settings = room.settings
     base = GuestView(
         room_name=room.name,
@@ -236,6 +254,10 @@ def guest_view(ctx: RoomContext, guest_token: str, *, now: float | None = None) 
             and settings.request_mode is not RequestMode.OFF
         ),
         music_paused=room.live and not ctx.speakers.speaker_online(workspace_id),
+        requests_left=left.left,
+        per_guest=settings.pending_per_guest,
+        limit_text=left.message,
+        limit_retry_s=left.retry_after_s,
     )
     songs = describe_songs(ctx, room, [*mine, *coming_up, *waiting])
     my_requests = tuple(_mine(ctx, workspace_id, request, songs) for request in mine)
@@ -257,6 +279,8 @@ def _mine(
     ctx: RoomContext, workspace_id: str, request: RoomRequest, songs: Mapping[int, SongSummary]
 ) -> MyRequest:
     text = STATUS_TEXT[request.status]
+    if getattr(ctx.planner, "host_adds_requests", False):
+        text = HOST_ADDS_TEXT.get(request.status, text)
     if request.status is RequestStatus.WITHDRAWN and request.reason in WITHDRAWN_TEXT:
         text = WITHDRAWN_TEXT[request.reason]
     minutes = None
@@ -338,6 +362,7 @@ def host_view(
         renders_left=left,
         music_paused=room.live and not ctx.speakers.speaker_online(workspace_id),
         displays=len(screens),
+        renders_apply=not getattr(ctx.planner, "takes_every_request", False),
         screens=screens,
         now=now,
     )

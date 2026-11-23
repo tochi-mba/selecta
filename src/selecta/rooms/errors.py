@@ -50,10 +50,19 @@ MESSAGES = {
     Refusal.AWAITING_APPROVAL: "The host hasn't let you in yet.",
     Refusal.REQUESTS_OFF: "Requests are off in this room.",
     Refusal.NOT_REQUESTABLE: "That song can't be requested here.",
-    Refusal.COOLDOWN: "Played recently, try again later.",
-    Refusal.GUEST_PENDING_LIMIT: "You already have a request waiting.",
-    Refusal.GUEST_HOURLY_LIMIT: "You've made a lot of requests this hour. Try again later.",
-    Refusal.ROOM_BUSY: "Lots of requests are waiting. Try again in a little while.",
+    # `requesting` says these with the room's own numbers and the wait; these are the fallbacks.
+    Refusal.COOLDOWN: "That song played recently. It can be asked for again a little later.",
+    Refusal.GUEST_PENDING_LIMIT: (
+        "You have as many songs waiting as this room allows at once. "
+        "You can ask again when the host adds one to the mix."
+    ),
+    Refusal.GUEST_HOURLY_LIMIT: (
+        "You've asked for as many songs this hour as this room allows. Try again later."
+    ),
+    Refusal.ROOM_BUSY: (
+        "This room has as many requests waiting as it holds. "
+        "You can ask again when the host has added some to the mix."
+    ),
     Refusal.VOTES_OFF: "Votes are off in this room.",
     Refusal.NO_SUCH_REQUEST: "That request isn't here any more.",
     Refusal.NO_SUCH_GUEST: "That guest isn't in this room.",

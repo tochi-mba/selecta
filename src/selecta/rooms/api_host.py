@@ -25,7 +25,7 @@ from selecta.rooms import limits
 from selecta.rooms.api_common import item_json, join_path, refusal, too_many
 from selecta.rooms.errors import RoomError
 from selecta.rooms.service import Rooms
-from selecta.rooms.settings import RoomSettings
+from selecta.rooms.settings import BOUNDS, RoomSettings
 from selecta.rooms.store import Guest, Room
 from selecta.rooms.views import HostView
 
@@ -88,6 +88,12 @@ def host_json(view: HostView) -> dict[str, Any]:
         "coming_up": [item_json(item) for item in view.coming_up],
         "unfit": [item_json(item) for item in view.unfit],
         "renders_left": view.renders_left,
+        "renders_apply": view.renders_apply,
+        # the range each request limit may take, so the host's settings offer exactly these
+        "bounds": {
+            name: list(BOUNDS[name])
+            for name in ("pending_per_guest", "requests_per_guest_per_hour", "pending_per_room")
+        },
         "music_paused": view.music_paused,
         "displays": view.displays,
         "screens": [
@@ -149,7 +155,13 @@ def install_routes(
         request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ) -> dict[str, Any]:
         workspace_id = workspace(request, claims)
-        room = rooms().current_room(workspace_id)
+        service = rooms()
+        room = service.current_room(workspace_id)
+        if room is not None:
+            # The host's browser reads this on every page while a room is open (the shell's
+            # room session), which is what keeps a browser-first room from ending for having
+            # "no speaker" between mixes.
+            service.host_seen(workspace_id, room.id)
         return {"room": None if room is None else view(workspace_id, room.id)}
 
     @app.get("/api/rooms/{room_id}")

@@ -47,6 +47,7 @@ from selecta.rooms.api_common import (
     too_many,
 )
 from selecta.rooms.errors import Refusal, RoomError
+from selecta.rooms.requesting import BATCH_MAX
 from selecta.rooms.schema import room_guests
 from selecta.rooms.service import Rooms
 from selecta.rooms.store import GuestRef, resolve_guest
@@ -64,6 +65,10 @@ class JoinBody(BaseModel):
 
 class RequestBody(BaseModel):
     song_id: int
+
+
+class BatchBody(BaseModel):
+    song_ids: list[int] = Field(min_length=1, max_length=BATCH_MAX)
 
 
 class NicknameBody(BaseModel):
@@ -89,6 +94,12 @@ def guest_json(
         "votes_on": view.votes_on and allowed,
         "requests_open": view.requests_open,
         "music_paused": view.music_paused,
+        # how many more songs this guest can ask for now; at 0, `limit_text` says which limit
+        # and when it frees up
+        "requests_left": view.requests_left,
+        "per_guest": view.per_guest,
+        "limit_text": view.limit_text,
+        "limit_retry_s": None if view.limit_retry_s is None else round(view.limit_retry_s),
         "now_playing": song_json(view.now_playing),
         "up_next": [song_json(song) for song in view.up_next],
         "coming_up": [item_json(item) for item in view.coming_up],
@@ -252,6 +263,37 @@ def install_routes(
             "already_queued": outcome.already_queued,
             "room": view(token, ref),
         }
+
+    @app.post("/api/guest/rooms/{room_id}/requests/batch", status_code=201)
+    def guest_request_many(room_id: str, body: BatchBody, request: Request) -> dict[str, Any]:
+        """Several songs sent together. The limits are held for the whole batch; each song has
+        its own answer, so the page can say which were added and why any were not."""
+        token, ref = write(request, room_id)
+        try:
+            items = rooms().request_many(token, body.song_ids)
+        except RoomError as error:
+            raise refusal(error) from error
+        results: list[dict[str, Any]] = []
+        for item in items:
+            if item.outcome is not None:
+                results.append({
+                    "song_id": item.song_id,
+                    "added": True,
+                    "request_id": item.outcome.request.id,
+                    "status": item.outcome.request.status.value,
+                    "became_vote": item.outcome.became_vote,
+                    "already_queued": item.outcome.already_queued,
+                })
+            elif item.error is not None:
+                wait = item.error.retry_after_s
+                results.append({
+                    "song_id": item.song_id,
+                    "added": False,
+                    "code": item.error.code,
+                    "message": item.error.message,
+                    "retry_after_s": None if wait is None else round(wait),
+                })
+        return {"results": results, "room": view(token, ref)}
 
     @app.delete("/api/guest/rooms/{room_id}/requests/{request_id}")
     def guest_withdraw(room_id: str, request_id: str, request: Request) -> dict[str, Any]:

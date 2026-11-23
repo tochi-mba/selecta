@@ -105,7 +105,11 @@ def pump(ctx: RoomContext, workspace_id: str, room_id: str, *, now: float | None
         if not room.live:
             return 0
         held, waiting = split(room_requests_where(conn, room, [RequestStatus.ACCEPTED]), now)
-        slots = min(PLANNER_WINDOW - len(held), renders_left(conn, room, now))
+        if getattr(ctx.planner, "takes_every_request", False):
+            # the host's browser shows the whole list and renders nothing: no window, no cap
+            slots = len(waiting)
+        else:
+            slots = min(PLANNER_WINDOW - len(held), renders_left(conn, room, now))
         if slots <= 0 or not waiting:
             return 0
         already = Counter(request.guest_id for request in held)

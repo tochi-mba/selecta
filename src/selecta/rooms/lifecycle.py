@@ -267,9 +267,37 @@ def expire_displays(conn: Connection, room: Room, now: float) -> None:
     )
 
 
+HOST_SEEN_EVERY_SECONDS = 60.0
+
+
+def host_seen(
+    ctx: RoomContext, workspace_id: str, room_id: str, *, now: float | None = None
+) -> None:
+    """The host's signed-in browser just read the room. In the browser-first Cloud the host's
+    browser is the speaker, and it holds a server lease only while a mix is playing, so a host
+    who is between mixes (or on another page) still counts as there: the room is not ended for
+    having "no speaker" while its host keeps checking in. Written at most once a minute."""
+    with transaction(ctx.engine, workspace_id) as conn:
+        now = resolve_now(conn, now)
+        conn.execute(
+            sa.update(rooms)
+            .where(
+                rooms.c.workspace_id == workspace_id,
+                rooms.c.id == room_id,
+                rooms.c.status.in_([status.value for status in LIVE]),
+                sa.or_(
+                    rooms.c.last_speaker_seen_at.is_(None),
+                    rooms.c.last_speaker_seen_at < now - HOST_SEEN_EVERY_SECONDS,
+                ),
+            )
+            .values(last_speaker_seen_at=now)
+        )
+
+
 def expire_rooms(ctx: RoomContext, *, now: float | None = None) -> list[EndedRoom]:
-    """The regular sweep: end rooms past their hours or without a speaker for too long, note when
-    a speaker was last seen, and hand waiting requests to the planner as the cap allows.
+    """The regular sweep: end rooms past their hours or with neither a speaker nor the host's
+    browser seen for too long (`host_seen`), note when a speaker was last seen, and hand waiting
+    requests to the planner as the cap allows.
 
     It looks across every workspace, so the listing needs the maintenance database role.
     """

@@ -38,6 +38,9 @@ class Rooms(RoomContext):
     def current_room(self, workspace_id: str) -> Room | None:
         return lifecycle.current_room(self, workspace_id)
 
+    def host_seen(self, workspace_id: str, room_id: str, *, now: float | None = None) -> None:
+        lifecycle.host_seen(self, workspace_id, room_id, now=now)
+
     def lock(self, workspace_id: str, room_id: str) -> Room:
         return lifecycle.lock(self, workspace_id, room_id)
 
@@ -140,6 +143,11 @@ class Rooms(RoomContext):
         self, guest_token: str, song_id: int, *, now: float | None = None
     ) -> requesting.RequestOutcome:
         return requesting.request(self, guest_token, song_id, now=now)
+
+    def request_many(
+        self, guest_token: str, song_ids: list[int], *, now: float | None = None
+    ) -> list[requesting.BatchItem]:
+        return requesting.request_many(self, guest_token, song_ids, now=now)
 
     def vote(self, guest_token: str, request_id: str, *, now: float | None = None) -> RoomRequest:
         return requesting.vote(self, guest_token, request_id, now=now)
