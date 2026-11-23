@@ -143,7 +143,7 @@ export function CommandPalette({ commands, onClose, searchSongs = true }: {
             </ul>
           )))}
         </div>
-        <p className="hint">Arrow keys choose, Enter goes, Escape closes. This never deletes anything or replaces what’s playing.{searchSongs ? ' A song opens its details; it doesn’t play.' : ''}</p>
+        <p className="hint"><span className="palette-keys">Arrow keys choose, Enter goes, Escape closes. </span>This never deletes anything or replaces what’s playing.{searchSongs ? ' A song opens its details; it doesn’t play.' : ''}</p>
       </div>
     </Dialog>
   );

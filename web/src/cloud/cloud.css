@@ -288,6 +288,8 @@
   color: var(--text-soft);
   font-size: var(--text-sm);
 }
+/* the list is the card's last thing: the card's own padding is the space under it */
+.cloud-plan-card > .cloud-plan-axes:last-child { margin-bottom: 0; }
 .cloud-plan-axes li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--icon-gap); align-items: start; }
 .cloud-plan-axes li > svg { color: var(--status-ready); margin-top: var(--space-hair); }
 .cloud-plan-axes b { color: var(--text); margin-right: var(--space-1); }

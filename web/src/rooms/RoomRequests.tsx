@@ -206,7 +206,7 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
       {variant === 'drawer' && (
         <header className="asks-head">
           <h3>From your room</h3>
-          <span className="ask-count" data-testid="room-requests-count">{waiting}</span>
+          {waiting > 0 && <span className="ask-count" data-testid="room-requests-count">{waiting}</span>}
           {room && <p>{room.name}{room.code ? ` · ${room.code}` : ''}</p>}
         </header>
       )}

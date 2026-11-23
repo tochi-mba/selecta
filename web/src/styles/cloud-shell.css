@@ -237,6 +237,18 @@
   :root[data-rail='collapsed'] .shell[data-mode='cloud'] .nav li a:is(:hover, :focus-visible)::after { left: calc(100% + var(--space-3)); font-weight: 500; pointer-events: none; }
 }
 
+/* A short window with the side bar (a phone on its side): the list of places is taller than the
+   bar, so it scrolls. It fades out above the account foot instead of ending in a row cut in half,
+   and its last row can scroll clear of the fade. */
+@media (max-height: 450px) and (min-width: 761px) {
+  .shell[data-mode='cloud'] .nav ul {
+    padding-bottom: var(--space-6);
+    -webkit-mask-image: linear-gradient(to bottom, black calc(100% - var(--space-6)), transparent);
+    mask-image: linear-gradient(to bottom, black calc(100% - var(--space-6)), transparent);
+  }
+  :root[data-rail='collapsed'] .shell[data-mode='cloud'] .nav ul { -webkit-mask-image: none; mask-image: none; }
+}
+
 /* ---- top bar ---- */
 .shell[data-mode='cloud'] .context-bar {
   min-height: var(--header-height);
