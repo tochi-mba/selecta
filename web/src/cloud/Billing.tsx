@@ -180,7 +180,6 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
       <CheckoutStatus phase={phase} account={account} />
       <SettingsCard
         id="cloud-plan"
-        className="cloud-current-plan"
         title="Your plan"
         about="What you are on now, and what it includes."
         actions={paid && portal && <button type="button" className="primary" disabled={!!offline} aria-disabled={busy || undefined} aria-busy={opening('change') || undefined} onClick={() => { if (!busy) openPortal('change'); }}>{opening('change') ? 'Opening…' : 'Change plan'}</button>}

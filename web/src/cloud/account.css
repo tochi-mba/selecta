@@ -112,7 +112,6 @@
 .acct-includes li[data-kept='no'] > svg { color: var(--text-soft); }
 .acct-includes b { color: var(--text); font-weight: var(--weight-label); }
 .acct-plan-name { font: var(--type-figure); margin: 0; }
-.acct-card.cloud-current-plan { display: grid; align-items: initial; }
 .acct-plan-foot { padding-top: var(--space-4); border-top: var(--separator) solid var(--edge-decorative); color: var(--text-soft); font: var(--type-meta); max-width: none; }
 .acct-progress { display: grid; gap: var(--space-2); }
 
@@ -191,10 +190,10 @@
 
 /* Lucy's choices: each a strong label over one soft line */
 .acct-card.lucy-settings form { display: grid; gap: var(--space-4); }
-.acct-card.lucy-settings fieldset { margin: 0; display: grid; gap: var(--space-1); min-width: 0; }
+.acct-card.lucy-settings fieldset { border: 0; padding: 0; background: none; margin: 0; display: grid; gap: var(--space-1); min-width: 0; }
 .acct-card.lucy-settings legend { float: left; width: 100%; font: var(--type-song); font-size: var(--text-sm); color: var(--text); margin: 0 0 var(--space-1); }
 .acct-card.lucy-settings legend + * { clear: both; }
-.acct-card.lucy-settings label.choice { display: flex; align-items: flex-start; gap: var(--space-snug); min-height: var(--control-height); box-sizing: border-box; font: var(--type-meta); color: var(--text); cursor: pointer; }
+.acct-card.lucy-settings label.choice { border: 0; border-radius: 0; background: none; box-shadow: none; padding: var(--space-2) 0; margin: 0; width: auto; display: flex; align-items: flex-start; gap: var(--space-snug); min-height: var(--control-height); box-sizing: border-box; font: var(--type-meta); color: var(--text); cursor: pointer; }
 .acct-card.lucy-settings label.choice input { flex: none; margin: var(--space-hair) 0 0; accent-color: var(--selected); }
 .acct-card.lucy-settings .lucy-setting-line > span { display: grid; gap: var(--space-hair); }
 .acct-card.lucy-settings .lucy-setting-line b { font-weight: var(--weight-label); }
