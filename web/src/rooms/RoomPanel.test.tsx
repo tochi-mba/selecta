@@ -143,14 +143,16 @@ describe('room panel actions', () => {
     current = panel({ guests: [guest('g1', 'Creative Lemur', true, 2)] });
     mount();
     await settle();
-    await press('Remove Creative Lemur');
+    await press('Options for Creative Lemur');
+    await act(async () => { screen.getByRole('menuitem', { name: 'Remove Creative Lemur' }).click(); await vi.advanceTimersByTimeAsync(0); });
     const dialog = screen.getByRole('alertdialog', { name: 'Remove Creative Lemur?' });
     expect(dialog).toHaveTextContent('They can scan the code again and join as someone new');
     expect(calls.some((call) => call.path.endsWith('/remove'))).toBe(false);
     await act(async () => { within(dialog).getByRole('button', { name: 'Keep it' }).click(); await vi.advanceTimersByTimeAsync(400); });
     expect(calls.some((call) => call.path.endsWith('/remove'))).toBe(false);
 
-    await press('Ban Creative Lemur');
+    await press('Options for Creative Lemur');
+    await act(async () => { screen.getByRole('menuitem', { name: 'Ban Creative Lemur' }).click(); await vi.advanceTimersByTimeAsync(0); });
     const ban = screen.getByRole('alertdialog', { name: 'Ban Creative Lemur?' });
     expect(ban).toHaveTextContent('This can’t be undone.');
     await act(async () => { within(ban).getByRole('button', { name: 'Ban' }).click(); await vi.advanceTimersByTimeAsync(0); });
@@ -173,9 +175,9 @@ describe('room panel actions', () => {
     current = panel();
     mount();
     await settle();
-    await press('End room');
+    await press('Close room');
     current = panel({ room: { ...(panel().room as object), status: 'ended' } });
-    await press('End room');
+    await act(async () => { within(screen.getByRole('alertdialog', { name: 'Close Garden party?' })).getByRole('button', { name: 'Close room' }).click(); await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByRole('heading', { name: 'Open a room' })).toBeInTheDocument();
     expect(screen.getByText('Room ended.')).toBeInTheDocument();
   });

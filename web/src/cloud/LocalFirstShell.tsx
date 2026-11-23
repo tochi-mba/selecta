@@ -466,21 +466,21 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
     const title = ask.song?.title ?? 'That song';
     const openRoom = { label: 'Open room', run: () => { if (roomsPlace) navigate(roomsPlace.path); } };
     if (kind === 'approve') {
-      showToast(`${words}. It waits for your yes.`, { actions: [{
+      showToast(`${words}. Approve it to accept.`, { actions: [{
         label: 'Approve',
         run: async () => {
           try {
             await api(`/rooms/${encodeURIComponent(roomId)}/requests/${encodeURIComponent(ask.request_id)}/approve`, { method: 'POST' }, workspaceId);
             window.dispatchEvent(new Event(ROOM_EVENT));
             void refreshRoomRequests.current?.();
-            showToast(`${title} is approved. It is in Requests for you to add to the mix.`);
+            showToast(`${title} is approved and waiting in Requests.`);
           } catch (problem) { showToast((problem as Error).message || 'Couldn’t approve that request.', { tone: 'problem' }); }
         },
       }, openRoom] });
       return;
     }
     void refreshRoomRequests.current?.();
-    showToast(`${words}.`, { actions: [{
+    showToast(words, { actions: [{
       label: 'Add next',
       run: async () => {
         try {
@@ -501,7 +501,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
           showToast(live ? `${title} plays after the current song.` : `${title} is in your mix.`);
         } catch (problem) { showToast((problem as Error).message || 'Couldn’t add it. Try again.', { tone: 'problem' }); }
       },
-    }, requestsOn ? { label: 'Requests', run: () => setRequesting(true) } : openRoom] });
+    }, requestsOn ? { label: 'Open requests', run: () => setRequesting(true) } : openRoom] });
   }, [api, workspaceId, request, setMixData, roomsPlace, requestsOn]);
   const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
   const roomWaiting = room ? room.toApprove : 0;
@@ -655,7 +655,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
         banner={<>{room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') && (
           <p className="room-open-line" role="status" data-testid="room-open-line">
             <a href={roomsPlace.path} onClick={(event) => { event.preventDefault(); navigate(roomsPlace.path); }}>{roomLine(room)}</a>
-            {roomWaiting > 0 && <span>{` · ${countOf(roomWaiting, 'request')} waiting for your yes`}</span>}
+            <span>{countOf(room.guestsHere, 'guest')} here</span>
+            {roomWaiting > 0 && <span>{countOf(roomWaiting, 'request')} to approve</span>}
           </p>
         )}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >

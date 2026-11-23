@@ -20,7 +20,7 @@ const WAITING_RANGE: [number, number] = [1, 20];
 const HOURLY_RANGE: [number, number] = [0, 60];
 const HOURLY_DEFAULT = 20;
 
-function NumberField({ label, help, value, min, max, disabled, onSave }: {
+export function NumberField({ label, help, value, min, max, disabled, onSave }: {
   label: string; help: string; value: number; min: number; max: number; disabled?: boolean; onSave: (value: number) => void;
 }) {
   const id = useId();
@@ -44,7 +44,7 @@ function NumberField({ label, help, value, min, max, disabled, onSave }: {
         onBlur={commit}
         onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commit(); } }}
       />
-      <p className="room-muted" id={`${id}-help`}>{help} From {min} to {max}.</p>
+      <p className="room-help" id={`${id}-help`}>{help} From {min} to {max}.</p>
     </div>
   );
 }
@@ -70,20 +70,20 @@ export function RoomLimits({ settings, bounds, save }: {
     <div className="room-limits" data-testid="room-limits">
       <NumberField
         label="Songs a guest can have waiting at once"
-        help="A guest who reaches this can ask again once you add one of their songs to the mix or pass on it, or they withdraw one."
+        help="At this many, a guest waits until one of their songs is added, passed on or withdrawn."
         value={waiting} min={waitingMin} max={waitingMax}
         onSave={(value) => save({ pending_per_guest: value })}
       />
       <NumberField
         label="Songs a guest can ask for per hour"
-        help={noHourly ? 'No hourly limit is set, so only the waiting limit above holds a guest back.' : 'Counts every song a guest asked for in the last 60 minutes, added or not.'}
+        help={noHourly ? 'No hourly limit: only the waiting limit above holds a guest back.' : 'Counts every song a guest asked for in the last 60 minutes.'}
         value={noHourly ? lastHourly : hourly} min={1} max={hourlyMax} disabled={noHourly}
         onSave={(value) => save({ requests_per_guest_per_hour: value })}
       />
       <label className="room-check">
         <input type="checkbox" checked={noHourly} onChange={(event) => save({ requests_per_guest_per_hour: event.target.checked ? 0 : lastHourly })} /> No hourly limit
       </label>
-      {plan && <p className="room-muted">These two are yours to set. Your plan sets the room itself: {plan}.</p>}
+      {plan && <p className="room-help">Your plan sets the room itself: {plan}.</p>}
     </div>
   );
 }

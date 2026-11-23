@@ -1,36 +1,87 @@
-.room-panel { display: grid; gap: var(--space-3); padding: var(--space-4); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); background: var(--surface-raised); }
-.room-panel h2, .room-panel h3 { margin: 0; }
-.room-head { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: baseline; }
-.room-status, .room-muted, .room-code-label { color: var(--text-soft); }
+/* The host's room page: a status line, then cards (share, requests, guests, settings, and the
+   area for lock, new code and closing). Each card is one job; the page reflows to one column on a phone. */
+.room-panel { display: grid; gap: var(--space-4); min-width: 0; }
+.room-panel h2, .room-panel h3, .room-panel h4, .room-panel p { margin: 0; }
+.room-panel h3 { font-size: var(--text-lg); }
+.room-panel h4 { font-size: var(--text-md); }
+.room-page { display: grid; gap: var(--space-4); min-width: 0; }
+.room-card { display: grid; gap: var(--space-3); align-content: start; min-width: 0; padding: var(--space-4); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); background: var(--surface-raised); }
+.room-head { display: grid; gap: var(--space-2); min-width: 0; }
+.room-head h2 { overflow-wrap: anywhere; }
+.room-status-line { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: center; color: var(--text-soft); }
+.room-muted, .room-code-label, .room-help { color: var(--text-soft); }
+.room-help, .room-code-label { font-size: var(--text-sm); }
 .room-plan { font: var(--type-label); border: var(--separator) solid currentColor; border-radius: var(--radius-pill); padding: var(--space-hair) var(--space-2); margin-left: var(--space-dense); }
-.room-share { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
-.room-qr { width: 180px; max-width: 100%; background: var(--surface-scan); border-radius: var(--radius); padding: var(--space-dense); }
+
+/* share card beside the activity (requests, guests); they stack when there is no room for both */
+.room-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: var(--space-4); align-items: start; min-width: 0; }
+.room-stack { display: grid; gap: var(--space-4); min-width: 0; }
+.room-share { justify-items: center; text-align: center; }
+.room-share h3 { justify-self: stretch; text-align: start; }
+.room-qr { width: 100%; max-width: 13rem; background: var(--surface-scan); border-radius: var(--radius); padding: var(--space-2); }
 .room-qr svg { display: block; width: 100%; height: auto; }
-.room-code { font: var(--type-figure); font-variant-numeric: tabular-nums; letter-spacing: var(--tracking-eyebrow); margin: 0; }
-.room-link a { overflow-wrap: anywhere; }
-.room-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-.room-panel button, .room-panel select, .room-panel input:not([type="checkbox"]) { min-height: 44px; }
-.room-check { display: inline-flex; gap: var(--space-dense); align-items: center; }
-/* the checkbox keeps its own size beside its words (a full-width 44px box stood apart from "and remove everyone", 2026-11-12 flow walk) */
+.room-share-words { display: grid; gap: var(--space-2); justify-items: center; min-width: 0; max-width: 100%; }
+.room-code { font: var(--type-figure); font-variant-numeric: tabular-nums; letter-spacing: var(--tracking-eyebrow); overflow-wrap: anywhere; }
+.room-link { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: center; min-width: 0; max-width: 100%; }
+.room-link a { min-width: 0; overflow-wrap: anywhere; font-size: var(--text-sm); }
+.room-link button { display: inline-flex; gap: var(--space-1); align-items: center; }
+
+.room-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; min-width: 0; }
+.room-open { display: grid; gap: var(--space-dense); min-width: 0; }
+.room-open label { font-weight: 600; }
+.room-open input { flex: 1 1 10rem; min-width: 0; max-width: 20rem; }
+.room-panel button, .room-panel select, .room-panel input:not([type="checkbox"]) { min-height: var(--control-height); }
+.room-panel select { max-width: 100%; }
+.room-check { display: inline-flex; gap: var(--space-dense); align-items: center; min-height: var(--control-height); }
+/* the checkbox keeps its own size beside its words (a full-width box stood apart from them, 2026-11-12 flow walk) */
 .room-check input[type="checkbox"] { width: auto; min-height: 0; flex: none; margin: 0; }
-.room-settings { display: grid; gap: var(--space-2); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); padding: var(--space-3); }
-.room-settings label { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-.room-list { list-style: none; margin: var(--space-dense) 0; padding: 0; }
+
+/* opening a room: one inviting card */
+.room-invite { max-width: 40rem; gap: var(--space-4); }
+.room-lede { font-size: var(--text-md); }
+.room-points { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); color: var(--text-soft); }
+.room-points li { display: flex; gap: var(--space-2); align-items: baseline; }
+.room-points .ui-icon { flex: none; color: var(--status-ready); }
+
+/* settings: groups side by side on a wide page, one under another on a phone */
+.room-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: var(--space-5); align-items: start; min-width: 0; }
+.room-group { display: grid; gap: var(--space-2); align-content: start; min-width: 0; }
+.room-group-head { display: flex; gap: var(--space-3); align-items: baseline; justify-content: space-between; padding-bottom: var(--space-2); border-bottom: var(--separator) solid var(--edge-decorative); }
+.room-saved { display: inline-flex; gap: var(--space-1); align-items: center; color: var(--status-ready); font-size: var(--text-sm); }
+.room-screens { padding-top: var(--space-2); }
+.room-limits { display: grid; gap: var(--space-3); }
+.room-limit { display: grid; gap: var(--space-dense); }
+.room-limit label { font-weight: 600; }
+.room-limit input { max-width: 8rem; }
+
+.room-list { list-style: none; margin: 0; padding: 0; }
 .room-list li { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; padding: var(--space-2) 0; border-top: var(--separator) solid var(--edge-decorative); }
-.room-list li > span { flex: 1 1 12rem; overflow-wrap: anywhere; }
-.room-banner { border: var(--separator) solid var(--status-action); border-radius: var(--radius); padding: var(--space-2) var(--space-3); margin: 0; }
-.room-error { color: var(--danger); margin: 0; }
-.room-said { margin: 0; }
+.room-list li:first-child { border-top: 0; }
+.room-list li > span { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+.room-who { display: grid; gap: var(--space-hair); }
+.room-presence { font-size: var(--text-sm); }
+.room-guest-menu > button { display: inline-grid; place-items: center; min-width: var(--control-height); padding: var(--space-dense); }
+.room-guest-menu .menu-list { right: 0; left: auto; }
+.room-banner { border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); padding: var(--space-3) var(--space-4); color: var(--text-soft); }
+.room-error { color: var(--danger); }
 /* presence: who is really here (ADR-0416); "here" reads by its words, the colour only echoes it */
 .room-here { color: var(--status-ready); }
-.room-gone summary { cursor: pointer; color: var(--text-soft); padding: var(--space-2) 0; min-height: 44px; display: flex; align-items: center; }
+.room-gone summary { cursor: pointer; color: var(--text-soft); padding: var(--space-2) 0; min-height: var(--control-height); display: flex; align-items: center; }
 .room-gone summary:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
 /* the same hiding as .visually-hidden (shell.css), kept until RoomPanel adopts it */
 .room-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-/* the shell line for an open room, on every page but the Rooms page itself */
-.room-open-line { margin: 0; font-size: var(--text-sm); color: var(--text-soft); }
-.room-open-line a { color: inherit; font-weight: 600; }
-.room-limits { display: grid; gap: var(--space-2); }
-.room-limit { display: grid; gap: var(--space-dense); }
-.room-limit input { max-width: 8rem; }
-.room-limit p { margin: 0; }
+
+/* the things that cut people off, kept apart from everything else */
+.room-danger { border-color: var(--edge-error); }
+.room-danger-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.room-danger-list li { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; justify-content: space-between; padding: var(--space-3) 0; border-top: var(--separator) solid var(--edge-decorative); }
+.room-danger-list li:first-child { border-top: 0; padding-top: 0; }
+.room-danger-list li:last-child { padding-bottom: 0; }
+.room-danger-list li > span:first-child { display: grid; gap: var(--space-hair); flex: 1 1 16rem; min-width: 0; }
+.room-danger button.destructive { border-color: var(--edge-error); color: var(--danger); }
+
+/* the shell line for an open room, on every page but the Rooms page itself: one short line that
+   wraps inside the page column on a phone and never widens it */
+.room-open-line { display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); align-items: center; min-width: 0; margin: 0; font-size: var(--text-sm); color: var(--text-soft); }
+.room-open-line a { color: inherit; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.room-open-line .status { white-space: normal; }

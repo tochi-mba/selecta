@@ -176,7 +176,7 @@ function ToastRow({ toast, closing = false, onGone }: { toast: Toast; closing?: 
   return (
     <div
       ref={row}
-      className={`toast-row ${toast.tone}`}
+      className={`toast-row ${toast.tone}${toast.actions?.length ? ' with-actions' : ''}`}
       aria-busy={undoing || undefined}
       role={toast.tone === 'problem' ? 'alert' : 'status'}
       data-closing={closing ? '' : undefined}
