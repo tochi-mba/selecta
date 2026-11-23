@@ -80,8 +80,10 @@
 .cloud-rail-bottom .cloud-delete-account { color: var(--danger); }
 .cloud-main {
   width: min(var(--content-browse), 100%);
-  margin: auto;
+  margin: 0 auto;
   padding: clamp(var(--space-5), 5vw, calc(var(--space-6) * 2));
+  box-sizing: border-box;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -177,13 +179,29 @@
   margin: var(--space-4) 0 var(--space-2);
 }
 .cloud-meter i { display: block; height: 100%; background: var(--status-working); border-radius: inherit; }
-.cloud-meters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-cozy); }
-.cloud-meter-card h2 { font-size: var(--text-lg); }
+/* a meter: what is counted, the figure, its bar, and when it resets */
+.cloud-meter-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: baseline; align-content: start; }
+.cloud-meter-card > * { grid-column: 1 / -1; }
+.cloud-card.cloud-meter-card > p.cloud-meter-name { grid-column: 1; margin: 0; font: var(--type-label); font-size: var(--text-sm); color: var(--text); }
+.cloud-meter-card > h2 { grid-column: 2; margin: 0; font: var(--type-counter); font-size: var(--text-md); color: var(--text); text-align: end; }
 .cloud-meter-card.warn { border-color: var(--status-warning); }
-.cloud-meter-reset,
-.cloud-meter-free { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
+.cloud-card p.cloud-meter-reset,
+.cloud-card p.cloud-meter-free,
+.cloud-card p.cloud-meter-note { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
+/* Plan & billing: the meters are rows of one card, so nothing is cramped and no card is taller
+   than its neighbour */
+.cloud-meters {
+  display: grid;
+  border: var(--separator) solid var(--edge-decorative);
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+  padding: 0 var(--space-5);
+}
+.cloud-meters > .cloud-meter-card { border: 0; border-radius: 0; background: none; padding: var(--space-4) 0; }
+.cloud-meters > .cloud-meter-card + .cloud-meter-card { border-top: var(--separator) solid var(--edge-decorative); }
+.cloud-meters > .cloud-meter-card.warn h2 { color: var(--danger); }
 .lucy-cloud-meter p { margin: 0 0 var(--space-dense); }
-.cloud-section-title { margin: var(--space-dense) 0 0; font-size: var(--text-lg); }
+.cloud-section-title { margin: var(--space-3) 0 0; font: var(--type-section); }
 .cloud-over-quota {
   display: flex;
   align-items: center;
@@ -207,28 +225,98 @@
 .cloud-legal input { width: auto; min-height: 0; margin-top: var(--space-1); accent-color: var(--selected); }
 .cloud-billing,
 .cloud-settings { display: grid; gap: var(--space-4); }
-.cloud-legal { margin: 0; }
-.cloud-legal p { max-width: var(--content-reading); color: var(--text-soft); }
-.cloud-legal label { display: flex; margin: var(--space-3) 0; }
-.cloud-legal legend { padding: 0; }
+.cloud-legal { margin: 0; min-width: 0; }
+.cloud-legal p { max-width: var(--content-reading); color: var(--text-soft); margin: 0 0 var(--space-3); }
+.cloud-legal label { display: flex; margin: 0; padding: var(--space-2) 0; color: var(--text); cursor: pointer; }
+/* a floated legend sits inside the box like a heading, instead of cutting through its border */
+.cloud-legal legend { float: left; width: 100%; padding: 0; margin: 0 0 var(--space-2); }
+.cloud-legal legend + * { clear: both; }
 .cloud-legal legend h2 { margin: 0; }
-.cloud-current-plan { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.cloud-legal .cloud-consent-version { margin: var(--space-2) 0 0; font: var(--type-caption); }
+.cloud-current-plan { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); flex-wrap: wrap; }
+.cloud-current-plan > div { min-width: 0; flex: 1 1 14rem; }
+.cloud-current-plan h2 { font: var(--type-figure); margin: 0; }
+.cloud-card.cloud-current-plan p:not(.cloud-eyebrow) { margin: var(--space-1) 0 0; }
+.cloud-current-plan .needs-connection { flex-basis: 100%; }
+.cloud-plan-note h2 { font: var(--type-song); }
+.cloud-card.cloud-plan-note p { margin: 0; max-width: var(--content-reading); }
+.cloud-plans-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); }
+.cloud-plans-heading .cloud-section-title { margin: 0; }
+/* monthly or annual: two halves of one control */
+.cloud-interval {
+  display: inline-flex;
+  padding: var(--space-hair);
+  border: var(--separator) solid var(--edge-interactive);
+  border-radius: var(--radius-pill);
+  background: var(--surface-control);
+}
+.cloud-interval button { border: 0; background: none; border-radius: var(--radius-pill); color: var(--text-soft); padding: var(--space-dense) var(--space-4); }
+.cloud-interval button[aria-pressed='true'] { background: var(--surface-selected); color: var(--text); font-weight: var(--weight-label); box-shadow: inset 0 0 0 var(--separator) var(--edge-selected); }
 .cloud-plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-cozy); }
-.cloud-plan-card { display: flex; flex-direction: column; align-items: flex-start; min-height: 250px; }
-.cloud-plan-card strong { font: var(--type-figure); }
+.cloud-plan-card { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); }
+.cloud-plan-card .cloud-eyebrow { margin: 0; }
+.cloud-plan-card h2 { margin: 0; }
+.cloud-plan-card p.cloud-price { margin: 0; font: var(--type-figure); color: var(--text); font-variant-numeric: tabular-nums; }
+.cloud-plan-card .cloud-price small { font: var(--type-meta); color: var(--text-soft); }
+.cloud-plan-card .cloud-plan-headline { font: var(--type-song); margin: var(--space-2) 0 0; }
+.cloud-plan-card p:not(.cloud-eyebrow, .cloud-price) { margin: 0; }
 .cloud-plan-card button { margin-top: auto; }
 .cloud-plan-card.featured { border-color: var(--edge-selected); box-shadow: inset 0 0 0 1px var(--edge-selected); }
+.cloud-checkout-confirmed { border-color: var(--status-ready); }
+.cloud-checkout-cancelled,
+.cloud-checkout-slow { border-color: var(--status-warning); }
 /* Plan cards for local-first accounts (ADR-0464): the axes a plan sells, no storage headline */
 .cloud-plan-card .cloud-plan-axes {
   list-style: none;
-  margin: 0 0 var(--space-4);
+  margin: var(--space-1) 0 var(--space-4);
   padding: 0;
   display: grid;
   gap: var(--space-2);
   color: var(--text-soft);
   font-size: var(--text-sm);
 }
+.cloud-plan-axes li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--icon-gap); align-items: start; }
+.cloud-plan-axes li > svg { color: var(--status-ready); margin-top: var(--space-hair); }
 .cloud-plan-axes b { color: var(--text); margin-right: var(--space-1); }
+
+/* account: who is signed in, and the rows of the leaving and this-browser cards */
+.cloud-account-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); }
+.cloud-account-strip > div:first-child { min-width: 0; flex: 1 1 14rem; }
+.cloud-account-strip .cloud-eyebrow { margin: 0 0 var(--space-1); }
+.cloud-card p.cloud-account-email { margin: 0; font: var(--type-song); color: var(--text); overflow-wrap: anywhere; }
+.cloud-account-strip .cloud-actions { margin: 0; }
+.cloud-card > .cloud-actions:last-child,
+.cloud-card > button:last-child { margin-bottom: 0; }
+.cloud-card > p:last-child { margin-bottom: 0; }
+.cloud-card p[role='status'] { margin: var(--space-3) 0 0; }
+.cloud-danger-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-4) 0;
+  border-top: var(--separator) solid var(--edge-decorative);
+}
+.cloud-danger-row:last-child { padding-bottom: 0; }
+.cloud-danger-row > div { min-width: 0; flex: 1 1 16rem; }
+.cloud-danger-row h3 { margin: 0 0 var(--space-1); font: var(--type-song); }
+.cloud-card .cloud-danger-row p { margin: 0; }
+.cloud-danger-row > button { flex: none; }
+.cloud-danger-text,
+.cloud-danger-action { color: var(--danger); border-color: var(--edge-error); }
+/* the question asked in the page before something is ended or removed: a marked aside, not a box */
+.cloud-confirm { padding: 0 0 0 var(--space-4); border-inline-start: var(--marker) solid var(--danger); margin-bottom: var(--space-4); }
+.cloud-confirm[data-tone='plain'] { border-inline-start-color: var(--edge-interactive); }
+.cloud-card .cloud-confirm p { margin: 0; color: var(--text); }
+.cloud-confirm .cloud-actions { margin: var(--space-3) 0 0; }
+.cloud-not-found .cloud-actions { margin-bottom: 0; }
+/* Lucy's choices on the Account page: plain rows under two small headings, not boxes in a box */
+.cloud-card.lucy-settings fieldset { border: 0; padding: 0; margin: var(--space-4) 0 0; background: none; }
+.cloud-card.lucy-settings legend { padding: 0; margin: 0 0 var(--space-1); font: var(--type-label); color: var(--text-soft); }
+.cloud-card.lucy-settings label.choice { border: 0; border-radius: 0; background: none; box-shadow: none; padding: var(--space-2) 0; margin: 0; width: auto; }
+.cloud-card.lucy-settings .lucy-cloud-meter { margin-top: var(--space-3); }
+.cloud-card.lucy-settings form > .row { margin-top: var(--space-4); }
 
 /* uploads */
 .cloud-upload-panel { display: grid; gap: var(--space-4); }
@@ -316,33 +404,73 @@
 .cloud-library-player audio { width: min(100%, 480px); }
 
 /* the onboarding spine (ADR-0463): one step at a time, the steps listed with words as well as marks */
+/* It starts at the page's own left edge, under the page title. On a wide window the steps are a
+   list down the left and the step in hand sits beside them; on a narrow one the list becomes a row
+   of eight short bars over the step (the words above them already say "Step 3 of 8"). */
 .cloud-spine {
   display: grid;
-  gap: var(--space-4);
-  max-width: var(--content-reading);
-  margin: auto;
-  padding: clamp(var(--space-5), 6vw, var(--space-7)) var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
 }
-.cloud-spine h1 { margin: 0; font: var(--type-page); }
-.cloud-spine h1:focus { outline: none; }
-.cloud-spine h1:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-1); }
+.cloud-spine > .cloud-eyebrow { margin: 0; }
+.cloud-spine > h2 { margin: 0; font: var(--type-section); justify-self: start; }
+.cloud-spine > h2:focus { outline: none; }
+.cloud-spine > h2:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-1); }
+.cloud-spine > .cloud-actions { margin: 0; align-items: center; }
+.cloud-spine > p { margin: 0; max-width: 40rem; }
 .cloud-spine-steps {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
+  gap: var(--space-1);
   color: var(--text-soft);
   font-size: var(--text-sm);
 }
-.cloud-spine-steps li { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); }
-.cloud-spine-steps li[aria-current='step'] { color: var(--text); font-weight: var(--weight-strong); }
-.cloud-spine-steps li[data-outcome='done'] { color: var(--status-ready); }
-.cloud-spine-steps li[data-outcome='unverified'] { color: var(--status-warning); }
+.cloud-spine-steps li {
+  position: relative;
+  flex: 1;
+  block-size: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--surface-control);
+  overflow: hidden;
+}
+.cloud-spine-steps li > * { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cloud-spine-steps li[aria-current='step'] { background: var(--text); }
+.cloud-spine-steps li[data-outcome='done'] { background: var(--status-ready); }
+.cloud-spine-steps li[data-outcome='unverified'] { background: var(--status-warning); }
+.cloud-spine-steps li:is([data-outcome='skipped'], [data-outcome='not_here']) { background: var(--edge-interactive); }
+@media (min-width: 901px) {
+  .cloud-spine { grid-template-columns: 14rem minmax(0, 1fr); column-gap: var(--space-6); }
+  .cloud-spine > * { grid-column: 2; }
+  .cloud-spine > .cloud-spine-steps { grid-column: 1; grid-row: 1 / span 5; flex-direction: column; gap: var(--space-hair); align-self: start; }
+  .cloud-spine-steps li {
+    flex: none;
+    block-size: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--icon-gap);
+    padding: var(--space-2) var(--space-snug);
+    border-radius: var(--radius-sm);
+    background: none;
+    overflow: visible;
+  }
+  .cloud-spine-steps li > * { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; white-space: normal; }
+  .cloud-spine-steps li > .visually-hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+  .cloud-spine-steps li[aria-current='step'] { background: var(--surface-control); color: var(--text); font-weight: var(--weight-label); }
+  .cloud-spine-steps li[data-outcome='done'] { background: none; }
+  .cloud-spine-steps li[data-outcome='done'] > svg { color: var(--status-ready); }
+  .cloud-spine-steps li[data-outcome='unverified'] { background: none; }
+  .cloud-spine-steps li[data-outcome='unverified'] > svg { color: var(--status-warning); }
+  .cloud-spine-steps li:is([data-outcome='skipped'], [data-outcome='not_here']) { background: none; }
+}
 
 .cloud-spine-step { display: grid; gap: var(--space-3); justify-items: start; }
-.cloud-spine-step p { margin: 0; }
+.cloud-card.cloud-spine-step p { margin: 0; max-width: 40rem; font-size: var(--text-md); }
+.cloud-card.cloud-spine-step p.cloud-hint { font-size: var(--text-sm); }
+.cloud-spine-step > .cloud-actions { margin: 0; align-items: center; }
 .cloud-spine-pick {
   position: relative;
   display: inline-flex;
@@ -372,21 +500,23 @@
 .cloud-spine-progress { width: min(100%, 420px); }
 .cloud-spine-status { color: var(--text-soft); }
 .cloud-spine-start { font-size: var(--text-lg); }
-.cloud-spine-routes { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-2); width: 100%; }
+.cloud-spine-routes { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-1); width: 100%; }
 .cloud-spine-routes legend { font-weight: var(--weight-strong); margin-bottom: var(--space-2); }
+.cloud-spine-routes label { padding: var(--space-2) 0; color: var(--text); cursor: pointer; }
 .cloud-spine-routes label span { display: grid; gap: var(--space-hair); }
 .cloud-spine-routes small { color: var(--text-soft); }
+/* an aside inside the step: a marked edge, not a second box inside the card */
 .cloud-spine-routes-help,
 .cloud-spine-fork {
   display: grid;
   gap: var(--space-2);
-  border: var(--separator) solid var(--edge-interactive);
-  border-radius: var(--radius);
-  padding: var(--space-cozy) var(--space-4);
-  background: var(--surface-control);
+  justify-items: start;
+  border-inline-start: var(--marker) solid var(--edge-interactive);
+  padding: 0 0 0 var(--space-4);
+  box-sizing: border-box;
   width: 100%;
 }
-.cloud-spine-fork { border-color: var(--status-warning); }
+.cloud-spine-fork { border-inline-start-color: var(--status-warning); }
 .cloud-spine-routes-help h3,
 .cloud-spine-fork h3 { margin: 0; font-size: var(--text-md); display: flex; align-items: center; gap: var(--icon-gap); }
 .cloud-spine-routes-help ol,
@@ -425,11 +555,6 @@
 }
 .cloud-reconcile-partial p { margin: 0; }
 
-/* laptop: four meters go to two */
-@media (max-width: 1100px) {
-  .cloud-meters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
 /* narrow: the legacy rail folds into a bar over the page */
 @media (max-width: 900px) {
   .cloud-shell { grid-template-columns: 1fr; }
@@ -459,7 +584,6 @@
   .cloud-library-heading,
   .cloud-library-player { align-items: flex-start; flex-direction: column; }
   .cloud-plan-grid,
-  .cloud-meters,
   .cloud-upload-list li,
   .cloud-reconcile-list li { grid-template-columns: 1fr; }
   .cloud-upload-list b { grid-row: 2; }
@@ -471,6 +595,14 @@
   .cloud-library-row button { padding: var(--space-dense) var(--space-2); }
   .cloud-over-quota-actions button,
   .cloud-spine-step .cloud-actions > * { flex: 1; }
+  .cloud-danger-row > button,
+  .cloud-current-plan > button,
+  .cloud-confirm .cloud-actions > button { flex: 1 1 100%; }
+  .cloud-meters { padding: 0 var(--space-4); }
+  .cloud-card,
+  .cloud-legal,
+  .cloud-plan-card,
+  .cloud-upload-panel { padding: var(--space-4); }
 }
 
 /* a finger needs the full 44px the narrow rail's denser rows give up for a mouse */
