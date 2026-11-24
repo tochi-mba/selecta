@@ -5,6 +5,7 @@ import { bpmWords, energyWords, isReadyStatus, keyDistanceWords, keyWords, seamW
 import { Action, Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { energySummary, measuredEnergy, SongMotif } from '../ui/MusicObjects';
+import { lucyTransport } from '../lucy/client';
 
 /** The proposed songs in their exact order, each one known by its place in the mix rather than its
  * song, so the same song twice is still two rows. Between each pair is that transition's real state
@@ -114,6 +115,9 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
     }
   };
   const blockedWords = editable ? undefined : 'Make this the current revision to change it';
+  // ADR-0476: a browser mix measures nothing ahead and plays every transition live, so its rows
+  // show the length only, with no locks and no transition rows to read
+  const live = lucyTransport() !== null;
 
   return (
     <ol className="lucy-songs" ref={list} aria-label="Songs in order, with the transitions between them">
@@ -124,7 +128,7 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
         const name = song.title || 'Untitled';
         return (
           <li key={song.occurrence} className="lucy-song-slot">
-            {previous && (
+            {previous && !live && (
               <SeamRow
                 seam={seamOf(previous.occurrence, song.occurrence)}
                 entry={entryOf(previous.occurrence, song.occurrence)}
@@ -141,17 +145,19 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
                 <SongMotif songId={song.song_id} />
                 <p className="lucy-song-name"><span className="visually-hidden">Song {index + 1}: </span><b dir="auto">{name}</b> <span className="soft" dir="auto">{song.artist || 'Unknown artist'}</span></p>
                 <p className="lucy-song-facts">
-                  {song.duration > 0 ? clock(song.duration) : 'Length unknown'} · {bpmWords(song.bpm)} · {keyWords(song.key)} · {energyWords(song.energy)}
+                  {song.duration > 0 ? clock(song.duration) : 'Length unknown'}{!live && <> · {bpmWords(song.bpm)} · {keyWords(song.key)} · {energyWords(song.energy)}</>}
                   {song.locked && <> · <span className="icon-words"><Icon name="lock" size="compact" /> Locked</span></>}
                 </p>
               </div>
               <div className="lucy-song-actions" role="group" aria-label={`Change ${name}`}>
                 {/* W5: each change is an Action, so the pressed control says it's working while Lucy's
                     revision is saved, and the others wait their turn */}
-                <Action type="button" data-act="lock" aria-pressed={song.locked} waiting={busy || !editable} title={blockedWords}
-                  run={() => change({ op: song.locked ? 'unlock' : 'lock', occurrence: song.occurrence }, { occurrence: song.occurrence, act: 'lock' })}>
-                  {song.locked ? 'Unlock' : 'Lock'}
-                </Action>
+                {!live && (
+                  <Action type="button" data-act="lock" aria-pressed={song.locked} waiting={busy || !editable} title={blockedWords}
+                    run={() => change({ op: song.locked ? 'unlock' : 'lock', occurrence: song.occurrence }, { occurrence: song.occurrence, act: 'lock' })}>
+                    {song.locked ? 'Unlock' : 'Lock'}
+                  </Action>
+                )}
                 <Action type="button" data-act="up" disabled={index === 0} waiting={busy || !editable} aria-label={`Move ${name} up`} title={blockedWords ?? `Move ${name} up`}
                   run={() => change({ op: 'move', occurrence: song.occurrence, to: index - 1 }, { occurrence: song.occurrence, act: 'up' })}>
                   <Icon name="up" />
