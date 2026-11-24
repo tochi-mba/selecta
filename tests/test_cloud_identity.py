@@ -5,7 +5,7 @@ import time
 import jwt
 import pytest
 import sqlalchemy as sa
-from cloud_helpers import GOOD_TOKEN, make_cloud_app
+from cloud_helpers import GOOD_TOKEN, grant_hosted_media, make_cloud_app
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -280,6 +280,9 @@ def suspended(tmp_path, monkeypatch):
 
     monkeypatch.setattr(storage_api, "R2Client", no_storage)
     app, engine, _verifier = make_cloud_app(tmp_path)
+    # uploads are a hosted-media grant: without it the flag refuses first, and the suspension
+    # this fixture is about is never reached
+    grant_hosted_media(engine, app)
     headers = {"Authorization": f"Bearer {GOOD_TOKEN}"}
     with TestClient(app) as client:
         created = client.post(

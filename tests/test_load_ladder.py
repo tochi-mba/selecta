@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from cloud_helpers import cloud_settings
+from cloud_helpers import cloud_settings, grant_hosted_media
 from cloud_world import CloudObjects, add_asset, use_fake_storage
 from fastapi.testclient import TestClient
 from test_cloud_jobs_support import make_store
@@ -158,6 +158,9 @@ def test_a_scaled_down_l1_passes_the_thresholds_locally(tmp_path, monkeypatch):
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)
     app = create_cloud_app(cloud_settings(), engine=engine, verifier=ManyListeners())
+    # the ladder's routine includes uploads, which are a hosted-media grant: without it one
+    # request in eleven is refused by the flag and counted as an error
+    grant_hosted_media(engine, app)
     scale = 0.1  # 10 of L1's 100 users and 100 of its 1,000 pending jobs
     # One at a time: the in-process client runs every request on one event loop, so more threads
     # would only measure queueing in the test harness. Real concurrency is k6's job on staging.
