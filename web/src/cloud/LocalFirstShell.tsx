@@ -680,6 +680,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     cloud, refreshHoldings: holdings.refresh,
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
     askToPlay: (device) => void playOn.ask(device, recipes.current()),
+    asking: playOn.state,
   });
   soundElsewhere.current = !on('devices.remote_control') ? null
     : speakerElsewhere ? () => { accountMix.offerLater(speakerElsewhere); return true; }

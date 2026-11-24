@@ -36,6 +36,9 @@ from selecta.work import outbox
 ONLINE_WITHIN_SECONDS = 30.0
 # A speaker whose lease lapsed less than this long ago is reconnecting, not gone.
 RECONNECTING_FOR_SECONDS = 300.0
+# A2: presence flaps (a phone locks, a tab is throttled). For this long after the lease lapses
+# nothing visible changes: the room still offers that device's songs.
+GRACE_SECONDS = 12.0
 # Published on the workspace event stream when the default changes.
 TOPIC = "devices.default_speaker"
 
@@ -98,7 +101,7 @@ def room_speaker(
     ).first()
     if session is not None and session.active_device_id:
         lease = float(session.lease_expires_at or 0)
-        if lease >= now:
+        if lease + GRACE_SECONDS >= now:
             return RoomSpeaker("ready", session.active_device_id)
         if now - lease < RECONNECTING_FOR_SECONDS:
             return RoomSpeaker("reconnecting", None)

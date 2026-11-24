@@ -219,7 +219,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
         {paid
           ? portal && <p className="acct-plan-foot">{local
             ? 'Upgrades start straight away and are prorated. Downgrades start at the end of the period, and your music and mixes stay exactly as they are.'
-            : 'Upgrades start straight away and are prorated. Downgrades start at the end of the period; a library bigger than the new plan stays playable and nothing is deleted.'}</p>
+            : 'Upgrades start straight away and are prorated. Downgrades start at the end of the period; a library bigger than the new plan stays playable and nothing is deleted. Finished exports are kept for the new plan’s time, counted from the day it starts.'}</p>
           : checkout && open && <p className="acct-plan-foot">Upgrade whenever you like. You can change or cancel at any time.</p>}
         {offline && <p className="needs-connection">{offline}</p>}
       </SettingsCard>

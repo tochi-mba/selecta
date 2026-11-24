@@ -104,6 +104,32 @@ def retention_days(conn: Connection, workspace_id: str) -> tuple[str, int] | Non
     return plan.id, plan.export_retention_days
 
 
+def shortened_at(conn: Connection, workspace_id: str, days: int) -> float | None:
+    """When the workspace last moved to a plan that keeps exports for less than it had (a
+    downgrade or a lapsed plan), or None. After such a move the new, shorter retention runs again
+    from that moment, so a drop to Free never deletes exports the hour it happens: the person has
+    the new plan's whole retention to download them (product audit, gap 3)."""
+    from selecta.billing.schema import entitlement_snapshots
+
+    rows = conn.execute(
+        sa.select(entitlement_snapshots.c.plan_id, entitlement_snapshots.c.plan_version,
+                  entitlement_snapshots.c.computed_at)
+        .where(entitlement_snapshots.c.workspace_id == workspace_id)
+        .order_by(entitlement_snapshots.c.version.desc())
+        .limit(50)
+    ).all()
+    newer: float | None = None
+    for row in rows:
+        try:
+            kept = plan_for(row.plan_id, row.plan_version).export_retention_days
+        except UnknownPlan:
+            kept = days
+        if kept > days:
+            return newer if newer is not None else float(row.computed_at)
+        newer = float(row.computed_at)
+    return None
+
+
 def _workspaces_with_exports(engine: Engine, before: float) -> list[str]:
     """Workspaces with an export at least as old as the shortest retention could allow."""
     with persistence.transaction(engine) as conn:
@@ -126,6 +152,9 @@ def expire_workspace(
         if found is None:
             return [], []
         plan_id, days = found
+        since = shortened_at(conn, workspace_id, days)
+        if since is not None and moment < since + days * DAY_S:
+            return [], []
         rows = conn.execute(
             sa.select(artifacts.c.id, artifacts.c["keys"], artifacts.c.size_bytes)
             .where(
