@@ -291,7 +291,9 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
             throw problem;
           });
           // changed on another device since it was deleted here: kept, and the member is told
-          if (there && there.revision !== resolveId(op.baseRevision)) note(workspaceId, NOT_DELETED);
+          // (a delete queued with no revision known here has nothing to compare: it goes ahead,
+          // where it used to be reported as changed elsewhere and the mix kept)
+          if (there && op.baseRevision && there.revision !== resolveId(op.baseRevision)) note(workspaceId, NOT_DELETED);
           else {
             if (there) await server.remove(target);
             await box.forget(workspaceId, op.mixId);
