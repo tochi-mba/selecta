@@ -242,6 +242,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const [otherTab, setOtherTab] = useState(false);
   // F39: the audio tab went away and this tab may carry on, but only with a press here
   const [carryOn, setCarryOn] = useState(false);
+  // G70: the last change made from another device, said briefly on the speaker's own screen
+  const [changedFrom, setChangedFrom] = useState<{ deviceId: string; command: string; at: number } | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -900,6 +902,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       }
     }
     acked.current.add(event.command_id);
+    // said quietly on this screen, so a person here is never confused (never for a seek)
+    if (result === 'applied' && event.issued_by && event.issued_by !== deviceId && event.command !== 'seek' && event.command !== 'set_programme') setChangedFrom({ deviceId: event.issued_by, command: event.command, at: Date.now() });
     try {
       const ackPath = event.zone_id
         ? `/zones/${encodeURIComponent(event.zone_id)}/playback/commands/${encodeURIComponent(event.command_id)}/ack`
@@ -930,5 +934,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     /** ADR-0475 F: another tab of this browser is making the sound. */
     otherTab,
     /** F39: the tab that made the sound went away; a press here carries on where it was. */
-    carryOn };
+    carryOn,
+    /** G70: the last change made from another device (who and what), for a brief line here. */
+    changedFrom };
 }

@@ -27,7 +27,7 @@ What this branch found before the change:
 - **Possession-proven.** The hash in the key is always one this device computed itself from a file it opened (the importer and the re-authorisation flow hash locally; the stored identity is never the server's reply). Writes go through `cacheSongBytes`, which hashes the bytes and refuses them unless they match. Reads go through `readSongBytes`, which re-hashes a hit and evicts it when it does not match. A server-supplied hash is never trusted to name shared bytes.
 - **Flag off means nothing is shared.** Keys fall back to `bytes-<workspaceId>-<songId>`.
 - **Eviction namespace unchanged.** Every key still sits under the `cache-` prefix, the only names eviction may touch; catalogue rows and source handles are never candidates.
-- **What it holds today.** No production path writes song bytes into the cache: copying source files into browser storage would be the second library ADR-0458 rejects. The contract governs every reader and writer of the cache, so anything cached under it is reusable by fingerprint; the cache itself is not yet filled by a feature.
+- **What it holds today.** No production path writes song bytes into the cache: copying source files into browser storage would be the second library ADR-0458 rejects. The contract governs every reader and writer of the cache, so anything cached under it is reusable by fingerprint; the cache itself is not yet filled by a feature. The device-wide derived store (amendment 1 below) is what now carries reuse across accounts on one browser.
 
 ### 2. The account-switch contract
 
@@ -65,6 +65,54 @@ Data may be shared across tenants by fingerprint only when it is a deterministic
 - **Unscoped device keys left as they are:** `selecta-now` (resume position by song id; resumes only when the id is in the current mix), `selecta.recentDraft` (a draft id read back through the signed-in account's own API, which refuses another workspace's id) and `selecta.lucy.unsent.<conversation>` (keyed by a server conversation id). None shows another account's data; each can misfire as a wrong resume pointer at worst. "Clear everything" removes them.
 - **Business venue offline cache** (`selectadj-zone-cache`) is outside this ADR's keying; "clear everything" deletes it.
 
+## Amendment 1 (2026-11-24): the device-wide derived store and the fingerprint memo
+
+The owner's case: account A imported a folder of about 2,900 songs in a browser; account B signs in on the same browser and picks the same folder. Before this amendment B redid everything: every file hashed in full, every duration probed, every tonal profile measured again, because derived data lived per workspace and the content cache had no producer.
+
+### What now produces and consumes shared data
+
+With `cloud.content_cache` on, one IndexedDB database per browser, `selecta-media-derived` (`web/src/media/derived.ts`), holds:
+
+| Kind | Key | Producer | Consumer |
+|---|---|---|---|
+| `facts` (duration) | `facts`, `facts-v1`, sha256 | the importer, after probing a file it hashed in that run | the importer, which skips the duration probe |
+| `tonal` (tonal profile) | `tonal`, `tonal-profile-v1`, sha256 | the tonal profiler (`cloud/tonalProfiles.ts`), after the resolver proved the bytes | harmonic matches, through the workspace's own index |
+| `waveform` (Listen's strip) | `waveform`, `waveform-v1-400`, sha256 | `cloud/sharedWaveforms.ts`, after hashing the bytes it decoded | the same, for a proven hash |
+| fingerprint memo | a SHA-256 of `fp-v1`, the file's place, size and last-modified time | the importer, after hashing a file | the importer (the memo rule below) |
+
+- **No workspace, no person.** Rows hold a kind, a version, a hash and the derived value. `assertMachineDerived` refuses any value carrying a key such as title, artist, name, path, rating, history, review or workspace, at any depth. The memo key is itself a hash, so the store holds no file name or path in the clear.
+- **A workspace's view is its own index.** Reads take a list of hashes: the ones the signed-in workspace's own song index (`selecta-media-ws-<workspace>`) holds and has proven (`provenHashes`). There is no listing of the shared store, so an account only ever reads a derivation for a file it has opened and hashed itself.
+- **Possession-proven writes.** A derivation is written only under a hash just computed from the bytes in hand: the importer's own hash, the resolver's play-time check, or a hash of the bytes about to be decoded.
+- **One writer per hash.** Expensive work takes a Web Lock named for the hash (`withHashLock`, the pattern in `devices/audioTab.ts`): two tabs importing the same folder hash each file once (the second finds the memo entry), and two tabs never measure the same profile at once.
+- **Migration.** Tonal profiles an older build kept in `selecta-tonal-<workspace>` are copied into the shared store lazily, on the first read with the flag on, only for hashes the workspace has proven, in the background, and never deleted from where they were. A marker in local storage stops the copy repeating. Harmonic reviews (the member's own verdicts) stay per workspace.
+- **Quota.** A full store evicts the least recently used derivations, then the oldest memo entries, 25 at a time, and retries. Song indexes are separate databases and never candidates. A miss is a recompute.
+- **Version bump.** Every key carries its version (and the memo its own `fp-v1`), so a new implementation reads the old entries as misses; they age out by eviction.
+- **Private browsing or refused storage.** The store degrades to memory for the visit. The memo then keeps nothing at all (a hint must come from a store that outlives the page), so every file is hashed, and the import summary says nothing can be recognised next time.
+- **Flag off.** No shared store and no memo: tonal profiles stay per workspace, every import hashes every file, nothing is shared.
+- **Account removal.** "Forget this account here" and account deletion drop the workspace's index, its `selecta-tonal-<workspace>` database (reviews) and its fingerprint log; the shared store survives, as the content cache does (§2). "Clear everything in this browser" deletes `selecta-media-derived` with every other `selecta-media*` and `selecta-tonal-*` database.
+- **Stems** already used content keys under this flag (`dsp/stems/cache.ts`), but the player plans stem windows without a content hash, so they stay scoped to the workspace. Left as they are: their source bytes can come from a hosted copy the device has not hashed.
+
+### The memo rule
+
+The memo is a hint, never proof.
+
+1. Its key covers the file's place inside the folder that was picked (the folder's own name plus the relative path, the same whether the folder came from the folder picker or a folder input), its size and its last-modified time. A different size or time is always a miss. Browsers give no stable identity for a folder handle, so a folder moved elsewhere on disk still hits; that is safe because of 2 to 4.
+2. A hit is trusted for registration and listing only. The song registers under the remembered hash, with the account's own tags read from its own file, and its index row is marked `fingerprint: 'remembered'`. A duration measured here before is reused as listing data.
+3. Before a remembered song's bytes first play, and before any shared analysis (tonal profile, waveform) is read for it, the bytes are hashed and compared, which the resolver's play-time verification already does for handles and now also does for picked files. A match clears the mark; a mismatch marks the song changed (the existing "changed file" recovery). A remembered hash never names shared cached bytes until proven.
+4. After each import a random sample of the remembered files (1%, at least 3, at most 24) is hashed again in the background. A mismatch drops that memo entry and marks the song changed.
+
+**Risk considered: a file rewritten with the same size and the same modified time.** A tag editor told to keep timestamps, writing into existing tag padding, can do exactly this. The song then registers under its old hash, with its new tags (tags are always read fresh). Rule 3 catches it at the first play or analysis, rule 4 may catch it sooner; until then the catalogue holds a stale hash for that one song. No other account's data is exposed: the title is the account's own, and shared analysis is not read for an unproven hash. Accepted.
+
+### What the import shows
+
+`ImportSummary.reuse` counts songs recognised from this browser and songs analysed. The summary line adds, for example: "2,918 recognised from this browser, so nothing had to be analysed again.", or "2,900 recognised from this browser, 18 new songs analysed.", or, for a browser that has never seen them, "None of these songs had been seen in this browser before, so each one was analysed. Next time, they'll be recognised."
+
+### How to watch the fingerprint log
+
+1. Settings, card "What this browser keeps" (`cloud.local_media`), section "Fingerprint log (for developers)" (`cloud.content_cache`). Open it before or during an import in the same tab. Totals sit at the top (files, recognised, hashed, bytes read and not read, time spent, an estimate of time saved at this run's own hashing speed, the sample check); below, one line per file, newest first: name, hash prefix, how the hash was found and how long it took, tags, duration, tonal profile, waveform, registration.
+2. In the browser console: `localStorage.setItem('selecta.debug.fingerprint', '1')`, then import. Each line is logged under `[fingerprint]`, with a summary line at the end.
+3. The log lives in memory for this tab and this workspace only. It holds only the signed-in account's own file names and hash prefixes; another account's import is never shown.
+
 ## Checklist
 
 - [x] Device song index is one IndexedDB database per workspace; callers pass the workspace. Implemented (66506d6b)
@@ -85,4 +133,9 @@ Data may be shared across tenants by fingerprint only when it is a deterministic
 - [ ] A producer that writes server analysis into `shared_derivations`. Needs follow-up (no hosted analysis job writes it today)
 - [x] Guard test `tests/test_fingerprint_sharing_guard.py`: every table with a content hash and no `workspace_id` is allowlisted with the possession rule beside it, and allowlisted tables carry no user-entered columns. Implemented (8af7c9cf)
 - [x] Vitest `web/src/media/accountSwitch.test.ts` and `web/src/media/lapseHonesty.test.ts`: two workspaces do not bleed, legacy database dropped, forget and clear-everything wipe, import snapshot scoped and forgotten, content cache hit across workspaces and titles, flag-off keys, hash-verified writes and reads, honest lapse reasons, one shared sweep. Implemented (8af7c9cf)
+- [x] Amendment 1: device-wide derived store keyed `(kind, version, sha256)`, no workspace or user data, possession-proven writes, LRU eviction that never touches an index. Implemented (amendment 1 commits)
+- [x] Amendment 1: tonal profiles, waveforms and durations produced into and read from the shared store through the workspace's proven hashes; older per-workspace profiles migrated lazily and kept. Implemented (amendment 1 commits)
+- [x] Amendment 1: fingerprint memo with the memo rule (hint for listing, proven before play or shared reads, background sample check). Implemented (amendment 1 commits)
+- [x] Amendment 1: import summary says what was recognised; fingerprint log in Settings and under `[fingerprint]` in the console. Implemented (amendment 1 commits)
+- [ ] Amendment 1: Vitest for the derived store, the memo rule and the reuse words. Needs follow-up (features first; tests in a later pass)
 - [x] Pytest `tests/test_shared_derivations.py`: possession-gated reads, claimed hashes refused, refusal equals absence, verified writes only, user data refused, flag off, reference count, erasure drops rows. Implemented (8af7c9cf; PostgreSQL variants run where a PostgreSQL test database is configured)

@@ -85,6 +85,8 @@ Deletion is a workflow, not a `DELETE`: mark tombstone (the song disappears and 
 
 Identical files uploaded by two users are stored and analysed twice. Storage is cheap; cross-tenant dedupe creates an existence side channel (upload timing reveals whether someone else has a file) and complicates deletion and copyright handling. Within one account, duplicates are detected and the user chooses.
 
+On one browser it is different ([ADR-0469](../adr/adr-0469-one-song-one-fingerprint.md), amendment 1, flag `cloud.content_cache`). When a browser-first member connects a folder, every file is fingerprinted on the device. The browser remembers those fingerprints, and the machine-made results from each file (duration, tonal profile, waveform), keyed by the file's content hash in one store for the whole browser. A second account signing in on the same browser and picking the same folder is told how many songs were recognised; their files are not read in full again, and nothing has to be analysed again. Only results computed from the bytes are shared: titles, ratings and history stay with each account, and an account reads a shared result only for a file it has opened itself. A remembered fingerprint is a hint, checked against the bytes before the song first plays or any shared analysis is used. How to watch it work: the ADR's "How to watch the fingerprint log".
+
 ### 5.7 Downloads
 
 Originals and exports download through presigned GETs with `Content-Disposition: attachment` and the user's filename, generated per click (TTL 5 min), rate-limited per account. Signed URLs never appear in logs or analytics.

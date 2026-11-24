@@ -1,6 +1,6 @@
 import { assertNoPath } from './identity';
 import {
-  BATCH_SIZE, collect, defaultTagReader, FIRST_BATCH, isAbort, postJson, registrationOf,
+  BATCH_SIZE, collect, defaultTagReader, FIRST_BATCH, isAbort, postJson, registrationOf, settleFingerprints,
   type Candidate, type ImportOptions, type ImportSummary, type ImportWait, type RegisteredSong, type RetryPolicy, type SongRegistration,
 } from './importer';
 import { fileKey, type ImportJournal, type JournalRow } from './importJournal';
@@ -109,6 +109,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
   const batchSize = options.batchSize ?? BATCH_SIZE;
   const retry = options.retry ?? patientRetry;
   const importId = options.importId ?? newImportId();
+  const fingerprints = options.fingerprints ?? null;
   const reportDevice = options.reportDevice ?? (() => options.deviceId);
   const summary: ImportSummary = { imported: 0, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false };
   const { candidates, skipped } = await collect(source, signal);
@@ -165,6 +166,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
       },
       ref: item.ref,
       importedAt: Date.now(),
+      ...(fingerprints?.isRemembered(item.entry.content_sha256) ? { fingerprint: 'remembered' as const } : {}),
     });
     if (item.sessionFile) store.attachSessionFile(song.song_id, item.sessionFile);
   };
@@ -186,6 +188,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
     let full: unknown = null;
     for (const item of sending) {
       const song = byHash.get(item.entry.content_sha256);
+      fingerprints?.landed(item.entry.content_sha256, song?.song_id ?? null, song?.duplicate_of !== undefined);
       if (!song) {
         summary.failed += 1;
         emit({ kind: 'file', name: item.name, stage: 'failed', reason: 'SelectaDJ could not add this song to your library. Try the import again.' });
@@ -282,7 +285,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
       }
       let entry: SongRegistration;
       try {
-        entry = await registrationOf(file, candidate.name, readTags, signal);
+        entry = await registrationOf(file, candidate.name, readTags, signal, fingerprints ? { fingerprints, candidate } : undefined);
       } catch (error) {
         if (isAbort(error)) { summary.cancelled = true; break; }
         summary.failed += 1;
@@ -312,6 +315,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
       emit({ kind: 'paused', paused: 'storage_full' });
     }
   }
+  settleFingerprints(fingerprints, summary, store);
   emit({ kind: 'finished', ...summary });
   return summary;
 }

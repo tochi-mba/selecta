@@ -19,7 +19,7 @@ from statistics import median
 
 import mutagen
 
-from selecta import db
+from selecta import db, longpaths
 
 AUDIO_EXTENSIONS = {".mp3", ".flac", ".m4a", ".aac", ".ogg", ".opus", ".wav", ".aiff", ".aif"}
 LOSSLESS_EXTENSIONS = {".flac", ".wav", ".aiff", ".aif"}
@@ -92,12 +92,12 @@ def _first(tags, *keys: str) -> str | None:
 def read_file(path: Path) -> dict | None:
     """Read tags and stream info, or return None if the file can't be read as audio."""
     try:
-        audio = mutagen.File(path, easy=True)
+        audio = mutagen.File(longpaths.os_path(path), easy=True)
     except Exception:
         return None
     if audio is None or audio.info is None:
         return None
-    stat = path.stat()
+    stat = longpaths.stat(path)
     info = audio.info
     return {
         "path": str(path),
@@ -225,15 +225,13 @@ def _forget_song(conn: sqlite3.Connection, path: str) -> None:
 
 def _audio_listing(root: Path) -> dict[str, tuple[int, float]]:
     listing = {}
-    for folder, _subfolders, names in os.walk(root):
-        for name in names:
-            if Path(name).suffix.lower() in AUDIO_EXTENSIONS:
-                path = Path(folder) / name
-                try:
-                    stat = path.stat()
-                except OSError:
-                    continue
-                listing[str(path)] = (stat.st_size, stat.st_mtime)
+    for path in longpaths.walk_files(root):
+        if path.suffix.lower() in AUDIO_EXTENSIONS:
+            try:
+                stat = longpaths.stat(path)
+            except OSError:
+                continue
+            listing[str(path)] = (stat.st_size, stat.st_mtime)
     return listing
 
 
@@ -324,7 +322,8 @@ def _save_batch(
 
 
 def _listing(root: Path, should_stop: Callable[[], bool]) -> Iterator[Path]:
-    for path in root.rglob("*"):
+    # files only, in ordinary form, reaching folders past Windows' old 260-character limit
+    for path in longpaths.walk_files(root):
         if should_stop():
             raise ScanStopped
         yield path
@@ -371,7 +370,7 @@ def _scan(
     files: list[Path] = []
     subtitled: set[str] = set()
     for path in sorted(_listing(root, should_stop)):
-        if not path.is_file():
+        if not longpaths.is_file(path):
             continue
         suffix = path.suffix.lower()
         if suffix in AUDIO_EXTENSIONS:
@@ -400,7 +399,7 @@ def _scan(
         key = str(path)
         seen.add(key)
         try:
-            stat = path.stat()
+            stat = longpaths.stat(path)
         except OSError:
             continue  # a download moving it into place, so it'll be there next time
         arriving = now - stat.st_mtime < SETTLE_SECONDS
