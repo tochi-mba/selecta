@@ -1,4 +1,5 @@
 import { KeyboardEvent, ReactNode, RefObject, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { lucyTransport } from '../lucy/client';
 import { Action } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 
@@ -7,6 +8,11 @@ import { Icon } from '../ui/Icon';
  * into the box to be read and edited: it never sends, and never touches the music. */
 
 const MAX_HEIGHT = 220;
+/** Local Lucy lets a new message replace the running one; Cloud answers one at a time on every
+ * device (ADR-0476 item 16), so there the words wait for the answer to finish. */
+const RUNNING_WORDS = () => (lucyTransport()
+  ? 'Lucy is answering. Send this when she’s done, or press Stop.'
+  : 'Lucy is working. Sending now replaces what it’s doing.');
 
 type Recognition = {
   lang: string;
@@ -141,7 +147,7 @@ export function Composer({ value, onChange, onSend, onStop, running, sending, bl
       />
       {problem && <p id={`${hintId}-problem`} className="warn lucy-send-problem">{problem}</p>}
       <div className="lucy-composer-row">
-        <span id={hintId} className="hint">{blocked || (running ? 'Lucy is working. Sending now replaces what it’s doing.' : 'Enter sends · Shift+Enter for a new line')}</span>
+        <span id={hintId} className="hint">{blocked || (running ? RUNNING_WORDS() : 'Enter sends · Shift+Enter for a new line')}</span>
         <div className="row">
           {voice && <VoiceButton onWords={(words) => onChange(latest.current.trim() ? `${latest.current.trimEnd()} ${words}` : words)} />}
           {running && <Action type="button" working="Stopping…" run={onStop}><Icon name="stop" /> Stop</Action>}
