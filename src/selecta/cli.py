@@ -549,6 +549,25 @@ def business_stripe_setup() -> None:
         raise typer.Exit(2) from problem
 
 
+@app.command("billing-portal-setup")
+def billing_portal_setup() -> None:
+    """Create or update SelectaDJ's Stripe customer portal (headline, what a customer may change,
+    the return address). Safe to run again; prints the id to set as
+    SELECTA_STRIPE_PORTAL_CONFIGURATION."""
+    from selecta.billing import branding
+    from selecta.billing.stripe_sync import load_price_map
+    from selecta.billing.webhooks import HttpStripeClient
+
+    key = os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip()
+    prices = load_price_map()
+    if not key or not prices:
+        raise typer.BadParameter("Set SELECTA_STRIPE_SECRET_KEY and SELECTA_STRIPE_PRICES first.")
+    client = HttpStripeClient(key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION"))
+    config_id, created = branding.set_up_portal(client, sorted(prices))
+    typer.echo(f"{'Created' if created else 'Updated'} {config_id}. "
+               f"Set {branding.PORTAL_CONFIGURATION_ENV}={config_id} on the API.")
+
+
 @app.command("billing-maintenance")
 def billing_maintenance(
     limit: int = typer.Option(50, min=1, max=500, help="Maximum webhook events to drain."),

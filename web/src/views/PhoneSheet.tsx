@@ -3,6 +3,39 @@ import { Sheet } from '../ui/controls';
 
 export type Detent = 'half' | 'full' | 'fit';
 
+/** The sheets open now, newest last. One history entry stands for all of them, so Back closes them
+ * and stays in the editor, and closing them any other way takes that entry back. The entry is only
+ * taken back once no sheet is open a moment later, so a sheet that is replaced, or remounted by
+ * React's development checks, keeps it. */
+const openSheets: (() => void)[] = [];
+const isSheetEntry = () => !!(window.history.state as { editorSheet?: boolean } | null)?.editorSheet;
+let listening = false;
+function onBack() {
+  if (isSheetEntry()) return;
+  for (const close of [...openSheets].reverse()) close();
+}
+
+function useBackCloses(close: () => void) {
+  useEffect(() => {
+    openSheets.push(close);
+    try {
+      if (!isSheetEntry()) window.history.pushState({ ...(window.history.state ?? {}), editorSheet: true }, '');
+    } catch { /* history is not writable here; Close and Escape still work */ }
+    if (!listening) {
+      window.addEventListener('popstate', onBack);
+      listening = true;
+    }
+    return () => {
+      const at = openSheets.indexOf(close);
+      if (at >= 0) openSheets.splice(at, 1);
+      window.setTimeout(() => {
+        if (openSheets.length || !isSheetEntry()) return;
+        try { window.history.back(); } catch { /* nothing to take back */ }
+      }, 0);
+    };
+  }, []);
+}
+
 /** How far a finger has to travel, in CSS pixels, before letting go changes the sheet's height. */
 const SNAP = 64;
 /** A flick: this fast (px per ms) changes the height even over a short distance. */
@@ -33,24 +66,8 @@ export function PhoneSheet(props: {
   now.current = { detent, tall, onClose };
   const swallowClick = useRef(false);
 
-  // Back closes the sheet: a history entry of its own while it is open, taken back when it closes
-  // any other way. If the page has moved on to another address meanwhile, that entry is left alone.
-  useEffect(() => {
-    const token = `sheet-${Math.random().toString(36).slice(2)}`;
-    const ours = () => (window.history.state as { editorSheet?: string } | null)?.editorSheet === token;
-    try { window.history.pushState({ ...(window.history.state ?? {}), editorSheet: token }, ''); } catch { return undefined; }
-    let closedByBack = false;
-    const back = () => {
-      if (ours()) return;
-      closedByBack = true;
-      now.current.onClose();
-    };
-    window.addEventListener('popstate', back);
-    return () => {
-      window.removeEventListener('popstate', back);
-      if (!closedByBack && ours()) window.history.back();
-    };
-  }, []);
+  // Back closes the sheet (see useBackCloses).
+  useBackCloses(() => now.current.onClose());
 
   // Dragging the grabber or the title bar. Native listeners, because the app's sheet draws the title
   // bar itself; only the first finger counts, and the Close button stays a button.
@@ -67,13 +84,16 @@ export function PhoneSheet(props: {
     const start = (event: PointerEvent) => {
       if (held || !event.isPrimary || (event.target as HTMLElement).closest('.overlay-close')) return;
       const on = event.currentTarget as HTMLElement;
+      // captured only once it really moves, so a tap stays a click on the grabber or the title
       held = { id: event.pointerId, y: event.clientY, at: event.timeStamp, moved: 0, on };
-      on.setPointerCapture?.(event.pointerId);
     };
     const move = (event: PointerEvent) => {
       if (!held || held.id !== event.pointerId) return;
       held.moved = event.clientY - held.y;
-      if (Math.abs(held.moved) > 4) panel.setAttribute('data-dragging', 'true');
+      if (Math.abs(held.moved) > 4 && !panel.hasAttribute('data-dragging')) {
+        panel.setAttribute('data-dragging', 'true');
+        try { held.on.setPointerCapture?.(event.pointerId); } catch { /* a pointer the browser no longer tracks */ }
+      }
       place(held.moved);
     };
     const stop = () => {

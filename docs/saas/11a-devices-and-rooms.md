@@ -33,6 +33,8 @@ These two belong together: a Room needs one device that is *the speaker*, and a 
 
 **One tab per browser.** Two tabs of one browser are one device: a Web Lock picks the tab that makes the sound; the others say "Playing in another tab." with "Play in this tab instead", and carry on by themselves if that tab closes.
 
+**One account per browser.** Signing out in one tab signs this device out of the account and stops anything it plays; every other tab says "You signed out in another tab." If music is playing, a room is open or an import is running in any tab, signing out asks first. A second account needs another browser profile.
+
 **Browser realities (verify on real devices in Phase 6).**
 - iOS Safari and iOS home-screen apps suspend Web Audio when the screen locks or the app goes to the background (long-standing WebKit bugs, worse reports on iOS 26). The player is Web Audio based, so an iPhone is a poor speaker device. Selecta detects this and says plainly: "On iPhone, keep Selecta open with the screen on while it plays". It requests a screen wake lock where the browser supports it.
 - Laptops, desktops, Android Chrome and an on-screen iPad are the recommended speaker devices; phones make excellent remotes.
