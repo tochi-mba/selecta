@@ -2,7 +2,7 @@
 id: T-20261124-536e
 title: Setup checklist should tick two-factor by itself when the staff organization requires it
 area: admin
-status: open
+status: blocked
 priority: later
 who: claude
 created: 2026-11-24

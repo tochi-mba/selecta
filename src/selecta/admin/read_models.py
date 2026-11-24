@@ -210,7 +210,24 @@ def search_jobs(conn: Connection, actor: Actor, *, job_id: str | None = None,
         if value:
             query = query.where(column == value)
     rows = conn.execute(query.limit(_cap(limit, PAGE_CAP))).mappings()
-    return [_job_json(row) for row in rows]
+    live = live_pools(conn)
+    return [{**_job_json(row), "waiting_reason": waiting_reason(row, live)} for row in rows]
+
+
+def live_pools(conn: Connection) -> set[str]:
+    """Pools with a worker seen in the last two minutes that staff haven't drained or paused."""
+    held = set(conn.execute(sa.select(worker_controls.c.worker_id)).scalars())
+    rows = conn.execute(sa.select(workers.c.id, workers.c.pool).where(
+        workers.c.last_seen_at >= db_now(conn) - WORKER_SEEN_S)).all()
+    return {pool for worker_id, pool in rows if worker_id not in held}
+
+
+def waiting_reason(row: Mapping[str, Any], live: set[str]) -> str | None:
+    """Why a queued job isn't moving, in words, when the answer is that nothing can run it."""
+    if row["state"] != "queued" or row["pool"] in live:
+        return None
+    return (f"No worker is running for the {row['pool']} pool, so this waits until one starts "
+            "(check the worker service and Emergency for a drained pool).")
 
 
 def job_detail(conn: Connection, actor: Actor, job_id: str) -> dict:

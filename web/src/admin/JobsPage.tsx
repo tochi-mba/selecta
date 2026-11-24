@@ -3,7 +3,7 @@ import { DataTable } from '../ui/DataTable';
 import { AdminFetch, post, Reading, when } from './adminApi';
 import { Command, Failure, Fresh, Panel, useLoad } from './parts';
 
-type Job = { id: string; workspace_id: string; type: string; pool: string; lane: string; state: string; attempt_count: number; error_class: string | null; error_detail: string | null; est_cost_s: number; actual_cost_s: number | null; created_at: number };
+type Job = { id: string; workspace_id: string; type: string; pool: string; lane: string; state: string; attempt_count: number; error_class: string | null; error_detail: string | null; est_cost_s: number; actual_cost_s: number | null; created_at: number; waiting_reason?: string | null };
 type Attempt = { id: string; worker_id: string | null; started_at: number; ended_at: number | null; outcome: string | null; error_class: string | null; cost_s: number | null; lease_expires_at: number | null };
 type Detail = { job: Job; attempts: Attempt[]; depends_on: { id: string; state: string; type: string }[]; needed_by: string[] };
 type Worker = { id: string; pool: string; slots: number; last_seen: Reading; hold: string | null };
@@ -31,7 +31,7 @@ export function JobsPage({ api, can }: { api: AdminFetch; can: (permission: stri
         <Failure error={jobs.error} />
         <DataTable stacked="auto" caption="Jobs" rows={jobs.data?.jobs ?? []} rowKey={(j) => j.id} onPick={(j) => setPicked(j.id)} pickLabel={(j) => `Open job ${j.id}`}
           empty="No jobs match."
-          columns={[{ key: 'id', label: 'Job', render: (j) => j.id.slice(0, 13) }, { key: 'type', label: 'Type' }, { key: 'state', label: 'State' },
+          columns={[{ key: 'id', label: 'Job', render: (j) => j.id.slice(0, 13) }, { key: 'type', label: 'Type' }, { key: 'state', label: 'State', render: (j) => j.waiting_reason ? <span>{j.state} <small className="admin-warning">{j.waiting_reason}</small></span> : j.state },
             { key: 'pool', label: 'Pool and lane', render: (j) => `${j.pool} / ${j.lane}` }, { key: 'attempt_count', label: 'Attempts', numeric: true },
             { key: 'created_at', label: 'Created', render: (j) => when(j.created_at) }]} />
       </Panel>

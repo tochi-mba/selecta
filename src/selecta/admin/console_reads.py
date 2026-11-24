@@ -161,9 +161,34 @@ def headline(conn: Connection, metrics: list[dict], biz: dict[str, Any]) -> dict
     return {"level": "ok", "text": "All systems normal.", "unknown": []}
 
 
+def report_own_health(conn: Connection) -> None:
+    """What the API can say about itself on every Overview, without waiting for a task: it is
+    answering, and whether Stripe's webhooks are being processed (no event stuck for 15 minutes,
+    judged only once any event has arrived)."""
+    read_models.report(conn, "health.api", 1.0)
+    now = db_now(conn)
+    seen = conn.execute(sa.select(sa.func.count()).select_from(stripe_events)).scalar_one()
+    if seen:
+        stuck = conn.execute(sa.select(sa.func.count()).where(
+            stripe_events.c.status != "processed",
+            stripe_events.c.received_at < now - STUCK_EVENT_S)).scalar_one()
+        read_models.report(conn, "health.stripe_webhooks", 0.0 if stuck else 1.0)
+
+
 def overview_extra(conn: Connection, metrics: list[dict]) -> dict[str, Any]:
+    from selecta.admin import storage_checks
+
     biz = business(conn)
-    return {"business": biz, "headline": headline(conn, metrics, biz)}
+    storage = storage_checks.cached(conn)
+    head = headline(conn, metrics, biz)
+    problems = [p for b in storage.get("buckets", []) for p in b["problems"]]
+    if storage.get("error"):
+        problems.insert(0, storage["error"])
+    if problems:
+        head = {"level": "problem", "unknown": head["unknown"],
+                "text": " ".join(problems[:2]) + (" " + head["text"]
+                                                  if head["level"] == "problem" else "")}
+    return {"business": biz, "headline": head, "storage": storage}
 
 
 # --- billing -----------------------------------------------------------------------------------
@@ -248,8 +273,15 @@ def system(conn: Connection, actor: Actor) -> dict[str, Any]:
             for i, name, var, unlocks, link in INTEGRATIONS
         ],
         "emergency": emergency.listing(conn),
+        "storage": _storage(conn),
         "backups": _backups(conn),
     }
+
+
+def _storage(conn: Connection) -> dict[str, Any]:
+    from selecta.admin import storage_checks
+
+    return storage_checks.cached(conn)
 
 
 def _backups(conn: Connection) -> dict[str, Any]:

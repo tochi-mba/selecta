@@ -2,7 +2,7 @@
 id: T-20261124-78e1
 title: Admin tests fail for the console's read-only default and new pages
 area: ci
-status: open
+status: doing
 priority: now
 who: claude
 created: 2026-11-24
