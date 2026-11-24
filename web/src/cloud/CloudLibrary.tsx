@@ -1,4 +1,4 @@
-import { useContext, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { HolderContext } from '../devices/controller';
 import { dirPicker, type ImportSummary } from '../media';
 import { Menu, Status } from '../ui/controls';
@@ -15,7 +15,9 @@ const KEEP_SAID = 'selecta.library.keep-said';
 
 /** ADR-0475 R6, R7: the one quiet line when another device has the music. A device with some
  * music of its own says how much is here and where the rest is. */
-export function remoteLineWords(playable: number, connected: number, holder: { name: string; online: boolean }): string {
+export function remoteLineWords(playable: number, connected: number, holder: { name: string; online: boolean }, keptHere = 0): string {
+  // R7: songs chosen here before, which this browser needs chosen again to play
+  if (playable === 0 && keptHere > 0) return `${countOf(keptHere, 'song')} on this device ${keptHere === 1 ? 'needs' : 'need'} choosing again to play here. The rest are on ${holder.name}.`;
   if (playable > 0) return `${formatCount(playable)} of ${countOf(connected, 'song')} are on this device. The rest are on ${holder.name}${holder.online ? '' : ', which isn’t open right now'}.`;
   return `${holder.online ? `This device is a remote for ${holder.name}.` : `Your music is on ${holder.name}, which isn’t open right now.`} Connect music here only if you want this device to make the sound.`;
 }
@@ -46,6 +48,14 @@ export function CloudLibrary({ shared, connected, connect }: {
   // ADR-0475 R7: a browser that cannot keep folder access (most phones) says so once, never on
   // every page; the songs are asked for again when they are needed
   const [keepSaid, setKeepSaid] = useState(() => { try { return localStorage.getItem(KEEP_SAID) === '1'; } catch { return true; } });
+  // songs this device was given before (this visit or an earlier one), playable here or not
+  const [keptHere, setKeptHere] = useState(0);
+  const { openStore } = connect;
+  useEffect(() => {
+    let live = true;
+    void openStore().then((opened) => opened.all()).then((songs) => { if (live) setKeptHere(songs.length); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [openStore, playable]);
   const sayKept = () => { setKeepSaid(true); try { localStorage.setItem(KEEP_SAID, '1'); } catch { /* said for this visit */ } };
   const doneWords = (summary: ImportSummary) => {
     if (playable === 0 && summary.imported + summary.duplicates > 0) return summaryWords(summary);
@@ -90,7 +100,8 @@ export function CloudLibrary({ shared, connected, connect }: {
           // music here is a choice, not the way forward
           <p className="lw-remote-line" data-testid="library-remote-line">
             <Icon name="system" size="toolbar" />
-            <span>{remoteLineWords(playable, connected, holder)}</span>
+            <span>{remoteLineWords(playable, connected, holder, keptHere)}</span>
+            {playable === 0 && keptHere > 0 && <button type="button" className="quiet" onClick={() => handle.current?.chooseSongs()}>Choose them again</button>}
           </p>
         )}
         {needsFolder && fresh && !holder && (
@@ -111,7 +122,7 @@ export function CloudLibrary({ shared, connected, connect }: {
             <button type="button" className="quiet" onClick={() => setDismissed(true)}>Dismiss</button>
           </div>
         )}
-        {!keepSaid && playable > 0 && !dirPicker().supported && (
+        {!keepSaid && (playable > 0 || keptHere > 0) && !dirPicker().supported && (
           <p className="lw-remote-line" data-testid="library-keep-line">
             <Icon name="system" size="toolbar" />
             <span>{KEEP_WORDS}</span>
