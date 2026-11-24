@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 import sqlalchemy as sa
 from cloud_admin_kit import audit_actions, make_world
+from cloud_helpers import grant_hosted_media
 
 from selecta.admin import alerts
 from selecta.admin.schema import platform_alerts
@@ -23,6 +24,9 @@ from selecta.storage.schema import assets, deletions
 def world(cloud_engine, monkeypatch):
     monkeypatch.setenv("SELECTA_REPEAT_INFRINGER_NOTICES", "2")
     built = make_world(cloud_engine)
+    # takedowns are about hosted audio: uploads are a grant, and without it the flag answers
+    # before the restriction this file tests
+    grant_hosted_media(cloud_engine, built.http.app)
     yield built
     built.http.__exit__(None, None, None)
 

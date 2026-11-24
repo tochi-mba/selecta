@@ -704,9 +704,14 @@ def granted_and_binds(engine, workspace: str) -> tuple[bool, bool]:
         )
 
 
-def test_before_the_cutover_rules_every_live_workspace_holds_the_grant(cloud_engine):
+def test_with_no_rule_saved_no_workspace_holds_the_grant_and_an_empty_one_is_not_bound(
+    cloud_engine,
+):
+    """Hosted media is a grant (ADR-0455): the registry's `rules_default` is false, so until
+    staff save a rule nobody holds it and storage binds only where bytes already are. (Before
+    the cutover the default was on, and this test said every live workspace held it.)"""
     owned_workspace(cloud_engine, "ws-pre", "u-pre")
-    assert granted_and_binds(cloud_engine, "ws-pre") == (True, True)
+    assert granted_and_binds(cloud_engine, "ws-pre") == (False, False)
 
 
 def test_the_grandfather_rules_bind_storage_only_where_the_grant_or_bytes_are(cloud_engine):

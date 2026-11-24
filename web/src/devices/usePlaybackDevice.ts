@@ -145,6 +145,18 @@ export function couldNotReach(problem: unknown): boolean {
   return status === 0 || status === 408 || status === 429 || status >= 500;
 }
 
+/** A press that never reached SelectaDJ at all: no network, or no answer. A busy or failing
+ * server (429, 5xx) did answer, so the press is refused and said so; the speaker does not start
+ * acting alone and showing offline words while the connection is fine. */
+export function neverReached(problem: unknown): boolean {
+  if (!isOnline()) return true;
+  const status = (problem as { status?: unknown } | null)?.status;
+  if (typeof status !== 'number') return problem instanceof TypeError || ['AbortError', 'TimeoutError', 'OfflineError'].includes(String((problem as { name?: unknown } | null)?.name));
+  return status === 0 || status === 408;
+}
+/** Said when a press found nobody playing: the session answers `no_speaker` to Play. */
+export const NO_SPEAKER_WORDS = 'Nothing is playing on another device right now. Choose a device to play on.';
+
 const storedKey = (workspaceId: string) => `selecta.device.${workspaceId}`;
 function stored(workspaceId: string): string | null {
   try { return localStorage.getItem(storedKey(workspaceId)); } catch { return null; }
@@ -175,6 +187,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const clockOffset = useRef(0);
   // A slow poll must never overwrite a newer ownership decision.
   const latestPoll = useRef(0);
+  /** How many session looks are in flight (see poll). */
+  const looking = useRef(0);
   // Never let cached/buffered audio outlive the server-issued exclusive lease.
   const leaseDeadline = useRef<number | null>(null);
   // Expiry silences cached audio, but reconnect may resume if the server still owns it.
@@ -273,16 +287,25 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!wake.current) wake.current = holdWakeLock();
     wakeWasHeld.current = false;
     if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
-    await speaker.start(session.song_index, extrapolate(session, serverNow()), session.state === 'playing');
-  }, [speaker]);
+    try {
+      await speaker.start(session.song_index, extrapolate(session, serverNow()), session.state === 'playing');
+    } catch (problem) {
+      // it could not make sound: stop holding the lease, or every other device would read
+      // "Playing on this device" over silence
+      becomeRemote('This device couldn’t start playing.', 0);
+      throw problem;
+    }
+  }, [becomeRemote, speaker]);
 
   /** Follow a session this device is the speaker of: play, pause, skip and seek from remotes. */
   const follow = useCallback(async (session: SessionState) => {
     if (!speaker || session.seq <= appliedSeq.current) return;
+    // this speaker is telling the session its own programme: nothing for it to move to yet.
+    // Nothing is marked applied here, so a skip or seek that landed meanwhile is carried out on
+    // the next look (publishProgramme marks its own change when the session answers).
+    if (publishing.current) return;
     appliedSeq.current = session.seq;
     if (!remoteControl) return;
-    // this speaker is telling the session its own programme: nothing for it to move to
-    if (publishing.current) return;
     if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
@@ -325,7 +348,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     const volume = heldVolume.current;
     const session = viewSnapshot.current?.session;
     if (volume === null || !deviceId) return;
-    if (!remoteControl || !session) { heldVolume.current = null; return; }
+    if (!remoteControl || !session || typeof session.volume !== 'number') { heldVolume.current = null; return; }
     try {
       await api('/playback/commands', {
         method: 'POST',
@@ -398,8 +421,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
 
   const poll = useCallback(async (forDecision = false): Promise<SessionView | null> => {
     if (!deviceId) return null;
+    // On a connection slower than the timer, a new look every tick threw away every answer
+    // (only the newest counts), so a speaker never followed a press. A regular look waits for
+    // the one in flight; a look that a press or a decision needs always goes.
+    if (!forDecision && looking.current > 0) return null;
     const requestId = ++latestPoll.current;
     const sentAt = Date.now();
+    looking.current += 1;
     try {
       const next = await api<SessionView>(`/playback/session?device_id=${encodeURIComponent(deviceId)}`, {}, workspaceId);
       // A reconnect/background poll can start after a person's button press. It must not
@@ -440,6 +468,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       // offline is said once by the connection banner, not as a raw error under the player
       if (!(offlinePlaybackOn() && couldNotReach(problem))) setError((problem as Error).message);
       return null;
+    } finally {
+      looking.current -= 1;
     }
   }, [api, becomeRemote, deviceId, follow, recoverExpired, workspaceId]);
 
@@ -457,6 +487,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         // flight. Never resurrect audio from that earlier grant on a reloaded tab.
         const verified = await poll(true);
         if (!current) return;
+        // a press on this reloaded tab is already taking over (or has): it starts the sound
+        if (claiming.current || speaking.current) return;
         if (verified?.speaker === 'here' && verified.session) {
           await startSpeaking(verified.session);
         } else if (!verified) {
@@ -627,8 +659,14 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       const at = sound.position();
       if (name === 'pause') sound.pause();
       else if (name === 'play') sound.resume();
-      else if (name === 'skip') await sound.start((at?.song_index ?? 0) + 1, 0, true);
-      else if (name === 'seek') await sound.start(Number(args?.song_index ?? at?.song_index ?? 0), Number(args?.offset_ms ?? 0), true);
+      else if (name === 'skip') {
+        // nothing after the last song: the press does nothing rather than asking for a song that is not there
+        const length = viewSnapshot.current?.session?.programme?.length;
+        const next = (at?.song_index ?? 0) + 1;
+        if (length === undefined || next < length) await sound.start(next, 0, true);
+      }
+      // a seek while paused moves the place and stays paused
+      else if (name === 'seek') await sound.start(Number(args?.song_index ?? at?.song_index ?? 0), Number(args?.offset_ms ?? 0), at?.state !== 'paused');
       else if (name === 'set_volume') {
         const volume = Math.max(0, Math.min(100, Number(args?.volume ?? 100)));
         sound.setVolume?.(volume / 100);
@@ -642,8 +680,11 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     };
     if (hereOffline() && (adrift.current || !isOnline())) return actHere();
     if (!deviceId || !view?.session) return false;
+    // a personal session has no shared volume (each device sets its own), so none is sent:
+    // the server would refuse it, and the refusal used to be shown as why a later press failed
+    if (name === 'set_volume' && typeof view.session.volume !== 'number') return false;
     try {
-      await api('/playback/commands', {
+      const answer = await api<{ status?: string } | null>('/playback/commands', {
         method: 'POST',
         body: JSON.stringify({
           device_id: deviceId,
@@ -655,11 +696,17 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
           idempotency_key: newKey(),
         }),
       }, workspaceId);
+      // Play with nobody playing is answered, not refused: say so and let the page offer a device
+      if (answer?.status === 'no_speaker') {
+        commandRefused.current = true;
+        setError(NO_SPEAKER_WORDS);
+        return false;
+      }
       commandRefused.current = false;
       setError('');
       return true;
     } catch (problem) {
-      if (hereOffline() && couldNotReach(problem)) return actHere();
+      if (hereOffline() && neverReached(problem)) return actHere();
       const code = (problem as { code?: string }).code;
       commandRefused.current = true;
       setError(code && RETRY_CODES.has(code) ? "Something changed just then. Here's where it is now; try again." : (problem as Error).message);
@@ -752,6 +799,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       // past) the command; otherwise it says it could not, never that it did.
       if (!now || now.speaker !== 'here' || !now.session || !speaking.current) return null;
       if (now.session.seq >= event.seq) {
+        for (let waited = 0; publishing.current && waited < 20; waited += 1) await new Promise((resolve) => window.setTimeout(resolve, 100));
         await follow(now.session);
         if (appliedSeq.current >= event.seq) result = 'applied';
         // Moved to a track this device could not resolve (ADR-0458): say so, naming it, so

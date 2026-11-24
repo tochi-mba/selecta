@@ -129,6 +129,8 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
   }, [positionMs, seekTo]);
   const skipTo = useCallback(async (songIndex: number) => { await send('skip', { song_index: songIndex }); }, [send]);
   const setVolume = useCallback(async (percent: number) => {
+    // only a session that carries a shared volume (a venue zone) can be told one
+    if (typeof latest.current.session?.volume !== 'number') return;
     await send('set_volume', { volume: Math.max(0, Math.min(100, Math.round(percent))) });
   }, [send]);
 
@@ -184,6 +186,7 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
     muted: level === 0,
   };
   player.state = now;
+  player.canSetVolume = level !== null;
   const on = `on ${view.speaker_name ?? 'another device'}`;
   const song: MixItem = {
     position: session.song_index,

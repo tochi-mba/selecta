@@ -14,7 +14,7 @@ from urllib.parse import quote
 
 import pytest
 import sqlalchemy as sa
-from cloud_helpers import cloud_settings
+from cloud_helpers import cloud_settings, grant_hosted_media
 from fastapi.testclient import TestClient
 from hypothesis import given
 from hypothesis import strategies as st
@@ -172,6 +172,8 @@ def app(cloud_engine, monkeypatch):
 
     sa.event.listen(cloud_engine, "before_cursor_execute", record)
     app = create_cloud_app(cloud_settings(), engine=cloud_engine, verifier=People())
+    # the upload routes are a hosted-media grant: without it the flag answers before any id is read
+    grant_hosted_media(cloud_engine, app)
     with TestClient(app) as client:
         answer = client.post(
             "/api/onboarding/complete", headers=_auth(), json={"age_confirmed": True}
