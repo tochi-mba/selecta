@@ -237,3 +237,5 @@
 .speaker-picker-note { margin: 0 0 var(--space-2); padding-inline-start: var(--space-2); border-inline-start: var(--marker) solid var(--status-warning); font: var(--type-meta); }
 .speaker-picker-default { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-height); margin-top: var(--space-2); }
 .speaker-picker-default input { width: var(--space-5); height: var(--space-5); margin: 0; }
+/* ADR-0475: the device chosen to make the sound when several could */
+.devices-default { display: inline-flex; align-items: center; gap: var(--icon-gap); width: fit-content; color: var(--selected); font: var(--type-caption); font-weight: var(--weight-label); }
