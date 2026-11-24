@@ -389,8 +389,20 @@ export function reduce(view: LucyView, action: LucyAction): LucyView {
   }
 }
 
-/** A few words about what just happened, for a screen reader. Never one per word of text. */
-export function summarize(events: LucyEvent[]): string[] {
+const SAID_REPLY_CHARS = 300;
+
+/** A finished reply as a screen reader hears it: plain words, cut at a word near the limit. */
+function replyWords(content: string): string {
+  const plain = content.replace(/[*_`#>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plain.length <= SAID_REPLY_CHARS) return plain;
+  const cut = plain.slice(0, SAID_REPLY_CHARS);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), SAID_REPLY_CHARS / 2))}… The rest is in the conversation`;
+}
+
+/** A few words about what just happened, for a screen reader. Never one per word of text. With
+ * `view` (the view these events made), a finished reply is said in its own words, so a screen
+ * reader hears Lucy's answer without going to find it; the history is never read out again. */
+export function summarize(events: LucyEvent[], view?: LucyView): string[] {
   const said: string[] = [];
   const count = (type: string) => events.filter((event) => event.type === type).length;
   if (events.some((event) => event.type === 'message.started' && event.payload?.role === 'assistant')) said.push('Lucy is replying');
@@ -401,7 +413,11 @@ export function summarize(events: LucyEvent[]): string[] {
   for (const event of events) {
     if (event.type === 'proposal.revision' && event.payload?.current) said.push(`New proposal: revision ${num(event.payload?.number)}`);
     if (event.type === 'permission.requested') said.push('Lucy is asking before it does something');
-    if (event.type === 'message.completed' && event.payload?.status === 'complete') said.push('Lucy finished replying');
+    if (event.type === 'message.completed' && event.payload?.status === 'complete') {
+      const reply = view?.messages.find((message) => message.id === event.payload?.message && message.role === 'assistant');
+      const words = reply ? replyWords(reply.content) : '';
+      said.push(words ? `Lucy replied: ${words}` : 'Lucy finished replying');
+    }
     if (event.type === 'run.state' && event.payload?.state === 'failed') said.push('Lucy stopped because something went wrong');
     if (event.type === 'error' && typeof event.payload?.message === 'string') said.push(event.payload.message);
   }

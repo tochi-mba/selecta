@@ -102,7 +102,9 @@ export function PlanGroupView({ group, cards, still }: { group: PlanGroup; cards
     : working ? `Working on: ${titleOf(working)} (${done} of ${cards.length} done)` : `${done} of ${plural(cards.length, 'step')} done`;
   const short = milestones(cards);
   return (
-    <section className={`lucy-plan ${settled ? 'is-settled' : 'is-live'}`} aria-label="Lucy’s steps">
+    // a group, not a landmark: there is one for every request, and a page of identically named
+    // regions is noise to anyone moving by landmark
+    <section className={`lucy-plan ${settled ? 'is-settled' : 'is-live'}`} role="group" aria-label="Lucy’s steps">
       <div className="lucy-plan-head">
         <p className="lucy-plan-summary">{summary}</p>
         <button type="button" className="quiet" aria-expanded={open} aria-controls={regionId} onClick={() => setOpen(!open)}>

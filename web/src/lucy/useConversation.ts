@@ -52,8 +52,10 @@ export function useConversation(id: string | null, onSummary: (words: string[]) 
     const events = buffer.current;
     buffer.current = [];
     if (!events.length) return;
+    // the view these events make, so a finished reply can be said in its own words
+    const next = reduce(viewRef.current, { type: 'events', events });
     dispatch({ type: 'events', events });
-    const words = summarize(events);
+    const words = summarize(events, next);
     if (words.length) said.current(words);
   }, []);
   const queue = useCallback((events: LucyEvent[]) => {

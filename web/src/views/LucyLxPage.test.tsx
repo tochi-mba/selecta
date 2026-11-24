@@ -107,7 +107,7 @@ describe('LX-0355-06 and LX-0357-02 exact scope stays with the chat', () => {
     const calls = backend();
     render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
     await userEvent.click(await screen.findByRole('tab', { name: 'Your mix' }));
-    const asks = await screen.findAllByRole('button', { name: 'Ask about Twice' });
+    const asks = await screen.findAllByRole('button', { name: 'Ask about this: Twice' });
     expect(asks).toHaveLength(2);
     await userEvent.click(asks[1]);
     // asking takes you to the chat, with the scope labelled above the box
@@ -115,8 +115,8 @@ describe('LX-0355-06 and LX-0357-02 exact scope stays with the chat', () => {
     expect(screen.getByText('Twice', { selector: '.lucy-selection span span' })).toBeInTheDocument();
     // looking at the proposal again does not lose or move the scope
     await userEvent.click(screen.getByRole('tab', { name: 'Your mix' }));
-    expect(screen.getAllByRole('button', { name: 'Ask about Twice' })[1]).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getAllByRole('button', { name: 'Ask about Twice' })[0]).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getAllByRole('button', { name: 'Ask about this: Twice' })[1]).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('button', { name: 'Ask about this: Twice' })[0]).toHaveAttribute('aria-pressed', 'false');
     await userEvent.click(screen.getByRole('tab', { name: 'Chat' }));
     await userEvent.type(await box(), 'make this one calmer{Enter}');
     await waitFor(() => expect(calls.some((call) => call.path.endsWith('/turns'))).toBe(true));
@@ -127,7 +127,7 @@ describe('LX-0355-06 and LX-0357-02 exact scope stays with the chat', () => {
     const calls = backend();
     render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
     await userEvent.click(await screen.findByRole('tab', { name: 'Your mix' }));
-    await userEvent.click((await screen.findAllByRole('button', { name: 'Ask about Twice' }))[0]);
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Ask about this: Twice' }))[0]);
     await userEvent.click(screen.getByRole('button', { name: 'Stop asking about Twice' }));
     await userEvent.type(await box(), 'anything else?{Enter}');
     await waitFor(() => expect(calls.some((call) => call.path.endsWith('/turns'))).toBe(true));
@@ -217,7 +217,7 @@ describe('LX-0361-07 looking at an older revision never moves the scope', () => 
     });
     render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
     await userEvent.click(await screen.findByRole('tab', { name: 'Your mix' }));
-    await userEvent.click((await screen.findAllByRole('button', { name: 'Ask about Twice' }))[1]);
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Ask about this: Twice' }))[1]);
     await userEvent.click(screen.getByRole('tab', { name: 'Your mix' }));
     // open the older revision, where the same recording sits in a different place, and compare
     await userEvent.click(screen.getByRole('button', { name: /^Revision 2/ }));
@@ -226,7 +226,7 @@ describe('LX-0361-07 looking at an older revision never moves the scope', () => 
     await userEvent.click(screen.getByRole('button', { name: 'Compare with current' }));
     expect(await screen.findByText(/Compared with revision 2/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Back to the current one' }));
-    const asks = await screen.findAllByRole('button', { name: 'Ask about Twice' });
+    const asks = await screen.findAllByRole('button', { name: 'Ask about this: Twice' });
     expect(asks.map((ask) => ask.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
     await userEvent.click(screen.getByRole('tab', { name: 'Chat' }));
     await userEvent.type(await box(), 'make this one calmer{Enter}');

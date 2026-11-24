@@ -84,7 +84,7 @@ function MessageItem({ message, superseded, onBranch, onRetry, canBranch }: {
         {(canBranch || unfinished) && !message.id.startsWith('turn:') && message.status !== 'streaming' && (
           <div className="lucy-msg-actions">
             {unfinished && message.turn && <Action className="quiet" working="Trying again…" run={() => onRetry(message.turn!)}>Try again</Action>}
-            {canBranch && <Action className="quiet" working="Branching…" run={() => onBranch(message.id)} aria-label={`Start a new conversation from this ${who === 'You' ? 'message of yours' : 'reply'}`}>Branch from here</Action>}
+            {canBranch && <Action className="quiet" working="Branching…" run={() => onBranch(message.id)} aria-label={`Branch from here: a new conversation from this ${who === 'You' ? 'message of yours' : 'reply'}`}>Branch from here</Action>}
           </div>
         )}
       </article>

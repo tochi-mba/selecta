@@ -76,7 +76,7 @@ function SeamRow({ seam, entry, readyOnly, number, into, onAsk, selected }: {
         {evidence && <p className="hint">{tempoGapWords(evidence.tempo_gap)} · {keyDistanceWords(evidence.key_distance)}{notes.length ? ` · ${notes.join(' · ')}` : ''}</p>}
         {!!seam?.warnings.length && <ul className="lucy-warnings">{seam.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
       </div>
-      <button type="button" className="quiet" aria-pressed={selected} onClick={onAsk} aria-label={`Ask about the transition into ${into.title || 'this song'}`}>Ask about this</button>
+      <button type="button" className="quiet" aria-pressed={selected} onClick={onAsk} aria-label={`Ask about this: the transition into ${into.title || 'this song'}`}>Ask about this</button>
     </div>
   );
 }
@@ -164,7 +164,7 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
                   run={() => change({ op: 'remove', occurrence: song.occurrence }, (nextSong ?? previous) ? { occurrence: (nextSong ?? previous).occurrence, act: 'remove' } : null)}>
                   <Icon name="trash" />
                 </Action>
-                <button type="button" data-act="ask" className="quiet" aria-pressed={songSelected} aria-label={`Ask about ${name}`}
+                <button type="button" data-act="ask" className="quiet" aria-pressed={songSelected} aria-label={`Ask about this: ${name}`}
                   onClick={() => onAsk({ occurrence: song.occurrence }, name)}>
                   Ask about this
                 </button>
