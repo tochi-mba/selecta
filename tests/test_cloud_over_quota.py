@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import zipfile
 
+from cloud_helpers import grant_hosted_media
 from cloud_world import HEADERS, ORIGINALS, add_asset, add_playback_file, signed_up
 
 from selecta.billing.plans import plan_for
@@ -28,6 +29,8 @@ def _over_quota(world, limit: int):
 
 def test_an_over_quota_workspace_is_named_and_refused_new_uploads(tmp_path, monkeypatch):
     with signed_up(tmp_path, monkeypatch) as world:
+        # a hosted account: uploads are a grant, and this is about what a full one is refused
+        grant_hosted_media(world.engine, world.client.app)
         add_asset(world.engine, world.objects, world.workspace_id, SONG)
         usage = _over_quota(world, 500)
         assert usage.read_only

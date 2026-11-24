@@ -216,14 +216,14 @@ def test_turning_lucy_off_stops_writes_but_keeps_reading_and_mixing(lucy):
     assert blocked.status_code == 403 and blocked.json()["code"] == "phase_off"
 
 
-def test_listening_history_is_opt_in_and_counts_only_the_player(lucy):
-    off = lucy.post("/api/listening/events", json={"song_id": 1, "session": "s",
-                                                   "event": "complete", "heard": 80})
-    assert off.json() == {"recorded": False}
+def test_listening_history_can_be_switched_off_and_counts_only_the_player(lucy):
+    """Memory is on by default (9df80c1b); switched off, nothing is recorded."""
+    play = {"song_id": 1, "session": "s", "event": "complete", "heard": 80}
+    assert lucy.post("/api/listening/events", json=play).json() == {"recorded": True}
+    lucy.put("/api/lucy/settings", json={"phases": {"memory": False}})
+    assert lucy.post("/api/listening/events", json=play).json() == {"recorded": False}
     lucy.put("/api/lucy/settings", json={"phases": {"memory": True}})
-    for _ in range(2):
-        lucy.post("/api/listening/events", json={"song_id": 1, "session": "s",
-                                                 "event": "complete", "heard": 80})
+    assert lucy.post("/api/listening/events", json=play).json() == {"recorded": True}
     lucy.post("/api/listening/events", json={"song_id": 2, "session": "s", "event": "skip",
                                              "heard": 5})
     preview = lucy.post("/api/listening/events", json={"song_id": 3, "session": "s",
