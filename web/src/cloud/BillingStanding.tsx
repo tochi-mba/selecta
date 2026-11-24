@@ -11,7 +11,8 @@ import { Notice } from './AccountLayout';
 // event in this browser for good; a new event (a new state or date) has a new key and shows again.
 
 export const STANDING_FLAG = 'billing.standing';
-const DISMISSED = 'selecta.billing.dismissed';
+// Holds only numbers (fingerprints), under a name that says nothing about what they stand for.
+const DISMISSED = 'selecta.notices.hidden';
 
 /** A one-way fingerprint of an event key (32-bit FNV-1a, hex): enough to tell events apart in
  * one browser, and nothing about the billing event itself is ever kept in storage. */
@@ -28,8 +29,12 @@ export function fingerprint(key: string): string {
  * dismissed, so that notice simply shows once more. */
 function dismissedPrints(): string[] {
   try {
-    const kept = JSON.parse(localStorage.getItem(DISMISSED) ?? '[]');
-    return Array.isArray(kept) ? kept.filter((print): print is string => typeof print === 'string' && /^f[0-9a-f]{8}$/.test(print)) : [];
+    const kept: unknown = JSON.parse(localStorage.getItem(DISMISSED) ?? '[]');
+    if (!Array.isArray(kept)) return [];
+    // Rebuilt from numbers, so nothing read back is ever written again as it was read.
+    return kept
+      .filter((print): print is string => typeof print === 'string' && /^f[0-9a-f]{8}$/.test(print))
+      .map((print) => `f${Number.parseInt(print.slice(1), 16).toString(16).padStart(8, '0')}`);
   } catch {
     return [];
   }
@@ -37,8 +42,9 @@ function dismissedPrints(): string[] {
 
 function dismiss(key: string) {
   const print = fingerprint(key);
+  const keep = dismissedPrints().filter((kept) => kept !== print).slice(-19);
   try {
-    localStorage.setItem(DISMISSED, JSON.stringify([...dismissedPrints().filter((kept) => kept !== print), print].slice(-20)));
+    localStorage.setItem(DISMISSED, JSON.stringify([...keep, print]));
   } catch {
     // storage refused (private browsing, full): it stays hidden for this visit only
   }
