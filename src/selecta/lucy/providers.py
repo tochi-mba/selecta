@@ -41,6 +41,39 @@ class ProviderError(Exception):
         self.code = code
         self.recoverable = recoverable
 
+    # What the provider itself said, read from the SDK error this was raised from, for logs and
+    # alerts. Never the key, and never the prompt: the API's error text names neither.
+
+    @property
+    def status(self) -> int | None:
+        return getattr(self.__cause__, "status_code", None)
+
+    @property
+    def kind(self) -> str:
+        cause = self.__cause__
+        body = getattr(cause, "body", None)
+        if isinstance(body, dict) and isinstance(body.get("error"), dict):
+            return str(body["error"].get("type") or type(cause).__name__)
+        return type(cause).__name__ if cause is not None else self.code
+
+    @property
+    def detail(self) -> str:
+        cause = self.__cause__
+        body = getattr(cause, "body", None)
+        if isinstance(body, dict) and isinstance(body.get("error"), dict):
+            text = str(body["error"].get("message") or "")
+        else:
+            text = str(getattr(cause, "message", "") or cause or self)
+        return text[:200]
+
+    @property
+    def configuration(self) -> bool:
+        """A setup problem no retry fixes: the key, its permissions, the model, or a missing
+        header (an organization-scoped key without `anthropic-workspace-id`)."""
+        if self.status in {401, 403, 404}:
+            return True
+        return self.status == 400 and "header" in self.detail.lower()
+
 
 @dataclass
 class ToolCall:

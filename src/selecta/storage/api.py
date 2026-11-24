@@ -22,6 +22,7 @@ from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 from selecta.storage.artifacts import Buckets
 from selecta.storage.audio_check import Rejected
+from selecta.storage.failures import storage_failure
 from selecta.storage.ids import require_id
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.storage.ports import (
@@ -258,9 +259,7 @@ def install_routes(
                 status_code=400, detail={"code": "invalid_upload", "message": str(error)}
             )
         if isinstance(error, R2Error):
-            return HTTPException(
-                status_code=503, detail={"code": "storage_temporarily_unavailable"}
-            )
+            return storage_failure(engine, error)
         return HTTPException(status_code=500, detail={"code": "upload_failed"})
 
     @app.post("/api/uploads/plan", status_code=201)

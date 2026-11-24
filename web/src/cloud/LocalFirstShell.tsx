@@ -30,7 +30,7 @@ import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
 import { planName } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
-import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
+import { forgetHostedAssets, hostedAssets, hostedResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CloudLibrary } from './CloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
@@ -66,6 +66,7 @@ import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
 import { profilesBySong, provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
 import { waveformFor } from './sharedWaveforms';
+import { withVersions } from './songVersions';
 import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
@@ -170,7 +171,6 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
   const coexisting = isHostedAccount(account) && on('cloud.stored_media');
-  const hostedCopies = useRef<Promise<HostedAsset[]> | null>(null);
   // BF-0462-04: the Library says where each song can play from, against this device's own
   // connected files and, for a grandfathered account, its hosted copies
   // Probing every handle means opening every file, which at thousands of songs cannot happen
@@ -283,7 +283,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       return found;
     },
     hosted: coexisting ? async (songs) => {
-      const listing = (hostedCopies.current ??= readHostedAssets(api, workspaceId).catch((problem) => { hostedCopies.current = null; throw problem; }));
+      const listing = hostedAssets(api, workspaceId); // read again after an upload (hostedMedia.ts)
       const assets = await listing;
       return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
     } : undefined,
@@ -318,7 +318,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const resolver = useCallback(async () => {
     if (resolverFor.current !== workspaceId) { resolverFor.current = workspaceId; resolving.current = null; }
     return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
-    device: makeResolver(opened, undefined, (songId, present, why) => {
+    // any version of the song this device holds plays it (ADR-0469 amendment 2)
+    device: withVersions(makeResolver(opened, undefined, (songId, present, why) => {
       if (present) lapsed.current.delete(songId);
       else lapsed.current.set(songId, why ?? 'missing');
       refreshStatusRef.current?.();
@@ -329,7 +330,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           refreshStatusRef.current?.();
         }).catch(() => undefined);
       }
-    }, { sharedCache: on('cloud.content_cache') }),
+    }, { sharedCache: on('cloud.content_cache') }), workspaceId),
     hosted: coexisting ? hostedResolver(api, workspaceId, {
       songs: () => programme.current,
       shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
@@ -355,6 +356,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // back online: read the library and the mix again
   useEffect(() => (offlineShell ? onReconnect(() => { refreshStatus(); refreshMix(); }) : undefined), [offlineShell, refreshStatus, refreshMix]);
   refreshStatusRef.current = refreshStatus;
+  // an upload accepted (or a stored song changed): read the hosted copies and the catalogue again
+  useEffect(() => {
+    const changed = () => { forgetHostedAssets(workspaceId); refreshStatus(); };
+    window.addEventListener(LIBRARY_CHANGED_EVENT, changed);
+    return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, changed);
+  }, [workspaceId, refreshStatus]);
   useEffect(() => { refreshStatus(); refreshMix(); void sweepLapsed(true); }, [refreshStatus, refreshMix, sweepLapsed]);
   useEffect(() => {
     const refreshWhenActive = () => {
@@ -939,7 +946,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
             {roomAdd.onDevice > 0 && <span className="room-open-waiting" data-testid="room-on-device" title={`${countOf(roomAdd.onDevice, 'request')} waiting on another device`}>{roomAdd.onDevice} waiting on a device</span>}
           </a>
         ) : undefined}
-        banner={<>{playback.view?.speaker === 'here' && <ChangedFromLine change={playback.changedFrom} nameOf={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null} />}{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{playback.view?.speaker === 'here' && <ChangedFromLine change={playback.changedFrom} nameOf={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null} />}{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} storedBytes={account.entitlement.storage_used_bytes} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section></HolderContext.Provider>
