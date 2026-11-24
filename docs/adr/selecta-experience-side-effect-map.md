@@ -53,6 +53,9 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta-requests:<workspace>` | local | `web/src/cloud/localFirstRequests.ts` | The songs asked for under Request a song in a browser mix, and which room requests this browser has already placed, so a reload keeps the queue (Cloud, ADR-0462) | Requests |
 | `selecta-requests-room:<workspace>` | local | `web/src/cloud/localFirstRequests.ts` | The last room request list the server answered, so Request a song still shows it while the connection is down (Cloud, `cloud.offline_shell`) | Requests |
 | `selecta.account-snapshot` | local | `web/src/cloud/offlineCache.ts` | The signed-in person's last account answer (user id, when, account), so a page opened offline still knows its workspace and features; forgotten with the workspace's device data (Cloud, `cloud.offline_shell`) | Cloud |
+| `selecta.cloud.verify-asked` | session | `web/src/cloud/Gate.tsx` | That the member pressed "I've verified my email", kept across the reload that follows, so a page that comes back unchanged can say the address still isn't verified (Cloud sign-in) | Cloud |
+| `selecta.controller.notices.seen` | local | `web/src/devices/ControllerNotices.tsx` | The ids of the last 60 remote-control notices this browser dismissed, so a dismissed notice stays dismissed across page loads (Cloud, `devices.remote_control`) | Cloud |
+| `selecta.debug.auth` | session | `web/src/cloud/authTrail.ts` | The last 20 sign-in problems in this tab (when, where, the error's name, message, status and isTransient; never a token), so a false "Sign in again" can be read afterwards (Cloud sign-in) | Cloud |
 | `selecta-mix-outbox-alias:<workspace>` | local | `web/src/cloud/outbox.ts` | Local mix ids matched to the server's once a queued create or edit lands, so later queued changes and a reloaded tab find the right mix (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-mix-outbox-notices:<workspace>` | local | `web/src/cloud/outbox.ts` | The last few plain notices about queued mix changes the server turned down, shown once and then removed (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
@@ -267,6 +270,7 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `DELETE /api/rooms/{room_id}/displays` | Unpairs displays |
 | `POST /api/guest/join` | Joins a room as a guest |
 | `POST /api/guest/rooms/{room_id}/requests` | A guest asks for a song |
+| `POST /api/guest/rooms/{room_id}/requests/batch` | A guest asks for several songs at once; each is accepted or refused on its own |
 | `DELETE /api/guest/rooms/{room_id}/requests/{request_id}` | A guest withdraws a request |
 | `POST /api/guest/rooms/{room_id}/requests/{request_id}/vote` | A guest votes |
 | `DELETE /api/guest/rooms/{room_id}/requests/{request_id}/vote` | A guest takes a vote back |
