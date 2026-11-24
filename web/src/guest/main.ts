@@ -32,7 +32,17 @@ type View = {
   nickname_confirm?: boolean;
   /** How many more songs this guest can ask for now; at 0, `limit_text` says why and until when. */
   requests_left?: number; limit_text?: string;
+  /** ADR-0475: a browser-first room offers only the songs of the device making the sound. Absent
+   * (an older server) is ready. */
+  music?: 'ready' | 'choosing' | 'reconnecting' | 'none';
 };
+/** What the guest is told while the room has no device to play from; never a device's name. */
+const MUSIC_WORDS: Record<string, { title: string; more: string }> = {
+  choosing: { title: 'The host is choosing where the music plays.', more: 'You can ask for songs in a moment.' },
+  reconnecting: { title: 'The music is paused while the host’s device reconnects.', more: 'Your requests are kept.' },
+  none: { title: 'The host hasn’t connected any music yet.', more: 'You can ask for songs once they do.' },
+};
+let lastMusic = 'ready';
 type Sent = { song_id: number; added: boolean; became_vote?: boolean; already_queued?: boolean; code?: string; message?: string; retry_after_s?: number | null };
 
 const POLL_MS = 5000;
@@ -352,10 +362,19 @@ function draw(): void {
     h('h1', { id: 'g-name', tabindex: -1 }, v.room_name),
     v.nickname_confirm && nameSave?.state === 'failed' ? h('p', { className: 'g-error', role: 'alert' }, `${nameSave.name} wasn't saved. ${nameSave.error ?? ''}`.trim(), ' ', h('button', { type: 'button', className: 'g-link', onclick: () => void saveNickname(nameSave?.name ?? '') }, 'Try again')) : null);
   const active = v.guest_status === 'active';
+  // ADR-0475: no device to play from yet (or it is reconnecting): said, and search waits with the
+  // guest's text kept; when the music is back, a search they had typed runs again by itself
+  const music = v.music ?? 'ready';
+  const held = active && v.requests_open && music !== 'ready' ? MUSIC_WORDS[music] : null;
   patch(parts.banners,
-    v.guest_status === 'pending' ? h('div', { className: 'g-section g-waiting', role: 'status' }, h('i', { className: 'g-spin', 'aria-hidden': 'true' }), h('p', {}, h('strong', {}, 'Waiting for the host to let you in'), h('span', { className: 'g-muted' }, 'This page opens by itself when they do.'))) : null);
+    v.guest_status === 'pending' ? h('div', { className: 'g-section g-waiting', role: 'status' }, h('i', { className: 'g-spin', 'aria-hidden': 'true' }), h('p', {}, h('strong', {}, 'Waiting for the host to let you in'), h('span', { className: 'g-muted' }, 'This page opens by itself when they do.'))) : null,
+    held ? h('div', { className: 'g-section g-waiting', role: 'status', 'data-music': music, 'data-key': `music-${music}` }, h('p', {}, h('strong', {}, held.title), h('span', { className: 'g-muted' }, held.more))) : null);
   patch(parts.now, active ? nowPlaying(v) : null);
-  parts.search.hidden = !(active && v.requests_open);
+  parts.search.hidden = !(active && v.requests_open) || music === 'none';
+  const box = document.getElementById('g-q') as HTMLInputElement | null;
+  if (box) box.disabled = music !== 'ready';
+  if (lastMusic !== 'ready' && music === 'ready' && box && box.value.trim().length >= 2) box.dispatchEvent(new Event('input'));
+  lastMusic = music;
   if (!parts.search.hidden) drawResults();
   drawBar();
   patch(parts.lists,
@@ -643,7 +662,9 @@ async function sendBasket(): Promise<void> {
     basket = [...held, ...songs.filter((song) => refused.some((one) => one.song_id === song.song_id))];
     for (const song of songs) whyNot.delete(song.song_id);
     for (const one of refused) {
-      whyNot.set(one.song_id, { message: one.message || "This one wasn't added. Try again.", until: one.retry_after_s ? Date.now() + one.retry_after_s * 1000 : undefined, never: one.code === 'not_requestable' });
+      // the device playing changed since the search: said plainly, and the results are read again
+      const gone = one.code === 'not_requestable';
+      whyNot.set(one.song_id, { message: gone ? 'That song isn’t available right now.' : one.message || "This one wasn't added. Try again.", until: one.retry_after_s ? Date.now() + one.retry_after_s * 1000 : undefined, never: gone });
     }
     watchWaits();
     sending = false;
