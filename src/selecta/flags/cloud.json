@@ -277,6 +277,7 @@
       "core": "The cloud service can't run, recover or erase data on time without them.",
       "cli": [
         "db",
+        "admin",
         "gateway",
         "maintain",
         "account-deletion-maintenance",
