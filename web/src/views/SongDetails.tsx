@@ -9,6 +9,7 @@ import { Action, Sheet, Status } from '../ui/controls';
 import { Field } from '../ui/primitives';
 import { SongMotif } from '../ui/MusicObjects';
 import { SongRelated } from './SongRelated';
+import { SongVersions } from './SongVersions';
 import { ViewProps } from './shared';
 
 const LOWEST_TEMPO = 40;
@@ -167,6 +168,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
         )}
         {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>}
       </dl>
+      <SongVersions song={song} onChanged={onChanged} notify={notify} />
       {flagOn('library.related_links') && <SongRelated song={song} />}
       {flagOn('library.corrections') && (
       <section className="stack">

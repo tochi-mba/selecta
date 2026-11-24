@@ -13,7 +13,8 @@ export type Milestone = { key: string; words: string };
 /** What an import's numbers say in words. Shared with Connect Music's own summary line. */
 export function importSummaryWords(summary: ImportSummary): string {
   const parts = [`${summary.imported} ${summary.imported === 1 ? 'song' : 'songs'} connected`];
-  if (summary.duplicates) parts.push(`${summary.duplicates} already in your library`);
+  // a version of a song already here is one more file of that song, never another song
+  if (summary.duplicates) parts.push(`${summary.duplicates} extra ${summary.duplicates === 1 ? 'copy' : 'copies'} of songs you already have`);
   if (summary.failed) parts.push(`${summary.failed} could not be read`);
   if (summary.skipped) parts.push(`${summary.skipped} skipped as not music`);
   const words = parts.join(', ');

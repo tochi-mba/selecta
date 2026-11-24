@@ -4,7 +4,9 @@ Every function takes the caller's connection and `workspace_id`, so row-level se
 `WHERE workspace_id = ...` filter both apply. Identity is `(workspace_id, content_sha256)`:
 registering the same hash again updates the display metadata and returns the same id, so the
 same file imported on two devices resolves to one entry. A different hash whose normalised
-title and artist match an existing entry is marked `duplicate_of` that entry, never merged.
+title and artist match an existing song, with a length within a few seconds, is a version of
+that song: marked `duplicate_of` its primary, never merged, and never listed on its own
+(`versions.py`, ADR-0469 amendment 2).
 
 No raw path ever reaches this module: `register_songs` refuses any song dict with a key that
 contains "path", as defence in depth behind the API models' `extra="forbid"`.
@@ -18,6 +20,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from selecta.local_media import versions
 from selecta.local_media.schema import local_song_availability, local_songs
 from selecta.persistence import db_now
 
@@ -64,15 +67,16 @@ def register_songs(
     conn: Connection, workspace_id: str, songs: Sequence[Mapping[str, Any]]
 ) -> list[dict[str, Any]]:
     """Upsert each song by `(workspace_id, content_sha256)` and answer, in order, with
-    `{"song_id", "content_sha256"}` plus `"duplicate_of"` where a different hash already holds
-    the same normalised title and artist. Re-registering a soft-deleted hash restores it.
+    `{"song_id", "content_sha256"}` plus `"duplicate_of"` where the file is a version of a song
+    already here (same normalised title and artist, length within a few seconds). Identical
+    bytes are always the same entry. Re-registering a soft-deleted hash restores it.
 
     Two devices importing the same file at once both land on the one entry: a losing insert is
     rolled back to its savepoint and read again, so the request never fails on the unique key."""
     for song in songs:
         _refuse_paths(song)
     now = db_now(conn)
-    earliest = _earliest_by_name(conn, workspace_id)
+    groups = versions.primaries(conn, workspace_id)
     answers: list[dict[str, Any]] = []
     for song in songs:
         sha = str(song["content_sha256"]).lower()
@@ -80,8 +84,8 @@ def register_songs(
         fields = {name: song.get(name) for name in OPTIONAL_FIELDS}
         existing = _by_hash(conn, workspace_id, sha)
         if existing is None:
-            key = (normalised(title), normalised(artist))
-            duplicate_of = earliest.get(key)
+            duration = song.get("duration_s")
+            duplicate_of = groups.match(title, artist, duration)
             try:
                 with conn.begin_nested():
                     made = conn.execute(
@@ -102,7 +106,8 @@ def register_songs(
                     raise
             else:
                 song_id = int(made.inserted_primary_key[0])
-                earliest.setdefault(key, song_id)
+                if duplicate_of is None:
+                    groups.add(song_id, title, artist, duration)
         if existing is not None:
             conn.execute(
                 local_songs.update()
@@ -126,27 +131,12 @@ def _by_hash(conn: Connection, workspace_id: str, sha: str) -> Any:
     ).first()
 
 
-def _earliest_by_name(conn: Connection, workspace_id: str) -> dict[tuple[str, str], int]:
-    """The earliest live entry for each normalised (title, artist), read once per registration
-    batch so a 5,000-track import does not rescan the library for every song. A new hash whose
-    key is here is a likely duplicate of that entry; hashes always differ, because a matching
-    hash is the same entry and never reaches duplicate marking."""
-    earliest: dict[tuple[str, str], int] = {}
-    rows = conn.execute(
-        sa.select(local_songs.c.id, local_songs.c.title, local_songs.c.artist)
-        .where(local_songs.c.workspace_id == workspace_id)
-        .where(local_songs.c.deleted_at.is_(None))
-        .order_by(local_songs.c.id)
-    )
-    for row in rows:
-        earliest.setdefault((normalised(row.title), normalised(row.artist)), int(row.id))
-    return earliest
-
-
 def list_songs(
     conn: Connection, workspace_id: str, *, after: int = 0, limit: int = 50
 ) -> tuple[list[dict[str, Any]], int | None]:
-    """A page of the workspace's songs (not deleted), id order, and the cursor for the next."""
+    """A page of the workspace's songs (not deleted), id order, and the cursor for the next.
+    Versions are included, each with `duplicate_of`, because a browser must know which file it
+    holds; the browser shows one row per song (web/src/cloud/songVersions.ts)."""
     rows = conn.execute(
         sa.select(local_songs)
         .where(local_songs.c.workspace_id == workspace_id)
