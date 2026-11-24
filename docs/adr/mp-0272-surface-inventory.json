@@ -233,24 +233,39 @@
    "axe": "web/e2e-cloud/bf-accessibility.cloud.ts"
   },
   {
-   "id": "site.admin.jobs",
+   "id": "site.admin.customers",
    "site": "admin",
-   "path": "/admin/jobs",
+   "path": "/admin/customers",
    "owner": [
-    "web/src/admin/JobsPage.tsx"
+    "web/src/admin/CustomersPage.tsx"
    ],
    "states": [
     "initial"
    ],
    "denominator": 1,
-   "axe": "web/e2e-cloud/bf-accessibility.cloud.ts"
+   "axe": null,
+   "gap": "The redesigned staff console needs a seeded privileged admin session; it is walked with Playwright against the local stack (doc 07b) and checked by Vitest in web/src/admin/AdminArea.test.tsx; automated axe coverage is still pending."
   },
   {
-   "id": "site.admin.accounts",
+   "id": "site.admin.billing",
    "site": "admin",
-   "path": "/admin/accounts",
+   "path": "/admin/billing",
    "owner": [
-    "web/src/admin/AccountsPage.tsx"
+    "web/src/admin/BillingPage.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": null,
+   "gap": "The redesigned staff console needs a seeded privileged admin session; it is walked with Playwright against the local stack (doc 07b) and checked by Vitest in web/src/admin/AdminArea.test.tsx; automated axe coverage is still pending."
+  },
+  {
+   "id": "site.admin.jobs",
+   "site": "admin",
+   "path": "/admin/jobs",
+   "owner": [
+    "web/src/admin/JobsPage.tsx"
    ],
    "states": [
     "initial"
@@ -272,19 +287,6 @@
    "axe": "web/e2e-cloud/bf-accessibility.cloud.ts"
   },
   {
-   "id": "site.admin.security",
-   "site": "admin",
-   "path": "/admin/security",
-   "owner": [
-    "web/src/admin/AiSecurityPages.tsx"
-   ],
-   "states": [
-    "initial"
-   ],
-   "denominator": 1,
-   "axe": "web/e2e-cloud/bf-accessibility.cloud.ts"
-  },
-  {
    "id": "site.admin.flags",
    "site": "admin",
    "path": "/admin/flags",
@@ -296,6 +298,90 @@
    ],
    "denominator": 1,
    "axe": "web/e2e-cloud/bf-accessibility.cloud.ts"
+  },
+  {
+   "id": "site.admin.content",
+   "site": "admin",
+   "path": "/admin/content",
+   "owner": [
+    "web/src/admin/ContentPage.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": null,
+   "gap": "The redesigned staff console needs a seeded privileged admin session; it is walked with Playwright against the local stack (doc 07b) and checked by Vitest in web/src/admin/AdminArea.test.tsx; automated axe coverage is still pending."
+  },
+  {
+   "id": "site.admin.emergency",
+   "site": "admin",
+   "path": "/admin/emergency",
+   "owner": [
+    "web/src/admin/EmergencyPage.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": null,
+   "gap": "The redesigned staff console needs a seeded privileged admin session; it is walked with Playwright against the local stack (doc 07b) and checked by Vitest in web/src/admin/AdminArea.test.tsx; automated axe coverage is still pending."
+  },
+  {
+   "id": "site.admin.security",
+   "site": "admin",
+   "path": "/admin/security",
+   "owner": [
+    "web/src/admin/StaffPage.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": null,
+   "gap": "The redesigned staff console needs a seeded privileged admin session; it is walked with Playwright against the local stack (doc 07b) and checked by Vitest in web/src/admin/AdminArea.test.tsx; automated axe coverage is still pending."
+  },
+  {
+   "id": "site.admin.communications",
+   "site": "admin",
+   "path": "/admin/communications",
+   "owner": [
+    "web/src/admin/CommsPage.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": null,
+   "gap": "The redesigned staff console needs a seeded privileged admin session; it is walked with Playwright against the local stack (doc 07b) and checked by Vitest in web/src/admin/AdminArea.test.tsx; automated axe coverage is still pending."
+  },
+  {
+   "id": "site.admin.system",
+   "site": "admin",
+   "path": "/admin/system",
+   "owner": [
+    "web/src/admin/SystemPage.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": null,
+   "gap": "The redesigned staff console needs a seeded privileged admin session; it is walked with Playwright against the local stack (doc 07b) and checked by Vitest in web/src/admin/AdminArea.test.tsx; automated axe coverage is still pending."
+  },
+  {
+   "id": "site.admin.pilots",
+   "site": "admin",
+   "path": "/admin/pilots",
+   "owner": [
+    "web/src/admin/PilotsPage.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": null,
+   "gap": "The business pilot controls require a seeded privileged admin session; automated axe coverage is still pending."
   },
   {
    "id": "site.business.harness",
@@ -351,24 +437,15 @@
    ],
    "denominator": 1,
    "axe": "web/e2e-cloud/bf-accessibility.cloud.ts"
-  },
-  {
-   "id": "site.admin.pilots",
-   "site": "admin",
-   "path": "/admin/pilots",
-   "owner": [
-    "web/src/admin/PilotsPage.tsx"
-   ],
-   "states": [
-    "initial"
-   ],
-   "denominator": 1,
-   "axe": null,
-   "gap": "The business pilot controls require a seeded privileged admin session; automated axe coverage is still pending."
   }
  ],
  "overlays": [
-  {"id": "site.overlay.cloud.delete_account", "title": "Delete your SelectaDJ account?", "kind": "alertdialog", "owner": "web/src/cloud/AccountData.tsx"},
+  {
+   "id": "site.overlay.cloud.delete_account",
+   "title": "Delete your SelectaDJ account?",
+   "kind": "alertdialog",
+   "owner": "web/src/cloud/AccountData.tsx"
+  },
   {
    "id": "site.overlay.cloud.shortcuts",
    "title": "Keyboard shortcuts",
@@ -410,13 +487,19 @@
    "title": "RoomSettings confirmation",
    "kind": "dialog",
    "owner": "web/src/business/rooms/RoomSettings.tsx"
+  },
+  {
+   "id": "site.overlay.admin.dangerous_action",
+   "title": "(Dangerous console action), e.g. Suspend jo@example.com",
+   "kind": "alertdialog",
+   "owner": "web/src/admin/safety.tsx"
   }
  ]
 },
- "outOfScope": [
-  {
-   "path": "web/src/harness",
-   "reason": "Device test harness, not shipped as a route"
-  }
- ]
+"outOfScope": [
+ {
+  "path": "web/src/harness",
+  "reason": "Device test harness, not shipped as a route"
+ }
+]
 }
