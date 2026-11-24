@@ -6,6 +6,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ago, groupGuests, guestsHeading, presenceChanges, screenPresence } from './presence';
 import { RoomPanel } from './RoomPanel';
+import { clearToasts, Toaster } from '../ui/toasts';
 
 const NOW = 1_800_000_000;
 type Answer = Record<string, unknown>;
@@ -29,22 +30,24 @@ function mount() {
     if (path === '/rooms/current') return { room: current };
     return current;
   }) as never;
-  return render(<RoomPanel api={api} workspaceId="ws-1" origin="https://app.test" />);
+  return render(<><RoomPanel api={api} workspaceId="ws-1" origin="https://app.test" /><Toaster /></>);
 }
+// the Guests card heads its list with "N here" and, when anyone is away, "· N away"
+const guestCount = () => screen.getByTestId('room-guests-heading').nextElementSibling as HTMLElement;
 async function poll() {
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
   await act(async () => { await vi.advanceTimersByTimeAsync(0); }); // the announcement, if due now
 }
 
 beforeEach(() => { vi.useFakeTimers(); calls = []; });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { clearToasts(); vi.useRealTimers(); });
 
 describe('room panel presence', () => {
   it('says who is here and who is away, and counts only those here', async () => {
     current = panel({ guests: [guest('g1', 'Creative Lemur', true, 2), guest('g2', 'Quiet Otter', false, 5 * 60)] });
     mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(screen.getByTestId('room-guests-heading')).toHaveTextContent('Guests (1 here, 1 away)');
+    expect(guestCount()).toHaveTextContent(/^1 here · 1 away$/);
     const rows = screen.getAllByTestId('room-guest');
     expect(rows[0]).toHaveTextContent('Creative Lemur');
     expect(within(rows[0]).getByTestId('room-guest-presence')).toHaveTextContent('Here now');
@@ -59,8 +62,8 @@ describe('room panel presence', () => {
     const gone = screen.getByTestId('room-guests-gone');
     expect(gone.tagName).toBe('DETAILS');
     expect(gone).not.toHaveAttribute('open');
-    expect(within(gone).getByText('Left or away (1)')).toBeInTheDocument();
-    expect(screen.getByTestId('room-guests-heading')).toHaveTextContent('Guests (0 here, 1 away)');
+    expect(within(gone).getByText('Away for a while (1)')).toBeInTheDocument();
+    expect(guestCount()).toHaveTextContent(/^0 here · 1 away$/);
   });
 
   it('shows each screen online or offline with its own Disconnect', async () => {
@@ -73,19 +76,19 @@ describe('room panel presence', () => {
     expect(rows[1]).toHaveTextContent('Screen 2 · offline since 21:04');
     await act(async () => { screen.getByRole('button', { name: 'Disconnect Screen 2' }).click(); await vi.advanceTimersByTimeAsync(0); });
     expect(calls).toContainEqual({ path: '/rooms/room-1/displays/d2', method: 'DELETE' });
-    expect(screen.getByRole('button', { name: 'Disconnect screens' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Disconnect all screens' })).toBeInTheDocument();
   });
 
   it('updates on the next poll with no refresh, and says so politely', async () => {
     current = panel({ guests: [guest('g1', 'Creative Lemur', true, 2)], displays: 1, screens: [tv('d1', 'Screen 1', true, NOW - 2)] });
     mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(screen.getByTestId('room-guests-heading')).toHaveTextContent('Guests (1 here)');
+    expect(guestCount()).toHaveTextContent(/^1 here$/);
 
     // the server restarts: its first answer says nobody has checked in since
     current = panel({ guests: [guest('g1', 'Creative Lemur', false, 40)], displays: 1, screens: [tv('d1', 'Screen 1', false, NOW - 40)], now: NOW + 3 });
     await poll();
-    expect(screen.getByTestId('room-guests-heading')).toHaveTextContent('Guests (0 here, 1 away)');
+    expect(guestCount()).toHaveTextContent(/^0 here · 1 away$/);
     expect(screen.getByTestId('room-screen')).toHaveTextContent('offline since');
     const said = screen.getByTestId('room-presence-said');
     expect(said).toHaveAttribute('aria-live', 'polite');
@@ -109,7 +112,7 @@ describe('room panel presence', () => {
     expect(screen.queryByTestId('room-guest')).toBeNull();
     expect(screen.queryByTestId('room-screen')).toBeNull();
     expect(screen.getByText(/No guests yet/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Disconnect screens' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Disconnect all screens' })).toBeNull();
   });
 });
 
@@ -140,6 +143,11 @@ describe('presence words', () => {
 describe('room panel actions', () => {
   const settle = async () => { await act(async () => { await vi.advanceTimersByTimeAsync(0); }); };
   const press = async (name: string) => { await act(async () => { screen.getByRole('button', { name }).click(); await vi.advanceTimersByTimeAsync(0); }); };
+  // a new code and closing the room live in the header's Room options menu
+  const roomOption = async (name: string) => {
+    await press('Room options');
+    await act(async () => { screen.getByRole('menuitem', { name }).click(); await vi.advanceTimersByTimeAsync(0); });
+  };
 
   it('asks before removing a guest, and sends nothing when the host keeps them', async () => {
     current = panel({ guests: [guest('g1', 'Creative Lemur', true, 2)] });
@@ -165,7 +173,7 @@ describe('room panel actions', () => {
     current = panel();
     mount();
     await settle();
-    await press('Make a new code');
+    await roomOption('Make a new code');
     const dialog = screen.getByRole('alertdialog', { name: 'Make a new code?' });
     expect(dialog).toHaveTextContent('The old QR code stops working the moment the new one exists.');
     await act(async () => { within(dialog).getByRole('button', { name: 'Make a new code' }).click(); await vi.advanceTimersByTimeAsync(0); });
@@ -173,23 +181,25 @@ describe('room panel actions', () => {
     expect(screen.getByText('New code made. The old one no longer works.')).toBeInTheDocument();
   });
 
-  it('says Room ended. on the panel it comes back to', async () => {
+  it('says the room closed on the panel it comes back to', async () => {
     current = panel();
     mount();
     await settle();
-    await press('Close room');
+    await roomOption('Close room');
     current = panel({ room: { ...(panel().room as object), status: 'ended' } });
     await act(async () => { within(screen.getByRole('alertdialog', { name: 'Close Garden party?' })).getByRole('button', { name: 'Close room' }).click(); await vi.advanceTimersByTimeAsync(0); });
-    expect(screen.getByRole('heading', { name: 'Open a room' })).toBeInTheDocument();
-    expect(screen.getByText('Room ended.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Let your guests pick the music' })).toBeInTheDocument();
+    expect(screen.getByText('Garden party is closed.')).toBeInTheDocument();
   });
 
-  it('counts votes and renders with the right word', async () => {
-    current = panel({ renders_left: 1, inbox: [{ request_id: 'q1', song: { song_id: 1, title: 'Tune', artist: 'Band', length_s: 200 }, status: 'sent', votes: 1, nickname: 'Fox' }] });
+  it('counts votes with the right word, and says nothing for the asker’s own vote', async () => {
+    const ask = (id: string, title: string, votes: number) => ({ request_id: id, song: { song_id: Number(id.slice(1)), title, artist: 'Band', length_s: 200 }, status: 'sent', votes, nickname: 'Fox' });
+    current = panel({ inbox: [ask('q1', 'Tune', 1), ask('q2', 'Other tune', 2)] });
     mount();
     await settle();
-    expect(screen.getByText('1 request render left this hour.')).toBeInTheDocument();
-    expect(screen.getByText(/· 1 vote$/)).toBeInTheDocument();
+    const [one, two] = screen.getAllByTestId('room-ask');
+    expect(one).not.toHaveTextContent(/vote/);
+    expect(within(two).getByText('2 votes')).toHaveClass('ask-extra');
   });
 
   it('stops reading the room while the tab is hidden and reads at once on return', async () => {

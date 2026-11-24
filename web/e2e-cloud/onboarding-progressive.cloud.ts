@@ -60,11 +60,13 @@ test('a new member carries on while the import finishes, and verify still settle
   await page.getByRole('button', { name: 'Continue while it finishes' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Check this device' })).toBeVisible();
   // the first batch of five lands while the rest are held at the door
+  // a running import's chip is a title, its count and a meter (ImportChip)
   const chip = page.locator('.cloud-import-chip');
-  await expect(chip).toContainText('Checking your music: 5 of 30 checked.');
+  await expect(chip).toContainText('Adding your music');
+  await expect(chip).toContainText('5 of 30 checked');
   await page.getByRole('button', { name: 'Finish later' }).click();
   await expect(songCount(page, 5)).toBeVisible();
-  await expect(chip).toContainText('Checking your music:');
+  await expect(chip).toContainText('Adding your music');
   await expect.poll(() => held.batches()).toBe(2);
   await expect(songCount(page, 5)).toBeVisible();
 
@@ -83,7 +85,8 @@ test('an import abandoned by a reload offers to carry on, and picking again dupl
   await openLocalFirst(page, user, '/library');
   const music = files(12);
   await page.getByLabel('Choose music files').setInputFiles(music);
-  await expect(page.locator('.cloud-import-chip')).toContainText('Checking your music: 5 of 12 checked.');
+  await expect(page.locator('.cloud-import-chip')).toContainText('Adding your music');
+  await expect(page.locator('.cloud-import-chip')).toContainText('5 of 12 checked');
   await expect.poll(() => held.batches()).toBe(2);
 
   await page.reload();
