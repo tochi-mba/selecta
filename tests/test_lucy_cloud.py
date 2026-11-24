@@ -503,3 +503,31 @@ def test_an_answer_cut_off_before_it_acted_is_asked_again_once(lucy):
     send(lucy, CAROL, conversation, "a very long brief")
     assert snapshot(lucy, CAROL, conversation)["messages"][-1]["content"] == "Here it is, shorter."
     assert "cut off before you finished" in json.dumps(provider.seen[-1])
+
+
+def test_first_asks_come_from_the_persons_own_library(lucy):
+    ids = songs(lucy, CAROL, [("Ye", "Burna Boy"), ("Last Last", "Burna Boy"),
+                              ("Essence", "Wizkid")])
+    _mix(lucy, CAROL, ids)
+    asks = lucy.client.get(f"{BASE}/status", headers=auth(CAROL)).json()["suggestions"]
+    assert asks[0] == "An hour of Burna Boy and Wizkid"
+    assert "What's in my current mix?" in asks and len(asks) == 3
+
+
+def test_a_plan_change_between_turns_is_said_once(lucy):
+    from selecta.billing import stripe_sync
+    from selecta.persistence import db_now
+
+    script(lucy, [{"chunks": ["One."]}])
+    conversation = converse(lucy, CAROL)
+    send(lucy, CAROL, conversation, "hi")
+    with transaction(lucy.engine) as conn:
+        stripe_sync.grant_override(conn, workspace_id=lucy.workspaces[CAROL], plan_id="standard",
+                                   reason="test", actor="tests", expires_at=db_now(conn) + 600)
+    for number in (2, 3):
+        script(lucy, [{"chunks": ["More."]}])
+        send(lucy, CAROL, conversation, "again", client_id=f"c{number}")
+    said = [e["payload"]["text"] for e in events(lucy, CAROL, conversation)
+            if e["type"] == "run.limit" and e["payload"].get("limit") == "plan"]
+    assert said == ["Your plan changed, so Lucy Standard answers from here on; the conversation "
+                    "so far is kept."]

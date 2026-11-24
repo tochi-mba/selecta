@@ -1,7 +1,7 @@
 import { KeyboardEvent, memo, ReactNode, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError, MixData, problemKind, ProblemKind } from '../api';
 import { useApi } from '../requestContext';
-import { lucy, newId } from '../lucy/client';
+import { lucy, lucyTransport, newId } from '../lucy/client';
 import { isRunActive } from '../lucy/reducer';
 import type { ConversationScope, LucyStatus, Selection } from '../lucy/types';
 import { forgetSent, keepUnsent, unsentKey, useUnsent } from '../lucy/unsent';
@@ -378,14 +378,14 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
           view={view}
           still={still}
           pending={pending}
-          canBranch={!!conversation && !running}
+          canBranch={!!conversation && !running && !lucyTransport()}
           onBranch={branch}
           onRetry={retry}
           onDecide={decide}
           empty={(
             <div className="lucy-empty">
               <p><b>{shownScope ? `Ask Lucy about this mix (${scopeWords(shownScope)}).` : 'Tell Lucy what kind of mix you want.'}</b> Lucy shows you every song and transition it plans, and builds nothing until you approve it.</p>
-              <ExamplePrompts onPick={fill} />
+              <ExamplePrompts onPick={fill} prompts={status?.suggestions} />
             </div>
           )}
         />
@@ -429,6 +429,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
       adopt={convo.adopt}
       reload={convo.reload}
       fillComposer={fill}
+      prompts={status?.suggestions}
       approve={(shown, isCurrent) => (
         <Approve
           revision={shown}

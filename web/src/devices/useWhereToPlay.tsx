@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { AskState } from './playOn';
 import { tabLog } from './audioTab';
-import { showToast } from '../ui/toasts';
+import { dismissToast, showToast } from '../ui/toasts';
 import { navigate } from '../router';
 import type { DeviceHolding } from './controller';
 import { SpeakerPicker } from './SpeakerPicker';
@@ -33,6 +33,8 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   // A1: devices that did not answer an ask this visit, left out until the next press
   const silent = useRef(new Set<string>());
   const started = useRef<string | null>(null);
+  // the 'Playing on X' toast, taken back when X turns out not to answer
+  const playingToast = useRef<number | null>(null);
   const choice = enabled && situation ? whereToPlay(situation) : null;
   const latest = useRef({ choice, situation });
   latest.current = { choice, situation };
@@ -58,7 +60,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     navigate('/listen');
     // the person is holding this device while the sound starts elsewhere: one way back
     const thisHolds = latest.current.situation?.devices.some((one) => one.device_id === here && one.online && one.songs > 0);
-    showToast(note ?? `Playing on ${device.name}.`, thisHolds ? { actions: [{ label: 'Play here instead', run: playHere }] } : {});
+    playingToast.current = showToast(note ?? `Playing on ${device.name}.`, thisHolds ? { actions: [{ label: 'Play here instead', run: playHere }] } : {});
   }, [askToPlay, playHere]);
 
   /** True when the press was handled here (asked elsewhere, picker opened, or nothing to do). */
@@ -90,6 +92,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     if ((phase !== 'no_answer' && phase !== 'offline') || !toldId || toldId !== started.current) return;
     started.current = null;
     silent.current.add(toldId);
+    if (playingToast.current !== null) { dismissToast(playingToast.current); playingToast.current = null; }
     const name = latest.current.situation?.devices.find((one) => one.device_id === toldId)?.name ?? 'That device';
     const others = latest.current.situation ? { ...latest.current.situation, devices: latest.current.situation.devices.map((one) => (silent.current.has(one.device_id) ? { ...one, online: false } : one)) } : null;
     const next = others ? whereToPlay(others) : null;

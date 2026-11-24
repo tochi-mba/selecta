@@ -172,7 +172,8 @@ def revision_json(conn: Connection, workspace_id: str, row: Any) -> dict[str, An
             found = store.get_song(conn, workspace_id, song_id)
             titles[song_id] = found["title"] if found else None
         diff = diff_ids(base, ids, titles)
-    warnings = [NOT_MEASURED]
+    # the pane says transitions are worked out as the mix plays; only real problems warn
+    warnings = []
     if any(not song["artist"] and song["duration"] == 0 for song in songs):
         warnings.append("A song in this proposal is no longer in your library.")
     summary_hash = _hash(ids, row.name)

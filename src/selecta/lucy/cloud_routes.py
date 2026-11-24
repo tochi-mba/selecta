@@ -101,7 +101,37 @@ def busy_words(device: str | None) -> str:
             "are kept.")
 
 
-def status_of(choices: dict[str, Any], tier_label: str) -> dict[str, Any]:
+def suggestions(conn, workspace_id: str) -> list[str]:
+    """Three first asks drawn from the person's own library: its two biggest artists and the
+    current mix, so the empty conversation starts from music they have."""
+    import sqlalchemy as sa
+
+    from selecta.local_media import current_mix
+    from selecta.local_media.schema import local_songs
+
+    rows = conn.execute(
+        sa.select(local_songs.c.artist, sa.func.count().label("n"))
+        .where(local_songs.c.workspace_id == workspace_id)
+        .where(local_songs.c.deleted_at.is_(None))
+        .group_by(local_songs.c.artist)
+        .order_by(sa.func.count().desc(), local_songs.c.artist)
+        .limit(2)
+    ).all()
+    artists = [row.artist for row in rows if row.artist]
+    asks = []
+    if len(artists) >= 2:
+        asks.append(f"An hour of {artists[0]} and {artists[1]}")
+    elif artists:
+        asks.append(f"A short mix of {artists[0]}")
+    if current_mix.read(conn, workspace_id).get("mix_id"):
+        asks += ["What's in my current mix?", "Take the slowest songs out of my mix"]
+    elif artists:
+        asks.append("Make a 30 minute mix to dance to")
+    return asks[:3]
+
+
+def status_of(choices: dict[str, Any], tier_label: str,
+              asks: list[str] | None = None) -> dict[str, Any]:
     """The local status shape, with the plan's Lucy level in place of a provider and model."""
     return {
         "enabled": choices["enabled"],
@@ -128,6 +158,7 @@ def status_of(choices: dict[str, Any], tier_label: str) -> dict[str, Any]:
         },
         "event_schema": cloud_store.EVENT_SCHEMA,
         "api_version": 1,
+        "suggestions": asks or [],
     }
 
 
@@ -173,7 +204,8 @@ def install_routes(
         principal = who(request, claims)
         with transaction(engine, principal.workspace.id) as conn:
             return status_of(cloud_settings.choices(conn, principal.user.id),
-                             tier_label(conn, principal))
+                             tier_label(conn, principal),
+                             suggestions(conn, principal.workspace.id))
 
     @app.put("/api/lucy-cloud/settings")
     def settings(
