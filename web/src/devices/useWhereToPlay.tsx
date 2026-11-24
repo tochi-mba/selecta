@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { AskState } from './playOn';
 import { tabLog } from './audioTab';
-import { dismissToast, showToast } from '../ui/toasts';
+import { showToast } from '../ui/toasts';
 import { navigate } from '../router';
 import type { DeviceHolding } from './controller';
 import { SpeakerPicker } from './SpeakerPicker';
@@ -14,6 +14,8 @@ import { becauseWords, NOBODY_OPEN, whereToPlay, type Choice, type Situation } f
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 type Device = { device_id: string; name: string };
+/** The one message about where the music is going, with its choices inline. */
+export type PlayNotice = { deviceId: string | null; text: string; actions: { label: string; run: () => void }[] };
 
 export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told }: {
   enabled: boolean;
@@ -27,14 +29,14 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   refreshHoldings: () => void;
   /** What the asked device said (usePlayOn): no answer in time makes it unusable this once. */
   asking?: AskState;
-}): { decide: () => boolean; picker: ReactNode; choice: Choice | null } {
+}): { decide: () => boolean; picker: ReactNode; choice: Choice | null; notice: PlayNotice | null; clearNotice: () => void } {
   const [asking, setAsking] = useState<Extract<Choice, { kind: 'ask' }> | null>(null);
   const said = useRef(new Set<string>());
   // A1: devices that did not answer an ask this visit, left out until the next press
   const silent = useRef(new Set<string>());
   const started = useRef<string | null>(null);
-  // the 'Playing on X' toast, taken back when X turns out not to answer
-  const playingToast = useRef<number | null>(null);
+  // one state, one message: the latest replaces any earlier one (shown on Listen's status line)
+  const [notice, setNotice] = useState<PlayNotice | null>(null);
   const choice = enabled && situation ? whereToPlay(situation) : null;
   const latest = useRef({ choice, situation });
   latest.current = { choice, situation };
@@ -51,7 +53,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   const startOn = useCallback((device: DeviceHolding, note?: string) => {
     const here = latest.current.situation?.thisDeviceId;
     if (device.device_id === here) {
-      if (note && !said.current.has(note)) { said.current.add(note); showToast(note); }
+      setNotice(note ? { deviceId: device.device_id, text: note, actions: [] } : null);
       playHere();
       return;
     }
@@ -60,7 +62,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     navigate('/listen');
     // the person is holding this device while the sound starts elsewhere: one way back
     const thisHolds = latest.current.situation?.devices.some((one) => one.device_id === here && one.online && one.songs > 0);
-    playingToast.current = showToast(note ?? `Playing on ${device.name}.`, thisHolds ? { actions: [{ label: 'Play here instead', run: playHere }] } : {});
+    setNotice({ deviceId: device.device_id, text: note ?? `Starting on ${device.name}.`, actions: thisHolds ? [{ label: 'Play here instead', run: () => { setNotice(null); playHere(); } }] : [] });
   }, [askToPlay, playHere]);
 
   /** True when the press was handled here (asked elsewhere, picker opened, or nothing to do). */
@@ -80,7 +82,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
       return true;
     }
     if (now.kind === 'ask') { setAsking(now); return true; }
-    showToast(NOBODY_OPEN, { actions: [{ label: 'Connect music here', run: () => navigate('/library') }] });
+    setNotice({ deviceId: null, text: NOBODY_OPEN, actions: [{ label: 'Connect music here', run: () => navigate('/library') }] });
     return true;
   }, [startOn]);
 
@@ -92,14 +94,16 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     if ((phase !== 'no_answer' && phase !== 'offline') || !toldId || toldId !== started.current) return;
     started.current = null;
     silent.current.add(toldId);
-    if (playingToast.current !== null) { dismissToast(playingToast.current); playingToast.current = null; }
     const name = latest.current.situation?.devices.find((one) => one.device_id === toldId)?.name ?? 'That device';
     const others = latest.current.situation ? { ...latest.current.situation, devices: latest.current.situation.devices.map((one) => (silent.current.has(one.device_id) ? { ...one, online: false } : one)) } : null;
     const next = others ? whereToPlay(others) : null;
-    showToast(phase === 'offline' ? `${name} isn’t open right now.` : `${name} didn’t answer.`, { tone: 'problem', actions: [
-      { label: 'Try again', run: () => { silent.current.delete(toldId); const again = latest.current.situation?.devices.find((one) => one.device_id === toldId); if (again) startOn(again); } },
-      ...(next && next.kind !== 'speaker' && next.kind !== 'none' ? [{ label: 'Choose another device', run: () => { if (next.kind === 'ask') setAsking(next); else startOn(next.device, next.kind === 'only' && next.defaultAway ? becauseWords(next.device.name, next.defaultAway.name) : undefined); } }] : []),
-    ] });
+    const choose = next && next.kind !== 'speaker' && next.kind !== 'none'
+      ? [{ label: 'Choose another device', run: () => { setNotice(null); if (next.kind === 'ask') setAsking(next); else startOn(next.device, next.kind === 'only' && next.defaultAway ? becauseWords(next.device.name, next.defaultAway.name) : undefined); } }] : [];
+    setNotice({
+      deviceId: toldId,
+      text: phase === 'offline' ? `${name} isn’t open. Open SelectaDJ there, or play somewhere else.` : `${name} didn’t answer. It may be asleep; try again, or play somewhere else.`,
+      actions: [{ label: 'Try again', run: () => { setNotice(null); silent.current.delete(toldId); const again = latest.current.situation?.devices.find((one) => one.device_id === toldId); if (again) startOn(again); } }, ...choose],
+    });
   }, [phase, toldId, startOn]);
 
   const live = choice?.kind === 'ask' ? choice : asking;
@@ -115,5 +119,5 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
       }}
     />
   ) : null;
-  return { decide, picker, choice };
+  return { decide, picker, choice, notice, clearNotice: useCallback(() => setNotice(null), []) };
 }
