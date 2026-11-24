@@ -12,6 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
+from selecta import longpaths
 from selecta.config import SAMPLE_RATE
 
 CHANNELS = 2
@@ -31,7 +32,8 @@ def decode(
 
     The seek is placed after the input so it is sample accurate rather than keyframe accurate.
     """
-    cmd = ["ffmpeg", "-v", "error", "-nostdin", "-i", str(path)]
+    # the extended form for a song past Windows' old 260-character limit (selecta.longpaths)
+    cmd = ["ffmpeg", "-v", "error", "-nostdin", "-i", longpaths.os_path(path)]
     if start:
         cmd += ["-ss", f"{start:.6f}"]
     if duration is not None:

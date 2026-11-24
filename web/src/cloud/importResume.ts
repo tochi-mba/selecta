@@ -11,6 +11,7 @@ import {
 } from './importSession';
 import { getConnection } from './connection';
 import { canHeal, withRetry } from './resilientRequest';
+import { ImportFingerprints } from '../media/fingerprints';
 
 // Carrying an interrupted import on (flag `cloud.resilient_import`).
 //
@@ -99,6 +100,18 @@ export function retryImportNow(): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(IMPORT_RETRY_NOW));
 }
 
+/** `cloud.content_cache` (ADR-0469 amendment): this browser's fingerprint memo and derived
+ * store for one import, as an option to spread into the importer's options. Empty when the flag
+ * is off or the store will not open, so the import is then exactly as it always was. */
+export async function fingerprintOption(workspaceId: string): Promise<{ fingerprints?: ImportFingerprints }> {
+  if (!flagOn('cloud.content_cache')) return {};
+  try {
+    return { fingerprints: await ImportFingerprints.start(workspaceId) };
+  } catch {
+    return {};
+  }
+}
+
 type RunnerParts = { request: Request; openStore: () => Promise<MediaStore>; workspaceId: string; importer?: typeof runImport };
 
 /** The import runner every surface uses. With `cloud.resilient_import` on, the run writes the
@@ -109,14 +122,15 @@ type RunnerParts = { request: Request; openStore: () => Promise<MediaStore>; wor
 export function importRunnerFor({ request, openStore, workspaceId, importer = runImport }: RunnerParts, importId?: string): ImportRunner {
   return async (source, onProgress, signal) => {
     const store = await openStore();
+    const reuse = await fingerprintOption(workspaceId);
     if (!flagOn('cloud.resilient_import')) {
-      return importer({ source, request, store, deviceId: mediaDeviceId(workspaceId), onProgress, signal });
+      return importer({ source, request, store, deviceId: mediaDeviceId(workspaceId), onProgress, signal, ...reuse });
     }
     const journal = await ImportJournal.open(workspaceId);
     try {
       const summary = await importer({
         source, request, store, deviceId: mediaDeviceId(workspaceId), onProgress, signal,
-        journal, retry: importRetry, reportDevice: () => registeredDeviceId(workspaceId), importId,
+        journal, retry: importRetry, reportDevice: () => registeredDeviceId(workspaceId), importId, ...reuse,
       });
       const putAside = signal.aborted && signal.reason === IMPORT_SUSPENDED;
       if (!summary.paused && !putAside) await journal.clear();

@@ -52,6 +52,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `cloud/connection.css` | the connection banner and the buttons that wait for the server while offline | `cloud/ConnectionBanner.tsx`, `rooms/RoomPanel.tsx` |
 | `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
 | `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
+| `views/phoneEditor.css` | the editor for every screen: its header, the mix strip, the list of songs and transitions, the side pane and its sheets | `views/PhoneEditor.tsx` |
 
 Load order (`web/src/main.tsx`): tokens, boot, style.css, shell, polish, foundation, cloud-ui, cloud-shell, listening, creation,
 operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier

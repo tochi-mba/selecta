@@ -19,7 +19,24 @@ export function importSummaryWords(summary: ImportSummary): string {
   const words = parts.join(', ');
   if (summary.cancelled) return `Stopped. ${words} before you cancelled. Nothing else changed.`;
   if (summary.paused) return `Paused because browser storage is full. ${words} so far.`;
-  return `${words}.`;
+  const reuse = reuseWords(summary);
+  return reuse ? `${words}. ${reuse}` : `${words}.`;
+}
+
+const count = (value: number) => value.toLocaleString('en-GB');
+
+/** What this browser already knew about the songs (`cloud.content_cache`, ADR-0469): how many
+ * were recognised from an earlier import here, by any account, so their files did not have to be
+ * read and analysed again. Empty when the import did not use the fingerprint memo. */
+export function reuseWords(summary: ImportSummary): string {
+  const reuse = summary.reuse;
+  if (!reuse) return '';
+  const { recognised, analysed } = reuse;
+  if (!reuse.kept) return 'This browser isn’t keeping anything between visits (a private window, or storage turned off), so every song was analysed and none can be recognised next time.';
+  if (recognised + analysed === 0) return '';
+  if (analysed === 0) return `${count(recognised)} recognised from this browser, so nothing had to be analysed again.`;
+  if (recognised === 0) return 'None of these songs had been seen in this browser before, so each one was analysed. Next time, they’ll be recognised.';
+  return `${count(recognised)} recognised from this browser, ${count(analysed)} new ${analysed === 1 ? 'song' : 'songs'} analysed.`;
 }
 
 /** The milestone this snapshot has reached, or null when there is nothing new to say. Pure:
