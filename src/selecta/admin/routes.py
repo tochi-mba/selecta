@@ -111,6 +111,7 @@ def install_routes(
     def admin_overview(request: Request, claims: SignedIn):
         def read(conn: Connection, actor: Actor) -> dict:
             authorize(conn, actor, "platform.dashboard.read")
+            console_reads.report_own_health(conn)
             read_models.maybe_refresh(conn)
             out = read_models.overview(conn)
             out["emergency"] = [

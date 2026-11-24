@@ -109,13 +109,16 @@ def _lucy(conn: Connection, workspace_id: str, now: float) -> dict[str, Any]:
 
 
 def _jobs(conn: Connection, workspace_id: str) -> list[dict[str, Any]]:
+    from selecta.admin.read_models import live_pools, waiting_reason
     from selecta.work.schema import jobs
 
     rows = conn.execute(
-        sa.select(jobs.c.id, jobs.c.type, jobs.c.state, jobs.c.error_class, jobs.c.created_at)
+        sa.select(jobs.c.id, jobs.c.type, jobs.c.state, jobs.c.pool, jobs.c.error_class,
+                  jobs.c.created_at)
         .where(jobs.c.workspace_id == workspace_id).order_by(jobs.c.created_at.desc()).limit(10)
     ).mappings()
-    return [dict(row) for row in rows]
+    live = live_pools(conn)
+    return [{**dict(row), "waiting_reason": waiting_reason(row, live)} for row in rows]
 
 
 def _activity(conn: Connection, user_id: str, workspace_id: str | None) -> list[dict[str, Any]]:
