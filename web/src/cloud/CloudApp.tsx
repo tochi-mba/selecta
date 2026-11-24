@@ -46,7 +46,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DeviceDataCard } from './DeviceDataCard';
 import { forgetWorkspaceOnDevice } from './deviceData';
 import type { HostedView } from './HostedShell';
-import { onReconnect, reportOk, useConnection } from './connection';
+import { isOnline, onReconnect, reportOk, useConnection } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { forgetAccountSnapshot, rememberAccount, rememberedAccount } from './offlineCache';
 import { syncOfflineShell } from './offlineShell';
@@ -115,6 +115,9 @@ const OFFLINE_SHELL = 'cloud.offline_shell';
  *   asking again every `openRetryMs` once the first tries are spent;
  * - `healFirstMs`, `healMaxMs`: "Sign in again" asking by itself, the first wait and the longest. */
 export const SIGN_IN_TIMING = { waits: [1500, 3000, 6000], patienceMs: 30_000, openRetryMs: 5_000, healFirstMs: 3_000, healMaxMs: 30_000 };
+/** An account read that failed while the connection itself is fine (a 500, a 429) and left the
+ * kept account on screen is asked again by itself: first after `firstMs`, doubling to `maxMs`. */
+export const ACCOUNT_RETRY = { firstMs: 5_000, maxMs: 60_000 };
 const RENEWING_WORDS = 'Renewing your sign-in. Everything on this page is kept.';
 
 const PATHS: Record<Page, string> ={ home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
@@ -234,6 +237,10 @@ export function CloudApp() {
   // and showed "Sign in again" about twelve seconds after the load.
   const refreshLatest = useRef<() => Promise<void>>(async () => undefined);
   useEffect(() => () => window.clearTimeout(loginRetry.current), []);
+  // the next try of an account read that failed behind a kept account, and how many have failed
+  const accountRetry = useRef(0);
+  const accountMisses = useRef(0);
+  useEffect(() => () => window.clearTimeout(accountRetry.current), []);
   /** An answer got past the token: the run of misses is over, and so is its retry timer. */
   const tokenFound = useCallback(() => {
     window.clearTimeout(loginRetry.current);
@@ -253,6 +260,8 @@ export function CloudApp() {
       setProblem(null);
       setSignInAgain(false);
       tokenFound();
+      window.clearTimeout(accountRetry.current);
+      accountMisses.current = 0;
       if (flagOn(OFFLINE_SHELL)) rememberAccount(user.id, next);
     } catch (problem) {
       // During the sign-in redirect AuthKit can report a user a moment before it holds a token.
@@ -306,6 +315,15 @@ export function CloudApp() {
           if (!shownAccount.current) {
             setAccountFeatures(kept.value.features);
             setAccount(kept.value);
+          }
+          // Coming back online reads the account again, but a failure that never took the
+          // connection down (one 500, a 429) has no coming back: without another try here the
+          // kept account stayed on screen, unsaid and unchecked, until something else asked.
+          if (isOnline()) {
+            window.clearTimeout(accountRetry.current);
+            const wait = Math.min(ACCOUNT_RETRY.maxMs, ACCOUNT_RETRY.firstMs * 2 ** accountMisses.current);
+            accountMisses.current += 1;
+            accountRetry.current = window.setTimeout(() => void refreshLatest.current(), wait);
           }
           return;
         }
