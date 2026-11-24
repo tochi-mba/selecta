@@ -56,7 +56,7 @@ export function Tour({ page, can, onDone }: { page: AdminPage; can: (p: string) 
   useLayoutEffect(() => {
     if (!step) return;
     const el = document.querySelector(`[data-tour="${step.target}"]`);
-    el?.scrollIntoView({ block: 'center', behavior: 'auto' });
+    (el as HTMLElement | null)?.scrollIntoView?.({ block: 'center', behavior: 'auto' });
     setBox(el?.getBoundingClientRect() ?? null);
     card.current?.focus();
   }, [step]);
