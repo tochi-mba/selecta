@@ -1,4 +1,4 @@
-import { get as localGet, send, type Request } from '../api';
+import { ApiError, get as localGet, send, type Request } from '../api';
 import type {
   Approval, ApproveAction, Commit, Conversation, ConversationScope, Diff, EditOp, EventsPage, Ledger, LucyStatus,
   Memory, MemoryFact, MemoryKind, Permission, Revision, SettingsChange, Snapshot, TurnAccepted, TurnBody,
@@ -38,8 +38,22 @@ function where(path: string): string {
   return transport ? path.replace(/^\/lucy(?=\/|$)/, transport.base) : path;
 }
 
+/** A refusal from the transport's own client (Cloud's `CloudError`) as the app's `ApiError`, so
+ * the page tells "Lucy is answering" (409 busy) or a stale save from a dropped connection. */
+async function viaTransport<T>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    return await transport!.request<T>(where(path), init);
+  } catch (error) {
+    const refusal = error as { message?: string; status?: unknown; code?: unknown };
+    if (!(error instanceof ApiError) && typeof refusal?.status === 'number' && refusal.status > 0) {
+      throw new ApiError(String(refusal.message ?? ''), refusal.status, typeof refusal.code === 'string' ? refusal.code : '');
+    }
+    throw error;
+  }
+}
+
 function get<T>(path: string): Promise<T> {
-  return transport ? transport.request<T>(where(path)) : localGet<T>(path);
+  return transport ? viaTransport<T>(path) : localGet<T>(path);
 }
 
 function change<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
@@ -48,7 +62,7 @@ function change<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, bo
     headers: { 'content-type': 'application/json', 'x-operation-id': newId() },
     body: method === 'DELETE' && body === undefined ? undefined : JSON.stringify(body ?? {}),
   };
-  return transport ? transport.request<T>(where(path), init) : send<T>(path, init);
+  return transport ? viaTransport<T>(path, init) : send<T>(path, init);
 }
 
 export const lucy = {
