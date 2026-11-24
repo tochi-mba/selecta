@@ -76,8 +76,10 @@ def test_the_default_is_listed_cleared_on_sign_out_and_only_ever_my_own_device(p
     assert _default(party, ALICE, theirs).status_code == 404
     assert _default(party, ALICE, "missing").status_code == 404
     # signed out: no longer the default
-    assert party.client.post(f"/api/devices/{laptop}/sign-out", headers=auth(ALICE)).status_code == 200
-    assert party.client.get("/api/devices", headers=auth(ALICE)).json()["default_speaker_id"] is None
+    signed_out = party.client.post(f"/api/devices/{laptop}/sign-out", headers=auth(ALICE))
+    assert signed_out.status_code == 200
+    listed = party.client.get("/api/devices", headers=auth(ALICE)).json()
+    assert listed["default_speaker_id"] is None
     # null clears it
     phone = party.register(ALICE, "Phone")["device"]["id"]
     assert _default(party, ALICE, phone).status_code == 200
