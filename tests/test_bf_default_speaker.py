@@ -147,3 +147,38 @@ def test_the_sessions_speaker_comes_first_and_a_lapsed_one_is_reconnecting(party
         )
     assert catalog.music_state(workspace) == "reconnecting"
     assert catalog.search(workspace, "", None, 20) == []
+
+
+def test_two_devices_pressing_play_at_once_have_one_winner(party, on):
+    """B11: with nobody playing, two devices press Play together; the take-over is a conditional
+    write under the session lock (observed owner: nobody), so exactly one becomes the speaker and
+    the other is told playback moved."""
+    import threading
+
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    phone = party.register(ALICE, "Phone")["device"]["id"]
+    gate = threading.Barrier(2)
+    answers: dict[str, int] = {}
+
+    def press(device: str) -> None:
+        gate.wait()
+        answers[device] = party.client.post(
+            "/api/playback/take-over",
+            headers=auth(ALICE),
+            json={
+                "device_id": device,
+                "start_playing": True,
+                "require_observed_owner": True,
+                "observed_owner_id": None,
+            },
+        ).status_code
+
+    threads = [threading.Thread(target=press, args=(device,)) for device in (laptop, phone)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert sorted(answers.values()) == [200, 409], answers
+    winner = next(device for device, status in answers.items() if status == 200)
+    view = party.client.get(f"/api/playback/session?device_id={winner}", headers=auth(ALICE))
+    assert view.json()["speaker"] == "here"
