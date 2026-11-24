@@ -760,7 +760,7 @@ export function CloudApp() {
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
         <HostedShell
           account={account}
-          signedIn={{ email: user.email, plan: planName(account), onSignOut: signOutHere }}
+          signedIn={{ email: user.email, plan: planName(account), onSignOut: signOutHere, onStaffConsole: showsAdmin(account) ? openAdmin : undefined }}
           page={hostedPage}
           notices={<>{shellNotices}{shellFeedback}</>}
           dock={singleAudioOwner(account) ? (view) => <CloudTransportDock api={api} account={account} page={dockPage(view)} reload={libraryVersion} /> : undefined}

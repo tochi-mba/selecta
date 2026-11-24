@@ -564,6 +564,7 @@ export function Shell({
             {account && (
               <div className="more-account">
                 <p><span className="account-avatar" aria-hidden="true">{account.email.slice(0, 1).toUpperCase()}</span><span className="account-who"><b title={account.email}>{account.email}</b><span>{account.plan} plan</span></span></p>
+                {account.onStaffConsole && <button className="more-help" onClick={account.onStaffConsole}><Icon name="settings" /> Staff console</button>}
                 <a className="more-help" href={supportHref('Help with SelectaDJ')}><Icon name="help" /> Help and support</a>
                 <button className="more-signout" onClick={account.onSignOut}><Icon name="signout" /> Sign out</button>
               </div>
@@ -593,7 +594,8 @@ export function Shell({
 }
 
 /** Who is signed in, for the side bar's account menu. */
-export type ShellAccount = { email: string; plan: string; onSignOut: () => void };
+/** onStaffConsole is set only for staff with the console flag on (CloudApp's showsAdmin). */
+export type ShellAccount = { email: string; plan: string; onSignOut: () => void; onStaffConsole?: () => void };
 
 const ACCOUNT_PLACES: ReadonlySet<string> = new Set(['account', 'billing']);
 const MORE_ICONS: Record<MoreDestination['id'], IconName> = {
@@ -691,6 +693,7 @@ function AccountMenu({ account, places, current }: { account: ShellAccount; plac
               <Icon name={MORE_ICONS[item.id]} size="toolbar" /> {item.label}
             </PageLink>
           ))}
+          {account.onStaffConsole && <button role="menuitem" tabIndex={-1} onClick={() => { close(true); account.onStaffConsole?.(); }}><Icon name="settings" size="toolbar" /> Staff console</button>}
           <a role="menuitem" tabIndex={-1} href={supportHref('Help with SelectaDJ')} onClick={() => close(false)}><Icon name="help" size="toolbar" /> Help and support</a>
           <button role="menuitem" tabIndex={-1} className="nav-account-signout" onClick={() => { close(true); account.onSignOut(); }}><Icon name="signout" size="toolbar" /> Sign out</button>
         </div>

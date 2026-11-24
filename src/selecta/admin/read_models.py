@@ -311,15 +311,35 @@ def search_accounts(conn: Connection, actor: Actor, *, query: str = "",
                  result=audit.AuditResult.SUCCESS, request_id=actor.request_id,
                  metadata={"results": len(rows), "filtered": bool(text)})
     since = db_now(conn) - 86_400
+    from selecta.admin.account_config import workspaces_with_hosted
+    from selecta.authz.schema import role_assignments
+    from selecta.persistence import metadata
+
+    hosted = set(workspaces_with_hosted(conn))
+    staff = set(conn.execute(sa.select(role_assignments.c.user_id).where(
+        role_assignments.c.revoked_at.is_(None))).scalars())
+    songs_t = metadata.tables.get("local_songs")
+    avail_t = metadata.tables.get("local_song_availability")
     out = []
     for row in rows:
-        failures = 0
-        if row["workspace_id"]:
+        failures, songs, devices = 0, None, None
+        workspace_id = row["workspace_id"]
+        if workspace_id:
             failures = conn.execute(sa.select(sa.func.count()).where(
-                jobs.c.workspace_id == row["workspace_id"], jobs.c.state == "failed",
+                jobs.c.workspace_id == workspace_id, jobs.c.state == "failed",
                 jobs.c.finished_at >= since)).scalar_one()
+            if songs_t is not None:
+                songs = conn.execute(sa.select(sa.func.count()).select_from(songs_t).where(
+                    songs_t.c.workspace_id == workspace_id, songs_t.c.deleted_at.is_(None))
+                ).scalar_one()
+            if avail_t is not None:
+                devices = conn.execute(sa.select(sa.func.count(sa.distinct(avail_t.c.device_id)))
+                                       .where(avail_t.c.workspace_id == workspace_id,
+                                              avail_t.c.present.is_(True))).scalar_one()
         out.append({**dict(row), "status": "suspended" if row["suspended_at"] else "active",
-                    "plan_id": row["plan_id"] or "free", "recent_failures": failures})
+                    "plan_id": row["plan_id"] or "free", "recent_failures": failures,
+                    "mode": "hosted" if workspace_id in hosted else "browser",
+                    "device_songs": songs, "devices": devices, "staff": row["id"] in staff})
     return out
 
 
