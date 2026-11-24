@@ -71,6 +71,7 @@ import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
 import { useAccountMix } from './useAccountMix';
+import { setTabBusy } from './accountTabs';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
 import { ChangedFromLine } from '../devices/ChangedFromLine';
@@ -766,6 +767,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   }, [api, workspaceId, request, setMixData, roomsPlace, requestsOn]);
   const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
   const roomWaiting = room ? room.toApprove : 0;
+  // R12: what a sign-out in any tab of this browser would stop, answered from here
+  setTabBusy({ playing: playback.isSpeaker() && now.phase === 'playing', room: !!room, importing: importLive.phase === 'running' });
   const roomShown = useRoomLive();
   // "N requests to add" counts only what the Requests list can add now; the rest are on the way
   const roomAdd = roomShown && requestsOn ? addable(roomShown.coming, songRequests.requests) : { ready: room?.toAdd ?? 0, onTheWay: 0, onDevice: 0 };
