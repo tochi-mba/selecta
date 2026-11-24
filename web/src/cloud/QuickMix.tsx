@@ -27,10 +27,10 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
   replacing?: string;
   problem?: ReactNode;
   /** ADR-0475 R8: the mix plays on another device (see ViewProps.playOn). */
-  playOn?: { name: string; now: boolean };
+  playOn?: { name: string; now: boolean; ask?: boolean };
 }) {
   // the songs counted are the ones the device that plays the mix holds
-  const where = playOn?.now ? playOn.name : 'this device';
+  const where = playOn?.now && !playOn.ask ? playOn.name : 'this device';
   const available = hero?.songs ?? playable;
   const short = available < songs;
   return (
@@ -85,7 +85,7 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
           )}
         </div>
         <Action className="primary big" disabled={!hero?.ready || blocked} busy={building} working="Building…" run={onPlay}>
-          <Icon name="play" /> {playOn?.now ? `Play on ${playOn.name}` : 'Play'}
+          <Icon name="play" /> {playOn?.now && !playOn.ask ? `Play on ${playOn.name}` : 'Play'}
         </Action>
       </footer>
       {hero && !hero.ready && <p className="hint">{hero.name} needs {hero.needs} more {hero.needs === 1 ? 'song' : 'songs'} this device can play.</p>}

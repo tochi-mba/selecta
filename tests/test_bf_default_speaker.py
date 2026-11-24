@@ -159,6 +159,14 @@ def test_the_sessions_speaker_comes_first_and_a_lapsed_one_is_reconnecting(party
         )
     assert catalog.music_state(workspace) == "reconnecting"
     assert catalog.search(workspace, "", None, 20) == []
+    # A2: a lease that lapsed a few seconds ago is within the grace: nothing visible changes
+    with transaction(party.engine, workspace) as conn:
+        conn.execute(
+            playback_sessions.update()
+            .where(playback_sessions.c.workspace_id == workspace)
+            .values(lease_expires_at=playback_sessions.c.lease_expires_at + 35)
+        )
+    assert catalog.music_state(workspace) == "ready"
 
 
 def test_two_devices_pressing_play_at_once_have_one_winner(party, on):
