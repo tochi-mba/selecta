@@ -40,7 +40,8 @@ export type CatalogueSong = {
 };
 
 export const NOT_HERE_YET = 'SelectaDJ can’t do that in your browser yet.';
-const PAGE = 100;
+// the server's largest page (local_media/api.py), so a big library is a few reads, not dozens
+const PAGE = 1000;
 /** How long one catalogue read is kept. A write through this adapter (`/local-media`, Never play)
  * or a library event from the server (`CATALOGUE_CHANGED_EVENT`) forgets it at once, so this only
  * bounds how long a change made on another device can go unseen. It was 3 s, which, with a

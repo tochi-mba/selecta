@@ -142,15 +142,38 @@ export function namesFromFilename(name: string): { artist: string; title: string
     : { artist: 'Unknown artist', title };
 }
 
+/** An artist tag that names nobody: written by rippers and players when they did not know. */
+const PLACEHOLDER_ARTIST = /^\s*(?:<?unknown(?:\s+artist)?>?|various(?:\s+artists?)?|artist|none|n\/a|-)?\s*$/i;
+
+/** Title and artist to show, from the file's tags where they say something, else from an
+ * "Artist - Title" name. A missing or placeholder artist ("Unknown Artist") with a title or file
+ * name of that shape is split, so "Adekunle Gold - Call on Me.mp3" is Call on Me by Adekunle Gold
+ * rather than the whole name by Unknown Artist. */
+export function displayNames(tags: { title?: string; artist?: string }, fileName: string): { title: string; artist: string } {
+  const fromName = namesFromFilename(fileName);
+  const tagArtist = tags.artist && !PLACEHOLDER_ARTIST.test(tags.artist) ? tags.artist : undefined;
+  if (tagArtist) return { title: tags.title ?? fromName.title, artist: tagArtist };
+  // the title tag itself may be "Artist - Title" (a tag copied from the file name)
+  const fromTitle = tags.title ? namesFromFilename(`${tags.title}.tag`) : null;
+  if (fromTitle && fromTitle.artist !== 'Unknown artist') return fromTitle;
+  if (fromName.artist !== 'Unknown artist') {
+    const stem = stemOf(fileName).trim();
+    // a title tag that only repeats the file name is replaced by the split one
+    const title = tags.title && tags.title.trim() !== stem ? tags.title : fromName.title;
+    return { title, artist: fromName.artist };
+  }
+  return { title: tags.title ?? fromName.title, artist: 'Unknown artist' };
+}
+
 /** The default tag reader: the file's own tags (ID3v2/v1, FLAC, M4A) first, the filename as
  * the fallback. Wrong tags are fine by design (ADR-0458 "metadata lies"): identity rides on
  * the content hash, and display metadata stays editable. */
 export const defaultTagReader: TagReader = async (file, known) => {
   const tags = (await readFileTags(file)) ?? {};
-  const names = namesFromFilename(file.name);
+  const { title, artist } = displayNames(tags, file.name);
   return {
-    title: tags.title ?? names.title,
-    artist: tags.artist ?? names.artist,
+    title,
+    artist,
     ...(tags.album ? { album: tags.album } : {}),
     duration_s: known?.duration_s ?? await probeDuration(file),
     codec: extensionOf(file.name) || undefined,
