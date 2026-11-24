@@ -325,7 +325,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
         <Icon name="thread" size="hero" className="lucy-mark" />
         <div>
           <h1 className="display small">Lucy</h1>
-          <p className="lede">Plan a mix together. Review its songs and transitions before approving a draft or choosing to play.</p>
+          <p className="lede">{lucyTransport() ? 'Ask about your music and mixes. Lucy proposes; nothing changes until you press Save.' : 'Plan a mix together. Review its songs and transitions before approving a draft or choosing to play.'}</p>
         </div>
       </div>
       <div className="row wrap lucy-head-actions">
