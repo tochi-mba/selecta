@@ -163,6 +163,7 @@
 .pe-song.is-lifted {
   z-index: var(--layer-sticky);
   border-color: var(--edge-selected);
+  background: var(--surface-overlay);
   box-shadow: var(--shadow-overlay);
   transition: none;
   pointer-events: none;
