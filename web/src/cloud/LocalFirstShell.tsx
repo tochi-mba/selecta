@@ -66,6 +66,7 @@ import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
 import { profilesBySong, provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
 import { waveformFor } from './sharedWaveforms';
+import { withVersions } from './songVersions';
 import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
@@ -318,7 +319,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const resolver = useCallback(async () => {
     if (resolverFor.current !== workspaceId) { resolverFor.current = workspaceId; resolving.current = null; }
     return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
-    device: makeResolver(opened, undefined, (songId, present, why) => {
+    // any version of the song this device holds plays it (ADR-0469 amendment 2)
+    device: withVersions(makeResolver(opened, undefined, (songId, present, why) => {
       if (present) lapsed.current.delete(songId);
       else lapsed.current.set(songId, why ?? 'missing');
       refreshStatusRef.current?.();
@@ -329,7 +331,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           refreshStatusRef.current?.();
         }).catch(() => undefined);
       }
-    }, { sharedCache: on('cloud.content_cache') }),
+    }, { sharedCache: on('cloud.content_cache') }), workspaceId),
     hosted: coexisting ? hostedResolver(api, workspaceId, {
       songs: () => programme.current,
       shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
