@@ -21,6 +21,7 @@ import { LucySettings } from './LucySettings';
 import { Announcer, Pending, Transcript, useAnnouncer, useStickToBottom } from './LucyTranscript';
 import type { ViewProps } from './shared';
 import '../styles/lucy.css';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 /** Lucy: describe a mix in your own words, and Lucy plans it. Nothing is built, saved or played until
  * it's approved, and Lucy never starts, pauses or replaces the music by itself. Lucy being off,
@@ -115,6 +116,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
   const [status, setStatus] = useState<LucyStatus | null>(null);
   const [statusProblem, setStatusProblem] = useState<{ kind: ProblemKind | 'old'; message: string } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [historySheet, setHistorySheet] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(savedHistoryOpen);
   const [tab, setTab] = useState<'chat' | 'mix'>('chat');
@@ -333,6 +335,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
           ? <button type="button" aria-pressed={historyOpen} onClick={toggleHistory}>{historyOpen ? 'Hide conversations' : 'Show conversations'}</button>
           : <button type="button" aria-haspopup="dialog" onClick={() => setHistorySheet(true)}>Conversations</button>}
         <button type="button" aria-haspopup="dialog" disabled={!status} onClick={() => setSettingsOpen(true)}><Icon name="settings" size="toolbar" /> Settings</button>
+        {lucyTransport() && conversation && <button type="button" aria-haspopup="dialog" onClick={() => setClearing(true)}>Clear</button>}
       </div>
       {(shownScope || backTo) && (
         <div className="row wrap lucy-scope">
@@ -342,6 +345,23 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
       )}
       {status && gate === 'open' && <ProviderNote status={status} onSettings={() => setSettingsOpen(true)} />}
     </header>
+  );
+
+  const clear = clearing && conversation && (
+    <ConfirmDialog
+      title="Clear this conversation?"
+      destructive
+      confirmLabel="Clear conversation"
+      working="Clearing…"
+      onConfirm={async () => {
+        if (running) await lucy.stop(conversation).catch(() => undefined);
+        await lucy.deleteConversation(conversation);
+        setClearing(false);
+        navigate('/mixes/lucy');
+      }}
+      onClose={() => setClearing(false)}
+      body={<p>Everything said here goes, on every device. Mixes you saved from it stay, and your music is never touched.</p>}
+    />
   );
 
   const settings = settingsOpen && status && (
@@ -485,6 +505,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
         </Drawer>
       )}
       {settings}
+      {clear}
     </main>
   );
 }

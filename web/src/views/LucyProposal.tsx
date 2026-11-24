@@ -231,6 +231,13 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
       {ledger && !live && <p className="hint">Readiness checked {whenWords(ledger.checked_at) || 'recently'}{ledger.playable_now && ready === needed ? '. Every directed transition has verified playable audio.' : '. Readiness is not guaranteed until checked again at approval.'}</p>}
       {snap.ready_only && ready < needed && <p className="lucy-readiness-warning" role="status">Only {ready} of {needed} required directed transitions have verified audio. This strict plan cannot be saved as ready-only yet. Ask Lucy for a shorter ready route, or explicitly change the rule before approving.</p>}
 
+      {live && shown.summary && (
+        <details className="lucy-why">
+          <summary>Why these songs</summary>
+          <p dir="auto">{shown.summary}</p>
+        </details>
+      )}
+
       {approve(shown, isCurrent)}
 
       {songs.length > 1 && !(live && songs.every((song) => song.energy === null)) && <EnergyBars values={songs.map((song) => song.energy)} />}

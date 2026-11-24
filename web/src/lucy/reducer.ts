@@ -299,7 +299,10 @@ function applyEvent(view: LucyView, event: LucyEvent, payload: Record<string, un
         ...view,
         messages: upsertMessage(view.messages, id, (found) => {
           const content = typeof payload.content === 'string' ? payload.content : found?.content ?? '';
-          return found ? { ...found, status, content } : newMessage(event, id, 'assistant', lastSeq(view.messages) + 1, content, status);
+          const meta = payload.meta && typeof payload.meta === 'object' ? payload.meta as Record<string, unknown> : null;
+          if (found) return { ...found, status, content, meta: meta ? { ...found.meta, ...meta } : found.meta };
+          const made = newMessage(event, id, 'assistant', lastSeq(view.messages) + 1, content, status);
+          return meta ? { ...made, meta } : made;
         }),
       };
     }

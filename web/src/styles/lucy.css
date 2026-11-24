@@ -143,6 +143,9 @@
 .lucy-text :is(ul, ol) { margin: 0 0 var(--space-2); padding-left: 1.3em; }
 .lucy-text > :last-child { margin-bottom: 0; }
 .lucy-msg-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-1); margin-inline-start: calc(-1 * var(--space-snug)); }
+.lucy-followup { border-radius: var(--radius-pill); font-size: var(--text-sm); }
+.lucy-why { margin: 0 0 var(--space-3); font-size: var(--text-sm); color: var(--text-soft); }
+.lucy-why summary { cursor: pointer; min-height: 32px; }
 .lucy-older { margin: 0 0 var(--space-4); text-align: center; }
 /* a short screen (a phone on its side): the heading gives its room to the conversation */
 @media (max-height: 500px) {
