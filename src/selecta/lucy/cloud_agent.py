@@ -386,6 +386,19 @@ async def _model_loop(
     plan = job.plan
     settings = gateway.provider_settings_for(plan)
     provider = job.provider_factory(settings, plan)
+    try:
+        return await _model_turns(job, ctx, events, writer, usage, notes, provider)
+    finally:
+        client = getattr(provider, "client", None)
+        if client is not None and hasattr(client, "close"):
+            await client.close()  # its connections belong to this turn's event loop
+
+
+async def _model_turns(
+    job: Job, ctx: cloud_tools.CloudCtx, events: Events, writer: Writer,
+    usage: dict[str, int], notes: list[str], provider: Any,
+) -> tuple[int, int]:
+    plan = job.plan
     tools = [provider.tool(spec["name"], spec["description"], spec["schema"])
              for spec in cloud_prompt.tool_specs(job.proposals_on)]
     with transaction(job.engine, job.workspace_id) as conn:
