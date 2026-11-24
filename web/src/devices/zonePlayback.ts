@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Api, OutputWire, SessionState, SessionView } from './usePlaybackDevice';
+import { statusWords } from '../cloud/api';
 
 // Which zone this browser is the speaker for (ADR-0443, `GET /api/zones/holding`). A device that
 // holds a zone's playback lease is that venue's speaker, so the workspace switcher refuses to
@@ -111,7 +112,7 @@ export function toZoneError(problem: unknown): ZonePlaybackError {
   const status = typeof raw.status === 'number' ? raw.status : 0;
   const code = raw.code ?? (typeof detail.code === 'string' ? detail.code : undefined) ?? (status === 404 ? 'not_found' : undefined);
   const zoneId = typeof detail.zone_id === 'string' ? detail.zone_id : null;
-  const message = typeof detail.message === 'string' ? detail.message : (raw.message || `Request failed (${status}).`);
+  const message = typeof detail.message === 'string' ? detail.message : (raw.message || statusWords(status));
   return new ZonePlaybackError(message, status, code, zoneId, raw.payload);
 }
 
@@ -128,7 +129,7 @@ export function fetchApi(fetchImpl: typeof fetch, base = '/api', headers: Record
     if (!response.ok) {
       const detail = detailOf(payload);
       const code = typeof detail.code === 'string' ? detail.code : undefined;
-      const message = typeof detail.message === 'string' ? detail.message : `Request failed (${response.status}).`;
+      const message = typeof detail.message === 'string' ? detail.message : statusWords(response.status);
       throw new ZonePlaybackError(message, response.status, code ?? (response.status === 404 ? 'not_found' : undefined), typeof detail.zone_id === 'string' ? detail.zone_id : null, payload);
     }
     return payload as T;

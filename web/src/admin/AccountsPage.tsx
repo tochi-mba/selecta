@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { DataTable } from '../ui/DataTable';
 import { AdminFetch, bytes, post, when } from './adminApi';
 import { Command, Failure, Panel, useLoad } from './parts';
+import { StorageMode } from './StorageMode';
 
 type Row = { id: string; email: string | null; workspace_id: string | null; plan_id: string; status: string; committed_bytes: number | null; recent_failures: number; created_at: number };
 type Detail = {
@@ -75,6 +76,7 @@ function AccountDetail({ api, userId, can }: { api: AdminFetch; userId: string; 
           <label>Days<input type="number" min={1} max={366} value={days} onChange={(event) => setDays(Number(event.target.value))} /></label>
           <Command label="Grant override" run={override} />
         </div>}
+        <StorageMode api={api} userId={userId} canChange={can('accounts.configure')} ensureChanges={async () => { await api('/admin/session/changes', { method: 'POST' }); return true; }} />
         <DataTable caption="Overrides" rows={account.overrides ?? []} rowKey={(o) => o.id} empty="No overrides."
           columns={[{ key: 'plan_id', label: 'Plan' }, { key: 'reason', label: 'Reason' }, { key: 'expires_at', label: 'Expires', render: (o) => when(o.expires_at) },
             { key: 'revoked_at', label: 'State', render: (o) => o.revoked_at ? 'Revoked' : can('billing.overrides.create') ? <Command label="Revoke" run={(r) => revoke(o.id, r)} /> : 'Active' }]} />

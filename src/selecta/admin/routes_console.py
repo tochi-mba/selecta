@@ -21,7 +21,16 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.admin import actions, alerts, commands, console_reads, customers, http, safety
+from selecta.admin import (
+    account_config,
+    actions,
+    alerts,
+    commands,
+    console_reads,
+    customers,
+    http,
+    safety,
+)
 from selecta.admin import staff_console as staff
 from selecta.authz.check import Actor
 from selecta.identity.tokens import Claims
@@ -72,6 +81,21 @@ class ExportBody(Guarded):
     action: str | None = Field(default=None, max_length=128)
     result: str | None = Field(default=None, max_length=16)
     since: float | None = None
+
+
+class ModeBody(Guarded):
+    mode: str = Field(min_length=1, max_length=16)
+
+
+class SwitchBody(Guarded):
+    value: str = Field(min_length=1, max_length=16)
+
+
+def _invalidate_rules(app: FastAPI) -> None:
+    """This process sees a flag rule change at once; others within the rule cache's age."""
+    cache = getattr(app.state, "flag_rules", None) or getattr(app.state, "rule_cache", None)
+    if cache is not None and hasattr(cache, "invalidate"):
+        cache.invalidate()
 
 
 class MassBody(BaseModel):
@@ -191,6 +215,33 @@ def install_routes(app: FastAPI, *, engine: Engine,
         action = run(request, claims, lambda conn, actor: customers.propose_deletion(
             conn, actor, user_id, reason=body.reason, intent=body.intent()))
         return {"action": actions.action_json(action)}
+
+    @app.get("/api/admin/customers/{user_id}/storage-mode")
+    def admin_storage_mode(user_id: str, request: Request, claims: SignedIn):
+        return run(request, claims,
+                   lambda conn, actor: account_config.storage_mode(conn, actor, user_id))
+
+    @app.put("/api/admin/customers/{user_id}/storage-mode")
+    def admin_set_storage_mode(user_id: str, body: ModeBody, request: Request,
+                               claims: SignedIn):
+        out = run(request, claims, lambda conn, actor: account_config.set_storage_mode(
+            conn, actor, user_id, mode=body.mode, reason=body.reason, intent=body.intent()))
+        _invalidate_rules(app)
+        return out
+
+    @app.get("/api/admin/customers/{user_id}/flags")
+    def admin_account_flags(user_id: str, request: Request, claims: SignedIn):
+        return run(request, claims,
+                   lambda conn, actor: account_config.account_flags(conn, actor, user_id))
+
+    @app.put("/api/admin/customers/{user_id}/flags/{flag_id}")
+    def admin_set_account_flag(user_id: str, flag_id: str, body: SwitchBody, request: Request,
+                               claims: SignedIn):
+        out = run(request, claims, lambda conn, actor: account_config.set_account_flag(
+            conn, actor, user_id, flag_id, value=body.value, reason=body.reason,
+            intent=body.intent()))
+        _invalidate_rules(app)
+        return out
 
     @app.post("/api/admin/customers/{user_id}/{command}")
     def admin_customer_command(user_id: str, command: str, body: Guarded, request: Request,
