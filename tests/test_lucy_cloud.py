@@ -495,3 +495,11 @@ def test_the_last_round_is_told_to_answer(lucy, monkeypatch):
     send(lucy, CAROL, converse(lucy, CAROL), "keep searching")
     told = [json.dumps(m) for m in provider.seen[-1]]
     assert any("last round of work for this message" in m for m in told)
+
+
+def test_an_answer_cut_off_before_it_acted_is_asked_again_once(lucy):
+    provider = script(lucy, [{"stop": "max_tokens"}, {"chunks": ["Here it is, shorter."]}])
+    conversation = converse(lucy, CAROL)
+    send(lucy, CAROL, conversation, "a very long brief")
+    assert snapshot(lucy, CAROL, conversation)["messages"][-1]["content"] == "Here it is, shorter."
+    assert "cut off before you finished" in json.dumps(provider.seen[-1])

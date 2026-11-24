@@ -18,6 +18,7 @@ describe('addresses', () => {
     ['/workshop', { page: 'workshop', tab: 'overview' }],
     ['/workshop/storage', { page: 'workshop', tab: 'storage' }],
     ['/mix/current/edit', { page: 'edit', draft: null }],
+    ['/mixes/lucy/01a20dd7-696f-71ed-802e-fa2498b0b910', { page: 'lucy', conversation: '01a20dd7-696f-71ed-802e-fa2498b0b910' }],
     ['/mixes/drafts/7/edit', { page: 'edit', draft: 7 }],
     ['/listen/', { page: 'listen' }],
   ])('%s', (path, route) => {
