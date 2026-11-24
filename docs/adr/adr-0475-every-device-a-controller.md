@@ -139,6 +139,27 @@ The one function: `whereToPlay(situation)` in `web/src/devices/whereToPlay.ts` (
 
 Two tabs of one browser share one device id and both could take the speaker's part: reproduced with two pages in one browser (40 of 40 samples with both tabs producing sound). Now a Web Lock (`devices/audioTab.ts`, `selecta-audio:{workspace}`) decides which tab makes the sound. A press in another tab asks the holder over a BroadcastChannel to stop; it stops, then lets go, and only then does the new tab start. A reloaded or asked tab starts only if no tab holds the lock. Every other tab of the speaker says "Playing in another tab." with "Play in this tab instead". Asks to play from another device are answered by one tab (a second lock, `selecta-house:`). Without Web Locks a tab plays as before. Two different browsers or profiles are two devices, kept to one speaker by the server.
 
+### R11. A remote can do what the speaker's screen can (capability table)
+
+A remote is any signed-in device of the same person that is not making the sound, including another tab. It can do everything the speaker's own screen does to the music, except what needs the speaker's hardware or files.
+
+| Control (speaker's screen) | From a remote today | How |
+| --- | --- | --- |
+| Play, pause, next, previous, seek, skip to a song in Up next | Yes | Signed playback commands (ADR-0461), applied by the speaker once, in order |
+| Volume and mute | Yes (G1, 2026-11-24) | `set_volume` on the session, last write wins; the speaker ramps to it; a new speaker rises from quiet over a second; unset plays at 80 |
+| Add next, add a request | Yes (R4) | `set_programme` with the song after the playing one, `keep_position` |
+| Reorder, remove, clear Up next | Not yet | Same path as Add next (`set_programme`); not built |
+| Start a mix, a saved mix, Make a Mix | Yes (R8) | The account's current mix, played through the one rule (Play on {device}) |
+| Stop (end the session) | Not yet | Needs a `stop` command; not built |
+| Play here instead, move to another device | Yes | Take-over (here) or a start-ask (another device) |
+| See what plays, position, Up next, the speaker's state | Yes | The session, the anchor and the server clock |
+| Never play, per-song actions | Yes | Account-wide routes (`/local-media/songs/never`) |
+| Rooms: open, close, approve, add, dismiss | Yes | The rooms routes are the account's, not the speaker's |
+| Check the speaker for new music | Not yet | Needs an ask like a start-ask; not built |
+| Sleep timer | Not built; considered | |
+| Maximum volume on the speaker | Not built; considered | |
+| Media keys and lock screen on the remote | Not possible without the remote making sound; not faked | |
+
 ## Edge cases and what happens
 
 | Case | Behaviour |
