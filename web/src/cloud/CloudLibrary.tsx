@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
+import { HolderContext } from '../devices/controller';
 import type { ImportSummary } from '../media';
 import { Menu, Status } from '../ui/controls';
 import { countOf } from '../ui/format';
@@ -29,6 +30,7 @@ export function CloudLibrary({ shared, connected, connect }: {
   // the finished import's result stands in for the banner until it is put away
   const [resultSeen, setResultSeen] = useState<ImportSummary | null>(null);
   const playable = shared.status.counts.ready ?? 0;
+  const holder = useContext(HolderContext);
   const doneWords = (summary: ImportSummary) => {
     if (playable === 0 && summary.imported + summary.duplicates > 0) return summaryWords(summary);
     const failed = summary.failed ? ` ${countOf(summary.failed, 'file')} could not be read.` : '';
@@ -67,7 +69,15 @@ export function CloudLibrary({ shared, connected, connect }: {
   return (
     <Library {...shared} browser={{ action }} lead={(
       <div className="lw-lead">
-        {needsFolder && fresh && (
+        {needsFolder && fresh && holder && (
+          // ADR-0475 R6: another device has the music, so this one is its remote; connecting
+          // music here is a choice, not the way forward
+          <p className="lw-remote-line" data-testid="library-remote-line">
+            <Icon name="system" size="toolbar" />
+            <span>{holder.online ? `This device is a remote for ${holder.name}.` : `Your music is on ${holder.name}, which isn’t open right now.`} Connect music here only if you want this device to make the sound.</span>
+          </p>
+        )}
+        {needsFolder && fresh && !holder && (
           <section className="lw-welcome" aria-labelledby="library-give-music">
             <span className="lw-welcome-mark" aria-hidden="true"><Icon name="folder" /></span>
             <div>
