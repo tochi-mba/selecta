@@ -13,6 +13,16 @@ import './libraryWorkspace.css';
 
 const KEEP_SAID = 'selecta.library.keep-said';
 
+/** ADR-0475 R6, R7: the one quiet line when another device has the music. A device with some
+ * music of its own says how much is here and where the rest is. */
+export function remoteLineWords(playable: number, connected: number, holder: { name: string; online: boolean }): string {
+  if (playable > 0) return `${formatCount(playable)} of ${countOf(connected, 'song')} are on this device. The rest are on ${holder.name}${holder.online ? '' : ', which isn’t open right now'}.`;
+  return `${holder.online ? `This device is a remote for ${holder.name}.` : `Your music is on ${holder.name}, which isn’t open right now.`} Connect music here only if you want this device to make the sound.`;
+}
+
+/** R7: said once, on a browser that cannot keep folder access between visits. */
+export const KEEP_WORDS = 'This browser can’t keep access to your music between visits. When a song is needed again, SelectaDJ asks you to choose it.';
+
 type ConnectProps = Omit<Parameters<typeof ConnectMusic>[0], 'variant' | 'ref'>;
 
 /** The Library in browser-first Cloud. Empty, it is one step: add your music. With songs, the
@@ -80,10 +90,7 @@ export function CloudLibrary({ shared, connected, connect }: {
           // music here is a choice, not the way forward
           <p className="lw-remote-line" data-testid="library-remote-line">
             <Icon name="system" size="toolbar" />
-            <span>{playable > 0
-              // R7: a device with some music of its own plays those; the rest are on the other device
-              ? `${formatCount(playable)} of ${countOf(connected, 'song')} are on this device. The rest are on ${holder.name}${holder.online ? '' : ', which isn’t open right now'}.`
-              : `${holder.online ? `This device is a remote for ${holder.name}.` : `Your music is on ${holder.name}, which isn’t open right now.`} Connect music here only if you want this device to make the sound.`}</span>
+            <span>{remoteLineWords(playable, connected, holder)}</span>
           </p>
         )}
         {needsFolder && fresh && !holder && (
@@ -107,7 +114,7 @@ export function CloudLibrary({ shared, connected, connect }: {
         {!keepSaid && playable > 0 && !dirPicker().supported && (
           <p className="lw-remote-line" data-testid="library-keep-line">
             <Icon name="system" size="toolbar" />
-            <span>This browser can’t keep access to your music between visits. When a song is needed again, SelectaDJ asks you to choose it.</span>
+            <span>{KEEP_WORDS}</span>
             <button type="button" className="quiet" onClick={sayKept}>Got it</button>
           </p>
         )}

@@ -1,7 +1,8 @@
 import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { linksFamily } from './localFirstLinks';
-import { mixFamily, type PlayableSong } from './localFirstMixes';
+import { mixFamily, type PlayableSong, type SongPlace } from './localFirstMixes';
+import { notOnSpeaker, playsOn, speakerHolds } from '../devices/controller';
 import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscoveries';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 import { requestsFamily } from './localFirstRequests';
@@ -249,7 +250,17 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted', never: song.never === true };
     });
   };
-  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.()) : null;
+  // R5: a result is placed by the device playing (it plays there, it is on another device, or on none)
+  const placeOf: SongPlace = (songId) => {
+    const link = sources.controller?.();
+    if (!link) return { rank: 0, where: null };
+    if (speakerHolds(link, songId)) return { rank: 0, where: playsOn(link.speakerName) };
+    const where = sources.holders?.()?.(songId);
+    if (where?.online.length) return { rank: 1, where: `Only on ${where.online[0]}` };
+    if (where?.before.length) return { rank: 1, where: `On ${where.before[0]}, not open now` };
+    return { rank: where ? 2 : 1, where: where ? 'On no device right now' : notOnSpeaker(link.speakerName).replace(/:.*$/, '') };
+  };
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
     songs: async () => {

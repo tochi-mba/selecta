@@ -20,6 +20,7 @@ TABLE_MODULES: tuple[str, ...] = (
     "selecta.local_media.schema",
     "selecta.local_media.recipe_schema",
     "selecta.local_media.lyrics_schema",
+    "selecta.local_media.current_mix_schema",
     "selecta.work.schema",
     "selecta.ai.schema",
     "selecta.flags.rules",

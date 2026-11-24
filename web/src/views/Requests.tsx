@@ -877,7 +877,7 @@ export function RequestsPanel() {
                 <button className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)} data-identity={identity}>
                   <span className="request-name">
                     <b>{song.title ?? 'Untitled'}</b>{' '}
-                    <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>
+                    <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}{song.where ? ` · ${song.where}` : ''}</span>
                   </span>{' '}
                   <small>{already === 'Requested' ? <><Icon name="check" size="compact" /> Requested</> : already || <><Icon name="plus" size="compact" /> Request</>}</small>
                 </button>

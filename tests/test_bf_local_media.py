@@ -285,6 +285,26 @@ def test_holdings_say_what_each_of_my_devices_can_open_by_id_only(party, local_m
     assert laptop_now["song_ids"] == [two, three]
 
 
+def test_a_signed_out_device_holds_nothing_any_more(party, local_media_on):
+    """ADR-0475: a device that is signed out loses its holdings; no other device counts on it."""
+    flags.use("+cloud.local_media,+devices,+devices.remote_control")
+    made = _register(party, ALICE, [song(SHA_A, "One")])
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    phone = party.register(ALICE, "Phone")["device"]["id"]
+    sent = party.client.post(
+        "/api/local-media/availability",
+        headers=auth(ALICE),
+        json={"device_id": laptop, "present": [made[0]["song_id"]], "absent": [], "snapshot": True},
+    )
+    assert sent.status_code == 200, sent.text
+    out = party.client.post(f"/api/devices/{laptop}/sign-out", headers=auth(ALICE))
+    assert out.status_code == 200, out.text
+    listed = party.client.get("/api/local-media/holdings", headers=auth(ALICE)).json()["devices"]
+    assert [entry["device_id"] for entry in listed] == [phone]
+    gone = party.client.get(f"/api/local-media/holdings?device_id={laptop}", headers=auth(ALICE))
+    assert gone.status_code == 404 or gone.json().get("song_ids") == []
+
+
 def test_holdings_are_only_my_own_devices_and_a_stale_device_is_not_online(party, local_media_on):
     flags.use("+cloud.local_media,+devices,+devices.remote_control")
     laptop = party.register(ALICE, "Laptop")["device"]["id"]

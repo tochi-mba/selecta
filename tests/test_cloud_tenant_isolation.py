@@ -332,6 +332,10 @@ FLAG_DARK = {
     ("POST", "/api/local-media/recipes/{mix_id}/revisions"),
     ("POST", "/api/local-media/recipes/{mix_id}/duplicate"),
     ("DELETE", "/api/local-media/recipes/{mix_id}"),
+    # The account's current mix (ADR-0475 R8) is one row keyed by the caller's workspace
+    # (`test_bf_current_mix.py`).
+    ("GET", "/api/local-media/current"),
+    ("PUT", "/api/local-media/current"),
     # Word connections between catalogue songs ride `discover.word_links`, dark in Cloud while
     # `lyrics.display` is (SC-0406-03); every query is scoped to the caller's workspace.
     ("GET", "/api/local-media/links"),

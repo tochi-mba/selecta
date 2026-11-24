@@ -232,7 +232,9 @@
         "GET /api/local-media/recipes/{mix_id}",
         "POST /api/local-media/recipes/{mix_id}/revisions",
         "POST /api/local-media/recipes/{mix_id}/duplicate",
-        "DELETE /api/local-media/recipes/{mix_id}"
+        "DELETE /api/local-media/recipes/{mix_id}",
+        "GET /api/local-media/current",
+        "PUT /api/local-media/current"
       ],
       "surfaces": ["cloud.library"],
       "modes": ["cloud"],

@@ -250,7 +250,8 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/local-media/recipes` | Saves a new portable recipe (a mix over catalogue songs) as its first immutable revision |
 | `POST /api/local-media/recipes/{mix_id}/revisions` | Saves the next immutable revision of a recipe, refused when made from a stale one |
 | `POST /api/local-media/recipes/{mix_id}/duplicate` | Copies the latest recipe revision into a new recipe with a fresh identity |
-| `DELETE /api/local-media/recipes/{mix_id}` | Deletes a recipe and its revisions from this workspace |
+| `DELETE /api/local-media/recipes/{mix_id}` | Deletes a recipe and its revisions from this workspace; a recipe that was the current mix stops being current, and `mix.current` is published |
+| `PUT /api/local-media/current` | Sets or clears the workspace's current mix, compare-and-set against the one the device last saw; publishes `mix.current` on the workspace event stream (ADR-0475 R8) |
 
 ### Rooms (`src/selecta/rooms/api_host.py`, `src/selecta/rooms/api_guest.py`) - Requests (guest rooms)
 

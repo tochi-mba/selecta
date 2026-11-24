@@ -72,3 +72,14 @@ describe('request rows judged by every device (R4)', () => {
     expect(waitingCount({ inbox: [], coming } as never, rows)).toBe(2);
   });
 });
+
+describe('R5: search results placed by the device that would play them', () => {
+  it('puts songs the speaker can play first, then songs on another device, then none, and says where', async () => {
+    const { mixFamily } = await import('../cloud/localFirstMixes');
+    const store = { current: () => null, steering: () => ({}) } as never;
+    const rank: Record<number, { rank: number; where: string | null }> = { 1: { rank: 2, where: 'On no device right now' }, 2: { rank: 1, where: 'Only on Tablet' }, 3: { rank: 0, where: 'Plays on Laptop' } };
+    const family = mixFamily(store, async () => SONGS, () => true, (id) => rank[id] ?? { rank: 2, where: null });
+    const found = await family.answer('GET', '/songs', new URLSearchParams({ q: 'song' })) as { id: number; where?: string }[];
+    expect(found.slice(0, 3).map((song) => [song.id, song.where])).toEqual([[3, 'Plays on Laptop'], [2, 'Only on Tablet'], [1, 'On no device right now']]);
+  });
+});

@@ -126,6 +126,8 @@ export type SongRow = {
   lyric_status: string | null;
   never: boolean;
   priority: boolean;
+  /** ADR-0475 R5: where it would play, said only when that is not this device. */
+  where?: string;
 };
 
 export type SongDetail = {
