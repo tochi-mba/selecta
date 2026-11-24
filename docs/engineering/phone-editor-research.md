@@ -70,7 +70,7 @@ Each finding: what it is, where it comes from, and what SelectaDJ does with it.
 |---|---|---|
 | A resizable sheet has a grabber; tapping it cycles through the detents, and it works with VoiceOver. Medium (about half) and large detents; add medium on iPhone for progressive disclosure. | Apple HIG, Sheets ([mirror of the HIG text](https://unpkg.com/apple-hig-mcp@1.1.3/content/sheets.md)) | The sheet has a grabber that is a real button ("Make the sheet taller" / "Make the sheet shorter"). It opens at half height and snaps to half or full. |
 | Support swiping down to dismiss, but never rely on it alone; show one sheet at a time; avoid a sheet on a sheet. | Apple HIG, Sheets | Swipe down closes; so do the Close button, Escape and the Back button. Opening another transition replaces the sheet's contents rather than stacking a second sheet. |
-| On mobile, bottom sheets span the width; on larger screens their contents move into side sheets. | Material 3, [Bottom sheets](https://material.io/components/sheets-bottom) | From 600px wide (and in phone landscape) the opened transition is a side pane, not a sheet. |
+| On mobile, bottom sheets span the width; on larger screens their contents move into side sheets. | Material 3, [Bottom sheets](https://material.io/components/sheets-bottom) | Wider than 640px (and in phone landscape) the opened transition is a side pane, not a sheet. |
 | A sheet must support the Back button and a visible Close; the grab handle is easy to miss; swipe-only dismissal is inaccessible; do not stack sheets; do not use sheets for long, complex content. | Nielsen Norman Group, [Bottom sheets](https://www.nngroup.com/articles/bottom-sheet/) | Back, Close and Escape all close it. Adding songs, which is longer and needs a keyboard, gets a full-height sheet of its own. |
 | The keyboard does not change `dvh`; by default Chrome resizes only the visual viewport, and Safari has no opt-out, so anything pinned to the bottom has to follow `visualViewport`. | Chrome, [Viewport resize behavior](https://developer.chrome.com/blog/viewport-resize-behavior), [MDN Visual Viewport API](https://developer.mozilla.org/en-US/docs/Web/API/Visual_Viewport_API) | The shell already measures the keyboard (`--keyboard-inset`, Shell.tsx). The sheets size from it, so the search field in Add songs is never under the keyboard. |
 
@@ -92,7 +92,7 @@ Each finding: what it is, where it comes from, and what SelectaDJ does with it.
 
 | Finding | Source | What we do |
 |---|---|---|
-| Window size classes: compact under 600, medium 600 to 839, expanded 840 and up; decided by the window, never the device. List-detail shows one pane on compact and medium, two on expanded. | Android, [Use window size classes](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [Canonical layouts](https://developer.android.com/guide/topics/ui/layout/canonical-layouts) | Compact: one column, transition in a bottom sheet. Medium, expanded and phone landscape: two panes, the list and the opened transition side by side. Decided with `matchMedia`, never the user agent. |
+| Window size classes: compact under 600, medium 600 to 839, expanded 840 and up; decided by the window, never the device. List-detail shows one pane on compact and medium, two on expanded. | Android, [Use window size classes](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [Canonical layouts](https://developer.android.com/guide/topics/ui/layout/canonical-layouts) | Compact: one column, transition in a bottom sheet. Medium, expanded and phone landscape: two panes, the list and the opened transition side by side. Decided with `matchMedia`, never the user agent, at the app's own canonical breakpoints (`styles/breakpoints.ts`: 640 for phones, which sits between Material's 600 and the largest phones held upright, and 1100 for laptops). |
 | Safe areas: fixed bars need `env(safe-area-inset-*)`, including left and right in landscape. | MDN, [env()](https://developer.mozilla.org/en-US/docs/Web/CSS/env) | The sheet pads its bottom by `--safe-bottom` and its sides by the left and right insets. |
 
 ## 3. Design
@@ -108,7 +108,7 @@ Each finding: what it is, where it comes from, and what SelectaDJ does with it.
    no A/B of clips that do not exist.
 5. **Every gesture has a button.** Drag has a menu; swipe has Close and Back; the grabber is a button.
 
-### 3.2 Phone (compact, under 600px)
+### 3.2 Phone (compact, up to 640px)
 
 From the top:
 
@@ -156,13 +156,13 @@ Gestures: swipe the grabber or header down to shrink, then to close; up to grow.
 the sheet's scrolled content only scrolls it. Escape and the Back button close it. Focus goes into the
 sheet on open and back to the connector on close.
 
-### 3.3 Phone landscape, tablet and foldables (600px and up, or under 500px tall)
+### 3.3 Phone landscape, tablet and foldables (wider than 640px, or under 500px tall)
 
 Two panes: the story on the left; the opened song or transition on the right, sticky under the app
 bar, with its own scroll. Nothing opens as a sheet except Add songs and Mix actions. With nothing open,
 the right pane says "Choose a transition to hear or change it" and shows the mix's facts.
 
-### 3.4 Desktop (1100px and up)
+### 3.4 Desktop (wider than 1100px)
 
 A browser mix (Cloud) uses the same two panes at desktop width, so the list is a readable column and the
 opened transition sits beside it. Local mode keeps today's Arrange, Story and Detail views with the side
@@ -202,7 +202,7 @@ The sheet rises over `--motion-overlay` and settles at its detent; a moved row s
 The story is an ordered list; each song is an `h3` inside its item, and each transition a button that
 names both songs. The handle is a button ("Reorder X") with the existing Space and arrow keys. The sheet
 is the app's own dialog (focus moved in, trapped, returned; Escape closes), plus a grabber button. At 200
-percent zoom the page is narrower than 600 CSS px, so it gets the one-column layout, which reflows.
+percent zoom the page is narrower than 640 CSS px, so it gets the one-column layout, which reflows.
 
 ### 3.9 The flag
 
