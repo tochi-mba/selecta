@@ -134,7 +134,7 @@ const surfaces = (lucy: string): Surface[] => [
     name: 'Lucy activity cards',
     open: async (page) => {
       await go(page, `/mixes/lucy/${lucy}`);
-      const steps = page.getByRole('region', { name: 'Lucy’s steps' }).or(page.locator('section.lucy-plan')).first();
+      const steps = page.getByRole('group', { name: 'Lucy’s steps' }).or(page.locator('section.lucy-plan')).first();
       await expect(steps).toBeVisible({ timeout: 30_000 });
       await steps.getByRole('button', { name: /^Show all/ }).click();
       await expect(page.locator('.lucy-card').first()).toBeVisible();

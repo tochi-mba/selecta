@@ -201,7 +201,9 @@ describe('UF-0378 entry intent and conversation continuity', () => {
       'POST /lucy/conversations/cv_1/turns': new Reply(503, { detail: 'down' }),
     });
     await userEvent.type(box, '{Enter}');
-    expect(await screen.findByText(/may not have arrived/)).toBeInTheDocument();
+    // said in the conversation, beside the box the words came back to, and to a screen reader
+    expect(await screen.findAllByText(/may not have arrived/)).not.toHaveLength(0);
+    expect(screen.getByRole('textbox', { name: 'Message to Lucy' })).toHaveAccessibleDescription(/^Not sent. .*may not have arrived/);
     expect(box).toHaveValue('half an idea');
     expect(calls.length).toBeGreaterThan(0);
   });

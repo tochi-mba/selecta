@@ -57,7 +57,7 @@ describe('LX-0356 readable transcript', () => {
     />);
     const items = [...document.querySelectorAll('.lucy-log > li')].map((item) => item.className);
     expect(items).toEqual([expect.stringContaining('is-user'), 'lucy-log-plan', expect.stringContaining('is-assistant'), expect.stringContaining('is-user')]);
-    expect(screen.getByRole('region', { name: 'Lucy’s steps' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Lucy’s steps' })).toBeInTheDocument();
   });
 
   it('LX-0356-04 says sending, sent, failed, stopped, replaced and interrupted truthfully', () => {
@@ -94,8 +94,8 @@ describe('LX-0356 readable transcript', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
     expect(onRetry).toHaveBeenCalledWith('t1');
     await act(async () => finish());
-    expect(screen.getByRole('button', { name: 'Start a new conversation from this reply' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start a new conversation from this message of yours' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Branch from here: a new conversation from this reply' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Branch from here: a new conversation from this message of yours' })).toBeInTheDocument();
   });
 });
 
@@ -362,7 +362,7 @@ describe('LX-0360 songs and transitions', () => {
     const twice = [song(1), song(2), song(1, { occurrence: 'occ_again' })];
     const onEdit = vi.fn(async () => true);
     const { rerender } = render(<SongsAndSeams {...props} snapshot={snapshot(twice)} onEdit={onEdit} />);
-    for (const name of ['Lock', 'Ask about Song 1']) expect(screen.getAllByRole('button', { name }).length).toBeGreaterThan(0);
+    for (const name of ['Lock', 'Ask about this: Song 1']) expect(screen.getAllByRole('button', { name }).length).toBeGreaterThan(0);
     await userEvent.click(screen.getAllByRole('button', { name: 'Remove Song 1' })[1]);
     expect(onEdit).toHaveBeenLastCalledWith({ op: 'remove', occurrence: 'occ_again' });
     // the removed row is gone, so focus lands on the same control of its neighbour

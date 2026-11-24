@@ -26,7 +26,7 @@ export type Holdings = { devices: DeviceHolding[]; server_time: number; device_i
 
 /** ADR-0475 R6: another of the person's devices that holds music, for the pages that say where a
  * song is. `ids` are the catalogue ids it reported; null when it has not said which. */
-export type MusicHolder = { deviceId: string; name: string; songs: number; online: boolean; ids: ReadonlySet<number> | null };
+export type MusicHolder = { deviceId: string; name: string; songs: number; online: boolean; ids: ReadonlySet<number> | null; places?: WhereHeld | null };
 export const HolderContext = createContext<MusicHolder | null>(null);
 
 /** The device to name as where the music is: the speaker when one is playing elsewhere, else the

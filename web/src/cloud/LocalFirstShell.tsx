@@ -399,12 +399,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // ADR-0475: what the speaker can open, so a request is judged by the device that will play it
   const [holderId, setHolderId] = useState<string | null>(null);
   const holdings = useHoldings(cloud, on('devices.remote_control'), remote ? playback.view?.speaker_device_id ?? null : holderId);
-  // R4, R6: which of the person's other devices hold a song (this device and the speaker are judged on their own)
-  whereHeld.current = holdings.devices ? whereHeldFrom(holdings.devices, holdings.ids, [playback.device?.id ?? null, remote ? playback.view?.speaker_device_id ?? null : null]) : null;
+  // R4, R6: which of the person's other devices hold a song (this device is judged on its own)
+  whereHeld.current = holdings.devices ? whereHeldFrom(holdings.devices, holdings.ids, [playback.device?.id ?? null]) : null;
   // ADR-0475 R6: the device to name as where the music is (the speaker, else the best holder)
   const holderDevice = holdings.devices ? musicHolder(holdings.devices, playback.device?.id ?? null, remote ? playback.view?.speaker_device_id ?? null : null) : null;
   useEffect(() => { setHolderId(holderDevice?.device_id ?? null); }, [holderDevice?.device_id]);
-  const holderValue = useMemo<MusicHolder | null>(() => (holderDevice ? { deviceId: holderDevice.device_id, name: holderDevice.name, songs: holderDevice.songs, online: holderDevice.online, ids: holdings.speakerSongs } : null), [holderDevice?.device_id, holderDevice?.name, holderDevice?.songs, holderDevice?.online, holdings.speakerSongs]);
+  const holderValue = useMemo<MusicHolder | null>(() => (holderDevice ? { deviceId: holderDevice.device_id, name: holderDevice.name, songs: holderDevice.songs, online: holderDevice.online, ids: holdings.speakerSongs, places: whereHeld.current } : null), [holderDevice?.device_id, holderDevice?.name, holderDevice?.songs, holderDevice?.online, holdings.speakerSongs, holdings.ids, holdings.devices]);
   const remoteProgramme = remote ? remote.session.programme.map((entry) => entry.song_id).join(',') : '';
   const remoteMix = useMemo<MixData['mix']>(() => (remoteProgramme ? remoteProgramme.split(',').map(Number).map((songId, position) => {
     const known = remote?.book.get(songId);

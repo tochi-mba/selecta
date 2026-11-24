@@ -87,7 +87,7 @@ function VoiceButton({ onWords }: { onWords: (words: string) => void }) {
   );
 }
 
-export function Composer({ value, onChange, onSend, onStop, running, sending, blocked, voice, above, boxRef }: {
+export function Composer({ value, onChange, onSend, onStop, running, sending, blocked, problem = '', voice, above, boxRef }: {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
@@ -96,6 +96,9 @@ export function Composer({ value, onChange, onSend, onStop, running, sending, bl
   sending: boolean;
   /** Why nothing can be sent right now, if it can't. */
   blocked: string;
+  /** Why the last message wasn't sent. Said here, beside the words that came back, because the
+   * copy in the conversation can be a long way above whoever is looking at the box. */
+  problem?: string;
   voice: boolean;
   above?: ReactNode;
   boxRef: RefObject<HTMLTextAreaElement | null>;
@@ -132,10 +135,11 @@ export function Composer({ value, onChange, onSend, onStop, running, sending, bl
         rows={1}
         value={value}
         placeholder={blocked ? '' : 'Describe a mix, or ask Lucy to change this one'}
-        aria-describedby={hintId}
+        aria-describedby={problem ? `${hintId}-problem ${hintId}` : hintId}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={keys}
       />
+      {problem && <p id={`${hintId}-problem`} className="warn lucy-send-problem">{problem}</p>}
       <div className="lucy-composer-row">
         <span id={hintId} className="hint">{blocked || (running ? 'Lucy is working. Sending now replaces what it’s doing.' : 'Enter sends · Shift+Enter for a new line')}</span>
         <div className="row">
