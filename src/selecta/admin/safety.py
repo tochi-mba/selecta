@@ -149,12 +149,12 @@ def guard(conn: Connection, actor: Actor, action_id: str, intent: Intent, *,
         require_change_window(conn, actor.staff_session_id)
     if action.tier is Tier.SAFE:
         return
-    if current_version is not None and intent.version is not None:
+    if current_version is not None and intent.version:
         stale = intent.read_at is not None and now - intent.read_at > READ_FRESH_S
         if intent.version != current_version or stale:
             raise CommandRefused(409, "record_changed", "This record changed. Review it again.")
     if action.tier in (Tier.DANGEROUS, Tier.DELAYED):
-        if current_version is not None and intent.version is None:
+        if current_version is not None and not intent.version:
             raise CommandRefused(409, "record_changed", "Open the record and review it first.")
         if action.confirm is not None:
             wanted = (target or "").strip().lower()
