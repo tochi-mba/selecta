@@ -8,14 +8,25 @@ or main runs.
 
 | Job | Execution | Required proof |
 |---|---|---|
-| Python shards 1/2 and 2/2 | Separate Windows runners, Python 3.12, FFmpeg | Locked dependencies, Ruff, 1,000-line rule, complete distributed pytest collection |
+| Workflows | Ubuntu | actionlint and shellcheck over every workflow |
+| Changes | Ubuntu | Says whether the pull request touches code; only a docs-only change may skip the three browser jobs |
+| Service image | Ubuntu | The Cloud service Docker image builds (no push) |
+| Lint | Ubuntu | Ruff, the 1,000-line rule, no live secret committed |
+| Checklist evidence | Ubuntu | No checklist task is ticked without its evidence |
+| Python shards 1/2 and 2/2 | Separate Windows runners, Python 3.12, FFmpeg | Locked dependencies, complete distributed pytest collection (cloud tests on SQLite) |
+| Cloud shards 1/4 to 4/4 | Ubuntu with PostgreSQL 16 and an S3 server (SeaweedFS) | `tests/test_cloud_*.py` and the gateway, room and flag tests on SQLite **and** PostgreSQL: row locks, LISTEN/NOTIFY, advisory locks and row-level security |
+| Cloud rest | Ubuntu with PostgreSQL 16 | Every other test file that uses the `cloud_engine` fixture, on PostgreSQL, plus the PostgreSQL-only race and fencing tests outside `tests/test_cloud_*`; found by the fixture, so a new file joins by itself |
+| Python advisories | Ubuntu | `pip-audit` over the locked dependencies (`uv export`). Reported by verify but **not yet required**: the owner makes it required once it is green |
 | Web | Ubuntu, Node 22, pnpm 10 | Frozen dependencies, all unit tests, TypeScript, production build |
 | Edge shards 1/2 and 2/2 | Separate Windows runners, real muted Edge and FFmpeg | All Playwright E2E tests, real audio, accessibility checks, error recovery |
 | Feature-flag sweep shards 1/2 and 2/2 | Separate Windows runners, real muted Edge | Every feature turned off in turn: each page it shows up on still fits, passes axe, links to nothing that's gone, says nothing about it, asks the server nothing about it and closes up around it. Screenshots uploaded as `flags-sweep-*` |
-| verify | Ubuntu | Every prerequisite succeeded **and** combined Python coverage reached at least 70% |
+| Cloud E2E shards 1/2 and 2/2 | Ubuntu 24.04 | The Cloud site in a browser against a real Cloud server |
+| verify | Ubuntu | Every prerequisite above (except Python advisories) succeeded **and** combined Python coverage reached at least 70% |
 
 A failed, skipped, missing, or cancelled prerequisite fails the final verify gate.
 There are no paths-ignore shortcuts, no continue-on-error and no removed tests.
+The nightly workflow adds the long property runs on PostgreSQL, `pnpm audit` and the slow
+browser extras.
 
 ## Python: sharded execution with whole-suite coverage
 

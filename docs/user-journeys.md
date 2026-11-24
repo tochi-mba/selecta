@@ -43,3 +43,13 @@ Someone opens one transition, changes how it is made and checks the result.
 3. A refused change shows its error under the fields it belongs to. `web/e2e/mp-0288-seam-inspector.e2e.ts` - "MP-0288-05 a refused change shows its error under the fields, tied to them"
 4. A reorder or a late answer never switches the pair being inspected. `web/e2e/mp-0288-seam-inspector.e2e.ts` - "MP-0288-07 a reorder or a late answer never switches the pair being inspected"
 5. A correction made while the page is open only touches its own transitions. `web/e2e/integration.e2e.ts` - "a correction made while the page is open shows up, and only touches its own transitions"
+
+## Cloud journeys
+
+SelectaDJ Cloud's journeys are walked by the Cloud browser tests (`web/e2e-cloud`, the `cloud-browser` CI job) against a real Cloud server. The four above are the local app's; these are the Cloud ones a paying customer depends on. Unit-level parts that no browser test walks yet are named with their unit test.
+
+- **Starting:** a new member carries on while their music import finishes. `web/e2e-cloud/onboarding-progressive.cloud.ts` - "a new member carries on while the import finishes, and verify still settles"
+- **Paying:** checkout needs all three consents and waits for the plan to be confirmed; a paid plan changes or cancels in the Stripe portal. `web/e2e-cloud/billing.cloud.ts` - "checkout needs all three consents, sends the consent version, and waits for the snapshot", "a paid plan changes or cancels in the portal"
+- **A billing problem:** a failed renewal, a cancellation, a payment to confirm and the drop to Free each show one dismissable notice with the date (`web/src/cloud/BillingStanding.test.tsx`), and the matching emails go once (`tests/test_cloud_billing_emails.py`). No browser test walks it yet.
+- **Several devices:** Play here moves the music with no double sound, and other devices steer it. `web/e2e-cloud/devices.cloud.ts` - "Play here moves playback with no double audio, and remotes steer it"
+- **Hosting a room:** a guest joins, requests, votes and follows their requests on a slow phone. `web/e2e-cloud/guest.cloud.ts` - "a guest joins, requests, votes and follows their requests on a slow phone"
