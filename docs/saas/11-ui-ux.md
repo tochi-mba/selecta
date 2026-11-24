@@ -62,6 +62,13 @@ Every signed-in Cloud account is drawn by the same shared shell as local Selecta
 
 `cloud.hosted_shell` is registered off by default (`src/selecta/flags/cloud.json`) and on in the development posture (`dev.cmd cloud`). **Retirement path:** once the flag has baked (on for every hosted account through the ADR-0467 rollout with no regressions), a later PR deletes the legacy rail markup in `CloudApp.tsx`, the `.cloud-shell` and `.cloud-rail` rules in `cloud/cloud.css` and the flag-off check, then retires the flag. Nothing in PR #96 removes the legacy rail.
 
+### 11.3c Every device a controller (ADR-0475)
+
+In the local-first shell (`devices.remote_control`) a device's Listen, Library and Requests are drawn by what each of the person's devices holds, not only this one ([§11A](11a-devices-and-rooms.md)):
+- **Listen** (`cloud/LocalFirstShell.tsx`): `devices/RemoteListen.tsx` while another device plays (with the ways on when that device is away or a press finds nobody playing), `devices/ControllerListen.tsx` when nothing plays and this device has no music, the ordinary Listen otherwise. A Play button is never shown where it cannot work.
+- **Library** (`cloud/CloudLibrary.tsx`, `views/LibraryBrowser.tsx`, `views/LibraryRow.tsx`): "All on {device}" in the header, a per-row device status, the filters All, On this device, Can play now and Needs attention, one quiet line instead of the "connect your music" card when another device has the music, and, on a browser that cannot keep folder access (phones), one sentence saying so.
+- **Requests** (`cloud/localFirstRequests.ts`, `rooms/RoomRequests.tsx`, `views/BrowserRequests.tsx`): rows judged by the device that would play the song, counts of what this device can add, and "N requests waiting on a device" in the room line.
+
 ### 11.4 Honest status language
 
 - Show stages ("Uploading 3 of 12", "Checking the file", "Analysing", "Ready"), measured counts ("4 of 7 transitions ready") and ranged ETAs from `eta.py`, never a global "you are number 27".
