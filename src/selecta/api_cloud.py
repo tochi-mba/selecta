@@ -33,7 +33,7 @@ from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from selecta import flags
+from selecta import flags, ratelimit
 from selecta.admin import guard as admin_guard
 from selecta.admin import routes as admin_routes
 from selecta.admin import routes_controls as admin_control_routes
@@ -41,7 +41,7 @@ from selecta.admin import routes_economics as admin_economics_routes
 from selecta.admin.state import EmergencyCache
 from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
-from selecta.billing import plans, stripe_sync
+from selecta.billing import plans, standing, stripe_sync
 from selecta.business import admin_routes as business_admin_routes
 from selecta.business import billing_routes as business_billing_routes
 from selecta.business import controls_wiring as business_controls
@@ -76,6 +76,7 @@ from selecta.local_media import api as local_media_routes
 from selecta.local_media import links as local_links_routes
 from selecta.local_media import recipe_api as local_recipe_routes
 from selecta.local_media.catalog import LocalMediaCatalog
+from selecta.lucy import cloud_routes as lucy_cloud_routes
 from selecta.lucy import cloud_settings as lucy_cloud_settings
 from selecta.observability import errors, metrics, tracing
 from selecta.persistence import db_now, make_engine, transaction
@@ -471,12 +472,12 @@ def create_cloud_app(
     if listener is not None:
         emergency_cache.listen(listener)
     admin_guard.install(app, emergency_cache)
+    ratelimit.install(app)  # per account and per IP, before any database work (§12.1)
     app.add_middleware(RequestMethodMiddleware)
     # One server span per request; job spans link to it (ADR-0410).
     tracing.install(app, "api")
-    tracing.configure_from_environment("api")
-    errors.configure_from_environment("api")
-    metrics.configure_from_environment("api")
+    for observer in (tracing, errors, metrics):
+        observer.configure_from_environment("api")
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
     app.add_middleware(
@@ -489,7 +490,7 @@ def create_cloud_app(
             "Authorization Content-Type Idempotency-Key Last-Event-ID "
             "X-Workspace-ID X-Operation-ID X-Admin-Session X-Upload-Batch"
         ).split(),
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "Retry-After"],
         max_age=600,
     )
 
@@ -654,13 +655,13 @@ def create_cloud_app(
         claims: Claims = Depends(current_claims),
     ):
         snapshot = rule_snapshot()
-        workspace_id = request.headers.get("x-workspace-id")
-        principal = _principal(engine, claims, workspace_id)
+        principal = _principal(engine, claims, request.headers.get("x-workspace-id"))
         with transaction(engine, principal.workspace.id) as conn:
             entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             storage = quota.usage(conn, principal.workspace.id)
             now = db_now(conn)
+            billing_now = standing.for_account(conn, principal, entitlement, now)
             preferences = flag_rules.user_preferences(conn, principal.user.id)
             decisions = targeting.decide_all(
                 feature_context(principal, plan, now),
@@ -710,6 +711,7 @@ def create_cloud_app(
             "billing": {
                 "consent_version": os.environ.get("SELECTA_CHECKOUT_CONSENT_VERSION", "").strip(),
                 "checkout_available": billing_api.checkout_available(),
+                "standing": billing_now,
             },
             "lucy": {"tier": meters.lucy_tier(plan)},
             "features": decisions.snapshot(),
@@ -919,6 +921,9 @@ def create_cloud_app(
     )
 
     lucy_cloud_settings.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    lucy_cloud_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     # Autopilot venue mode and venue policy (ADR-0424, ADR-0425); refused while the flags are off.

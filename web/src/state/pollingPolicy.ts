@@ -49,7 +49,7 @@ export const POLLING: readonly PollRule[] = [
   { file: 'devices/usePlaybackDevice.ts', reads: 'remote playback state and heartbeat', everyMs: '1000 or 2000', hidden: 'continues', why: 'remote playback keeps going while this tab is hidden (Cloud programme)' },
   { file: 'devices/PlayingBar.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'clock text only' },
   { file: 'devices/RemoteListen.tsx', reads: null, everyMs: 500, hidden: 'continues', why: 'the position text and seek bar of the remote, worked out from the session anchor; it reads no server and runs only while the speaker is playing' },
-  { file: 'devices/useHoldings.ts', reads: 'which songs each device of the account can open', everyMs: 'HOLDINGS_EVERY_MS', hidden: 'continues', why: 'a controller needs to know what the speaker holds before it sends a song; one small read every 15 seconds, only with remote control on (ADR-0475)' },
+  { file: 'devices/useHoldings.ts', reads: 'which songs each device of the account can open', everyMs: 'HOLDINGS_EVERY_MS', hidden: 'continues', why: 'a controller needs to know what the speaker holds before it sends a song; one small read every 15 seconds, and the ids of a device again only when its report changed, only with remote control on (ADR-0475)' },
   { file: 'cloud/AccountLayout.tsx', reads: null, everyMs: 1500, hidden: 'continues', why: 'which settings section is in view, for the section list; it measures the page and reads no server (cards arrive after the first measure, so a scroll listener alone would miss them)' },
   { file: 'devices/audioSpeaker.ts', reads: null, everyMs: 'fade steps', hidden: 'continues', why: 'volume fade' },
   { file: 'rooms/RoomPanel.tsx', reads: '/rooms/current', everyMs: 3000, hidden: 'pauses', why: 'useVisiblePoll: the host panel reads the room only while it is on screen, and at once on return (W3 adoption)' },
@@ -58,6 +58,7 @@ export const POLLING: readonly PollRule[] = [
   { file: 'cloud/ConnectionBanner.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down to the next connection try and clears "Back online" only while either shows; the probe itself is connection.ts (cloud.offline_shell)' },
   { file: 'cloud/ImportChip.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down "Trying again in 8 s" only while an import waits for the service; never reads the server (cloud.resilient_import)' },
   { file: 'cloud/ImportStatus.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down "Trying again in 8 s" only while an import waits for the service; never reads the server (cloud.resilient_import)' },
+  { file: 'ui/staleBuild.tsx', reads: '/index.html (the site, not the API)', everyMs: 'VERSION_CHECK_MS (30 min), and on return to the tab', hidden: 'pauses', why: 'whether a newer build is live, for the quiet "A new version is ready" line shown when nothing plays; plus a 15 s tick that reads no server (product audit gap 4)' },
   { file: 'engine/scheduler.ts', reads: null, everyMs: 'audio clock tick', hidden: 'continues', why: 'schedules the next song and seam on the audio clock while music plays in a hidden tab (ADR-0457)' },
 ];
 

@@ -24,6 +24,8 @@ type Script = {
   reconnect?: () => unknown;
   heartbeat?: () => unknown;
   commands?: () => unknown;
+  /** Fields every session read carries (a programme, a paused state). */
+  session?: Partial<SessionState>;
 };
 
 function harness(script: Script) {
@@ -40,7 +42,7 @@ function harness(script: Script) {
       return script.reconnect?.() ?? { action: 'continue', session: session({ lease_expires_at: Date.now() / 1000 + 60 }), message: null };
     }
     if (path.startsWith('/playback/session')) {
-      return { session: session({}), speaker: 'here', speaker_device_id: 'd1', speaker_name: 'Laptop', ask_before_playing_here: false, server_time: Date.now() / 1000 };
+      return { session: session(script.session ?? {}), speaker: 'here', speaker_device_id: 'd1', speaker_name: 'Laptop', ask_before_playing_here: false, server_time: Date.now() / 1000 };
     }
     if (path === '/playback/heartbeat') {
       if (script.heartbeat) return script.heartbeat();
@@ -185,6 +187,37 @@ describe('playing through a dropped connection (cloud.offline_playback)', () => 
       act(() => reportOffline());
       await waitFor(() => expect(sound.stop).toHaveBeenCalledWith(0), { timeout: 3_500 });
       expect(hook.result.current.offline).toBe(false);
+    } finally { hook.unmount(); }
+  });
+
+  it('Skip on the last song does nothing offline, rather than asking for a song that is not there', async () => {
+    const sound = speaker();
+    const programme = [1, 2, 3].map((song_id) => ({ song_id, sha256: 'a'.repeat(64) }));
+    const { api, setDown } = harness({ session: { programme } });
+    const hook = renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws-off-7', speaker: sound }));
+    try {
+      await waitFor(() => expect(sound.start).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(hook.result.current.view?.session?.programme?.length).toBe(3));
+      setDown(true);
+      act(() => reportOffline());
+      // the engine is on song 3 of 3 (index 2)
+      await act(async () => { await hook.result.current.send('skip'); });
+      expect(sound.start).toHaveBeenCalledTimes(1);
+    } finally { hook.unmount(); }
+  });
+
+  it('a seek while paused offline moves the place and stays paused', async () => {
+    const sound = speaker();
+    const { api, setDown } = harness({});
+    const hook = renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws-off-8', speaker: sound }));
+    try {
+      await waitFor(() => expect(sound.start).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(hook.result.current.view?.session).toBeTruthy());
+      setDown(true);
+      act(() => reportOffline());
+      vi.mocked(sound.position).mockReturnValue({ song_index: 2, offset_ms: 1_000, state: 'paused' });
+      await act(async () => { await hook.result.current.send('seek', { song_index: 2, offset_ms: 30_000 }); });
+      expect(sound.start).toHaveBeenLastCalledWith(2, 30_000, false);
     } finally { hook.unmount(); }
   });
 });

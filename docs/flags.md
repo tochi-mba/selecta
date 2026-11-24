@@ -74,6 +74,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `lucy.voice` | **Voice input.** Talking to Lucy instead of typing. | `lucy` |
 | `lucy.remote_providers` | **AI services for Lucy.** Planning with Anthropic or an OpenAI-compatible host instead of the built-in planner. | `lucy` |
 | `lucy.listening_history` | **Listening history for Lucy.** What you play is noted so Lucy can know your most-played songs. | `lucy` |
+| `lucy.cloud_conversation` | **Lucy's conversation in Cloud.** Talk to Lucy in the browser about your library and mixes; she proposes changes you can save. | `lucy`, `cloud.local_media` |
 
 ## My Mixes
 
@@ -239,6 +240,9 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.local_media` | **Local media catalogue.** The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458). |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
+| `cloud.rate_limits` | **API rate limits.** Per-account and per-IP request limits in the Cloud API, with stricter limits for checkout, account changes, search and upload plans. **Cloud surface:** operations (A request limit has no screen; a refused request says why and when to try again). |  |
+| `cloud.idempotency` | **Replayed writes.** A Cloud write sent again with the same Idempotency-Key within 24 hours gets the first answer back instead of doing it twice. **Cloud surface:** operations (Replaying a stored answer has no screen; the person simply never sees a double). |  |
+| `billing.standing` | **Billing notices and emails.** Tell the customer when a payment failed, needs confirming, or a plan is ending or has ended, in the app and by email. |  |
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
 | `cloud.tracing` | **Job tracing.** OpenTelemetry spans across the API, worker gateway, workers and storage, one trace per job with its id as a span attribute. |  |
 | `cloud.metrics` | **Service metrics.** OpenTelemetry metrics the SLOs and alerts read: lost jobs, webhook-to-entitlement time, queue age, quarantines, spend ceilings, audit writes, reconciliation drift, backups and the maintenance leader. |  |

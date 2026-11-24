@@ -30,6 +30,7 @@ SELF_APPROVAL = "security.self_approval_attempt"
 KILL_SWITCH = "flags.kill_switch"
 EMERGENCY = "platform.emergency_control"
 REPEAT_INFRINGER = "legal.repeat_infringer"
+OWNER_BOOTSTRAPPED = "security.owner_bootstrapped"
 
 
 @dataclass(frozen=True)

@@ -168,8 +168,10 @@ def test_v2_is_the_current_version_and_v1_stays_reachable():
     ("v2", "v1", "v1_soft_cap"),
     [(FREE_2, FREE_1, 3_000), (STANDARD_2, STANDARD_1, 15_000), (PREMIUM_2, PREMIUM_1, 40_000)],
 )
-def test_v2_differs_from_v1_only_on_version_and_library_soft_cap(v2, v1, v1_soft_cap):
-    assert replace(v2, version=1, library_soft_cap_songs=v1_soft_cap) == v1
+def test_v2_differs_from_v1_only_on_version_library_soft_cap_and_lucy_models(v2, v1, v1_soft_cap):
+    # Lucy's model classes follow the routing map (owner, 2026-11-24); the turn counts don't move.
+    assert replace(v2, version=1, library_soft_cap_songs=v1_soft_cap, lucy=v1.lucy) == v1
+    assert [(t.purpose, t.turns) for t in v2.lucy] == [(t.purpose, t.turns) for t in v1.lucy]
 
 
 def test_v2_raises_the_library_soft_cap_as_a_ui_sanity_bound_only():

@@ -71,8 +71,9 @@ export function AskRow({ title, artist, who, extra, note, done, children, stage 
           {extra && <span className="ask-extra">{extra}</span>}
         </span>
       )}
-      {children && <span className="ask-actions">{children}</span>}
+      {/* the reason first, then what can be done about it */}
       {note && <p className="ask-note">{note}</p>}
+      {children && <span className="ask-actions">{children}</span>}
     </li>
   );
 }
@@ -125,6 +126,16 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
   // room requests the browser holds while no read of the room is here to list them; once the room
   // has been read, its list is the only one, so every count and every list agree
   const loose = room ? [] : roomRows;
+  // ADR-0475 R4: "Ready to add" counts what can be added from this device; a request whose song
+  // waits on another device (its file is elsewhere, or its folder needs choosing) is not counted
+  const actionable = (row: Row | undefined) => !!row && !held(row.request, row.stage);
+  const readyHere = coming.filter((ask) => actionable(rowOf(ask))).length + loose.filter(actionable).length;
+  // a row whose song waits on another device (it has a browser note and is not addable here)
+  const waitsOnDevice = (row: Row | undefined) => !!row && !going[row.request.room_request_id ?? ''] && !!row.request.browser_note && row.stage !== 'in_mix' && !actionable(row);
+  const heldComing = mix && rows !== null ? coming.filter((ask) => waitsOnDevice(rowOf(ask))) : [];
+  const readyComing = coming.filter((ask) => !heldComing.includes(ask));
+  const heldLoose = mix ? loose.filter(waitsOnDevice) : [];
+  const readyLoose = loose.filter((row) => !heldLoose.includes(row));
   const missing = !!mix && rows !== null && coming.some((ask) => !rowOf(ask));
   // An accepted request with no row in the browser's list yet: the list is asked for again at
   // once, then after 2, 4 and 4 seconds, then ever less often up to every 30 seconds. "Getting
@@ -184,9 +195,9 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
       <Action className="quiet" aria-label={`Dismiss: ${title}`} working={`Dismissing${ELLIPSIS}`} waiting={row.request.id < 0}
         run={() => settle(id, row.request, async () => { await mix.onDismiss(row.request); showToast(`${title} was dismissed.`); })}>Dismiss</Action>
     );
-    // a song whose file is on another device: say so, and offer the way to bring it here
-    // (with another device playing, connecting music here would not help: that device plays it)
-    if (why) return { note: why, buttons: <>{why === row.request.browser_note && row.stage !== 'in_mix' && !row.request.plays_on && <button type="button" onClick={() => navigate('/library')}>Connect music</button>}{dismiss}</> };
+    // a song whose file is on another device: say so, and offer the way to bring it here only
+    // when that is the way on (ADR-0475 R4: never while another device has the file or plays)
+    if (why) return { note: why, buttons: <>{why === row.request.browser_note && row.stage !== 'in_mix' && (row.request.connect_here ?? !row.request.plays_on) && <button type="button" className="quiet" onClick={() => navigate('/library')}>Connect music here</button>}{dismiss}</> };
     const start = row.stage === 'no_mix';
     const label = start ? 'Start a mix with this song' : mix.live ? 'Add next' : 'Add to mix';
     return {
@@ -198,6 +209,18 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
         {dismiss}
       </>,
     };
+  };
+
+  const comingRow = (ask: RoomAsk) => {
+    const row = rowOf(ask);
+    const { note, buttons } = acceptedActions(ask.request_id, titleOf(ask), row);
+    return <AskRow key={ask.request_id} title={titleOf(ask)} artist={ask.song?.artist} who={ask.nickname ?? row?.request.asked_by} extra={voteWords(ask)} note={note} stage={row?.stage}>{buttons}</AskRow>;
+  };
+  const looseRow = (row: Row) => {
+    const id = row.request.room_request_id ?? `row-${row.request.id}`;
+    const title = row.request.title ?? 'Unavailable song';
+    const { note, buttons } = acceptedActions(id, title, row);
+    return <AskRow key={id} title={title} artist={row.request.artist} who={row.request.asked_by ?? 'A guest'} note={note} stage={row.stage}>{buttons}</AskRow>;
   };
 
   if (variant === 'drawer' && !room && !loose.length) return null;
@@ -227,21 +250,20 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
           ))}
         </Group>
       )}
-      {(coming.length > 0 || loose.length > 0) && (
+      {(readyComing.length > 0 || readyLoose.length > 0) && (
         // counted: what the host can act on now; a request still on its way says so in its own row
-        <Group title={mix ? 'Ready to add' : 'Accepted'} count={(mix && rows !== null ? coming.filter((ask) => rowOf(ask)).length : coming.length) + loose.length}
+        <Group title={mix ? 'Ready to add' : 'Accepted'} count={mix && rows !== null ? readyHere : coming.length + loose.length}
           help={!mix ? undefined : noMix ? 'No mix yet. Start one with a request, then add the others.' : mix.live ? 'Add next plays a song right after the current one.' : 'Add to mix puts a song at the end of your mix.'}>
-          {coming.map((ask) => {
-            const row = rowOf(ask);
-            const { note, buttons } = acceptedActions(ask.request_id, titleOf(ask), row);
-            return <AskRow key={ask.request_id} title={titleOf(ask)} artist={ask.song?.artist} who={ask.nickname ?? row?.request.asked_by} extra={voteWords(ask)} note={note} stage={row?.stage}>{buttons}</AskRow>;
-          })}
-          {loose.map((row) => {
-            const id = row.request.room_request_id ?? `row-${row.request.id}`;
-            const title = row.request.title ?? 'Unavailable song';
-            const { note, buttons } = acceptedActions(id, title, row);
-            return <AskRow key={id} title={title} artist={row.request.artist} who={row.request.asked_by ?? 'A guest'} note={note} stage={row.stage}>{buttons}</AskRow>;
-          })}
+          {readyComing.map(comingRow)}
+          {readyLoose.map(looseRow)}
+        </Group>
+      )}
+      {(heldComing.length > 0 || heldLoose.length > 0) && (
+        // ADR-0475 R4: requests whose song waits on another device, apart from what can be added
+        <Group title="Waiting on a device" count={heldComing.length + heldLoose.length}
+          help="Each says which device has the song, or that none does right now.">
+          {heldComing.map(comingRow)}
+          {heldLoose.map(looseRow)}
         </Group>
       )}
       {rows === null && mix && coming.length === 0 && variant === 'page' && !nothing && <Skeleton variant="rows" lines={2} label="Loading requests" />}

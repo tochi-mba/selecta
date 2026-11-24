@@ -62,6 +62,13 @@ Every signed-in Cloud account is drawn by the same shared shell as local Selecta
 
 `cloud.hosted_shell` is registered off by default (`src/selecta/flags/cloud.json`) and on in the development posture (`dev.cmd cloud`). **Retirement path:** once the flag has baked (on for every hosted account through the ADR-0467 rollout with no regressions), a later PR deletes the legacy rail markup in `CloudApp.tsx`, the `.cloud-shell` and `.cloud-rail` rules in `cloud/cloud.css` and the flag-off check, then retires the flag. Nothing in PR #96 removes the legacy rail.
 
+### 11.3c Every device a controller (ADR-0475)
+
+In the local-first shell (`devices.remote_control`) a device's Listen, Library and Requests are drawn by what each of the person's devices holds, not only this one ([§11A](11a-devices-and-rooms.md)):
+- **Listen** (`cloud/LocalFirstShell.tsx`): `devices/RemoteListen.tsx` while another device plays (with the ways on when that device is away or a press finds nobody playing), `devices/ControllerListen.tsx` when nothing plays and this device has no music, the ordinary Listen otherwise. A Play button is never shown where it cannot work.
+- **Library** (`cloud/CloudLibrary.tsx`, `views/LibraryBrowser.tsx`, `views/LibraryRow.tsx`): "All on {device}" in the header, a per-row device status, the filters All, On this device, Can play now and Needs attention, one quiet line instead of the "connect your music" card when another device has the music, and, on a browser that cannot keep folder access (phones), one sentence saying so.
+- **Requests** (`cloud/localFirstRequests.ts`, `rooms/RoomRequests.tsx`, `views/BrowserRequests.tsx`): rows judged by the device that would play the song, counts of what this device can add, and "N requests waiting on a device" in the room line.
+
 ### 11.4 Honest status language
 
 - Show stages ("Uploading 3 of 12", "Checking the file", "Analysing", "Ready"), measured counts ("4 of 7 transitions ready") and ranged ETAs from `eta.py`, never a global "you are number 27".
@@ -72,6 +79,31 @@ Every signed-in Cloud account is drawn by the same shared shell as local Selecta
 ### 11.5 State matrix every screen is tested against
 
 empty · loading · ready · partially ready · updating · failed · retrying · offline · recovering · over quota · plan changed mid-session · session expired · another tab/device active · feature turned off mid-session · plan-locked feature; at 1440 and 375 px, light and dark, keyboard only, screen reader, reduced motion, 400% zoom, long names, 20,000-song libraries.
+
+### 11.6 Defaults
+
+What a new account, device or room starts with (the table of every setting is in
+`docs/engineering/product-audit.md`, section K).
+
+- **One source per default.** Each default is one named constant on the side that owns the
+  setting (`DEFAULT_PREFS` in `web/src/state/prefs.ts`, `DEFAULT_PLAN` in `Billing.tsx`). A missing
+  value reads as the default, so a new setting needs no backfill.
+- **Only choices are stored.** A setting the person never changed is not written down, so a
+  better default later reaches them; a value they chose is never rewritten.
+- **Scope on purpose.** About the person (default speaker, never play, mix and Lucy preferences,
+  email preferences, time zone): on the account, on every device. About the screen or hardware
+  (theme, motion, volume, visualiser, layout, keep-awake): on the device.
+- **Follow the system.** Theme follows the OS until chosen; motion follows OS reduced motion,
+  otherwise Subtle; language, dates and numbers follow the browser; the time zone comes from the
+  browser at sign-up and stays on the account.
+- **Safe, quiet, private.** Volume starts comfortable; guest-facing options start cautious (the
+  host approves requests, nicknames are generated); no marketing email unless asked; checkout
+  consent boxes are never ticked; nothing is shared or public unless the person makes it so.
+- **Nothing that costs more.** The plan picker starts on the cheaper plan, billed monthly, and the
+  button names the plan and its price.
+- **Visible and reversible.** Each setting shows its value; a settings section whose values differ
+  from the defaults offers "Reset to defaults", and its confirmation lists what changes.
+- **Flags.** A feature that is off adds no default and no settings row.
 
 ---
 

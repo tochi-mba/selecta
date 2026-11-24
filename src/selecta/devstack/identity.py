@@ -47,6 +47,7 @@ from selecta.devstack import guard
 from selecta.devstack.identity_store import MIN_PASSWORD, IdentityStore, Person, iso
 from selecta.devstack.pages import page
 from selecta.devstack.redirects import site_target
+from selecta.devstack.settings import STAFF_ORGANIZATION_ID
 from selecta.identity import workos_signature
 
 GOOGLE = "GoogleOAuth"
@@ -106,6 +107,9 @@ class LocalIdentity:
             "exp": now + TOKEN_SECONDS,
             "jti": secrets.token_hex(8),
         }
+        if self.store.is_staff(person.id):
+            # As a sign-in under the WorkOS staff organization (whose policy requires MFA).
+            payload["org_id"] = STAFF_ORGANIZATION_ID
         return jwt.encode(
             payload, self.store.private_key, algorithm="RS256", headers={"kid": self.store.kid}
         )
@@ -113,7 +117,7 @@ class LocalIdentity:
     def answer(self, person: Person, session_id: str, refresh: str, method: str) -> dict:
         return {
             "user": person.as_workos(),
-            "organization_id": None,
+            "organization_id": STAFF_ORGANIZATION_ID if self.store.is_staff(person.id) else None,
             "access_token": self.access_token(person, session_id),
             "refresh_token": refresh,
             "authentication_method": method,

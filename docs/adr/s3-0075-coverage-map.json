@@ -12,15 +12,15 @@
  "reasons": {
   "in-flight": "Shown only while a request is on its way (refreshing, saving); against the local fixture it resolves within a frame or two, so a still needs a held-request driver that no candidate spec has yet. The settled states either side are captured.",
   "needs-driver": "A real state of this surface with no deterministic driver in any candidate spec yet; a person reviewing the set should treat it as uncovered.",
-  "outside-route-tree": "Only mounted outside the local app routes (the control gallery specimen page or the device harness), per the inventory fixture gap."
+  "outside-route-tree": "Only mounted outside the local app routes (the control gallery specimen page, the device harness or the Cloud site), per the inventory fixture gap."
  },
  "totals": {
-  "states": 220,
+  "states": 225,
   "captured": 72,
   "uncovered": {
    "in-flight": 42,
    "needs-driver": 101,
-   "outside-route-tree": 5
+   "outside-route-tree": 10
   }
  },
  "segments": {

@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useId, useState } from 'react';
 import { ApiError } from '../api';
 import { length } from '../lib';
-import { lucy } from '../lucy/client';
+import { lucy, lucyTransport } from '../lucy/client';
 import type { ProposalState } from '../lucy/reducer';
 import type { Diff, EditOp, Phases, ProposalSnapshot, Revision, Rule, Selection } from '../lucy/types';
 import { countsWords, EXAMPLE_PROMPTS, isReadyStatus, plural, whenWords } from '../lucy/words';
@@ -28,10 +28,13 @@ export function LifecyclePill({ stage }: { stage: Lifecycle }) {
   return <span className={`lucy-stage is-${stage}`}>{LIFECYCLE_WORDS[stage]}</span>;
 }
 
-export function ExamplePrompts({ onPick }: { onPick: (text: string) => void }) {
+/** Suggested first asks: the server's, drawn from the person's own library, when it gives
+ * them (Cloud, ADR-0476); otherwise the fixed examples. */
+export function ExamplePrompts({ onPick, prompts }: { onPick: (text: string) => void; prompts?: string[] }) {
+  const shown = prompts?.length ? prompts : EXAMPLE_PROMPTS;
   return (
     <div className="lucy-examples" role="group" aria-label="Example requests">
-      {EXAMPLE_PROMPTS.map((prompt) => (
+      {shown.map((prompt) => (
         <button key={prompt} type="button" onClick={() => onPick(prompt)}>{prompt}</button>
       ))}
     </div>
@@ -94,7 +97,7 @@ function Rules({ rules, readyOnly, editable, onRemove }: { rules: Rule[]; readyO
   );
 }
 
-export function ProposalPane({ proposal, revision, phases, selection, onAsk, adopt, reload, fillComposer, approve }: {
+export function ProposalPane({ proposal, revision, phases, selection, onAsk, adopt, reload, fillComposer, approve, prompts }: {
   proposal: ProposalState | null;
   revision: Revision | null;
   phases: Phases | null;
@@ -104,7 +107,10 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
   reload: () => void;
   fillComposer: (text: string) => void;
   approve: (shown: Revision, isCurrent: boolean) => ReactNode;
+  prompts?: string[];
 }) {
+  // ADR-0476: a browser mix renders nothing ahead; every transition is worked out as it plays
+  const live = lucyTransport() !== null;
   const headingId = useId();
   const [viewing, setViewing] = useState<string | null>(null);
   const [viewed, setViewed] = useState<Revision | null>(null);
@@ -140,7 +146,7 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
         <p className="eyebrow">Your mix</p>
         <h2 id={headingId}>Nothing proposed yet</h2>
         <p className="hint">Describe the mix you want in the chat. Lucy plans it here, and nothing is built until you approve it. Try one of these:</p>
-        <ExamplePrompts onPick={fillComposer} />
+        <ExamplePrompts onPick={fillComposer} prompts={prompts} />
       </section>
     );
   }
@@ -207,7 +213,7 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
           <div className="row wrap">
             {currentId && <Action working="Comparing…" run={async () => setCompared(await lucy.diff(shown.id, currentId))}>Compare with current</Action>}
             <Action working="Switching…" run={() => change(() => lucy.makeCurrent(proposal.id, shown.id, currentId))}>Make this the current one</Action>
-            <Action working="Restoring…" run={() => change(() => lucy.restore(shown.id, currentId))}>Restore as new revision</Action>
+            {!live && <Action working="Restoring…" run={() => change(() => lucy.restore(shown.id, currentId))}>Restore as new revision</Action>}
             <button type="button" className="quiet" onClick={() => setViewing(null)}>Back to the current one</button>
           </div>
           {compared && <DiffSummary diff={compared} label={`Compared with revision ${currentNumber ?? 'current'}:`} />}
@@ -218,14 +224,14 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
       <Rules rules={snap.constraints ?? []} readyOnly={snap.ready_only} editable={isCurrent} onRemove={async (rule) => { await change(() => lucy.removeRule(shown.id, rule.id, shown.id)); }} />
 
       <p className="lucy-summary">
-        <b>{plural(songs.length, 'song')}</b> · {ready} of {plural(needed, 'transition')} ready · {durationText(snap)}
+        <b>{plural(songs.length, 'song')}</b> · {live ? 'transitions worked out as it plays' : `${ready} of ${plural(needed, 'transition')} ready`} · {durationText(snap)}
       </p>
-      {ledger && <p className="hint">Readiness checked {whenWords(ledger.checked_at) || 'recently'}{ledger.playable_now && ready === needed ? '. Every directed transition has verified playable audio.' : '. Readiness is not guaranteed until checked again at approval.'}</p>}
+      {ledger && !live && <p className="hint">Readiness checked {whenWords(ledger.checked_at) || 'recently'}{ledger.playable_now && ready === needed ? '. Every directed transition has verified playable audio.' : '. Readiness is not guaranteed until checked again at approval.'}</p>}
       {snap.ready_only && ready < needed && <p className="lucy-readiness-warning" role="status">Only {ready} of {needed} required directed transitions have verified audio. This strict plan cannot be saved as ready-only yet. Ask Lucy for a shorter ready route, or explicitly change the rule before approving.</p>}
 
       {approve(shown, isCurrent)}
 
-      {songs.length > 1 && <EnergyBars values={songs.map((song) => song.energy)} />}
+      {songs.length > 1 && !(live && songs.every((song) => song.energy === null)) && <EnergyBars values={songs.map((song) => song.energy)} />}
       {warnings.length > 0 && (
         <div className="lucy-warnings-box">
           <h3>Worth knowing</h3>

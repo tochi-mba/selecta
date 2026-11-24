@@ -1,4 +1,4 @@
-import { get, send } from '../api';
+import { ApiError, get as localGet, send, type Request } from '../api';
 import type {
   Approval, ApproveAction, Commit, Conversation, ConversationScope, Diff, EditOp, EventsPage, Ledger, LucyStatus,
   Memory, MemoryFact, MemoryKind, Permission, Revision, SettingsChange, Snapshot, TurnAccepted, TurnBody,
@@ -15,12 +15,54 @@ export function newId(): string {
 
 const at = (id: string) => encodeURIComponent(id);
 
+/** Where Lucy's requests go. Local mode asks this computer's server at `/api/lucy`; browser-first
+ * Cloud (ADR-0476) installs its authenticated request and its own prefix, and reads events by
+ * asking every `pollMs` (a bearer token can't ride on an EventSource). */
+export type LucyTransport = {
+  request: Request; base: string; pollMs: number;
+  /** The device this page runs on, sent with each message so Lucy knows what "here" means. */
+  device?: () => string | null;
+};
+let transport: LucyTransport | null = null;
+
+export function setLucyTransport(next: LucyTransport | null): void {
+  transport = next;
+}
+
+export function lucyTransport(): LucyTransport | null {
+  return transport;
+}
+
+/** `/lucy/...` as the active transport names it. */
+function where(path: string): string {
+  return transport ? path.replace(/^\/lucy(?=\/|$)/, transport.base) : path;
+}
+
+/** A refusal from the transport's own client (Cloud's `CloudError`) as the app's `ApiError`, so
+ * the page tells "Lucy is answering" (409 busy) or a stale save from a dropped connection. */
+async function viaTransport<T>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    return await transport!.request<T>(where(path), init);
+  } catch (error) {
+    const refusal = error as { message?: string; status?: unknown; code?: unknown };
+    if (!(error instanceof ApiError) && typeof refusal?.status === 'number' && refusal.status > 0) {
+      throw new ApiError(String(refusal.message ?? ''), refusal.status, typeof refusal.code === 'string' ? refusal.code : '');
+    }
+    throw error;
+  }
+}
+
+function get<T>(path: string): Promise<T> {
+  return transport ? viaTransport<T>(path) : localGet<T>(path);
+}
+
 function change<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
-  return send<T>(path, {
+  const init = {
     method,
     headers: { 'content-type': 'application/json', 'x-operation-id': newId() },
     body: method === 'DELETE' && body === undefined ? undefined : JSON.stringify(body ?? {}),
-  });
+  };
+  return transport ? viaTransport<T>(path, init) : send<T>(path, init);
 }
 
 export const lucy = {
@@ -38,7 +80,10 @@ export const lucy = {
   deleteConversation: (id: string) => change<{ deleted: boolean; drafts_kept: true }>('DELETE', `/lucy/conversations/${at(id)}`),
   branchConversation: (id: string, message: string) => change<Conversation>('POST', `/lucy/conversations/${at(id)}/branch`, { message }),
 
-  sendTurn: (id: string, body: TurnBody) => change<TurnAccepted>('POST', `/lucy/conversations/${at(id)}/turns`, body),
+  sendTurn: (id: string, body: TurnBody) => {
+    const device = transport?.device?.() ?? null;
+    return change<TurnAccepted>('POST', `/lucy/conversations/${at(id)}/turns`, device ? { ...body, device_id: device } : body);
+  },
   stop: (id: string) => change<{ stopped: boolean }>('POST', `/lucy/conversations/${at(id)}/stop`, {}),
   retry: (id: string, turn: string) => change<TurnAccepted>('POST', `/lucy/conversations/${at(id)}/retry`, { turn }),
   events: (id: string, after: number) => get<EventsPage>(`/lucy/conversations/${at(id)}/events.json?after=${after}`),

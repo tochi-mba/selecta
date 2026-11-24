@@ -1,4 +1,5 @@
-import { lazy, type ReactNode, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazyPage as lazy } from './ui/staleBuild';
 import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, request, Status } from './api';
 import { getDraftNames } from './state/draftNames';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';

@@ -229,6 +229,19 @@ class Probe:
     detail: str
 
 
+def _own_console() -> dict[str, object]:
+    """On Windows each service gets its own hidden console. uvicorn's --reload restarts its server
+    by sending Ctrl+C to the whole console, so a shared console stopped this launcher (and every
+    other service) whenever a Python file changed. Services are stopped with terminate and kill,
+    never Ctrl+C, so nothing here needs the shared console."""
+    if sys.platform != "win32":
+        return {}
+    startup = subprocess.STARTUPINFO()
+    startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startup.wShowWindow = 0  # SW_HIDE
+    return {"creationflags": subprocess.CREATE_NEW_CONSOLE, "startupinfo": startup}
+
+
 def start_service(name: str, command: list[str], cwd: Path, env: dict[str, str]) -> Service:
     say("START", f"{name}: {' '.join(command)}")
     try:
@@ -242,6 +255,7 @@ def start_service(name: str, command: list[str], cwd: Path, env: dict[str, str])
             encoding="utf-8",
             errors="replace",
             bufsize=1,
+            **_own_console(),
         )
     except OSError as problem:
         raise StartupError(f"{name} could not start: {problem}") from problem

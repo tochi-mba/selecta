@@ -67,7 +67,7 @@ test('LX-0364-07 long, RTL and CJK titles stay readable at 400% zoom in Lucy and
 
   // every song's controls are reachable from the keyboard, the international ones included
   const target = (rtl[0] ?? cjk[0] ?? long[0]).text;
-  const ask = page.getByRole('button', { name: `Ask about ${target}`, exact: true }).first();
+  const ask = page.getByRole('button', { name: `Ask about this: ${target}`, exact: true }).first();
   await page.getByRole('tab', { name: 'Your mix' }).focus();
   let reached = false;
   for (let presses = 0; presses < 200 && !reached; presses += 1) {

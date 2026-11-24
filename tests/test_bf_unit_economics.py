@@ -164,7 +164,7 @@ def test_cheap_turns_confirm_the_allowance_under_the_40_percent_rule():
     assert plan["expected_max_out_usd"] == pytest.approx(400 * 0.002 + 40 * 0.02)
     assert plan["verdict"] == "confirmed" and plan["suggested_allowances"] is None
     rows = {row["bucket"]: row for row in plan["buckets"]}
-    assert rows["everyday"]["model_class"] == "haiku"
+    assert rows["everyday"]["model_class"] == "sonnet"
     assert rows["planning"]["model_class"] == "sonnet"
     assert rows["everyday"]["measured"]["n"] == 40
 

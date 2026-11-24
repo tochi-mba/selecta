@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, problemKind } from '../api';
-import { lucy, newId } from '../lucy/client';
+import { lucy, lucyTransport, newId } from '../lucy/client';
 import type { CommitNote } from '../lucy/reducer';
 import type { Approval, ApproveAction, Commit, Revision } from '../lucy/types';
 import { PageLink } from '../shell/PageLink';
@@ -216,6 +216,10 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
     await submit(asked);
   };
 
+  // ADR-0476: in Cloud a save is the mix itself (a new revision, or a new mix), not a draft
+  const words = lucyTransport()
+    ? { save: 'Save', saved: 'Saved to', saveHint: 'Saving puts exactly these songs in the mix. Save and play also makes it the mix that plays, after you confirm.' }
+    : { save: 'Save as draft', saved: 'Saved as draft', saveHint: 'Saving makes a draft from exactly these songs. Save and play also replaces what’s playing, after you confirm.' };
   const busy = outcome?.state === 'saving' || outcome?.state === 'checking';
   const disabled = !isCurrent || !!blocked || busy || !!pending.current || outcome?.state === 'saved';
   const preflight = activeApproval?.preflight;
@@ -228,7 +232,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   return (
     <div className="lucy-approve">
       <div className="row wrap">
-        <Action className="primary" disabled={disabled} working="Checking…" run={() => ask('draft')}>Save as draft</Action>
+        <Action className="primary" disabled={disabled} working="Checking…" run={() => ask('draft')}>{words.save}</Action>
         <Action disabled={disabled} working="Checking…" run={() => ask('draft_and_play')}>Save and play</Action>
       </div>
       {!isCurrent && <p className="hint">Make this the current revision to approve it</p>}
@@ -239,7 +243,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
         </div>
       )}
       {isCurrent && blocked && <p className="hint">{blocked}</p>}
-      {isCurrent && !blocked && !outcome && <p className="hint">Saving makes a draft from exactly these songs. Save and play also replaces what’s playing, after you confirm.</p>}
+      {isCurrent && !blocked && !outcome && <p className="hint">{words.saveHint}</p>}
 
       {outcome?.state === 'saving' && <p className="hint" role="status">Saving…</p>}
       {outcome?.state === 'checking' && <p className="hint" role="status">Checking whether it was saved…</p>}
@@ -247,7 +251,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
         <div className="lucy-saved" role="status">
           <LifecyclePill stage={outcome.commit.played ? 'playing' : 'draft'} />
           <p>
-            Saved as draft “{outcome.commit.name ?? 'Untitled'}”.
+            {words.saved} “{outcome.commit.name ?? 'Untitled'}”.
             {outcome.action === 'draft_and_play' && (outcome.commit.played
               ? outcome.startedHere ? ' It’s playing now.' : ' It’s your current mix now.'
               : ' It isn’t playing: what was playing was left alone.')}
@@ -287,7 +291,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
           footer={(
             <>
               <button type="button" data-autofocus onClick={() => setApproval(null)}>Cancel</button>
-              <Action className="primary" disabled={!canConfirm} working="Saving…" run={confirm}>{playing ? 'Save and play' : 'Save as draft'}</Action>
+              <Action className="primary" disabled={!canConfirm} working="Saving…" run={confirm}>{playing ? 'Save and play' : words.save}</Action>
             </>
           )}
         >

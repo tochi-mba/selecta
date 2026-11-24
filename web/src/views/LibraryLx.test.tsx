@@ -136,14 +136,14 @@ describe('LX-0346-07 a repeated press commits once and claims nothing early', ()
     await screen.findByText('First');
     await userEvent.click(screen.getByRole('checkbox', { name: /Select recording First/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Prioritize selected' }));
-    const confirm = screen.getByRole('button', { name: /Confirm 1 recordings/ });
+    const confirm = screen.getByRole('button', { name: 'Prioritize 1 song' });
     await userEvent.click(confirm);
     await userEvent.click(confirm);
     expect(calls.filter((call) => call.includes('/library/batch'))).toHaveLength(1);
     expect(notify).not.toHaveBeenCalled();
     answer(new Response(JSON.stringify({ updated: 1 }), { status: 200 }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith(
-      'Updated 1 precisely selected recordings.',
+      '1 song is now prioritized.',
       expect.any(Function),
     ));
   });
@@ -275,7 +275,7 @@ describe('LX-0347-06, LX-0347-07 refused batches change nothing and focus has so
     await screen.findByText('First');
     await userEvent.click(screen.getByRole('checkbox', { name: /Select recording First/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Prioritize selected' }));
-    await userEvent.click(screen.getByRole('button', { name: /Confirm 1 recordings/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Prioritize 1 song' }));
     await waitFor(() => expect(calls.some((call) => call.path === '/library/batch')).toBe(true));
     await new Promise((done) => setTimeout(done, 20));
     expect(notify).not.toHaveBeenCalled();
@@ -288,7 +288,7 @@ describe('LX-0347-06, LX-0347-07 refused batches change nothing and focus has so
     await userEvent.click(screen.getByRole('checkbox', { name: /Select recording First/ }));
     const opener = screen.getByRole('button', { name: 'Never play selected' });
     await userEvent.click(opener);
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel - change nothing' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(opener).toHaveFocus());
   });
 });

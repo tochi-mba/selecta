@@ -28,6 +28,7 @@ from selecta.billing import plans, stripe_sync
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
 from selecta.lucy import cloud_settings as lucy_cloud
+from selecta.lucy import cloud_store as lucy_conversations
 from selecta.persistence import transaction
 from selecta.playback.schema import devices, playback_sessions
 from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets
@@ -109,6 +110,7 @@ def install_routes(
                 if not str(row["flag_id"]).startswith(lucy_cloud.PREFIX)
             ]
             lucy_choices = lucy_cloud.choices(conn, principal.user.id)
+            lucy_talk = lucy_conversations.export(conn, workspace.id, principal.user.id)
             entitlement = stripe_sync.effective_entitlement(conn, workspace.id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             device_rows = [
@@ -262,6 +264,7 @@ def install_routes(
                         else "none stored for this workspace"
                     ),
                     "settings": "included in settings.json",
+                    "lucy_conversations": "included in lucy-conversations.json",
                     "mixes": {
                         "available": False,
                         "reason": MIXES_UNAVAILABLE,
@@ -272,6 +275,8 @@ def install_routes(
                 archive.writestr("settings.json", json.dumps(settings, indent=2))
                 archive.writestr("assets.json", json.dumps(exported_assets, indent=2))
                 archive.writestr("mixes.json", json.dumps(mixes, indent=2, default=str))
+                # ADR-0476: this person's Lucy conversations, as they read them
+                archive.writestr("lucy-conversations.json", json.dumps(lucy_talk, indent=2))
         except Exception:
             shutil.rmtree(temp_dir, ignore_errors=True)
             raise

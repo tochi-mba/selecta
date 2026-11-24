@@ -7,6 +7,7 @@ import { Icon, IconName } from '../ui/Icon';
 import { showToast } from '../ui/toasts';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { Api, Device, DEVICE_REGISTERED } from './usePlaybackDevice';
+import { flagOn } from '../flags';
 import './devices.css';
 
 // Account > Devices: every browser signed in to this account, this one first and then the most
@@ -58,6 +59,10 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
   const [renameError, setRenameError] = useState('');
   const [forgetting, setForgetting] = useState<Device | null>(null);
   const [clearing, setClearing] = useState(false);
+  // ADR-0475: the default speaker, and how many songs each device holds (only one with music can be it)
+  const [defaultId, setDefaultId] = useState<string | null>(null);
+  const [songs, setSongs] = useState<Map<string, number> | null>(null);
+  const speakerChoice = flagOn('devices.remote_control');
   const [thisDevice, setThisDevice] = useState<string | null>(() => { try { return localStorage.getItem(`selecta.device.${workspaceId}`); } catch { return null; } });
   // after a rename ends (saved or cancelled), focus goes back to that row's Rename button
   const renamed = useRef<string | null>(null);
@@ -71,10 +76,15 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
   const load = useCallback(async () => {
     try {
       const query = thisDevice ? `?device_id=${encodeURIComponent(thisDevice)}` : '';
-      const listed = await api<{ devices: Listed[]; limit: number }>(`/devices${query}`, {}, workspaceId);
+      const listed = await api<{ devices: Listed[]; limit: number; default_speaker_id?: string | null }>(`/devices${query}`, {}, workspaceId);
       setDevices(listed.devices); setLimit(listed.limit); setError('');
+      setDefaultId(listed.default_speaker_id ?? null);
+      if (speakerChoice) {
+        const held = await api<{ devices: { device_id: string; songs: number }[] }>('/local-media/holdings', {}, workspaceId).catch(() => null);
+        if (held) setSongs(new Map(held.devices.map((one) => [one.device_id, one.songs])));
+      }
     } catch (problem) { setError((problem as Error).message); }
-  }, [api, thisDevice, workspaceId]);
+  }, [api, thisDevice, workspaceId, speakerChoice]);
   useEffect(() => { void load(); }, [load]);
   useVisiblePoll(load, 15_000);
 
@@ -99,6 +109,14 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
       showToast(`Renamed to ${next}.`);
       await load();
     } catch (problem) { setRenameError((problem as Error).message); }
+  };
+  /** ADR-0475: make a device the default speaker, or stop it being one. Nothing playing moves. */
+  const chooseDefault = async (device: Device | null) => {
+    try {
+      await api('/devices/default-speaker', { method: 'PUT', body: JSON.stringify({ device_id: device?.id ?? null }) }, workspaceId);
+      setDefaultId(device?.id ?? null);
+      showToast(device ? `${device.name} is your default speaker. Used the next time nothing is playing.` : 'No default speaker. SelectaDJ asks where to play when more than one device could.');
+    } catch (problem) { showToast((problem as Error).message || 'Couldn’t change the default speaker.', { tone: 'problem' }); }
   };
   // Throws on refusal, so the confirmation stays open and says what went wrong.
   const signOut = async (device: Device) => {
@@ -220,9 +238,17 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
                         {device.created_at ? <span>Signed in {dayWords(device.created_at)}</span> : null}
                         {device.poor_speaker ? <span>Best as a remote</span> : null}
                       </span>
+                      {speakerChoice && device.id === defaultId && (
+                        <span className="devices-default" data-testid="default-speaker">
+                          <Icon name="music" size="compact" />{songs && !songs.get(device.id) ? 'Default speaker, no music connected' : 'Default speaker'}
+                        </span>
+                      )}
                     </div>
                     <span className="devices-actions">
                       <button type="button" className="quiet small" data-rename={device.id} onClick={() => { setEditing(device.id); setName(device.name); setRenameError(''); }} aria-label={`Rename ${device.name}`}><Icon name="edit" size="toolbar" />Rename</button>
+                      {speakerChoice && !out && (device.id === defaultId
+                        ? <Action type="button" className="quiet small" run={() => chooseDefault(null)} aria-label={`Stop using ${device.name} as the default speaker`}>Not the default</Action>
+                        : (songs?.get(device.id) ?? 0) > 0 && <Action type="button" className="small" run={() => chooseDefault(device)} aria-label={`Make ${device.name} the default speaker`}>Make default speaker</Action>)}
                       {!out && <Action type="button" className="small" run={() => setForgetting(device)} busy={forgetting?.id === device.id} aria-label={`Sign out this device: ${device.name}`}>Sign out</Action>}
                     </span>
                   </>

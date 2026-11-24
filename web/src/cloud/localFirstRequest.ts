@@ -1,7 +1,8 @@
 import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { linksFamily } from './localFirstLinks';
-import { mixFamily, type PlayableSong } from './localFirstMixes';
+import { mixFamily, type PlayableSong, type SongPlace } from './localFirstMixes';
+import { notOnSpeaker, playsOn, speakerHolds } from '../devices/controller';
 import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscoveries';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 import { requestsFamily } from './localFirstRequests';
@@ -32,21 +33,32 @@ export type CatalogueSong = {
 
 export const NOT_HERE_YET = 'SelectaDJ can’t do that in your browser yet.';
 const PAGE = 100;
-/** Enough for a large personal library; the catalogue pages at 100. */
-const MAX_PAGES = 200;
+/** How long one catalogue read is kept. A write through this adapter (`/local-media`, Never play)
+ * or a library event from the server (`CATALOGUE_CHANGED_EVENT`) forgets it at once, so this only
+ * bounds how long a change made on another device can go unseen. It was 3 s, which, with a
+ * request waiting (polled every 4 s), read every page of the catalogue again on every poll. */
+export const CATALOGUE_KEEP_MS = 5 * 60_000;
+/** Said on `window` when the server says the library changed (CloudApp's event stream). */
+export const CATALOGUE_CHANGED_EVENT = 'selecta:catalogue-changed';
+// counted once for the page, so an adapter made again (its sources changed) leaves no listener behind
+let catalogueChanges = 0;
+if (typeof window !== 'undefined') window.addEventListener(CATALOGUE_CHANGED_EVENT, () => { catalogueChanges += 1; });
 
 export function notHereYet(path: string): ApiError {
   return new ApiError(NOT_HERE_YET, 404, 'flag_off', `local-first:${path.split('?')[0]}`);
 }
 
-/** Every catalogue song, page by page. `cloud` is the authenticated client (paths without /api). */
+/** Every catalogue song, page by page, however many pages there are (it used to stop silently at
+ * 200 pages, 20,000 songs). `cloud` is the authenticated client (paths without /api). */
 export async function readCatalogue(cloud: Request): Promise<CatalogueSong[]> {
   const songs: CatalogueSong[] = [];
   let after = 0;
-  for (let page = 0; page < MAX_PAGES; page += 1) {
-    const answer = await cloud<{ songs: CatalogueSong[]; next?: number }>(`/local-media/songs?after=${after}&limit=${PAGE}`);
+  for (;;) {
+    const answer = await cloud<{ songs: CatalogueSong[]; next?: number | null }>(`/local-media/songs?after=${after}&limit=${PAGE}`);
     songs.push(...answer.songs);
     if (answer.next === undefined || answer.next === null) break;
+    // a cursor that doesn't move on would ask for the same page for ever
+    if (!(answer.next > after) || !answer.songs.length) break;
     after = answer.next;
   }
   return songs;
@@ -69,6 +81,11 @@ export type AvailabilitySources = {
   /** ADR-0475: the device that is playing when it is not this one; null when this device is the
    * speaker or nothing is playing. Read each time, so it is always the newest session. */
   controller?: () => import('../devices/controller').ControllerLink | null;
+  /** ADR-0475 R4: which of the person's other devices hold a song; null until known. */
+  holders?: () => import('../devices/controller').WhereHeld | null;
+  /** ADR-0475 R8: songs another device holds now that a mix made here may use (the device R1
+   * would choose, when it has more of the music than this one); null when none. */
+  mixable?: () => ReadonlySet<number> | null;
   /** Whether this account has Rooms. False: a room's requests are never asked for (the server
    * answers 404 to an account without Rooms). Left out: asked, as before. */
   rooms?: boolean;
@@ -82,7 +99,8 @@ export type AvailabilitySources = {
     onServed?: (from: { cached: false } | { cached: true; at: number | null }) => void;
   };
 };
-export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number> };
+/** `elsewhere`: which other devices of the person hold a song (ADR-0475 R6), when known. */
+export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number>; elsewhere?: import('../devices/controller').WhereHeld | null };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
 /** One song's availability: this device first, then a hosted copy, then the member's other devices. */
@@ -135,6 +153,8 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
       if (state === 'all' || state === 'not_yet') return true;
       const where = availabilityOf(song, known);
       if (state === 'ready') return where === 'here' || where === 'hosted';
+      // R6: plays now, here or on another of the person's devices that is open
+      if (state === 'playable_now') return where === 'here' || where === 'hosted' || (known.elsewhere?.(song.id).online.length ?? 0) > 0;
       if (state === 'attention') return where === 'reauth' || where === 'reconnect' || where === 'nowhere';
       return state === 'missing' && where === 'nowhere';
     })
@@ -207,10 +227,13 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       return mergeSongs(kept?.value ?? [], device);
     }
   };
-  // one catalogue read serves a burst of requests (status, the library page, a search)
+  // One catalogue read serves every request until something changes it: a write through here
+  // forgets it (below), and so does the server saying the library changed.
+  let readChanges = catalogueChanges;
   const songs = () => {
-    if (!catalogue || performance.now() - readAt > 3000) {
+    if (!catalogue || readChanges !== catalogueChanges || performance.now() - readAt > CATALOGUE_KEEP_MS) {
       readAt = performance.now();
+      readChanges = catalogueChanges;
       catalogue = fromServer();
       catalogue.catch(() => { catalogue = null; });
     }
@@ -220,16 +243,28 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   const availability = async (list: CatalogueSong[]): Promise<Availability> => ({
     here: (await sources.here?.().catch(() => null)) ?? NO_AVAILABILITY.here,
     hosted: (await sources.hosted?.(list).catch(() => null)) ?? NO_AVAILABILITY.hosted,
+    elsewhere: sources.holders?.() ?? null,
   });
   const playable = async (): Promise<PlayableSong[]> => {
     const list = await songs();
     const known = await availability(list);
     return list.map((song) => {
       const where = availabilityOf(song, known);
-      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted', never: song.never === true };
+      const elsewhere = sources.mixable?.()?.has(song.id) ?? false;
+      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' || elsewhere, never: song.never === true };
     });
   };
-  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.()) : null;
+  // R5: a result is placed by the device playing (it plays there, it is on another device, or on none)
+  const placeOf: SongPlace = (songId) => {
+    const link = sources.controller?.();
+    if (!link) return { rank: 0, where: null };
+    if (speakerHolds(link, songId)) return { rank: 0, where: playsOn(link.speakerName) };
+    const where = sources.holders?.()?.(songId);
+    if (where?.online.length) return { rank: 1, where: `Only on ${where.online[0]}` };
+    if (where?.before.length) return { rank: 1, where: `On ${where.before[0]}, not open now` };
+    return { rank: where ? 2 : 1, where: where ? 'On no device right now' : notOnSpeaker(link.speakerName).replace(/:.*$/, '') };
+  };
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
     songs: async () => {
@@ -241,7 +276,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   }) : null;
   // requests join the current recipe through the mix routes above, so they need the store too
   const requests = sources.recipes && sources.workspaceId
-    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, controller: sources.controller, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
+    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, controller: sources.controller, holders: sources.holders, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);

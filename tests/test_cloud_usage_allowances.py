@@ -47,9 +47,10 @@ def give_back(engine, consumed, amount=None) -> None:
         ("speculative_cpu_seconds", 600, 3_600, 14_400),
         ("stem_preview_window", 10, None, None),
         ("export", 3, 30, None),
-        ("lucy_turn.haiku", 40, 400, None),
-        ("lucy_turn.sonnet", 0, 40, 150),
-        ("lucy_turn.opus", 0, 0, 25),
+        ("lucy_turn.everyday", 40, 400, 150),
+        ("lucy_turn.planning", 0, 40, 0),
+        ("lucy_turn.deep_plan", 0, 0, 25),
+        ("lucy_turn.quick", 0, 0, None),
     ],
 )
 def test_each_plan_sets_the_allowances_in_the_plan_table(kind, free, standard, premium):
@@ -188,15 +189,15 @@ def test_a_limit_is_a_number_zero_or_more(cloud_engine, limit):
 
 def test_fair_use_is_counted_but_never_refused(cloud_engine):
     for _ in range(5):
-        found = consume(cloud_engine, kind="lucy_turn.haiku", amount=100, limit=None)
+        found = consume(cloud_engine, kind="lucy_turn.everyday", amount=100, limit=None)
         assert found.ok
     assert found.allowance.used == 500
     assert found.allowance.remaining is None
-    assert left(cloud_engine, "lucy_turn.haiku", None).remaining is None
+    assert left(cloud_engine, "lucy_turn.everyday", None).remaining is None
 
 
 def test_a_limit_of_zero_means_the_plan_does_not_include_it(cloud_engine):
-    found = consume(cloud_engine, kind="lucy_turn.opus", limit=0)
+    found = consume(cloud_engine, kind="lucy_turn.deep_plan", limit=0)
     assert not found.ok
     assert found.allowance.used == 0
 
@@ -402,7 +403,7 @@ def test_requests_at_once_never_take_more_than_the_allowance(cloud_engine):
     def take() -> None:
         try:
             start.wait()
-            results.append(consume(cloud_engine, kind="lucy_turn.haiku", limit=10).ok)
+            results.append(consume(cloud_engine, kind="lucy_turn.everyday", limit=10).ok)
         except BaseException as error:  # noqa: BLE001
             errors.append(error)
 
@@ -413,7 +414,7 @@ def test_requests_at_once_never_take_more_than_the_allowance(cloud_engine):
         thread.join()
     assert errors == []
     assert results.count(True) == 10
-    found = left(cloud_engine, "lucy_turn.haiku", 10)
+    found = left(cloud_engine, "lucy_turn.everyday", 10)
     assert (found.used, found.remaining) == (10, 0)
 
 

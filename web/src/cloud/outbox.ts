@@ -311,7 +311,9 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
       }
       try {
         const made = op.kind === 'create'
-          ? await server.create(op.name, op.songIds)
+          // the local mix id is the key: a create whose answer was lost, sent again, gets the
+          // mix the first send made instead of a second copy
+          ? await server.create(op.name, op.songIds, [], op.mixId)
           : await server.edit(target, resolveId(op.baseRevision), op.change);
         if (op.kind === 'create') rememberAlias(workspaceId, op.mixId, made.mix_id);
         rememberAlias(workspaceId, op.revision, made.revision);

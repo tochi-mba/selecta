@@ -81,25 +81,32 @@ def test_free_previews_stems_in_a_few_windows_a_day_and_the_others_are_not_limit
 
 
 @pytest.mark.parametrize(
-    ("plan", "haiku", "sonnet", "opus"),
-    [(FREE_2, 40, 0, 0), (STANDARD_2, 400, 40, 0), (PREMIUM_2, None, 150, 25)],
+    ("plan", "everyday", "planning", "deep_plan", "quick"),
+    [
+        (FREE_2, 40, 0, 0, 0),
+        (STANDARD_2, 400, 40, 0, 0),
+        (PREMIUM_2, 150, 0, 25, None),
+    ],
 )
-def test_lucy_turns_match_the_plan_table(plan, haiku, sonnet, opus):
-    assert plan.lucy_turns("haiku") == haiku
-    assert plan.lucy_turns("sonnet") == sonnet
-    assert plan.lucy_turns("opus") == opus
+def test_lucy_turns_match_the_plan_table(plan, everyday, planning, deep_plan, quick):
+    assert plan.lucy_turns("everyday") == everyday
+    assert plan.lucy_turns("planning") == planning
+    assert plan.lucy_turns("deep_plan") == deep_plan
+    assert plan.lucy_turns("quick") == quick
 
 
 def test_lucy_purposes_and_capabilities_rise_with_the_plan():
     assert [a.purpose for a in FREE_2.lucy] == ["everyday"]
-    assert {a.model_class: a.purpose for a in STANDARD_2.lucy} == {
-        "haiku": "everyday",
-        "sonnet": "planning",
+    # One model per plan (owner, 2026-11-24): Free on Haiku, Standard on Sonnet, Premium on Opus.
+    assert {a.purpose: a.model_class for a in FREE_2.lucy} == {"everyday": "haiku"}
+    assert {a.purpose: a.model_class for a in STANDARD_2.lucy} == {
+        "everyday": "sonnet",
+        "planning": "sonnet",
     }
-    assert {a.model_class: a.purpose for a in PREMIUM_2.lucy} == {
-        "sonnet": "everyday",
-        "opus": "deep_plan",
-        "haiku": "quick",
+    assert {a.purpose: a.model_class for a in PREMIUM_2.lucy} == {
+        "everyday": "opus",
+        "deep_plan": "opus",
+        "quick": "opus",
     }
     assert [p.lucy_capability for p in CURRENT] == ["lucy_basic", "lucy_standard", "lucy_advanced"]
 
@@ -320,9 +327,11 @@ def test_a_stem_preview_needs_a_daily_number_of_windows():
     assert found == ["standard v1: a stem preview needs a daily number of windows"]
 
 
-def test_lucy_allowances_must_name_each_real_model_class_once_with_turns_zero_or_more():
-    twice = (LucyTurns("haiku", "a", 1), LucyTurns("haiku", "b", 2))
-    assert broken(lucy=twice) == ["standard v1: lists a Lucy model class twice"]
+def test_lucy_allowances_name_each_purpose_once_on_a_real_model_class_with_turns_zero_or_more():
+    one_model = (LucyTurns("haiku", "a", 1), LucyTurns("haiku", "b", 2))
+    assert broken(lucy=one_model) == []
+    twice = (LucyTurns("haiku", "a", 1), LucyTurns("sonnet", "a", 2))
+    assert broken(lucy=twice) == ["standard v1: lists a Lucy purpose twice"]
     unknown = (LucyTurns("gpt", "a", 1),)
     assert broken(lucy=unknown) == ["standard v1: gpt isn't a Lucy model class"]
     negative = (LucyTurns("haiku", "a", -1),)

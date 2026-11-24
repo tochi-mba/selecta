@@ -20,6 +20,7 @@ from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
 from selecta.local_media import store
 from selecta.persistence import db_now, transaction
+from selecta.playback import default_speaker
 from selecta.playback.schema import devices as playback_devices
 
 _MAX_PAGE_SIZE = 100
@@ -233,6 +234,8 @@ def install_routes(
                     for row in mine
                 ],
                 "server_time": now,
+                # ADR-0475: the device the person chose to make the sound when several could
+                "default_speaker_id": default_speaker.read(conn, workspace_id),
             }
             if device_id is not None:
                 if not any(row["id"] == device_id for row in mine):

@@ -50,9 +50,10 @@ PERIODS = {
     "speculative_cpu_seconds": Period.DAY,
     "stem_preview_window": Period.DAY,
     "export": Period.MONTH,
-    "lucy_turn.haiku": Period.MONTH,
-    "lucy_turn.sonnet": Period.MONTH,
-    "lucy_turn.opus": Period.MONTH,
+    "lucy_turn.everyday": Period.MONTH,
+    "lucy_turn.planning": Period.MONTH,
+    "lucy_turn.deep_plan": Period.MONTH,
+    "lucy_turn.quick": Period.MONTH,
 }
 
 

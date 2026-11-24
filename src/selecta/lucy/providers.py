@@ -10,6 +10,7 @@ lives in builtin.py.
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -56,6 +57,10 @@ class TurnResult:
     stop: str = "end_turn"
     tokens_in: int = 0
     tokens_out: int = 0
+    cache_read: int = 0
+    """Of `tokens_in`, how many were read from or written to the provider's prompt cache, so a
+    turn's cost can bill them at their own rates (the Cloud gateway does)."""
+    cache_write: int = 0
     assistant: Any = None
     """The provider-native assistant message to append before tool results."""
 
@@ -79,9 +84,12 @@ class AnthropicProvider:
         self.effort = effort or DEFAULT_EFFORT
         # The host itself, not a substring: "https://other.example/api.anthropic.com" is not it.
         self.default_host = not base_url or urlsplit(base_url).hostname == "api.anthropic.com"
+        # A key that isn't scoped to one Anthropic workspace must name it on every request.
+        workspace = os.environ.get("ANTHROPIC_WORKSPACE_ID", "").strip()
         self.client = anthropic.AsyncAnthropic(
             api_key=api_key, base_url=None if self.default_host else base_url,
             max_retries=2, timeout=120.0,
+            default_headers={"anthropic-workspace-id": workspace} if workspace else None,
         )
 
     def tool(self, name: str, description: str, schema: dict) -> dict:
@@ -152,7 +160,10 @@ class AnthropicProvider:
                             tokens_in=(final.usage.input_tokens or 0)
                             + (getattr(final.usage, "cache_read_input_tokens", 0) or 0)
                             + (getattr(final.usage, "cache_creation_input_tokens", 0) or 0),
-                            tokens_out=final.usage.output_tokens or 0)
+                            tokens_out=final.usage.output_tokens or 0,
+                            cache_read=getattr(final.usage, "cache_read_input_tokens", 0) or 0,
+                            cache_write=getattr(final.usage, "cache_creation_input_tokens", 0)
+                            or 0)
         result.text = "".join(b.text for b in final.content if b.type == "text")
         if result.stop in {"refusal", "max_tokens"}:
             return result  # a truncated or declined tool call is never run

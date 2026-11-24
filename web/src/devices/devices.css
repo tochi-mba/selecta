@@ -214,6 +214,32 @@
 .controller-devices li button { flex: none; min-height: var(--control-height); white-space: nowrap; }
 /* this device was asked to play and the browser needs one press first */
 .shell[data-mode='cloud'] .shell-banners > .asked-to-play { border-color: var(--edge-selected); }
-.shell[data-mode='cloud'] .shell-banners > .asked-to-play > button { min-height: var(--control-height); }
-.shell[data-mode='cloud'] .shell-banners > .asked-to-play > button + button { margin-inline-start: 0; }
-.remote-card > .remote-elsewhere { display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); min-height: var(--control-height); }
+/* the sentence on its own line, then the two buttons together on one row, the main one first */
+.shell[data-mode='cloud'] .shell-banners > .asked-to-play { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.shell[data-mode='cloud'] .shell-banners > .asked-to-play > .asked-to-play-words { flex: 1 1 100%; }
+.shell[data-mode='cloud'] .shell-banners > .asked-to-play > button { min-height: var(--control-height); margin: 0; }
+/* ADR-0475 R1: every way to start the music from the device in hand */
+.remote-ways { display: grid; gap: var(--space-2); min-width: 0; }
+.remote-ways ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.remote-ways li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); min-height: var(--control-height); padding: var(--space-2) 0; border-bottom: var(--separator) solid var(--edge-decorative); min-width: 0; }
+.remote-ways li button { flex: none; display: inline-flex; align-items: center; gap: var(--icon-gap); min-height: var(--control-height); white-space: nowrap; }
+.remote-next-missing { color: var(--status-warning); font: var(--type-caption); }
+.remote-refusal { margin: 0; padding-inline-start: var(--space-2); border-inline-start: var(--marker) solid var(--status-warning); color: var(--text); font: var(--type-meta); }
+/* ADR-0475: Where should the music play? */
+.speaker-picker-list { display: grid; gap: var(--space-1); margin: 0; }
+.speaker-picker-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--control-height); padding: var(--space-2) var(--space-3); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius-sm); cursor: pointer; min-width: 0; }
+.speaker-picker-row:not([data-usable]) { cursor: default; color: var(--text-soft); }
+.speaker-picker-row:has(input:checked) { border-color: var(--selected); background: var(--surface-selected); }
+.speaker-picker-row input { flex: none; width: var(--space-5); height: var(--space-5); margin: 0; }
+.speaker-picker-words { display: grid; gap: var(--space-hair); min-width: 0; flex: 1; }
+.speaker-picker-words b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--type-meta); font-weight: var(--weight-label); }
+.speaker-picker-words span { color: var(--text-soft); font: var(--type-caption); }
+.speaker-picker-note { margin: 0 0 var(--space-2); padding-inline-start: var(--space-2); border-inline-start: var(--marker) solid var(--status-warning); font: var(--type-meta); }
+.speaker-picker-default { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-height); margin-top: var(--space-2); }
+.speaker-picker-default input { width: var(--space-5); height: var(--space-5); margin: 0; }
+/* ADR-0475: the device chosen to make the sound when several could */
+.devices-default { display: inline-flex; align-items: center; gap: var(--icon-gap); width: fit-content; color: var(--selected); font: var(--type-caption); font-weight: var(--weight-label); }
+.speaker-picker-away { margin-top: var(--space-2); color: var(--text-soft); font: var(--type-meta); }
+.speaker-picker-away summary { min-height: var(--control-height); display: flex; align-items: center; cursor: pointer; }
+.speaker-picker-away ul { list-style: none; margin: 0; padding: 0 0 0 var(--space-3); display: grid; gap: var(--space-1); }
+.speaker-picker-away b { font-weight: var(--weight-label); color: var(--text); }

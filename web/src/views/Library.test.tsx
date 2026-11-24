@@ -461,12 +461,12 @@ describe('contextual selection controls', () => {
     await screen.findByText('First');
     await userEvent.click(screen.getByRole('checkbox', { name: /Select recording First/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Prioritize selected' }));
-    expect(screen.getByRole('dialog', { name: 'Apply batch Library action?' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Prioritize 1 song?' })).toBeVisible();
     act(() => {
       window.history.pushState({}, '', '/library?show=ready');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm 1 recordings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Prioritize 1 song' }));
     expect(calls.filter((call) => call.path === '/library/batch')).toHaveLength(0);
   });
 });
@@ -490,15 +490,15 @@ describe('Library music-first retrieval', () => {
     expect(screen.getByText(/does not mean transitions are already rendered/)).toBeInTheDocument();
   });
 
-  it('shows exact current flags before confirming a batch edit', async () => {
+  it('names each song, in plain words, before confirming a batch edit', async () => {
     const calls = fakeBackend({ 'GET /library': page({ ...row(1, 'First'), priority: true }) });
     show();
     await screen.findByText('First');
     await userEvent.click(screen.getByRole('checkbox', { name: /Select recording First/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Remove priority' }));
-    const dialog = screen.getByRole('dialog', { name: 'Apply batch Library action?' });
-    expect(within(dialog).getByText(/ID 1; priority on; excluded no/)).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel - change nothing' }));
+    const dialog = screen.getByRole('dialog', { name: 'Remove priority from 1 song?' });
+    expect(within(dialog).getByText('First, Someone')).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(calls.some((call) => call.method === 'POST' && call.path === '/library/batch')).toBe(false);
   });
 

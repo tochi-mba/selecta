@@ -76,7 +76,11 @@ export type MixFamily = {
 
 /** `everySong` (ADR-0475 R5): another device is playing, so Request a song looks through the
  * whole account library, not only what this device can play. */
-export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false): MixFamily {
+/** ADR-0475 R5: how a search result ranks (0 plays where it would play now, 1 is held on another
+ * device, 2 is held nowhere right now) and the words for where it would play, when not here. */
+export type SongPlace = (songId: number, playableHere: boolean) => { rank: number; where: string | null };
+
+export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace): MixFamily {
   const current = async (): Promise<MixData | null> => {
     const id = store.current();
     if (!id) return null;
@@ -202,12 +206,15 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     const wanted = (query.get('q') ?? '').trim().toLowerCase();
     const limit = Math.max(1, Number(query.get('limit') ?? 20) || 20);
     const all = everySong();
+    // R5: with another device playing, songs it can play first, then songs on another device,
+    // then songs on no device now; without placings, what this device can play itself first
+    const place = (song: PlayableSong) => (all && placeOf ? placeOf(song.id, song.playable) : { rank: song.playable ? 0 : 1, where: null });
     return (await songs())
       .filter((song) => (all || song.playable) && `${song.title} ${song.artist}`.toLowerCase().includes(wanted))
-      // what this device can play itself comes first; the rest plays on the speaker
-      .sort((one, other) => Number(other.playable) - Number(one.playable))
+      .map((song) => ({ song, at: place(song) }))
+      .sort((one, other) => one.at.rank - other.at.rank || Number(other.song.playable) - Number(one.song.playable))
       .slice(0, limit)
-      .map((song) => ({ id: song.id, artist: song.artist, title: song.title, genre: null, duration: song.duration, bpm: null, camelot: null, lyric_status: null, never: false, priority: false }));
+      .map(({ song, at }) => ({ id: song.id, artist: song.artist, title: song.title, genre: null, duration: song.duration, bpm: null, camelot: null, lyric_status: null, never: false, priority: false, ...(at.where ? { where: at.where } : {}) }));
   };
 
   return {

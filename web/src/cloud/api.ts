@@ -11,6 +11,15 @@ export type Usage = {
   exports_month: Allowance & { retention_days: number; blocked: boolean };
   lucy_turns_month: LucyTurns;
 };
+/** The billing moment the customer should hear about (billing/standing.py), or null for none.
+ * `at` is epoch seconds; `key` changes whenever the event does, so a dismissal is per event. */
+export type BillingStanding = {
+  state: 'payment_failed' | 'action_required' | 'cancelling' | 'ended_payment_failed';
+  plan_label: string;
+  at: number | null;
+  key: string;
+  can_manage?: boolean;
+};
 export type Account = {
   user: { id: string; email: string; email_verified: boolean; suspended?: boolean; staff?: boolean; timezone?: string };
   workspace: { id: string; name: string; role: string };
@@ -18,7 +27,7 @@ export type Account = {
   usage?: Usage;
   /** `checkout_available` false: this site cannot start a payment (no Stripe key or prices). Left
    * out by an older server, which means it can. */
-  billing?: { consent_version: string; checkout_available?: boolean };
+  billing?: { consent_version: string; checkout_available?: boolean; standing?: BillingStanding | null };
   lucy?: { tier: string };
   /** One server-decided answer for the two independent Cloud grants (BF-0455-03). */
   experience?: { local_first: boolean; hosted: boolean };

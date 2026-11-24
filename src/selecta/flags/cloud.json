@@ -232,7 +232,9 @@
         "GET /api/local-media/recipes/{mix_id}",
         "POST /api/local-media/recipes/{mix_id}/revisions",
         "POST /api/local-media/recipes/{mix_id}/duplicate",
-        "DELETE /api/local-media/recipes/{mix_id}"
+        "DELETE /api/local-media/recipes/{mix_id}",
+        "GET /api/local-media/current",
+        "PUT /api/local-media/current"
       ],
       "surfaces": ["cloud.library"],
       "modes": ["cloud"],
@@ -260,12 +262,40 @@
       "kind": "release",
       "owner": "billing"
     },
+    "cloud.rate_limits": {
+      "label": "API rate limits",
+      "about": "Per-account and per-IP request limits in the Cloud API, with stricter limits for checkout, account changes, search and upload plans.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform",
+      "cloud_surface_kind": "operations",
+      "cloud_surface_reason": "A request limit has no screen; a refused request says why and when to try again"
+    },
+    "cloud.idempotency": {
+      "label": "Replayed writes",
+      "about": "A Cloud write sent again with the same Idempotency-Key within 24 hours gets the first answer back instead of doing it twice.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform",
+      "cloud_surface_kind": "operations",
+      "cloud_surface_reason": "Replaying a stored answer has no screen; the person simply never sees a double"
+    },
+    "billing.standing": {
+      "label": "Billing notices and emails",
+      "about": "Tell the customer when a payment failed, needs confirming, or a plan is ending or has ended, in the app and by email.",
+      "surfaces": ["cloud.billing", "cloud.home"],
+      "words": ["Update your card to keep it"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "billing"
+    },
     "cloud.operations": {
       "label": "Cloud operations",
       "about": "Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct.",
       "core": "The cloud service can't run, recover or erase data on time without them.",
       "cli": [
         "db",
+        "admin",
         "gateway",
         "maintain",
         "account-deletion-maintenance",
@@ -377,6 +407,7 @@
         "POST /api/playback/commands",
         "GET /api/local-media/holdings",
         "POST /api/playback/start-asks",
+        "PUT /api/devices/default-speaker",
         "POST /api/playback/start-asks/{ask_id}/answer",
         "POST /api/playback/commands/{command_id}/ack"
       ],
@@ -476,6 +507,7 @@
         "GET /api/room-requests",
         "POST /api/room-requests/{request_id}/played",
         "POST /api/room-requests/{request_id}/dismiss",
+        "POST /api/room-requests/{request_id}/waiting",
         "POST /api/guest/join",
         "GET /api/guest/rooms/{room_id}",
         "GET /api/guest/rooms/{room_id}/search",

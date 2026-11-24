@@ -110,11 +110,12 @@ class Plan:
     def lane_concurrency(self, lane: str) -> int:
         return self.concurrency[lane]
 
-    def lucy_turns(self, model_class: str) -> int | None:
-        """This plan's monthly turns for one model class: 0 when it doesn't include that class,
-        `None` under fair use."""
+    def lucy_turns(self, purpose: str) -> int | None:
+        """This plan's monthly turns for one purpose ("everyday", "planning", "deep_plan",
+        "quick"): 0 when it doesn't include that purpose, `None` under fair use. Purposes, not
+        model classes, name an allowance, since one model can serve several (Premium's Opus)."""
         for allowance in self.lucy:
-            if allowance.model_class == model_class:
+            if allowance.purpose == purpose:
                 return allowance.turns
         return 0
 
@@ -233,9 +234,29 @@ PREMIUM_1 = Plan(
 # version lists `cloud.hosted_media` or any other BF flag; `plan_gated_flags()` reads latest
 # versions only, and v2 keeps the gated set identical to `PREMIUM_ONLY`.
 
+#
+# Lucy's model classes in v2 follow the routing map (owner, 2026-11-24): Standard runs on Sonnet
+# and Premium on Opus for every kind of turn. Allowances are enforced per tier and request class
+# in `selecta.ai.allowance`, so this relabels which model serves the same turn counts; no count
+# or price changes, which is why v2 is edited rather than a v3 added.
+
 FREE_2 = replace(FREE_1, version=2, library_soft_cap_songs=10_000)
-STANDARD_2 = replace(STANDARD_1, version=2, library_soft_cap_songs=40_000)
-PREMIUM_2 = replace(PREMIUM_1, version=2, library_soft_cap_songs=100_000)
+STANDARD_2 = replace(
+    STANDARD_1,
+    version=2,
+    library_soft_cap_songs=40_000,
+    lucy=(LucyTurns("sonnet", "everyday", 400), LucyTurns("sonnet", "planning", 40)),
+)
+PREMIUM_2 = replace(
+    PREMIUM_1,
+    version=2,
+    library_soft_cap_songs=100_000,
+    lucy=(
+        LucyTurns("opus", "everyday", 150),
+        LucyTurns("opus", "deep_plan", 25),
+        LucyTurns("opus", "quick", None),
+    ),
+)
 
 # Every version of every plan, oldest first. Add a version; never change or remove one, because
 # subscriptions point at it.
@@ -389,9 +410,9 @@ def _plan_problems(plan_id: str, plan: Plan, registry: Mapping[str, flags.Flag])
         found.append(f"{name}: exports_per_month can't be negative")
     if plan.stems is StemAccess.PREVIEW and plan.stem_preview_windows_per_day is None:
         found.append(f"{name}: a stem preview needs a daily number of windows")
-    classes = [allowance.model_class for allowance in plan.lucy]
-    if len(set(classes)) != len(classes):
-        found.append(f"{name}: lists a Lucy model class twice")
+    purposes = [allowance.purpose for allowance in plan.lucy]
+    if len(set(purposes)) != len(purposes):
+        found.append(f"{name}: lists a Lucy purpose twice")
     for allowance in plan.lucy:
         if allowance.model_class not in LUCY_MODEL_CLASSES:
             found.append(f"{name}: {allowance.model_class} isn't a Lucy model class")

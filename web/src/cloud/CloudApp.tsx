@@ -1,10 +1,13 @@
 import { LoginRequiredError, useAuth } from '@workos-inc/authkit-react';
-import { FormEvent, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazyPage as lazy } from '../ui/staleBuild';
 import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
 import { START_ANSWER_EVENT, START_ASK_EVENT } from '../devices/playOn';
+import { CURRENT_MIX_EVENT } from './currentMix';
+import { DEFAULT_SPEAKER_EVENT } from '../devices/useHoldings';
 import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
@@ -31,11 +34,14 @@ import { AccountProblemPage, BlockedAccount, GateLoading, OfflineWait, SignInAga
 import { Welcome } from './Welcome';
 import { CloudEvent, useCloudEvents } from './events';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
+import { CATALOGUE_CHANGED_EVENT } from './localFirstRequest';
 import { LIBRARY_STATES_FLAG } from './libraryState';
 import { LibraryPanel } from './Library';
 import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
+import { BillingStandingNotice } from './BillingStanding';
+import { SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './localFirstGate';
 import { LocalFirstLabs } from './labs/LocalFirstLabs';
@@ -398,12 +404,17 @@ export function CloudApp() {
     // ADR-0475 R2: one device asking another to start, and what it answered (devices/playOn.ts)
     if (event.topic === 'playback.start_ask') window.dispatchEvent(new CustomEvent(START_ASK_EVENT, { detail: event.payload }));
     if (event.topic === 'playback.start_answer') window.dispatchEvent(new CustomEvent(START_ANSWER_EVENT, { detail: event.payload }));
+    // ADR-0475 R8: another device chose the account's current mix
+    if (event.topic === 'mix.current') window.dispatchEvent(new CustomEvent(CURRENT_MIX_EVENT, { detail: event.payload }));
+    if (event.topic === 'devices.default_speaker') window.dispatchEvent(new Event(DEFAULT_SPEAKER_EVENT));
     // a room request the host accepted, waiting for (or gone from) the browser mix's Requests
     if (event.topic === 'requests.room') window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: event.payload }));
     // anything about the open room (a request, a guest, its settings, its end) reaches the shell's
     // room session, which reads the room again on whichever page the host is (useRoomSession)
     if (event.topic === 'requests.room' || event.topic.startsWith('room.')) window.dispatchEvent(new Event(ROOM_EVENT));
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); }
+    // the browser-first catalogue is kept until the library changes (localFirstRequest.ts)
+    if (/^(upload|asset|library|local_media)\./.test(event.topic)) window.dispatchEvent(new Event(CATALOGUE_CHANGED_EVENT));
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);
   const stream = useCloudEvents({ token: getAccessToken, workspaceId: account?.workspace.id ?? null, onEvent, refresh: refreshAll });
@@ -526,7 +537,7 @@ export function CloudApp() {
     <ConfirmDialog
       destructive
       title="Delete your SelectaDJ Cloud account?"
-      body="It is hidden and you are signed out at once. Final erasure happens after the 30 day recovery window; contact SelectaDJ support within it to keep the account."
+      body={`It is hidden and you are signed out at once. It is erased for good after 30 days; until then, write to ${SUPPORT_EMAIL} to keep it. A paid plan is cancelled straight away, with no refund for the rest of the period, and does not come back if the account is restored.`}
       confirmLabel="Delete my account"
       cancelLabel="Keep my account"
       working="Deleting…"
@@ -608,7 +619,7 @@ export function CloudApp() {
       </Suspense>
     );
   }
-  if (!user) return <Welcome problem={signInProblem} onSignIn={startSignIn} onSignUp={() => signUp()} />;
+  if (!user) return <Welcome problem={signInProblem} onSignIn={startSignIn} onSignUp={() => signUp({ state: { returnTo: `${window.location.pathname}${window.location.search}` } })} />;
   if (signInAgain) return <SignInAgain onSignIn={signInAgainPressed} />;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} email={user.email} onSignOut={() => restartSignIn()} />;
   if (!user.emailVerified) return <VerifyEmail email={user.email} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
@@ -703,6 +714,7 @@ export function CloudApp() {
     {account.user.suspended && (exact ? <SuspendedPanel go={goShell} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
     {problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
     <OverQuotaBanner account={account} go={goShell} />
+    {place !== PATHS.billing && <BillingStandingNotice account={account} place="shell" busy={busy('portal')} onPortal={() => void openPortal()} />}
     {renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>}
     {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
   </>;
@@ -768,6 +780,7 @@ export function CloudApp() {
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         <OverQuotaBanner account={account} go={choosePage} />
+        {account && view !== 'billing' && <BillingStandingNotice account={account} place="shell" busy={busy('portal')} onPortal={() => void openPortal()} />}
         {renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>}
         {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
         {flagOn(OFFLINE_SHELL) && <ConnectionBanner />}

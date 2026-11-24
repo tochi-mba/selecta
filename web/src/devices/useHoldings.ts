@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DeviceHolding, Holdings } from './controller';
+import { onReconnect } from '../cloud/connection';
 
 // ADR-0475 holdings as this device sees them: the person's signed-in devices with how many songs
 // each can open and whether it is here now, and the catalogue ids the speaker can open. Read from
@@ -9,38 +10,57 @@ import type { DeviceHolding, Holdings } from './controller';
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 export const HOLDINGS_EVERY_MS = 15_000;
+/** Fired on window by the Cloud event stream when the default speaker changed (ADR-0475 C19). */
+export const DEFAULT_SPEAKER_EVENT = 'selecta:default-speaker';
 
 export type HoldingsView = {
   /** null until the first answer (or while the route is refused: an older server, the flag off) */
   devices: DeviceHolding[] | null;
   /** The ids the speaker can open; null when there is no speaker elsewhere or it has not said. */
   speakerSongs: ReadonlySet<number> | null;
+  /** Each reporting device's ids (ADR-0475 R4, R6: which device holds a song). A device that has
+   * reported nothing is absent: unknown, not empty. */
+  ids: ReadonlyMap<string, ReadonlySet<number>>;
+  /** The account's default speaker (ADR-0475); null when none is set. */
+  defaultId: string | null;
+  /** Read again now (after the default changed here). */
+  refresh: () => void;
 };
 
-/** `speakerId`: the device playing elsewhere, whose ids are worth reading; null reads counts only. */
+const NO_IDS: ReadonlyMap<string, ReadonlySet<number>> = new Map();
+
+/** `speakerId`: the device playing elsewhere (its ids are `speakerSongs`); null when none is.
+ * Every reporting device's ids are read too, each again only when its report changes. */
 export function useHoldings(cloud: Request, enabled: boolean, speakerId: string | null): HoldingsView {
   const [devices, setDevices] = useState<DeviceHolding[] | null>(null);
-  const [speakerSongs, setSpeakerSongs] = useState<ReadonlySet<number> | null>(null);
-  // the report the kept ids came from, so an unchanged set is not read again
-  const kept = useRef<{ id: string; reportedAt: number | null } | null>(null);
+  const [ids, setIds] = useState<ReadonlyMap<string, ReadonlySet<number>>>(NO_IDS);
+  const [defaultId, setDefaultId] = useState<string | null>(null);
+  const [asked, setAsked] = useState(0);
+  // the report each kept set came from, so an unchanged set is not read again
+  const kept = useRef(new Map<string, { reportedAt: number; songs: ReadonlySet<number> }>());
 
   useEffect(() => {
-    if (!enabled) { setDevices(null); setSpeakerSongs(null); kept.current = null; return undefined; }
+    if (!enabled) { setDevices(null); setIds(NO_IDS); kept.current = new Map(); return undefined; }
     let live = true;
     const read = async () => {
       try {
         const counts = await cloud<Holdings>('/local-media/holdings');
         if (!live) return;
         setDevices(counts.devices);
-        const speaker = speakerId ? counts.devices.find((device) => device.device_id === speakerId) : undefined;
-        if (!speakerId || !speaker) { kept.current = null; setSpeakerSongs(null); return; }
-        if (kept.current?.id === speakerId && kept.current.reportedAt === speaker.reported_at) return;
-        // a speaker that has reported nothing is unknown, not empty: it answers for itself
-        if (speaker.reported_at === null) { kept.current = { id: speakerId, reportedAt: null }; setSpeakerSongs(null); return; }
-        const one = await cloud<Holdings>(`/local-media/holdings?device_id=${encodeURIComponent(speakerId)}`);
-        if (!live) return;
-        kept.current = { id: speakerId, reportedAt: speaker.reported_at };
-        setSpeakerSongs(new Set(one.song_ids ?? []));
+        setDefaultId(counts.default_speaker_id ?? null);
+        const next = new Map<string, { reportedAt: number; songs: ReadonlySet<number> }>();
+        let changed = kept.current.size !== counts.devices.filter((device) => device.reported_at !== null).length;
+        for (const device of counts.devices) {
+          if (device.reported_at === null) continue;
+          const had = kept.current.get(device.device_id);
+          if (had && had.reportedAt === device.reported_at) { next.set(device.device_id, had); continue; }
+          const one = await cloud<Holdings>(`/local-media/holdings?device_id=${encodeURIComponent(device.device_id)}`);
+          if (!live) return;
+          next.set(device.device_id, { reportedAt: device.reported_at, songs: new Set(one.song_ids ?? []) });
+          changed = true;
+        }
+        kept.current = next;
+        if (changed) setIds(new Map([...next].map(([id, held]) => [id, held.songs])));
       } catch {
         // refused or unreachable: what is known stays; nothing is claimed that was not read
       }
@@ -48,7 +68,17 @@ export function useHoldings(cloud: Request, enabled: boolean, speakerId: string 
     void read();
     const timer = window.setInterval(() => void read(), HOLDINGS_EVERY_MS);
     return () => { live = false; window.clearInterval(timer); };
-  }, [cloud, enabled, speakerId]);
+  }, [cloud, enabled, asked]);
 
-  return { devices, speakerSongs };
+  // a speaker that has reported nothing is unknown, not empty: it answers for itself
+  const speakerSongs = speakerId ? ids.get(speakerId) ?? null : null;
+  // another device changed the default, or the connection is back: read again now
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const again = () => setAsked((count) => count + 1);
+    window.addEventListener(DEFAULT_SPEAKER_EVENT, again);
+    const off = onReconnect(again);
+    return () => { window.removeEventListener(DEFAULT_SPEAKER_EVENT, again); off(); };
+  }, [enabled]);
+  return { devices, speakerSongs, ids, defaultId, refresh: useCallback(() => setAsked((count) => count + 1), []) };
 }

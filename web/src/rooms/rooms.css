@@ -116,7 +116,7 @@
 .ask-actions { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: flex-end; }
 .ask-actions button { min-height: var(--control-height); white-space: nowrap; }
 .ask-state { color: var(--text-soft); font-size: var(--text-sm); }
-.ask-note { grid-column: 2 / -1; color: var(--text-soft); font-size: var(--text-sm); }
+.ask-note { grid-column: 2 / -1; color: var(--text-soft); font-size: var(--text-sm); text-align: start; }
 .ask-done { background: none; }
 .ask-done .ask-mark { color: var(--status-ready); background: color-mix(in srgb, var(--status-ready) 12%, transparent); }
 @keyframes ask-in { from { opacity: 0; transform: translateY(calc(-1 * var(--space-2))); border-color: var(--request); } to { opacity: 1; transform: none; } }
@@ -127,8 +127,12 @@
 .requests-browser > .asks { padding-bottom: var(--space-5); border-bottom: var(--separator) solid var(--edge-decorative); }
 .requests-browser > label[for='request-song-search'] { font-size: var(--text-md); font-weight: var(--weight-heading); }
 .requests-browser .ask { grid-template-columns: auto minmax(0, 1fr); }
-.requests-browser .ask-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; }
-.requests-browser .ask-actions .primary { flex: 1 1 auto; }
+/* One layout for every request row in the drawer: the main action fills the row and the second
+   sits in a fixed column, so Add next is the same width on every row whatever the second is. */
+.requests-browser .ask-actions { grid-column: 1 / -1; grid-row: auto; display: grid; grid-template-columns: minmax(0, 1fr) 8rem; }
+/* a main action alone fills the row; a lone secondary one (Dismiss) keeps its usual column */
+.requests-browser .ask-actions > :only-child { grid-column: 1 / -1; }
+.requests-browser .ask-actions > :only-child:not(.primary) { grid-column: 2; }
 
 /* opening a room */
 .room-open { display: grid; gap: var(--space-2); min-width: 0; }
@@ -191,8 +195,9 @@
   .room-share-body { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .room-share-words { justify-items: center; text-align: center; }
   .ask { grid-template-columns: auto minmax(0, 1fr); }
-  .ask-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; }
-  .ask-actions .primary { flex: 1 1 auto; }
+  .ask-actions { grid-column: 1 / -1; grid-row: auto; display: grid; grid-template-columns: minmax(0, 1fr) 8rem; }
+  .ask-actions > :only-child { grid-column: 1 / -1; }
+  .ask-actions > :only-child:not(.primary) { grid-column: 2; }
   .room-qr-words { justify-items: center; text-align: center; }
 }
 

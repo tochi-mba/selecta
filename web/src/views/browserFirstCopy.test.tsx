@@ -97,8 +97,9 @@ describe('Request a song in the browser', () => {
     fakeBackend({});
     panel([row({ stage: 'searching', browser_note: JOINS_BY_HAND })]);
     const list = within(screen.getByRole('list', { name: 'Your requests' }));
-    expect(list.getByRole('button', { name: /^Add (next|to mix)/ })).toBeInTheDocument();
-    expect(list.getByText(JOINS_BY_HAND)).toBeInTheDocument();
+    // the one thing to do is the button: a row this device can play is not held, so the browser's
+    // note (JOINS_BY_HAND) is said once as the room list's help, not on each own row
+    expect(list.getByRole('button', { name: 'Add next: Wanted' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Your requests' })).not.toHaveTextContent(/looking for a spot|Finding a spot/i);
   });
 });
@@ -154,7 +155,7 @@ describe('Make a Mix while too few songs can play here', () => {
   it('draws nothing extra when there is no current mix', () => {
     render(<MixesEmpty connected={0} />);
     expect(screen.queryByRole('region', { name: 'Current mix' })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Mixes start with your music' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Connect your music to make a mix' })).toBeVisible();
   });
 });
 

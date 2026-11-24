@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { houseTab } from './audioTab';
 
 // ADR-0475 R2, "Play on {device}": one device asks another of the same person's devices to
 // become the speaker and start. It is an ask, not a remote take-over: the asked device decides
@@ -18,7 +19,9 @@ export type StartAnswer = { ask_id: string; asker_device_id: string; target_devi
 export const START_ASK_EVENT = 'selecta-start-ask';
 export const START_ANSWER_EVENT = 'selecta-start-answer';
 /** How long the asker waits for any answer before saying the device did not answer. */
-export const START_ASK_WAIT_MS = 10_000;
+/** ADR-0475 A1: a device that does not answer in this long (asleep, a locked phone) is not
+ * usable for this attempt; the rule moves on. */
+export const START_ASK_WAIT_MS = 8_000;
 /** How long "Starting on {device}" may stand before the asker stops claiming even that. */
 export const STARTING_WAIT_MS = 20_000;
 
@@ -95,9 +98,11 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
 
   useEffect(() => {
     if (!enabled || !deviceId) return undefined;
+    // ADR-0475 F: every tab of this browser hears the ask; exactly one answers it
+    const house = houseTab(`${deviceId}`);
     const asked = (event: Event) => {
       const one = (event as CustomEvent<StartAsk>).detail;
-      if (!one || one.target_device_id !== deviceId) return;
+      if (!one || one.target_device_id !== deviceId || !house.holds()) return;
       // an ask that has run out is not acted on: the asker has already been told nobody answered
       if (clock.current() > one.expires_at) return;
       void handler.current(one).then((result) => answer(one, result)).catch(() => undefined);
@@ -118,7 +123,7 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
     };
     window.addEventListener(START_ASK_EVENT, asked);
     window.addEventListener(START_ANSWER_EVENT, answered);
-    return () => { window.removeEventListener(START_ASK_EVENT, asked); window.removeEventListener(START_ANSWER_EVENT, answered); };
+    return () => { house.close(); window.removeEventListener(START_ASK_EVENT, asked); window.removeEventListener(START_ANSWER_EVENT, answered); };
   }, [answer, deviceId, enabled]);
 
   return { state, ask, answer, reset };

@@ -18,7 +18,7 @@ Storage is your decision. Everything else is a proposed starting point to valida
 | Stem-assisted transitions and Stem Studio | Preview only (limited windows/day) | Yes | Yes, plus priority GPU lane |
 | Exports (FLAC) | 3 per month, kept 7 days | 30 per month, kept 30 days | Unlimited (fair use), kept 90 days |
 | Max upload file size / duration | 200 MB / 20 min | 500 MB / 60 min | 1 GB / 120 min |
-| Lucy | Basic: Haiku 5.5, ~40 turns/month | Haiku 5.5 (higher effort) ~400 turns + ~40 Sonnet 5.5 whole-mix planning turns | Sonnet 5.5 ~150 turns + ~25 Opus 5.5 deep plans + Haiku quick answers (fair use) |
+| Lucy | Basic: Haiku 5.5, ~40 turns/month | Sonnet 5.5 for every turn: ~400 everyday + ~40 whole-mix planning turns | Opus 5.5 for every turn: ~150 everyday + ~25 deep plans + quick answers (fair use) |
 | Library size soft cap (songs) | 3,000 | 15,000 | 40,000 |
 | Word/harmonic discovery sweep | Sampled only | Sampled + scheduled | Sampled + larger scheduled sweeps |
 | Rooms (QR guest requests) | Shown as a Premium feature | Shown as a Premium feature | 1 open room, up to 100 guests (beta), 12 h max, ~60 request renders/hour |
@@ -29,7 +29,8 @@ Notes:
 - **Decimal GB**, enforced in bytes, shown as "18.4 GB of 50 GB".
 - **What counts against storage**: uploaded originals and exports the user chose to keep. **What doesn't**: analysis data, playback proxies, stems, transition clips, waveform data, staging uploads after they finish or expire. Those are system-managed with their own per-account budgets and eviction (Selecta pays for them; they're bounded so they can't explode).
 - **Daily/monthly allowances** reset in the account's timezone at midnight; the UI shows remaining amounts plainly, never as tokens or CPU seconds.
-- "Turns" for Lucy are a user-facing unit; internally each turn is metered in tokens and dollars with hard per-turn ceilings ([§9](09-lucy-ai-gateway.md#9-lucy-and-the-ai-gateway-hosted-apis-server-owned-routing)). Allowances are sized so a user who spends every turn costs at most ~40% of their plan price in AI (Standard ≈ $1.50 of ~$8.90; Premium ≈ $7 of ~$16.50); typical use should be far lower. Beta measurements replace these numbers.
+- "Turns" for Lucy are a user-facing unit; internally each turn is metered in tokens and dollars with hard per-turn ceilings ([§9](09-lucy-ai-gateway.md#9-lucy-and-the-ai-gateway-hosted-apis-server-owned-routing)). Allowances are sized so a user who spends every turn costs at most ~40% of their plan price in AI (Standard ≈ $3.56 of ~$8.90; Premium ≈ $6.60 of ~$16.50); typical use should be far lower. Beta measurements replace these numbers.
+- **One model per plan (owner, 2026-11-24).** Free runs on Haiku, Standard on Sonnet and Premium on Opus for every kind of turn. At the typical turn shapes below, a member who used every turn would cost more than the 40% ceiling (Standard ≈ 400 × $0.02 + 40 × $0.055 ≈ $10.20, above its ~$8.90 net; Premium ≈ 150 × $0.045 + 25 × $0.10 ≈ $9.25 before fair-use quick turns, below its ~$16.50 net but above its $6.60 ceiling). The account's monthly dollar ceiling (`TIER_LIMITS`, $0.25 / $3.56 / $6.60) is what holds the margin: once the next turn's worst case would pass it, the gateway steps down the deployment's own chain (Opus, Sonnet, Haiku) and then to the built-in planner, so a heavy month gets smaller answers rather than a loss. In practice a Standard member gets about 170 typical Sonnet turns before Haiku answers, and a Premium member about 140.
 
 ### 3.2 Pricing hypothesis (to test, not decided)
 

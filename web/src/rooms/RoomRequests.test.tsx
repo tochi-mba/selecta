@@ -99,13 +99,13 @@ describe('how many requests can be added', () => {
   const coming = [{ request_id: 'r1' }, { request_id: 'r2' }];
 
   it('counts a request as ready once the browser list holds its row', () => {
-    expect(addable(coming, [{ room_request_id: 'r1' }])).toEqual({ ready: 1, onTheWay: 1 });
-    expect(addable(coming, [{ room_request_id: 'r1' }, { room_request_id: 'r2' }, {}])).toEqual({ ready: 2, onTheWay: 0 });
-    expect(addable(coming, [])).toEqual({ ready: 0, onTheWay: 2 });
+    expect(addable(coming, [{ room_request_id: 'r1' }])).toEqual({ ready: 1, onTheWay: 1, onDevice: 0 });
+    expect(addable(coming, [{ room_request_id: 'r1' }, { room_request_id: 'r2' }, {}])).toEqual({ ready: 2, onTheWay: 0, onDevice: 0 });
+    expect(addable(coming, [])).toEqual({ ready: 0, onTheWay: 2, onDevice: 0 });
   });
 
   it('takes the room at its word while the list has not loaded', () => {
-    expect(addable(coming, null)).toEqual({ ready: 2, onTheWay: 0 });
-    expect(addable(coming, undefined)).toEqual({ ready: 2, onTheWay: 0 });
+    expect(addable(coming, null)).toEqual({ ready: 2, onTheWay: 0, onDevice: 0 });
+    expect(addable(coming, undefined)).toEqual({ ready: 2, onTheWay: 0, onDevice: 0 });
   });
 });

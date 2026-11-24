@@ -39,6 +39,10 @@ export type ViewProps = {
   /** How many ready songs Make a Mix needs before it offers a mix. Local mode leaves it to the
    * page's own number; a browser mix needs only two songs it can play (BF-0462-05). */
   readyNeeded?: number;
+  /** ADR-0475 R8: a new mix makes its sound on another device. `now`: Play starts it there at
+   * once (this device holds none of the music); otherwise that device is playing and is asked
+   * first. Absent: the mix plays here. */
+  playOn?: { name: string; now: boolean; ask?: boolean };
   /** Whether this mode runs the local background audio-analysis pipeline. Browser-first Cloud
    * works transitions out while playing and must not offer the local-only Analyse action. */
   analysisAvailable?: boolean;

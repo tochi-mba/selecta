@@ -14,10 +14,11 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
-from selecta.local_media import recipes
+from selecta.local_media import current_mix, recipes
 from selecta.mix_contract import MAX_SONGS, NAME_LIMIT
 from selecta.persistence import transaction
 
@@ -37,6 +38,16 @@ class RecipeEdit(BaseModel):
     song_ids: list[int] | None = Field(default=None, min_length=2, max_length=MAX_SONGS)
     # the move into song `into` (1-based position after the first); null lets SelectaDJ pick
     seam_moves: dict[int, str | None] | None = Field(default=None, max_length=MAX_SONGS)
+
+
+class CurrentMixChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # null clears the current mix
+    mix_id: str | None = Field(default=None, max_length=64)
+    # what this device last saw as current: the set is refused when another device changed it
+    expected_mix_id: str | None = Field(default=None, max_length=64)
+    device_id: str | None = Field(default=None, max_length=64)
 
 
 class RecipeDuplicate(BaseModel):
@@ -81,13 +92,27 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
         workspace_id, user_id = member(request, claims, WorkspaceAction.MIXES_EDIT)
+        # An offline queue sends its create again when it never heard the answer: the same key
+        # gets the mix the first one made, never a second copy.
+        key = (request.headers.get("idempotency-key") or "").strip()[:128] or None
         try:
             with transaction(engine, workspace_id) as conn:
                 return {
-                    "mix": recipes.create(conn, workspace_id, user_id, body.name, body.song_ids)
+                    "mix": recipes.create(
+                        conn, workspace_id, user_id, body.name, body.song_ids, key=key
+                    )
                 }
         except recipes.RecipeError as error:
             raise _refused(error) from error
+        except IntegrityError:
+            # two sends with the same key at once: the other one made it first
+            if key is None:
+                raise
+            with transaction(engine, workspace_id) as conn:
+                first = recipes.made_for(conn, workspace_id, key)
+            if first is None:
+                raise
+            return {"mix": first}
 
     @app.get("/api/local-media/recipes/{mix_id}")
     def read_recipe(
@@ -154,8 +179,38 @@ def install_routes(
         try:
             with transaction(engine, workspace_id) as conn:
                 recipes.delete(conn, workspace_id, mix_id)
+                # ADR-0475 R8: a deleted mix is no longer current on any device
+                current_mix.forget_deleted(conn, workspace_id, mix_id)
         except recipes.RecipeError as error:
             raise _refused(error) from error
+
+    # ADR-0475 R8: the account's current mix, the same on every device
+    @app.get("/api/local-media/current")
+    def read_current_mix(
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        workspace_id, _user = member(request, claims, WorkspaceAction.MIXES_READ)
+        with transaction(engine, workspace_id) as conn:
+            return current_mix.read(conn, workspace_id)
+
+    @app.put("/api/local-media/current")
+    def choose_current_mix(
+        body: CurrentMixChoice,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        workspace_id, _user = member(request, claims, WorkspaceAction.MIXES_EDIT)
+        try:
+            with transaction(engine, workspace_id) as conn:
+                return current_mix.choose(
+                    conn, workspace_id, body.mix_id, body.expected_mix_id, body.device_id
+                )
+        except current_mix.CurrentMixError as error:
+            detail: dict[str, Any] = {"code": error.code, "message": error.message}
+            if error.current is not None:
+                detail["current"] = error.current
+            raise HTTPException(status_code=error.status, detail=detail) from error
 
 
 __all__ = ["install_routes"]

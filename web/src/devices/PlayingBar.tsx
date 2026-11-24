@@ -6,6 +6,7 @@ import { Action } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ELLIPSIS } from '../ui/format';
 import { Api, extrapolate, HEARTBEAT_MS, REMOTE_POLL_MS, SessionState, Speaker, usePlaybackDevice } from './usePlaybackDevice';
+import { whereWords } from './remoteNow';
 import './devices.css';
 
 // The "Playing on ..." bar (ADR-0415): every device sees where the music is and can steer it.
@@ -85,7 +86,8 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
       return `${view.speaker_name ?? 'The speaker'} has not checked in recently and may still be playing`;
     }
     if (view.speaker === 'here') return 'Playing here';
-    if (view.speaker === 'elsewhere') return `Playing on ${view.speaker_name ?? 'another device'}`;
+    // ADR-0475 R9: the same words as the remote's Listen (Playing, Paused or Stopped on {device})
+    if (view.speaker === 'elsewhere') return whereWords(view);
     return 'Nothing is playing';
   }, [here, session?.state_confidence, view]);
 

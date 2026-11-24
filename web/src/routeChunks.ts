@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazyPage as lazy } from './ui/staleBuild';
 
 /**
  * S3-0073-06: the pages that are not needed to start listening load as their own chunks.

@@ -1,8 +1,23 @@
 # Response headers for the static site on Cloudflare Pages (the local app ignores this file).
 # No page may be framed by another site (clickjacking of the host panel and the admin area),
 # no plugins, no <base> from elsewhere, and no content-type sniffing.
+#
+# The full policy below is REPORT-ONLY (docs/engineering/product-audit.md, gap 7): browsers log
+# what it would block and block nothing. Once a week of real use shows no reports for our own
+# pages, the owner moves it into the enforced Content-Security-Policy line. Checked against a
+# production build: index.html has one inline script (the theme before first paint), allowed by
+# its sha256 below; if that script changes, its hash must change with it
+# (web/src/securityHeaders.test.ts recomputes it). The other pages have no inline script.
+# - connect-src: the API, the WorkOS sign-in domains, and Cloudflare R2's signed upload and
+#   download links. Stripe Checkout and the portal are full-page redirects, so Stripe needs none.
+# - media-src: blob: for music read from the person's own folders, and R2 for hosted songs.
+# - script-src 'wasm-unsafe-eval': the stem splitter runs ONNX Runtime as WebAssembly.
+# - style-src-attr: React sets a few inline style attributes (meters, widths).
 /*
   Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'self'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-mPlg8TmCXBVJkQzdWNyqnrkRKybM5dlTncWMN0B7Wm0='; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob: https://*.r2.cloudflarestorage.com; connect-src 'self' https://api.selectadj.app https://api.staging.selectadj.app https://auth.selectadj.app https://auth.staging.selectadj.app https://api.workos.com https://*.r2.cloudflarestorage.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), midi=(self), screen-wake-lock=(self), fullscreen=(self), autoplay=(self)
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

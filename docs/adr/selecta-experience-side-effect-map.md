@@ -55,6 +55,7 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.account-snapshot` | local | `web/src/cloud/offlineCache.ts` | The signed-in person's last account answer (user id, when, account), so a page opened offline still knows its workspace and features; forgotten with the workspace's device data (Cloud, `cloud.offline_shell`) | Cloud |
 | `selecta.cloud.verify-asked` | session | `web/src/cloud/Gate.tsx` | That the member pressed "I've verified my email", kept across the reload that follows, so a page that comes back unchanged can say the address still isn't verified (Cloud sign-in) | Cloud |
 | `selecta.controller.notices.seen` | local | `web/src/devices/ControllerNotices.tsx` | The ids of the last 60 remote-control notices this browser dismissed, so a dismissed notice stays dismissed across page loads (Cloud, `devices.remote_control`) | Cloud |
+| `selecta.library.keep-said` | local | `web/src/cloud/CloudLibrary.tsx` | Set once the person pressed Got it on the line saying this browser cannot keep access to their music between visits, so it is said once (Cloud, ADR-0475 R7) | Cloud |
 | `selecta.debug.auth` | session | `web/src/cloud/authTrail.ts` | The last 20 sign-in problems in this tab (when, where, the error's name, message, status and isTransient; never a token), so a false "Sign in again" can be read afterwards (Cloud sign-in) | Cloud |
 | `selecta-mix-outbox-alias:<workspace>` | local | `web/src/cloud/outbox.ts` | Local mix ids matched to the server's once a queued create or edit lands, so later queued changes and a reloaded tab find the right mix (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-mix-outbox-notices:<workspace>` | local | `web/src/cloud/outbox.ts` | The last few plain notices about queued mix changes the server turned down, shown once and then removed (Cloud, `cloud.mix_outbox`) | My Mixes |
@@ -205,6 +206,17 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/webhooks/workos` | Stores and acts on a WorkOS event once |
 | `POST /api/admin/session` | Starts a privileged admin session |
 | `PUT /api/account/lucy` | Saves Cloud Lucy settings |
+| `PUT /api/lucy-cloud/settings` | Saves the person's Cloud Lucy choices (on/off, phases, sharing), the same store as `PUT /api/account/lucy` |
+| `POST /api/lucy-cloud/conversations` | Starts a Lucy conversation for this person in this workspace |
+| `PATCH /api/lucy-cloud/conversations/{conversation}` | Renames or archives one of this person's Lucy conversations |
+| `DELETE /api/lucy-cloud/conversations/{conversation}` | Deletes a Lucy conversation, its messages, events and proposals; mixes saved from it stay |
+| `POST /api/lucy-cloud/conversations/{conversation}/turns` | Stores the person's message, admits a turn through the AI gateway (counts a Lucy turn, takes the run slot, reserves its cost) and starts Lucy's answer |
+| `POST /api/lucy-cloud/conversations/{conversation}/retry` | Sends an earlier message again as a new turn (counted like any turn) |
+| `POST /api/lucy-cloud/conversations/{conversation}/stop` | Stops Lucy's running answer; the stopped turn is given back |
+| `POST /api/lucy-cloud/revisions/{revision}/edit` | Removes or moves a song in Lucy's proposal as a new proposal revision; no mix changes |
+| `POST /api/lucy-cloud/proposals/{proposal}/current` | Makes an earlier proposal revision the current one; no mix changes |
+| `POST /api/lucy-cloud/approvals` | Checks a proposal can be saved and returns a short-lived approval; nothing is saved |
+| `POST /api/lucy-cloud/commits` | Saves an approved proposal as the next recipe revision (or a new recipe), once per idempotency key; Save and play also makes it the account's current mix and publishes `mix.current` |
 | `POST /api/billing/checkout` | Opens a Stripe checkout |
 | `POST /api/billing/portal` | Opens the Stripe billing portal |
 | `POST /api/webhooks/stripe` | Applies a Stripe billing event |
@@ -221,6 +233,9 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/playback/reconnect` | Reclaims playback after a drop |
 | `POST /api/playback/commands` | Sends a transport command to the playing device |
 | `POST /api/playback/commands/{command_id}/ack` | Records that the playing device received a command, never that it was audible (ADR-0461) |
+| `POST /api/playback/start-asks` | Asks another of the member's own signed-in devices to become the speaker and start; publishes the ask on the workspace event stream, stores nothing (ADR-0475 R2) |
+| `PUT /api/devices/default-speaker` | Sets or clears which of the member's own signed-in devices is the account's default speaker; one per workspace, cleared when that device signs out (ADR-0475) |
+| `POST /api/playback/start-asks/{ask_id}/answer` | The asked device says what it did (starting, needs music, needs a press, no mix, declined); publishes the answer, stores nothing |
 | `POST /api/zones/{zone_id}/playback/heartbeat` | Updates a zone's active device lease and accepted playback position |
 | `POST /api/zones/{zone_id}/playback/take-over` | Transfers the zone playback lease to this device |
 | `POST /api/zones/{zone_id}/playback/reconnect` | Reclaims or reports the zone playback lease after a device reconnects |
@@ -242,12 +257,14 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | Route | Side effect |
 |---|---|
 | `POST /api/local-media/songs` | Registers songs on the member's own devices in the workspace catalogue |
+| `POST /api/local-media/songs/never` | Sets or clears Never play on a batch of the workspace's catalogue songs, all or none |
 | `DELETE /api/local-media/songs/{song_id}` | Soft-deletes a catalogue entry |
 | `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
 | `POST /api/local-media/recipes` | Saves a new portable recipe (a mix over catalogue songs) as its first immutable revision |
 | `POST /api/local-media/recipes/{mix_id}/revisions` | Saves the next immutable revision of a recipe, refused when made from a stale one |
 | `POST /api/local-media/recipes/{mix_id}/duplicate` | Copies the latest recipe revision into a new recipe with a fresh identity |
-| `DELETE /api/local-media/recipes/{mix_id}` | Deletes a recipe and its revisions from this workspace |
+| `DELETE /api/local-media/recipes/{mix_id}` | Deletes a recipe and its revisions from this workspace; a recipe that was the current mix stops being current, and `mix.current` is published |
+| `PUT /api/local-media/current` | Sets or clears the workspace's current mix, compare-and-set against the one the device last saw; publishes `mix.current` on the workspace event stream (ADR-0475 R8) |
 
 ### Rooms (`src/selecta/rooms/api_host.py`, `src/selecta/rooms/api_guest.py`) - Requests (guest rooms)
 
@@ -263,6 +280,7 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/rooms/{room_id}/requests/{request_id}/pass` | Passes on a guest request |
 | `POST /api/room-requests/{request_id}/played` | Records that the host's browser mix placed an accepted room request, so the room shows it as played |
 | `POST /api/room-requests/{request_id}/dismiss` | Lets an accepted room request go from the host's browser list, so the guest sees the host passed on it |
+| `POST /api/room-requests/{request_id}/waiting` | Undoes `played`: a played room request of a room still open goes back to accepted, so the host can add it again; anything else is left as it is |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/approve` | Lets a guest in |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/remove` | Removes a guest |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/ban` | Bans a guest |

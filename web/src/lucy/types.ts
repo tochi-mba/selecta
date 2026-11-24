@@ -36,6 +36,8 @@ export type LucyStatus = {
   privacy: { share_lyrics: boolean; share_history: boolean; data_classes: DataClass[] };
   event_schema: number;
   api_version: number;
+  /** Cloud (ADR-0476): first asks drawn from the person's own library. */
+  suggestions?: string[];
 };
 
 export type SettingsChange = {

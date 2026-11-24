@@ -42,7 +42,7 @@ function rememberLength(songs: number) {
 }
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED, analysisAvailable = true, transitionEditingAvailable = true, startedAMix }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED, analysisAvailable = true, transitionEditingAvailable = true, startedAMix, playOn }: ViewProps) {
   // ADR-0462: this page's own reads and writes go through the injected request, never the local client.
   const via = useRequest(request);
   const { get, post } = useApi(via);
@@ -101,7 +101,11 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         const actual = data.mix.length;
         const duration = data.mix.reduce((seconds, item) => seconds + item.duration, 0);
         // a browser mix says what is playing; the local build also says how it compares with what was asked
-        notify(analysisAvailable ? `${name}: generated ${actual} of ${songs} requested songs, about ${length(duration)} of source audio before transitions. Review the actual order in Edit.` : `Your new mix is playing: ${actual} ${actual === 1 ? 'song' : 'songs'}.`, true);
+        const counted = `${actual} ${actual === 1 ? 'song' : 'songs'}`;
+        notify(analysisAvailable ? `${name}: generated ${actual} of ${songs} requested songs, about ${length(duration)} of source audio before transitions. Review the actual order in Edit.`
+          // ADR-0475 R8: never claim it plays here when another device makes the sound
+          : playOn ? (playOn.ask ? `Your new mix: ${counted}. Choose where it plays.` : playOn.now ? `Your new mix: ${counted}. Starting it on ${playOn.name}.` : `Your new mix is ready: ${counted}. ${playOn.name} is still playing.`)
+            : `Your new mix is playing: ${counted}.`, true);
         if (open) {
           setView('Edit');
         } else {
@@ -158,7 +162,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const readinessAvailable = Number.isFinite(counts.ready);
   const readyCount = counts.ready;
   // a mix that's playing or paused is what would be replaced, so that's when to ask (EX-0117-04: idle builds straight away)
-  const replacing = mix.length > 0 && now.phase !== 'idle';
+  // ADR-0475 R8: with another device playing, a new mix replaces nothing there; that device is asked
+  const replacing = mix.length > 0 && now.phase !== 'idle' && !(playOn && !playOn.now);
   // the current mix by name, quoted, so a name like "Your songs, in your browser" never reads as
   // part of the sentence around it
   const current = `your current mix, “${mixName}”`;
@@ -216,6 +221,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           shape={shaping ? { summary: buildSummary(status.steering), open: () => setCustomizing(true) } : undefined}
           replacing={replacing ? 'The mix that is playing stays in My Mixes.' : undefined}
           problem={problem ? <p className="warn" role="alert">{problem}</p> : undefined}
+          playOn={playOn}
         />
       )}
       {!analysisAvailable && on('lucy') && <p className="quick-mix-more"><PageLink to="/mixes/lucy" className="button">Plan a mix with Lucy</PageLink></p>}
@@ -368,7 +374,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                     {/* MP-0274-04: the actions close the card, so Play and Shape first share one line across a row of
                         cards however a name, summary or this disclosure wraps */}
                     <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
-                      <Action className="primary" disabled={!!building && building !== card.key} busy={building === card.key} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>Play</Action>
+                      <Action className="primary" disabled={!!building && building !== card.key} busy={building === card.key} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>{playOn?.now && !playOn.ask ? `Play on ${playOn.name}` : 'Play'}</Action>
                       {on('editor') && <Action className="quiet" disabled={!!building && building !== `${card.key}:open`} busy={building === `${card.key}:open`} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
                       {on('drafts') && <Action className="quiet save-draft" disabled={!!building && building !== `${card.key}:draft`} busy={building === `${card.key}:draft`} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
                     </div>

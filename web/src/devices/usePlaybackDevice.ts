@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { browserName, capabilities, currentFacts, deviceKind } from './deviceInfo';
 import { holdWakeLock, WakeLockHold } from './wakeLock';
 import { flagOn } from '../flags';
 import { isOnline, onReconnect } from '../cloud/connection';
+import { audioTab, tabLog } from './audioTab';
+import { soundAllowedHere } from './playOn';
 
 // This browser as a playback device, and the account's one playback session (ADR-0415).
 //
@@ -224,6 +226,16 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const [standIn, setStandIn] = useState<string | null>(null);
   const [registerTry, setRegisterTry] = useState(0);
   const deviceId = device?.id ?? standIn;
+  // ADR-0475 F: which tab of this browser makes the sound (one device, many tabs: never two)
+  const tab = useMemo(() => audioTab(workspaceId), [workspaceId]);
+  // let go on unmount, but keep the channel: React's development double mount runs this cleanup
+  // and then uses the same tab again, which must still hear the other tabs (a closed channel
+  // left the audio tab deaf to 'let go', so no other tab could ever take the sound)
+  useEffect(() => () => tab.release(), [tab]);
+  // another tab of this browser is the one making the sound
+  const [otherTab, setOtherTab] = useState(false);
+  // F39: the audio tab went away and this tab may carry on, but only with a press here
+  const [carryOn, setCarryOn] = useState(false);
 
   useEffect(() => {
     let current = true;
@@ -264,6 +276,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const becomeRemote = useCallback((why: string, fadeMs = FADE_MS) => {
     if (!speaking.current) return;
     speaking.current = false;
+    tab.release();
     adrift.current = false;
     beatTrouble.current = false;
     setOffline(false);
@@ -275,7 +288,28 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     wake.current = null;
     wakeWasHeld.current = false;
     setMessage(why);
-  }, [speaker]);
+  }, [speaker, tab]);
+  // another tab of this browser took the sound: stop here at once, before it starts
+  useEffect(() => {
+    tab.onTaken(() => {
+      if (!speaking.current) return;
+      speaking.current = false;
+      expiredSpeaker.current = false;
+      speaker?.stop(0);
+      setOtherTab(true);
+    });
+  }, [speaker, tab]);
+
+  /** The sound could not start here. The session is told it stopped (so no device reads
+   * "Playing on" over silence while the lease runs out), and this device becomes a remote. */
+  const couldNotStart = useCallback((session: SessionState, why: string) => {
+    if (deviceId && speaking.current) {
+      void api('/playback/heartbeat', {
+        method: 'POST', body: JSON.stringify({ device_id: deviceId, song_index: session.song_index, offset_ms: Math.max(0, Math.round(session.offset_ms)), state: 'stopped', seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }), output_status: 'interrupted' }),
+      }, workspaceId).catch(() => undefined);
+    }
+    becomeRemote(why, 0);
+  }, [api, becomeRemote, deviceId, workspaceId]);
 
   const startSpeaking = useCallback(async (session: SessionState) => {
     if (!speaker) return;
@@ -292,10 +326,10 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     } catch (problem) {
       // it could not make sound: stop holding the lease, or every other device would read
       // "Playing on this device" over silence
-      becomeRemote('This device couldn’t start playing.', 0);
+      couldNotStart(session, 'This device couldn’t start playing.');
       throw problem;
     }
-  }, [becomeRemote, speaker]);
+  }, [couldNotStart, speaker]);
 
   /** Follow a session this device is the speaker of: play, pause, skip and seek from remotes. */
   const follow = useCallback(async (session: SessionState) => {
@@ -310,10 +344,17 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
     const moved = !here || here.song_index !== session.song_index || Math.abs(here.offset_ms - target) > 2500;
-    if (moved) await speaker.start(session.song_index, target, session.state === 'playing');
-    else if (session.state === 'paused' && speaker.active()) speaker.pause();
+    if (moved) {
+      try {
+        await speaker.start(session.song_index, target, session.state === 'playing');
+      } catch {
+        // a skip or seek from another device that this one could not play: say so, stop here
+        // truthfully, and leave the music to a device that can
+        couldNotStart({ ...session, offset_ms: target }, 'This device couldn’t play that song, so playback stopped here.');
+      }
+    } else if (session.state === 'paused' && speaker.active()) speaker.pause();
     else if (session.state === 'playing' && !speaker.active()) speaker.resume();
-  }, [speaker, remoteControl]);
+  }, [couldNotStart, speaker, remoteControl]);
 
   // Once a missed-lease safeguard silences the device, reconnect under the server's
   // session lock. If someone else took over, stay silent; otherwise resume from the
@@ -331,6 +372,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       expiredSpeaker.current = false;
       if (answer.action === 'continue' && answer.session) {
         learnKey(answer.envelope_key);
+        if (!(await tab.claim(false))) { setOtherTab(true); return; }
         await startSpeaking(answer.session);
         setMessage('');
       } else {
@@ -341,7 +383,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     } finally {
       recoveringExpired.current = false;
     }
-  }, [api, deviceId, speaker, startSpeaking, workspaceId]);
+  }, [api, deviceId, speaker, startSpeaking, tab, workspaceId]);
 
   /** A volume set here while offline goes to the session once the connection is back. */
   const sendHeldVolume = useCallback(async () => {
@@ -455,6 +497,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       if (speaking.current && next.speaker === 'here' && next.session) {
         leaseDeadline.current = next.session.lease_expires_at;
       }
+      // this device is the speaker but this tab is not making the sound: another tab is
+      setOtherTab(next.speaker === 'here' && !speaking.current && !tab.holds() && !claiming.current);
       if (speaking.current && next.speaker !== 'here') {
         becomeRemote(next.speaker_name ? `Playback moved to ${next.speaker_name}` : 'Playback stopped.');
       } else if (speaking.current && next.session) {
@@ -471,7 +515,29 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     } finally {
       looking.current -= 1;
     }
-  }, [api, becomeRemote, deviceId, follow, recoverExpired, workspaceId]);
+  }, [api, becomeRemote, deviceId, follow, recoverExpired, tab, workspaceId]);
+
+  // F39: while another tab of this browser makes the sound, wait for it to go away (closed,
+  // crashed, discarded: the lock frees itself). Then carry on here by itself when this tab may
+  // make sound (it has had a press and has its player), else offer "Carry on here".
+  useEffect(() => {
+    if (!otherTab) return undefined;
+    const stop = new AbortController();
+    void tab.waitFree(stop.signal).then(async (free) => {
+      if (!free || stop.signal.aborted) return;
+      const now = await poll(true);
+      setOtherTab(false);
+      if (!now || now.speaker !== 'here' || !now.session || speaking.current || now.session.state === 'stopped') { if (!speaking.current) tab.release(); return; }
+      if (speaker && now.session.state === 'playing' && soundAllowedHere()) {
+        tabLog('carrying on by itself');
+        await startSpeaking(now.session).catch(() => undefined);
+        return;
+      }
+      tabLog('offering Carry on here');
+      setCarryOn(true);
+    });
+    return () => stop.abort();
+  }, [otherTab, poll, speaker, startSpeaking, tab]);
 
   // When the page opens on the device that was the speaker, carry on or fade out as the
   // server says (it may have moved while this one was away).
@@ -490,6 +556,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         // a press on this reloaded tab is already taking over (or has): it starts the sound
         if (claiming.current || speaking.current) return;
         if (verified?.speaker === 'here' && verified.session) {
+          // another tab of this browser is already making the sound: this one stays quiet
+          if (!(await tab.claim(false))) { setOtherTab(true); return; }
           await startSpeaking(verified.session);
         } else if (!verified) {
           // Reconnect succeeded but verification could not reach the server.
@@ -499,7 +567,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       }
     }).catch(() => undefined).finally(() => { if (current) void poll(); });
     return () => { current = false; };
-  }, [api, deviceId, poll, speaker, startSpeaking, workspaceId]);
+  }, [api, deviceId, poll, speaker, startSpeaking, tab, workspaceId]);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -605,12 +673,18 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   /** `startAt`: where this device's first sound begins (a press on a song, a new mix from a
    * request). Without it the new speaker carries on from the session's position. */
   const playHere = useCallback(async (observedOwnerId?: string | null, startAt?: StartAt) => {
+    tabLog('playHere', { deviceId: !!deviceId, speaker: !!speaker, claiming: claiming.current });
     if (!deviceId || !speaker || claiming.current) return;
     expiredSpeaker.current = false;
     claiming.current = true;
     commandRefused.current = false;
     setStarting(true); setMessage('Starting here...'); setError('');
     try {
+      // the person pressed here: any other tab of this browser stops first, then this one plays
+      tabLog('playHere: claiming');
+      setCarryOn(false);
+      if (!(await tab.claim(true))) throw new Error('Another tab of this browser is playing. Close it, or press Play there.');
+      setOtherTab(false);
       const sentAt = Date.now();
       const moved = await api<{ session: SessionState; previous_device: { name: string } | null; server_time: number; envelope_key?: string | null }>('/playback/take-over', {
         method: 'POST', body: JSON.stringify({
@@ -654,7 +728,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       setStarting(false);
       void poll();
     }
-  }, [api, deviceId, poll, speaker, startSpeaking, workspaceId]);
+  }, [api, deviceId, poll, speaker, startSpeaking, tab, workspaceId]);
 
   /** Sends a press; true when the server took it, false when it was refused or never sent. */
   const send = useCallback(async (name: string, args?: Record<string, unknown>): Promise<boolean> => {
@@ -845,5 +919,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
 
   return { device, notice, view, message, starting, error, playHere, publishProgramme, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, send, serverNow, isSpeaker: () => speaking.current,
     /** cloud.offline_playback: playing on while SelectaDJ can't be reached, and what was said when that ended. */
-    offline, offlineNotice, playOffline, heldVolume: () => heldVolume.current };
+    offline, offlineNotice, playOffline, heldVolume: () => heldVolume.current,
+    /** ADR-0475 F: another tab of this browser is making the sound. */
+    otherTab,
+    /** F39: the tab that made the sound went away; a press here carries on where it was. */
+    carryOn };
 }

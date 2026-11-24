@@ -1,7 +1,7 @@
-import { KeyboardEvent, memo, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { KeyboardEvent, memo, ReactNode, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError, MixData, problemKind, ProblemKind } from '../api';
 import { useApi } from '../requestContext';
-import { lucy, newId } from '../lucy/client';
+import { lucy, lucyTransport, newId } from '../lucy/client';
 import { isRunActive } from '../lucy/reducer';
 import type { ConversationScope, LucyStatus, Selection } from '../lucy/types';
 import { forgetSent, keepUnsent, unsentKey, useUnsent } from '../lucy/unsent';
@@ -27,6 +27,8 @@ import '../styles/lucy.css';
  * unset or unreachable never gets in the way of Make a Mix. */
 
 const SPLIT_AT = 1100;
+/** The longest message the server takes (TurnBody's limit). */
+const MAX_MESSAGE = 4000;
 const HISTORY_AT = 1280;
 const HISTORY_KEY = 'selecta.lucy.history';
 
@@ -87,9 +89,13 @@ function savedHistoryOpen(): boolean {
 
 /** Only what Lucy needs from the app, all of it stable, so the player's once-a-second updates don't
  * redraw the conversation. */
-export type LucyProps = { conversation: string | null; setMixData: ViewProps['setMixData']; player: ViewProps['player']; request?: ViewProps['request'] };
+export type LucyProps = {
+  conversation: string | null; setMixData: ViewProps['setMixData']; player: ViewProps['player']; request?: ViewProps['request'];
+  /** Cloud (ADR-0476): the account's own settings card in place of the bring-your-own-AI one. */
+  settingsPanel?: ReactNode;
+};
 
-export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
+export function Lucy({ conversation, setMixData, player, request, settingsPanel }: LucyProps) {
   // ADR-0462: this page's own mix read goes through the injected request; standalone local mounts
   // (and the existing tests) keep the local client by default.
   const { get } = useApi(request);
@@ -211,10 +217,20 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
   const send = async () => {
     const text = unsent.text.trim();
     if (!text || sending.current || blocked) return;
+    if (text.length > MAX_MESSAGE) {
+      // said before sending, with the count, and the words stay in the box (the server refuses past this too)
+      const message = `That message is ${text.length.toLocaleString()} characters; Lucy reads up to ${MAX_MESSAGE.toLocaleString()}. Shorten it and send again.`;
+      setPending({ conversation, text, state: 'failed', message });
+      announcer.say([`Not sent. ${message.replace(/[.\s]+$/, '')}`]);
+      return;
+    }
     sending.current = true;
     let id = conversation;
     unsent.hold();
     setPending({ conversation: id, text, state: 'sending' });
+    // whoever sends is following the conversation now: their message and Lucy's answer come
+    // into view, rather than arriving out of sight behind a "New messages" count
+    if (conversation) sticky.jump();
     try {
       if (!id) {
         const scope = askedScope ?? undefined;
@@ -255,6 +271,8 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
         attempt.current = null;
       }
       setPending({ conversation: id, text, state: 'failed', message });
+      // said, not only shown: the box keeps the focus, and nothing else tells a screen reader
+      announcer.say([`Not sent. ${message.replace(/[.\s]+$/, '')}`]);
       // the words go back in the box for this conversation, unless something new was typed meanwhile
       const shown = unsentNow.current;
       if (shown.key === unsentKey(id)) {
@@ -327,8 +345,8 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
   );
 
   const settings = settingsOpen && status && (
-    <Drawer title="Lucy settings" onClose={() => setSettingsOpen(false)}>
-      <LucySettings status={status} onSaved={setStatus} />
+    <Drawer title="Lucy settings" onClose={() => { setSettingsOpen(false); if (settingsPanel) void readStatus(); }}>
+      {settingsPanel ?? <LucySettings status={status} onSaved={setStatus} />}
     </Drawer>
   );
 
@@ -360,14 +378,14 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
           view={view}
           still={still}
           pending={pending}
-          canBranch={!!conversation && !running}
+          canBranch={!!conversation && !running && !lucyTransport()}
           onBranch={branch}
           onRetry={retry}
           onDecide={decide}
           empty={(
             <div className="lucy-empty">
               <p><b>{shownScope ? `Ask Lucy about this mix (${scopeWords(shownScope)}).` : 'Tell Lucy what kind of mix you want.'}</b> Lucy shows you every song and transition it plans, and builds nothing until you approve it.</p>
-              <ExamplePrompts onPick={fill} />
+              <ExamplePrompts onPick={fill} prompts={status?.suggestions} />
             </div>
           )}
         />
@@ -387,6 +405,7 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
           running={running && !!conversation}
           sending={pending?.state === 'sending'}
           blocked={blocked}
+          problem={pending?.state === 'failed' && pending.conversation === conversation ? `Not sent. ${pending.message ?? 'Couldn’t send this.'}` : ''}
           voice={voice}
           boxRef={box}
           above={selection && (
@@ -410,6 +429,7 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
       adopt={convo.adopt}
       reload={convo.reload}
       fillComposer={fill}
+      prompts={status?.suggestions}
       approve={(shown, isCurrent) => (
         <Approve
           revision={shown}

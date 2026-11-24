@@ -321,6 +321,9 @@ FLAG_DARK = {
     ("GET", "/api/local-media/songs/{song_id}"),
     ("DELETE", "/api/local-media/songs/{song_id}"),
     ("POST", "/api/local-media/availability"),
+    # Never play on a batch of catalogue songs; Bob cannot touch Alice's songs
+    # (`test_bf_local_media_never.py`).
+    ("POST", "/api/local-media/songs/never"),
     # Portable recipes ride the same flag; Bob cannot list, read or edit Alice's recipes
     # (`test_bf_local_recipes.py`).
     ("GET", "/api/local-media/recipes"),
@@ -329,6 +332,10 @@ FLAG_DARK = {
     ("POST", "/api/local-media/recipes/{mix_id}/revisions"),
     ("POST", "/api/local-media/recipes/{mix_id}/duplicate"),
     ("DELETE", "/api/local-media/recipes/{mix_id}"),
+    # The account's current mix (ADR-0475 R8) is one row keyed by the caller's workspace
+    # (`test_bf_current_mix.py`).
+    ("GET", "/api/local-media/current"),
+    ("PUT", "/api/local-media/current"),
     # Word connections between catalogue songs ride `discover.word_links`, dark in Cloud while
     # `lyrics.display` is (SC-0406-03); every query is scoped to the caller's workspace.
     ("GET", "/api/local-media/links"),
@@ -356,6 +363,31 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/account/labs/local-first/leave"): None,
     ("GET", "/api/account/export"): None,
     ("GET", "/api/account/lucy"): None,
+    # Lucy's conversation in Cloud (ADR-0476): every route names the workspace before anything
+    ("GET", "/api/lucy-cloud/status"): None,
+    ("PUT", "/api/lucy-cloud/settings"): {"enabled": True},
+    ("GET", "/api/lucy-cloud/conversations"): None,
+    ("POST", "/api/lucy-cloud/conversations"): {},
+    ("GET", "/api/lucy-cloud/conversations/{conversation}"): None,
+    ("PATCH", "/api/lucy-cloud/conversations/{conversation}"): {"title": "Tenant check"},
+    ("DELETE", "/api/lucy-cloud/conversations/{conversation}"): None,
+    ("POST", "/api/lucy-cloud/conversations/{conversation}/turns"): {
+        "client_id": "tenant", "text": "hello",
+    },
+    ("POST", "/api/lucy-cloud/conversations/{conversation}/retry"): {"turn": "tenant"},
+    ("POST", "/api/lucy-cloud/conversations/{conversation}/stop"): None,
+    ("GET", "/api/lucy-cloud/conversations/{conversation}/events.json"): None,
+    ("GET", "/api/lucy-cloud/revisions/{revision}"): None,
+    ("GET", "/api/lucy-cloud/revisions/{revision}/diff"): None,
+    ("GET", "/api/lucy-cloud/revisions/{revision}/readiness"): None,
+    ("POST", "/api/lucy-cloud/revisions/{revision}/edit"): {
+        "expected": "tenant", "op": {"op": "remove", "occurrence": "0:1"},
+    },
+    ("POST", "/api/lucy-cloud/proposals/{proposal}/current"): {"revision": "tenant"},
+    ("POST", "/api/lucy-cloud/approvals"): {"revision": "tenant", "hash": "x", "action": "draft"},
+    ("POST", "/api/lucy-cloud/commits"): {"token": "tenant", "idempotency_key": "tenant"},
+    ("GET", "/api/lucy-cloud/commits/{key}"): None,
+    ("GET", "/api/lucy-cloud/memory"): None,
     ("PUT", "/api/account/lucy"): {
         "enabled": True,
         "phases": {"chat": True},
@@ -406,6 +438,20 @@ SCOPED: dict[tuple[str, str], dict | None] = {
         "device_id": "missing",
         "result": "applied",
     },
+    # One device asks another of the same person's devices to start (ADR-0475 R2), held to the
+    # same principal as a press (playback/start_asks.py)
+    ("POST", "/api/playback/start-asks"): {
+        "device_id": "missing",
+        "target_device_id": "missing",
+    },
+    # The default speaker names one of the caller's own devices (ADR-0475), checked against the
+    # caller's workspace and user (playback/default_speaker.py)
+    ("PUT", "/api/devices/default-speaker"): {"device_id": "missing"},
+    ("POST", "/api/playback/start-asks/{ask_id}/answer"): {
+        "device_id": "missing",
+        "asker_device_id": "missing",
+        "result": "declined",
+    },
     # Zone playback (venue zones; the same workspace principal as personal playback, so a
     # caller naming another workspace is refused before the zone is looked up).
     ("GET", "/api/zones/playback"): None,
@@ -450,6 +496,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/room-requests"): None,
     ("POST", "/api/room-requests/{request_id}/played"): None,
     ("POST", "/api/room-requests/{request_id}/dismiss"): None,
+    ("POST", "/api/room-requests/{request_id}/waiting"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/approve"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/remove"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/ban"): None,
@@ -610,8 +657,13 @@ def world(tmp_path, monkeypatch):
                 "request_id": new_id(),
                 "guest_id": new_id(),
                 "command_id": new_id(),
+                "ask_id": new_id(),
                 "zone_id": new_id(),
                 "song_id": 1,
+                "conversation": new_id(),
+                "revision": new_id(),
+                "proposal": new_id(),
+                "key": new_id(),
             },
             "derived": derived,
             "alice_keys": {original_key(alice_ws, asset_id), derived, f"s/{session_id}/object"},

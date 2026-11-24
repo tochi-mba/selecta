@@ -56,11 +56,11 @@ describe('GP-0258 exact-scope batch actions', () => {
     await user.click(box('A'));
     await user.click(box('B'));
     await user.click(screen.getByRole('button', { name: 'Prioritize selected' }));
-    const dialog = screen.getByRole('dialog', { name: 'Apply batch Library action?' });
-    expect(within(dialog).getByText(/ID 1; priority off/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/ID 2; priority on/)).toBeInTheDocument();
-    expect(within(dialog).queryByText(/ID 3;/)).toBeNull();
-    await user.click(within(dialog).getByRole('button', { name: 'Confirm 2 recordings' }));
+    const dialog = screen.getByRole('dialog', { name: 'Prioritize 2 songs?' });
+    expect(within(dialog).getByText('A, Someone')).toBeInTheDocument();
+    expect(within(dialog).getByText('B, Someone')).toBeInTheDocument();
+    expect(within(dialog).queryByText('C, Someone')).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'Prioritize 2 songs' }));
     await waitFor(() => expect(calls.filter((call) => call.path === '/library/batch')).toHaveLength(1));
     expect(calls.find((call) => call.path === '/library/batch')!.body).toEqual({
       action: 'prioritize', entries: [{ id: 1, expected: false }, { id: 2, expected: true }],
@@ -79,10 +79,10 @@ describe('GP-0258 exact-scope batch actions', () => {
     await user.click(box('A'));
     await user.click(box('B'));
     await user.click(screen.getByRole('button', { name: /Never play selected|Exclude selected/ }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm 2 recordings' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Never play 2 songs' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     const [message, undo] = notify.mock.calls.at(-1)!;
-    expect(message).toBe('Updated 2 precisely selected recordings.');
+    expect(message).toBe('2 songs won’t be picked for mixes.');
     expect(typeof undo).toBe('function');
     await (undo as () => Promise<void>)();
     const batches = calls.filter((call) => call.path === '/library/batch');
@@ -92,7 +92,7 @@ describe('GP-0258 exact-scope batch actions', () => {
     notify.mockClear();
     await user.click(box('B'));
     await user.click(screen.getByRole('button', { name: /Never play selected|Exclude selected/ }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm 1 recordings' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Never play 1 song' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     expect(notify.mock.calls.at(-1)![1]).toBeUndefined();
   });
@@ -110,7 +110,7 @@ describe('GP-0258 exact-scope batch actions', () => {
     const user = userEvent.setup();
     await user.click(box('A'));
     await user.click(screen.getByRole('button', { name: /Never play selected|Exclude selected/ }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm 1 recordings' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Never play 1 song' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     const undo = notify.mock.calls.at(-1)![1] as () => Promise<void>;
     // a new search is on screen before Undo is pressed
@@ -137,7 +137,7 @@ describe('GP-0258 exact-scope batch actions', () => {
     await user.click(box('A'));
     await user.click(box('B'));
     await user.click(screen.getByRole('button', { name: 'Prioritize selected' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm 2 recordings' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Prioritize 2 songs' }));
     await waitFor(() => expect(notify).toHaveBeenCalled());
     await (notify.mock.calls.at(-1)![1] as () => Promise<void>)();
     expect(calls.filter((call) => call.path === '/library/batch').at(-1)!.body).toEqual({

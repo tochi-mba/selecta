@@ -48,7 +48,9 @@ export function ControllerNotices({ notices, speakerName, session, send }: { not
   const waiting = notices.waiting.filter(fresh);
   const missed = notices.missed.filter(fresh);
   const recent = (notice: { acked_at: number }) => Date.now() / 1000 - notice.acked_at < UNAVAILABLE_FRESH_SECONDS;
-  const unavailable = notices.unavailable.filter(fresh).filter(recent)[0];
+  // a song from an earlier programme (a mix since replaced) is not news about this one
+  const thisProgramme = (notice: { song_id: number | null }) => notice.song_id === null || !session?.programme?.length || session.programme.some((ref) => ref.song_id === notice.song_id);
+  const unavailable = notices.unavailable.filter(fresh).filter(recent).filter(thisProgramme)[0];
   if (!waiting.length && !missed.length && !unavailable) return null;
   const who = speakerName ?? 'The speaker';
   // the songs that can stand in for the one the speaker could not play, each with its command

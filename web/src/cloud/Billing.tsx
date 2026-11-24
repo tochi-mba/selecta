@@ -6,6 +6,7 @@ import { checkoutAvailable, CheckoutPhase, Consent, consentComplete, NO_CONSENT,
 import { hasMeters, Meters } from './Meters';
 import { useNeedsConnection } from './connection';
 import { Icon } from '../ui/Icon';
+import { BillingStandingNotice } from './BillingStanding';
 
 // Plan & billing (docs/saas/11-ui-ux.md §11.1): the current plan, the usage meters, and the way
 // to change plan, each in its own titled card. A free account picks a plan, ticks the three UK
@@ -14,6 +15,9 @@ import { Icon } from '../ui/Icon';
 
 type Interval = 'month' | 'year';
 type Paid = 'standard' | 'premium';
+/** What the plan picker starts on: the cheaper plan, billed monthly. */
+export const DEFAULT_PLAN: Paid = 'standard';
+export const DEFAULT_INTERVAL: Interval = 'month';
 
 const PLANS: { id: Paid; name: string; storage: string; month: string; year: string; about: string; featured?: boolean }[] = [
   { id: 'standard', name: 'Standard', storage: '50 GB', month: '£6.99 / month', year: '£59 / year', about: 'More room for your working library.' },
@@ -32,7 +36,7 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
     headline: 'More from Lucy',
     eyebrow: 'For everyday mixing',
     axes: [
-      { name: 'Lucy', words: 'Standard: 400 everyday turns and 40 planning turns a month.', flag: 'lucy' },
+      { name: 'Lucy', words: 'Standard: 400 everyday turns and 40 planning turns a month, usually answered by Claude Sonnet (a very heavy month moves to a lighter model).', flag: 'lucy' },
       { name: 'Discovery', words: 'Scheduled discovery sweeps for new links between your songs.' },
       { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
     ],
@@ -42,7 +46,7 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
     eyebrow: 'For hosting',
     axes: [
       { name: 'Rooms', words: 'Open a room for up to 100 guests, for up to 12 hours, with song requests.', flag: 'rooms' },
-      { name: 'Lucy', words: 'Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use.', flag: 'lucy' },
+      { name: 'Lucy', words: 'Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use, usually answered by Claude Opus (a very heavy month moves to a lighter model).', flag: 'lucy' },
       { name: 'Discovery', words: 'Larger scheduled discovery sweeps.' },
       { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
     ],
@@ -180,9 +184,11 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   onPortal: () => void;
   blocked?: boolean;
 }) {
-  const [interval, setInterval] = useState<Interval>('month');
+  const [interval, setInterval] = useState<Interval>(DEFAULT_INTERVAL);
   const [consent, setConsent] = useState<Consent>(NO_CONSENT);
-  const [chosen, setChosen] = useState<Paid>('premium');
+  // Defaults (docs/saas/11-ui-ux.md): the cheaper plan and Monthly start chosen, so continuing
+  // without looking never costs more than meant; the button and hint name the plan and price.
+  const [chosen, setChosen] = useState<Paid>(DEFAULT_PLAN);
   // which of the two portal buttons was pressed, so only that one says it is opening
   const [pressed, setPressed] = useState<'change' | 'invoices' | null>(null);
   const paid = account.entitlement.plan !== 'free';
@@ -206,6 +212,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   return (
     <div className="cloud-billing">
       <CheckoutStatus phase={phase} account={account} />
+      <BillingStandingNotice account={account} place="billing" busy={opening('change')} onPortal={() => openPortal('change')} />
       <SettingsCard
         id="cloud-plan"
         title="Your plan"
@@ -217,7 +224,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
         {paid
           ? portal && <p className="acct-plan-foot">{local
             ? 'Upgrades start straight away and are prorated. Downgrades start at the end of the period, and your music and mixes stay exactly as they are.'
-            : 'Upgrades start straight away and are prorated. Downgrades start at the end of the period; a library bigger than the new plan stays playable and nothing is deleted.'}</p>
+            : 'Upgrades start straight away and are prorated. Downgrades start at the end of the period; a library bigger than the new plan stays playable and nothing is deleted. Finished exports are kept for the new plan’s time, counted from the day it starts.'}</p>
           : checkout && open && <p className="acct-plan-foot">Upgrade whenever you like. You can change or cancel at any time.</p>}
         {offline && <p className="needs-connection">{offline}</p>}
       </SettingsCard>

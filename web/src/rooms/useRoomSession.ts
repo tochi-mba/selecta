@@ -104,20 +104,38 @@ export function useRoomLive(): RoomLive | null {
  * drawer's count and the Rooms page. The room's come from the shared read of the room (waiting
  * for approval, and accepted); the host's own are the rows no room asked for. Before the room
  * has been read, the room rows the browser already holds stand in. */
-export function waitingCount(live: RoomLive | null, rows: { room_name?: string }[] | null | undefined): number {
-  const own = rows?.filter((row) => !row.room_name).length ?? 0;
-  return own + (live ? live.inbox.length + live.coming.length : (rows?.length ?? 0) - own);
+export function waitingCount(live: RoomLive | null, rows: Countable[] | null | undefined): number {
+  // ADR-0475 R4: a row waiting on another device is counted apart, never in the badge
+  const own = rows?.filter((row) => !row.room_name && actionableHere(row)).length ?? 0;
+  if (!live) return own + (rows?.filter((row) => row.room_name && actionableHere(row)).length ?? 0);
+  const { ready, onTheWay } = addable(live.coming, rows);
+  return own + live.inbox.length + ready + onTheWay;
 }
 
+/** A request row as the counts read it. */
+type Countable = { room_name?: string; room_request_id?: string; browser_note?: string; stage?: string };
+/** ADR-0475 R4: a Cloud row can be acted on from this device when the device that would play it
+ * holds the song (the browser family marks that `searching`). A row waiting on another device
+ * (its file is elsewhere, or a folder needs choosing again) is counted apart. Rows without a
+ * browser note (local mode) are always actionable. */
+export const actionableHere = (row: Countable) => !row.browser_note || row.stage === 'searching';
+
 /** The accepted room requests, split by whether the host can add them now. A request can be
- * added once the browser's own Requests list holds its row (matched by the room request's id);
- * until then it is on its way. Before that list has loaded, every accepted request counts as
- * ready, as the room says. So the room line, the drawer and the Rooms page agree. */
-export function addable(coming: readonly { request_id: string }[], rows: readonly { room_request_id?: string }[] | null | undefined): { ready: number; onTheWay: number } {
-  if (!rows) return { ready: coming.length, onTheWay: 0 };
-  const held = new Set(rows.map((row) => row.room_request_id).filter(Boolean));
-  const ready = coming.filter((ask) => held.has(ask.request_id)).length;
-  return { ready, onTheWay: coming.length - ready };
+ * added once the browser's own Requests list holds its row (matched by the room request's id)
+ * and the device that would play it holds the song; a row whose song waits on another device is
+ * `onDevice`; one without a row yet is on its way. Before that list has loaded, every accepted
+ * request counts as ready, as the room says. So the room line, the drawer and the Rooms page agree. */
+export function addable(coming: readonly { request_id: string }[], rows: readonly Countable[] | null | undefined): { ready: number; onTheWay: number; onDevice: number } {
+  if (!rows) return { ready: coming.length, onTheWay: 0, onDevice: 0 };
+  const byId = new Map(rows.filter((row) => row.room_request_id).map((row) => [row.room_request_id!, row]));
+  let ready = 0;
+  let onDevice = 0;
+  for (const ask of coming) {
+    const row = byId.get(ask.request_id);
+    if (!row) continue;
+    if (actionableHere(row)) ready += 1; else onDevice += 1;
+  }
+  return { ready, onTheWay: coming.length - ready - onDevice, onDevice };
 }
 
 /** What the host can do to a room request from any page: say yes to one waiting for approval,

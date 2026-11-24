@@ -80,6 +80,7 @@ export function BrowserRequests({ part = 'own', rows, live, playback, send, refr
         return (
           <AskRow key={request.id} title={title} artist={request.artist} note={stage === 'adding' ? '' : why || request.where_note} stage={stage}>
             {!why && <Action className="primary" aria-label={`${label}: ${title}`} run={() => (start ? onStart(request) : onAdd(request))} working="Working…">{label}</Action>}
+            {why && request.connect_here && <button type="button" className="quiet" onClick={() => navigate('/library')}>Connect music here</button>}
             <button className="quiet" disabled={request.id < 0} aria-label={`Dismiss: ${title}`} onClick={() => { void onDismiss(request); }}>Dismiss</button>
           </AskRow>
         );

@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 CLIENT_ID = "client_selecta_local_dev"
+# The local stand-in for the "Selecta Staff" WorkOS organization (§7A.5). The local identity
+# provider puts it in the tokens of people marked as staff, and the dev API expects it.
+STAFF_ORGANIZATION_ID = "org_selectadj_local_staff"
 
 
 @dataclass(frozen=True)
@@ -68,4 +71,4 @@ class DevSettings:
         return path.read_text(encoding="ascii").strip()
 
 
-__all__ = ["CLIENT_ID", "DevSettings"]
+__all__ = ["CLIENT_ID", "STAFF_ORGANIZATION_ID", "DevSettings"]
