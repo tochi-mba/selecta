@@ -11,6 +11,8 @@ case sits in the device and room agent's or the Lucy agent's area and was handed
 *Not reviewed*: listed so it is not forgotten; nobody has looked yet. A row is never marked fixed
 unless its test was run; where a fix was not checked in a browser the row says so.
 
+Open work from this audit (every "Needs the owner" and "Not reviewed" row) is tracked in the to-do list, [docs/todo](../todo/README.md); this file keeps the record of what was found and fixed.
+
 ## Counts
 
 Rows that name each status (a row can name two, such as a fix that also needs an owner setting):
