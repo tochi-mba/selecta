@@ -80,3 +80,8 @@
   .admin-top { flex-direction: column; align-items: start; }
   .admin-who { justify-items: start; }
 }
+.admin-config { display: grid; gap: var(--space-2); padding-block: var(--space-3); border-top: var(--separator) solid var(--edge-decorative); }
+.admin-config h3 { margin: 0; }
+.admin-warning { color: var(--status-warning); font-size: var(--text-sm); }
+.admin-result { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.admin-skeleton { color: var(--text-soft); }

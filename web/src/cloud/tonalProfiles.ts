@@ -73,7 +73,11 @@ function asPromise<T>(request: IDBRequest<T>): Promise<T> {
 /** This workspace's profile and review store. Reads are served from memory after the first. */
 export function tonalStore(workspaceId: string): TonalStore {
   let db: Promise<IDBDatabase | null> | null = null;
-  const opened = () => (db ??= openDb(workspaceId));
+  const opened = () => (db ??= openDb(workspaceId).then((handle) => {
+    // Another tab opening a newer version of this database must not wait on us (area F).
+    if (handle) handle.onversionchange = () => { try { handle.close(); } catch { /* closed */ } db = null; };
+    return handle;
+  }));
   let profiles: Map<string, ProfileRecord> | null = null;
   let verdicts: Map<string, Verdict> | null = null;
 

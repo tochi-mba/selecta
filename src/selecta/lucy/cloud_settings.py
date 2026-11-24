@@ -23,7 +23,7 @@ from typing import Any
 
 import sqlalchemy as sa
 from fastapi import Depends, FastAPI, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.engine import Connection, Engine
 
@@ -52,8 +52,9 @@ class LucyChoices(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     enabled: bool | None = None
-    phases: dict[str, bool] | None = None
-    privacy: dict[str, bool] | None = None
+    # a few named choices each: a body naming hundreds is refused before it is read
+    phases: dict[str, bool] | None = Field(default=None, max_length=len(PHASES))
+    privacy: dict[str, bool] | None = Field(default=None, max_length=len(PRIVACY))
 
 
 def _keys() -> dict[str, tuple[str, str | None]]:

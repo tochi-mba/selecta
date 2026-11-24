@@ -40,7 +40,8 @@ from selecta.lucy.providers import (
     ProviderError,
     TurnResult,
 )
-from selecta.persistence import new_id, transaction
+from selecta.persistence import db_now, new_id, transaction
+from selecta.work import outbox
 
 STOP_CHECK_SECONDS = 1.0
 CUT_OFF = ("(Your last reply was cut off before you finished. Think briefly, then answer "
@@ -396,6 +397,9 @@ async def run_turn(job: Job) -> None:
                 {"note": " | ".join(notes)[-NOTE_CHARS:]} if notes else {},
             )
             cloud_store.set_turn(conn, job.workspace_id, job.turn_id, status=final)
+            # every device's Lucy settings card reads its turns again (ADR-0476 item 31)
+            outbox.emit(conn, "lucy.turns", job.workspace_id, {"run": plan.run_id},
+                        db_now(conn))
             summary = gateway.finish_turn(
                 conn, plan, outcome=outcome, tokens_in=usage["tokens_in"],
                 tokens_out=usage["tokens_out"], cache_read_tokens=usage["cache_read"],

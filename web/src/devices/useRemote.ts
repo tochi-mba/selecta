@@ -4,7 +4,7 @@ import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
 import { OPTIMISTIC_MS } from './PlayingBar';
 import { bookOf, entryAt, hasNext, previousTarget, remotePosition, remoteSession, sameProgramme, whereWords, type RemoteEntry, type RemoteSession, type SongBook, type SongDetails } from './remoteNow';
-import type { SessionView } from './usePlaybackDevice';
+import { levelOf, type SessionView } from './usePlaybackDevice';
 
 // The remote session as the shell and the Listen page use it (flag `devices.remote_control`).
 //
@@ -129,8 +129,7 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
   }, [positionMs, seekTo]);
   const skipTo = useCallback(async (songIndex: number) => { await send('skip', { song_index: songIndex }); }, [send]);
   const setVolume = useCallback(async (percent: number) => {
-    // only a session that carries a shared volume (a venue zone) can be told one
-    if (typeof latest.current.session?.volume !== 'number') return;
+    // ADR-0475 G1: every session carries a mix level the speaker plays at
     await send('set_volume', { volume: Math.max(0, Math.min(100, Math.round(percent))) });
   }, [send]);
 
@@ -159,8 +158,7 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
       // the speaker is another device: nothing here to stop
       stop: () => undefined,
       toggleMute: () => {
-        const level = latest.current.session?.volume ?? null;
-        if (level === null) return;
+        const level = levelOf(latest.current.session);
         if (level > 0) { lastAudible.current = level; void setVolume(0); } else void setVolume(lastAudible.current);
       },
       setVolume: (volume) => { if (Number.isFinite(volume)) settle(volume * 100); },
@@ -170,7 +168,7 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
 
   if (!view || !session) return null;
   const current = entryAt(session, book, session.song_index) ?? { index: session.song_index, songId: -1, title: `Song ${session.song_index + 1} of ${session.programme.length}`, artist: '', durationMs: null, known: false };
-  const level = typeof session.volume === 'number' && Number.isFinite(session.volume) ? Math.max(0, Math.min(100, session.volume)) : null;
+  const level = Math.max(0, Math.min(100, levelOf(session)));
   const now: NowState = {
     // a stopped session has no mini player; Listen says it is stopped
     phase: session.state === 'stopped' ? 'idle' : playing ? 'playing' : 'paused',
@@ -182,11 +180,11 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
     notice: view.speaker === 'offline' ? whereWords(view) : '',
     nextReady: false,
     lastSeamKey: null,
-    volume: level === null ? 1 : level / 100,
+    volume: level / 100,
     muted: level === 0,
   };
   player.state = now;
-  player.canSetVolume = level !== null;
+  player.canSetVolume = true;
   const on = `on ${view.speaker_name ?? 'another device'}`;
   const song: MixItem = {
     position: session.song_index,

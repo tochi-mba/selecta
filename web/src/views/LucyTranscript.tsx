@@ -2,6 +2,7 @@ import { Fragment, ReactNode, useCallback, useEffect, useId, useLayoutEffect, us
 import type { LucyView } from '../lucy/reducer';
 import type { Message } from '../lucy/types';
 import { Action } from '../ui/controls';
+import { Icon } from '../ui/Icon';
 import { PermissionCard, PlanGroupView } from './LucyCards';
 
 /** The conversation itself. It's a log a screen reader can browse, but it doesn't speak each word as
@@ -65,12 +66,18 @@ const STATE_WORDS: Partial<Record<Message['status'], string>> = {
   failed: 'Didn’t finish',
 };
 
-function MessageItem({ message, superseded, onBranch, onRetry, canBranch }: {
+function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest, onEdit, onRate }: {
   message: Message;
   superseded: boolean;
   onBranch: (id: string) => Promise<void>;
   onRetry: (turn: string) => Promise<void>;
   canBranch: boolean;
+  /** The newest answer: it can be asked again even when it finished. */
+  latest?: boolean;
+  /** Put the person's own words back in the box to change and send again. */
+  onEdit?: (text: string) => void;
+  /** Thumbs up or down on an answer (Cloud keeps it for Lucy's evaluation). */
+  onRate?: (id: string, rating: 'up' | 'down') => Promise<void>;
 }) {
   const headingId = useId();
   const who = message.role === 'user' ? 'You' : message.role === 'assistant' ? 'Lucy' : 'Note';
@@ -86,10 +93,12 @@ function MessageItem({ message, superseded, onBranch, onRetry, canBranch }: {
           {when && <time className="lucy-msg-time" dateTime={when.iso}>{when.words}</time>}
         </h3>
         {message.content ? <RichText text={message.content} /> : message.status === 'streaming' ? <p className="soft lucy-thinking">Thinking…</p> : null}
-        {(canBranch || unfinished || answered) && !message.id.startsWith('turn:') && message.status !== 'streaming' && (
+        {(canBranch || unfinished || answered || (onEdit && message.role === 'user')) && !message.id.startsWith('turn:') && message.status !== 'streaming' && (
           <div className="lucy-msg-actions">
-            {unfinished && message.turn && <Action className="quiet" working="Trying again…" run={() => onRetry(message.turn!)}>Try again</Action>}
+            {(unfinished || (answered && latest)) && message.turn && <Action className="quiet" working="Trying again…" run={() => onRetry(message.turn!)}>Try again</Action>}
             {answered && <CopyAnswer text={message.content} />}
+            {answered && onRate && <RateAnswer id={message.id} rated={(message.meta?.rating as 'up' | 'down' | undefined) ?? null} onRate={onRate} />}
+            {onEdit && message.role === 'user' && <button type="button" className="quiet" onClick={() => onEdit(message.content)} aria-label="Edit and send again: puts these words back in the box">Edit</button>}
             {canBranch && <Action className="quiet" working="Branching…" run={() => onBranch(message.id)} aria-label={`Branch from here: a new conversation from this ${who === 'You' ? 'message of yours' : 'reply'}`}>Branch from here</Action>}
           </div>
         )}
@@ -107,6 +116,22 @@ function timeOf(value: Message['created_at']): { iso: string; words: string } | 
     ? at.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
     : at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   return { iso: at.toISOString(), words };
+}
+
+/** Was this answer useful? One press, either way; pressing the same again takes it back. */
+function RateAnswer({ id, rated, onRate }: { id: string; rated: 'up' | 'down' | null; onRate: (id: string, rating: 'up' | 'down') => Promise<void> }) {
+  const [mine, setMine] = useState(rated);
+  const rate = async (rating: 'up' | 'down') => {
+    const before = mine;
+    setMine(rating);
+    try { await onRate(id, rating); } catch { setMine(before); }
+  };
+  return (
+    <span className="lucy-rate" role="group" aria-label="Was this answer useful?">
+      <button type="button" className="quiet" aria-pressed={mine === 'up'} aria-label="Useful" title="Useful" onClick={() => void rate('up')}><Icon name="check" size="compact" /></button>
+      <button type="button" className="quiet" aria-pressed={mine === 'down'} aria-label="Not useful" title="Not useful" onClick={() => void rate('down')}><Icon name="close" size="compact" /></button>
+    </span>
+  );
 }
 
 /** Copy one answer's text; says so for a moment, and politely for a screen reader. */
@@ -134,7 +159,7 @@ export type Pending = { conversation: string | null; text: string; state: 'sendi
 
 type Entry = { key: number; order: number; node: ReactNode };
 
-export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide }: {
+export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide, onEdit, onRate }: {
   view: LucyView;
   still: boolean;
   pending: Pending | null;
@@ -143,11 +168,14 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   onBranch: (id: string) => Promise<void>;
   onRetry: (turn: string) => Promise<void>;
   onDecide: (id: string, decision: 'allow' | 'deny') => Promise<void>;
+  onEdit?: (text: string) => void;
+  onRate?: (id: string, rating: 'up' | 'down') => Promise<void>;
 }) {
+  const newest = [...view.messages].reverse().find((message) => message.role === 'assistant')?.id;
   const entries: Entry[] = view.messages.map((message) => ({
     key: message.seq,
     order: 0,
-    node: <MessageItem key={message.id} message={message} superseded={!!message.turn && !!view.superseded[message.turn]} onBranch={onBranch} onRetry={onRetry} canBranch={canBranch} />,
+    node: <MessageItem key={message.id} message={message} superseded={!!message.turn && !!view.superseded[message.turn]} onBranch={onBranch} onRetry={onRetry} canBranch={canBranch} latest={message.id === newest} onEdit={onEdit} onRate={onRate} />,
   }));
   for (const plan of view.planOrder) {
     const group = view.plans[plan];

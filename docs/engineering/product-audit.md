@@ -17,9 +17,9 @@ Rows that name each status (a row can name two, such as a fix that also needs an
 
 | Status | Rows |
 |---|---|
-| Fixed now | 16 |
-| Handled before | 17 |
-| Needs the owner | 9 |
+| Fixed now | 26 |
+| Handled before | 22 |
+| Needs the owner | 8 |
 | Other agent | 7 |
 | Not reviewed | 13 |
 
@@ -64,7 +64,8 @@ Rows that name each status (a row can name two, such as a fix that also needs an
 | E | Server codes shown as words: `messageOf` turns a bare code into text ("billing not permitted") | `cloud/api.ts:101-109` | Not reviewed in full: callers need a code-to-words map | |
 | F | Storage full, cleared, private browsing, versionchange, two tabs migrating | `media/store.ts`, `cloud/persistence.ts` | Not reviewed | |
 | G | Suspended audio context, output change, sleep, discarded tab | `devices/**`, `playback/**` | Other agent (device and room) | handed over |
-| H | Rate limits: `docs/saas/12-security-privacy-legal.md:18` promises "per-account and per-IP limits in the API"; only rooms, business people and the kiosk answer 429 | `scripts/audit/routes.py` table: 19 of 338 Cloud routes mention 429 | **Needs the owner**: Cloudflare WAF rate rules in front of the API, and a decision on a general per-account limiter (a new flag) | |
+| H | Rate limits: `docs/saas/12-security-privacy-legal.md:18` promised "per-account and per-IP limits in the API"; only rooms, business people and the kiosk answered 429 | `scripts/audit/routes.py` table: 19 of 338 Cloud routes mentioned 429 | Fixed now (`src/selecta/ratelimit.py`, flag `cloud.rate_limits`): per-IP and per-account token buckets kept in each process's memory (a database write per request would double the load to stop the rare abuser; N processes allow N times each limit, documented), stricter for checkout and portal, account changes, upload plans and search; 429 with `Retry-After` and plain words; a forged token is refused before it costs anyone's bucket. Doc §12.1 now matches. **Owner**: Cloudflare WAF rules on top. Tests to follow (CI) | fb728358 |
+| H | A write whose answer was lost, or a double press, done twice (a second mix, room or upload plan) | Only billing, local-media recipes, Lucy and business billing kept keys | Fixed now (`src/selecta/replay/`, flag `cloud.idempotency`, table `idempotent_replays` with the workspace isolation policy, migration `bfaudit01`): every Cloud write with an Idempotency-Key gets the first answer back for 24 hours, a concurrent repeat gets 409 `request_in_progress`; the web client sends one key per press, made before any retry. Left without it, on purpose: billing Checkout and portal, local-media recipes, Lucy and business billing (each keeps its own keys, Stripe's included); webhooks (Stripe and WorkOS event ids); guest, display, kiosk and venue room routes (no account token, their own per-guest and per-device limits). Tests to follow (CI) | 16c1b6b6 |
 | H | Anonymous access: every Cloud route called with no sign-in | `scripts/audit/anonymous.py`: only `GET /api/status` and `GET /api/ready` answered 2xx | Handled before | the script |
 | I | Accessibility of the new notices and frames | Notices use `role="alert"` or `status`; error frames keep the `main` landmark and put the alert on the message | Fixed now; not checked with a screen reader | `LocalFirstShell.test.tsx` L1 |
 | J | No Terms of Service or Privacy Policy link anywhere; Checkout asks "I agree to the subscription terms" without a link to them | `Billing.tsx:164`; `PrivacyNoticeDraft.tsx` is a draft behind a flag | **Needs the owner** (legal text and URLs) | |
@@ -87,7 +88,7 @@ and where that default is written.
 | Plan picker | page | Premium, Monthly | `Billing.tsx:186` | Standard, Monthly (`DEFAULT_PLAN`, `DEFAULT_INTERVAL`) | n/a. **Fixed now** |
 | Checkout consent boxes | page | none ticked (`checkout.ts NO_CONSENT`) | | same (UK: never pre-ticked) | n/a. Handled before |
 | Time zone | account | browser's at onboarding (`CloudApp.tsx:478`), `UTC` if unknown | `identity/schema.py:41` | same | Yes |
-| Workspace name | workspace | "Personal" | `identity/accounts.py:52 PERSONAL_WORKSPACE_NAME` | "{First name}'s music" or "My music" | Yes. Not changed yet: WorkOS gives no first name in the token; needs a decision on asking |
+| Workspace name | workspace | "Personal" | `identity/accounts.py:52 PERSONAL_WORKSPACE_NAME` | "Personal" until a name is known; the owner is offered a rename once (`PUT /api/account/workspace-name`, flag `account.workspace_name`, `cloud/WorkspaceNameOffer.tsx`). Shown on the Account page, not the device Workspace page, which belongs to the device and room agent's shell work | Yes. Fixed now, e646a972; not checked in a browser |
 | Device name, default speaker, never play | account / device | `devices/**` (ADR-0475) | | the first device with music becomes the default only when it is the only one | Other agent (device and room) |
 | Room settings: approval, nicknames, per-guest limit, cooldown | room | `src/selecta/rooms/settings.py` | | host approves, generated nicknames | Other agent (device and room) |
 | Lucy preferences | account | `src/selecta/lucy/**` | | | Other agent (Lucy) |
@@ -107,7 +108,8 @@ and where that default is written.
 | Anonymous calls | `uv run python scripts/audit/anonymous.py` | 2 Cloud routes answer with no sign-in (status, ready); 12 answer 503 "not configured" in a bare test app (webhooks, guest and display pages) |
 | Background work | `src/selecta/maintain.py` builds every task; each runs under the maintenance leader's lease (`fence`) | 25 tasks (actions, reservations, Lucy runs, flag previews, admin metrics, usage reconcile, derived eviction, Stripe events and reconcile, storage and account deletions, rooms, export expiry, DMCA, emails, zone clock and autoplan, entitlement, alerts, horizon, business billing and licensing) |
 | Migrations | `src/selecta/persistence/migrations/versions` | 46 |
-| Screens | not generated yet | Not reviewed |
+| Screens | `uv run python scripts/audit/screens.py` (loading, empty, error, offline, flag-off signs per file) | 141 screen files; with no sign in their own file: loading 73, empty 88, error 57, offline 100, flag-off 100. Most are parts drawn inside a page that handles the state; every page that fetches was checked to have a failure state (only admin pages use `useLoad` with `Failure`, which does) |
+| Request bodies | `uv run python scripts/audit/body_limits.py` | 32 body fields with no length limit of their own (most in business, admin, Lucy and rooms); every body is now capped at 8 MB before it is read |
 
 ### Findings so far
 
@@ -118,9 +120,21 @@ and where that default is written.
 | Routes, abuse | No general per-account or per-IP rate limit | Needs the owner (see H) |
 | Secrets | The production build holds the public API origin only; no key or token found by a grep of `web/dist/assets` for `sk_`, `whsec_`, `rk_`, `Bearer ` | Handled before (checked once on this audit's build) |
 | Jobs | Each maintenance task runs under one leader with a fence | Handled before (`maintain.py`); interruption and double-run per task not reviewed |
-| Docs | `docs/saas/16-edge-cases.md` claims every line maps to a test or policy; "sign-in from a new device (notify)" has neither | Needs the owner: build the notice or drop the claim |
-| Dead code | `library_soft_cap_songs` in the plan catalogue is read nowhere | Needs the owner |
-| Local app, business, admin, dependencies, observability, consistency | | Not reviewed |
+| Docs | `docs/saas/16-edge-cases.md` claimed "sign-in from a new device (notify)" with nothing behind it | Fixed now: one email per new device with Sign out everywhere (`notify/device_mail.py`, flag `account.new_device_email`; `tests/test_cloud_new_device_email.py`), e59ea95a |
+| Dead code | `library_soft_cap_songs` was read nowhere, though `02-plans-and-economics.md:22,70` promises it as a soft cap | Fixed now: counted in `/api/account` (`usage/meters.py library_size`) and said calmly on Plan & billing past the cap; nothing is refused (`tests/test_cloud_library_soft_cap.py`), e646a972 |
+| Routes, abuse | No request body size limit: a field with no limit of its own (a venue address, a flag change's params) could carry megabytes | Fixed now: `ratelimit.BodyLimit` refuses over 8 MB with 413 and plain words (checked by hand against the app: 9 MB answered 413, `/api/status` 200), 8f7725ff |
+| Errors | A refusal with no words of its own showed "Request failed (403)." or the code as words ("billing not permitted") | Fixed now: `cloud/api.ts statusWords` says it by status; `messageOf` never shows a code, 5bd40071 |
+| Account | Download my data said "Everything SelectaDJ keeps" but left out saved mixes, the current mix and the library's song details ("Cloud mix revisions are not yet stored") | Fixed now: `mixes.json` holds every saved mix revision and the current mix, `library.json` the song details (never the files), 5edb981e; `tests/test_cloud_account_export.py` |
+| Local storage | Three IndexedDB handles (offline catalogue, outbox, tonal profiles) never let go when another tab opened a newer version, so after a deploy the new tab's open was blocked and it ran without storage | Fixed now: each closes and reopens on `versionchange`, dd30659b. Not checked in a browser |
+| Secrets | `git grep` for live keys, private keys and tokens: only documented fake examples in tests; `tests/test_no_committed_secrets.py` guards it; no source maps in the build | Handled before |
+| Dependencies | `pnpm audit` (all and production): no known vulnerabilities. Python: no auditor is installed; `pip-audit` would need downloading | Handled before (web); Python not reviewed |
+| Dead and risky code | No TODO, FIXME or TEMP notes in `src` or `web/src`; skips are conditional only (no PostgreSQL, no S3, platform limits), guarded by `tests/test_no_quarantined_tests.py` | Handled before |
+| Routes, abuse | Per-IP limits trust `cf-connecting-ip` (`infra/render/render.yaml:84-86`); if the API can be reached without Cloudflare, a caller names their own address | Needs the owner: Cloudflare-only origin; written into `launch-operator-checklist.md` §9 |
+| Docs | `launch-operator-checklist.md` §9 said "The code sends no email itself today" | Fixed now: lists what SelectaDJ and Stripe each send and the two Stripe switches to turn off |
+| Tests | PostgreSQL-only tests (row-level security, append-only audit) run only in the nightly workflow (`.github/workflows/nightly.yml`), not on pull requests, so a new tenant table's policy is first checked overnight | Needs the owner: whether a PostgreSQL job should run on pull requests |
+| Business hours | Overnight periods, the spring gap and the autumn repeat (fold) | `business/hours.py:9,158,187-195`; `tests/test_business_hours.py`, `test_business_zone_clock.py` | Handled before |
+| Admin | The last owner cannot be removed (`authz/errors.py LastOwner`) | Handled before; the rest of the admin pass is with the admin console agent |
+| Local app, kiosk left running for weeks, observability, docs against reality beyond the rows above, consistency of words | | Not reviewed |
 
 ## Handed to the other agents
 

@@ -32,7 +32,7 @@ from selecta.rooms.views import HostView
 
 class OpenBody(BaseModel):
     name: str = Field(max_length=200)
-    settings: dict[str, Any] | None = None
+    settings: dict[str, Any] | None = Field(default=None, max_length=40)
 
 
 class RotateBody(BaseModel):

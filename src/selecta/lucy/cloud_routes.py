@@ -47,7 +47,7 @@ class TurnBody(BaseModel):
     client_id: str = Field(min_length=1, max_length=64)
     text: str = Field(min_length=1, max_length=MAX_TEXT)
     expected_revision: str | None = Field(default=None, max_length=64)
-    selection: dict[str, Any] | None = None
+    selection: dict[str, Any] | None = Field(default=None, max_length=4)
     # the playback device this was typed on (ADR-0476 item 22); unknown ids are ignored
     device_id: str | None = Field(default=None, max_length=36)
 
@@ -60,7 +60,7 @@ class RetryBody(BaseModel):
 class EditBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected: str = Field(min_length=1, max_length=64)
-    op: dict[str, Any]
+    op: dict[str, Any] = Field(max_length=4)
 
 
 class CurrentBody(BaseModel):
@@ -74,6 +74,11 @@ class ApproveBody(BaseModel):
     revision: str = Field(min_length=1, max_length=64)
     hash: str = Field(min_length=1, max_length=64)
     action: str = Field(pattern="^(draft|draft_and_play)$")
+
+
+class RatingBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rating: str = Field(pattern="^(up|down)$")
 
 
 class CommitBody(BaseModel):
@@ -506,6 +511,21 @@ def install_routes(
                 raise _missing()
             mine(conn, principal, row.conversation_id)
             return cloud_proposals.commit_answer(row, None)
+
+    @app.post("/api/lucy-cloud/messages/{message}/rating")
+    def rate(
+        message: str, body: RatingBody, request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        """Was this answer useful? Stored on the answer, for Lucy's evaluation; the latest
+        press wins."""
+        principal = who(request, claims)
+        with transaction(engine, principal.workspace.id) as conn:
+            conversation = cloud_store.rate(conn, principal.workspace.id, message, body.rating)
+            if conversation is None:
+                raise _missing()
+            mine(conn, principal, conversation)
+        return {"rating": body.rating}
 
     @app.get("/api/lucy-cloud/memory")
     def memory(request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008

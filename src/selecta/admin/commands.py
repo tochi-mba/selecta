@@ -26,6 +26,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from selecta.admin import safety
 from selecta.admin.schema import worker_controls
 from selecta.authz import audit, delayed
 from selecta.authz.check import Actor, authorize, ensure_not_own_workspace
@@ -43,6 +44,29 @@ from selecta.work.state import read_job
 
 MASS_OVERRIDE_THRESHOLD = 10
 MAX_OVERRIDE_DAYS = 366
+MASS_OVERRIDE_MAX = 500
+# Commands called from code (tests, maintenance) carry no console intent: the change window and
+# tier rules still apply, but there is no version to compare.
+NO_INTENT = safety.Intent()
+
+
+def job_version(job: Job) -> str:
+    return safety.version_of(job.state, job.attempt_count, job.error_class)
+
+
+def account_version(conn: Connection, user_id: str, workspace_id: str | None) -> str:
+    """What an account action depends on: suspension, deletion, plan and live overrides."""
+    user = accounts.get_user(conn, user_id)
+    parts: list[Any] = [user.suspended_at if user else None, user.deleted_at if user else None]
+    if workspace_id:
+        from selecta.billing.schema import entitlement_overrides as o
+
+        entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
+        live = conn.execute(sa.select(o.c.id).where(
+            o.c.workspace_id == workspace_id, o.c.revoked_at.is_(None)).order_by(o.c.id)
+        ).scalars().all()
+        parts += [entitlement.plan_id, entitlement.source, list(live)]
+    return safety.version_of(*parts)
 
 
 def _need_reason(reason: str) -> str:
@@ -102,31 +126,38 @@ def _lanes(conn: Connection) -> None:
     heads.lock_all_lanes(conn)
 
 
-def retry_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) -> Job:
+def retry_job(conn: Connection, actor: Actor, job_id: str, *, reason: str,
+              intent: safety.Intent = NO_INTENT) -> Job:
     reason = _need_reason(reason)
     _lanes(conn)
     job = _job(conn, actor, job_id, "jobs.retry")
+    safety.guard(conn, actor, "job.retry", intent, current_version=job_version(job))
     again = retrying.retry(conn, job.workspace_id, job.id, db_now(conn))
     _audit(conn, actor, "admin.job.retry", _job_resource(job), reason, new_job_id=again.id,
            state_before=job.state)
     return again
 
 
-def cancel_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) -> Job:
+def cancel_job(conn: Connection, actor: Actor, job_id: str, *, reason: str,
+               intent: safety.Intent = NO_INTENT) -> Job:
     reason = _need_reason(reason)
     _lanes(conn)
     job = _job(conn, actor, job_id, "jobs.cancel")
+    safety.guard(conn, actor, "job.cancel", intent, current_version=job_version(job),
+                 target=job.id[:8])
     after = lifecycle.cancel(conn, job.workspace_id, job.id, db_now(conn))
     _audit(conn, actor, "admin.job.cancel", _job_resource(job), reason,
            state_before=job.state, state_after=after.state)
     return after
 
 
-def quarantine_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) -> Job:
+def quarantine_job(conn: Connection, actor: Actor, job_id: str, *, reason: str,
+                   intent: safety.Intent = NO_INTENT) -> Job:
     """Hold a job out of line for inspection (`work.holds.hold_for_staff`)."""
     reason = _need_reason(reason)
     _lanes(conn)
     job = _job(conn, actor, job_id, "jobs.cancel")
+    safety.guard(conn, actor, "job.quarantine", intent, current_version=job_version(job))
     after = holds.hold_for_staff(conn, job.id, db_now(conn))
     _audit(conn, actor, "admin.job.quarantine", _job_resource(job), reason,
            state_before=job.state, state_after=after.state,
@@ -134,11 +165,13 @@ def quarantine_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) 
     return after
 
 
-def release_job(conn: Connection, actor: Actor, job_id: str, *, reason: str) -> Job:
+def release_job(conn: Connection, actor: Actor, job_id: str, *, reason: str,
+                intent: safety.Intent = NO_INTENT) -> Job:
     """Put a quarantined job back (`work.holds.release_staff_hold`)."""
     reason = _need_reason(reason)
     _lanes(conn)
     job = _job(conn, actor, job_id, "jobs.retry")
+    safety.guard(conn, actor, "job.release", intent, current_version=job_version(job))
     after = holds.release_staff_hold(conn, job.id, db_now(conn))
     _audit(conn, actor, "admin.job.release", _job_resource(job), reason,
            state_before=job.state, state_after=after.state)
@@ -151,7 +184,8 @@ WORKER_HOLDS = ("drain", "pause")
 
 
 def hold_worker(
-    conn: Connection, actor: Actor, worker_id: str, hold: str, *, reason: str
+    conn: Connection, actor: Actor, worker_id: str, hold: str, *, reason: str,
+    intent: safety.Intent = NO_INTENT,
 ) -> dict[str, Any]:
     """Drain (finish running work, claim nothing new) or pause (also ask running work to give
     way) one worker. The hold outlives the worker re-registering."""
@@ -160,6 +194,7 @@ def hold_worker(
         raise ValueError(f"A worker can be held as {' or '.join(WORKER_HOLDS)}, not {hold!r}.")
     resource = ResourceRef("worker", worker_id)
     authorize(conn, actor, "workers.drain", resource)
+    safety.guard(conn, actor, f"worker.{hold}", intent)
     found = conn.execute(sa.select(workers.c.id).where(workers.c.id == worker_id)).first()
     if found is None:
         raise LookupError(f"There's no worker {worker_id!r}.")
@@ -183,10 +218,12 @@ def hold_worker(
     return {"worker_id": worker_id, "hold": hold, "preempted": preempted}
 
 
-def resume_worker(conn: Connection, actor: Actor, worker_id: str, *, reason: str) -> dict:
+def resume_worker(conn: Connection, actor: Actor, worker_id: str, *, reason: str,
+                  intent: safety.Intent = NO_INTENT) -> dict:
     reason = _need_reason(reason)
     resource = ResourceRef("worker", worker_id)
     authorize(conn, actor, "workers.drain", resource)
+    safety.guard(conn, actor, "worker.resume", intent)
     conn.execute(worker_controls.delete().where(worker_controls.c.worker_id == worker_id))
     conn.execute(workers.update().where(workers.c.id == worker_id).values(draining=False))
     _audit(conn, actor, "admin.worker.resume", resource, reason)
@@ -223,7 +260,7 @@ def _apply_override(conn: Connection, workspace_id: str, plan_id: str, reason: s
 
 def grant_override(
     conn: Connection, actor: Actor, *, workspace_id: str, plan_id: str, reason: str,
-    expires_at: float,
+    expires_at: float, intent: safety.Intent = NO_INTENT,
 ) -> dict[str, Any]:
     """One workspace's plan, overridden until `expires_at`, with a reason (never via Stripe)."""
     reason = _need_reason(reason)
@@ -231,6 +268,10 @@ def grant_override(
     authorize(conn, actor, "billing.overrides.create", resource)
     ensure_not_own_workspace(conn, actor, "billing.overrides.create", [workspace_id])
     _check_override(conn, workspace_id, plan_id, expires_at)
+    owner = conn.execute(sa.select(workspaces.c.owner_user_id).where(
+        workspaces.c.id == workspace_id)).scalar()
+    safety.guard(conn, actor, "override.grant", intent,
+                 current_version=account_version(conn, owner, workspace_id) if owner else None)
     override_id = _apply_override(conn, workspace_id, plan_id, reason, actor.user_id, expires_at)
     _audit(conn, actor, "admin.override.grant", resource, reason, override_id=override_id,
            plan_id=plan_id, expires_at=expires_at)
@@ -238,7 +279,8 @@ def grant_override(
             "expires_at": expires_at}
 
 
-def revoke_override(conn: Connection, actor: Actor, override_id: str, *, reason: str) -> dict:
+def revoke_override(conn: Connection, actor: Actor, override_id: str, *, reason: str,
+                    intent: safety.Intent = NO_INTENT) -> dict:
     reason = _need_reason(reason)
     from selecta.billing.schema import entitlement_overrides as t
 
@@ -249,6 +291,8 @@ def revoke_override(conn: Connection, actor: Actor, override_id: str, *, reason:
         raise LookupError(f"There's no override {override_id!r}.")
     resource = ResourceRef("workspace", workspace_id, workspace_id)
     authorize(conn, actor, "billing.overrides.create", resource)
+    ensure_not_own_workspace(conn, actor, "billing.overrides.create", [workspace_id])
+    safety.guard(conn, actor, "override.revoke", intent)
     changed = stripe_sync.revoke_override(conn, override_id, actor.user_id)
     entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
     quota.set_limit(conn, workspace_id, plans.plan_for(entitlement.plan_id,
@@ -261,23 +305,64 @@ def revoke_override(conn: Connection, actor: Actor, override_id: str, *, reason:
 def propose_mass_override(
     conn: Connection, actor: Actor, *, workspace_ids: list[str], plan_id: str, reason: str,
     expires_at: float, notifier: delayed.Notifier | None = None,
+    intent: safety.Intent | None = None,
 ) -> delayed.DangerousAction:
-    """Overrides for many workspaces at once are a dangerous action: they wait (§7.4)."""
+    """Overrides for many workspaces at once are a dangerous action: they wait (§7.4). From the
+    console they also need the dry run's digest as the version and the count typed back."""
     reason = _need_reason(reason)
     unique = sorted(set(workspace_ids))
     if len(unique) < 2:
         raise ValueError("A mass override names at least two workspaces.")
+    if len(unique) > MASS_OVERRIDE_MAX:
+        raise ValueError(f"A mass override names at most {MASS_OVERRIDE_MAX} workspaces a run.")
     # Checked before the workspaces are looked up, so they reveal nothing to anyone else.
     authorize(conn, actor, delayed.RULES[delayed.ActionKind.MASS_ENTITLEMENT_OVERRIDE].propose,
               ResourceRef("entitlement_overrides", None))
     ensure_not_own_workspace(conn, actor, "billing.overrides.create", unique)
     for workspace_id in unique:
         _check_override(conn, workspace_id, plan_id, expires_at)
+    if intent is not None:
+        if intent.version is None:
+            from selecta.admin.http import CommandRefused
+
+            raise CommandRefused(409, "dry_run_required", "Run the dry run first.")
+        safety.guard(conn, actor, "override.mass", intent,
+                     current_version=mass_digest(unique, plan_id, expires_at),
+                     target=str(len(unique)))
     return delayed.propose(
         conn, actor, delayed.ActionKind.MASS_ENTITLEMENT_OVERRIDE,
         {"workspace_ids": unique, "plan_id": plan_id, "expires_at": expires_at},
         reason=reason, resource=ResourceRef("entitlement_overrides", None), notifier=notifier,
     )
+
+
+def mass_digest(workspace_ids: list[str], plan_id: str, expires_at: float) -> str:
+    return safety.version_of(sorted(set(workspace_ids)), plan_id, round(expires_at))
+
+
+def mass_override_dry_run(
+    conn: Connection, actor: Actor, *, workspace_ids: list[str], plan_id: str, expires_at: float,
+) -> dict[str, Any]:
+    """What a mass override would do, changing nothing: the count, a sample, what each gets,
+    and the digest the real run must quote."""
+    unique = sorted(set(workspace_ids))
+    authorize(conn, actor, "billing.overrides.create", ResourceRef("entitlement_overrides", None))
+    problems: list[str] = []
+    sample = []
+    for workspace_id in unique[:MASS_OVERRIDE_MAX]:
+        try:
+            _check_override(conn, workspace_id, plan_id, expires_at)
+        except (ValueError, LookupError) as problem:
+            problems.append(f"{workspace_id}: {problem}")
+            continue
+        if len(sample) < 5:
+            now_plan = stripe_sync.effective_entitlement(conn, workspace_id).plan_id
+            sample.append({"workspace_id": workspace_id, "plan_now": now_plan,
+                           "plan_after": plan_id})
+    return {"count": len(unique), "max": MASS_OVERRIDE_MAX,
+            "too_many": len(unique) > MASS_OVERRIDE_MAX, "sample": sample,
+            "problems": problems[:20], "plan_id": plan_id, "expires_at": expires_at,
+            "digest": mass_digest(unique, plan_id, expires_at)}
 
 
 def execute_mass_override(conn: Connection, action: delayed.DangerousAction) -> dict:
@@ -320,17 +405,43 @@ def _account_resource(
     return resource
 
 
-def suspend_account(conn: Connection, actor: Actor, user_id: str, *, reason: str) -> dict:
-    reason = _need_reason(reason)
+def _not_own_account(conn: Connection, actor: Actor, user_id: str, permission: str,
+                     workspace_id: str | None) -> None:
     if user_id == actor.user_id:
-        raise ValueError("Staff can't suspend their own account.")
-    _account_resource(conn, actor, user_id, "accounts.suspend")
+        audit.record_durably(
+            conn, actor_id=actor.user_id, action=permission, result=audit.AuditResult.DENY,
+            resource_type="user", resource_id=user_id, reason="acting on the actor's own account",
+            request_id=actor.request_id)
+        from selecta.authz.errors import SelfApproval
+
+        raise SelfApproval("Staff can't do this to their own account.")
+    if workspace_id:
+        ensure_not_own_workspace(conn, actor, permission, [workspace_id])
+
+
+def suspend_account(conn: Connection, actor: Actor, user_id: str, *, reason: str,
+                    intent: safety.Intent = NO_INTENT) -> dict:
+    reason = _need_reason(reason)
+    resource = _account_resource(conn, actor, user_id, "accounts.suspend")
+    _not_own_account(conn, actor, user_id, "accounts.suspend", resource.workspace_id)
+    user = accounts.get_user(conn, user_id)
+    safety.guard(conn, actor, "account.suspend", intent,
+                 current_version=account_version(conn, user_id, resource.workspace_id),
+                 target=user.email if user else None)
     suspended_at = accounts.suspend(conn, user_id, actor_id=actor.user_id, reason=reason)
+    safety.record(conn, actor, "account.suspend", resource_type="user", resource_id=user_id,
+                  workspace_id=resource.workspace_id, reason=reason)
     return {"user_id": user_id, "suspended_at": suspended_at}
 
 
-def restore_account(conn: Connection, actor: Actor, user_id: str, *, reason: str) -> dict:
+def restore_account(conn: Connection, actor: Actor, user_id: str, *, reason: str,
+                    intent: safety.Intent = NO_INTENT) -> dict:
     reason = _need_reason(reason)
-    _account_resource(conn, actor, user_id, "accounts.restore")
+    resource = _account_resource(conn, actor, user_id, "accounts.restore")
+    _not_own_account(conn, actor, user_id, "accounts.restore", resource.workspace_id)
+    safety.guard(conn, actor, "account.restore", intent,
+                 current_version=account_version(conn, user_id, resource.workspace_id))
     accounts.lift_suspension(conn, user_id, actor_id=actor.user_id, reason=reason)
+    safety.record(conn, actor, "account.restore", resource_type="user", resource_id=user_id,
+                  workspace_id=resource.workspace_id, reason=reason)
     return {"user_id": user_id, "suspended_at": None}

@@ -240,6 +240,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.local_media` | **Local media catalogue.** The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458). |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
+| `account.workspace_name` | **Workspace name.** Rename the personal workspace from its starting name, offered once on Workspace. |  |
 | `account.new_device_email` | **New device email.** Email the person once when a new device signs in to their account, with a way to sign out everywhere. **Cloud surface:** headless (An email sent by the maintenance task; nothing on a Cloud screen changes). |  |
 | `cloud.rate_limits` | **API rate limits.** Per-account and per-IP request limits in the Cloud API, with stricter limits for checkout, account changes, search and upload plans. **Cloud surface:** operations (A request limit has no screen; a refused request says why and when to try again). |  |
 | `cloud.idempotency` | **Replayed writes.** A Cloud write sent again with the same Idempotency-Key within 24 hours gets the first answer back instead of doing it twice. **Cloud surface:** operations (Replaying a stored answer has no screen; the person simply never sees a double). |  |

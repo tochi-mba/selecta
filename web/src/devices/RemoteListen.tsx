@@ -7,7 +7,7 @@ import type { Remote } from './useRemote';
 import { askWords, stillAsking, type AskState } from './playOn';
 import { bestHolder, notOn, type DeviceHolding } from './controller';
 import { holdingWords } from './ControllerListen';
-import { NO_SPEAKER_WORDS } from './usePlaybackDevice';
+import { levelOf, NO_SPEAKER_WORDS } from './usePlaybackDevice';
 import { countOf } from '../ui/format';
 import { PlayNoticeLine } from './PlayNoticeLine';
 import type { PlayNotice } from './useWhereToPlay';
@@ -18,6 +18,9 @@ import './devices.css';
 // this device: titles come from the account's library, and every press is a playback command
 // the speaker applies. Presses that wait or were missed are said by ControllerNotices, in the
 // shell's banner, as on every other page.
+
+/** How often a dragged volume is sent to the speaker. */
+const VOLUME_EVERY_MS = 100;
 
 /** One value a slider is being dragged to, sent once when the drag ends. */
 function useRelease(send: (value: number) => void) {
@@ -91,11 +94,19 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
     setLevel({ percent, seq: session.seq });
     void remote.setVolume(percent);
   });
+  // G1: while dragging, the speaker follows about ten times a second; the final value always goes
+  const sentAt = useRef(0);
+  const dragVolume = (percent: number) => {
+    volume.move(percent);
+    if (Date.now() - sentAt.current < VOLUME_EVERY_MS) return;
+    sentAt.current = Date.now();
+    void remote.setVolume(percent);
+  };
 
   const duration = current.durationMs;
   const held = sought && sought.seq === session.seq && sought.index === session.song_index ? sought.ms : null;
   const position = seek.dragged ?? held ?? remote.positionMs();
-  const reportedVolume = typeof session.volume === 'number' && Number.isFinite(session.volume) ? Math.round(session.volume) : null;
+  const reportedVolume = Math.round(levelOf(session));
   const shownVolume = volume.dragged ?? (level && level.seq === session.seq ? level.percent : reportedVolume);
   // said about the speaker, by name: this device cannot play its check tone
   const sound = soundWords(view, speakerOutput(session));
@@ -112,7 +123,8 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
       </header>
       <div className="remote-layout">
         <section className="remote-card" aria-label="Remote control">
-          <p className="remote-where" data-testid="remote-where"><Icon name={view.speaker === 'offline' ? 'warning' : 'music'} size="compact" />{whereWords(view)}</p>
+          {/* a notice about the speaker itself is the one message about it: no second line above */}
+          {!(notice && notice.deviceId === view.speaker_device_id) && <p className="remote-where" data-testid="remote-where"><Icon name={view.speaker === 'offline' ? 'warning' : 'music'} size="compact" />{whereWords(view)}</p>}
           <div className="remote-song">
             <h2 dir="auto" data-testid="remote-title">{current.title}</h2>
             {current.artist && <p dir="auto" data-testid="remote-artist">{current.artist}</p>}
@@ -164,7 +176,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
                 min={0}
                 max={100}
                 value={shownVolume}
-                onChange={(event) => volume.move(Number(event.target.value))}
+                onChange={(event) => dragVolume(Number(event.target.value))}
                 onPointerUp={volume.release}
                 onTouchEnd={volume.release}
                 onKeyUp={volume.release}
@@ -172,6 +184,8 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
               />
             </label>
           )}
+          {/* G52: the app's level cannot go past the speaker's own volume */}
+          {shownVolume === 100 && <p className="remote-hint" data-testid="volume-max">For more volume, turn up {view.speaker_name ?? 'the speaker'} itself.</p>}
         </section>
         <div className="remote-side">
           {coming.length > 0 && (
