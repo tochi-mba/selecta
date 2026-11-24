@@ -179,6 +179,8 @@ def _person_version(conn: Connection, user_id: str) -> str:
 
 def assign_role(conn: Connection, actor: Actor, *, user_id: str, role: str, scope: str,
                 reason: str, expires_at: float | None, intent: safety.Intent) -> dict[str, Any]:
+    # Giving yourself a role is refused (and alerted) before anything else, as `assign_role` does.
+    assignments._refuse_self(conn, actor, user_id, "security.roles.assign")
     authorize(conn, actor, "security.roles.assign", ResourceRef("role_assignment", user_id))
     safety.guard(conn, actor, "role.assign", intent,
                  current_version=_person_version(conn, user_id) if intent.version else None,
