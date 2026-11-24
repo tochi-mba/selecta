@@ -16,6 +16,10 @@ const EDGE = 72;
 
 export type StoryDrag = { from: number; to: number; offset: number };
 
+/** Safari doesn't focus a button it was pressed with, so the sheet wouldn't know where to send focus
+ * back to when it closes. The button takes focus itself first. */
+export const takeFocus = (event: { currentTarget: HTMLElement }) => event.currentTarget.focus({ preventScroll: true });
+
 /** What a transition says on the list: what will happen, in a few words, and its state. */
 export function connectorWords(item: MixItem, previous: MixItem, names: Record<string, string>, live: boolean, played: PlayedSeam | undefined) {
   const seam = item.seam;
@@ -185,7 +189,7 @@ export function PhoneStory(props: {
             <li className="pe-item" data-song-key={key} data-position={item.position}>
               {previous && words && (
                 <div className={`pe-seam ${selectedSeam === index ? 'is-open' : ''} ${affected?.has(index) ? 'is-affected' : ''}`} data-pe-seam={`${keys[index - 1]}>${key}`} data-seam={`${keys[index - 1]}>${key}`}>
-                  <button type="button" className="pe-seam-open" aria-expanded={selectedSeam === index} onClick={() => onOpenSeam(index)}>
+                  <button type="button" className="pe-seam-open" aria-expanded={selectedSeam === index} onClick={(event) => { takeFocus(event); onOpenSeam(index); }}>
                     <span className="visually-hidden">Transition from {previous.title} into {item.title}: </span>
                     <Status kind={words.kind}>{words.headline}</Status>
                     {affected?.has(index) && <span className="pe-seam-note">Changes<span className="visually-hidden"> if the song is dropped there</span></span>}
@@ -199,7 +203,7 @@ export function PhoneStory(props: {
                 aria-busy={movingKey === key || undefined}
               >
                 <span className="pe-number" aria-hidden="true">{playingIndex === index ? <Icon name="play" size="compact" /> : index + 1}</span>
-                <button type="button" className="pe-song-open" aria-current={selectedSong === index ? 'true' : undefined} onClick={() => onOpenSong(index)}>
+                <button type="button" className="pe-song-open" aria-current={selectedSong === index ? 'true' : undefined} onClick={(event) => { takeFocus(event); onOpenSong(index); }}>
                   <SongMotif songId={item.song_id} />
                   <span className="pe-song-words">
                     <h3 dir="auto"><span className="visually-hidden">{index + 1}. </span>{item.title}</h3>
@@ -207,7 +211,7 @@ export function PhoneStory(props: {
                   </span>
                 </button>
                 <RequestTag item={item} />
-                <button type="button" className="pe-icon-button" aria-label={`More for ${item.title}`} title={`More for ${item.title}`} onClick={() => onOpenSong(index)}>
+                <button type="button" className="pe-icon-button" aria-label={`More for ${item.title}`} title={`More for ${item.title}`} onClick={(event) => { takeFocus(event); onOpenSong(index); }}>
                   <Icon name="more" />
                 </button>
                 <button
