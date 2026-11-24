@@ -88,14 +88,14 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
       {/* gone once that mix is the one here (played from this banner, or asked from another device) */}
       {arrived && arrived.mixId !== recipes.current() && (
         <p className="asked-to-play" role="status" data-testid="new-mix-arrived">
-          {arrived.by ?? 'Another device'} made a new mix.
+          <span className="asked-to-play-words">{arrived.by ?? 'Another device'} made a new mix.</span>
           <button className="primary" onClick={() => void playArrived()}>Play it now</button>
           <button onClick={() => setArrived(null)}>Keep playing</button>
         </p>
       )}
       {later && (
         <p className="asked-to-play" role="status" data-testid="new-mix-later">
-          Your new mix is the current mix. {later.device.name} is still playing the last one.
+          <span className="asked-to-play-words">Your new mix is the current mix. {later.device.name} is still playing the last one.</span>
           <button className="primary" onClick={() => { const offer = later; setLater(null); askToPlay(offer.device, offer.mixId); }}>Play on {later.device.name} now</button>
           <button onClick={() => setLater(null)}>Later</button>
         </p>

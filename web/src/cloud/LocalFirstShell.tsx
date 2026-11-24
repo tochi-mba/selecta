@@ -674,7 +674,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         : null;
   const askedBanner = askedToPlay && (
     <p className="asked-to-play" role="alert" data-testid="asked-to-play">
-      {askedToPlay.asker_name} asked to play here. Press Play to allow sound from this tab.
+      <span className="asked-to-play-words">{askedToPlay.asker_name} asked to play here. Press Play to allow sound from this tab.</span>
       <button className="primary" onClick={() => { const ask = askedToPlay; setAskedToPlay(null); void startAskedMix(ask, true).then((result) => playOn.answer(ask, result)); }}>Play</button>
       <button onClick={() => { const ask = askedToPlay; setAskedToPlay(null); void playOn.answer(ask, 'declined'); }}>Not now</button>
     </p>

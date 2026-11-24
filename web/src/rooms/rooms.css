@@ -130,7 +130,9 @@
 /* One layout for every request row in the drawer: the main action fills the row and the second
    sits in a fixed column, so Add next is the same width on every row whatever the second is. */
 .requests-browser .ask-actions { grid-column: 1 / -1; grid-row: auto; display: grid; grid-template-columns: minmax(0, 1fr) 8rem; }
+/* a main action alone fills the row; a lone secondary one (Dismiss) keeps its usual column */
 .requests-browser .ask-actions > :only-child { grid-column: 1 / -1; }
+.requests-browser .ask-actions > :only-child:not(.primary) { grid-column: 2; }
 
 /* opening a room */
 .room-open { display: grid; gap: var(--space-2); min-width: 0; }
@@ -195,6 +197,7 @@
   .ask { grid-template-columns: auto minmax(0, 1fr); }
   .ask-actions { grid-column: 1 / -1; grid-row: auto; display: grid; grid-template-columns: minmax(0, 1fr) 8rem; }
   .ask-actions > :only-child { grid-column: 1 / -1; }
+  .ask-actions > :only-child:not(.primary) { grid-column: 2; }
   .room-qr-words { justify-items: center; text-align: center; }
 }
 
