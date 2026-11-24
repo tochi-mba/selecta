@@ -280,6 +280,77 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+  cloud-rest:
+    # The `cloud` job above runs tests/test_cloud_*.py on PostgreSQL. Other test files use the
+    # same `cloud_engine` fixture (playback fencing, business zone sessions and races, shared
+    # derivations, the first Owner, DMCA, plans v2...) and ran only on SQLite in `python`, so
+    # their PostgreSQL half (row locks, row-level security) waited for no one. This runs exactly
+    # those files on PostgreSQL, found by the fixture they use, so a new one joins by itself.
+    name: Cloud / PostgreSQL for the other cloud-engine tests
+    needs: [lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: selecta
+          POSTGRES_PASSWORD: selecta
+          POSTGRES_DB: selecta_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U selecta -d selecta_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      CI: "true"
+      SELECTA_TEST_POSTGRES_URL: postgresql+psycopg://selecta:selecta@localhost:5432/selecta_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          version: "0.12.15" # matches infra/docker/service.Dockerfile
+          enable-cache: true
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: uv sync --locked
+      - name: Every non-cloud test file that uses the cloud database, on PostgreSQL only
+        run: |
+          mapfile -t files < <(grep -lE 'cloud_engine' tests/test_*.py | grep -v '^tests/test_cloud_')
+          echo "Running ${#files[@]} files: ${files[*]}"
+          uv run pytest "${files[@]}" -q -k postgres -p no:cacheprovider
+      - name: The PostgreSQL-only race and fencing tests outside tests/test_cloud_*
+        run: |
+          mapfile -t files < <(grep -lE 'postgres_engine' tests/test_*.py | grep -v '^tests/test_cloud_')
+          echo "Running ${#files[@]} files: ${files[*]}"
+          uv run pytest "${files[@]}" -q -p no:cacheprovider
+
+  python-advisories:
+    # Known vulnerabilities in the locked Python dependencies (pip-audit against the PyPI
+    # advisory database). Advisory for now: it shows red without blocking `verify`, so a new
+    # advisory never stops unrelated work; the owner can add it to `verify` once it is green.
+    name: Python / dependency advisories (pip-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          version: "0.12.15"
+          enable-cache: true
+      - name: Export the locked dependencies
+        run: uv export --locked --no-hashes --no-emit-project --format requirements-txt -o requirements-audit.txt
+      - name: Audit them
+        run: uvx --from 'pip-audit==2.9.0' pip-audit -r requirements-audit.txt --no-deps --disable-pip --progress-spinner off
+
   web:
     name: Web / unit tests and production build
     runs-on: ubuntu-latest
@@ -605,6 +676,8 @@ jobs:
       - checklist-evidence
       - python
       - cloud
+      - cloud-rest
+      - python-advisories
       - web
       - browser
       - flags
@@ -627,10 +700,13 @@ jobs:
           BROWSER_RESULT: ${{ needs.browser.result }}
           FLAGS_RESULT: ${{ needs.flags.result }}
           CLOUD_RESULT: ${{ needs.cloud.result }}
+          CLOUD_REST_RESULT: ${{ needs.cloud-rest.result }}
+          # advisory: said here, not required (python-advisories)
+          ADVISORIES_RESULT: ${{ needs.python-advisories.result }}
           CLOUD_BROWSER_RESULT: ${{ needs.cloud-browser.result }}
         run: |
           echo "Changes: $CHANGES_RESULT (code=$CODE_CHANGED); Service image: $SERVICE_IMAGE_RESULT"
-          echo "Workflows: $WORKFLOWS_RESULT; Lint: $LINT_RESULT; Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT; Cloud E2E: $CLOUD_BROWSER_RESULT"
+          echo "Workflows: $WORKFLOWS_RESULT; Lint: $LINT_RESULT; Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT; Cloud rest: $CLOUD_REST_RESULT; Cloud E2E: $CLOUD_BROWSER_RESULT; Python advisories (not required): $ADVISORIES_RESULT"
           test "$CHANGES_RESULT" = success
           case "$CODE_CHANGED" in
             true | false) ;;
@@ -643,6 +719,7 @@ jobs:
           test "$PYTHON_RESULT" = success
           test "$WEB_RESULT" = success
           test "$CLOUD_RESULT" = success
+          test "$CLOUD_REST_RESULT" = success
           for gated in "$BROWSER_RESULT" "$FLAGS_RESULT" "$CLOUD_BROWSER_RESULT"; do
             if [ "$CODE_CHANGED" = false ] && [ "$gated" = skipped ]; then
               continue

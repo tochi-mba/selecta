@@ -98,6 +98,9 @@ function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest
             {(unfinished || (answered && latest)) && message.turn && <Action className="quiet" working="Trying again…" run={() => onRetry(message.turn!)}>Try again</Action>}
             {answered && <CopyAnswer text={message.content} />}
             {answered && onRate && <RateAnswer id={message.id} rated={(message.meta?.rating as 'up' | 'down' | undefined) ?? null} onRate={onRate} />}
+            {latest && answered && onEdit && Array.isArray(message.meta?.followups) && (message.meta.followups as string[]).slice(0, 2).map((ask) => (
+              <button key={ask} type="button" className="lucy-followup" onClick={() => onEdit(ask)}>{ask}</button>
+            ))}
             {onEdit && message.role === 'user' && <button type="button" className="quiet" onClick={() => onEdit(message.content)} aria-label="Edit and send again: puts these words back in the box">Edit</button>}
             {canBranch && <Action className="quiet" working="Branching…" run={() => onBranch(message.id)} aria-label={`Branch from here: a new conversation from this ${who === 'You' ? 'message of yours' : 'reply'}`}>Branch from here</Action>}
           </div>
@@ -159,7 +162,7 @@ export type Pending = { conversation: string | null; text: string; state: 'sendi
 
 type Entry = { key: number; order: number; node: ReactNode };
 
-export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide, onEdit, onRate }: {
+export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide, onEdit, onRate, onOlder }: {
   view: LucyView;
   still: boolean;
   pending: Pending | null;
@@ -170,6 +173,7 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   onDecide: (id: string, decision: 'allow' | 'deny') => Promise<void>;
   onEdit?: (text: string) => void;
   onRate?: (id: string, rating: 'up' | 'down') => Promise<void>;
+  onOlder?: () => Promise<void>;
 }) {
   const newest = [...view.messages].reverse().find((message) => message.role === 'assistant')?.id;
   const entries: Entry[] = view.messages.map((message) => ({
@@ -197,6 +201,7 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   return (
     <section className="lucy-transcript" aria-label="Conversation with Lucy">
       {!entries.length && !showPending && empty}
+      {view.more && onOlder && <p className="lucy-older"><Action className="quiet" working="Reading…" run={onOlder}>Show earlier messages</Action></p>}
       <div role="log" aria-live="off" aria-label="Messages">
         <ol className="lucy-log">
           {entries.map((entry) => entry.node)}

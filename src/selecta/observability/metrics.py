@@ -8,6 +8,8 @@ code path it describes:
 |---|---|---|
 | `selecta_invariant_violations_total{invariant}` | counter | `maintain` task `lost_jobs` |
 | `selecta_api_requests_total{cohort,status_class}` | counter | Cloud API middleware (cohorts) |
+| `selecta_client_problems_total{kind}` | counter | `identity.routes` problem reports from pages |
+| `selecta_rate_limited_total{bucket}` | counter | `ratelimit` (a request refused with 429) |
 | `selecta_webhook_to_entitlement_seconds` | histogram | `billing.webhooks.process_event` |
 | `selecta_oldest_queued_seconds{lane}` | gauge | `maintain` task `queue_metrics` |
 | `selecta_jobs_quarantined_total` | counter | `work.lifecycle` (a job quarantined) |
@@ -65,6 +67,11 @@ SERIES: Mapping[str, Series] = {
                "Invariant violations the maintenance leader found, by invariant.", ("invariant",)),
         Series("selecta_webhook_to_entitlement_seconds", "histogram",
                "From a Stripe webhook arriving to the entitlement it changed.", unit="s"),
+        Series("selecta_client_problems_total", "counter",
+               "Pages that stopped drawing or could not load after a deploy, by kind.",
+               ("kind",)),
+        Series("selecta_rate_limited_total", "counter",
+               "Cloud API requests refused by a rate limit, by bucket.", ("bucket",)),
         Series("selecta_api_requests_total", "counter",
                "Cloud API requests by browser-first/hosted cohort and HTTP status class.",
                ("cohort", "status_class")),

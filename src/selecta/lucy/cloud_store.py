@@ -383,18 +383,37 @@ def rate(conn: Connection, workspace_id: str, message_id: str, rating: str) -> s
     return row.conversation_id
 
 
+PAGE_MESSAGES = 80
+"""How many messages a snapshot holds; older ones are read a page at a time (item 30)."""
+
+
+def has_older(conn: Connection, workspace_id: str, conversation_id: str, seq: int) -> bool:
+    return conn.execute(
+        sa.select(messages.c.id)
+        .where(messages.c.workspace_id == workspace_id)
+        .where(messages.c.conversation_id == conversation_id)
+        .where(messages.c.seq < seq)
+        .limit(1)
+    ).first() is not None
+
+
 def snapshot_messages(
-    conn: Connection, workspace_id: str, conversation_id: str, upto: int | None = None
+    conn: Connection, workspace_id: str, conversation_id: str, upto: int | None = None,
+    before: int | None = None, limit: int = PAGE_MESSAGES,
 ) -> list[dict[str, Any]]:
     """Every message in server order (`seq`, never a device's clock). An answer still
     streaming carries its text so far, rebuilt from its delta events up to `upto` (the cursor
     the snapshot hands out), so a device joining mid-answer then reads exactly the rest."""
-    rows = conn.execute(
+    statement = (
         sa.select(messages)
         .where(messages.c.workspace_id == workspace_id)
         .where(messages.c.conversation_id == conversation_id)
-        .order_by(messages.c.seq)
-    ).all()
+    )
+    if before is not None:
+        statement = statement.where(messages.c.seq < before)
+    rows = list(reversed(conn.execute(
+        statement.order_by(messages.c.seq.desc()).limit(limit)
+    ).all()))
     found = []
     for row in rows:
         content = row.content
@@ -404,7 +423,8 @@ def snapshot_messages(
             "id": row.id, "seq": int(row.seq), "role": row.role, "turn": row.turn_id,
             "run": row.run_id, "content": content, "status": row.status,
             "revision": row.revision,
-            "meta": {"rating": (row.meta or {}).get("rating")} if row.role == "assistant" else {},
+            "meta": {key: (row.meta or {}).get(key) for key in ("rating", "followups")}
+            if row.role == "assistant" else {},
             "created_at": iso(row.created_at),
         })
     return found

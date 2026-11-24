@@ -149,10 +149,19 @@ Each item names where it is handled; "decided" lines say what happens and why.
 - Evaluation: `tests/lucy_eval/requests.json` (72 cases), `tests/lucy_eval/library.json`, `tools/lucy_eval.py`.
 - Proved in a browser on the practice stack with two devices (laptop 1280x800, phone 360x740): items 15, 16, 18 and 21.
 
+### Built after the first report
+
+- Body limits: settings take at most the named phases and privacy choices; a turn's selection and an edit's op at most four fields.
+- Clear in the conversation header (confirms; stops a running answer; every device).
+- At most two follow-up asks under the newest answer, only after work they continue.
+- "Why these songs", folded, in the mix pane.
+- `interactive-widget=resizes-content` in the viewport meta (Android); the shell's `visualViewport` inset already keeps the box above the keyboard on iOS.
+- The remaining-turns meter updates on every device (`lucy.turns` on the workspace stream).
+- Long conversations open on their newest 80 messages; "Show earlier messages" reads a page at a time.
+- Lucy's state block names where the playing mix is (song and time) and the open room's waiting requests as catalogue songs.
+- Inline tool cards were already there: one card per tool call, with its own title ("Searching your library", "Proposing a new mix") and state.
+
 ### Not built yet
 
-- A "Clear" button in the page header (deleting a conversation is in the Conversations list).
-- Follow-up suggestion chips after an answer; a one-line "why" on each choice.
-- The remaining-turns count updating live on other devices; paging very long conversations.
-- Room requests and the playing position in Lucy's state block.
-- `interactive-widget=resizes-content` in the viewport meta (the shell already keeps the box above the keyboard from `visualViewport`); not checked on a real phone's keyboard.
+- A real-phone keyboard check (it cannot be emulated here).
+- Song titles in the playing position (the session holds an index; the speaker's programme holds the titles).

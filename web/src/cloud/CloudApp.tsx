@@ -42,7 +42,7 @@ import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
 import { WorkspaceNameOffer } from './WorkspaceNameOffer';
-import { SUPPORT_EMAIL } from '../support';
+import { setProblemReporter, SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './localFirstGate';
 import { LocalFirstLabs } from './labs/LocalFirstLabs';
@@ -210,6 +210,13 @@ export function CloudApp() {
     });
   }, [rawApi]);
   const connectionNow = useConnection();
+  // A broken page's reference reaches the server log while someone is signed in (observability).
+  const signedWorkspace = account?.workspace.id;
+  useEffect(() => {
+    if (!signedWorkspace) return undefined;
+    setProblemReporter((report) => api('/account/problem-report', { method: 'POST', body: JSON.stringify(report) }, signedWorkspace));
+    return () => setProblemReporter(null);
+  }, [api, signedWorkspace]);
   const shownAccount = useRef(account);
   shownAccount.current = account;
 

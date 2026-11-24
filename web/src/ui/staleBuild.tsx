@@ -1,5 +1,5 @@
 import { ComponentType, lazy, LazyExoticComponent, useEffect, useState } from 'react';
-import { buildMark, supportHref } from '../support';
+import { buildMark, newReference, reportProblem, supportHref } from '../support';
 
 // A deploy under an open tab (docs/engineering/product-audit.md, gap 4). Route chunks are hashed
 // files, and a deploy removes the old ones, so a tab opened yesterday can fail to fetch a page.
@@ -23,6 +23,7 @@ export function isChunkLoadError(error: unknown): boolean {
 export function markStale(): void {
   if (stale) return;
   stale = true;
+  reportProblem(newReference(), 'stale_build');
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENT));
 }
 
