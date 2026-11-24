@@ -43,6 +43,8 @@ from selecta.lucy.providers import (
 from selecta.persistence import new_id, transaction
 
 STOP_CHECK_SECONDS = 1.0
+CUT_OFF = ("(Your last reply was cut off before you finished. Think briefly, then answer "
+           "or make the proposal now, in few words.)")
 LAST_ROUND = ("\n(This is your last round of work for this message: answer now, and make the "
               "proposal if you have the songs for it.)")
 FLUSH_CHARS = 80
@@ -448,6 +450,7 @@ async def _model_turns(
     limits = plan.limits
     deadline = time.monotonic() + limits.max_seconds
     cycles = steps = 0
+    cut_once = False
     while True:
         if writer.stopped():
             raise Stopped()
@@ -481,6 +484,12 @@ async def _model_turns(
             await writer.write("\n\n(I can't help with that one.)")
             break
         if not result.calls:
+            if result.stop == "max_tokens" and not cut_once and cycles < limits.max_cycles:
+                # cut off before it could act (long thinking or a long list): once, ask again
+                # for a shorter go, rather than leaving the person with nothing
+                cut_once = True
+                _tell(messages, CUT_OFF)
+                continue
             if result.stop == "max_tokens":
                 await writer.write("\n\n(That answer got too long; ask me for the rest.)")
             break
@@ -527,6 +536,16 @@ async def _model_turns(
         messages += provider.results(result, outputs)
         events.state("evaluating", cycles, steps)
     return cycles, steps
+
+
+def _tell(messages: list[dict], note: str) -> None:
+    """Add a note to the last message (the person's, or the tool results), keeping turns
+    alternating as the providers need."""
+    last = messages[-1]
+    if isinstance(last.get("content"), list):
+        last["content"] = [*last["content"], {"type": "text", "text": note}]
+    else:
+        last["content"] = f"{last.get('content') or ''}\n\n{note}"
 
 
 def _right_now(job: Job) -> str:
