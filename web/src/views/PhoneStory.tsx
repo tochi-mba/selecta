@@ -186,7 +186,7 @@ export function PhoneStory(props: {
                     <span className="visually-hidden">Transition from {previous.title} into {item.title}: </span>
                     <Status kind={words.kind}>{words.headline}</Status>
                     {affected?.has(index) && <span className="pe-seam-note">Changes if dropped there</span>}
-                    <Icon name="expand" size="compact" className="pe-chevron" />
+                    <Icon name="down" size="compact" className="pe-chevron" />
                   </button>
                 </div>
               )}
