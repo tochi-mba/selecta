@@ -124,6 +124,8 @@ def application() -> FastAPI:
     if os.environ.get(lucy_practice.ENV) == "1":
         # ADR-0476: walk Lucy's conversation in a browser with no AI and no spend
         app.state.lucy_cloud_provider = lucy_practice.factory(engine)
+        # the gateway asks for a deployment key before the provider; practice never uses it
+        os.environ.setdefault("ANTHROPIC_API_KEY", lucy_practice.NO_KEY)
     store = objects.DiskObjects.in_folder(settings.objects, settings.site_url)
     objects.install_routes(app, store)
     app.add_middleware(guard.LoopbackOnly)
