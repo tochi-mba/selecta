@@ -72,7 +72,8 @@ export function deviceChip(songId: number, availability: string, holder: MusicHo
   if (availability !== 'elsewhere' && availability !== 'nowhere') return null;
   const places = holder.places?.(songId);
   const open = places ? places.online[0] : holder.online && (holder.ids ? holder.ids.has(songId) : true) ? holder.name : undefined;
-  if (open) return { kind: 'unavailable', words: `On ${open}`, why: `${open} has this song’s file and makes the sound. Connect music here only if you want this device to play it.` };
+  // I83: one plain line; a song an open device holds plays from here, on that device
+  if (open) return { kind: 'ready', words: `Plays on ${open}`, why: `${open} has this song’s file and makes the sound.` };
   const away = places ? places.before[0] : holder.ids?.has(songId) ? holder.name : undefined;
   if (away) return { kind: 'needs-action', words: `Needs its folder again on ${away}`, why: `${away} had this song’s file but isn’t open now. Open SelectaDJ there, and choose its music folder again if it asks.` };
   if (!places && availability === 'elsewhere') return null;
