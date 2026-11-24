@@ -221,6 +221,8 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/playback/reconnect` | Reclaims playback after a drop |
 | `POST /api/playback/commands` | Sends a transport command to the playing device |
 | `POST /api/playback/commands/{command_id}/ack` | Records that the playing device received a command, never that it was audible (ADR-0461) |
+| `POST /api/playback/start-asks` | Asks another of the member's own signed-in devices to become the speaker and start; publishes the ask on the workspace event stream, stores nothing (ADR-0475 R2) |
+| `POST /api/playback/start-asks/{ask_id}/answer` | The asked device says what it did (starting, needs music, needs a press, no mix, declined); publishes the answer, stores nothing |
 | `POST /api/zones/{zone_id}/playback/heartbeat` | Updates a zone's active device lease and accepted playback position |
 | `POST /api/zones/{zone_id}/playback/take-over` | Transfers the zone playback lease to this device |
 | `POST /api/zones/{zone_id}/playback/reconnect` | Reclaims or reports the zone playback lease after a device reconnects |
@@ -242,6 +244,7 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | Route | Side effect |
 |---|---|
 | `POST /api/local-media/songs` | Registers songs on the member's own devices in the workspace catalogue |
+| `POST /api/local-media/songs/never` | Sets or clears Never play on a batch of the workspace's catalogue songs, all or none |
 | `DELETE /api/local-media/songs/{song_id}` | Soft-deletes a catalogue entry |
 | `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
 | `POST /api/local-media/recipes` | Saves a new portable recipe (a mix over catalogue songs) as its first immutable revision |
@@ -263,6 +266,7 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/rooms/{room_id}/requests/{request_id}/pass` | Passes on a guest request |
 | `POST /api/room-requests/{request_id}/played` | Records that the host's browser mix placed an accepted room request, so the room shows it as played |
 | `POST /api/room-requests/{request_id}/dismiss` | Lets an accepted room request go from the host's browser list, so the guest sees the host passed on it |
+| `POST /api/room-requests/{request_id}/waiting` | Undoes `played`: a played room request of a room still open goes back to accepted, so the host can add it again; anything else is left as it is |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/approve` | Lets a guest in |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/remove` | Removes a guest |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/ban` | Bans a guest |

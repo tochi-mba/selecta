@@ -321,6 +321,9 @@ FLAG_DARK = {
     ("GET", "/api/local-media/songs/{song_id}"),
     ("DELETE", "/api/local-media/songs/{song_id}"),
     ("POST", "/api/local-media/availability"),
+    # Never play on a batch of catalogue songs; Bob cannot touch Alice's songs
+    # (`test_bf_local_media_never.py`).
+    ("POST", "/api/local-media/songs/never"),
     # Portable recipes ride the same flag; Bob cannot list, read or edit Alice's recipes
     # (`test_bf_local_recipes.py`).
     ("GET", "/api/local-media/recipes"),
@@ -405,6 +408,17 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/playback/commands/{command_id}/ack"): {
         "device_id": "missing",
         "result": "applied",
+    },
+    # One device asks another of the same person's devices to start (ADR-0475 R2), held to the
+    # same principal as a press (playback/start_asks.py)
+    ("POST", "/api/playback/start-asks"): {
+        "device_id": "missing",
+        "target_device_id": "missing",
+    },
+    ("POST", "/api/playback/start-asks/{ask_id}/answer"): {
+        "device_id": "missing",
+        "asker_device_id": "missing",
+        "result": "declined",
     },
     # Zone playback (venue zones; the same workspace principal as personal playback, so a
     # caller naming another workspace is refused before the zone is looked up).
@@ -611,6 +625,7 @@ def world(tmp_path, monkeypatch):
                 "request_id": new_id(),
                 "guest_id": new_id(),
                 "command_id": new_id(),
+                "ask_id": new_id(),
                 "zone_id": new_id(),
                 "song_id": 1,
             },
