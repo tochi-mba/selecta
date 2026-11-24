@@ -658,7 +658,7 @@ export function CloudApp() {
 
   if ((exact ? route.kind === 'admin' : inAdmin) && showsAdmin(account)) {
     const leave = () => { setInAdmin(false); window.history.pushState({}, '', '/'); setPage('home'); setPath('/'); };
-    return <Suspense fallback={<main className="cloud-runtime-message"><p>Opening the staff console…</p></main>}><AdminArea token={getAccessToken} onLeave={leave} origin={apiOrigin} /></Suspense>;
+    return <Suspense fallback={<main className="cloud-runtime-message"><p>Opening the staff console…</p></main>}><AdminArea token={getAccessToken} onLeave={leave} origin={apiOrigin} email={user.email} features={account?.features ?? null} onSignInAgain={() => void signIn({ state: { returnTo: `${window.location.pathname}${window.location.search}` } })} /></Suspense>;
   }
 
   // The business workspace (`/b/{org}`) and its invitation page, only with the flag on; off, the

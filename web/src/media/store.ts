@@ -37,6 +37,11 @@ export type StoredSong = {
   importedAt: number;
   /** Persistent handles whose current bytes no longer match the registered identity. */
   availabilityIssue?: 'changed';
+  /** ADR-0469 memo rule: the content hash came from this browser's fingerprint memo (the same
+   * file, by place, size and time, was hashed here before) rather than from reading these bytes
+   * in this import. Trusted for listing; checked against the bytes before they first play or any
+   * shared analysis is read, which clears it. */
+  fingerprint?: 'remembered';
 };
 
 /** Thrown where browser storage is full: the import pauses honestly instead of half-recording. */
@@ -279,6 +284,21 @@ export class MediaStore {
       await done;
     } catch {
       this.degraded = true;
+    }
+  }
+
+  /** The bytes were hashed and matched the registered hash: the memo's hint is now proven. */
+  async confirmFingerprint(songId: number): Promise<void> {
+    const current = this.memory.get(songId);
+    if (!current?.fingerprint) return;
+    const next: StoredSong = { ...current };
+    delete next.fingerprint;
+    this.memory.set(songId, next);
+    if (!this.db) return;
+    try {
+      await persistSong(this.db, next);
+    } catch {
+      // kept in memory for this visit; the next visit checks again, which costs one hash
     }
   }
 

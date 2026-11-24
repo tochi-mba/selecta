@@ -1,5 +1,6 @@
-import type { MediaResolver, MediaStore } from '../media';
+import type { MediaResolver, MediaStore, StoredSong } from '../media';
 import { TONAL_PROFILE_IMPLEMENTATION, type TonalProfile } from '../dsp/analysis/tonalProfile';
+import { derivedStore, withHashLock, type DerivedStore } from '../media/derived';
 import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
 
 /** Browser tonal profiles and harmonic-match answers (cloud.browser_harmonic).
@@ -9,13 +10,18 @@ import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
  * browser. Nothing about the audio is sent anywhere. Profiles are keyed by the file's content hash
  * and the profile implementation, so a changed file or a new implementation measures again.
  *
- * The store is its OWN IndexedDB database per workspace (like the remembered import folder), so
- * it never touches the song index or its version, and a different account in this browser opens
- * its own. Every call degrades quietly: without IndexedDB nothing is remembered and the page says
- * nothing has been measured yet.
+ * Reviews (the member's own approve or reject) live in an IndexedDB database per workspace and
+ * never leave it. Profiles are a pure function of the bytes: with `cloud.content_cache` on they
+ * live in this browser's device-wide derived store (media/derived.ts, ADR-0469), keyed by content
+ * hash and implementation, and a workspace reads only the profiles of hashes its own song index
+ * holds and has proven from the bytes. Profiles an older build kept per workspace are copied
+ * across once, in the background, and the old copies are left where they are. Off, profiles stay
+ * per workspace as before. Every call degrades quietly: without IndexedDB nothing is remembered
+ * and the page says nothing has been measured yet.
  */
 
-const DB_PREFIX = 'selecta-tonal';
+export const TONAL_DB_PREFIX = 'selecta-tonal';
+const DB_PREFIX = TONAL_DB_PREFIX;
 const DB_VERSION = 1;
 const PROFILES = 'profiles';
 const REVIEWS = 'reviews';
@@ -42,7 +48,23 @@ export type TonalStore = {
   put(record: ProfileRecord): Promise<void>;
   reviews(): Promise<ReadonlyMap<string, Verdict>>;
   review(pair: string, verdict: Verdict): Promise<void>;
+  /** Shared mode only: the device-wide profile for bytes the caller has just proven it holds. */
+  lookup?(sha: string): Promise<ProfileRecord | null>;
+  /** Shared mode only: one tab at a time measures these bytes. */
+  exclusive?<T>(sha: string, run: () => Promise<T>): Promise<T>;
 };
+
+/** Shared mode (`cloud.content_cache`): the hashes this workspace's own song index holds and has
+ * proven from the bytes, which are the only ones it may read from the device-wide store. */
+export type SharedProfiles = { held: () => Promise<Iterable<string>>; open?: () => Promise<DerivedStore> };
+
+/** The hashes a song index has proven: imported by reading the bytes, or checked since. A hash
+ * from the fingerprint memo, or a file found changed, proves nothing yet. */
+export function provenHashes(songs: readonly StoredSong[]): string[] {
+  return songs.filter((song) => !song.fingerprint && song.availabilityIssue !== 'changed').map((song) => song.identity.content_sha256);
+}
+
+const MIGRATED = (workspaceId: string) => `selecta.derived.migrated.tonal.${workspaceId}`;
 
 function openDb(workspaceId: string): Promise<IDBDatabase | null> {
   try {
@@ -71,7 +93,11 @@ function asPromise<T>(request: IDBRequest<T>): Promise<T> {
 }
 
 /** This workspace's profile and review store. Reads are served from memory after the first. */
-export function tonalStore(workspaceId: string): TonalStore {
+export function tonalStore(workspaceId: string, shared?: SharedProfiles): TonalStore {
+  return shared ? sharedTonalStore(workspaceId, shared, localTonalStore(workspaceId)) : localTonalStore(workspaceId);
+}
+
+function localTonalStore(workspaceId: string): TonalStore {
   let db: Promise<IDBDatabase | null> | null = null;
   const opened = () => (db ??= openDb(workspaceId).then((handle) => {
     // Another tab opening a newer version of this database must not wait on us (area F).
@@ -137,6 +163,47 @@ export function tonalStore(workspaceId: string): TonalStore {
   };
 }
 
+function sharedTonalStore(workspaceId: string, shared: SharedProfiles, local: TonalStore): TonalStore {
+  const opening = () => (shared.open ?? derivedStore)();
+  let migrating: Promise<void> | null = null;
+  // The profiles an older build kept for this workspace are copied into the device-wide store
+  // once, only for hashes this workspace has proven, and never deleted from where they were.
+  const migrate = (held: Set<string>, legacy: ReadonlyMap<string, ProfileRecord>) => (migrating ??= (async () => {
+    try { if (localStorage.getItem(MIGRATED(workspaceId)) === '1') return; } catch { /* no marker: copy again, harmlessly */ }
+    const derived = await opening();
+    if (derived.degraded) return;
+    for (const record of legacy.values()) {
+      if (!held.has(record.sha) || (await derived.get('tonal', record.implementation, record.sha))) continue;
+      if (!(await derived.put('tonal', record.implementation, record.sha, record))) return;
+    }
+    try { localStorage.setItem(MIGRATED(workspaceId), '1'); } catch { /* copied again next visit */ }
+  })().catch(() => undefined));
+
+  return {
+    async records() {
+      const held = new Set(await shared.held());
+      const legacy = await local.records();
+      const derived = await opening();
+      const found = new Map<string, ProfileRecord>();
+      for (const [sha, record] of await derived.getMany<ProfileRecord>('tonal', TONAL_PROFILE_IMPLEMENTATION, held)) found.set(sha, record);
+      for (const [sha, record] of legacy) if (held.has(sha) && !found.has(sha)) found.set(sha, record);
+      if (legacy.size) void migrate(held, legacy);
+      return found;
+    },
+    async put(record) {
+      const derived = await opening();
+      // kept device-wide when this browser keeps anything; else per workspace, as before
+      if (derived.degraded || !(await derived.put('tonal', record.implementation, record.sha, record))) await local.put(record);
+    },
+    reviews: () => local.reviews(),
+    review: (pair, verdict) => local.review(pair, verdict),
+    async lookup(sha) {
+      return (await opening()).get<ProfileRecord>('tonal', TONAL_PROFILE_IMPLEMENTATION, sha);
+    },
+    exclusive: (sha, run) => withHashLock('tonal', sha, run),
+  };
+}
+
 /** Wait for spare time: an idle callback where the browser has one, a timer otherwise. */
 function spareTime(gapMs: number, stopped: () => boolean): Promise<void> {
   return new Promise((resolve) => {
@@ -187,8 +254,19 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
     const track = await options.resolve(songId).catch(() => null);
     if (!track) { unreachable.add(songId); return; }
     let bytes: ArrayBuffer;
+    // The resolver hashes the bytes against the registered hash (and a remembered one is proven
+    // or marked changed by it), so from here these bytes are possession proof for `sha`.
     try { bytes = await track.data(); } catch { unreachable.add(songId); return; }
     if (stopped) return;
+    const run = options.store.exclusive ?? (<T,>(_sha: string, work: () => Promise<T>) => work());
+    await run(sha, async () => {
+      // another account (or tab) on this browser measured these bytes already: reuse it
+      if (await options.store.lookup?.(sha)) return;
+      await measureBytes(sha, bytes);
+    });
+  };
+
+  const measureBytes = async (sha: string, bytes: ArrayBuffer) => {
     const base = { sha, implementation: TONAL_PROFILE_IMPLEMENTATION };
     if (bytes.byteLength > MAX_BYTES) { await options.store.put({ ...base, unreadable: 'too_large' }); return; }
     let pcm: Float32Array;

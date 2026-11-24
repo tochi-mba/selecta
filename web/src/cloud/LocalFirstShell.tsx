@@ -65,7 +65,8 @@ import { bindImportWorkspace, endImportSession, useImportSession } from './impor
 import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
-import { profilesBySong, startTonalProfiler, tonalStore } from './tonalProfiles';
+import { profilesBySong, provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
+import { waveformFor } from './sharedWaveforms';
 import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
@@ -252,7 +253,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const offlineShell = on('cloud.offline_shell');
   // where the library shown came from: null from the server, or this device's kept copy
   const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
-  const tonal = useMemo(() => tonalStore(workspaceId), [workspaceId]);
+  const sharedDerived = on('cloud.content_cache');
+  const tonal = useMemo(() => tonalStore(workspaceId, sharedDerived ? { held: async () => provenHashes(await (await openStore()).all()) } : undefined), [workspaceId, sharedDerived, openStore]);
   const roomsHere = on('rooms') && !account.feature_locks.rooms;
   // ADR-0475: the device that is playing when it is not this one, for the request adapter. Set
   // further down each render, once the session is known; read by the adapter at each press.
@@ -474,18 +476,16 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const waveformOf = useCallback((songId: number) => {
     let made = waveforms.current.get(songId);
     if (!made) {
-      made = (async () => {
-        const track = await resolveTrack(songId);
-        if (!track || typeof OfflineAudioContext === 'undefined') return null;
-        const decoded = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(await track.data());
-        return peaksFrom(decoded);
-      })().catch(() => null);
+      made = waveformFor(songId, {
+        resolve: resolveTrack, openStore, shared: sharedDerived,
+        decode: async (bytes) => peaksFrom(await new OfflineAudioContext(1, 1, 44100).decodeAudioData(bytes)),
+      }).catch(() => null);
       waveforms.current.set(songId, made);
       // a song not readable yet (not connected this visit) is tried again next time
       void made.then((peaks) => { if (!peaks) waveforms.current.delete(songId); });
     }
     return made;
-  }, [resolveTrack]);
+  }, [resolveTrack, openStore, sharedDerived]);
   // Make a Mix sets the new mix and asks to play it in the same breath (local mode's player reads
   // the mix from its server). Here the engine learns the mix from the next render, so a play asked
   // for straight after a new mix waits for that render instead of playing the old one.
