@@ -21,7 +21,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.local_media import current_mix, recipes, store
+from selecta.local_media import current_mix, recipes, store, versions
 from selecta.local_media.schema import local_song_availability, local_songs
 from selecta.lucy import cloud_proposals
 from selecta.mix_contract import MAX_SONGS, NAME_LIMIT
@@ -59,14 +59,13 @@ class CloudCtx:
         """The whole catalogue, read once per turn."""
         if self._songs is None:
             with transaction(self.engine, self.workspace_id) as conn:
+                # one line per song, never its extra copies (ADR-0469 amendment 2)
                 rows = conn.execute(
-                    sa.select(local_songs.c.id, local_songs.c.title, local_songs.c.artist,
-                              local_songs.c.album, local_songs.c.duration_s,
-                              local_songs.c.never_play)
-                    .where(local_songs.c.workspace_id == self.workspace_id)
-                    .where(local_songs.c.deleted_at.is_(None))
-                    .where(local_songs.c.duplicate_of.is_(None))
-                    .order_by(local_songs.c.id)
+                    versions.listed_songs(
+                        self.workspace_id, local_songs.c.id, local_songs.c.title,
+                        local_songs.c.artist, local_songs.c.album, local_songs.c.duration_s,
+                        local_songs.c.never_play,
+                    ).order_by(local_songs.c.id)
                 ).all()
             self._songs = [
                 {"id": int(r.id), "title": r.title, "artist": r.artist, "album": r.album,
@@ -88,7 +87,11 @@ class CloudCtx:
             ).first()
             if reporting is None:
                 return
-            counts = store.availability_counts(conn, self.workspace_id, ids)
+            # a song is on a device when any of its versions is
+            groups = versions.groups_of(conn, self.workspace_id, ids)
+            members = {member for group in groups.values() for member in group}
+            held = store.availability_counts(conn, self.workspace_id, members)
+            counts = {song: sum(held.get(m, 0) for m in groups.get(song, [song])) for song in ids}
         for line in lines:
             if not counts.get(line["id"]):
                 line["not_on_an_open_device"] = True
