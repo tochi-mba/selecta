@@ -76,6 +76,11 @@ class ApproveBody(BaseModel):
     action: str = Field(pattern="^(draft|draft_and_play)$")
 
 
+class RatingBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rating: str = Field(pattern="^(up|down)$")
+
+
 class CommitBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     token: str = Field(min_length=1, max_length=400)
@@ -506,6 +511,21 @@ def install_routes(
                 raise _missing()
             mine(conn, principal, row.conversation_id)
             return cloud_proposals.commit_answer(row, None)
+
+    @app.post("/api/lucy-cloud/messages/{message}/rating")
+    def rate(
+        message: str, body: RatingBody, request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        """Was this answer useful? Stored on the answer, for Lucy's evaluation; the latest
+        press wins."""
+        principal = who(request, claims)
+        with transaction(engine, principal.workspace.id) as conn:
+            conversation = cloud_store.rate(conn, principal.workspace.id, message, body.rating)
+            if conversation is None:
+                raise _missing()
+            mine(conn, principal, conversation)
+        return {"rating": body.rating}
 
     @app.get("/api/lucy-cloud/memory")
     def memory(request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008

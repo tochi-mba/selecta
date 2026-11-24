@@ -142,7 +142,15 @@
 .lucy-text p { margin: 0 0 var(--space-2); }
 .lucy-text :is(ul, ol) { margin: 0 0 var(--space-2); padding-left: 1.3em; }
 .lucy-text > :last-child { margin-bottom: 0; }
-.lucy-msg-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2); }
+.lucy-msg-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-1); margin-inline-start: calc(-1 * var(--space-snug)); }
+/* a short screen (a phone on its side): the heading gives its room to the conversation */
+@media (max-height: 500px) {
+  .lucy-head { gap: var(--space-1); margin-bottom: var(--space-2); }
+  .lucy-head .lede, .lucy-head .lucy-provider, .lucy-head .lucy-mark { display: none; }
+  .lucy-head h1.display { font: var(--type-section); }
+  .lucy-thread-title { margin-bottom: var(--space-2); }
+  .lucy-dock .hint:not(.warn) { display: none; }
+}
 .lucy-msg-actions button, .lucy-plan-head button { min-height: 36px; padding: var(--space-1) var(--space-snug); background: none; font-size: var(--text-sm); }
 .lucy-note p {
   margin: 0;
