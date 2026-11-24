@@ -309,3 +309,18 @@ def test_a_device_id_from_another_account_is_ignored(lucy):
     send(lucy, conversation, "hi", "x1", device=alices)
     cloud_agent.RUNNER.wait()
     assert "This message's device isn't known" in provider.systems[-1][-1]
+
+
+def test_practice_lucy_proposes_from_the_catalogue_with_no_ai(lucy, monkeypatch):
+    from selecta.devstack import lucy_practice
+
+    monkeypatch.setattr(lucy_practice, "WORD_SECONDS", 0.0)
+    lucy.client.post("/api/local-media/songs", headers=auth(CAROL), json={"songs": [
+        {"content_sha256": f"{n + 3:x}" * 64, "title": f"P{n}", "artist": "A"} for n in range(3)]})
+    lucy.app.state.lucy_cloud_provider = lucy_practice.factory(lucy.engine)
+    conversation = converse(lucy)
+    send(lucy, conversation, "make me a mix", "p1")
+    cloud_agent.RUNNER.wait()
+    shown = snapshot(lucy, conversation)
+    assert shown["proposal"]["current"]["snapshot"]["title"] == "Practice mix"
+    assert "nothing is saved until you press Save" in shown["messages"][-1]["content"]

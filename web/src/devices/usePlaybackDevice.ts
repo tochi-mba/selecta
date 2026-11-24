@@ -3,7 +3,7 @@ import { browserName, capabilities, currentFacts, deviceKind } from './deviceInf
 import { holdWakeLock, WakeLockHold } from './wakeLock';
 import { flagOn } from '../flags';
 import { isOnline, onReconnect } from '../cloud/connection';
-import { audioTab } from './audioTab';
+import { audioTab, tabLog } from './audioTab';
 
 // This browser as a playback device, and the account's one playback session (ADR-0415).
 //
@@ -227,7 +227,10 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const deviceId = device?.id ?? standIn;
   // ADR-0475 F: which tab of this browser makes the sound (one device, many tabs: never two)
   const tab = useMemo(() => audioTab(workspaceId), [workspaceId]);
-  useEffect(() => () => tab.close(), [tab]);
+  // let go on unmount, but keep the channel: React's development double mount runs this cleanup
+  // and then uses the same tab again, which must still hear the other tabs (a closed channel
+  // left the audio tab deaf to 'let go', so no other tab could ever take the sound)
+  useEffect(() => () => tab.release(), [tab]);
   // another tab of this browser is the one making the sound
   const [otherTab, setOtherTab] = useState(false);
 
@@ -645,6 +648,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   /** `startAt`: where this device's first sound begins (a press on a song, a new mix from a
    * request). Without it the new speaker carries on from the session's position. */
   const playHere = useCallback(async (observedOwnerId?: string | null, startAt?: StartAt) => {
+    tabLog('playHere', { deviceId: !!deviceId, speaker: !!speaker, claiming: claiming.current });
     if (!deviceId || !speaker || claiming.current) return;
     expiredSpeaker.current = false;
     claiming.current = true;
@@ -652,6 +656,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     setStarting(true); setMessage('Starting here...'); setError('');
     try {
       // the person pressed here: any other tab of this browser stops first, then this one plays
+      tabLog('playHere: claiming');
       if (!(await tab.claim(true))) throw new Error('Another tab of this browser is playing. Close it, or press Play there.');
       setOtherTab(false);
       const sentAt = Date.now();

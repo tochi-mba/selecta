@@ -30,7 +30,7 @@ from selecta.persistence import transaction
 SEARCH_LIMIT = 25
 ARTIST_LIMIT = 40
 MIX_SONGS_SHOWN = 60
-TOOL_SCHEMA_VERSION = "cloud-tools-3"
+TOOL_SCHEMA_VERSION = "cloud-tools-4"
 
 
 def fold(text: str | None) -> str:
@@ -126,7 +126,14 @@ _WORD = re.compile(r"[\w']+", re.UNICODE)
 STOP = frozenset("a an and the of by to some songs song music track tracks me for with".split())
 
 
-def search_songs(ctx: CloudCtx, query: str = "", limit: int = 10, **_: Any) -> dict[str, Any]:
+def search_songs(
+    ctx: CloudCtx, query: str = "", limit: int = 10, queries: Any = None, **_: Any
+) -> dict[str, Any]:
+    if isinstance(queries, list) and queries:
+        # several artists or titles in one call: one result list per query
+        each = max(1, min(int(limit or 10), SEARCH_LIMIT) // max(1, min(len(queries), 8)))
+        return {"results": [search_songs(ctx, query=str(q), limit=max(each, 3))
+                            for q in queries[:8]]}
     words = [w for w in _WORD.findall(fold(query)) if w not in STOP]
     limit = max(1, min(int(limit or 10), SEARCH_LIMIT))
     if not words:

@@ -932,6 +932,29 @@
     "make a 30 minute house mix",
     "actually make it Afrobeats"
    ]
+  },
+  {
+   "id": "devices-now",
+   "kind": "devices",
+   "turns": [
+    "which of my devices can play music right now?"
+   ],
+   "propose": false,
+   "says_any": [
+    "no devices|none of your devices|not signed in|no device"
+   ]
+  },
+  {
+   "id": "stale-state",
+   "kind": "devices",
+   "turns": [
+    "my laptop is playing the Friday night mix right now",
+    "so what's playing on my laptop?"
+   ],
+   "propose": false,
+   "says_any": [
+    "nothing is playing|not playing|no devices|isn't playing|can't see"
+   ]
   }
  ]
 }

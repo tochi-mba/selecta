@@ -115,6 +115,26 @@ A mix made on any device is the account's mix. Making one on a device that canno
 
 "Playing on {device}", "Paused on {device}", "{Device} is offline", "Remote for {device}", "Playing here". Used identically in the Listen eyebrow, the mini player, the room pill tooltip and the Devices page.
 
+### R1, revised (2026-11-24): which device plays, and the default speaker
+
+The one function: `whereToPlay(situation)` in `web/src/devices/whereToPlay.ts` (stable signature: a `Situation` of the person's devices with what each holds, the session's speaker and whether it is online, the default speaker's id, this device's id, the songs about to play and each device's song ids; it answers a `Choice`). The server applies the same order to a room's library in `room_speaker(conn, workspace_id, holds)` in `src/selecta/playback/default_speaker.py`. Every way of starting music in the local-first shell (Make a Mix, My Mixes, Listen, the play bar, Add next with nothing playing, an asked device) goes through the shell player's `playFrom`, which asks `useWhereToPlay().decide()` first. Lucy's tools and answer cards should call the same two functions; the start itself is the existing start-ask (expiring, one answer per ask) or the session's take-over (fenced), so a press sent twice does not start twice.
+
+1. The session's speaker, while it is online (playing or paused).
+2. Else the default speaker, when it is online and holds at least one song of what is about to play. It wins even when another device holds more; the device that would have played says "Playing on {default}." with "Play here instead", and when another open device holds the whole mix the default is still used (the not-on-speaker marks say what it lacks).
+3. Else the only online device that holds some of it; when the default is the one away: "Playing on {device} because {default} isn't open."
+4. Else, with two or more, "Where should the music play?" (`devices/SpeakerPicker.tsx`): each device with what it holds of this mix, the most first, then this device, then the most recently active, one "Suggested"; devices that cannot play listed disabled with the reason ("isn't open right now", "needs its music folder allowed again", "has no music connected", "has none of these songs"); same names told apart ("This device", "Last seen 10 minutes ago"); "Make this my default", saved on Confirm. Cancel, Escape or the backdrop choose nothing. The order is fixed once shown.
+5. Else no Play: "None of your devices with music is open right now." with Connect music here.
+
+**Default speaker.** One per workspace (`playback_default_speakers`, migration `bf0478speaker01`, workspace isolation policy), set with `PUT /api/devices/default-speaker` under `devices.remote_control`, only to the caller's own signed-in device (404 otherwise), returned with `/api/devices` and `/api/local-media/holdings`, cleared when that device is signed out. The Devices page offers "Make default speaker" on a device that holds music, marks "Default speaker" (or "Default speaker, no music connected"), and "Not the default" clears it. Setting it moves nothing playing ("Used the next time nothing is playing.").
+
+**Rooms use the speaker's library.** A browser-first room offers its guests only the songs held now by the device `room_speaker` names (the session's speaker while its lease holds; else the rule above). The guest payload carries `music`: ready, choosing, reconnecting (the lease lapsed under five minutes ago) or none, and the guest page says "The host is choosing where the music plays.", "The music is paused while the host's device reconnects." or "The host hasn't connected any music yet." without naming a device, keeps the typed search and runs it again when the music is back. A request for a song the speaker no longer holds says "That song isn't available right now."
+
+**Streaming a song from another open device: considered, not built.** It would need a second upload path, costs the other device's battery and data, and leaves a gap when that device sleeps. A song only on another open device keeps "Only on {device}. {Speaker} can't play it."
+
+### R10. One device, many tabs
+
+Two tabs of one browser share one device id and both could take the speaker's part: reproduced with two pages in one browser (40 of 40 samples with both tabs producing sound). Now a Web Lock (`devices/audioTab.ts`, `selecta-audio:{workspace}`) decides which tab makes the sound. A press in another tab asks the holder over a BroadcastChannel to stop; it stops, then lets go, and only then does the new tab start. A reloaded or asked tab starts only if no tab holds the lock. Every other tab of the speaker says "Playing in another tab." with "Play in this tab instead". Asks to play from another device are answered by one tab (a second lock, `selecta-house:`). Without Web Locks a tab plays as before. Two different browsers or profiles are two devices, kept to one speaker by the server.
+
 ## Edge cases and what happens
 
 | Case | Behaviour |

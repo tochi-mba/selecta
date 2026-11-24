@@ -80,7 +80,7 @@
   {"surface":"overlay.playing_bar_ask","state":"open","uncovered":"outside-route-tree"},
   {"surface":"overlay.confirm","state":"open","uncovered":"needs-driver"},
   {"surface":"overlay.lucy_approve","state":"open","uncovered":"needs-driver"},
-  {"surface":"overlay.controller_alternatives","state":"open","uncovered":"outside-route-tree"},
+  {"surface":"overlay.controller_alternatives","state":"open","uncovered":"outside-route-tree"},{"surface":"overlay.speaker_picker","state":"open","uncovered":"outside-route-tree"},{"surface":"overlay.speaker_picker","state":"partial","uncovered":"outside-route-tree"},{"surface":"overlay.speaker_picker","state":"unavailable","uncovered":"outside-route-tree"},
   {"surface":"overlay.room_share","state":"open","uncovered":"outside-route-tree"}
  ]
 }

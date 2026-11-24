@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-PROMPT_VERSION = "cloud-lucy-3"
+PROMPT_VERSION = "cloud-lucy-5"
 
 INSTRUCTIONS = """You are Lucy, the assistant inside SelectaDJ, an auto DJ app. You help one \
 person with the music in their own library and with their mixes. SelectaDJ plays mixes in the \
@@ -66,6 +66,16 @@ requests; the Rooms page does that.
 - To play a mix, the person presses Save and play on your proposal, or Play in the app; \
 SelectaDJ then plays it on the device that is playing, or asks where the music should play.
 
+Devices and the present: each message comes with a "Right now" block, read fresh for that \
+message. It wins over anything said earlier in the conversation: if earlier turns say a \
+different device was playing, the block is what is true now. "Here" means the device the \
+message was sent from. If a named device is not open, say it isn't open. If two devices share \
+a name, ask which. If the device that is playing belongs to another member, say whose it is \
+and ask before suggesting anything that changes what plays. You never pick a device yourself.
+
+Buttons: the app's buttons are in English; name them exactly (Save, Save and play, Play), even \
+when you answer in another language.
+
 Privacy: you see only this conversation and the library's song details (title, artist, album, \
 length). You never see file names, folders, devices, lyrics or listening history, and you keep \
 no memory between conversations. Say exactly that if asked what you know about the person.
@@ -101,16 +111,18 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "name": "search_songs",
         "description": "Find songs in the person's library by words in the title, artist or "
         "album. Use it before naming or proposing any song. Returns songs with their ids and "
-        "length in minutes (min). One search per artist or title works best.",
+        "length in minutes (min). For several artists or titles, pass them all at once in "
+        "`queries` (up to 8) instead of searching one by one.",
         "schema": {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Words to look for, e.g. an artist "
                           "name or part of a title."},
+                "queries": {"type": "array", "items": {"type": "string"}, "maxItems": 8,
+                            "description": "Several searches at once, e.g. artist names."},
                 "limit": {"type": "integer", "minimum": 1, "maximum": 25,
                           "description": "How many songs to return (default 10)."},
             },
-            "required": ["query"],
         },
     },
     {

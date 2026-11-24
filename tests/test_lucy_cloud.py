@@ -480,3 +480,26 @@ def test_the_provider_names_the_anthropic_workspace_only_when_one_is_set(monkeyp
     monkeypatch.delenv("ANTHROPIC_WORKSPACE_ID")
     plain = AnthropicProvider("test-key-not-real", "claude-haiku-5-5", None, 256)
     assert "anthropic-workspace-id" not in plain.client.default_headers
+
+
+def test_several_searches_go_in_one_call(lucy):
+    songs(lucy, CAROL, [("Ye", "Burna Boy"), ("Essence", "Wizkid"), ("Halo", "Beyonce")])
+    found = cloud_agent.cloud_tools.search_songs(_ctx(lucy, CAROL), queries=["Burna", "Wizkid"])
+    assert [[s["title"] for s in one["songs"]] for one in found["results"]] == [["Ye"],
+                                                                               ["Essence"]]
+
+
+def test_the_last_round_is_told_to_answer(lucy, monkeypatch):
+    songs(lucy, CAROL, [("Ye", "Burna Boy")])
+    provider = script(lucy, [{"calls": [{"name": "search_songs", "input": {"query": "Ye"}}]}] * 4)
+    send(lucy, CAROL, converse(lucy, CAROL), "keep searching")
+    told = [json.dumps(m) for m in provider.seen[-1]]
+    assert any("last round of work for this message" in m for m in told)
+
+
+def test_an_answer_cut_off_before_it_acted_is_asked_again_once(lucy):
+    provider = script(lucy, [{"stop": "max_tokens"}, {"chunks": ["Here it is, shorter."]}])
+    conversation = converse(lucy, CAROL)
+    send(lucy, CAROL, conversation, "a very long brief")
+    assert snapshot(lucy, CAROL, conversation)["messages"][-1]["content"] == "Here it is, shorter."
+    assert "cut off before you finished" in json.dumps(provider.seen[-1])
