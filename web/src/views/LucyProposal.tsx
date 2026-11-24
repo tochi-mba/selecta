@@ -25,7 +25,9 @@ const LIFECYCLE_WORDS: Record<Lifecycle, string> = {
 };
 
 export function LifecyclePill({ stage }: { stage: Lifecycle }) {
-  return <span className={`lucy-stage is-${stage}`}>{LIFECYCLE_WORDS[stage]}</span>;
+  // in Cloud a proposal is saved into the mix, never built
+  const words = stage === 'proposed' && lucyTransport() ? 'Proposed - not saved' : LIFECYCLE_WORDS[stage];
+  return <span className={`lucy-stage is-${stage}`}>{words}</span>;
 }
 
 /** Suggested first asks: the server's, drawn from the person's own library, when it gives
@@ -145,8 +147,8 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
       <section className="lucy-proposal is-empty" aria-labelledby={headingId}>
         <p className="eyebrow">Your mix</p>
         <h2 id={headingId}>Nothing proposed yet</h2>
-        <p className="hint">Describe the mix you want in the chat. Lucy plans it here, and nothing is built until you approve it. Try one of these:</p>
-        <ExamplePrompts onPick={fillComposer} prompts={prompts} />
+        <p className="hint">{live ? 'Ask Lucy for a mix, or a change to yours, in the chat. Her proposal shows here, and nothing is saved until you press Save.' : 'Describe the mix you want in the chat. Lucy plans it here, and nothing is built until you approve it. Try one of these:'}</p>
+        {!live && <ExamplePrompts onPick={fillComposer} prompts={prompts} />}
       </section>
     );
   }
