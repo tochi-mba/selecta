@@ -206,14 +206,65 @@ def install(app: FastAPI, on: Callable[[], bool] | None = None,
     return kept
 
 
+MAX_BODY_BYTES = 8 * 1024 * 1024
+"""The largest request body the Cloud API reads. Music goes straight to storage by signed URL, so
+the biggest API body is a library catalogue of a 20,000-song library, well under this."""
+TOO_LARGE = "That is too much to send at once. Try a smaller part, or contact support."
+
+
+class BodyLimit:
+    """Refuse a body over `MAX_BODY_BYTES` with 413, by its Content-Length or, when it has none,
+    by counting what arrives, so a field with no length limit of its own still has one."""
+
+    def __init__(self, app, limit: int = MAX_BODY_BYTES) -> None:
+        self.app, self.limit = app, limit
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http" or not scope.get("path", "").startswith("/api/"):
+            await self.app(scope, receive, send)
+            return
+        headers = dict(scope.get("headers") or [])
+        length = headers.get(b"content-length", b"").decode() or None
+        if length is not None and (not length.isdigit() or int(length) > self.limit):
+            await self._refuse(scope, receive, send)
+            return
+        seen = 0
+
+        async def counted():
+            nonlocal seen
+            message = await receive()
+            if message.get("type") == "http.request":
+                seen += len(message.get("body", b""))
+                if seen > self.limit:
+                    raise _TooLarge
+            return message
+
+        try:
+            await self.app(scope, counted, send)
+        except _TooLarge:
+            await self._refuse(scope, receive, send)
+
+    @staticmethod
+    async def _refuse(scope, receive, send) -> None:
+        await JSONResponse(
+            {"detail": {"code": "request_too_large", "message": TOO_LARGE}}, status_code=413
+        )(scope, receive, send)
+
+
+class _TooLarge(Exception):
+    pass
+
+
 def install_guards(app: FastAPI) -> Buckets:
     """The request guards that run before any route: keyed writes are replayed
-    (`replay.middleware`, inner), and the rate limits run first (outer), so a flood costs
-    nothing more than a dictionary lookup."""
+    (`replay.middleware`, inner), the rate limits run first (outer), so a flood costs nothing
+    more than a dictionary lookup, and no body over `MAX_BODY_BYTES` is read at all."""
     from selecta.replay import middleware as replay
 
     replay.install(app)
-    return install(app)
+    kept = install(app)
+    app.add_middleware(BodyLimit)
+    return kept
 
 
 __all__ = [
