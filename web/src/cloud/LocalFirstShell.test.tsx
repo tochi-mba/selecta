@@ -274,7 +274,7 @@ describe('what the local-first shell mounts', () => {
     const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { level: 1, name: /stopped working\.$/ })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Start this page again' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible();
     // the shell around the page is still there
     expect(screen.getByText(/SelectaDJ Cloud\. Your music files stay on your devices/)).toBeVisible();
     expect(screen.getAllByRole('main')).toHaveLength(1);

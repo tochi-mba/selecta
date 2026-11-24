@@ -1,4 +1,5 @@
-import { lazy, ReactNode, Suspense, useEffect, useState } from 'react';
+import { ReactNode, Suspense, useEffect, useState } from 'react';
+import { lazyPage as lazy } from './ui/staleBuild';
 import { App } from './App';
 import type { MixData } from './api';
 import { setCopyMode } from './copy';

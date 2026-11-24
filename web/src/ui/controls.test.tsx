@@ -454,7 +454,7 @@ describe('a page that breaks', () => {
     render(<Section name="Library"><Page /></Section>);
     expect(screen.getByRole('heading', { name: 'Library stopped working.' })).toBeInTheDocument();
     broken = false;
-    fireEvent.click(screen.getByRole('button', { name: 'Start this page again' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(screen.getByText('All fine')).toBeInTheDocument();
   });
 });

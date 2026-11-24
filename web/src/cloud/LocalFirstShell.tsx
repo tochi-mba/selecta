@@ -1,4 +1,5 @@
-import { lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazyPage as lazy } from '../ui/staleBuild';
 import type { MixData, Request, Status } from '../api';
 import { accountFlagOn, setFlags, useFlags } from '../flags';
 import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
