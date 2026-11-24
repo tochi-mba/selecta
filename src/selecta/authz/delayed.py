@@ -65,6 +65,7 @@ class ActionKind(StrEnum):
     MASS_ENTITLEMENT_OVERRIDE = "billing.overrides.mass"
     CONTENT_ACCESS_GRANT = "support.content_access.grant"
     FLAG_BROAD_RULE = "flags.rules.broad"
+    ACCOUNT_DELETE = "accounts.delete"
 
 
 class ActionStatus(StrEnum):
@@ -106,6 +107,10 @@ RULES: Mapping[ActionKind, ActionRule] = {
         "flags.rules.propose",
         "flags.rules.apply",
         "Switch a feature off for a whole plan, or change it for over 10% of active accounts.",
+    ),
+    ActionKind.ACCOUNT_DELETE: ActionRule(
+        "accounts.suspend", "accounts.suspend",
+        "Delete a customer's account through the account deletion workflow.",
     ),
     ActionKind.CONTENT_ACCESS_GRANT: ActionRule(
         "support.content_access.request",
