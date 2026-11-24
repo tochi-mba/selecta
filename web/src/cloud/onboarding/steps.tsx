@@ -9,6 +9,7 @@ import { carryOnNow } from '../importResume';
 import { CancelImportButton, checkedOf, ImportProgressLine, ResumeOfferNotice } from '../ImportStatus';
 import type { AudioSession, SpineDeps, WakeSentinel } from './deps';
 import { forkToController, ImportTally, OutputRoute, settle, skipPlayback, SpineState } from './state';
+import { reuseWords } from '../importAnnouncer';
 
 /** The steps of the onboarding spine (ADR-0463). Each one says plainly what is happening and
  * what is not, and records its own outcome through `onChange`. No step says install, upload or
@@ -192,6 +193,7 @@ export function VerifyStep({ state, onChange, live, earlyContinue, onStop, onCon
         {summary.duplicates ? ` ${summary.duplicates} of them were already there.` : ''}
         {summary.failed ? ` ${summary.failed} could not be read.` : ''}
         {summary.skipped ? ` ${summary.skipped} files were not music and were left alone.` : ''}
+        {reuseWords(summary) ? ` ${reuseWords(summary)}` : ''}
       </p>
       {summary.cancelled && <p>You stopped part way. Everything checked before that is in your library.</p>}
       {summary.paused && <p>This browser ran out of room for its notes about your music. Everything checked so far is in your library; free some space and add the rest later.</p>}

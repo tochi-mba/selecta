@@ -10,7 +10,7 @@ import { Meter } from '../ui/Meter';
 import { cancelImportSession, clearImportMarker, readImportMarker, startImportSession, useImportSession, type ImportRunner } from './importSession';
 import { preloadImportCode } from '../media/importer';
 import { deleteImportJournal } from '../media/importJournal';
-import { carryOnNow, dropResumeOffer, startImport } from './importResume';
+import { carryOnNow, dropResumeOffer, fingerprintOption, startImport } from './importResume';
 import { CancelImportButton, checkedOf, checkedWords, formatCount, ImportProgressLine, ResumeOfferNotice } from './ImportStatus';
 import './libraryWorkspace.css';
 
@@ -160,7 +160,7 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
       return;
     }
     const run: ImportRunner = async (given, onProgress, signal) => importer({
-      source: given, request, store: await openStore(), deviceId: mediaDeviceId(workspaceId), onProgress, signal,
+      source: given, request, store: await openStore(), deviceId: mediaDeviceId(workspaceId), onProgress, signal, ...(await fingerprintOption(workspaceId)),
     });
     void startImportSession({ source, run, workspaceId, folder });
   };

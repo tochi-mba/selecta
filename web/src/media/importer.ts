@@ -4,6 +4,7 @@ import { isQuotaError, MediaStore } from './store';
 import type { DirectoryHandleLike, FileHandleLike, FileRef } from './store';
 import type { ImportJournal } from './importJournal';
 import { runJournalled } from './journalledImport';
+import type { ImportFingerprints, ImportReuse } from './fingerprints';
 
 // The import pipeline (ADR-0458, BF-0458-01 and BF-0458-02).
 //
@@ -45,6 +46,8 @@ export type ImportSummary = {
   skipped: number;
   cancelled: boolean;
   paused: boolean;
+  /** `cloud.content_cache`: how much of the fingerprinting this browser already had. */
+  reuse?: ImportReuse;
 };
 
 export type ImportEvent =
@@ -67,7 +70,7 @@ export type ImportEvent =
 /** Reads display tags and duration from a file. The default parses the filename and probes
  * duration through an audio element; a real tag parser can be injected without touching the
  * pipeline. Must never return a path. */
-export type TagReader = (file: File) => Promise<{ title?: string; artist?: string; album?: string; duration_s?: number; codec?: string; sample_rate?: number }>;
+export type TagReader = (file: File, known?: { duration_s?: number }) => Promise<{ title?: string; artist?: string; album?: string; duration_s?: number; codec?: string; sample_rate?: number }>;
 
 export type ImportWait = { why: 'offline' | 'server' | 'signin'; retryAt: number | null };
 
@@ -99,6 +102,10 @@ export type ImportOptions = {
   reportDevice?: () => string | null;
   /** The import this run belongs to (kept across resumes), for the journal rows. */
   importId?: string;
+  /** `cloud.content_cache` (ADR-0469 amendment): this browser's fingerprint memo and derived
+   * store, so files hashed here before (by any account) are recognised without being read in
+   * full. Without it every file is hashed, as before. */
+  fingerprints?: ImportFingerprints | null;
 };
 
 /** Metadata-only JSON mutation through the injected client. FastAPI must see JSON; relying on
@@ -138,14 +145,14 @@ export function namesFromFilename(name: string): { artist: string; title: string
 /** The default tag reader: the file's own tags (ID3v2/v1, FLAC, M4A) first, the filename as
  * the fallback. Wrong tags are fine by design (ADR-0458 "metadata lies"): identity rides on
  * the content hash, and display metadata stays editable. */
-export const defaultTagReader: TagReader = async (file) => {
+export const defaultTagReader: TagReader = async (file, known) => {
   const tags = (await readFileTags(file)) ?? {};
   const names = namesFromFilename(file.name);
   return {
     title: tags.title ?? names.title,
     artist: tags.artist ?? names.artist,
     ...(tags.album ? { album: tags.album } : {}),
-    duration_s: await probeDuration(file),
+    duration_s: known?.duration_s ?? await probeDuration(file),
     codec: extensionOf(file.name) || undefined,
   };
 };
@@ -185,7 +192,16 @@ function probeDuration(file: File): Promise<number> {
 
 /** `path` is the file's place inside what the member picked (never a full path), for the
  * journal's stable key. */
-export type Candidate = { name: string; path: string; ref: FileRef; open: () => Promise<File>; sessionFile?: File };
+export type Candidate = {
+  name: string;
+  path: string;
+  /** The file's place including the picked folder's own name, for the fingerprint memo: the same
+   * folder picked by a handle or by a plain folder input gives the same place. */
+  place: string;
+  ref: FileRef;
+  open: () => Promise<File>;
+  sessionFile?: File;
+};
 
 function isDirectorySource(source: ImportSource): source is DirectoryHandleLike {
   return (source as { kind?: string }).kind === 'directory';
@@ -208,14 +224,15 @@ export async function collect(source: ImportSource, signal?: AbortSignal): Promi
       return;
     }
     const path = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
-    candidates.push({ name: file.name, path, ref: { kind: 'repick', name: file.name, size: file.size }, open: async () => file, sessionFile: file });
+    candidates.push({ name: file.name, path, place: path, ref: { kind: 'repick', name: file.name, size: file.size }, open: async () => file, sessionFile: file });
   };
+  const root = isDirectorySource(source) ? `${source.name}/` : '';
   const addHandle = (handle: FileHandleLike, path = handle.name) => {
     if (!isAudioName(handle.name)) {
       skipped += 1;
       return;
     }
-    candidates.push({ name: handle.name, path, ref: { kind: 'handle', handle }, open: () => handle.getFile() });
+    candidates.push({ name: handle.name, path, place: `${root}${path}`, ref: { kind: 'handle', handle }, open: () => handle.getFile() });
   };
   if (isDirectorySource(source)) {
     await walk(source, addHandle, () => signal?.aborted ?? false);
@@ -235,9 +252,26 @@ export function isAbort(error: unknown): boolean {
 
 /** One file's registration: its content fingerprint and display tags, with blanks recovered
  * locally. Shared by both import paths. */
-export async function registrationOf(file: File, name: string, readTags: TagReader, signal?: AbortSignal): Promise<SongRegistration> {
-  const content_sha256 = await fileSha256(file, { signal });
-  const tags = await readTags(file);
+export async function registrationOf(
+  file: File, name: string, readTags: TagReader, signal?: AbortSignal,
+  reuse?: { fingerprints: ImportFingerprints; candidate: Pick<Candidate, 'place' | 'open'> },
+): Promise<SongRegistration> {
+  const fingerprints = reuse?.fingerprints;
+  const found = fingerprints
+    ? await fingerprints.identify(file, reuse.candidate.place, name, reuse.candidate.open, signal)
+    : null;
+  const content_sha256 = found ? found.sha : await fileSha256(file, { signal });
+  // A duration measured here before for these bytes saves probing the file again; tags are
+  // always the account's own, read from its own file (titles never travel by fingerprint).
+  const knownDuration = fingerprints ? await fingerprints.knownDuration(content_sha256) : undefined;
+  const tagsStarted = Date.now();
+  const tags = await readTags(file, knownDuration !== undefined ? { duration_s: knownDuration } : undefined);
+  const tagsMs = Date.now() - tagsStarted;
+  if (fingerprints && found) {
+    const measured = knownDuration === undefined ? tags.duration_s : undefined;
+    if (found.how === 'computed') await fingerprints.keepDuration(content_sha256, measured);
+    await fingerprints.log(name, file, found, tagsMs, knownDuration !== undefined ? 'reused' : measured && measured > 0 ? 'measured' : 'unknown');
+  }
   const normalised = normalise({
     title: tags.title ?? stemOf(name),
     artist: tags.artist ?? 'Unknown artist',
@@ -276,6 +310,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
   const emit = options.onProgress ?? (() => {});
   const readTags = options.readTags ?? defaultTagReader;
   const batchSize = options.batchSize ?? BATCH_SIZE;
+  const fingerprints = options.fingerprints ?? null;
   const summary: ImportSummary = { imported: 0, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false };
   const { candidates, skipped } = await collect(source, signal);
   summary.skipped = skipped;
@@ -300,6 +335,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
     let stopped: unknown = null;
     for (const item of sending) {
       const song = byHash.get(item.entry.content_sha256);
+      fingerprints?.landed(item.entry.content_sha256, song?.song_id ?? null, song?.duplicate_of !== undefined);
       if (!song) {
         summary.failed += 1;
         emit({ kind: 'file', name: item.name, stage: 'failed', reason: 'SelectaDJ could not register this track. Try the import again.' });
@@ -317,6 +353,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
           },
           ref: item.ref,
           importedAt: Date.now(),
+          ...(fingerprints?.isRemembered(item.entry.content_sha256) ? { fingerprint: 'remembered' as const } : {}),
         });
         // Plain inputs and webkitdirectory return File objects, not durable handles. Keep that
         // object reachable for this visit only: it is never written to IndexedDB or sent to Cloud.
@@ -353,7 +390,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
       let entry: SongRegistration;
       try {
         const file = await candidate.open();
-        entry = await registrationOf(file, candidate.name, readTags, signal);
+        entry = await registrationOf(file, candidate.name, readTags, signal, fingerprints ? { fingerprints, candidate } : undefined);
       } catch (error) {
         if (isAbort(error)) {
           summary.cancelled = true;
@@ -372,8 +409,18 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
     summary.paused = true;
     emit({ kind: 'paused', paused: 'storage_full' });
   }
+  settleFingerprints(fingerprints, summary, store);
   emit({ kind: 'finished', ...summary });
   return summary;
+}
+
+/** The end of an import's fingerprint run: the reuse counts for the summary, the log's totals,
+ * and the background sample check of remembered files (the memo rule). */
+export function settleFingerprints(fingerprints: ImportFingerprints | null, summary: ImportSummary, store: MediaStore): void {
+  if (!fingerprints) return;
+  summary.reuse = fingerprints.reuse();
+  fingerprints.finish();
+  void fingerprints.sampleCheck(store).catch(() => undefined);
 }
 
 /** Starts loading the fingerprinting code now, so an import begun later (or carried on while
