@@ -92,6 +92,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
   });
   const volume = useRelease((percent) => {
     setLevel({ percent, seq: session.seq });
+    sentLevels.current.add(percent);
     void remote.setVolume(percent);
   });
   // G1: while dragging, the speaker follows about ten times a second; the final value always goes
@@ -101,6 +102,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
     if (Date.now() - sentAt.current < VOLUME_EVERY_MS) return;
     sentAt.current = Date.now();
     setLevel({ percent, seq: session.seq });
+    sentLevels.current.add(percent);
     void remote.setVolume(percent);
   };
 
@@ -111,7 +113,13 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
   // G50: the level set here stands until the session reports it (or the wait runs out), so a
   // late answer never moves the slider back under the finger
   const shownVolume = volume.dragged ?? (level ? level.percent : reportedVolume);
-  useEffect(() => { if (level && reportedVolume === level.percent) setLevel(null); }, [level, reportedVolume]);
+  // ...or until the session reports a level this remote never sent: another device changed it,
+  // and that wins (two remotes dragging settle on the same value)
+  const sentLevels = useRef(new Set<number>());
+  useEffect(() => {
+    // only a state newer than the one the level was set on can say another device changed it
+    if (level && (reportedVolume === level.percent || (session.seq > level.seq && !sentLevels.current.has(reportedVolume)))) { setLevel(null); sentLevels.current.clear(); }
+  }, [level, reportedVolume, session.seq]);
   // said about the speaker, by name: this device cannot play its check tone
   const sound = soundWords(view, speakerOutput(session));
   const state = stateWords(view, session);
