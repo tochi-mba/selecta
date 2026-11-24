@@ -141,6 +141,17 @@ The tier is declared in code next to the action (`selecta/admin/tiers.py`) and e
 | Make or revoke Owner | yes | | | | | | | |
 | Export the audit log | yes | yes | | | | | | yes |
 
+Who each role is for (the console's role cards say the same, from `selecta/admin/staff_console.py`):
+
+- **Owner:** runs SelectaDJ and holds every power a role can hold, including making Owners (which waits 15 minutes). Deliberately cannot skip the waits, approve their own action or act on their own account.
+- **Admin:** runs it day to day: everything an Owner can except making or removing Owners.
+- **Operator:** keeps the service healthy: jobs, workers, flags, kill switches, emergency controls, the status banner. Cannot open customer records, billing or the audit log.
+- **AI Admin:** looks after Lucy: model routing, AI spend and Lucy's flags. Cannot open customer records or change other flags.
+- **Support:** helps customers: finds their record, retries their jobs, adds notes, switches a feature for one account. Cannot suspend, grant time, refund, cancel jobs or read the audit log.
+- **Billing:** looks after money: subscriptions, Stripe actions including refunds, time granted to customers, storage mode. Cannot suspend accounts or change jobs.
+- **Analyst:** reads how the service is doing. Changes nothing, opens no customer.
+- **Auditor:** reads the audit log and billing to check what staff did. Changes nothing, opens no customer.
+
 Rules the server enforces on roles: nobody assigns themselves; nobody assigns a role holding a permission they lack (so an Admin cannot make an Owner and nobody climbs above their own role); the last active Owner can't be revoked; any role change ends that person's admin sessions at once; an expired assignment stops working on the next request; staff roles never change the person's own customer account, and suspending a customer account never touches staff roles (a suspended person cannot enter the console, since sign-in refuses them, but their assignments stay for when they are restored).
 
 ### 7B.7 Safety: hard to do harm by accident
@@ -199,6 +210,35 @@ The last Owner can't be removed or demoted; nobody grants a role they don't full
 - Lucy: a per-workspace "turns and spend this period" function, without prompt text, for the customer record.
 - Product audit: the customer-side status banner needs a slot in the Cloud shell (`GET /api/status-banner` is provided).
 
-### 7B.12 As built
+### 7B.12 As built (2026-11-25)
 
-Kept current as the build lands; see the end of the PR body for the latest.
+**Built and walked** (Playwright on the local stack at 1440x900, 1024x768 and 390x844; Vitest against a fake API; Python tests through the real API):
+
+- `selecta admin bootstrap-owner`; the dev seed's Owner and one sign-in per role; the local staff organization.
+- The shell: environment bar (Local, Staging, Production colours), sidebar with Leave console always reachable, breadcrumbs, the view-mode bar with Make changes, the alerts bell, help (`?`), the Ctrl+K palette, per-page tours, the first-visit welcome and the Owner setup checklist. Production shows a one-time notice per session.
+- Server safety (`selecta/admin/safety.py`, `tiers.py`): view mode for every admin write (middleware, so business admin routes too), record versions, typed confirmation and a session from the last 5 minutes for Dangerous actions, hourly blast limits with an alert, the 15 minute delay for account deletion, Owner assignment, mass overrides and releasing an emergency control, the mass-override dry run and its digest, own-account and own-workspace refusals, and the rule that nobody gives a role holding a permission they lack. Idempotency is the Cloud-wide `Idempotency-Key` replay, which every console write sends.
+- Pages: Overview, Customers and the customer record (overview and grant time, configuration with the storage-mode switch, Stripe live and our copy, devices and rooms, WorkOS sign-ins, staff activity, notes; Sign out everywhere, Suspend, Restore, Delete through the 30-day workflow), Billing, Jobs, AI, Flags, Content, Emergency, Staff and security (Add a staff member with role cards, scope and expiry; revoke; the role matrix from the code; admin sessions with End; waiting actions with Cancel, Approve and Run; the audit log with CSV export; alerts with Acknowledge), Communications (the status banner, with `GET /api/status-banner` for the customer side), System (deployed commit, schema against code, settings set or missing, integrations).
+
+**Not built yet, and why:**
+
+- WorkOS staff-organization membership, invitations, authentication factors and the organization's MFA policy: their endpoints could not be checked against WorkOS's reference (the reference site is blocked for the agent's fetch tool). Until they are, the Staff page tells the Owner to add the person in the WorkOS dashboard (Organizations, the staff organization, Members, Add) and to require MFA there.
+- The customer-side banner slot in the Cloud shell (the product-audit team's area); the endpoint exists.
+- Anthropic, Render, Cloudflare, email-provider and GitHub adapters: they need keys the owner has not created; System shows each as not connected with what it unlocks.
+- Global settings in the database (plan limits, routing, rate limits, support address) with history and roll back; segments and bulk configuration; the support inbox, legal-request queue, changelog and scheduled changes from the coordinator's list. Designed here, not built.
+- Impersonation ("view as"): rejected (§7B.10).
+
+### 7B.13 Integrations
+
+Each outside service is reached through one small server-side adapter, permission-checked, audited, idempotent where the provider allows, time-limited, and never returning its key. The provider is the source of truth: after a write the adapter reads the object back from the provider. Without its key an integration says "Not connected: add VARIABLE" with a link to the provider's page.
+
+| Service | Variable | Built | Endpoints (checked against the provider's reference) |
+|---|---|---|---|
+| Stripe | `SELECTA_STRIPE_SECRET_KEY` | Live subscriptions, invoices with Stripe's hosted links, card brand and last four; cancel at period end and undo (Careful), cancel now (Dangerous), retry an open invoice (Careful), refund a paid invoice in full (Dangerous, typed invoice number), a billing portal link to send (Careful) | `GET /v1/invoices`, `GET /v1/customers/{id}/payment_methods`, `GET` and `POST /v1/subscriptions/{id}` (`cancel_at_period_end`), `DELETE /v1/subscriptions/{id}`, `POST /v1/invoices/{id}/pay`, `POST /v1/refunds`, `POST /v1/billing_portal/sessions` (docs.stripe.com, November 2026) |
+| WorkOS | `SELECTA_WORKOS_API_KEY` | A customer's sign-ins read live and ended one by one | The existing tested client's `GET /user_management/users/{id}`, `GET .../users/{id}/sessions`, `POST /user_management/sessions/revoke` |
+| Anthropic usage and cost | `ANTHROPIC_ADMIN_KEY` | Not connected | Admin API usage and cost reports, to compare with Lucy's ledger |
+| Render | `SELECTA_RENDER_API_KEY` | Not connected | Deploys, roll back, restart, environment variable names |
+| Cloudflare | `SELECTA_CLOUDFLARE_API_TOKEN` | Not connected | Pages deployments, cache purge, WAF state, R2 sizes |
+| Email provider | `SELECTA_EMAIL_PROVIDER_TOKEN` | Not connected | Message log, resend, suppressions |
+| GitHub | `SELECTA_GITHUB_TOKEN` | Not connected | CI status of main, the open pull request |
+
+Money moves only through Stripe's own refund object; the console never stores card data beyond the brand and last four. Refund keys are built from the invoice, amount and reason, so pressing twice, retrying or two staff refunding the same invoice is one refund at Stripe.

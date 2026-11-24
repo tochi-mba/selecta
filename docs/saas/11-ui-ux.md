@@ -19,7 +19,7 @@ The music-first app stays recognisable: same five destinations, same design toke
 | Help | FAQ, contact support, copy diagnostic id |
 | Devices | Account → Devices list; "Playing on…" bar with remote controls on every non-playing device; "Play here" ([§11A.1](11a-devices-and-rooms.md#11a1-devices-and-the-playback-session)) |
 | Rooms | Room panel on Listen (QR, code, settings, requests inbox, guests); guest page `/r/{code}`; big-screen display `/display` ([§11A.2](11a-devices-and-rooms.md#11a2-rooms-premium)) |
-| Admin console | [§7.5](07-identity-rbac-admin.md#75-admin-console-v1-six-pages-before-beta) |
+| Admin console | [§7.5](07-identity-rbac-admin.md#75-the-admin-console) |
 
 ### 11.2 Changes to existing screens (by file)
 
