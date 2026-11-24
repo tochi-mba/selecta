@@ -174,7 +174,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     held.release();
     const offer = page.getByRole('note').filter({ hasText: 'Your import stopped part way' });
     await expect(offer).toContainText('choose the same files again');
-    await expect(offer).toContainText('skips everything already done');
+    await expect(offer).toContainText('SelectaDJ carries on from there');
     await page.locator('.connect-music input[accept="audio/*"]').setInputFiles(music);
     await expect(songCount(page, 10)).toBeVisible({ timeout: 60_000 });
   });
