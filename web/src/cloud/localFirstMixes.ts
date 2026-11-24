@@ -14,7 +14,9 @@ import { asMixData, copyName, RecipeStore, WORKED_OUT_LIVE } from './recipeStore
  */
 
 /** A catalogue song as this family needs it: playable here or not. */
-export type PlayableSong = { id: number; title: string; artist: string; duration: number; playable: boolean };
+/** `never`: "Never play" for the account. A mix SelectaDJ builds leaves it out; a person can
+ * still choose it as the start or ending, or add it by hand. */
+export type PlayableSong = { id: number; title: string; artist: string; duration: number; playable: boolean; never?: boolean };
 
 export const PICK_NAME = 'Your songs, in your browser';
 export const PICK_BLURB = `A run through the songs you can play on this device, starting and ending where you choose. ${WORKED_OUT_LIVE}`;
@@ -26,7 +28,7 @@ function refuse(message: string, code: string, status = 400): ApiError {
 }
 
 export function pickCard(songs: readonly PlayableSong[]): VibeCard {
-  const playable = songs.filter((song) => song.playable);
+  const playable = songs.filter((song) => song.playable && !song.never);
   return {
     key: 'pick', name: PICK_NAME, blurb: PICK_BLURB,
     songs: playable.length, ready: playable.length >= BROWSER_MIX_NEEDS,
@@ -56,9 +58,12 @@ export function mixNameFor(songs: readonly PlayableSong[], ids: readonly number[
 export function chooseSongs(songs: readonly PlayableSong[], count: number, { start, end }: { start?: number | null; end?: number | null } = {}): number[] {
   const playable = songs.filter((song) => song.playable);
   const byTitle = [...playable].sort((one, other) => one.title.localeCompare(other.title) || one.id - other.id).map((song) => song.id);
-  const ending = end !== null && end !== undefined && byTitle.includes(end) && end !== start ? end : null;
-  const first = start !== null && start !== undefined && byTitle.includes(start) ? [start] : [];
-  const middle = byTitle.filter((id) => id !== start && id !== ending);
+  const chosen = (id: number | null | undefined) => id !== null && id !== undefined && byTitle.includes(id);
+  const ending = chosen(end) && end !== start ? end! : null;
+  const first = chosen(start) ? [start!] : [];
+  // songs set to Never play fill no gap of their own; a start or ending the person chose still plays
+  const never = new Set(playable.filter((song) => song.never).map((song) => song.id));
+  const middle = byTitle.filter((id) => id !== start && id !== ending && !never.has(id));
   const room = Math.max(BROWSER_MIX_NEEDS, count) - first.length - (ending === null ? 0 : 1);
   return [...first, ...middle.slice(0, Math.max(0, room)), ...(ending === null ? [] : [ending])];
 }

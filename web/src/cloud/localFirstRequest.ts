@@ -26,6 +26,8 @@ export type CatalogueSong = {
   album?: string | null;
   duration_s?: number | null;
   available_on?: number;
+  /** "Never play" for the account: a mix SelectaDJ builds leaves it out (it can be added by hand). */
+  never?: boolean;
 };
 
 export const NOT_HERE_YET = 'SelectaDJ can’t do that in your browser yet.';
@@ -105,7 +107,7 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     duration: song.duration_s ?? 0, bpm: null, camelot: null,
     detected_bpm: null, detected_camelot: null, override_bpm: null, override_camelot: null,
     music_override: null, energy: null, grid_confidence: null, lyric_status: null,
-    never: false, priority: false, availability,
+    never: song.never === true, priority: false, availability,
     // the availability line says where it is; readiness only says how far analysis has got
     // in a browser mix a song that plays here is ready: its transitions are worked out from the
     // audio as the mix plays, so nothing has to be measured first (BF-0462-05)
@@ -224,7 +226,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     const known = await availability(list);
     return list.map((song) => {
       const where = availabilityOf(song, known);
-      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' };
+      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted', never: song.never === true };
     });
   };
   const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.()) : null;
@@ -271,7 +273,33 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       if (method !== 'GET') catalogue = null;
       return cloud<T>(path, init);
     }
+    const neverAnswer = setNever(method, route, init);
+    if (neverAnswer) return (await neverAnswer) as T;
     throw notHereYet(path);
+  };
+  /** "Never play" from the Library's row toggle (`/songs/{id}/never`) and its batch actions
+   * (`/library/batch`, never and allow), kept for the account (ADR-0475). Priority is an analysis
+   * setting and nothing is analysed in the browser, so those batch actions stay not here yet. */
+  const setNever = (method: string, route: string, init?: RequestInit): Promise<unknown> | undefined => {
+    if (method !== 'POST') return undefined;
+    const write = async (never: boolean, entries: { id: number; expected: boolean }[]) => {
+      catalogue = null;
+      await cloud('/local-media/songs/never', { method: 'POST', body: JSON.stringify({ never, entries }) });
+      catalogue = null;
+      return {};
+    };
+    const toggle = route.match(/^\/songs\/(\d+)\/never$/);
+    if (toggle) {
+      const id = Number(toggle[1]);
+      return (async () => {
+        const current = (await songs()).find((song) => song.id === id)?.never === true;
+        return write(!current, [{ id, expected: current }]);
+      })();
+    }
+    if (route !== '/library/batch') return undefined;
+    const body = JSON.parse(String(init?.body ?? '{}')) as { action?: string; entries?: { id: number; expected: unknown }[] };
+    if (body.action !== 'never' && body.action !== 'allow') return undefined;
+    return write(body.action === 'never', (body.entries ?? []).map((entry) => ({ id: entry.id, expected: entry.expected === true })));
   };
   return adapted as Request;
 }
