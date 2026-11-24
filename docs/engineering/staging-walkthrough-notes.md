@@ -21,13 +21,13 @@ Things to refine, found by walking staging (app.staging.selectadj.app) as the ow
 ### Lucy on staging (tochimba26, Premium)
 17. **Lucy failed with no server log line** until `ANTHROPIC_WORKSPACE_ID` was added to staging on Render. Fixed in settings; the silent failure, an alert and a readiness check are with the Lucy agent. [lucy]
 18. **Works after the fix.** "Make me a 30 minute afrobeats mix that starts mellow and builds up" gave 11 real songs from the library in about 20 s; "Swap the last song for something by Tems and take out any Davido" removed both Davido songs and added BIG DADDY; Save and play saved "Afrobeats Mellow to Hype" and it played.
-19. **The badge still says "PROPOSED - NOT SAVED" after saving**, beside "PLAYING" and "Saved to ...". [lucy]
-20. **The Save and play dialog shows local-mode jargon**: "Revision 2 (current)", "Transitions ready 0 of 0", "Only transitions that are already ready: No". In Cloud it should say the name, the songs, the length and where it will play. [lucy]
-21. **The feedback buttons are a bare tick and cross** with no label or tooltip; nobody will know they mean "good answer" and "bad answer". [lucy]
-22. **The mix pane's song cards are tall** (one song per 140px with four controls each); nine songs need a lot of scrolling in a small pane. Use the compact rows from the new phone editor. [lucy + editor]
-23. **Suggested first asks included audiobook authors** ("An hour of J.K. Rowling and Alan Watts"). [lucy, sent]
-24. **Every page takes about 30 s to open** while the catalogue loads, Lucy included. [audit + lucy, sent]
-25. **Lucy says "Tempo and energy aren't measured in the browser yet"** in every answer; say it once per conversation, or only when the ask depends on it. [lucy]
+19. **The badge still says "PROPOSED - NOT SAVED" after saving**, beside "PLAYING" and "Saved to ...". [lucy] Fixed in 9dde4176.
+20. **The Save and play dialog shows local-mode jargon**: "Revision 2 (current)", "Transitions ready 0 of 0", "Only transitions that are already ready: No". In Cloud it should say the name, the songs, the length and where it will play. [lucy] Fixed in 9dde4176.
+21. **The feedback buttons are a bare tick and cross** with no label or tooltip; nobody will know they mean "good answer" and "bad answer". [lucy] Fixed in 9dde4176.
+22. **The mix pane's song cards are tall** (one song per 140px with four controls each); nine songs need a lot of scrolling in a small pane. Use the compact rows from the new phone editor. [lucy + editor] Fixed in 9dde4176.
+23. **Suggested first asks included audiobook authors** ("An hour of J.K. Rowling and Alan Watts"). [lucy, sent] Fixed in b3ff4719.
+24. **Every page takes about 30 s to open** while the catalogue loads, Lucy included. [audit + lucy, sent] Fixed in c7c9d584 (Lucy only).
+25. **Lucy says "Tempo and energy aren't measured in the browser yet"** in every answer; say it once per conversation, or only when the ask depends on it. [lucy] Fixed in 9dde4176.
 
 ### Admin console
 6. **System and Overview did not catch the missing bucket.** "File storage (R2): Not reporting" is all it said. Good: the System page checks each configured bucket exists and is writable, and Overview turns red with "Storage bucket selecta-staging-originals doesn't exist" and the fix. [admin]

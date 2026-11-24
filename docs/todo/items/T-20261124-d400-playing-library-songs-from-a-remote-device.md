@@ -2,7 +2,7 @@
 id: T-20261124-d400
 title: Playing Library songs from a remote device
 area: devices
-status: open
+status: doing
 priority: high
 who: claude
 created: 2026-11-24

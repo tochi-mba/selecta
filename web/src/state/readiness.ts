@@ -40,7 +40,8 @@ export function trackReadiness(song: Pick<LibrarySong, 'bpm' | 'readiness'> & Pa
     reason: song.readiness?.reason ?? '',
     canStartMix: status === 'mix_ready',
     // a tempo alone never makes a song mix-ready, but it's what adding one by hand has always needed
-    canAdd: analysed && !['set_aside', 'excluded', 'missing', 'needs_attention'].includes(status),
+    // a song ready for a browser mix (worked out as it plays) can be added by hand too
+    canAdd: (analysed || status === 'mix_ready') && !['set_aside', 'excluded', 'missing', 'needs_attention'].includes(status),
     // a song ready without a measured tempo (a browser mix works its transitions out as it plays)
     // has nothing to ask analysis for
     canAnalyse: !analysed && !['set_aside', 'excluded', 'missing', 'mix_ready'].includes(status),
