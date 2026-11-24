@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.billing.plans import Plan
@@ -136,7 +137,24 @@ def meters(
             "blocked": storage.read_only,
         },
         "lucy_turns_month": lucy_turns(connection, workspace_id, plan, timezone),
+        "library": library_size(connection, workspace_id, plan),
     }
 
 
-__all__ = ["LUCY_TIERS", "lucy_tier", "lucy_turns", "meters", "storage_mode"]
+def library_size(connection: Connection, workspace_id: str, plan: Plan) -> dict[str, int]:
+    """How many songs the library holds (on devices and hosted) against the plan's soft cap: a
+    sanity bound the page mentions calmly, never a refusal (docs/saas/02-plans-and-economics.md)."""
+    from selecta.local_media.schema import local_songs
+    from selecta.storage.schema import assets
+
+    def counted(query: sa.Select) -> int:
+        return int(connection.execute(query).scalar() or 0)
+
+    count = counted(sa.select(sa.func.count()).select_from(local_songs)
+                    .where(local_songs.c.workspace_id == workspace_id))
+    count += counted(sa.select(sa.func.count()).select_from(assets)
+                     .where(assets.c.workspace_id == workspace_id, assets.c.deleted_at.is_(None)))
+    return {"songs": count, "soft_cap": plan.library_soft_cap_songs}
+
+
+__all__ = ["LUCY_TIERS", "library_size", "lucy_tier", "lucy_turns", "meters", "storage_mode"]

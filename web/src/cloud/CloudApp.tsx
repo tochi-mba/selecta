@@ -20,7 +20,7 @@ import { SettingsLayout, settingsPlaces } from './AccountLayout';
 import { AccountPage, AccountStrip } from './AccountPage';
 export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
-import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
+import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, statusWords, Page, pageShown, planName } from './api';
 import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
@@ -41,6 +41,7 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
+import { WorkspaceNameOffer } from './WorkspaceNameOffer';
 import { SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './localFirstGate';
@@ -192,7 +193,7 @@ export function CloudApp() {
       // An account-level refusal replaces the whole app with a plain explanation.
       const accountState = blockedCode(code);
       if (accountState) setBlocked(accountState);
-      throw new CloudError(refusalMessage(code) ?? messageOf(payload, `Request failed (${response.status}).`), response.status, code, payload);
+      throw new CloudError(refusalMessage(code) ?? messageOf(payload, statusWords(response.status)), response.status, code, payload);
     }
     return payload as T;
   }, [getAccessToken]);
@@ -679,6 +680,7 @@ export function CloudApp() {
     profile={[
       <AccountStrip email={user.email} plan={planName(account)} workspace={account.workspace.name} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />,
       framed && businessEntry,
+      <WorkspaceNameOffer account={account} rename={async (name) => { await api('/account/workspace-name', { method: 'PUT', body: JSON.stringify({ name }) }, account.workspace.id); await refreshAccount(); }} />,
       framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />,
       !framed && flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />,
     ]}

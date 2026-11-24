@@ -36,13 +36,39 @@ from selecta.storage.keys import Bucket, original_key
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.storage.schema import assets, upload_sessions
 
-MIXES_UNAVAILABLE = "Cloud mix revisions are not yet stored by this application version."
-
 
 def _safe_filename(name: str) -> str:
     leaf = name.replace("\\", "/").rsplit("/", 1)[-1]
     cleaned = re.sub(r"[^A-Za-z0-9._ -]", "_", leaf).strip(" .")[:180]
     return cleaned or "audio"
+
+
+def _kept_library(conn: Any, workspace_id: str) -> dict[str, Any]:
+    """What the account keeps about its library and mixes, beyond hosted files: the songs'
+    details (title, artist, never play), every saved mix revision, and the current mix."""
+    from selecta.local_media.current_mix_schema import local_current_mix
+    from selecta.local_media.recipe_schema import local_recipes
+    from selecta.local_media.schema import local_songs
+
+    def rows(query: Any) -> list[dict[str, Any]]:
+        return [dict(row) for row in conn.execute(query).mappings().all()]
+
+    songs = rows(
+        select(local_songs.c.id, local_songs.c.title, local_songs.c.artist, local_songs.c.album,
+               local_songs.c.duration_s, local_songs.c.codec, local_songs.c.never_play,
+               local_songs.c.content_sha256)
+        .where(local_songs.c.workspace_id == workspace_id).order_by(local_songs.c.id)
+    )
+    saved = rows(
+        select(local_recipes.c.mix_id, local_recipes.c.number, local_recipes.c.revision,
+               local_recipes.c.name, local_recipes.c.contract, local_recipes.c.created_at)
+        .where(local_recipes.c.workspace_id == workspace_id)
+        .order_by(local_recipes.c.mix_id, local_recipes.c.number)
+    )
+    current = rows(
+        select(local_current_mix).where(local_current_mix.c.workspace_id == workspace_id)
+    )
+    return {"songs": songs, "saved_mixes": saved, "current_mix": current[0] if current else None}
 
 
 def install_routes(
@@ -143,6 +169,7 @@ def install_routes(
                 .mappings()
                 .first()
             )
+            kept = _kept_library(conn, workspace.id)
 
         temp_dir = Path(tempfile.mkdtemp(prefix="selecta-account-export-"))
         archive_path = temp_dir / "selectadj-account-export.zip"
@@ -245,9 +272,10 @@ def install_routes(
                     "devices": device_rows,
                 }
                 mixes = {
-                    "available": False,
-                    "reason": MIXES_UNAVAILABLE,
-                    "mixes": [],
+                    # saved mixes (every revision of each) and the mix last chosen as current
+                    "available": True,
+                    "saved_mixes": kept["saved_mixes"],
+                    "current_mix": kept["current_mix"],
                     # What was last playing, so the export holds every mix fact Cloud keeps.
                     "playback_session": dict(session) if session else None,
                 }
@@ -266,15 +294,18 @@ def install_routes(
                     "settings": "included in settings.json",
                     "lucy_conversations": "included in lucy-conversations.json",
                     "mixes": {
-                        "available": False,
-                        "reason": MIXES_UNAVAILABLE,
+                        "saved_mixes": f"{len(kept['saved_mixes'])} revisions in mixes.json",
+                        "current_mix": "included in mixes.json",
                         "playback_session": "included in mixes.json",
                     },
+                    "library": f"{len(kept['songs'])} songs in library.json (details, never "
+                    "the files on your devices)",
                 }
                 archive.writestr("manifest.json", json.dumps(manifest, indent=2))
                 archive.writestr("settings.json", json.dumps(settings, indent=2))
                 archive.writestr("assets.json", json.dumps(exported_assets, indent=2))
                 archive.writestr("mixes.json", json.dumps(mixes, indent=2, default=str))
+                archive.writestr("library.json", json.dumps(kept["songs"], indent=2, default=str))
                 # ADR-0476: this person's Lucy conversations, as they read them
                 archive.writestr("lucy-conversations.json", json.dumps(lucy_talk, indent=2))
         except Exception:

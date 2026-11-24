@@ -382,6 +382,8 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
           onBranch={branch}
           onRetry={retry}
           onDecide={decide}
+          onEdit={lucyTransport() ? fill : undefined}
+          onRate={lucyTransport() ? async (id, rating) => { await lucy.rate(id, rating); } : undefined}
           empty={(
             <div className="lucy-empty">
               <p><b>{shownScope ? `Ask Lucy about this mix (${scopeWords(shownScope)}).` : 'Tell Lucy what kind of mix you want.'}</b> Lucy shows you every song and transition it plans, and builds nothing until you approve it.</p>

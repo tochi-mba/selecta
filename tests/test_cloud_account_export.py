@@ -78,8 +78,10 @@ def test_the_mixes_json_says_what_cloud_keeps_and_includes_the_playback_session(
     with signed_up(tmp_path, monkeypatch) as world:
         with _archive(world) as archive:
             empty = json.loads(archive.read("mixes.json"))
-        assert empty["available"] is False
-        assert empty["mixes"] == []
+        # product audit area C: saved mixes and the current mix are in the copy, not "unavailable"
+        assert empty["available"] is True
+        assert empty["saved_mixes"] == []
+        assert empty["current_mix"] is None
         assert empty["playback_session"] is None
 
         revision = new_id()
