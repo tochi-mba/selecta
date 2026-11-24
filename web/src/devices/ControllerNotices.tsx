@@ -70,7 +70,7 @@ export function ControllerNotices({ notices, speakerName, session, send }: { not
       {missed.length > 0 && (
         <p data-testid="presses-missed">
           {`Not played while ${who} was offline: ${missed.map((press: HeldPress) => `${label(press)} (${WHY[press.reason] ?? press.reason})`).join(', ')}`}
-          <button type="button" onClick={() => dismiss(missed.map((press) => press.command_id))}>OK</button>
+          <button type="button" onClick={() => dismiss(missed.map((press) => press.command_id))}>Dismiss</button>
         </p>
       )}
       {unavailable && (

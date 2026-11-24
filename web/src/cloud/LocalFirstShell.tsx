@@ -72,6 +72,7 @@ import { plainMessage } from './resilientRequest';
 import { useAccountMix } from './useAccountMix';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
+import { PlayNoticeLine } from '../devices/PlayNoticeLine';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -680,7 +681,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     cloud, refreshHoldings: holdings.refresh,
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
     askToPlay: (device) => void playOn.ask(device, recipes.current()),
-    asking: playOn.state,
+    asking: playOn.state, playHereInstead: () => { playOn.reset(); void player.playHereInstead(); }, playingOn: playback.view?.speaker === 'elsewhere' ? playback.view.speaker_device_id : null,
   });
   soundElsewhere.current = !on('devices.remote_control') ? null
     : speakerElsewhere ? () => { accountMix.offerLater(speakerElsewhere); return true; }
@@ -853,7 +854,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         )}{localExport}</>;
       case 'listen':
         // something is playing on another device and this one does not hold that mix: the remote
-        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} speakerSongs={holdings.speakerSongs} />;
+        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} speakerSongs={holdings.speakerSongs} notice={where.notice} onDismissNotice={where.clearNotice} />;
         // nothing is playing (no speaker at all) and this device holds no music, but the person
         // has another device: play on one that has music (ADR-0475 R1, R2), or say which is
         // missing; never a Play button that cannot work here
@@ -863,7 +864,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
               mixName={data.mix.length ? data.name : newest?.name ?? ''} mixSongs={data.mix.length || (newest?.songs ?? 0)} devices={holdings.devices} thisDeviceId={playback.device?.id ?? null}
               mixIds={data.mix.length ? songOrder : newest?.ids ?? []} ids={holdings.ids}
               now={playback.serverNow()} asking={playOn.state}
-              onPlayOn={(device) => void playOn.ask(device, recipes.current() ?? newest?.mix_id ?? null)}
+              onPlayOn={(device) => void playOn.ask(device, recipes.current() ?? newest?.mix_id ?? null)} notice={where.notice} onDismissNotice={where.clearNotice}
             />
           );
         }
@@ -930,7 +931,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
             {roomAdd.onDevice > 0 && <span className="room-open-waiting" data-testid="room-on-device" title={`${countOf(roomAdd.onDevice, 'request')} waiting on another device`}>{roomAdd.onDevice} waiting on a device</span>}
           </a>
         ) : undefined}
-        banner={<>{askedBanner}{accountMix.banner}{where.picker}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section></HolderContext.Provider>

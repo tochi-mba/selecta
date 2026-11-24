@@ -54,7 +54,13 @@ function database(): Promise<IDBDatabase | null> {
         if (!db.objectStoreNames.contains('recipes')) db.createObjectStore('recipes');
         if (!db.objectStoreNames.contains('lists')) db.createObjectStore('lists');
       };
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const db = request.result;
+        // Another tab opening a newer version of this database (after a deploy) must not wait on us:
+        // close, forget the handle, and open again on the next use (product audit, area F).
+        db.onversionchange = () => { try { db.close(); } catch { /* closed */ } opening = null; };
+        resolve(db);
+      };
       request.onerror = () => resolve(null);
       request.onblocked = () => resolve(null);
     } catch {

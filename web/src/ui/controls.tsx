@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { showProblem } from './toasts';
 import { Icon, IconName } from './Icon';
 import { exitGhost, usePresence } from './exitMotion';
-import { newReference, supportHref } from '../support';
+import { newReference, reportProblem, supportHref } from '../support';
 import { isChunkLoadError, StaleBuildPanel } from './staleBuild';
 export { Skeleton } from './Skeleton';
 
@@ -107,6 +107,7 @@ export class Section extends Component<{ name: string; children: ReactNode; whol
   componentDidCatch(error: Error, info: ErrorInfo) {
     // the reference goes to the console with the error, so a support copy can be matched to it
     console.error(`${this.props.name} stopped working (reference ${this.state.reference})`, error, info.componentStack);
+    reportProblem(this.state.reference, isChunkLoadError(error) ? 'stale_build' : 'page_crash');
   }
 
   render() {
@@ -197,6 +198,7 @@ function Overlay({
   className,
   role = 'dialog',
   describedBy,
+  grabber,
 }: {
   title: string;
   onClose: () => void;
@@ -211,6 +213,8 @@ function Overlay({
   role?: 'dialog' | 'alertdialog';
   /** the id of the text that explains the dialog, read with its title */
   describedBy?: string;
+  /** a sheet's grabber, drawn above its title (the editor's resizable sheets) */
+  grabber?: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
@@ -299,6 +303,7 @@ function Overlay({
   return createPortal(
     <div ref={holder} className={`overlay overlay-${kind}${keepsChrome ? ' overlay-keeps-chrome' : ''}${className ? ` ${className}` : ''}`} data-keeps-chrome={keepsChrome ? 'true' : undefined} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div ref={panel} className="overlay-panel" role={role} aria-modal={keepsChrome ? undefined : 'true'} aria-labelledby={titleId} aria-describedby={describedBy} tabIndex={-1} onKeyDown={keys}>
+        {grabber}
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
           <button className="overlay-close" aria-label={`Close ${title}`} title={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
@@ -325,7 +330,7 @@ export function Workspace(props: { title: string; onClose: () => void; children:
   return <Overlay kind="workspace" {...props} />;
 }
 
-export function Sheet(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; keepsChrome?: boolean }) {
+export function Sheet(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; keepsChrome?: boolean; className?: string; grabber?: ReactNode }) {
   return <Overlay kind="sheet" {...props} />;
 }
 

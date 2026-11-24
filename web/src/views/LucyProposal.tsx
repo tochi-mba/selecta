@@ -25,7 +25,9 @@ const LIFECYCLE_WORDS: Record<Lifecycle, string> = {
 };
 
 export function LifecyclePill({ stage }: { stage: Lifecycle }) {
-  return <span className={`lucy-stage is-${stage}`}>{LIFECYCLE_WORDS[stage]}</span>;
+  // in Cloud a proposal is saved into the mix, never built
+  const words = stage === 'proposed' && lucyTransport() ? 'Proposed - not saved' : LIFECYCLE_WORDS[stage];
+  return <span className={`lucy-stage is-${stage}`}>{words}</span>;
 }
 
 /** Suggested first asks: the server's, drawn from the person's own library, when it gives
@@ -145,8 +147,8 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
       <section className="lucy-proposal is-empty" aria-labelledby={headingId}>
         <p className="eyebrow">Your mix</p>
         <h2 id={headingId}>Nothing proposed yet</h2>
-        <p className="hint">Describe the mix you want in the chat. Lucy plans it here, and nothing is built until you approve it. Try one of these:</p>
-        <ExamplePrompts onPick={fillComposer} prompts={prompts} />
+        <p className="hint">{live ? 'Ask Lucy for a mix, or a change to yours, in the chat. Her proposal shows here, and nothing is saved until you press Save.' : 'Describe the mix you want in the chat. Lucy plans it here, and nothing is built until you approve it. Try one of these:'}</p>
+        {!live && <ExamplePrompts onPick={fillComposer} prompts={prompts} />}
       </section>
     );
   }
@@ -228,6 +230,13 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
       </p>
       {ledger && !live && <p className="hint">Readiness checked {whenWords(ledger.checked_at) || 'recently'}{ledger.playable_now && ready === needed ? '. Every directed transition has verified playable audio.' : '. Readiness is not guaranteed until checked again at approval.'}</p>}
       {snap.ready_only && ready < needed && <p className="lucy-readiness-warning" role="status">Only {ready} of {needed} required directed transitions have verified audio. This strict plan cannot be saved as ready-only yet. Ask Lucy for a shorter ready route, or explicitly change the rule before approving.</p>}
+
+      {live && shown.summary && (
+        <details className="lucy-why">
+          <summary>Why these songs</summary>
+          <p dir="auto">{shown.summary}</p>
+        </details>
+      )}
 
       {approve(shown, isCurrent)}
 

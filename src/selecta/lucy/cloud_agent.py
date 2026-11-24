@@ -40,7 +40,8 @@ from selecta.lucy.providers import (
     ProviderError,
     TurnResult,
 )
-from selecta.persistence import new_id, transaction
+from selecta.persistence import db_now, new_id, transaction
+from selecta.work import outbox
 
 STOP_CHECK_SECONDS = 1.0
 CUT_OFF = ("(Your last reply was cut off before you finished. Think briefly, then answer "
@@ -390,19 +391,26 @@ async def run_turn(job: Job) -> None:
         status = {"completed": "complete", "cancelled": "cancelled",
                   "interrupted": "interrupted"}.get(final, "failed")
         revision = ctx.proposed[-1] if ctx.proposed else None
+        followups = follow_ups(ctx, notes) if final == "completed" else []
+        meta: dict[str, Any] = {"note": " | ".join(notes)[-NOTE_CHARS:]} if notes else {}
+        if followups:
+            meta["followups"] = followups
         with transaction(job.engine, job.workspace_id) as conn:
             cloud_store.finish_message(
-                conn, job.workspace_id, message["id"], writer.content, status, revision,
-                {"note": " | ".join(notes)[-NOTE_CHARS:]} if notes else {},
+                conn, job.workspace_id, message["id"], writer.content, status, revision, meta,
             )
             cloud_store.set_turn(conn, job.workspace_id, job.turn_id, status=final)
+            # every device's Lucy settings card reads its turns again (ADR-0476 item 31)
+            outbox.emit(conn, "lucy.turns", job.workspace_id, {"run": plan.run_id},
+                        db_now(conn))
             summary = gateway.finish_turn(
                 conn, plan, outcome=outcome, tokens_in=usage["tokens_in"],
                 tokens_out=usage["tokens_out"], cache_read_tokens=usage["cache_read"],
                 cache_write_tokens=usage["cache_write"], error_code=error_code,
             )
         events.emit("message.completed", {"message": message["id"], "status": status,
-                                          "content": writer.content})
+                                          "content": writer.content,
+                                          "meta": {"followups": followups}})
         events.state(final, cycles, steps, error)
         with transaction(job.engine, job.workspace_id) as conn:
             cloud_store.prune_deltas(conn, job.workspace_id, job.conversation_id, plan.run_id)
@@ -412,6 +420,16 @@ async def run_turn(job: Job) -> None:
             deployment=plan.deployment.id, model=plan.deployment.model_id,
             limited=plan.limited,
         )
+
+
+def follow_ups(ctx: cloud_tools.CloudCtx, notes: list[str]) -> list[str]:
+    """At most two next asks, and only after work they continue: a proposal can be made
+    shorter or calmer; songs found can become a mix. Small talk gets none."""
+    if ctx.proposed:
+        return ["Make it shorter", "Leave out the slowest songs"]
+    if any(note.startswith("search_songs") and "=" in note for note in notes):
+        return ["Make a mix from these"]
+    return []
 
 
 async def _say(writer: Writer, words: str) -> None:

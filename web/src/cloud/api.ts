@@ -10,6 +10,8 @@ export type Usage = {
   analysis_today: Allowance;
   exports_month: Allowance & { retention_days: number; blocked: boolean };
   lucy_turns_month: LucyTurns;
+  /** Songs in the library against the plan's soft cap: mentioned calmly, never a refusal. */
+  library?: { songs: number; soft_cap: number };
 };
 /** The billing moment the customer should hear about (billing/standing.py), or null for none.
  * `at` is epoch seconds; `key` changes whenever the event does, so a dismissal is per event. */
@@ -107,14 +109,38 @@ export function idempotencyKey() {
   return crypto.randomUUID();
 }
 
+/** The request with an Idempotency-Key added when it is a write that has none (`on` is the
+ * `cloud.idempotency` flag). A caller that sets its own key keeps it. */
+export function withIdempotencyKey(init: RequestInit | undefined, on: boolean): RequestInit | undefined {
+  const method = (init?.method ?? 'GET').toUpperCase();
+  if (!on || method === 'GET' || method === 'HEAD') return init;
+  const headers = new Headers(init?.headers);
+  if (headers.has('Idempotency-Key')) return init;
+  headers.set('Idempotency-Key', idempotencyKey());
+  return { ...init, headers };
+}
+
+/** The server's own plain words for a refusal, or `fallback`. Never a code, JSON or a stack. */
 export function messageOf(payload: unknown, fallback: string) {
   if (payload && typeof payload === 'object' && 'detail' in payload) {
     const detail = (payload as { detail: unknown }).detail;
     if (typeof detail === 'string') return detail;
     if (detail && typeof detail === 'object' && 'message' in detail) return String((detail as { message: unknown }).message);
-    if (detail && typeof detail === 'object' && 'code' in detail) return String((detail as { code: unknown }).code).replaceAll('_', ' ');
+    // a bare code is never shown as words ("billing not permitted"): the caller's plain fallback is
   }
   return fallback;
+}
+
+/** Plain words for a refusal that carried none of its own, by its HTTP status. */
+export function statusWords(status: number): string {
+  if (status === 401) return 'Your sign-in has ended. Sign in again to carry on.';
+  if (status === 403) return 'This account can’t do that.';
+  if (status === 404) return 'That isn’t here any more.';
+  if (status === 409) return 'That changed somewhere else. Reload and try again.';
+  if (status === 413) return 'That is too large to send.';
+  if (status === 429) return 'That’s a lot of requests at once. Wait a moment and try again.';
+  if (status >= 500) return 'SelectaDJ’s service isn’t answering right now. Try again in a moment.';
+  return 'That didn’t work. Try again, or contact support if it keeps happening.';
 }
 
 /** Decimal sizes as people read them: "18.4 GB", "820.0 MB". */

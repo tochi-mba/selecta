@@ -94,6 +94,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `editor.suggestions` | **Song suggestions.** Songs suggested for a spot before you search, each saying how it would hand over. | `editor` |
 | `editor.locks` | **Locked songs.** A locked song stays where it is when the mix is rebuilt. | `editor` |
 | `editor.drag_preview` | **Move preview.** While a song is dragged, the transitions the drop would change are marked before it lands. | `editor` |
+| `editor.phone_layout` | **Editor for every screen.** The mix as a list of songs and the transitions between them, with the opened transition in a sheet on a phone and beside the list on a tablet or wider screen. Without it, the editor keeps its earlier layout at every size. | `editor` |
 | `seam_inspector` | **Transition inspector.** Pick the move for any transition, hear it, render it and see its checks. | `editor` |
 | `seam_inspector.exact_cues` | **Exact cues.** Choose the exact bars and phrase a transition leaves and lands on. | `seam_inspector` |
 | `seam_inspector.compare` | **Compare with before.** Hear a transition's earlier finished render beside the new one, once both really exist. | `seam_inspector` |
@@ -240,6 +241,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.local_media` | **Local media catalogue.** The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458). |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
+| `account.workspace_name` | **Workspace name.** Rename the personal workspace from its starting name, offered once on Workspace. |  |
+| `account.new_device_email` | **New device email.** Email the person once when a new device signs in to their account, with a way to sign out everywhere. **Cloud surface:** headless (An email sent by the maintenance task; nothing on a Cloud screen changes). |  |
 | `cloud.rate_limits` | **API rate limits.** Per-account and per-IP request limits in the Cloud API, with stricter limits for checkout, account changes, search and upload plans. **Cloud surface:** operations (A request limit has no screen; a refused request says why and when to try again). |  |
 | `cloud.idempotency` | **Replayed writes.** A Cloud write sent again with the same Idempotency-Key within 24 hours gets the first answer back instead of doing it twice. **Cloud surface:** operations (Replaying a stored answer has no screen; the person simply never sees a double). |  |
 | `billing.standing` | **Billing notices and emails.** Tell the customer when a payment failed, needs confirming, or a plan is ending or has ended, in the app and by email. |  |

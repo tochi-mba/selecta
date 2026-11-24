@@ -52,3 +52,20 @@ export function supportHref(subject: string, reference?: string): string {
   const query = `subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
   return `mailto:${SUPPORT_EMAIL}?${query}`;
 }
+
+type Reporter = (report: { reference: string; kind: 'page_crash' | 'stale_build'; where: string; build: string }) => Promise<unknown>;
+let reporter: Reporter | null = null;
+
+/** Set by the signed-in Cloud app: how a problem reference reaches the server log, so support can
+ * find the reference a person quotes. Null when signed out or in the local app. */
+export function setProblemReporter(next: Reporter | null): void {
+  reporter = next;
+}
+
+/** Tell the server a page stopped drawing (or could not load after a deploy), with the reference
+ * the person was shown. Never the error text, which can hold personal data. Never throws. */
+export function reportProblem(reference: string, kind: 'page_crash' | 'stale_build'): void {
+  if (!reporter) return;
+  const where = typeof window === 'undefined' ? '' : window.location.pathname.replace(/\/[0-9a-f-]{16,}/gi, '/…').slice(0, 200);
+  void reporter({ reference, kind, where, build: buildMark() ?? '' }).catch(() => undefined);
+}

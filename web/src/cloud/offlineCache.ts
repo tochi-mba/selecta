@@ -36,7 +36,15 @@ function openDb(workspaceId: string): Promise<IDBDatabase | null> {
 const opened = new Map<string, Promise<IDBDatabase | null>>();
 function dbFor(workspaceId: string) {
   let made = opened.get(workspaceId);
-  if (!made) { made = openDb(workspaceId); opened.set(workspaceId, made); }
+  if (!made) {
+    made = openDb(workspaceId).then((db) => {
+      // Another tab opening a newer version of this database (after a deploy) must not wait on us:
+      // close, forget the handle, and open again on the next use (product audit, area F).
+      if (db) db.onversionchange = () => { try { db.close(); } catch { /* closed */ } opened.delete(workspaceId); };
+      return db;
+    });
+    opened.set(workspaceId, made);
+  }
   return made;
 }
 

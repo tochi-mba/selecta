@@ -64,6 +64,11 @@ _DECLARED: tuple[Permission, ...] = (
     Permission("platform.dashboard.read", "See the admin overview: health, queues, spend.", R),
     Permission("accounts.list", "Search accounts by email, plan and status.", R),
     Permission("accounts.read_metadata", "Open one account's metadata (never its content).", S),
+    Permission(
+        "accounts.configure",
+        "Set one account's storage mode (hosted media) and its per-account feature switches.",
+        S,
+    ),
     Permission("accounts.suspend", "Suspend an account: read-only, no processing.", S),
     Permission("accounts.restore", "Lift an account suspension.", S),
     Permission("support.cases.read", "Read support cases.", R),

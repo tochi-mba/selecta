@@ -47,7 +47,7 @@ class TurnBody(BaseModel):
     client_id: str = Field(min_length=1, max_length=64)
     text: str = Field(min_length=1, max_length=MAX_TEXT)
     expected_revision: str | None = Field(default=None, max_length=64)
-    selection: dict[str, Any] | None = None
+    selection: dict[str, Any] | None = Field(default=None, max_length=4)
     # the playback device this was typed on (ADR-0476 item 22); unknown ids are ignored
     device_id: str | None = Field(default=None, max_length=36)
 
@@ -60,7 +60,7 @@ class RetryBody(BaseModel):
 class EditBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected: str = Field(min_length=1, max_length=64)
-    op: dict[str, Any]
+    op: dict[str, Any] = Field(max_length=4)
 
 
 class CurrentBody(BaseModel):
@@ -74,6 +74,11 @@ class ApproveBody(BaseModel):
     revision: str = Field(min_length=1, max_length=64)
     hash: str = Field(min_length=1, max_length=64)
     action: str = Field(pattern="^(draft|draft_and_play)$")
+
+
+class RatingBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rating: str = Field(pattern="^(up|down)$")
 
 
 class CommitBody(BaseModel):
@@ -252,16 +257,32 @@ def install_routes(
             row = mine(conn, principal, conversation)
             cloud_store.settle_stale(conn, ws, row.id, runner.alive_turns())
             cursor = cloud_store.cursor_of(conn, ws, row.id)
+            shown = cloud_store.snapshot_messages(conn, ws, row.id, cursor)
             return {
                 "conversation": cloud_store.get_conversation(conn, ws, principal.user.id,
                                                              row.id),
-                "messages": cloud_store.snapshot_messages(conn, ws, row.id, cursor),
+                "messages": shown,
+                "more": bool(shown) and cloud_store.has_older(conn, ws, row.id, shown[0]["seq"]),
                 "proposal": cloud_proposals.snapshot(conn, ws, row.id),
                 "run": cloud_store.last_run(conn, ws, row.id),
                 "permissions": [], "cards": [],
                 "cursor": cursor,
                 "event_schema": cloud_store.EVENT_SCHEMA,
             }
+
+    @app.get("/api/lucy-cloud/conversations/{conversation}/messages")
+    def older(
+        conversation: str, request: Request, before: int = 0,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        """An earlier page of a long conversation, oldest first."""
+        principal = who(request, claims)
+        ws = principal.workspace.id
+        with transaction(engine, ws) as conn:
+            mine(conn, principal, conversation)
+            page = cloud_store.snapshot_messages(conn, ws, conversation, before=max(0, before))
+            more = bool(page) and cloud_store.has_older(conn, ws, conversation, page[0]["seq"])
+            return {"messages": page, "more": more}
 
     @app.patch("/api/lucy-cloud/conversations/{conversation}")
     def update(
@@ -506,6 +527,21 @@ def install_routes(
                 raise _missing()
             mine(conn, principal, row.conversation_id)
             return cloud_proposals.commit_answer(row, None)
+
+    @app.post("/api/lucy-cloud/messages/{message}/rating")
+    def rate(
+        message: str, body: RatingBody, request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        """Was this answer useful? Stored on the answer, for Lucy's evaluation; the latest
+        press wins."""
+        principal = who(request, claims)
+        with transaction(engine, principal.workspace.id) as conn:
+            conversation = cloud_store.rate(conn, principal.workspace.id, message, body.rating)
+            if conversation is None:
+                raise _missing()
+            mine(conn, principal, conversation)
+        return {"rating": body.rating}
 
     @app.get("/api/lucy-cloud/memory")
     def memory(request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008

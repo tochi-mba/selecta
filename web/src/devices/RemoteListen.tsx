@@ -7,8 +7,10 @@ import type { Remote } from './useRemote';
 import { askWords, stillAsking, type AskState } from './playOn';
 import { bestHolder, notOn, type DeviceHolding } from './controller';
 import { holdingWords } from './ControllerListen';
-import { NO_SPEAKER_WORDS } from './usePlaybackDevice';
+import { levelOf, NO_SPEAKER_WORDS } from './usePlaybackDevice';
 import { countOf } from '../ui/format';
+import { PlayNoticeLine } from './PlayNoticeLine';
+import type { PlayNotice } from './useWhereToPlay';
 import './devices.css';
 
 // Listen on a device that is not the speaker (flag `devices.remote_control`): what is playing on
@@ -16,6 +18,9 @@ import './devices.css';
 // this device: titles come from the account's library, and every press is a playback command
 // the speaker applies. Presses that wait or were missed are said by ControllerNotices, in the
 // shell's banner, as on every other page.
+
+/** How often a dragged volume is sent to the speaker. */
+const VOLUME_EVERY_MS = 100;
 
 /** One value a slider is being dragged to, sent once when the drag ends. */
 function useRelease(send: (value: number) => void) {
@@ -48,13 +53,16 @@ export type PlayWays = {
   ofMix?: (device: DeviceHolding) => { held: number | null; total: number } | undefined;
 };
 
-export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs }: {
+export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs, notice, onDismissNotice }: {
   remote: Remote;
   /** How many songs this device could play itself; none makes it a remote and nothing more. */
   playableHere: number;
   ways?: PlayWays | null;
   /** What the last press was told when the session did not take it. */
   refusal?: string;
+  /** The one message about where the music is going (useWhereToPlay); replaces the others. */
+  notice?: PlayNotice | null;
+  onDismissNotice?: () => void;
   /** R3: the songs the speaker reported it can open; null when it has not said. */
   speakerSongs?: ReadonlySet<number> | null;
 }) {
@@ -86,12 +94,24 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
     setLevel({ percent, seq: session.seq });
     void remote.setVolume(percent);
   });
+  // G1: while dragging, the speaker follows about ten times a second; the final value always goes
+  const sentAt = useRef(0);
+  const dragVolume = (percent: number) => {
+    volume.move(percent);
+    if (Date.now() - sentAt.current < VOLUME_EVERY_MS) return;
+    sentAt.current = Date.now();
+    setLevel({ percent, seq: session.seq });
+    void remote.setVolume(percent);
+  };
 
   const duration = current.durationMs;
   const held = sought && sought.seq === session.seq && sought.index === session.song_index ? sought.ms : null;
   const position = seek.dragged ?? held ?? remote.positionMs();
-  const reportedVolume = typeof session.volume === 'number' && Number.isFinite(session.volume) ? Math.round(session.volume) : null;
-  const shownVolume = volume.dragged ?? (level && level.seq === session.seq ? level.percent : reportedVolume);
+  const reportedVolume = Math.round(levelOf(session));
+  // G50: the level set here stands until the session reports it (or the wait runs out), so a
+  // late answer never moves the slider back under the finger
+  const shownVolume = volume.dragged ?? (level ? level.percent : reportedVolume);
+  useEffect(() => { if (level && reportedVolume === level.percent) setLevel(null); }, [level, reportedVolume]);
   // said about the speaker, by name: this device cannot play its check tone
   const sound = soundWords(view, speakerOutput(session));
   const state = stateWords(view, session);
@@ -107,16 +127,19 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
       </header>
       <div className="remote-layout">
         <section className="remote-card" aria-label="Remote control">
-          <p className="remote-where" data-testid="remote-where"><Icon name={view.speaker === 'offline' ? 'warning' : 'music'} size="compact" />{whereWords(view)}</p>
+          {/* a notice about the speaker itself is the one message about it: no second line above */}
+          {!(notice && notice.deviceId === view.speaker_device_id) && <p className="remote-where" data-testid="remote-where"><Icon name={view.speaker === 'offline' ? 'warning' : 'music'} size="compact" />{whereWords(view)}</p>}
           <div className="remote-song">
             <h2 dir="auto" data-testid="remote-title">{current.title}</h2>
             {current.artist && <p dir="auto" data-testid="remote-artist">{current.artist}</p>}
             {current.known && <p className="remote-place">Song {session.song_index + 1} of {session.programme.length}</p>}
           </div>
-          {state && <p className="remote-state" role="status" data-testid="remote-state">{state}</p>}
-          {sound && <p className="remote-sound" role="status" data-testid="remote-sound">{sound}</p>}
-          {refusal && <p className="remote-refusal" role="alert" data-testid="remote-refusal">{refusal}</p>}
-          {ways && (view.speaker === 'offline' || refusal === NO_SPEAKER_WORDS) && <WaysOn ways={ways} total={session.programme.length} />}
+          {/* one state, one message: a notice about where the music is going says it all; with
+              the speaker away, only that it is away (not also what it may or may not be doing) */}
+          {notice ? <PlayNoticeLine notice={notice} onDismiss={() => onDismissNotice?.()} /> : state && <p className="remote-state" role="status" data-testid="remote-state">{state}</p>}
+          {!notice && sound && view.speaker !== 'offline' && <p className="remote-sound" role="status" data-testid="remote-sound">{sound}</p>}
+          {refusal && !notice && <p className="remote-refusal" role="alert" data-testid="remote-refusal">{refusal}</p>}
+          {ways && (view.speaker === 'offline' || refusal === NO_SPEAKER_WORDS) && <WaysOn ways={ways} total={session.programme.length} quiet={!!notice} />}
           <div className="remote-seek">
             {duration !== null ? (
               <input
@@ -157,7 +180,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
                 min={0}
                 max={100}
                 value={shownVolume}
-                onChange={(event) => volume.move(Number(event.target.value))}
+                onChange={(event) => dragVolume(Number(event.target.value))}
                 onPointerUp={volume.release}
                 onTouchEnd={volume.release}
                 onKeyUp={volume.release}
@@ -165,6 +188,8 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
               />
             </label>
           )}
+          {/* G52: the app's level cannot go past the speaker's own volume */}
+          {shownVolume === 100 && <p className="remote-hint" data-testid="volume-max">For more volume, turn up {view.speaker_name ?? 'the speaker'} itself.</p>}
         </section>
         <div className="remote-side">
           {coming.length > 0 && (
@@ -195,7 +220,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
 
 /** Each way to start the music from here: Play on each open device with music (the R1 best
  * first), and Play here when this device holds songs of the programme. */
-function WaysOn({ ways, total }: { ways: PlayWays; total: number }) {
+function WaysOn({ ways, total, quiet = false }: { ways: PlayWays; total: number; quiet?: boolean }) {
   const best = bestHolder(ways.devices);
   const open = ways.devices.filter((device) => device.online && device.songs > 0)
     .sort((one, other) => (one === best ? -1 : other === best ? 1 : other.songs - one.songs));
@@ -220,7 +245,7 @@ function WaysOn({ ways, total }: { ways: PlayWays; total: number }) {
       ) : (
         <p className="remote-state" role="status" data-testid="play-ways-none">None of your other devices with music is open right now. Open SelectaDJ on one of them.</p>
       )}
-      {ways.asking && <p className="controller-asking" role="status" data-testid="play-on-status" data-phase={ways.asking.phase}>{askWords(ways.asking.phase, ways.asking.device)}</p>}
+      {ways.asking && !quiet && <p className="controller-asking" role="status" data-testid="play-on-status" data-phase={ways.asking.phase}>{askWords(ways.asking.phase, ways.asking.device)}</p>}
     </section>
   );
 }

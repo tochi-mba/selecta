@@ -48,9 +48,12 @@ export type LucyView = {
   commits: Record<string, CommitNote>;
   cursor: number;
   loaded: boolean;
+  /** Older messages wait on the server (a long Cloud conversation). */
+  more: boolean;
 };
 
 export type LucyAction =
+  | { type: 'older'; messages: Message[]; more: boolean }
   | { type: 'reset' }
   | { type: 'snapshot'; snapshot: Snapshot }
   | { type: 'events'; events: LucyEvent[] }
@@ -73,6 +76,7 @@ export const EMPTY_VIEW: LucyView = {
   commits: {},
   cursor: 0,
   loaded: false,
+  more: false,
 };
 
 export const ACTIVE_RUN: ReadonlySet<RunState> = new Set(['interpreting', 'running_tools', 'evaluating', 'preparing', 'streaming', 'awaiting_permission']);
@@ -144,6 +148,7 @@ function fromSnapshot(snapshot: Snapshot, before: LucyView): LucyView {
     commits: before.conversation?.id === snapshot.conversation.id ? before.commits : {},
     cursor: num(snapshot.cursor),
     loaded: true,
+    more: snapshot.more === true,
   };
 }
 
@@ -294,7 +299,10 @@ function applyEvent(view: LucyView, event: LucyEvent, payload: Record<string, un
         ...view,
         messages: upsertMessage(view.messages, id, (found) => {
           const content = typeof payload.content === 'string' ? payload.content : found?.content ?? '';
-          return found ? { ...found, status, content } : newMessage(event, id, 'assistant', lastSeq(view.messages) + 1, content, status);
+          const meta = payload.meta && typeof payload.meta === 'object' ? payload.meta as Record<string, unknown> : null;
+          if (found) return { ...found, status, content, meta: meta ? { ...found.meta, ...meta } : found.meta };
+          const made = newMessage(event, id, 'assistant', lastSeq(view.messages) + 1, content, status);
+          return meta ? { ...made, meta } : made;
         }),
       };
     }
@@ -378,6 +386,11 @@ export function reduce(view: LucyView, action: LucyAction): LucyView {
     case 'reset': return { ...EMPTY_VIEW, revisionTick: view.revisionTick, readinessTick: view.readinessTick };
     case 'snapshot': return fromSnapshot(action.snapshot, view);
     case 'current': return adoptRevision(view, action.revision);
+    case 'older': {
+      const known = new Set(view.messages.map((message) => message.id));
+      const earlier = action.messages.filter((message) => !known.has(message.id));
+      return { ...view, messages: [...earlier, ...view.messages].sort(bySeq), more: action.more };
+    }
     case 'events': {
       let next = view;
       for (const event of action.events) {

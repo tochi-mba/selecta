@@ -102,7 +102,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         const duration = data.mix.reduce((seconds, item) => seconds + item.duration, 0);
         // a browser mix says what is playing; the local build also says how it compares with what was asked
         const counted = `${actual} ${actual === 1 ? 'song' : 'songs'}`;
-        notify(analysisAvailable ? `${name}: generated ${actual} of ${songs} requested songs, about ${length(duration)} of source audio before transitions. Review the actual order in Edit.`
+        // while the picker asks where it plays, the question is asked once, there
+        if (!playOn?.ask) notify(analysisAvailable ? `${name}: generated ${actual} of ${songs} requested songs, about ${length(duration)} of source audio before transitions. Review the actual order in Edit.`
           // ADR-0475 R8: never claim it plays here when another device makes the sound
           : playOn ? (playOn.ask ? `Your new mix: ${counted}. Choose where it plays.` : playOn.now ? `Your new mix: ${counted}. Starting it on ${playOn.name}.` : `Your new mix is ready: ${counted}. ${playOn.name} is still playing.`)
             : `Your new mix is playing: ${counted}.`, true);

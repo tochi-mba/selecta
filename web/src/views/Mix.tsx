@@ -19,6 +19,8 @@ import { ExportPanel } from './ExportPanel';
 import { MixScope, useMixPath } from './mixScope';
 import { ComingSongs } from './Requests';
 import { InspectorTab, SeamInspector } from './SeamInspector';
+import { useEditorLayout } from './editorLayout';
+import { PhoneEditor } from './PhoneEditor';
 import { draftShown, movedLocally, MoveQueue } from './optimisticMove';
 import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
@@ -148,6 +150,8 @@ function MixView(props: ViewProps) {
   const [confirmClear, setConfirmClear] = useState<string | null>(null);
   const [inspectorWidth, setInspectorWidth] = useState(savedInspectorWidth);
   const narrow = useNarrow();
+  // editor.phone_layout: a list and a sheet on a phone, two panes with room for them
+  const layout = useEditorLayout();
   // where a new song goes is a place in the mix, not a number, so it stays right if the mix moves
   const [adding, setAdding] = useState<string | null>(inDraft && !mix.length ? 'start' : null);
   const [renaming, setRenaming] = useState(false);
@@ -745,11 +749,12 @@ function MixView(props: ViewProps) {
   else if (selectedIndex > 0) askLucy.set('seam', String(selectedIndex));
   askLucy.set('from', inDraft ? `/mixes/drafts/${draftId}/edit` : '/mix/current/edit');
 
+  const undoAction = canUndo && undo && <Action working="Undoing…" run={() => undo(draftId)}>{layout === 'classic' ? 'Undo last change' : 'Undo'}</Action>;
   const actions = (
     <>
       {inDraft ? (
         <>
-          <Action className="primary" working="Starting…" run={() => playDraft?.(draftId)}>Play this mix</Action>
+          {layout === 'classic' && <Action className="primary" working="Starting…" run={() => playDraft?.(draftId)}>Play this mix</Action>}
           {!on('render_line') ? null : draftPlace ? (
             <Action run={() => prioritize(false)}>Take out of line</Action>
           ) : (
@@ -764,12 +769,14 @@ function MixView(props: ViewProps) {
         </>
       ) : (
         <>
-          <button className="primary" onClick={() => {
-            setView('Now');
-            void player.playFrom(0);
-          }}>
-            Play from the top
-          </button>
+          {layout === 'classic' && (
+            <button className="primary" onClick={() => {
+              setView('Now');
+              void player.playFrom(0);
+            }}>
+              Play from the top
+            </button>
+          )}
           {on('drafts') && (
             <button onClick={() => {
               setName(mixName);
@@ -780,7 +787,7 @@ function MixView(props: ViewProps) {
           )}
         </>
       )}
-      {canUndo && undo && <Action working="Undoing…" run={() => undo(draftId)}>Undo last change</Action>}
+      {layout === 'classic' && undoAction}
       {readiness.firstProblem !== null && on('seam_inspector') && <button onClick={jumpToProblem}><Icon name="warning" /> Jump to first problem</button>}
       {!inDraft && ready < seams && analysisAvailable && (
         <Action run={renderAll} disabled={!waiting}>
@@ -803,6 +810,43 @@ function MixView(props: ViewProps) {
     </>
   );
 
+  const namingForm = naming && (
+    <form className="row" onSubmit={saveMix}>
+      <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
+      <button className="primary" disabled={!name.trim()} aria-busy={savingCopy || undefined}>{savingCopy ? 'Saving…' : 'Save copy'}</button>
+      <button type="button" onClick={() => setNaming(false)}>Cancel</button>
+    </form>
+  );
+  const exportPanel = exporting && <ExportPanel mix={mix} mixName={mixName} inDraft={inDraft} guard={guard} setMixData={setMixData} names={status.moves} onClose={() => setExporting(false)} />;
+
+  if (layout !== 'classic') {
+    return (
+      <TransitionsWorkedOutLive.Provider value={!analysisAvailable}>
+        <main className="page mix pe-page" id="main" ref={page}>
+          <PhoneEditor
+            layout={layout} mix={mix} keys={keys} mixName={mixName} draftId={draftId} names={status.moves} guard={guard}
+            readiness={readiness} totalSeconds={total} playingIndex={playingIndex} player={player} playDraft={playDraft}
+            selectedSeam={selectedIndex} selectedSong={selectedSongIndex} seamInspector={seamInspector}
+            openSeam={(index) => { setHearNow(false); setInspectorTab('listen'); selectSeamAt(index); }}
+            openSong={(index) => { setGone(''); setHearNow(false); setSelected({ kind: 'song', key: keys[index], title: mix[index].title }); }}
+            close={() => setSelected(null)}
+            actions={rowActions} movingKey={movingKey} affected={dropPreview?.seams ?? null}
+            primary={inDraft
+              ? <Action className="primary" working="Starting…" run={() => playDraft?.(draftId)}><Icon name="play" /> Play this mix</Action>
+              : <button className="primary" onClick={() => void player.playFrom(0)}><Icon name="play" /> Play from the top</button>}
+            more={actions} undo={undoAction}
+            switcher={analysisAvailable ? <MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} /> : null}
+            problem={problem} clearProblem={() => setProblem('')} refreshMix={refreshMix}
+            adding={adding} setAdding={setAdding} adder={adder} waveformOf={props.waveformOf}
+            below={<>{renameForm}{namingForm}{gone && <p className="notice" role="status">{gone}</p>}{exportPanel}</>}
+          />
+          {deleteConfirmation}
+          {clearConfirmation}
+        </main>
+      </TransitionsWorkedOutLive.Provider>
+    );
+  }
+
   return (
     <TransitionsWorkedOutLive.Provider value={!analysisAvailable}>
     <main className="page mix" id="main" ref={page}>
@@ -824,16 +868,10 @@ function MixView(props: ViewProps) {
       {renameForm}
       {deleteConfirmation}
       {clearConfirmation}
-      {naming && (
-        <form className="row" onSubmit={saveMix}>
-          <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
-          <button className="primary" disabled={!name.trim()} aria-busy={savingCopy || undefined}>{savingCopy ? 'Saving…' : 'Save copy'}</button>
-          <button type="button" onClick={() => setNaming(false)}>Cancel</button>
-        </form>
-      )}
+      {namingForm}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {gone && <p className="notice" role="status">{gone}</p>}
-      {exporting && <ExportPanel mix={mix} mixName={mixName} inDraft={inDraft} guard={guard} setMixData={setMixData} names={status.moves} onClose={() => setExporting(false)} />}
+      {exportPanel}
 
       {mode === 'story' && (
         <EditorStory

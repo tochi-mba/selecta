@@ -89,6 +89,8 @@ CAPABILITY_ONLY = {
 SELF_ONLY = {
     ("POST", "/api/onboarding/complete"),
     ("POST", "/api/account/sign-out-everywhere"),
+    # a log line and a count about the caller's own page; reads no workspace
+    ("POST", "/api/account/problem-report"),
     ("DELETE", "/api/account"),
     # ADR-0453 S1: emails REX Technologies sales from the signed-in person; reads no workspace.
     ("POST", "/api/business/pilot-interest"),
@@ -359,6 +361,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/account"): None,
     ("GET", "/api/account/labs"): None,
     ("PUT", "/api/account/labs/{flag_id}"): {"enabled": False},
+    ("PUT", "/api/account/workspace-name"): {"name": "Tenant check"},
     ("GET", "/api/account/labs/local-first"): None,
     ("POST", "/api/account/labs/local-first/leave"): None,
     ("GET", "/api/account/export"): None,
@@ -388,6 +391,8 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/lucy-cloud/commits"): {"token": "tenant", "idempotency_key": "tenant"},
     ("GET", "/api/lucy-cloud/commits/{key}"): None,
     ("GET", "/api/lucy-cloud/memory"): None,
+    ("POST", "/api/lucy-cloud/messages/{message}/rating"): {"rating": "up"},
+    ("GET", "/api/lucy-cloud/conversations/{conversation}/messages"): None,
     ("PUT", "/api/account/lucy"): {
         "enabled": True,
         "phases": {"chat": True},
@@ -664,6 +669,7 @@ def world(tmp_path, monkeypatch):
                 "revision": new_id(),
                 "proposal": new_id(),
                 "key": new_id(),
+                "message": new_id(),
             },
             "derived": derived,
             "alice_keys": {original_key(alice_ws, asset_id), derived, f"s/{session_id}/object"},

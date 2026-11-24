@@ -252,7 +252,7 @@ def save_session(conn: Connection, session: Session) -> None:
 
 def session_payload(session: Session, now: float | None = None) -> dict[str, Any]:
     """The session as every device sees it on its event stream. A zone session also names its
-    zone and carries the zone's shared volume; a personal one looks exactly as before.
+    zone; every session carries its mix level (`volume`, ADR-0475 G1).
 
     `fence` and `state_confidence` are the ADR-0461 truth: which ownership regime commands
     must be fenced to, and whether the lease backs what's shown ("fresh") or lapsed
@@ -283,9 +283,10 @@ def session_payload(session: Session, now: float | None = None) -> dict[str, Any
         payload["track"] = (
             session.programme[playing].to_json() if 0 <= playing < len(session.programme) else None
         )
+    # ADR-0475 G1: every session carries its mix level (null until someone sets one)
+    payload["volume"] = session.volume
     if session.zone_id is not None:
         payload["zone_id"] = session.zone_id
-        payload["volume"] = session.volume
         payload["hand_back_to_device_id"] = session.hand_back_to_device_id
     return payload
 

@@ -86,6 +86,7 @@ export const lucy = {
   },
   stop: (id: string) => change<{ stopped: boolean }>('POST', `/lucy/conversations/${at(id)}/stop`, {}),
   retry: (id: string, turn: string) => change<TurnAccepted>('POST', `/lucy/conversations/${at(id)}/retry`, { turn }),
+  older: (id: string, before: number) => get<{ messages: import('./types').Message[]; more: boolean }>(`/lucy/conversations/${at(id)}/messages?before=${before}`),
   events: (id: string, after: number) => get<EventsPage>(`/lucy/conversations/${at(id)}/events.json?after=${after}`),
 
   revision: (id: string) => get<Revision>(`/lucy/revisions/${at(id)}`),
@@ -103,6 +104,8 @@ export const lucy = {
   commit: (body: { token: string; idempotency_key: string; confirm_play?: boolean }) => change<Commit>('POST', '/lucy/commits', body),
   commitResult: (key: string) => get<Commit>(`/lucy/commits/${at(key)}`),
 
+  /** Cloud (ADR-0476): was this answer useful? Kept for Lucy's evaluation. */
+  rate: (message: string, rating: 'up' | 'down') => change<{ rating: string }>('POST', `/lucy/messages/${at(message)}/rating`, { rating }),
   decide: (id: string, decision: 'allow' | 'deny') => change<Permission>('POST', `/lucy/permissions/${at(id)}`, { decision }),
 
   memory: () => get<Memory>('/lucy/memory'),

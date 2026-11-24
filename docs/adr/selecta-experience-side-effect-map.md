@@ -22,6 +22,9 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.persist.asked` | local | `web/src/cloud/persistence.ts` | That the one storage-persistence ask after the first import has been made, so no browser re-asks on every import | Cloud storage card |
 | `selecta.` | local | `web/src/cloud/deviceData.ts` | A clearing prefix, not a key: Clear everything in this browser removes every `selecta.`-prefixed entry | Cloud device data |
 | `selecta.prefs` | local | `web/src/state/prefs.ts` | Theme, motion, density, rail and library layout choices | Shared foundation |
+| `selecta.notices.hidden` | local | `web/src/cloud/BillingStanding.tsx` | Numbers standing for the billing notices dismissed in this browser (one-way fingerprints, at most 20), so a dismissed notice stays hidden and a new one shows (`billing.standing`) | Cloud billing |
+| `selecta.reloadedForUpdate` | session | `web/src/ui/staleBuild.tsx` | That this tab already reloaded once for a new build, so a page that still will not open offers support instead of a reload loop | Shared foundation |
+| `selecta.workspaceNameOffered` | local | `web/src/cloud/WorkspaceNameOffer.tsx` | That the one offer to rename the starting "Personal" workspace was answered or dismissed in this browser | Cloud account |
 | `selecta.sound` | local | `web/src/player.ts` | Volume and mute | Listen |
 | `selecta-now` | local | `web/src/lib.ts` | Where playback was, so a reload resumes without a surprise | Listen |
 | `selecta.listen` | local | `web/src/views/Now.tsx` | Listen display choices (spectrum shape and the like) | Listen |
@@ -202,6 +205,8 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/account/labs/local-first/feedback` | Records the member's Labs feedback as a `labs.local_first.feedback` audit event |
 | `POST /api/onboarding/complete` | Marks Cloud onboarding done |
 | `POST /api/account/sign-out-everywhere` | Revokes every session |
+| `POST /api/account/problem-report` | One log line with the reference a broken page showed, and a count by kind; nothing stored |
+| `PUT /api/account/workspace-name` | Renames the personal workspace (owner only); offered once on Workspace (`account.workspace_name`) |
 | `DELETE /api/account` | Hides the account and queues its deletion |
 | `POST /api/webhooks/workos` | Stores and acts on a WorkOS event once |
 | `POST /api/admin/session` | Starts a privileged admin session |
@@ -217,6 +222,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/lucy-cloud/proposals/{proposal}/current` | Makes an earlier proposal revision the current one; no mix changes |
 | `POST /api/lucy-cloud/approvals` | Checks a proposal can be saved and returns a short-lived approval; nothing is saved |
 | `POST /api/lucy-cloud/commits` | Saves an approved proposal as the next recipe revision (or a new recipe), once per idempotency key; Save and play also makes it the account's current mix and publishes `mix.current` |
+| `POST /api/lucy-cloud/messages/{message}/rating` | Keeps the person's thumbs up or down on one of Lucy's answers, for Lucy's evaluation; the latest press wins |
 | `POST /api/billing/checkout` | Opens a Stripe checkout |
 | `POST /api/billing/portal` | Opens the Stripe billing portal |
 | `POST /api/webhooks/stripe` | Applies a Stripe billing event |
