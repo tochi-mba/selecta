@@ -14,6 +14,7 @@ import { SearchField } from '../ui/primitives';
 import { BrowserLibraryEmpty, BrowserLibraryHead, BrowserLibraryMeta, BrowserLibraryToolbar, type LibraryBrowserChrome } from './LibraryBrowser';
 import { LibraryRow, LibraryRowActions } from './LibraryRow';
 import { hasEarlyLibrary, libraryUrl, takeEarlyLibrary } from './libraryPrefetch';
+import { batchLines, batchWords } from './libraryBatchWords';
 import { ViewProps } from './shared';
 import { SongDetails } from './SongDetails';
 
@@ -187,7 +188,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     // value other than 0 or 100 isn't flattened to 0. A server that doesn't report it gets the inverse.
     const before = new Map((done?.previous ?? []).map((entry) => [entry.id, entry.priority]));
     const restore = priority && changedSongs.every((song) => before.has(song.id));
-    notify(`Updated ${wanted.songs.length} precisely selected recordings.`, changedSongs.length ? async () => {
+    notify(batchWords(wanted.action, wanted.songs.length).done, changedSongs.length ? async () => {
       await post('/library/batch', restore
         ? { action: 'restore_priority', entries: changedSongs.map((song) => ({ id: song.id, expected: target, priority: before.get(song.id) })) }
         : { action: inverse, entries: changedSongs.map((song) => ({ id: song.id, expected: target })) });
@@ -772,17 +773,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       )}
       {tail}
       {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable} />}
-      {confirmBatch && <Dialog title="Apply batch Library action?" onClose={() => setConfirmBatch(null)}
+      {confirmBatch && <Dialog title={batchWords(confirmBatch.action, confirmBatch.songs.length).title} onClose={() => setConfirmBatch(null)}
         footer={<>
-          <button onClick={() => setConfirmBatch(null)}>Cancel - change nothing</button>
-          <Action className="primary" working="Updating selected recordings…" run={applyBatch}>Confirm {confirmBatch.songs.length} recordings</Action>
+          <button onClick={() => setConfirmBatch(null)}>Cancel</button>
+          <Action className="primary" working="Saving…" run={applyBatch}>{batchWords(confirmBatch.action, confirmBatch.songs.length).confirm}</Action>
         </>}>
-        <p>You are about to <b>{confirmBatch.action === 'never' ? 'exclude from future mixes' : confirmBatch.action === 'allow' ? 'allow in future mixes' : confirmBatch.action === 'prioritize' ? 'prioritize for analysis' : 'remove analysis priority from'}</b> precisely {confirmBatch.songs.length} recording{confirmBatch.songs.length === 1 ? '' : 's'}.</p>
-        <p className="hint">Only these exact song IDs will be changed. If any were changed in another tab or scan, the entire action is refused. Original audio and current mix are untouched.</p>
-        <ul className="batch-preview">{confirmBatch.songs.slice(0, 15).map((song) =>
-          <li key={song.id}>{song.title} - {song.artist} (ID {song.id}; priority {song.priority ? 'on' : 'off'}; excluded {song.never ? 'yes' : 'no'})</li>
-        )}</ul>
-        {confirmBatch.songs.length > 15 && <p>…and {confirmBatch.songs.length - 15} more selected recordings.</p>}
+        <p>{batchWords(confirmBatch.action, confirmBatch.songs.length).body}</p>
+        <ul className="batch-preview">{batchLines(confirmBatch.songs.slice(0, 15)).map(({ id, line }) => <li key={id}>{line}</li>)}</ul>
+        {confirmBatch.songs.length > 15 && <p>…and {confirmBatch.songs.length - 15} more.</p>}
       </Dialog>}
       {confirmStart && (
         <Dialog
