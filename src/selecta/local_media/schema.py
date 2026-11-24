@@ -32,6 +32,9 @@ local_songs = sa.Table(
     sa.Column("duration_s", sa.Float, nullable=True),
     sa.Column("codec", sa.String(32), nullable=True),
     sa.Column("sample_rate", sa.Integer, nullable=True),
+    # "Never play", for the whole account: a mix SelectaDJ builds never picks this song. It can
+    # still be added to a mix by hand.
+    sa.Column("never_play", sa.Boolean, nullable=False, server_default=sa.false()),
     # A different hash whose normalised title and artist match an earlier entry: marked as a
     # likely duplicate for the library page, never silently merged (ADR-0458 edge case).
     sa.Column("duplicate_of", sa.Integer, sa.ForeignKey("local_songs.id"), nullable=True),

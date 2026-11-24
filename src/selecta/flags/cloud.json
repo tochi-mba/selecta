@@ -223,6 +223,7 @@
       "routes": [
         "POST /api/local-media/songs",
         "GET /api/local-media/songs",
+        "POST /api/local-media/songs/never",
         "GET /api/local-media/songs/{song_id}",
         "DELETE /api/local-media/songs/{song_id}",
         "POST /api/local-media/availability",
