@@ -45,12 +45,13 @@ EXEMPT = re.compile(
 
 class Guarded(BaseModel):
     reason: str = Field(default="", max_length=2000)
-    version: str | None = Field(default=None, max_length=64)
+    version: str | int | None = Field(default=None)
     read_at: float | None = None
     confirm: str | None = Field(default=None, max_length=320)
 
     def intent(self) -> safety.Intent:
-        return safety.Intent(version=self.version, read_at=self.read_at, confirm=self.confirm)
+        return safety.Intent(version=str(self.version)[:64] if self.version else None,
+                             read_at=self.read_at, confirm=self.confirm)
 
 
 class NoteBody(Guarded):
@@ -217,7 +218,7 @@ def install_routes(app: FastAPI, *, engine: Engine,
     # --- search ------------------------------------------------------------------------------
 
     @app.get("/api/admin/lookup")
-    def admin_lookup(request: Request, claims: SignedIn, q: str = Query(min_length=1,
+    def admin_lookup(request: Request, claims: SignedIn, q: str = Query(default="",
                                                                         max_length=200)):
         return run(request, claims, lambda conn, actor: console_reads.lookup(conn, actor, q))
 
