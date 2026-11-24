@@ -277,6 +277,17 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     setMessage(why);
   }, [speaker]);
 
+  /** The sound could not start here. The session is told it stopped (so no device reads
+   * "Playing on" over silence while the lease runs out), and this device becomes a remote. */
+  const couldNotStart = useCallback((session: SessionState, why: string) => {
+    if (deviceId && speaking.current) {
+      void api('/playback/heartbeat', {
+        method: 'POST', body: JSON.stringify({ device_id: deviceId, song_index: session.song_index, offset_ms: Math.max(0, Math.round(session.offset_ms)), state: 'stopped', seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }), output_status: 'interrupted' }),
+      }, workspaceId).catch(() => undefined);
+    }
+    becomeRemote(why, 0);
+  }, [api, becomeRemote, deviceId, workspaceId]);
+
   const startSpeaking = useCallback(async (session: SessionState) => {
     if (!speaker) return;
     speaking.current = true;
@@ -292,10 +303,10 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     } catch (problem) {
       // it could not make sound: stop holding the lease, or every other device would read
       // "Playing on this device" over silence
-      becomeRemote('This device couldn’t start playing.', 0);
+      couldNotStart(session, 'This device couldn’t start playing.');
       throw problem;
     }
-  }, [becomeRemote, speaker]);
+  }, [couldNotStart, speaker]);
 
   /** Follow a session this device is the speaker of: play, pause, skip and seek from remotes. */
   const follow = useCallback(async (session: SessionState) => {
@@ -310,10 +321,17 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
     const moved = !here || here.song_index !== session.song_index || Math.abs(here.offset_ms - target) > 2500;
-    if (moved) await speaker.start(session.song_index, target, session.state === 'playing');
-    else if (session.state === 'paused' && speaker.active()) speaker.pause();
+    if (moved) {
+      try {
+        await speaker.start(session.song_index, target, session.state === 'playing');
+      } catch {
+        // a skip or seek from another device that this one could not play: say so, stop here
+        // truthfully, and leave the music to a device that can
+        couldNotStart({ ...session, offset_ms: target }, 'This device couldn’t play that song, so playback stopped here.');
+      }
+    } else if (session.state === 'paused' && speaker.active()) speaker.pause();
     else if (session.state === 'playing' && !speaker.active()) speaker.resume();
-  }, [speaker, remoteControl]);
+  }, [couldNotStart, speaker, remoteControl]);
 
   // Once a missed-lease safeguard silences the device, reconnect under the server's
   // session lock. If someone else took over, stay silent; otherwise resume from the
