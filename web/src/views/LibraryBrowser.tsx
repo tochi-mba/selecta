@@ -29,7 +29,8 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
     <header className="page-header">
       <div className="page-header-text">
         <h1 className="display small">Library</h1>
-        <p className="page-lead">Your songs, and which of them can play on this device.</p>
+        {/* I83: with another device holding music, the Library is the whole account's */}
+        <p className="page-lead">{holder ? 'Your songs, and where each one plays.' : 'Your songs, and which of them can play on this device.'}</p>
         <p className="lw-stats">
           {total !== null && <span><b>{total}</b> {songs === 1 ? 'song' : 'songs'}</span>}
           {holder && <span data-testid="library-holder">{songs !== undefined && holder.songs >= songs ? <>All on <b>{holder.name}</b></> : <><b>{holder.songs.toLocaleString()}</b> on {holder.name}</>}</span>}

@@ -143,6 +143,14 @@ The one function: `whereToPlay(situation)` in `web/src/devices/whereToPlay.ts` (
 
 Two tabs of one browser share one device id and both could take the speaker's part: reproduced with two pages in one browser (40 of 40 samples with both tabs producing sound). Now a Web Lock (`devices/audioTab.ts`, `selecta-audio:{workspace}`) decides which tab makes the sound. A press in another tab asks the holder over a BroadcastChannel to stop; it stops, then lets go, and only then does the new tab start. A reloaded or asked tab starts only if no tab holds the lock. Every other tab of the speaker says "Playing in another tab." with "Play in this tab instead". Asks to play from another device are answered by one tab (a second lock, `selecta-house:`). Without Web Locks a tab plays as before. Two different browsers or profiles are two devices, kept to one speaker by the server.
 
+### R13. Playing Library songs from a remote (section I)
+
+Walked first (2026-11-25, a phone with no music while the laptop played): the Library listed the whole account with "On Edge on Windows" and a long second line, and offered no way to play any of it: Start a mix needed the song on the phone, and Add to current mix never appeared in the browser at all (it needed a measured tempo).
+
+Built: a song an open device holds is ready on a remote, with one plain line, "Plays on Laptop" (I83), and the Library's lead says "Your songs, and where each one plays." Start a mix, Add to current mix and Play next appear on its row; songs ready for a browser mix can be added by hand on any device. With another device playing, Add and Play next put the song into that device's programme (next, or at the end) with the same signed press a request uses, and Start a mix builds the mix and offers it to the speaker ("Your new mix is the current mix. Laptop is still playing the last one." with Play on Laptop now and Later), with no "Replace and play?" (I84). Proved (`ctl8.js`, 360x740): the phone added a laptop song and the laptop's programme went from 12 to 13; Start a mix from a row showed the offer.
+
+Not built yet (to-do items): a song only on another open device offering "Play on {device}" or "Move the music there?" (I85; today the add is refused with "{Speaker} can't play this"), mixed selections (I88), song details on a remote (I90), opening from the cached catalogue (I92).
+
 ### R12. One account per browser profile, and every tab agrees
 
 What happened before (reproduced 2026-11-25, two tabs of one browser): signing out in tab 2 stopped tab 1's music within a second (the app unmounted when its session ended), but tab 1 said "You were signed out. This session was ended, for example by 'Sign out everywhere' or a password reset", which is not what happened; nothing asked first; the device stayed signed in on the server.
