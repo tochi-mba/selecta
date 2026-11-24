@@ -86,14 +86,14 @@ const STAGE_WORDS: Record<FingerprintLine['tonal'], string> = {
 export function lineWords(line: FingerprintLine): string {
   const hash = line.hashHow === 'memo' ? 'hash: recognised (memo hit, 0 bytes read)' : `hash: computed in ${line.hashMs} ms (${kb(line.bytesRead)} read)`;
   const duration = line.duration === 'reused' ? 'duration: reused' : line.duration === 'measured' ? 'duration: measured' : 'duration: unknown';
-  const registered = line.registered === 'new' ? 'registered: new' : line.registered === 'known' ? 'registered: already in this library' : line.registered === 'failed' ? 'registered: failed' : 'registered: waiting';
+  const registered = line.registered === 'new' ? 'registered: in this library' : line.registered === 'known' ? 'registered: as a copy of a song already in this library' : line.registered === 'failed' ? 'registered: failed' : 'registered: waiting';
   return `${line.name} ${line.hash} · ${hash} · tags: read in ${line.tagsMs} ms · ${duration} · tonal profile: ${STAGE_WORDS[line.tonal]} · waveform: ${STAGE_WORDS[line.waveform]} · ${registered}`;
 }
 
 export function totalsWords(totals: FingerprintTotals): string {
   const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
   return `${totals.files} files · ${totals.reused} recognised · ${totals.computed} hashed · ${kb(totals.bytesRead)} read · ${kb(totals.bytesSkipped)} not read · ${seconds(totals.spentMs)} spent · about ${seconds(totals.savedMs)} saved`
-    + ` · registered ${totals.registeredNew} new, ${totals.registeredKnown} already in this library${totals.registeredFailed ? `, ${totals.registeredFailed} failed` : ''}`
+    + ` · registered ${totals.registeredNew}${totals.registeredKnown ? `, ${totals.registeredKnown} as a copy of a song already in this library` : ''}${totals.registeredFailed ? `, ${totals.registeredFailed} failed` : ''}`
     + (totals.sampleChecked ? ` · sample check ${totals.sampleChecked - totals.sampleMismatched}/${totals.sampleChecked} matched` : '')
     + (totals.kept ? '' : ' · this browser keeps nothing between visits, so nothing can be reused next time');
 }
