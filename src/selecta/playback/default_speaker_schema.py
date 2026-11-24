@@ -16,7 +16,10 @@ playback_default_speakers = sa.Table(
     "playback_default_speakers",
     metadata,
     sa.Column("workspace_id", Id, nullable=False),
-    sa.Column("device_id", Id, nullable=False),
+    # a device row removed takes the default with it, by the database itself (ADR-0475 C18)
+    sa.Column(
+        "device_id", Id, sa.ForeignKey("devices.id", ondelete="CASCADE"), nullable=False
+    ),
     sa.Column("set_at", Epoch, nullable=False),
     sa.PrimaryKeyConstraint("workspace_id"),
 )

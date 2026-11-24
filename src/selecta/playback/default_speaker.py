@@ -30,11 +30,14 @@ from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 from selecta.playback.default_speaker_schema import playback_default_speakers
 from selecta.playback.schema import devices, playback_sessions
+from selecta.work import outbox
 
 # The same window the holdings route uses for "online" (local_media/api.py).
 ONLINE_WITHIN_SECONDS = 30.0
 # A speaker whose lease lapsed less than this long ago is reconnecting, not gone.
 RECONNECTING_FOR_SECONDS = 300.0
+# Published on the workspace event stream when the default changes.
+TOPIC = "devices.default_speaker"
 
 
 def read(conn: Connection, workspace_id: str) -> str | None:
@@ -139,11 +142,19 @@ def install_routes(
         with transaction(engine, found.workspace.id) as conn:
             if body.device_id is not None:
                 owner = conn.execute(
-                    sa.select(devices.c.user_id)
+                    sa.select(devices.c.user_id, devices.c.signed_out_at)
                     .where(devices.c.workspace_id == found.workspace.id)
                     .where(devices.c.id == body.device_id)
-                    .where(devices.c.signed_out_at.is_(None))
                 ).first()
+                if owner is not None and owner.user_id == found.user.id and owner.signed_out_at:
+                    # the person's own device, signed out: a clear refusal, not "not found"
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "code": "device_signed_out",
+                            "message": "That device is signed out. Sign in on it first.",
+                        },
+                    )
                 if owner is None or owner.user_id != found.user.id:
                     raise HTTPException(
                         status_code=404,
@@ -152,7 +163,14 @@ def install_routes(
                             "message": "That device isn't signed in here.",
                         },
                     )
-            return {"default_speaker_id": choose(conn, found.workspace.id, body.device_id)}
+            before = read(conn, found.workspace.id)
+            chosen = choose(conn, found.workspace.id, body.device_id)
+            # every open device of the person hears the change (ADR-0475 C19)
+            if before != chosen:
+                outbox.emit(
+                    conn, TOPIC, found.workspace.id, {"default_speaker_id": chosen}, db_now(conn)
+                )
+            return {"default_speaker_id": chosen}
 
 
 __all__ = ["RoomSpeaker", "choose", "forget", "install_routes", "read", "room_speaker"]
