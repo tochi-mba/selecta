@@ -194,6 +194,10 @@ def install(app: FastAPI, on: Callable[[], bool] | None = None,
                  kept.wait(strict_key, strict) if strict and strict_key else 0.0]
         waits.append(kept.take(ip_key, IP))
         if max(waits) > 0:
+            from selecta.observability import metrics
+
+            names = ["account", strict.name if strict else "strict", "ip"]
+            metrics.add("selecta_rate_limited_total", bucket=names[waits.index(max(waits))])
             return refused(max(waits))
         response = await call_next(request)
         if response.status_code != 401:
