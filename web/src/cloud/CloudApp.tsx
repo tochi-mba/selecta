@@ -20,7 +20,7 @@ import { SettingsLayout, settingsPlaces } from './AccountLayout';
 import { AccountPage, AccountStrip } from './AccountPage';
 export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
-import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
+import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, statusWords, Page, pageShown, planName } from './api';
 import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
@@ -193,7 +193,7 @@ export function CloudApp() {
       // An account-level refusal replaces the whole app with a plain explanation.
       const accountState = blockedCode(code);
       if (accountState) setBlocked(accountState);
-      throw new CloudError(refusalMessage(code) ?? messageOf(payload, `Request failed (${response.status}).`), response.status, code, payload);
+      throw new CloudError(refusalMessage(code) ?? messageOf(payload, statusWords(response.status)), response.status, code, payload);
     }
     return payload as T;
   }, [getAccessToken]);

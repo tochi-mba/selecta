@@ -221,6 +221,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/lucy-cloud/proposals/{proposal}/current` | Makes an earlier proposal revision the current one; no mix changes |
 | `POST /api/lucy-cloud/approvals` | Checks a proposal can be saved and returns a short-lived approval; nothing is saved |
 | `POST /api/lucy-cloud/commits` | Saves an approved proposal as the next recipe revision (or a new recipe), once per idempotency key; Save and play also makes it the account's current mix and publishes `mix.current` |
+| `POST /api/lucy-cloud/messages/{message}/rating` | Keeps the person's thumbs up or down on one of Lucy's answers, for Lucy's evaluation; the latest press wins |
 | `POST /api/billing/checkout` | Opens a Stripe checkout |
 | `POST /api/billing/portal` | Opens the Stripe billing portal |
 | `POST /api/webhooks/stripe` | Applies a Stripe billing event |
