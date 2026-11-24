@@ -601,19 +601,19 @@ test('LX-0344-02 LX-0344-05 LX-0351-06 columns line up with their labels, target
   await page.getByRole('button', { name: 'Comfortable' }).click();
 });
 
-test('LX-0347-04 the confirmation lists each same-titled recording by ID with its flags, and a change elsewhere refuses the whole batch', async ({ page, request }) => {
+test('LX-0347-04 the confirmation tells same-titled recordings apart, and a change elsewhere refuses the whole batch', async ({ page, request }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await openLibrary(page, '/library?q=Same%20Name');
   await rows(page).filter({ hasText: 'Hal Greene' }).getByRole('checkbox').check();
   await rows(page).filter({ hasText: 'Iris Vale' }).getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Prioritize selected' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Apply batch Library action?' });
-  await expect(dialog.getByText('Same Name - Hal Greene (ID 10; priority off; excluded no)')).toBeVisible();
-  await expect(dialog.getByText('Same Name - Iris Vale (ID 11; priority off; excluded no)')).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: 'Prioritize 2 songs?' });
+  await expect(dialog.getByText('Same Name, Hal Greene', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Same Name, Iris Vale', { exact: true })).toBeVisible();
   // another tab prioritises recording 11 while this dialog is open
   await request.post('/api/songs/11/priority', { params: { priority: '100' } });
   try {
-    await dialog.getByRole('button', { name: 'Confirm 2 recordings' }).click();
+    await dialog.getByRole('button', { name: 'Prioritize 2 songs' }).click();
     await expect(page.getByText(/changed since selection/)).toBeVisible();
     const after = (await (await request.get('/api/library', { params: { q: 'Same Name', state: 'all' } })).json()).songs;
     expect(after.map((song: { id: number; priority: boolean }) => [song.id, song.priority]).sort()).toEqual([[10, false], [11, true]]);

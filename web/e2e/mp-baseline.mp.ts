@@ -418,10 +418,10 @@ test("dialog 'fx.overlay.library_batch'", async ({ page, request }) => {
   await settle(page);
   await page.getByRole('button', { name: 'Select up to 200 loaded songs' }).click();
   await page.getByRole('button', { name: 'Prioritize selected' }).or(page.getByRole('button', { name: 'Never play selected' })).first().click();
-  const dialog = page.getByRole('dialog', { name: 'Apply batch Library action?' });
+  const dialog = page.getByRole('dialog', { name: /^(Prioritize|Never play) \d+ songs?\?$/ });
   await expect(dialog).toBeVisible();
   await sweep(page, 'fx.overlay.library_batch', 'overlay.library_batch');
-  await dialog.getByRole('button', { name: 'Cancel - change nothing' }).click();
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
 });
 
 test("folder dialogs 'fx.overlay.folder_stop' and 'fx.overlay.folder_relink'", async ({ page }) => {
