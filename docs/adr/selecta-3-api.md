@@ -68,6 +68,7 @@ Added to the inventory on 2026-11-10. `web/src/s3-0071-api-inventory.test.ts` fa
 | `POST /requests/consider` | The current order and playhead | The server re-reads the request list | Safe: it only re-plans waiting requests |
 | `POST /folders/relink` | Old and new folder, with the preview's token | 409 if the preview no longer matches | Refused the same way |
 | `POST /folders/stop-watching` | Folder path | | Safe: the folder is simply not watched, and no file is touched |
+| `DELETE /local-media/songs/{id}` | The extra copy's catalogue id (a song's versions, ADR-0469 amendment 2) | 404 if the id is not in the library | Safe: a second press answers `already_deleted`; the file itself is never touched, and the other versions regroup |
 
 ## Fields that may be missing
 

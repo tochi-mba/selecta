@@ -232,4 +232,4 @@
 .admin-role-card p { margin: 0; }
 .admin-headline { font-size: var(--text-lg); }
 .admin-nav { height: calc(100vh - var(--space-5)); max-height: none; }
-@media (max-width: 720px) { .admin-nav { height: auto; } }
+@media (max-width: 768px) { .admin-nav { height: auto; } }
