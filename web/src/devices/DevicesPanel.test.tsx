@@ -44,7 +44,8 @@ describe('devices panel', () => {
   it('pauses its reads while the tab is hidden', async () => {
     mount();
     await settle();
-    const reads = () => calls.filter((call) => call.method === 'GET').length;
+    // one read of the devices list per look (the holdings read beside it is counted apart)
+    const reads = () => calls.filter((call) => call.method === 'GET' && call.path.startsWith('/devices')).length;
     const before = reads();
     const hidden = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
     await act(async () => { await vi.advanceTimersByTimeAsync(45_000); });
@@ -72,5 +73,26 @@ describe('busy labels (L3)', () => {
     expect(devicesSource).toContain('`Signing out${ELLIPSIS}`');
     expect(playingSource).toContain('`Moving${ELLIPSIS}`');
     expect(roomSource).toContain('`Pairing${ELLIPSIS}`');
+  });
+});
+
+describe('the default speaker (ADR-0475)', () => {
+  it('marks the default, offers it only for a device with music, and sends the choice', async () => {
+    let chosen: string | null = 'd1';
+    const sent: unknown[] = [];
+    const api = (async (path: string, init: RequestInit = {}) => {
+      if (path === '/devices/default-speaker') { sent.push(JSON.parse(String(init.body))); chosen = (sent.at(-1) as { device_id: string | null }).device_id; return { default_speaker_id: chosen }; }
+      if (path.startsWith('/devices')) return { devices: [device('d1', 'Laptop', NOW - 10), device('d2', 'Phone', NOW - 10), device('d3', 'Tablet', NOW - 10)], limit: 10, default_speaker_id: chosen };
+      if (path === '/local-media/holdings') return { devices: [{ device_id: 'd1', songs: 0 }, { device_id: 'd2', songs: 4 }, { device_id: 'd3', songs: 0 }] };
+      return {};
+    }) as Api;
+    render(<><DevicesPanel api={api} workspaceId="ws-1" /><Toaster /></>);
+    await settle();
+    // the default whose music was removed stays the default, and says so
+    expect(screen.getByTestId('default-speaker')).toHaveTextContent('Default speaker, no music connected');
+    expect(screen.queryByRole('button', { name: 'Make Tablet the default speaker' })).toBeNull();
+    await act(async () => { screen.getByRole('button', { name: 'Make Phone the default speaker' }).click(); await vi.advanceTimersByTimeAsync(0); });
+    expect(sent).toEqual([{ device_id: 'd2' }]);
+    expect(screen.getByText('Phone is your default speaker. Used the next time nothing is playing.')).toBeInTheDocument();
   });
 });
