@@ -216,4 +216,9 @@
 .shell[data-mode='cloud'] .shell-banners > .asked-to-play { border-color: var(--edge-selected); }
 .shell[data-mode='cloud'] .shell-banners > .asked-to-play > button { min-height: var(--control-height); }
 .shell[data-mode='cloud'] .shell-banners > .asked-to-play > button + button { margin-inline-start: 0; }
-.remote-card > .remote-elsewhere { display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); min-height: var(--control-height); }
+/* ADR-0475 R1: every way to start the music from the device in hand */
+.remote-ways { display: grid; gap: var(--space-2); min-width: 0; }
+.remote-ways ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.remote-ways li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); min-height: var(--control-height); padding: var(--space-2) 0; border-bottom: var(--separator) solid var(--edge-decorative); min-width: 0; }
+.remote-ways li button { flex: none; display: inline-flex; align-items: center; gap: var(--icon-gap); min-height: var(--control-height); white-space: nowrap; }
+.remote-refusal { margin: 0; padding-inline-start: var(--space-2); border-inline-start: var(--marker) solid var(--status-warning); color: var(--text); font: var(--type-meta); }

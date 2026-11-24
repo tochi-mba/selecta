@@ -101,7 +101,8 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
   let roomsAt = 0;
   let roomsVersion = -1;
   // the last request this browser put in the mix, so its Undo can take exactly that back out
-  let lastJoin: { order: string; at: number } | null = null;
+  // (`room`: the room request it settled, so Undo can put that back to waiting as well)
+  let lastJoin: { order: string; at: number; room?: string } | null = null;
   // the same for a request put into another device's programme: what the programme was before
   let lastSent: { order: string; before: number[]; index: number } | null = null;
   // room requests this device has just sent to the speaker: hidden here until the speaker's own
@@ -272,7 +273,7 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
       headers: { 'content-type': 'application/json', 'x-mix-order': order },
       body: JSON.stringify({ song_id: asked.song_id, position: at }),
     });
-    lastJoin = { order: changed.mix.map((item) => item.song_id).join(','), at };
+    lastJoin = { order: changed.mix.map((item) => item.song_id).join(','), at, room: asked.room_request_id };
     // it is in the mix now; a room that isn't told this time is told on the next look (settle)
     await finish(id, 'played').catch(() => undefined);
     return changed;
@@ -314,7 +315,16 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     // only the request this browser just added; any other undo is the mix family's to answer
     if (!last || expected !== last.order) return undefined;
     lastJoin = null;
-    return send<MixData>(`/mix/songs/${last.at}`, { method: 'DELETE', headers: { 'x-mix-order': last.order } });
+    return send<MixData>(`/mix/songs/${last.at}`, { method: 'DELETE', headers: { 'x-mix-order': last.order } }).then(async (mix) => {
+      // The song is out of the mix again, so a guest's request for it is waiting again: without
+      // this the room went on telling the guest it had played, and the host could not add it.
+      // A room that can't be told now keeps the request as played; the mix is still right.
+      if (last.room) {
+        await cloud(`/room-requests/${encodeURIComponent(last.room)}/waiting`, { method: 'POST' }).catch(() => undefined);
+        roomChanged();
+      }
+      return mix;
+    });
   };
 
   return {

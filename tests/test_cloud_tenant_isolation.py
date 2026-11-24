@@ -450,6 +450,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/room-requests"): None,
     ("POST", "/api/room-requests/{request_id}/played"): None,
     ("POST", "/api/room-requests/{request_id}/dismiss"): None,
+    ("POST", "/api/room-requests/{request_id}/waiting"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/approve"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/remove"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/ban"): None,

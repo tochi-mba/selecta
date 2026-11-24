@@ -40,7 +40,7 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { bestHolder, HolderContext, musicHolder, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
+import { HolderContext, musicHolder, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { ControllerListen } from '../devices/ControllerListen';
 import { soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
@@ -577,9 +577,30 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const resetAsk = playOn.reset;
   const speakerHereNow = remote?.view.speaker === 'elsewhere';
   useEffect(() => { if (speakerHereNow) resetAsk(); }, [speakerHereNow, resetAsk]);
-  // the speaker is away: another of this person's devices that is open and holds music can take over
-  const otherHolder = remote && remote.view.speaker === 'offline' && holdings.devices
-    ? bestHolder(holdings.devices.filter((device) => device.device_id !== playback.view?.speaker_device_id), playback.device?.id ?? null) : null;
+  // the speaker is away, or a press found nobody playing: every way on from this device (R1)
+  const speakerId = playback.view?.speaker_device_id ?? null;
+  const [hereSongs, setHereSongs] = useState(0);
+  useEffect(() => {
+    if (!remoteProgramme || !followsHere) { setHereSongs(0); return undefined; }
+    let live = true;
+    const ids = remoteProgramme.split(',').map(Number);
+    void sources.here?.().then((held) => { if (live) setHereSongs(ids.filter((id) => held.get(id) === 'here').length); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [remoteProgramme, followsHere, sources]);
+  const playWays = remote && holdings.devices ? {
+    devices: holdings.devices.filter((device) => device.device_id !== speakerId && device.device_id !== playback.device?.id),
+    asking: playOn.state,
+    onPlayOn: (device: { device_id: string; name: string }) => void playOn.ask(device, recipes.current() ?? null),
+    hereSongs,
+    // this device plays the programme from where it is: its mix becomes that order, then it takes over
+    onPlayHere: () => {
+      const at = remote.session.song_index;
+      const offset = remote.positionMs() / 1000;
+      setMixData({ ...data, mix: remoteMix });
+      void shellPlayer.playFrom(at, offset);
+    },
+    now: playback.serverNow(),
+  } : null;
   const askedBanner = askedToPlay && (
     <p className="asked-to-play" role="alert" data-testid="asked-to-play">
       {askedToPlay.asker_name} asked to play here. Press Play to allow sound from this tab.
@@ -741,10 +762,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         )}{localExport}</>;
       case 'listen':
         // something is playing on another device and this one does not hold that mix: the remote
-        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} elsewhere={otherHolder ? { device: otherHolder.name, asking: playOn.state, onPlay: () => void playOn.ask(otherHolder, recipes.current() ?? null) } : null} />;
-        // nothing is playing and this device holds no music: the one thing to do is play on a
-        // device that does (ADR-0475 R1, R2), never a Play button that cannot work here
-        if (on('devices.remote_control') && !followsHere && status && holdings.devices && holdings.devices.some((device) => device.songs > 0 && device.device_id !== playback.device?.id)) {
+        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} />;
+        // nothing is playing (no speaker at all) and this device holds no music, but the person
+        // has another device: play on one that has music (ADR-0475 R1, R2), or say which is
+        // missing; never a Play button that cannot work here
+        if (on('devices.remote_control') && !followsHere && status && holdings.devices && holdings.devices.some((device) => device.device_id !== playback.device?.id)) {
           return (
             <ControllerListen
               mixName={data.mix.length ? data.name : newest?.name ?? ''} mixSongs={data.mix.length || (newest?.songs ?? 0)} devices={holdings.devices} thisDeviceId={playback.device?.id ?? null}

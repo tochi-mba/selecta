@@ -11,6 +11,9 @@ reads that queue and says what became of each request:
   as played and the next accepted request is handed over.
 - `POST /api/room-requests/{request_id}/dismiss`: the host let it go; the guest sees "The host
   passed on this one".
+- `POST /api/room-requests/{request_id}/waiting`: the host took the song back out of the mix
+  (Undo straight after adding it); the request is accepted and waiting again, so the guest is
+  not told a song played that never did.
 
 Only songs and room names are returned, never guest names: the host's request list doesn't
 show who asked.
@@ -36,7 +39,14 @@ from selecta.rooms.requesting import Outcome
 from selecta.rooms.schema import room_requests
 from selecta.rooms.schema import rooms as rooms_table
 from selecta.rooms.service import Rooms
-from selecta.rooms.store import WAITING, RequestStatus, RoomStatus, load_room, set_request
+from selecta.rooms.store import (
+    WAITING,
+    RequestStatus,
+    RoomStatus,
+    load_room,
+    passes_unique,
+    set_request,
+)
 
 WAITING_SHOWN = 100
 
@@ -174,6 +184,46 @@ def install_routes(
                 rooms().record_outcome(workspace_id, row["song_request_id"], Outcome.PLAYED)
             except RoomError as error:
                 raise refusal(error) from error
+        return {"requests": waiting(workspace_id)}
+
+    @app.post("/api/room-requests/{request_id}/waiting")
+    def waiting_again(
+        request_id: str, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
+    ) -> dict[str, Any]:
+        """Undo of `played`: only a played browser request of a room that is still open goes
+        back to accepted. Anything else (already waiting, let go, the room closed) is left as
+        it is, so saying it twice or late is harmless."""
+        workspace_id = workspace(request, claims)
+        browser_request(workspace_id, request_id)  # 404 unless it is this workspace's own
+        service = rooms()
+        try:
+            with transaction(engine, workspace_id) as conn:
+                row = (
+                    conn.execute(
+                        sa.select(room_requests.c.room_id, room_requests.c.status)
+                        .where(
+                            room_requests.c.workspace_id == workspace_id,
+                            room_requests.c.id == request_id,
+                        )
+                        .with_for_update()
+                    )
+                    .mappings()
+                    .one()
+                )
+                room = load_room(conn, workspace_id, row["room_id"], lock=True)
+                if room.live and row["status"] == RequestStatus.PLAYED.value:
+                    # the song may have been asked for again since: then that request is the
+                    # one waiting, and this one stays as it is
+                    back = passes_unique(
+                        conn,
+                        sa.update(room_requests)
+                        .where(room_requests.c.id == request_id)
+                        .values(status=RequestStatus.ACCEPTED.value, resolved_at=None),
+                    )
+                    if back:
+                        service.publish(conn, room, "room.request", {"request_id": request_id})
+        except RoomError as error:
+            raise refusal(error) from error
         return {"requests": waiting(workspace_id)}
 
     @app.post("/api/room-requests/{request_id}/dismiss")
