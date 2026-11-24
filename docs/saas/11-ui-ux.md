@@ -80,6 +80,31 @@ In the local-first shell (`devices.remote_control`) a device's Listen, Library a
 
 empty · loading · ready · partially ready · updating · failed · retrying · offline · recovering · over quota · plan changed mid-session · session expired · another tab/device active · feature turned off mid-session · plan-locked feature; at 1440 and 375 px, light and dark, keyboard only, screen reader, reduced motion, 400% zoom, long names, 20,000-song libraries.
 
+### 11.6 Defaults
+
+What a new account, device or room starts with (the table of every setting is in
+`docs/engineering/product-audit.md`, section K).
+
+- **One source per default.** Each default is one named constant on the side that owns the
+  setting (`DEFAULT_PREFS` in `web/src/state/prefs.ts`, `DEFAULT_PLAN` in `Billing.tsx`). A missing
+  value reads as the default, so a new setting needs no backfill.
+- **Only choices are stored.** A setting the person never changed is not written down, so a
+  better default later reaches them; a value they chose is never rewritten.
+- **Scope on purpose.** About the person (default speaker, never play, mix and Lucy preferences,
+  email preferences, time zone): on the account, on every device. About the screen or hardware
+  (theme, motion, volume, visualiser, layout, keep-awake): on the device.
+- **Follow the system.** Theme follows the OS until chosen; motion follows OS reduced motion,
+  otherwise Subtle; language, dates and numbers follow the browser; the time zone comes from the
+  browser at sign-up and stays on the account.
+- **Safe, quiet, private.** Volume starts comfortable; guest-facing options start cautious (the
+  host approves requests, nicknames are generated); no marketing email unless asked; checkout
+  consent boxes are never ticked; nothing is shared or public unless the person makes it so.
+- **Nothing that costs more.** The plan picker starts on the cheaper plan, billed monthly, and the
+  button names the plan and its price.
+- **Visible and reversible.** Each setting shows its value; a settings section whose values differ
+  from the defaults offers "Reset to defaults", and its confirmation lists what changes.
+- **Flags.** A feature that is off adds no default and no settings row.
+
 ---
 
 [← 10-audio-engine-in-cloud.md](10-audio-engine-in-cloud.md) · [Contents](README.md#chapters) · [11a-devices-and-rooms.md →](11a-devices-and-rooms.md)

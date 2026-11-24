@@ -115,9 +115,9 @@ export class Section extends Component<{ name: string; children: ReactNode; whol
     const { name, whole } = this.props;
     const reference = this.state.reference;
     return (
-      <main className="page section-failed" id="main" role="alert">
+      <main className="page section-failed" id="main">
         <h1 className="display small">{whole ? 'SelectaDJ stopped working.' : `${name} stopped working.`}</h1>
-        <p className="lede">{whole
+        <p className="lede" role="alert">{whole
           ? 'Your music, mixes and account are safe. Try again, or reload the page.'
           : 'Your music, mixes and anything playing are fine. This page just needs to start again.'}</p>
         <div className="section-failed-actions">

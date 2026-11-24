@@ -619,7 +619,7 @@ export function CloudApp() {
       </Suspense>
     );
   }
-  if (!user) return <Welcome problem={signInProblem} onSignIn={startSignIn} onSignUp={() => signUp()} />;
+  if (!user) return <Welcome problem={signInProblem} onSignIn={startSignIn} onSignUp={() => signUp({ state: { returnTo: `${window.location.pathname}${window.location.search}` } })} />;
   if (signInAgain) return <SignInAgain onSignIn={signInAgainPressed} />;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} email={user.email} onSignOut={() => restartSignIn()} />;
   if (!user.emailVerified) return <VerifyEmail email={user.email} onSignOut={() => signOut({ returnTo: window.location.origin })} />;

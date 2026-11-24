@@ -173,9 +173,12 @@ def _seed(settings: DevSettings, env: dict[str, str], ops) -> None:
     code = (
         "from selecta.devstack.seed import seed; "
         "from selecta.devstack.settings import DevSettings; "
+        "from selecta.devstack.seed import staff_accounts; "
         "result = seed(DevSettings.from_environment()); "
-        "print('[SEED] Ready:', result['email'], "
-        "'songs added:', result['songs_added'], flush=True)"
+        "staff = staff_accounts(DevSettings.from_environment()); "
+        "print('[SEED] Ready:', result['email'], '(staff Owner)', "
+        "'songs added:', result['songs_added'], flush=True); "
+        "print('[SEED] Staff role sign-ins:', ', '.join(staff.values()), flush=True)"
     )
     ops.say("SEED", "Preparing demo identity, Premium workspace and synthetic music...")
     try:

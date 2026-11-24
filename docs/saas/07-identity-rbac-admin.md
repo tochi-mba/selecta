@@ -28,6 +28,8 @@
 
 Two-person approval is the right design, but at launch you're the only operator. Substitute: **delayed execution with alerts**. Dangerous actions (changing tier weights by more than 50%, assigning Owner, bulk deletion, disabling an emergency control, mass entitlement overrides) are queued for 15 minutes, email and push-notify you, can be cancelled, then execute with a re-check. When a second staff member exists, switch the same actions to two-person approval. A break-glass Owner credential lives offline on a hardware key.
 
+**The first Owner.** Nobody holds the permission to propose the first Owner, so `selecta admin bootstrap-owner --email ... --reason ...` makes it from an operator's shell (Render's shell on the API service, against `SELECTA_DATABASE_URL`). It refuses once any active Owner exists, refuses unknown, suspended or deleted accounts, takes a PostgreSQL advisory lock so two shells can't race, prints only the user id, audits `role.assigned` and `admin.owner.bootstrap`, and raises a `security.owner_bootstrapped` alert (`selecta/admin/bootstrap.py`, `tests/test_admin_bootstrap_owner.py`). The local stack's `dev.cmd cloud --seed` makes `dev@selectadj.test` the Owner when the local database has none, puts it in a local staff organization (`org_selectadj_local_staff`) so its sign-ins can enter the console, and adds one sign-in per role, `staff-<role>@selectadj.test` plus `staff-none@...` with no role. The full console design is [07b](07b-admin-console.md).
+
 ### 7.5 Admin console v1 (six pages, before beta)
 
 Built as a lazy-loaded `/admin` area of the same React app, hidden unless the session has staff roles, with every action enforced server-side. It reuses the design system and adds a data table and simple charts.

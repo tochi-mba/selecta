@@ -15,6 +15,9 @@ import { BillingStandingNotice } from './BillingStanding';
 
 type Interval = 'month' | 'year';
 type Paid = 'standard' | 'premium';
+/** What the plan picker starts on: the cheaper plan, billed monthly. */
+export const DEFAULT_PLAN: Paid = 'standard';
+export const DEFAULT_INTERVAL: Interval = 'month';
 
 const PLANS: { id: Paid; name: string; storage: string; month: string; year: string; about: string; featured?: boolean }[] = [
   { id: 'standard', name: 'Standard', storage: '50 GB', month: '£6.99 / month', year: '£59 / year', about: 'More room for your working library.' },
@@ -181,9 +184,11 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   onPortal: () => void;
   blocked?: boolean;
 }) {
-  const [interval, setInterval] = useState<Interval>('month');
+  const [interval, setInterval] = useState<Interval>(DEFAULT_INTERVAL);
   const [consent, setConsent] = useState<Consent>(NO_CONSENT);
-  const [chosen, setChosen] = useState<Paid>('premium');
+  // Defaults (docs/saas/11-ui-ux.md): the cheaper plan and Monthly start chosen, so continuing
+  // without looking never costs more than meant; the button and hint name the plan and price.
+  const [chosen, setChosen] = useState<Paid>(DEFAULT_PLAN);
   // which of the two portal buttons was pressed, so only that one says it is opening
   const [pressed, setPressed] = useState<'change' | 'invoices' | null>(null);
   const paid = account.entitlement.plan !== 'free';

@@ -58,6 +58,9 @@ describe('preferences across a rollback', () => {
     localStorage.setItem(KEY, '[1,2]');
     reloadPrefs();
     setPrefs({ theme: 'dark' });
-    expect(JSON.parse(localStorage.getItem(KEY)!)).toMatchObject({ theme: 'dark', motion: 'subtle' });
+    // only the choice is stored; the rest reads as the defaults (product audit, area K)
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ theme: 'dark' });
+    reloadPrefs();
+    expect(prefs()).toMatchObject({ theme: 'dark', motion: 'subtle' });
   });
 });

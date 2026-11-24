@@ -79,6 +79,10 @@ CREATE TABLE IF NOT EXISTS mail (
     link TEXT,
     created_at REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS staff (
+    person_id TEXT PRIMARY KEY,
+    created_at REAL NOT NULL
+);
 """
 
 
@@ -256,6 +260,19 @@ class IdentityStore:
                 "UPDATE people SET email_verified = 1, updated_at = ? WHERE id = ?",
                 (time.time(), person_id),
             )
+
+    def mark_staff(self, person_id: str) -> None:
+        """Put this person in the local staff organization, so their sign-ins carry it."""
+        with self._db() as db:
+            db.execute(
+                "INSERT OR IGNORE INTO staff (person_id, created_at) VALUES (?, ?)",
+                (person_id, time.time()),
+            )
+
+    def is_staff(self, person_id: str) -> bool:
+        with self._db() as db:
+            row = db.execute("SELECT 1 FROM staff WHERE person_id = ?", (person_id,)).fetchone()
+        return row is not None
 
     def set_password(self, person_id: str, password: str) -> None:
         with self._db() as db:
