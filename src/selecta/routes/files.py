@@ -14,6 +14,8 @@ from pathlib import Path
 from fastapi import Request, Response
 from fastapi.responses import FileResponse
 
+from selecta import longpaths
+
 REVALIDATE = "no-cache"
 
 
@@ -37,6 +39,7 @@ def audio_file(
     """The file, or a 304 when the browser's copy is still this exact file. One stat serves both
     the tag and the response, rather than one each. A caller whose file is made from another one
     (r10: a decoded song) passes `etag` to tag it by its source instead of by the copy."""
+    path = Path(longpaths.os_path(path))  # past Windows' old path limit (selecta.longpaths)
     facts = path.stat()
     headers = {"Cache-Control": REVALIDATE}
     if etag is not None:
