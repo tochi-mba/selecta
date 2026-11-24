@@ -108,7 +108,8 @@ and where that default is written.
 | Anonymous calls | `uv run python scripts/audit/anonymous.py` | 2 Cloud routes answer with no sign-in (status, ready); 12 answer 503 "not configured" in a bare test app (webhooks, guest and display pages) |
 | Background work | `src/selecta/maintain.py` builds every task; each runs under the maintenance leader's lease (`fence`) | 25 tasks (actions, reservations, Lucy runs, flag previews, admin metrics, usage reconcile, derived eviction, Stripe events and reconcile, storage and account deletions, rooms, export expiry, DMCA, emails, zone clock and autoplan, entitlement, alerts, horizon, business billing and licensing) |
 | Migrations | `src/selecta/persistence/migrations/versions` | 46 |
-| Screens | not generated yet | Not reviewed |
+| Screens | `uv run python scripts/audit/screens.py` (loading, empty, error, offline, flag-off signs per file) | 141 screen files; with no sign in their own file: loading 73, empty 88, error 57, offline 100, flag-off 100. Most are parts drawn inside a page that handles the state; every page that fetches was checked to have a failure state (only admin pages use `useLoad` with `Failure`, which does) |
+| Request bodies | `uv run python scripts/audit/body_limits.py` | 32 body fields with no length limit of their own (most in business, admin, Lucy and rooms); every body is now capped at 8 MB before it is read |
 
 ### Findings so far
 
@@ -121,7 +122,15 @@ and where that default is written.
 | Jobs | Each maintenance task runs under one leader with a fence | Handled before (`maintain.py`); interruption and double-run per task not reviewed |
 | Docs | `docs/saas/16-edge-cases.md` claimed "sign-in from a new device (notify)" with nothing behind it | Fixed now: one email per new device with Sign out everywhere (`notify/device_mail.py`, flag `account.new_device_email`; `tests/test_cloud_new_device_email.py`), e59ea95a |
 | Dead code | `library_soft_cap_songs` was read nowhere, though `02-plans-and-economics.md:22,70` promises it as a soft cap | Fixed now: counted in `/api/account` (`usage/meters.py library_size`) and said calmly on Plan & billing past the cap; nothing is refused (`tests/test_cloud_library_soft_cap.py`), e646a972 |
-| Local app, business, admin, dependencies, observability, consistency | | Not reviewed |
+| Routes, abuse | No request body size limit: a field with no limit of its own (a venue address, a flag change's params) could carry megabytes | Fixed now: `ratelimit.BodyLimit` refuses over 8 MB with 413 and plain words (checked by hand against the app: 9 MB answered 413, `/api/status` 200), 8f7725ff |
+| Errors | A refusal with no words of its own showed "Request failed (403)." or the code as words ("billing not permitted") | Fixed now: `cloud/api.ts statusWords` says it by status; `messageOf` never shows a code, 5bd40071 |
+| Account | Download my data said "Everything SelectaDJ keeps" but left out saved mixes, the current mix and the library's song details ("Cloud mix revisions are not yet stored") | Fixed now: `mixes.json` holds every saved mix revision and the current mix, `library.json` the song details (never the files), 5edb981e; `tests/test_cloud_account_export.py` |
+| Local storage | Three IndexedDB handles (offline catalogue, outbox, tonal profiles) never let go when another tab opened a newer version, so after a deploy the new tab's open was blocked and it ran without storage | Fixed now: each closes and reopens on `versionchange`, dd30659b. Not checked in a browser |
+| Secrets | `git grep` for live keys, private keys and tokens: only documented fake examples in tests; `tests/test_no_committed_secrets.py` guards it; no source maps in the build | Handled before |
+| Dependencies | `pnpm audit` (all and production): no known vulnerabilities. Python: no auditor is installed; `pip-audit` would need downloading | Handled before (web); Python not reviewed |
+| Dead and risky code | No TODO, FIXME or TEMP notes in `src` or `web/src`; skips are conditional only (no PostgreSQL, no S3, platform limits), guarded by `tests/test_no_quarantined_tests.py` | Handled before |
+| Tests | PostgreSQL-only tests (row-level security, append-only audit) run only in the nightly workflow (`.github/workflows/nightly.yml`), not on pull requests, so a new tenant table's policy is first checked overnight | Needs the owner: whether a PostgreSQL job should run on pull requests |
+| Local app, business and kiosk (weeks of running, midnight and daylight-saving hours), admin (audit, roles, last owner), observability, docs against reality, consistency of words | | Not reviewed |
 
 ## Handed to the other agents
 
