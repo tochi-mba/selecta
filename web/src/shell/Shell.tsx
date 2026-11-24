@@ -15,6 +15,7 @@ import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
 import { aboutOf, classicDestinations, describeRoute, destinationOf, destinationsFor, type MoreDestination, type ShellMode, type ShellRoute, workspaceTabs } from './manifest';
 import { PageLink } from './PageLink';
+import { supportHref } from '../support';
 
 export { PageLink };
 
@@ -563,6 +564,7 @@ export function Shell({
             {account && (
               <div className="more-account">
                 <p><span className="account-avatar" aria-hidden="true">{account.email.slice(0, 1).toUpperCase()}</span><span className="account-who"><b title={account.email}>{account.email}</b><span>{account.plan} plan</span></span></p>
+                <a className="more-help" href={supportHref('Help with SelectaDJ')}><Icon name="help" /> Help and support</a>
                 <button className="more-signout" onClick={account.onSignOut}><Icon name="signout" /> Sign out</button>
               </div>
             )}
@@ -689,6 +691,7 @@ function AccountMenu({ account, places, current }: { account: ShellAccount; plac
               <Icon name={MORE_ICONS[item.id]} size="toolbar" /> {item.label}
             </PageLink>
           ))}
+          <a role="menuitem" tabIndex={-1} href={supportHref('Help with SelectaDJ')} onClick={() => close(false)}><Icon name="help" size="toolbar" /> Help and support</a>
           <button role="menuitem" tabIndex={-1} className="nav-account-signout" onClick={() => { close(true); account.onSignOut(); }}><Icon name="signout" size="toolbar" /> Sign out</button>
         </div>
       )}

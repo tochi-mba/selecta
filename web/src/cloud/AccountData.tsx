@@ -8,6 +8,7 @@ import { showToast } from '../ui/toasts';
 import { Notice, SettingsCard, SettingsRow } from './AccountLayout';
 import { apiOrigin, bytes, CloudError, messageOf } from './api';
 import { useNeedsConnection } from './connection';
+import { SUPPORT_EMAIL } from '../support';
 
 // Download my data (docs/saas/11-ui-ux.md §11.1, ADR-0412): one ZIP with the original files,
 // settings.json and mixes.json. It is a download, so it keeps working while the account is over
@@ -157,7 +158,8 @@ export function AccountDanger({ busy, onSignOutEverywhere, onDelete }: {
         >
           <div id={deleteBody} className="confirm-dialog-body">
             <p>You are signed out on every device straight away, and your account, mixes and settings are hidden.</p>
-            <p>After 30 days they are erased for good. Until then, SelectaDJ support can bring your account back.</p>
+            <p>After 30 days they are erased for good. Until then, SelectaDJ support at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> can bring your account back.</p>
+            <p>A paid plan is cancelled straight away, with no refund for the rest of the period, and does not come back if the account is restored.</p>
             <p className="hint">Want a copy first? Keep your account, then use Download my data.</p>
           </div>
         </Dialog>

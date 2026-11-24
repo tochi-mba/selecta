@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '../support';
 // How the Cloud site talks to AuthKit, kept apart from the components so the rules are testable.
 //
 // - Development mode (refresh token in localStorage) is on for `vite dev`, and for a staging
@@ -72,7 +73,7 @@ export const BLOCKED_MESSAGES: Record<BlockedCode, { title: string; detail: stri
   },
   account_deleting: {
     title: 'This account is being deleted',
-    detail: 'It will be erased when the 30-day recovery window ends. To keep it, contact SelectaDJ support before then.',
+    detail: `It will be erased when the 30-day recovery window ends. To keep it, write to SelectaDJ support at ${SUPPORT_EMAIL} before then.`,
   },
   session_revoked: {
     title: 'You were signed out',
