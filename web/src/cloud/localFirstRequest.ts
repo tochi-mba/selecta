@@ -232,7 +232,31 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   const keep = sources.offline && sources.workspaceId ? { ...sources.offline, workspaceId: sources.workspaceId } : null;
   let keptCount = -1;
   let keptAt = 0;
+  // Staging walkthrough item 5: the first Library of a visit opens from this browser's last copy
+  // of the catalogue at once, and the server's list replaces it as soon as it has arrived (a big
+  // library is several reads). Only the first read of a visit; every later one is the server's.
+  let firstRead = true;
+  let arrived: CatalogueSong[] | null = null;
   const fromServer = async (): Promise<CatalogueSong[]> => {
+    if (!keep) return readCatalogue(cloud);
+    if (arrived) { const list = arrived; arrived = null; return list; }
+    if (firstRead) {
+      firstRead = false;
+      const kept = await readCached<CatalogueSong[]>(keep.workspaceId, CATALOGUE_KEY).catch(() => null);
+      if (kept?.value?.length) {
+        void serverList().then((list) => {
+          arrived = list;
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event(CATALOGUE_CHANGED_EVENT));
+            window.dispatchEvent(new Event('selecta:library-changed'));
+          }
+        }).catch(() => undefined);
+        return kept.value;
+      }
+    }
+    return serverList();
+  };
+  const serverList = async (): Promise<CatalogueSong[]> => {
     if (!keep) return readCatalogue(cloud);
     try {
       const list = await readCatalogue(cloud);
