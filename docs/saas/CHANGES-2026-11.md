@@ -72,6 +72,16 @@ ends with everything that needs you.*
 - Songs in folders deeper than Windows' old 260-character limit are now found, read and played
   (#135). Nothing already in the library changes.
 
+## Looking like SelectaDJ everywhere
+
+- A brand kit (`web/public/brand/`): the mark, the wordmark and every image size Stripe, WorkOS,
+  Google and link previews ask for.
+- Stripe Checkout speaks in our words and the person's language; the customer portal is set up
+  from code; our emails, error pages, link previews (including room links, which show an
+  invitation and nothing private) are in the brand (#136, #137).
+- What each service lets us change, and the checklist to apply in each dashboard:
+  [branded-surfaces.md](../engineering/branded-surfaces.md).
+
 ## Staff console
 
 - The admin console's pages (Overview, Jobs and workers, Accounts and billing, AI routing, Security,
@@ -99,8 +109,11 @@ Money, legal, and settings only you can change:
    visitor address), and add Cloudflare rate rules on top.
 7. **Security policy**: after a week with no reports, switch the report-only policy to enforced.
 8. **CI**: make `pip-audit` a required check once it is green.
-9. **Restore drill**: run the staging backup restore, which also proves a rollback.
-10. From the launch checklist ([launch-operator-checklist.md](launch-operator-checklist.md)),
+9. **Branded surfaces**: apply the dashboard checklist in `docs/engineering/branded-surfaces.md`;
+   the WorkOS custom domain costs $99 a month, Cloudflare custom error pages need a paid plan,
+   and a Stripe custom domain is optional and paid.
+10. **Restore drill**: run the staging backup restore, which also proves a rollback.
+11. From the launch checklist ([launch-operator-checklist.md](launch-operator-checklist.md)),
     still open: Sentry and Grafana setup, choosing Resend or Postmark, a status page, scheduling
     backups, the DMCA agent date, phone alerts, the model and lyrics licences (S-KEY, Demucs,
     LRCLIB), a UK music and IP lawyer, UK GDPR and DPIA work, the deploy credential broker, and

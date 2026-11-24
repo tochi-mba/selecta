@@ -114,7 +114,7 @@ type Item = { id: string; label: string; hint: string; run: () => void };
  * The command palette (Ctrl+K or Cmd+K): pages, playbooks and records by pasted id. It only ever
  * opens places; it never runs a change, so nothing can be done by accident from here.
  */
-export function Palette({ api, pages, onClose, onPlaybook }: { api: AdminFetch; pages: { id: AdminPage; label: string }[]; onClose: () => void; onPlaybook: (id: string) => void }) {
+export function Palette({ api, pages, onClose, onPlaybook, onLeave }: { api: AdminFetch; pages: { id: AdminPage; label: string }[]; onClose: () => void; onPlaybook: (id: string) => void; onLeave?: () => void }) {
   const [text, setText] = useState('');
   const [found, setFound] = useState<Item[]>([]);
   const [at, setAt] = useState(0);
@@ -123,7 +123,8 @@ export function Palette({ api, pages, onClose, onPlaybook }: { api: AdminFetch; 
   const base: Item[] = useMemo(() => [
     ...pages.map((p) => ({ id: `page-${p.id}`, label: `Go to ${p.label}`, hint: 'Page', run: () => go(adminPath(p.id)) })),
     ...PLAYBOOKS.map((p) => ({ id: `book-${p.id}`, label: `How do I: ${p.title.toLowerCase()}`, hint: 'Playbook', run: () => onPlaybook(p.id) })),
-  ], [pages, onPlaybook]);
+    ...(onLeave ? [{ id: 'leave', label: 'Leave the console (back to my workspace)', hint: 'Leave', run: onLeave }] : []),
+  ], [pages, onPlaybook, onLeave]);
   useEffect(() => {
     const q = text.trim();
     if (q.length < 4) { setFound([]); return; }

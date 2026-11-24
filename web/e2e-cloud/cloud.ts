@@ -32,12 +32,22 @@ export async function asStaff(page: Page, request: APIRequestContext, role = 'ow
 }
 
 /** Open the staff console from the Cloud site and enter an admin session; the console's menu. */
-export async function enterConsole(page: Page) {
-  await page.getByRole('button', { name: 'Staff console' }).click();
+export async function enterConsole(page: Page, { changes = true }: { changes?: boolean } = {}) {
+  await page.getByRole('button', { name: 'Staff console' }).or(page.getByRole('menuitem', { name: 'Staff console' })).first().click();
   await expect(page).toHaveURL(/\/admin$/);
-  await page.getByRole('button', { name: 'Enter console' }).click();
-  const nav = page.getByRole('navigation', { name: 'Admin pages' });
+  // The console enters by itself while the sign-in is fresh; otherwise it asks.
+  const nav = page.getByRole('navigation', { name: 'Console pages' });
+  const enter = page.getByRole('button', { name: 'Enter console' });
+  await expect(nav.or(enter)).toBeVisible();
+  if (await enter.isVisible()) await enter.click();
   await expect(nav).toBeVisible();
+  const skip = page.getByRole('region', { name: 'Welcome to the staff console' }).getByRole('button', { name: 'Skip' });
+  if (await skip.isVisible()) await skip.click();
+  // The console opens in view mode (doc 07b §7B.7); tests that change things press Make changes.
+  if (changes) {
+    await page.getByRole('button', { name: 'Make changes' }).click();
+    await expect(page.getByRole('button', { name: 'Stop making changes' })).toBeVisible();
+  }
   return nav;
 }
 

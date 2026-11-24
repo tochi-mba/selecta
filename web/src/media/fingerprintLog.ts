@@ -36,6 +36,10 @@ export type FingerprintTotals = {
   savedMs: number;
   sampleChecked: number;
   sampleMismatched: number;
+  /** Registration outcomes so far: new to this library, already in it, or refused. */
+  registeredNew: number;
+  registeredKnown: number;
+  registeredFailed: number;
   startedAt: number;
   finishedAt: number | null;
   /** False where this browser keeps nothing between visits (private browsing, storage refused). */
@@ -82,13 +86,14 @@ const STAGE_WORDS: Record<FingerprintLine['tonal'], string> = {
 export function lineWords(line: FingerprintLine): string {
   const hash = line.hashHow === 'memo' ? 'hash: recognised (memo hit, 0 bytes read)' : `hash: computed in ${line.hashMs} ms (${kb(line.bytesRead)} read)`;
   const duration = line.duration === 'reused' ? 'duration: reused' : line.duration === 'measured' ? 'duration: measured' : 'duration: unknown';
-  const registered = line.registered === 'new' ? 'registered: new' : line.registered === 'known' ? 'registered: already in this library' : line.registered === 'failed' ? 'registered: failed' : 'registered: waiting';
+  const registered = line.registered === 'new' ? 'registered: in this library' : line.registered === 'known' ? 'registered: as a copy of a song already in this library' : line.registered === 'failed' ? 'registered: failed' : 'registered: waiting';
   return `${line.name} ${line.hash} · ${hash} · tags: read in ${line.tagsMs} ms · ${duration} · tonal profile: ${STAGE_WORDS[line.tonal]} · waveform: ${STAGE_WORDS[line.waveform]} · ${registered}`;
 }
 
 export function totalsWords(totals: FingerprintTotals): string {
   const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
   return `${totals.files} files · ${totals.reused} recognised · ${totals.computed} hashed · ${kb(totals.bytesRead)} read · ${kb(totals.bytesSkipped)} not read · ${seconds(totals.spentMs)} spent · about ${seconds(totals.savedMs)} saved`
+    + ` · registered ${totals.registeredNew}${totals.registeredKnown ? `, ${totals.registeredKnown} as a copy of a song already in this library` : ''}${totals.registeredFailed ? `, ${totals.registeredFailed} failed` : ''}`
     + (totals.sampleChecked ? ` · sample check ${totals.sampleChecked - totals.sampleMismatched}/${totals.sampleChecked} matched` : '')
     + (totals.kept ? '' : ' · this browser keeps nothing between visits, so nothing can be reused next time');
 }
@@ -96,15 +101,28 @@ export function totalsWords(totals: FingerprintTotals): string {
 /** Begin a fresh log for this workspace's import. */
 export function beginFingerprintRun(workspaceId: string, kept: boolean): void {
   runs.set(workspaceId, {
-    totals: { files: 0, reused: 0, computed: 0, bytesRead: 0, bytesSkipped: 0, spentMs: 0, savedMs: 0, sampleChecked: 0, sampleMismatched: 0, startedAt: Date.now(), finishedAt: null, kept },
+    totals: { files: 0, reused: 0, computed: 0, bytesRead: 0, bytesSkipped: 0, spentMs: 0, savedMs: 0, sampleChecked: 0, sampleMismatched: 0, registeredNew: 0, registeredKnown: 0, registeredFailed: 0, startedAt: Date.now(), finishedAt: null, kept },
     lines: [],
   });
   say('import started', kept ? '' : '(nothing is kept in this browser between visits)');
   notify();
 }
 
+/** This browser's own hashing speed from its last import that read files, so the "saved"
+ * estimate of a run that read nothing is in this device's terms. A number, nothing else. */
+const RATE_KEY = 'selecta.fingerprint.bytesPerMs';
+
+function rememberedRate(): number {
+  try {
+    const kept = Number(localStorage.getItem(RATE_KEY));
+    return Number.isFinite(kept) && kept > 0 ? kept : DEFAULT_BYTES_PER_MS;
+  } catch {
+    return DEFAULT_BYTES_PER_MS;
+  }
+}
+
 function rateOf(totals: FingerprintTotals, computedMs: number): number {
-  return totals.computed && computedMs > 0 ? totals.bytesRead / computedMs : DEFAULT_BYTES_PER_MS;
+  return totals.computed && computedMs > 0 ? totals.bytesRead / computedMs : rememberedRate();
 }
 
 const hashMsByRun = new Map<string, number>();
@@ -139,6 +157,12 @@ export function logRegistered(workspaceId: string, sha: string, outcome: 'new' |
     const line = run.lines[index];
     if (line.hash === prefix && line.registered === 'pending') {
       line.registered = outcome;
+      if (outcome === 'new') run.totals.registeredNew += 1;
+      else if (outcome === 'known') run.totals.registeredKnown += 1;
+      else {
+        run.totals.registeredFailed += 1;
+        say(`${line.name} ${line.hash} · registered: failed`);
+      }
       notify();
       return;
     }
@@ -158,6 +182,10 @@ export function finishFingerprintRun(workspaceId: string): void {
   const run = runs.get(workspaceId);
   if (!run) return;
   run.totals.finishedAt = Date.now();
+  const hashMs = hashMsByRun.get(workspaceId) ?? 0;
+  if (run.totals.computed >= 3 && hashMs > 0) {
+    try { localStorage.setItem(RATE_KEY, String(run.totals.bytesRead / hashMs)); } catch { /* estimate from the default next time */ }
+  }
   say('import finished:', totalsWords(run.totals), `(${((run.totals.finishedAt - run.totals.startedAt) / 1000).toFixed(1)} s wall time)`);
   notify();
 }

@@ -7,7 +7,7 @@
 - **Priority / phase:** P1 / Phase 6. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
 - **Existing ADR owners:** ADR-0401, ADR-0414; their statuses are unchanged.
 - **Source touchpoints:** new `web/src/admin/`, `src/selecta/admin/`; `web/src/ui/` (data table, charts).
-- **Proposal chapter:** [docs/saas/07-identity-rbac-admin.md](../saas/07-identity-rbac-admin.md#75-admin-console-v1-six-pages-before-beta).
+- **Proposal chapter:** [docs/saas/07-identity-rbac-admin.md](../saas/07-identity-rbac-admin.md#75-the-admin-console).
 
 ## Context and evidence boundary
 
