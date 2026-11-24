@@ -69,6 +69,8 @@ export type AvailabilitySources = {
   /** ADR-0475: the device that is playing when it is not this one; null when this device is the
    * speaker or nothing is playing. Read each time, so it is always the newest session. */
   controller?: () => import('../devices/controller').ControllerLink | null;
+  /** ADR-0475 R4: which of the person's other devices hold a song; null until known. */
+  holders?: () => import('../devices/controller').WhereHeld | null;
   /** Whether this account has Rooms. False: a room's requests are never asked for (the server
    * answers 404 to an account without Rooms). Left out: asked, as before. */
   rooms?: boolean;
@@ -82,7 +84,8 @@ export type AvailabilitySources = {
     onServed?: (from: { cached: false } | { cached: true; at: number | null }) => void;
   };
 };
-export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number> };
+/** `elsewhere`: which other devices of the person hold a song (ADR-0475 R6), when known. */
+export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number>; elsewhere?: import('../devices/controller').WhereHeld | null };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
 /** One song's availability: this device first, then a hosted copy, then the member's other devices. */
@@ -135,6 +138,8 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
       if (state === 'all' || state === 'not_yet') return true;
       const where = availabilityOf(song, known);
       if (state === 'ready') return where === 'here' || where === 'hosted';
+      // R6: plays now, here or on another of the person's devices that is open
+      if (state === 'playable_now') return where === 'here' || where === 'hosted' || (known.elsewhere?.(song.id).online.length ?? 0) > 0;
       if (state === 'attention') return where === 'reauth' || where === 'reconnect' || where === 'nowhere';
       return state === 'missing' && where === 'nowhere';
     })
@@ -220,6 +225,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   const availability = async (list: CatalogueSong[]): Promise<Availability> => ({
     here: (await sources.here?.().catch(() => null)) ?? NO_AVAILABILITY.here,
     hosted: (await sources.hosted?.(list).catch(() => null)) ?? NO_AVAILABILITY.hosted,
+    elsewhere: sources.holders?.() ?? null,
   });
   const playable = async (): Promise<PlayableSong[]> => {
     const list = await songs();
@@ -241,7 +247,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   }) : null;
   // requests join the current recipe through the mix routes above, so they need the store too
   const requests = sources.recipes && sources.workspaceId
-    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, controller: sources.controller, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
+    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, controller: sources.controller, holders: sources.holders, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);

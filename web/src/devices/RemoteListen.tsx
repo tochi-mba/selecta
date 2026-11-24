@@ -5,6 +5,10 @@ import { OPTIMISTIC_MS, speakerOutput } from './PlayingBar';
 import { advancing, clock, soundWords, stateWords, upNext, whereWords } from './remoteNow';
 import type { Remote } from './useRemote';
 import { askWords, stillAsking, type AskState } from './playOn';
+import { bestHolder, notOn, type DeviceHolding } from './controller';
+import { holdingWords } from './ControllerListen';
+import { NO_SPEAKER_WORDS } from './usePlaybackDevice';
+import { countOf } from '../ui/format';
 import './devices.css';
 
 // Listen on a device that is not the speaker (flag `devices.remote_control`): what is playing on
@@ -28,15 +32,29 @@ function useRelease(send: (value: number) => void) {
   return { dragged, move, release };
 }
 
-/** ADR-0475: the speaker is away and another of the person's devices with music is open, so
- * the music can be started there. */
-export type PlayElsewhere = { device: string; asking: AskState; onPlay: () => void };
+/** ADR-0475 R1: the speaker is away, or a press found nobody playing, so the device in hand
+ * offers every way on from here: each open device of the person's with music, by R1, and this
+ * device itself when it holds songs of the programme. */
+export type PlayWays = {
+  devices: readonly DeviceHolding[];
+  asking: AskState;
+  onPlayOn: (device: DeviceHolding) => void;
+  /** Songs of the programme this device holds now; 0 offers no "Play here". */
+  hereSongs: number;
+  onPlayHere: () => void;
+  /** The server's time, for "last open". */
+  now: number;
+};
 
-export function RemoteListen({ remote, playableHere, elsewhere }: {
+export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs }: {
   remote: Remote;
   /** How many songs this device could play itself; none makes it a remote and nothing more. */
   playableHere: number;
-  elsewhere?: PlayElsewhere | null;
+  ways?: PlayWays | null;
+  /** What the last press was told when the session did not take it. */
+  refusal?: string;
+  /** R3: the songs the speaker reported it can open; null when it has not said. */
+  speakerSongs?: ReadonlySet<number> | null;
 }) {
   const { view, session, current } = remote;
   const nextId = useId();
@@ -95,12 +113,8 @@ export function RemoteListen({ remote, playableHere, elsewhere }: {
           </div>
           {state && <p className="remote-state" role="status" data-testid="remote-state">{state}</p>}
           {sound && <p className="remote-sound" role="status" data-testid="remote-sound">{sound}</p>}
-          {view.speaker === 'offline' && elsewhere && (
-            <>
-              <button type="button" className="remote-elsewhere" disabled={stillAsking(elsewhere.asking)} data-testid="play-on" onClick={elsewhere.onPlay}><Icon name="play" /> Play on {elsewhere.device}</button>
-              {elsewhere.asking && <p className="controller-asking" role="status" data-testid="play-on-status" data-phase={elsewhere.asking.phase}>{askWords(elsewhere.asking.phase, elsewhere.asking.device)}</p>}
-            </>
-          )}
+          {refusal && <p className="remote-refusal" role="alert" data-testid="remote-refusal">{refusal}</p>}
+          {ways && (view.speaker === 'offline' || refusal === NO_SPEAKER_WORDS) && <WaysOn ways={ways} total={session.programme.length} />}
           <div className="remote-seek">
             {duration !== null ? (
               <input
@@ -159,7 +173,7 @@ export function RemoteListen({ remote, playableHere, elsewhere }: {
                   <li key={entry.index}>
                     <button type="button" onClick={() => void remote.skipTo(entry.index)} title={`Play ${entry.title} now`}>
                       <span className="remote-next-place" aria-hidden="true">{entry.index + 1}</span>
-                      <span className="remote-next-words"><b dir="auto">{entry.title}</b>{entry.artist && <span dir="auto">{entry.artist}</span>}</span>
+                      <span className="remote-next-words"><b dir="auto">{entry.title}</b>{entry.artist && <span dir="auto">{entry.artist}</span>}{speakerSongs && !speakerSongs.has(entry.songId) && <span className="remote-next-missing" data-testid="not-on-speaker">{notOn(view.speaker_name ?? 'the speaker')}</span>}</span>
                     </button>
                   </li>
                 ))}
@@ -174,5 +188,37 @@ export function RemoteListen({ remote, playableHere, elsewhere }: {
         </div>
       </div>
     </main>
+  );
+}
+
+/** Each way to start the music from here: Play on each open device with music (the R1 best
+ * first), and Play here when this device holds songs of the programme. */
+function WaysOn({ ways, total }: { ways: PlayWays; total: number }) {
+  const best = bestHolder(ways.devices);
+  const open = ways.devices.filter((device) => device.online && device.songs > 0)
+    .sort((one, other) => (one === best ? -1 : other === best ? 1 : other.songs - one.songs));
+  const busy = stillAsking(ways.asking);
+  return (
+    <section className="remote-ways" aria-label="Play it somewhere else" data-testid="play-ways">
+      {open.length > 0 || ways.hereSongs > 0 ? (
+        <ul>
+          {open.map((device) => (
+            <li key={device.device_id}>
+              <span className="controller-device-words"><b dir="auto">{device.name}</b><span>{holdingWords(device, ways.now)}</span></span>
+              <button type="button" className={device === best ? 'primary' : undefined} disabled={busy} data-testid="play-on" onClick={() => ways.onPlayOn(device)}><Icon name="play" /> Play on {device.name}</button>
+            </li>
+          ))}
+          {ways.hereSongs > 0 && (
+            <li>
+              <span className="controller-device-words"><b>This device</b><span>{ways.hereSongs >= total ? `All ${countOf(total, 'song')}` : `${ways.hereSongs} of ${countOf(total, 'song')}`}</span></span>
+              <button type="button" className={open.length ? undefined : 'primary'} disabled={busy} data-testid="play-here" onClick={ways.onPlayHere}><Icon name="play" /> Play here</button>
+            </li>
+          )}
+        </ul>
+      ) : (
+        <p className="remote-state" role="status" data-testid="play-ways-none">None of your other devices with music is open right now. Open SelectaDJ on one of them.</p>
+      )}
+      {ways.asking && <p className="controller-asking" role="status" data-testid="play-on-status" data-phase={ways.asking.phase}>{askWords(ways.asking.phase, ways.asking.device)}</p>}
+    </section>
   );
 }

@@ -2,7 +2,7 @@ import { ApiError, type MixData, type Request } from '../api';
 import type { RequestRow } from '../views/Requests';
 import type { PlayableSong } from './localFirstMixes';
 import { askerOf, openRoomId } from '../rooms/useRoomSession';
-import { addedOnReturn, comingUp, notOnSpeaker, playsOn, programmeWithNext, speakerHolds, type ControllerLink } from '../devices/controller';
+import { addedOnReturn, comingUp, notHereWords, notOnSpeaker, playsOn, programmeWithNext, speakerHolds, type ControllerLink, type WhereHeld } from '../devices/controller';
 
 /** The requests route family of the local-first adapter (ADR-0462 "one adapter per route family"):
  * `/requests`, `/requests/consider`, `/requests/insert` and `/requests/{id}/add` as the shared
@@ -70,6 +70,11 @@ function save(workspaceId: string, saved: Saved) {
   try { window.localStorage.setItem(queueKey(workspaceId), JSON.stringify(saved)); } catch { /* kept for this visit only */ }
 }
 
+/** Nothing is playing and this device lacks the file: the R4 line, said about this device. */
+function hereWords(note: string): string {
+  return note.replace(/ This device can’t play it\.$/, ' Start the music there to add it.');
+}
+
 function refuse(message: string, code: string, status = 400): ApiError {
   return new ApiError(message, status, code, 'local-first:requests');
 }
@@ -86,11 +91,14 @@ export type RequestsFamily = {
 };
 
 /** `cloud` is the authenticated Cloud client; `send` is the adapted request, for the mix routes. */
-export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRooms, controller }: {
+export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRooms, controller, holders }: {
   cloud: Request;
   /** ADR-0475: the device that is playing, when it is not this one. Requests are then added to
    * its programme, and a row is judged by what that device can play, not this one. */
   controller?: () => ControllerLink | null;
+  /** ADR-0475 R4: which of the person's other devices hold a song, to say where it is when the
+   * device that would play it cannot. */
+  holders?: () => WhereHeld | null;
   workspaceId: string;
   /** False for an account without Rooms: its room list is empty and the server is never asked. */
   rooms?: boolean;
@@ -152,16 +160,22 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     saved.room = kept;
     if (changed) save(workspaceId, saved);
     const link = controller?.() ?? null;
+    const places = holders?.() ?? null;
     const row = (id: number, songId: number, from?: RoomRequest): RequestRow => {
       const song = all.find((one) => one.id === songId);
       // another device is playing: what matters is whether that device can play the song
       const there = link && song ? speakerHolds(link, songId) : false;
+      // R4: the device that would play it cannot, so say where the file is (or that it is nowhere)
+      const missing = song && (link ? !there : !song.playable) ? notHereWords(places ? places(songId) : null, link?.speakerName ?? 'This device') : null;
+      const note = link ? (there ? JOINS_BY_HAND : missing?.note ?? notOnSpeaker(link.speakerName)) : song?.playable ? JOINS_BY_HAND : missing && places ? hereWords(missing.note) : NOT_ON_THIS_DEVICE;
       return {
         id, song_id: songId, title: song?.title ?? null, artist: song?.artist ?? null, status: 'waiting',
         // a song no longer in the catalogue really has gone from the library
         available: song ? 1 : 0,
         stage: (link ? there : song?.playable) ? 'searching' : 'waiting',
-        browser_note: link ? (there ? JOINS_BY_HAND : notOnSpeaker(link.speakerName)) : song?.playable ? JOINS_BY_HAND : NOT_ON_THIS_DEVICE,
+        browser_note: note,
+        // R4 row five: connecting music here is the way on only when no device has the file
+        ...(missing && places ? { connect_here: missing.connectHere } : {}),
         ...(link ? { plays_on: link.speakerName, ...(there ? { where_note: link.online ? playsOn(link.speakerName) : addedOnReturn(link.speakerName) } : {}) } : {}),
         // a room request says who asked and in which room; the member's own says neither
         ...(from ? { room_name: from.room_name, asked_by: askerOf(from.id), room_request_id: from.id } : {}),
