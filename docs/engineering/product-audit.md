@@ -129,8 +129,12 @@ and where that default is written.
 | Secrets | `git grep` for live keys, private keys and tokens: only documented fake examples in tests; `tests/test_no_committed_secrets.py` guards it; no source maps in the build | Handled before |
 | Dependencies | `pnpm audit` (all and production): no known vulnerabilities. Python: no auditor is installed; `pip-audit` would need downloading | Handled before (web); Python not reviewed |
 | Dead and risky code | No TODO, FIXME or TEMP notes in `src` or `web/src`; skips are conditional only (no PostgreSQL, no S3, platform limits), guarded by `tests/test_no_quarantined_tests.py` | Handled before |
+| Routes, abuse | Per-IP limits trust `cf-connecting-ip` (`infra/render/render.yaml:84-86`); if the API can be reached without Cloudflare, a caller names their own address | Needs the owner: Cloudflare-only origin; written into `launch-operator-checklist.md` §9 |
+| Docs | `launch-operator-checklist.md` §9 said "The code sends no email itself today" | Fixed now: lists what SelectaDJ and Stripe each send and the two Stripe switches to turn off |
 | Tests | PostgreSQL-only tests (row-level security, append-only audit) run only in the nightly workflow (`.github/workflows/nightly.yml`), not on pull requests, so a new tenant table's policy is first checked overnight | Needs the owner: whether a PostgreSQL job should run on pull requests |
-| Local app, business and kiosk (weeks of running, midnight and daylight-saving hours), admin (audit, roles, last owner), observability, docs against reality, consistency of words | | Not reviewed |
+| Business hours | Overnight periods, the spring gap and the autumn repeat (fold) | `business/hours.py:9,158,187-195`; `tests/test_business_hours.py`, `test_business_zone_clock.py` | Handled before |
+| Admin | The last owner cannot be removed (`authz/errors.py LastOwner`) | Handled before; the rest of the admin pass is with the admin console agent |
+| Local app, kiosk left running for weeks, observability, docs against reality beyond the rows above, consistency of words | | Not reviewed |
 
 ## Handed to the other agents
 
