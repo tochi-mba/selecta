@@ -96,6 +96,8 @@ ends with everything that needs you.*
 
 ## What needs you
 
+Every item below is also in the to-do list ([docs/todo](../todo/README.md); `python scripts/todo.py list --who owner`), which stays current as items are done.
+
 Money, legal, and settings only you can change:
 
 1. **Support mailbox**: make `support@selectadj.app` real and read (`web/src/support.ts`).

@@ -118,6 +118,8 @@ def install_routes(
             answers = store.register_songs(
                 conn, workspace_id, [song.model_dump() for song in body.songs]
             )
+            # a re-registered file may carry new tags, which can change its song
+            versions.regroup_versions(conn, workspace_id)
         return {"songs": answers}
 
     @app.post("/api/local-media/songs/never")
@@ -161,13 +163,16 @@ def install_routes(
         after: int = Query(default=0, ge=0),
         limit: int = Query(default=50, ge=1, le=_MAX_PAGE_SIZE),
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_READ)
+        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        if not principal.can(WorkspaceAction.LIBRARY_READ):
+            raise HTTPException(status_code=403, detail={"code": "not_allowed"})
+        workspace_id = principal.workspace.id
         with transaction(engine, workspace_id) as conn:
-            if after == 0:
-                # Each full read starts by putting songs and their versions right (idempotent;
-                # writes only what changed): copies registered before lengths counted, and
-                # versions of a song since removed (ADR-0469 amendment 2).
-                versions.regroup_versions(conn, workspace_id)
+            if after == 0 and principal.can(WorkspaceAction.LIBRARY_WRITE):
+                # once per workspace per grouping rule: existing songs and their versions are
+                # put right on the first load after a deploy (ADR-0469 amendment 2); a viewer's
+                # read never writes
+                versions.ensure_regrouped(conn, workspace_id)
             songs, next_after = store.list_songs(conn, workspace_id, after=after, limit=limit)
             counts = store.availability_counts(conn, workspace_id, [s["id"] for s in songs])
         for song in songs:
