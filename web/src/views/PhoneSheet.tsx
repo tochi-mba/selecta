@@ -84,13 +84,16 @@ export function PhoneSheet(props: {
     const start = (event: PointerEvent) => {
       if (held || !event.isPrimary || (event.target as HTMLElement).closest('.overlay-close')) return;
       const on = event.currentTarget as HTMLElement;
+      // captured only once it really moves, so a tap stays a click on the grabber or the title
       held = { id: event.pointerId, y: event.clientY, at: event.timeStamp, moved: 0, on };
-      try { on.setPointerCapture?.(event.pointerId); } catch { /* a pointer the browser no longer tracks */ }
     };
     const move = (event: PointerEvent) => {
       if (!held || held.id !== event.pointerId) return;
       held.moved = event.clientY - held.y;
-      if (Math.abs(held.moved) > 4) panel.setAttribute('data-dragging', 'true');
+      if (Math.abs(held.moved) > 4 && !panel.hasAttribute('data-dragging')) {
+        panel.setAttribute('data-dragging', 'true');
+        try { held.on.setPointerCapture?.(event.pointerId); } catch { /* a pointer the browser no longer tracks */ }
+      }
       place(held.moved);
     };
     const stop = () => {

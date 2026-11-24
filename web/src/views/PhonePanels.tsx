@@ -171,7 +171,7 @@ export function SongPanel(props: {
   const facts = [item.artist, clock(item.duration), item.bpm ? `${Math.round(item.bpm)} BPM` : '', item.key ?? ''].filter(Boolean);
   return (
     <div className="pe-panel pe-song-panel">
-      <p className="pe-panel-song"><SongMotif songId={item.song_id} /><span><b dir="auto">{item.title}</b><span dir="auto">{facts.join(' · ')}</span></span></p>
+      <p className="pe-panel-song"><SongMotif songId={item.song_id} /><span dir="auto">{facts.join(' · ')}</span></p>
       <RequestTag item={item} />
       <p className="hint">Number {index + 1} of {total}{item.locked && flagOn('editor.locks') ? '. Locked: it stays here when the mix is rebuilt.' : '.'}</p>
       <div className="pe-list-actions" role="group" aria-label={`Actions for ${item.title}`}>

@@ -67,6 +67,7 @@
 .pe-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .pe-actions > * { min-height: var(--control-height); }
 .pe-actions > .primary { flex: 1 1 12rem; display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
+.pe-editor.is-panes .pe-actions > .primary { flex: 0 1 22rem; }
 .pe-more { display: inline-flex; align-items: center; gap: var(--icon-gap); }
 
 /* ---------- the mix strip ---------- */
@@ -203,6 +204,8 @@
   text-overflow: ellipsis;
 }
 .pe-editor.is-sheet .pe-song-open .song-motif { display: none; }
+.pe-song-open .song-motif, .pe-panel-song .song-motif { flex: none; width: var(--space-6); height: var(--space-6); }
+.pe-picture .song-motif { flex: none; width: var(--icon-size); height: var(--icon-size); }
 .pe-tag { font-weight: var(--weight-label); color: var(--playing); }
 .pe-song .request-tag { grid-column: 2; justify-self: start; margin-block-end: var(--space-2); }
 .pe-icon-button, .pe-handle {
@@ -259,7 +262,7 @@
 .pe-seam-open .status { white-space: normal; text-align: start; }
 .pe-seam-open:hover:not(:disabled) { border-color: var(--border); color: var(--text); }
 .pe-seam.is-open .pe-seam-open { border-color: var(--edge-selected); background: var(--surface-selected); color: var(--text); }
-.pe-seam-note { font: var(--type-caption); color: var(--selected); }
+.pe-seam-note { flex: none; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--selected); color: var(--accent-ink); font: var(--type-label); }
 .pe-chevron { margin-inline-start: auto; flex: none; transform: rotate(-90deg); }
 .pe-seam.is-open .pe-chevron { transform: rotate(-90deg); color: var(--selected); }
 
@@ -366,9 +369,7 @@
   color: var(--text-soft);
 }
 .pe-panel-song { display: flex; align-items: center; gap: var(--space-3); }
-.pe-panel-song > span { display: flex; flex-direction: column; gap: var(--space-hair); min-width: 0; }
-.pe-panel-song b { font: var(--type-song); overflow-wrap: anywhere; }
-.pe-panel-song span span { font: var(--type-meta); color: var(--text-soft); }
+.pe-panel-song > span { min-width: 0; font: var(--type-meta); color: var(--text-soft); }
 .pe-list-actions { display: flex; flex-direction: column; gap: var(--space-2); }
 .pe-list-actions > :is(button, a, label, form, .row) {
   display: flex;
@@ -429,7 +430,8 @@
   display: grid;
   place-items: center;
   width: var(--space-7);
-  min-height: var(--space-5);
+  min-height: var(--control-height);
+  margin-block-end: calc(-1 * var(--space-3));
   padding: 0;
   border: 0;
   background: none;

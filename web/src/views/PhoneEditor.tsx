@@ -1,5 +1,5 @@
-import { ReactNode, RefObject, useContext, useId, useRef, useState } from 'react';
-import type { MixItem } from '../api';
+import { ReactNode, RefObject, useContext, useId, useLayoutEffect, useRef, useState } from 'react';
+import { ApiError, type MixItem } from '../api';
 import { flagOn } from '../flags';
 import { length } from '../lib';
 import { MixReadiness } from '../state/readiness';
@@ -57,8 +57,22 @@ export type PhoneEditorProps = {
  * and whether it's saved, the mix as a strip, and the mix as a story of songs and the transitions
  * between them. On a phone an opened song or transition rises from the bottom; with room for two
  * panes it opens beside the list. Every write still goes through the editor's own actions. */
+/** Two panes need this much room in the page itself (Material's compact width); a tablet held upright
+ * beside the app's rail has less, so its opened song or transition rises in a sheet instead. */
+const PANES_FROM = 600;
+
 export function PhoneEditor(props: PhoneEditorProps) {
-  const { layout, mix, keys, mixName, draftId, names, guard, readiness, totalSeconds, playingIndex, player, playDraft,
+  const root = useRef<HTMLDivElement>(null);
+  const [roomy, setRoomy] = useState(true);
+  useLayoutEffect(() => {
+    const node = root.current;
+    if (!node || typeof ResizeObserver === 'undefined') return undefined;
+    const watch = new ResizeObserver(([entry]) => setRoomy(entry.contentRect.width >= PANES_FROM));
+    watch.observe(node);
+    return () => watch.disconnect();
+  }, []);
+  const layout = props.layout === 'panes' && !roomy ? 'sheet' : props.layout;
+  const { mix, keys, mixName, draftId, names, guard, readiness, totalSeconds, playingIndex, player, playDraft,
     selectedSeam, selectedSong, openSeam, openSong, seamInspector, actions, movingKey, affected,
     primary, more, switcher, undo, problem, clearProblem, refreshMix, adding, setAdding, adder, waveformOf, below } = props;
   const closePane = () => {
@@ -74,7 +88,8 @@ export function PhoneEditor(props: PhoneEditorProps) {
   const heading = useId();
   const list = useRef<HTMLOListElement>(null);
   const [sending, setSending] = useState(0);
-  const [failed, setFailed] = useState<{ words: string; retry: () => Promise<void> } | null>(null);
+  // refused: the server answered no (nothing changed, so the mix is still saved); failed: no answer
+  const [failed, setFailed] = useState<{ words: string; retry: (() => Promise<void>) | null } | null>(null);
   const [showMore, setShowMore] = useState(false);
 
   /** Every change made here: counted while it travels, so the header can say Saving, and kept if it
@@ -86,7 +101,8 @@ export function PhoneEditor(props: PhoneEditorProps) {
     try {
       await work();
     } catch (error) {
-      setFailed({ words: (error as Error).message, retry: () => send(work) });
+      const refused = error instanceof ApiError && error.status > 0 && error.status < 500;
+      setFailed({ words: (error as Error).message, retry: refused ? null : () => send(work) });
     } finally {
       setSending((count) => count - 1);
     }
@@ -100,7 +116,8 @@ export function PhoneEditor(props: PhoneEditorProps) {
     if (inDraft) void playDraft?.(draftId, mix[index]?.position ?? index);
     else void player.playFrom(mix[index]?.position ?? index, offset);
   };
-  const saveWords = sending > 0 || movingKey ? 'Saving…' : failed || problem ? 'Not saved' : inDraft ? 'Saved' : 'Saved, and playing as it is';
+  const notSaved = !!failed?.retry;
+  const saveWords = sending > 0 || movingKey ? 'Saving…' : notSaved ? 'Not saved' : inDraft ? 'Saved' : 'Saved, and playing as it is';
   const ready = !readiness.seams ? null : live ? null : readiness.allReady ? 'All transitions ready' : `${readiness.ready} of ${readiness.seams} transitions ready`;
 
   const seamItem = selectedSeam > 0 ? mix[selectedSeam] : null;
@@ -142,7 +159,7 @@ export function PhoneEditor(props: PhoneEditorProps) {
   ) : null;
 
   return (
-    <div className={`pe-editor is-${layout}`} data-editor-layout={layout}>
+    <div ref={root} className={`pe-editor is-${layout}`} data-editor-layout={layout}>
       <header className="pe-head">
         {switcher}
         <p className={`pe-scope ${inDraft ? 'is-draft' : 'is-current'}`}>
@@ -154,12 +171,12 @@ export function PhoneEditor(props: PhoneEditorProps) {
           <span>{mix.length} {mix.length === 1 ? 'song' : 'songs'}</span>
           <span>{length(totalSeconds)}</span>
           {ready && <span>{ready}</span>}
-          <span className={`pe-save ${failed || problem ? 'is-failed' : sending || movingKey ? 'is-saving' : ''}`} role="status">{saveWords}</span>
+          <span className={`pe-save ${notSaved ? 'is-failed' : sending || movingKey ? 'is-saving' : ''}`} role="status">{saveWords}</span>
         </p>
         {(failed || problem) && (
           <div className="pe-not-saved" role="alert">
             <p>{failed?.words ?? problem}</p>
-            {failed ? <Action run={failed.retry}>Try again</Action> : <button type="button" onClick={() => { clearProblem(); refreshMix(); }}>Show the mix as saved</button>}
+            {failed?.retry ? <Action run={failed.retry}>Try again</Action> : <button type="button" onClick={() => { setFailed(null); clearProblem(); refreshMix(); }}>OK</button>}
           </div>
         )}
         <div className="pe-actions">

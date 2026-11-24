@@ -185,7 +185,7 @@ export function PhoneStory(props: {
                   <button type="button" className="pe-seam-open" aria-expanded={selectedSeam === index} onClick={() => onOpenSeam(index)}>
                     <span className="visually-hidden">Transition from {previous.title} into {item.title}: </span>
                     <Status kind={words.kind}>{words.headline}</Status>
-                    {affected?.has(index) && <span className="pe-seam-note">Changes if dropped there</span>}
+                    {affected?.has(index) && <span className="pe-seam-note">Changes<span className="visually-hidden"> if the song is dropped there</span></span>}
                     <Icon name="down" size="compact" className="pe-chevron" />
                   </button>
                 </div>
