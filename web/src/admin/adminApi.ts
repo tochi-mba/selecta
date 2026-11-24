@@ -16,7 +16,8 @@ export type Me = {
   user_id: string; email?: string; roles: RoleInfo[]; permissions: string[];
   session: { id: string; expires_at: number; mfa_at?: number };
   environment?: string; changes_until?: number | null; session_started?: number; can_write?: boolean;
-  actions?: ActionSpec[]; role_matrix?: Record<string, { title: string; permissions: string[] }>;
+  actions?: ActionSpec[]; role_matrix?: Record<string, { title: string; permissions: string[]; purpose?: string; cannot?: string }>;
+  permission_info?: Record<string, string>;
   preferences?: Record<string, unknown>;
 };
 export type AdminFetch = <T>(path: string, init?: RequestInit) => Promise<T>;

@@ -45,6 +45,31 @@ REQUIRED_SETTINGS = (
 )
 
 
+# Outside services (doc 07b §7B.13). Connected means the key is present; the adapters that use
+# them are listed in 07b with what is built.
+INTEGRATIONS = (
+    ("stripe", "Stripe", "SELECTA_STRIPE_SECRET_KEY",
+     "live subscriptions, invoices, refunds and re-sync from the customer page",
+     "https://dashboard.stripe.com/apikeys"),
+    ("workos", "WorkOS", "SELECTA_WORKOS_API_KEY",
+     "staff organization membership, sessions and MFA state",
+     "https://dashboard.workos.com/"),
+    ("anthropic_admin", "Anthropic usage and cost", "ANTHROPIC_ADMIN_KEY",
+     "AI usage and cost reports compared with Lucy's own ledger",
+     "https://console.anthropic.com/settings/admin-keys"),
+    ("render", "Render", "SELECTA_RENDER_API_KEY",
+     "deploys, rollback and environment checks from System",
+     "https://dashboard.render.com/u/settings#api-keys"),
+    ("cloudflare", "Cloudflare", "SELECTA_CLOUDFLARE_API_TOKEN",
+     "Pages deploys, cache purge, WAF state and R2 sizes",
+     "https://dash.cloudflare.com/profile/api-tokens"),
+    ("email", "Email provider", "SELECTA_EMAIL_PROVIDER_TOKEN",
+     "message log, resend and suppressions for a customer", "https://postmarkapp.com/"),
+    ("github", "GitHub", "SELECTA_GITHUB_TOKEN",
+     "CI status of main and the open pull request", "https://github.com/settings/tokens"),
+)
+
+
 def _monthly_minor(raw: dict[str, Any]) -> tuple[str, int] | None:
     """(currency, monthly amount in minor units) from a stored Stripe subscription."""
     items = ((raw or {}).get("items") or {}).get("data") or []
@@ -217,6 +242,11 @@ def system(conn: Connection, actor: Actor) -> dict[str, Any]:
         "migration": {"code_head": head(), "database": sorted(current),
                       "matches": head() in current},
         "settings": settings,
+        "integrations": [
+            {"id": i, "name": name, "connected": bool(os.environ.get(var, "").strip()),
+             "needs": var, "unlocks": unlocks, "link": link}
+            for i, name, var, unlocks, link in INTEGRATIONS
+        ],
         "emergency": emergency.listing(conn),
         "backups": _backups(conn),
     }
