@@ -1,4 +1,5 @@
-import { ReactNode, Ref } from 'react';
+import { ReactNode, Ref, useContext } from 'react';
+import { HolderContext } from '../devices/controller';
 import { Icon } from '../ui/Icon';
 import { SearchField } from '../ui/primitives';
 
@@ -22,6 +23,8 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
 }) {
   const total = figure(songs);
   const here = figure(playable);
+  // ADR-0475 R6: where the music is, when that is another of this person's devices
+  const holder = useContext(HolderContext);
   return (
     <header className="page-header">
       <div className="page-header-text">
@@ -29,6 +32,7 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
         <p className="page-lead">Your songs, and which of them can play on this device.</p>
         <p className="lw-stats">
           {total !== null && <span><b>{total}</b> {songs === 1 ? 'song' : 'songs'}</span>}
+          {holder && <span data-testid="library-holder"><b>{holder.songs.toLocaleString()}</b> on {holder.name}</span>}
           {here !== null && <span><b>{here}</b> ready to play here</span>}
           {!!setAside && Number.isFinite(setAside) && (
             <button type="button" className="link" onClick={onSetAside}><b>{setAside.toLocaleString()}</b> set aside</button>

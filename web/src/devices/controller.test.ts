@@ -5,7 +5,7 @@ import { requestsFamily, type RoomRequest } from '../cloud/localFirstRequests';
 import { mixFamily } from '../cloud/localFirstMixes';
 import type { RecipeStore } from '../cloud/recipeStore';
 import type { RequestRow } from '../views/Requests';
-import { addedOnReturn, bestHolder, comingUp, notOnSpeaker, playsOn, programmeTurn, programmeWithNext, speakerHolds, type ControllerLink, type DeviceHolding } from './controller';
+import { addedOnReturn, bestHolder, comingUp, musicHolder, notOnSpeaker, playsOn, programmeTurn, programmeWithNext, speakerHolds, type ControllerLink, type DeviceHolding } from './controller';
 
 // ADR-0475, every device a controller: a device that is not the speaker adds requests to the
 // speaker's programme, is judged by what the speaker can play, and searches the whole account.
@@ -42,6 +42,22 @@ describe('the rules for changing another device’s programme', () => {
     expect(bestHolder([device('laptop', 12, true)], 'laptop')).toBeNull();
     expect(bestHolder([device('a', 5, true, 1), device('b', 5, true, 9)])?.device_id).toBe('b');
     expect(bestHolder([device('phone', 0, true)])).toBeNull();
+  });
+});
+
+describe('which device to name as where the music is (R6)', () => {
+  const device = (id: string, songs: number, online: boolean, seen = 1): DeviceHolding => ({ device_id: id, name: id, last_seen_at: seen, online, songs, reported_at: songs ? 1 : null });
+
+  it('is the speaker when one is playing, else the open device with the most songs, else the one with the most that is away', () => {
+    const all = [device('phone', 3, true), device('laptop', 2864, true), device('tablet', 5000, false)];
+    expect(musicHolder(all, 'phone', 'tablet')?.device_id).toBe('tablet');
+    expect(musicHolder(all, 'phone', null)?.device_id).toBe('laptop');
+    expect(musicHolder([device('tablet', 5000, false), device('old', 10, false)], 'phone', null)?.device_id).toBe('tablet');
+  });
+
+  it('is never this device, and nobody when no other device holds music', () => {
+    expect(musicHolder([device('phone', 3, true)], 'phone', null)).toBeNull();
+    expect(musicHolder([device('phone', 3, true), device('laptop', 0, true)], 'phone', null)).toBeNull();
   });
 });
 

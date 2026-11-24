@@ -2,6 +2,7 @@ import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DevicesPanel, seen } from './DevicesPanel';
 import type { Api } from './usePlaybackDevice';
+import { clearToasts, Toaster } from '../ui/toasts';
 import devicesSource from './DevicesPanel.tsx?raw';
 import playingSource from './PlayingBar.tsx?raw';
 import roomSource from '../rooms/RoomPanel.tsx?raw';
@@ -19,12 +20,12 @@ function mount() {
     if (path.startsWith('/devices?') || path === '/devices') return { devices: [device('d1', 'Old laptop', NOW - 3 * 3600)], limit: 10 };
     return {};
   }) as Api;
-  return render(<DevicesPanel api={api} workspaceId="ws-1" />);
+  return render(<><DevicesPanel api={api} workspaceId="ws-1" /><Toaster /></>);
 }
 const settle = async () => { await act(async () => { await vi.advanceTimersByTimeAsync(0); }); };
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW * 1000); calls = []; });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); clearToasts(); vi.useRealTimers(); });
 
 describe('devices panel', () => {
   it('asks before signing a device out, and only then sends it', async () => {
@@ -32,7 +33,7 @@ describe('devices panel', () => {
     await settle();
     await act(async () => { screen.getByRole('button', { name: 'Sign out this device: Old laptop' }).click(); await vi.advanceTimersByTimeAsync(0); });
     const dialog = screen.getByRole('alertdialog', { name: 'Sign out Old laptop?' });
-    expect(dialog).toHaveTextContent('That device is signed out of your account. It can sign in again any time.');
+    expect(dialog).toHaveTextContent('It stops playing and leaves your account. It can sign in again any time.');
     expect(dialog).not.toHaveTextContent(/forget|paired/i);
     expect(calls.some((call) => call.path.endsWith('/sign-out'))).toBe(false);
     await act(async () => { within(dialog).getByRole('button', { name: 'Sign out this device' }).click(); await vi.advanceTimersByTimeAsync(0); });
@@ -57,8 +58,8 @@ describe('devices panel', () => {
   it('says when a device was last seen', () => {
     expect(seen(NOW - 30, NOW)).toBe('Active now');
     // jsdom reads as en-US, so Intl says it in English
-    expect(seen(NOW - 5 * 60, NOW)).toBe('Seen 5 minutes ago');
-    expect(seen(NOW - 3 * 3600, NOW)).toBe('Seen 3 hours ago');
+    expect(seen(NOW - 5 * 60, NOW)).toBe('Last active 5 minutes ago');
+    expect(seen(NOW - 3 * 3600, NOW)).toBe('Last active 3 hours ago');
   });
 });
 
@@ -70,6 +71,6 @@ describe('busy labels (L3)', () => {
     }
     expect(devicesSource).toContain('`Signing out${ELLIPSIS}`');
     expect(playingSource).toContain('`Moving${ELLIPSIS}`');
-    expect(roomSource).toContain('`Opening${ELLIPSIS}`');
+    expect(roomSource).toContain('`Pairing${ELLIPSIS}`');
   });
 });

@@ -90,7 +90,7 @@ test('an import abandoned by a reload offers to carry on, and picking again dupl
   held.release();
   // cloud.resilient_import: picked files are gone after a reload by the browser's design, so the
   // offer asks for them again and says everything already done is skipped
-  await expect(page.getByRole('note').filter({ hasText: 'Your import stopped part way' })).toContainText('skips everything already done');
+  await expect(page.getByRole('note').filter({ hasText: 'stopped part way' })).toContainText('SelectaDJ carries on from there');
   await expect(songCount(page, 5)).toBeVisible();
   await page.locator('.connect-music input[accept="audio/*"]').setInputFiles(music);
   await expect(page.locator('.connect-music').getByText(/songs connected/)).toBeVisible({ timeout: 60_000 });

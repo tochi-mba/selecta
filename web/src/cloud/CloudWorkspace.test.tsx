@@ -54,6 +54,9 @@ beforeEach(() => {
   });
 });
 
+/** The figure in an overview tile, found by the tile's label. */
+const tile = (label: string) => screen.getByText(label).closest('a')?.querySelector('strong')?.textContent;
+
 describe('the tabs of the browser Workspace', () => {
   it('offers Overview, Sources, Storage and Diagnostics, each at its own address', () => {
     show('overview');
@@ -82,38 +85,44 @@ describe('the tabs of the browser Workspace', () => {
 describe('Workspace overview in the browser', () => {
   it('counts the library, what plays here and the saved mixes', () => {
     show('overview', { savedMixes: 1 });
-    const metric = (words: string) => screen.getByText(words).parentElement?.querySelector('strong')?.textContent;
-    expect(metric('songs in your library')).toBe('12');
-    expect(metric('can play in this browser')).toBe('9');
-    expect(metric('saved mix')).toBe('1');
+    expect(tile('Songs')).toBe('12');
+    expect(tile('Playable here')).toBe('9');
+    expect(tile('Saved mixes')).toBe('1');
+    expect(screen.getByText('Songs').closest('a')).toHaveAttribute('href', '/library');
     // nothing is missing, so no count of missing songs is drawn
     expect(screen.queryByText(/missing from every device/)).toBeNull();
   });
 
   it('holds the saved-mix count open until the server has said, and shows missing songs when there are some', () => {
     show('overview', { savedMixes: null, counts: { missing: 2 } });
-    expect(screen.getByText('saved mixes').parentElement?.querySelector('strong')?.textContent).toBe('…');
-    expect(screen.getByText('missing from every device right now').parentElement?.querySelector('strong')?.textContent).toBe('2');
+    // no figure is claimed before the server answers: the tile holds a loading mark
+    expect(tile('Saved mixes')).toBe('');
+    expect(within(screen.getByText('Saved mixes').closest('a')!).getByLabelText('Loading')).toBeInTheDocument();
+    // missing songs are something to act on, so they are said under Needs attention with a way to see them
+    const needs = screen.getByRole('region', { name: 'Needs attention' });
+    expect(needs).toHaveTextContent('2 songs are missing from every device');
+    expect(within(needs).getByRole('link', { name: 'Show them' })).toHaveAttribute('href', '/library?show=attention');
   });
 
   it('says what this browser is doing in the background, and only what it is doing', () => {
     const { unmount } = show('overview');
-    const background = screen.getByRole('region', { name: 'In the background' });
-    expect(background).toHaveTextContent('No music is being connected right now.');
-    expect(background).toHaveTextContent('The check of which connected songs this browser can open has not finished yet.');
+    const background = screen.getByRole('region', { name: 'Activity' });
+    // nothing is being added, so nothing says it is
+    expect(background).not.toHaveTextContent(/Adding your music/);
+    expect(background).toHaveTextContent('Songs not checked yet this visit.');
     expect(background).not.toHaveTextContent(/Harmonic matches/);
     expect(background).not.toHaveTextContent(/Stem splitting/);
     unmount();
     show('overview', { measuringKeys: true, stemsShown: true, fileCheck: { running: true, at: null } });
-    const busy = screen.getByRole('region', { name: 'In the background' });
-    expect(busy).toHaveTextContent('Checking which connected songs this browser can still open.');
-    expect(busy).toHaveTextContent(/For Harmonic matches, this browser measures each song’s key from its file here/);
-    expect(busy).toHaveTextContent('Stem splitting for this browser is under Storage.');
+    const busy = screen.getByRole('region', { name: 'Activity' });
+    expect(busy).toHaveTextContent('Checking which songs can play here.');
+    expect(busy).toHaveTextContent('Measuring song keys for Harmonic matches.');
+    expect(busy).toHaveTextContent('Stem splitting is under Storage.');
   });
 
   it('says when the file check last ran', () => {
     show('overview', { fileCheck: { running: false, at: new Date(2026, 10, 22, 9, 5).getTime() } });
-    expect(screen.getByRole('region', { name: 'In the background' })).toHaveTextContent(/Checked which connected songs this browser can open at .*It checks again about twice a day/);
+    expect(screen.getByRole('region', { name: 'Activity' })).toHaveTextContent(/Songs checked at \d{1,2}[:.]05/);
   });
 
   it('keeps the interface choices, without the older navigation a browser has no pages for', () => {
@@ -130,15 +139,16 @@ describe('Workspace sources in the browser', () => {
     show('sources');
     expect(screen.getByRole('region', { name: 'Connect music' })).toBeVisible();
     expect(await screen.findByText(/No folder is remembered in this browser/)).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Forget this folder' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Forget' })).toBeNull();
   });
 
   it('names the remembered folder, says whether it may be read, and forgets it on request', async () => {
     folders.remembered = { name: 'Summer sets', queryPermission: async () => 'prompt' } as unknown as StoredFolderHandle;
     show('sources');
-    expect(await screen.findByText(/This browser remembers Summer sets, the last folder you chose/)).toBeVisible();
-    await waitFor(() => expect(screen.getByText(/This browser remembers/)).toHaveTextContent('It will ask your permission again before reading it.'));
-    fireEvent.click(screen.getByRole('button', { name: 'Forget this folder' }));
+    const remembered = screen.getByRole('region', { name: 'Connected in this browser' });
+    expect(await within(remembered).findByText('Summer sets')).toBeVisible();
+    await waitFor(() => expect(remembered).toHaveTextContent('Folder. The browser asks your permission before reading it again.'));
+    fireEvent.click(within(remembered).getByRole('button', { name: 'Forget' }));
     expect(await screen.findByText(/No folder is remembered in this browser/)).toBeVisible();
     expect(folders.forgotten).toEqual([WORKSPACE]);
   });
@@ -146,24 +156,24 @@ describe('Workspace sources in the browser', () => {
   it('says a folder it may read now can be read', async () => {
     folders.remembered = { name: 'Summer sets', queryPermission: async () => 'granted' } as unknown as StoredFolderHandle;
     show('sources');
-    await waitFor(() => expect(screen.getByText(/This browser remembers/)).toHaveTextContent('It may read it now.'));
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Connected in this browser' })).toHaveTextContent('Folder. This browser can read it now.'));
   });
 });
 
 describe('Workspace storage in the browser', () => {
   it('shows browser storage in MB and GB, the stem card and what this browser keeps', async () => {
     show('storage', { degraded: true });
-    expect(await screen.findByText(/SelectaDJ is using 2\.5 MB of the 3\.0 GB this browser allows\./)).toBeVisible();
+    expect(await screen.findByRole('meter', { name: 'Used by SelectaDJ' })).toHaveAttribute('aria-valuetext', '2.5 MB of 3.0 GB');
     expect(screen.getByRole('region', { name: 'Stem splitting' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'What SelectaDJ keeps here' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'What this browser keeps' })).toBeVisible();
     expect(await screen.findByRole('note')).toHaveTextContent(/not keeping SelectaDJ’s list of connected files/);
   });
 
   it('leaves out the device data card with cloud.local_media off', async () => {
     setFlags({ 'cloud.local_media': false });
     show('storage');
-    await screen.findByText(/SelectaDJ is using/);
-    expect(screen.queryByRole('heading', { name: 'What SelectaDJ keeps here' })).toBeNull();
+    await screen.findByRole('meter', { name: 'Used by SelectaDJ' });
+    expect(screen.queryByRole('heading', { name: 'What this browser keeps' })).toBeNull();
   });
 });
 
@@ -172,29 +182,30 @@ describe('browser diagnostics', () => {
 
   it('lists what this browser can do, checked here', async () => {
     show('diagnostics');
-    const panel = await screen.findByRole('region', { name: 'Diagnostics' });
-    // jsdom has no Web Audio, and the page says so instead of guessing
-    expect(panel).toHaveTextContent('This browser has no Web Audio, so it cannot play mixes here.');
-    expect(panel).toHaveTextContent('The audio check has not run yet in this visit.');
-    expect(panel).toHaveTextContent('No device is playing right now.');
-    expect(panel).toHaveTextContent('The list of connected songs is kept in this browser (IndexedDB).');
+    await screen.findByText(/"engine"/);
+    const panel = document.body;
+    // jsdom has no Web Audio, and the page says so instead of guessing: it is the headline
+    expect(screen.getByRole('heading', { name: 'This browser has no way to play sound for SelectaDJ. A recent desktop browser can.' })).toBeVisible();
+    expect(panel).toHaveTextContent('Audio checkNot run yet in this visit.');
+    expect(panel).toHaveTextContent('Nothing is playing right now.');
+    expect(panel).toHaveTextContent('Your list of connected songsKept in this browser between visits.');
     expect(panel).toHaveTextContent('The browser has agreed to keep SelectaDJ’s details on this device.');
-    expect(panel).toHaveTextContent(/Browser storage in use: .* of .* allowed\./);
+    expect(panel).toHaveTextContent('2.5 MB used of 3.0 GB allowed.');
     // no feature counts: that is internal detail, not something a member can act on
     expect(panel).not.toHaveTextContent(/features? on/);
-    expect(panel).toHaveTextContent('Nothing is sent anywhere unless you copy it and share it yourself.');
+    expect(panel).toHaveTextContent('Checked in this browser; nothing is sent anywhere.');
   });
 
   it('says who the speaker is, or why playing here was refused', async () => {
     const { unmount } = show('diagnostics', { playback: { refusal: null, speaker: 'here', phase: 'playing' } });
-    expect(await screen.findByText('This browser is the speaker (playing).')).toBeVisible();
+    expect(await screen.findByText('This browser is the speaker.')).toBeVisible();
     unmount();
     const other = show('diagnostics', { playback: { refusal: null, speaker: 'elsewhere', phase: 'idle' } });
     expect(await screen.findByText('Another device is the speaker; this browser is controlling it.')).toBeVisible();
     other.unmount();
     show('diagnostics', { playback: { refusal: 'Another device took over.', speaker: null, phase: 'idle' }, degraded: true });
     expect(await screen.findByText('Playing here was refused: Another device took over.')).toBeVisible();
-    expect(screen.getByText(/not keeping the list of connected songs, so they need connecting again next visit/)).toBeVisible();
+    expect(screen.getByText('This browser is not keeping it, so songs need choosing again next visit.')).toBeVisible();
   });
 
   it('summarises capabilities and states only', async () => {
@@ -219,7 +230,8 @@ describe('browser diagnostics', () => {
     expect(text).not.toContain(WORKSPACE);
     expect(text).not.toContain('Summer sets');
     expect(text).not.toMatch(/@|email|user|account|workspace|device_id|token|title|artist|folder_name|path/i);
-    expect(screen.getByText(/It has no names, emails, songs, folders or account details\./)).toBeVisible();
+    // said beside the copy itself, which is closed until asked for
+    expect(screen.getByText(/No names, emails, songs, folders or account details\./)).toBeInTheDocument();
   });
 
   it('copies exactly the summary shown, and says so', async () => {
@@ -228,7 +240,7 @@ describe('browser diagnostics', () => {
     try {
       show('diagnostics');
       const shown = (await screen.findByText(/"engine"/)).textContent;
-      fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Copy details for support' }));
       expect(await screen.findByRole('button', { name: 'Copied' })).toBeVisible();
       expect(writeText).toHaveBeenCalledWith(shown);
     } finally {
@@ -239,7 +251,7 @@ describe('browser diagnostics', () => {
   it('reports the audio check as not passing where there is no Web Audio, without throwing', async () => {
     show('diagnostics');
     fireEvent.click(await screen.findByRole('button', { name: 'Run the audio check' }));
-    expect(await screen.findByText('The audio check did not pass: This browser has no Web Audio.')).toBeVisible();
+    expect(await screen.findByText('Did not pass: This browser has no Web Audio.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Run the audio check again' })).toBeVisible();
     expect(await summary()).toMatchObject({ audio_check: { ok: false, reason: 'This browser has no Web Audio.' } });
   });
@@ -249,7 +261,7 @@ describe('browser diagnostics', () => {
     vi.stubGlobal('AudioContext', FakeContext);
     show('diagnostics');
     fireEvent.click(await screen.findByRole('button', { name: 'Run the audio check' }));
-    expect(await screen.findByText(/The audio check ran at 48000 Hz with 1 scheduling gap in 200 blocks\. This shows audio runs here, not that your speakers are on\./)).toBeVisible();
+    expect(await screen.findByText('Passed at 48000 Hz with 1 gap in 200 blocks. This shows audio runs here, not that your speakers are on.')).toBeInTheDocument();
     expect(await summary()).toMatchObject({ web_audio: true, audio_check: { ok: true, sample_rate: 48000, scheduling_misses: 1, blocks: 200 } });
   });
 });
