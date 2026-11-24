@@ -41,8 +41,11 @@ class FakeSongCatalog:
         self.played: dict[int, float] = {}
         self.searches: list[tuple[str, str, frozenset[int] | None, int]] = []
 
-    def is_requestable(self, workspace_id: str, song_id: int) -> bool:
+    def _ready(self, song_id: int) -> bool:
         return song_id in self.songs and song_id not in self.not_ready
+
+    def is_requestable(self, workspace_id: str, song_id: int) -> bool:
+        return self._ready(song_id)
 
     def search(
         self, workspace_id: str, query: str, crate: frozenset[int] | None, limit: int
@@ -65,7 +68,7 @@ class FakeSongCatalog:
         return sum(
             1
             for number in self.songs
-            if self.is_requestable(workspace_id, number) and (crate is None or number in crate)
+            if self._ready(number) and (crate is None or number in crate)
         )
 
     def describe(self, workspace_id: str, song_ids: Collection[int]) -> Mapping[int, SongSummary]:
