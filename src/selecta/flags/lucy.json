@@ -85,6 +85,37 @@
       "routes": ["POST /api/listening/events"],
       "surfaces": ["lucy"],
       "words": ["Listening history"]
+    },
+    "lucy.cloud_conversation": {
+      "label": "Lucy's conversation in Cloud",
+      "about": "Talk to Lucy in the browser about your library and mixes; she proposes changes you can save.",
+      "requires": ["lucy", "cloud.local_media"],
+      "routes": [
+        "GET /api/lucy-cloud/status",
+        "PUT /api/lucy-cloud/settings",
+        "GET /api/lucy-cloud/conversations",
+        "POST /api/lucy-cloud/conversations",
+        "GET /api/lucy-cloud/conversations/{conversation}",
+        "PATCH /api/lucy-cloud/conversations/{conversation}",
+        "DELETE /api/lucy-cloud/conversations/{conversation}",
+        "POST /api/lucy-cloud/conversations/{conversation}/turns",
+        "POST /api/lucy-cloud/conversations/{conversation}/retry",
+        "POST /api/lucy-cloud/conversations/{conversation}/stop",
+        "GET /api/lucy-cloud/conversations/{conversation}/events.json",
+        "GET /api/lucy-cloud/revisions/{revision}",
+        "GET /api/lucy-cloud/revisions/{revision}/diff",
+        "GET /api/lucy-cloud/revisions/{revision}/readiness",
+        "POST /api/lucy-cloud/revisions/{revision}/edit",
+        "POST /api/lucy-cloud/proposals/{proposal}/current",
+        "POST /api/lucy-cloud/approvals",
+        "POST /api/lucy-cloud/commits",
+        "GET /api/lucy-cloud/commits/{key}",
+        "GET /api/lucy-cloud/memory"
+      ],
+      "surfaces": ["lucy"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "lucy"
     }
   }
 }

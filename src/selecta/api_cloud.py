@@ -76,6 +76,7 @@ from selecta.local_media import api as local_media_routes
 from selecta.local_media import links as local_links_routes
 from selecta.local_media import recipe_api as local_recipe_routes
 from selecta.local_media.catalog import LocalMediaCatalog
+from selecta.lucy import cloud_routes as lucy_cloud_routes
 from selecta.lucy import cloud_settings as lucy_cloud_settings
 from selecta.observability import errors, metrics, tracing
 from selecta.persistence import db_now, make_engine, transaction
@@ -919,6 +920,9 @@ def create_cloud_app(
     )
 
     lucy_cloud_settings.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    lucy_cloud_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     # Autopilot venue mode and venue policy (ADR-0424, ADR-0425); refused while the flags are off.

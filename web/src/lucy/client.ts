@@ -1,4 +1,4 @@
-import { get, send } from '../api';
+import { get as localGet, send, type Request } from '../api';
 import type {
   Approval, ApproveAction, Commit, Conversation, ConversationScope, Diff, EditOp, EventsPage, Ledger, LucyStatus,
   Memory, MemoryFact, MemoryKind, Permission, Revision, SettingsChange, Snapshot, TurnAccepted, TurnBody,
@@ -15,12 +15,36 @@ export function newId(): string {
 
 const at = (id: string) => encodeURIComponent(id);
 
+/** Where Lucy's requests go. Local mode asks this computer's server at `/api/lucy`; browser-first
+ * Cloud (ADR-0476) installs its authenticated request and its own prefix, and reads events by
+ * asking every `pollMs` (a bearer token can't ride on an EventSource). */
+export type LucyTransport = { request: Request; base: string; pollMs: number };
+let transport: LucyTransport | null = null;
+
+export function setLucyTransport(next: LucyTransport | null): void {
+  transport = next;
+}
+
+export function lucyTransport(): LucyTransport | null {
+  return transport;
+}
+
+/** `/lucy/...` as the active transport names it. */
+function where(path: string): string {
+  return transport ? path.replace(/^\/lucy(?=\/|$)/, transport.base) : path;
+}
+
+function get<T>(path: string): Promise<T> {
+  return transport ? transport.request<T>(where(path)) : localGet<T>(path);
+}
+
 function change<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
-  return send<T>(path, {
+  const init = {
     method,
     headers: { 'content-type': 'application/json', 'x-operation-id': newId() },
     body: method === 'DELETE' && body === undefined ? undefined : JSON.stringify(body ?? {}),
-  });
+  };
+  return transport ? transport.request<T>(where(path), init) : send<T>(path, init);
 }
 
 export const lucy = {
