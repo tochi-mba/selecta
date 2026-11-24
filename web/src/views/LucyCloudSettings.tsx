@@ -1,13 +1,12 @@
 import { accountFlagOn, type FlagId } from '../flags';
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import type { PhaseName, Phases } from '../lucy/types';
 import { PHASES } from './LucySettings';
 import '../styles/lucy.css';
 import { Badge, Notice, SettingsCard } from '../cloud/AccountLayout';
-import { Skeleton } from '../ui/controls';
+import { Action, Skeleton } from '../ui/controls';
 import { userLocale } from '../ui/format';
 import { Meter } from '../ui/Meter';
-import { showToast } from '../ui/toasts';
 
 /** Lucy's settings in Cloud mode (docs/saas/09-lucy-ai-gateway.md §9.5). Only the person's own
  * choices are here: Use Lucy, the phases, and what may be shared with Selecta's AI provider. The
@@ -37,6 +36,15 @@ export function LucyTurnsMeter({ usage }: { usage: CloudLucy['usage'] }) {
     <div className="lucy-cloud-meter">
       <p><b>{words}</b>{usage.resets_at ? <span className="soft"> · resets {resetDate(usage.resets_at)}</span> : null}</p>
       {usage.limit !== null && <Meter kind="meter" label="Lucy turns this month" showLabel={false} value={Math.round(percent)} max={100} valueText={words} warnAt={0.8} dangerAt={1} />}
+      {/* the meter turning red is not words: say what a full meter means, and when it ends */}
+      {usage.limit !== null && usage.used >= usage.limit && (
+        <p className="lucy-cloud-spent" role="note">
+          {usage.fair_use
+            ? 'You’ve used this month’s planning turns. Quick turns still work.'
+            : 'You’ve used all of this month’s turns, so Lucy can’t take a new request yet.'}
+          {usage.resets_at ? ` They start again on ${resetDate(usage.resets_at)}.` : ''}
+        </p>
+      )}
       {usage.fair_use && <p className="hint">Quick turns on your plan are fair use: counted, never cut off.</p>}
     </div>
   );
@@ -55,40 +63,50 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
   // away what the person has ticked but not saved yet.
   const asked = useRef(request);
   asked.current = request;
-  useEffect(() => {
-    let live = true;
-    asked.current<CloudLucy>('/account/lucy').then((next) => {
-      if (!live) return;
+  const live = useRef(true);
+  const load = useCallback(async () => {
+    setProblem('');
+    try {
+      const next = await asked.current<CloudLucy>('/account/lucy');
+      if (!live.current) return;
       setStatus(next); setEnabled(next.enabled); setPhases(next.phases); setPrivacy(next.privacy);
-    }).catch((error: Error) => { if (live) setProblem(error.message); });
-    return () => { live = false; };
+    } catch (error) {
+      if (live.current) setProblem((error as Error).message || 'Check your connection.');
+    }
   }, []);
+  useEffect(() => {
+    live.current = true;
+    void load();
+    return () => { live.current = false; };
+  }, [load]);
 
   if (!status || !phases) {
     return (
       <SettingsCard id="lucy-cloud" className="lucy-settings" title="Lucy" about="Whether to use Lucy, and what it may share." busy={!problem}>
         {problem
-          ? <Notice tone="danger" role="alert"><strong>Lucy’s settings could not be loaded</strong><span>{problem}</span></Notice>
+          // a way on from here: without it the only way to try again was to reload the page
+          ? <Notice tone="danger" role="alert" action={<Action run={load} working="Trying again…">Try again</Action>}><strong>Lucy’s settings could not be loaded.</strong> <span>{problem}</span></Notice>
           : <Skeleton variant="rows" lines={3} label="Loading Lucy’s settings" />}
       </SettingsCard>
     );
   }
 
   const shown = PHASES.filter((phase) => ([] as FlagId[]).concat(phase.flag ?? []).every((flag) => accountFlagOn(flag, features)));
+  const changed = enabled !== status.enabled || JSON.stringify(phases) !== JSON.stringify(status.phases)
+    || privacy.share_lyrics !== status.privacy.share_lyrics || privacy.share_history !== status.privacy.share_history;
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    // the button stays focusable while it can't be pressed (below), so the press is refused here
+    if (saving || !changed) return;
     setSaving(true); setProblem(''); setSaved('');
     try {
       const next = await request<CloudLucy>('/account/lucy', { method: 'PUT', body: JSON.stringify({ enabled, phases, privacy }) });
       setStatus(next); setEnabled(next.enabled); setPhases(next.phases); setPrivacy(next.privacy);
+      // said once, in the line beside the button (a toast as well was the same news twice)
       setSaved('Saved.');
-      showToast('Lucy settings saved.');
     } catch (error) { setProblem((error as Error).message); }
     finally { setSaving(false); }
   };
-
-  const changed = enabled !== status.enabled || JSON.stringify(phases) !== JSON.stringify(status.phases)
-    || privacy.share_lyrics !== status.privacy.share_lyrics || privacy.share_history !== status.privacy.share_history;
 
   return (
     <SettingsCard
@@ -123,9 +141,11 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
             <span><b>Share a summary of your listening</b> <span className="soft">most played and most skipped, never a full log.</span></span>
           </label>
         </fieldset>
-        {problem && <Notice tone="danger" role="alert"><strong>Your changes were not saved</strong><span>{problem}</span></Notice>}
+        {problem && <Notice tone="danger" role="alert"><strong>Your changes were not saved.</strong> <span>{problem}</span></Notice>}
         <div className="row wrap lucy-cloud-save">
-          <button type="submit" className={changed ? 'primary' : undefined} disabled={saving || !changed} aria-busy={saving || undefined}>{saving ? 'Saving…' : 'Save changes'}</button>
+          {/* aria-disabled, never disabled: a disabled button drops the keyboard's focus to the top
+              of the page the moment a save starts or ends */}
+          <button type="submit" className={changed ? 'primary' : undefined} aria-disabled={saving || !changed || undefined} aria-busy={saving || undefined}>{saving ? 'Saving…' : 'Save changes'}</button>
           <span className="hint" role="status">{saving ? '' : changed ? 'You have changes that are not saved yet.' : saved ? 'All changes saved.' : ''}</span>
         </div>
       </form>
