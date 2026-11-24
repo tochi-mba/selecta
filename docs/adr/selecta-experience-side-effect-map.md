@@ -233,6 +233,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/playback/commands` | Sends a transport command to the playing device |
 | `POST /api/playback/commands/{command_id}/ack` | Records that the playing device received a command, never that it was audible (ADR-0461) |
 | `POST /api/playback/start-asks` | Asks another of the member's own signed-in devices to become the speaker and start; publishes the ask on the workspace event stream, stores nothing (ADR-0475 R2) |
+| `PUT /api/devices/default-speaker` | Sets or clears which of the member's own signed-in devices is the account's default speaker; one per workspace, cleared when that device signs out (ADR-0475) |
 | `POST /api/playback/start-asks/{ask_id}/answer` | The asked device says what it did (starting, needs music, needs a press, no mix, declined); publishes the answer, stores nothing |
 | `POST /api/zones/{zone_id}/playback/heartbeat` | Updates a zone's active device lease and accepted playback position |
 | `POST /api/zones/{zone_id}/playback/take-over` | Transfers the zone playback lease to this device |

@@ -444,6 +444,9 @@ SCOPED: dict[tuple[str, str], dict | None] = {
         "device_id": "missing",
         "target_device_id": "missing",
     },
+    # The default speaker names one of the caller's own devices (ADR-0475), checked against the
+    # caller's workspace and user (playback/default_speaker.py)
+    ("PUT", "/api/devices/default-speaker"): {"device_id": "missing"},
     ("POST", "/api/playback/start-asks/{ask_id}/answer"): {
         "device_id": "missing",
         "asker_device_id": "missing",
