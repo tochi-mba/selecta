@@ -101,6 +101,7 @@ are additive and are tracked by ADR-0391–0416; they do not relax the local con
 | [16-edge-cases.md](16-edge-cases.md) | Product and correctness edge cases by area |
 | [17-roadmap-and-risks.md](17-roadmap-and-risks.md) | Phases, risks, open questions, repo layout and the ADR list |
 | [18-test-plan.md](18-test-plan.md) | Every edge case and test per module, coverage gates, security suite and CI wiring |
+| [../todo/README.md](../todo/README.md) | The to-do list: everything still to do, one file per item, `python scripts/todo.py list` |
 | [CHANGES-2026-11.md](CHANGES-2026-11.md) | What changed in November 2026, in plain words, and what needs the owner |
 | [sources.md](sources.md) | Where the facts and prices came from |
 | [licence-register.md](licence-register.md) | Every model and key dependency, its licence and whether cloud mode may use it |
