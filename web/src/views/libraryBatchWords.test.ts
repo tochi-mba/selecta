@@ -27,7 +27,7 @@ describe('the Library batch dialog in plain words', () => {
     expect(batchWords('deprioritize', 1).done).toBe('1 song no longer has priority.');
     for (const action of ['never', 'allow', 'prioritize', 'deprioritize'] as const) {
       const words = Object.values(batchWords(action, 3)).join(' ');
-      expect(words).not.toMatch(/precisely|recording|ID |—/);
+      expect(words).not.toMatch(/precisely|recording|ID |2014/);
     }
   });
 
