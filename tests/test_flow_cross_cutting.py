@@ -237,8 +237,12 @@ def test_transport_and_routes_each_have_one_owner() -> None:
     contexts = sorted(name for name, text in sources.items() if "new AudioContext(" in text)
     elements = sorted(name for name, text in sources.items() if "new Audio(" in text)
     # engine/context.ts is the Browser-first Cloud runtime (ADR-0457); it is the only audio
-    # context in the Cloud build, which never mounts the local player or the Studio.
-    assert contexts == ["engine/context.ts", "player.ts", "studio.ts"], (
+    # context that plays in the Cloud build, which never mounts the local player or the Studio.
+    # cloud/BrowserDiagnostics.tsx opens one on a press only to ask what this browser can do and
+    # closes it straight after; it never plays (the audio audit, docs/adr/selecta-3-audio.md).
+    assert contexts == [
+        "cloud/BrowserDiagnostics.tsx", "engine/context.ts", "player.ts", "studio.ts"
+    ], (
         "the main player, the Studio preview engine and the Cloud browser runtime"
     )
     # cloud/venue/probeSuite.ts makes a detached element only to ask canPlayType; it never plays.

@@ -1,8 +1,8 @@
 # Selecta 4.0 selector-collision inventory (S4-0091-04)
 
-Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.selector_collisions --write`; `tests/test_s4_selector_collisions.py` fails when it falls behind. Load order: `styles/boot.css`, `style.css`, `styles/shell.css`, `styles/polish.css`, `styles/foundation.css`, `styles/listening.css`, `styles/creation.css`, `styles/operations.css`, `styles/music-objects.css`, `styles/glossary.css`, `styles/palette.css`, `styles/icons.css`, `styles/depth.css`, `styles/typography.css`. The proposed owner is the earliest sheet that styles the class unscoped, else the earliest that styles it. Verdicts for the seven shared class names are in `docs/adr/completion/css-ownership.md`. Rules inside media queries count, so a responsive refinement shows here too; each row is for review, not a defect.
+Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.selector_collisions --write`; `tests/test_s4_selector_collisions.py` fails when it falls behind. Load order: `styles/boot.css`, `style.css`, `styles/shell.css`, `styles/polish.css`, `styles/foundation.css`, `styles/cloud-ui.css`, `styles/cloud-shell.css`, `styles/listening.css`, `styles/creation.css`, `styles/operations.css`, `styles/music-objects.css`, `styles/glossary.css`, `styles/palette.css`, `styles/icons.css`, `styles/depth.css`, `styles/typography.css`. The proposed owner is the earliest sheet that styles the class unscoped, else the earliest that styles it. Verdicts for the seven shared class names are in `docs/adr/completion/css-ownership.md`. Rules inside media queries count, so a responsive refinement shows here too; each row is for review, not a defect.
 
-## Identical selectors in more than one sheet (169)
+## Identical selectors in more than one sheet (170)
 
 | Selector | Sheets, in load order | Wins the cascade |
 |---|---|---|
@@ -167,16 +167,17 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `media (max-width: 1024px)` | style.css, styles/polish.css, styles/creation.css, styles/operations.css | styles/operations.css |
 | `media (max-width: 1040px)` | styles/polish.css, styles/listening.css | styles/listening.css |
 | `media (max-width: 420px)` | styles/shell.css, styles/polish.css, styles/listening.css | styles/listening.css |
-| `media (max-width: 520px)` | style.css, styles/foundation.css, styles/listening.css | styles/listening.css |
+| `media (max-width: 520px)` | style.css, styles/shell.css, styles/foundation.css, styles/listening.css | styles/listening.css |
 | `media (max-width: 560px)` | style.css, styles/shell.css, styles/polish.css | styles/polish.css |
 | `media (max-width: 620px)` | style.css, styles/polish.css, styles/listening.css, styles/creation.css, styles/operations.css | styles/operations.css |
-| `media (max-width: 760px)` | styles/shell.css, styles/polish.css, styles/listening.css, styles/creation.css | styles/creation.css |
-| `media (pointer: coarse)` | styles/creation.css, styles/operations.css, styles/glossary.css, styles/icons.css | styles/icons.css |
-| `media (prefers-reduced-motion: reduce)` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css | styles/foundation.css |
+| `media (max-width: 760px)` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/creation.css | styles/creation.css |
+| `media (min-width: 761px)` | styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css | styles/cloud-shell.css |
+| `media (pointer: coarse)` | styles/cloud-ui.css, styles/creation.css, styles/operations.css, styles/glossary.css, styles/palette.css, styles/icons.css | styles/icons.css |
+| `media (prefers-reduced-motion: reduce)` | styles/boot.css, style.css, styles/shell.css, styles/polish.css, styles/foundation.css | styles/foundation.css |
 | `select` | style.css, styles/polish.css | styles/polish.css |
 | `select:focus-visible` | style.css, styles/polish.css | styles/polish.css |
 
-## Classes styled by more than one sheet (220)
+## Classes styled by more than one sheet (251)
 
 | Class | Sheets, in load order | Proposed owner |
 |---|---|---|
@@ -187,8 +188,10 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.artist` | style.css, styles/shell.css, styles/listening.css | style.css |
 | `.artists` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.attention` | style.css, styles/polish.css | style.css |
-| `.big` | style.css, styles/listening.css | style.css |
-| `.button` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css | style.css |
+| `.big` | style.css, styles/cloud-ui.css, styles/listening.css | style.css |
+| `.brand` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.brand-mark` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.button` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css | style.css |
 | `.can-seek` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.card` | style.css, styles/polish.css, styles/depth.css | style.css |
 | `.cards` | style.css, styles/listening.css | style.css |
@@ -196,22 +199,28 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.carry-on-words` | styles/listening.css, styles/typography.css | styles/listening.css |
 | `.chips` | style.css, styles/polish.css, styles/listening.css, styles/operations.css | style.css |
 | `.choice` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/operations.css | styles/shell.css |
+| `.cloud-footer` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.cloud-import-chip` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.coming` | style.css, styles/music-objects.css | style.css |
-| `.content` | styles/shell.css, styles/polish.css | styles/shell.css |
-| `.context-bar` | styles/shell.css, styles/icons.css | styles/shell.css |
-| `.context-button` | styles/shell.css, styles/icons.css | styles/shell.css |
+| `.content` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/cloud-shell.css | styles/shell.css |
+| `.context-actions` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.context-bar` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
+| `.context-button` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
+| `.context-counted` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.context-request` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.correct-field` | styles/shell.css, styles/operations.css | styles/shell.css |
-| `.count` | style.css, styles/shell.css, styles/polish.css, styles/icons.css | styles/polish.css |
+| `.count` | style.css, styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/icons.css | styles/polish.css |
 | `.countdown-meta` | style.css, styles/typography.css | style.css |
 | `.countdown-number` | style.css, styles/polish.css, styles/listening.css, styles/typography.css | style.css |
 | `.countdown-track` | style.css, styles/listening.css | style.css |
+| `.crumbs` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.cue-row` | style.css, styles/creation.css | style.css |
 | `.current-word` | style.css, styles/foundation.css | style.css |
-| `.destructive` | styles/polish.css, styles/foundation.css | styles/polish.css |
+| `.destructive` | styles/polish.css, styles/foundation.css, styles/cloud-ui.css | styles/polish.css |
 | `.discoveries` | style.css, styles/polish.css | style.css |
 | `.discovery` | style.css, styles/operations.css | style.css |
 | `.discovery-steps` | style.css, styles/operations.css | style.css |
-| `.display` | style.css, styles/shell.css, styles/polish.css, styles/listening.css, styles/operations.css, styles/music-objects.css | style.css |
+| `.display` | style.css, styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/listening.css, styles/operations.css, styles/music-objects.css | style.css |
 | `.done` | style.css, styles/foundation.css | style.css |
 | `.draft` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.draft-actions` | style.css, styles/listening.css | style.css |
@@ -222,6 +231,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.edit-inspector` | styles/shell.css, styles/creation.css, styles/depth.css | styles/shell.css |
 | `.editor` | style.css, styles/creation.css | style.css |
 | `.editor-scope` | styles/creation.css, styles/depth.css, styles/typography.css | styles/creation.css |
+| `.empty-state` | styles/polish.css, styles/cloud-ui.css, styles/listening.css | styles/polish.css |
 | `.energy-arc-stops` | style.css, styles/listening.css | style.css |
 | `.energy-overview` | styles/creation.css, styles/music-objects.css | styles/music-objects.css |
 | `.energy-overview-unknown` | styles/creation.css, styles/music-objects.css | styles/music-objects.css |
@@ -229,17 +239,19 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.eyebrow` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.facts` | style.css, styles/polish.css | style.css |
 | `.failed` | style.css, styles/music-objects.css | style.css |
-| `.field` | styles/polish.css, styles/foundation.css, styles/listening.css, styles/operations.css, styles/glossary.css | styles/foundation.css |
-| `.field-help` | styles/polish.css, styles/glossary.css | styles/polish.css |
+| `.field` | styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/listening.css, styles/operations.css, styles/glossary.css | styles/foundation.css |
+| `.field-help` | styles/polish.css, styles/cloud-ui.css, styles/glossary.css | styles/polish.css |
 | `.focus` | style.css, styles/listening.css | style.css |
 | `.folder-list` | styles/shell.css, styles/operations.css | styles/shell.css |
 | `.grip` | style.css, styles/polish.css, styles/creation.css | style.css |
 | `.handoff` | style.css, styles/listening.css | style.css |
 | `.handoff-next` | style.css, styles/listening.css | style.css |
+| `.health-attention` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.hero` | style.css, styles/polish.css, styles/listening.css | style.css |
-| `.hint` | style.css, styles/polish.css, styles/listening.css, styles/operations.css, styles/glossary.css, styles/typography.css | style.css |
+| `.hint` | style.css, styles/polish.css, styles/cloud-ui.css, styles/listening.css, styles/operations.css, styles/glossary.css, styles/typography.css | style.css |
 | `.how` | style.css, styles/listening.css | style.css |
-| `.icon` | styles/shell.css, styles/icons.css | styles/shell.css |
+| `.icon` | styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
+| `.icon-button` | styles/foundation.css, styles/cloud-ui.css | styles/foundation.css |
 | `.in-seam` | style.css, styles/listening.css | style.css |
 | `.inspector` | styles/shell.css, styles/polish.css, styles/creation.css, styles/music-objects.css | styles/shell.css |
 | `.inspector-head` | styles/shell.css, styles/creation.css | styles/shell.css |
@@ -248,8 +260,9 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.inspector-tabs` | styles/shell.css, styles/polish.css | styles/shell.css |
 | `.is-current` | styles/creation.css, styles/depth.css | styles/creation.css |
 | `.is-draft` | styles/creation.css, styles/depth.css | styles/creation.css |
+| `.keys` | style.css, styles/shell.css | style.css |
 | `.lede` | style.css, styles/polish.css, styles/listening.css, styles/typography.css | style.css |
-| `.library` | styles/shell.css, styles/polish.css | styles/shell.css |
+| `.library` | styles/shell.css, styles/polish.css, styles/operations.css | styles/shell.css |
 | `.library-cards` | styles/operations.css, styles/music-objects.css | styles/operations.css |
 | `.library-count` | styles/shell.css, styles/typography.css | styles/shell.css |
 | `.library-density` | styles/polish.css, styles/operations.css | styles/polish.css |
@@ -265,18 +278,29 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.lost` | styles/polish.css, styles/creation.css | styles/polish.css |
 | `.lyrics` | style.css, styles/foundation.css, styles/listening.css | style.css |
 | `.menu` | styles/shell.css, styles/listening.css, styles/creation.css | styles/shell.css |
-| `.menu-list` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css, styles/creation.css, styles/depth.css | styles/shell.css |
+| `.menu-list` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/creation.css, styles/depth.css | styles/shell.css |
+| `.meter` | styles/foundation.css, styles/cloud-ui.css | styles/foundation.css |
+| `.meter-fill` | styles/foundation.css, styles/cloud-ui.css | styles/foundation.css |
 | `.metrics` | style.css, styles/polish.css, styles/operations.css | style.css |
-| `.mini-song` | styles/shell.css, styles/polish.css, styles/typography.css | styles/shell.css |
+| `.mini` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.mini-next` | styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css | styles/shell.css |
+| `.mini-progress` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.mini-requests` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.mini-song` | styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/typography.css | styles/shell.css |
 | `.mix` | styles/shell.css, styles/creation.css | styles/shell.css |
 | `.mix-head` | style.css, styles/polish.css, styles/creation.css, styles/typography.css | style.css |
+| `.mix-quick` | styles/polish.css, styles/listening.css | styles/polish.css |
 | `.mixes` | styles/shell.css, styles/polish.css, styles/listening.css | styles/shell.css |
+| `.more-nav-workspace` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.music-seam-diagram` | styles/music-objects.css, styles/depth.css | styles/music-objects.css |
 | `.music-visualizer` | style.css, styles/listening.css | style.css |
-| `.nav` | styles/shell.css, styles/polish.css, styles/icons.css | styles/shell.css |
-| `.nav-collapse` | styles/shell.css, styles/icons.css | styles/shell.css |
-| `.nav-label` | styles/shell.css, styles/icons.css | styles/shell.css |
-| `.nav-request` | styles/shell.css, styles/icons.css | styles/shell.css |
+| `.nav` | styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
+| `.nav-collapse` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
+| `.nav-context` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.nav-foot` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.nav-label` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
+| `.nav-more-mobile` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.nav-request` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
 | `.next-song` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.next-up` | style.css, styles/listening.css, styles/typography.css | style.css |
 | `.notice` | style.css, styles/listening.css | style.css |
@@ -286,32 +310,34 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.on-stage` | styles/shell.css, styles/polish.css | styles/shell.css |
 | `.open` | style.css, styles/shell.css, styles/creation.css | style.css |
 | `.over` | style.css, styles/shell.css, styles/creation.css | style.css |
-| `.overlay` | styles/shell.css, styles/polish.css | styles/shell.css |
-| `.overlay-body` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/creation.css | styles/shell.css |
-| `.overlay-close` | styles/shell.css, styles/polish.css | styles/shell.css |
-| `.overlay-dialog` | styles/shell.css, styles/glossary.css | styles/shell.css |
-| `.overlay-drawer` | styles/shell.css, styles/polish.css | styles/shell.css |
-| `.overlay-foot` | styles/shell.css, styles/foundation.css | styles/shell.css |
-| `.overlay-head` | styles/shell.css, styles/polish.css, styles/typography.css | styles/shell.css |
-| `.overlay-panel` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/glossary.css, styles/depth.css | styles/shell.css |
-| `.overlay-sheet` | styles/shell.css, styles/polish.css, styles/creation.css | styles/shell.css |
+| `.overlay` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
+| `.overlay-body` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/creation.css | styles/shell.css |
+| `.overlay-close` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
+| `.overlay-dialog` | styles/shell.css, styles/cloud-ui.css, styles/glossary.css | styles/shell.css |
+| `.overlay-drawer` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
+| `.overlay-foot` | styles/shell.css, styles/foundation.css, styles/cloud-ui.css | styles/shell.css |
+| `.overlay-head` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/typography.css | styles/shell.css |
+| `.overlay-panel` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/glossary.css, styles/depth.css | styles/shell.css |
+| `.overlay-sheet` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/creation.css | styles/shell.css |
 | `.overlay-workspace` | styles/shell.css, styles/creation.css | styles/shell.css |
-| `.page` | style.css, styles/shell.css, styles/polish.css, styles/creation.css | style.css |
+| `.page` | style.css, styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/creation.css, styles/operations.css | style.css |
+| `.palette-button` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.palette-item` | styles/foundation.css, styles/palette.css, styles/depth.css | styles/foundation.css |
 | `.panel` | style.css, styles/polish.css, styles/depth.css | style.css |
 | `.phrase` | style.css, styles/operations.css | style.css |
 | `.pill` | style.css, styles/listening.css | style.css |
 | `.playing` | style.css, styles/polish.css, styles/creation.css, styles/depth.css | style.css |
-| `.popover-panel` | styles/foundation.css, styles/depth.css | styles/foundation.css |
+| `.popover-panel` | styles/foundation.css, styles/cloud-ui.css, styles/depth.css | styles/foundation.css |
 | `.preview` | style.css, styles/shell.css | style.css |
-| `.primary` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css, styles/creation.css | style.css |
-| `.problem` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css, styles/depth.css | styles/shell.css |
+| `.primary` | styles/boot.css, style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/listening.css, styles/creation.css | style.css |
+| `.problem` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/listening.css, styles/depth.css | styles/shell.css |
 | `.prominent` | styles/listening.css, styles/depth.css | styles/listening.css |
-| `.quiet` | style.css, styles/listening.css | style.css |
+| `.quiet` | styles/boot.css, style.css, styles/cloud-ui.css, styles/listening.css | styles/boot.css |
 | `.ready` | style.css, styles/music-objects.css | style.css |
 | `.report` | style.css, styles/icons.css | style.css |
 | `.request-approve` | style.css, styles/listening.css | style.css |
 | `.request-cancel` | style.css, styles/listening.css | style.css |
+| `.request-detail` | style.css, styles/listening.css | style.css |
 | `.request-list` | style.css, styles/shell.css | style.css |
 | `.request-name` | style.css, styles/listening.css | style.css |
 | `.request-pair` | style.css, styles/listening.css | style.css |
@@ -322,7 +348,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.requested` | style.css, styles/depth.css | style.css |
 | `.requests` | style.css, styles/foundation.css, styles/depth.css | style.css |
 | `.requests-head` | style.css, styles/foundation.css | style.css |
-| `.round` | style.css, styles/shell.css | style.css |
+| `.round` | style.css, styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css | style.css |
 | `.row` | style.css, styles/polish.css, styles/listening.css, styles/operations.css | style.css |
 | `.seam` | style.css, styles/shell.css, styles/creation.css | style.css |
 | `.seam-actions` | style.css, styles/creation.css | style.css |
@@ -333,11 +359,14 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.seam-visual-caption` | style.css, styles/shell.css | style.css |
 | `.seam-visual-label` | style.css, styles/shell.css | style.css |
 | `.search-field` | styles/foundation.css, styles/operations.css | styles/foundation.css |
-| `.section-title` | style.css, styles/listening.css | style.css |
+| `.section-title` | style.css, styles/cloud-ui.css, styles/listening.css | style.css |
 | `.selected` | styles/creation.css, styles/music-objects.css, styles/depth.css | styles/creation.css |
+| `.setup-steps` | styles/foundation.css, styles/listening.css | styles/foundation.css |
+| `.shell` | styles/shell.css, styles/cloud-shell.css, styles/listening.css | styles/shell.css |
+| `.shell-banners` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.skeleton` | styles/shell.css, styles/polish.css, styles/listening.css | styles/shell.css |
 | `.skeleton-library` | styles/polish.css, styles/operations.css | styles/operations.css |
-| `.small` | styles/boot.css, style.css, styles/polish.css, styles/operations.css | styles/boot.css |
+| `.small` | styles/boot.css, style.css, styles/polish.css, styles/cloud-ui.css, styles/operations.css | styles/boot.css |
 | `.soft` | style.css, styles/typography.css | style.css |
 | `.song` | style.css, styles/shell.css, styles/polish.css, styles/creation.css, styles/depth.css | style.css |
 | `.song-actions` | style.css, styles/polish.css, styles/creation.css, styles/operations.css, styles/music-objects.css | style.css |
@@ -375,17 +404,20 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.studio-ruler` | style.css, styles/creation.css | styles/creation.css |
 | `.studio-side` | style.css, styles/creation.css | style.css |
 | `.sung` | style.css, styles/listening.css | style.css |
-| `.tabs` | styles/shell.css, styles/polish.css | styles/shell.css |
+| `.tabs` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
+| `.theme-menu` | styles/foundation.css, styles/cloud-shell.css | styles/foundation.css |
 | `.thumbs` | style.css, styles/polish.css | style.css |
 | `.time` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.timeline` | style.css, styles/shell.css, styles/polish.css, styles/creation.css, styles/depth.css | style.css |
-| `.toast-close` | styles/shell.css, styles/polish.css, styles/icons.css | styles/polish.css |
-| `.toast-row` | styles/shell.css, styles/polish.css, styles/icons.css, styles/depth.css | styles/shell.css |
-| `.toasts` | styles/shell.css, styles/polish.css | styles/shell.css |
+| `.toast-close` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/icons.css | styles/polish.css |
+| `.toast-row` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/icons.css, styles/depth.css | styles/shell.css |
+| `.toast-where` | styles/shell.css, styles/cloud-ui.css | styles/shell.css |
+| `.toasts` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
+| `.tooltip` | styles/shell.css, styles/cloud-ui.css | styles/shell.css |
 | `.tooltip-anchor` | styles/shell.css, styles/listening.css | styles/shell.css |
 | `.transport` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.transport-more` | styles/shell.css, styles/listening.css | styles/shell.css |
-| `.ui-icon` | styles/polish.css, styles/foundation.css, styles/icons.css | styles/polish.css |
+| `.ui-icon` | styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/icons.css | styles/polish.css |
 | `.vibe-card` | styles/polish.css, styles/listening.css, styles/music-objects.css, styles/typography.css | styles/listening.css |
 | `.vibe-card-detail` | styles/polish.css, styles/listening.css | styles/polish.css |
 | `.vibe-card-facts` | styles/listening.css, styles/typography.css | styles/listening.css |
@@ -394,9 +426,9 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.vibe-scope` | styles/listening.css, styles/typography.css | styles/listening.css |
 | `.vibe-tempo` | styles/polish.css, styles/listening.css, styles/typography.css | styles/polish.css |
 | `.view-options` | styles/polish.css, styles/listening.css | styles/polish.css |
-| `.volume` | styles/shell.css, styles/icons.css | styles/shell.css |
+| `.volume` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
 | `.waiting` | style.css, styles/music-objects.css | style.css |
-| `.warn` | style.css, styles/polish.css, styles/listening.css, styles/operations.css | style.css |
+| `.warn` | style.css, styles/polish.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/operations.css | style.css |
 | `.why` | style.css, styles/typography.css | style.css |
 | `.wide` | style.css, styles/shell.css | style.css |
 | `.wrap` | style.css, styles/polish.css | style.css |

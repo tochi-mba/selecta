@@ -56,7 +56,10 @@ def test_every_setting_has_field_level_instructions():
 
 def test_workos_guide_explains_issuer_and_audience_source():
     guide = setup_cloud.SETUP_GUIDES["WorkOS"][1]
-    assert ".well-known/openid-configuration" in guide
+    # the issuer is WorkOS's per-client address, and a token is tied to the application by its
+    # client_id claim (37bee97b); the guide used to send the reader to the discovery document
+    assert "https://api.workos.com/user_management/<client_id>" in guide
+    assert "client_id claim" in guide
     assert "client ID" in guide
 
 
