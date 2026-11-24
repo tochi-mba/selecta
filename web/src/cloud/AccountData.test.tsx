@@ -33,10 +33,10 @@ describe('Download my data', () => {
     expect(holds).toHaveTextContent('as mixes.json');
   });
 
-  it('shows the server’s reason when the export fails', async () => {
+  it('says the server’s reason in plain words when the export fails, never its code', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: { code: 'asset_export_unavailable' } }), { status: 503 })));
     render(<AccountData token={async () => 'tok'} workspaceId="ws-1" />);
     await userEvent.click(screen.getByRole('button', { name: 'Download my data' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('asset export unavailable');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your audio files couldn’t be read from storage just now.');
   });
 });

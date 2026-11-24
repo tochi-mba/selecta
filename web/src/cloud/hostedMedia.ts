@@ -52,6 +52,28 @@ export async function readHostedAssets(api: Api, workspaceId: string): Promise<H
   return found;
 }
 
+// One listing of the hosted copies per workspace, shared by the Library's "stored in Cloud" check
+// and the player, read again when it is older than HOSTED_FRESH_MS or after an upload was
+// accepted (`forgetHostedAssets`), so a new upload shows and plays without a reload.
+export const HOSTED_FRESH_MS = 20_000;
+/** Said on window when an upload was accepted or a stored song changed (CloudApp's event stream). */
+export const LIBRARY_CHANGED_EVENT = 'selecta:library-changed';
+const kept = new Map<string, { at: number; listing: Promise<HostedAsset[]> }>();
+
+export function hostedAssets(api: Api, workspaceId: string, now = Date.now()): Promise<HostedAsset[]> {
+  const known = kept.get(workspaceId);
+  if (known && now - known.at < HOSTED_FRESH_MS) return known.listing;
+  const listing = readHostedAssets(api, workspaceId).catch((problem) => { kept.delete(workspaceId); throw problem; });
+  kept.set(workspaceId, { at: now, listing });
+  return listing;
+}
+
+/** After an upload is accepted: the next look reads the hosted copies again. */
+export function forgetHostedAssets(workspaceId?: string): void {
+  if (workspaceId) kept.delete(workspaceId);
+  else kept.clear();
+}
+
 /** A MediaResolver over the account's hosted copies. `songs` is the current programme's
  * catalogue entries; `shaOf` reads the device's identity hash for a song when it has one. */
 export function hostedResolver(api: Api, workspaceId: string, options: {
@@ -59,8 +81,7 @@ export function hostedResolver(api: Api, workspaceId: string, options: {
   shaOf?: (songId: number) => Promise<string | null>;
   fetchBytes?: (url: string) => Promise<ArrayBuffer>;
 }): MediaResolver {
-  let listing: Promise<HostedAsset[]> | null = null;
-  const assets = () => (listing ??= readHostedAssets(api, workspaceId).catch((problem) => { listing = null; throw problem; }));
+  const assets = () => hostedAssets(api, workspaceId);
   const fetchBytes = options.fetchBytes ?? (async (url: string) => {
     const response = await fetch(url);
     if (!response.ok) throw new Error('SelectaDJ could not fetch the hosted copy of this song.');
@@ -70,7 +91,12 @@ export function hostedResolver(api: Api, workspaceId: string, options: {
     const song = options.songs().find((entry) => entry.song_id === songId);
     if (!song) return null;
     const sha = (await options.shaOf?.(songId).catch(() => null)) ?? null;
-    const asset = matchAsset(song, sha, await assets());
+    let asset = matchAsset(song, sha, await assets());
+    if (!asset) {
+      // a song uploaded since the listing was read: look once more before saying it is not here
+      forgetHostedAssets(workspaceId);
+      asset = matchAsset(song, sha, await assets());
+    }
     if (!asset) return null;
     return {
       id: songId,

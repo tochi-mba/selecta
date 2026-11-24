@@ -504,6 +504,15 @@ class Uploads:
                     created_at=now,
                 )
             )
+        # the song joins the account's catalogue at once, so the Library lists it (staging
+        # walkthrough item 13); the stored file stays accepted whatever happens here
+        from selecta.storage.catalogue_link import register_upload
+
+        register_upload(
+            conn, session.workspace_id, sha256=probe.sha256, file_name=session.display_name,
+            duration_s=float(probe.duration_s), codec=probe.format,
+            sample_rate=int(probe.sample_rate),
+        )
         if session.reservation_id:
             self.quota.commit(conn, session.reservation_id)
         session = self._update(conn, session, now=now, status=Status.ACCEPTED, error=None)
