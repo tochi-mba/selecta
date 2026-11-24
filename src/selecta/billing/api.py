@@ -14,6 +14,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
+from starlette.concurrency import run_in_threadpool
 
 from selecta.admin import state as emergency_state
 from selecta.authz.roles import WorkspaceAction
@@ -293,6 +294,12 @@ def install_routes(
             raise HTTPException(
                 status_code=400, detail={"code": "invalid_stripe_signature"}
             ) from error
+        # Storing and processing use the database and ask Stripe (up to 20 seconds), all
+        # blocking: on the event loop they would stall every other request and every open
+        # event stream for as long as Stripe took. They run on a worker thread instead.
+        return await run_in_threadpool(_apply_event, event)
+
+    def _apply_event(event: dict[str, Any]) -> dict[str, Any]:
         with transaction(engine) as conn:
             stored = store_event(conn, event)
             held = emergency_state.load(conn).billing_safe_mode
