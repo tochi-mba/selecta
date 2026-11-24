@@ -74,6 +74,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `lucy.voice` | **Voice input.** Talking to Lucy instead of typing. | `lucy` |
 | `lucy.remote_providers` | **AI services for Lucy.** Planning with Anthropic or an OpenAI-compatible host instead of the built-in planner. | `lucy` |
 | `lucy.listening_history` | **Listening history for Lucy.** What you play is noted so Lucy can know your most-played songs. | `lucy` |
+| `lucy.cloud_conversation` | **Lucy's conversation in Cloud.** Talk to Lucy in the browser about your library and mixes; she proposes changes you can save. | `lucy`, `cloud.local_media` |
 
 ## My Mixes
 

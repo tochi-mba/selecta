@@ -51,6 +51,8 @@ beforeEach(() => {
     if (url.startsWith('/api/local-media/songs')) return json({ songs });
     if (url.startsWith('/api/uploads')) return json({ uploads: [] });
     if (url.startsWith('/api/assets?')) return json({ assets: [], next_cursor: null });
+    if (url === '/api/lucy-cloud/status') return json({ enabled: true, phases: { chat: true, proposals: true, commit: true, memory: false, voice: false }, provider: { kind: 'anthropic', label: 'Lucy Basic', model: null, base_url: null, remote: true, consented: true, key_set: true, mode: 'full', reason: null, capabilities: { streaming: true, tools: true, json_schema: true, context_tokens: null, cancellation: true } }, budgets: { max_cycles: 0, max_steps: 0, max_seconds: 0, max_output_tokens: 0, spend_cap_usd: null }, privacy: { share_lyrics: false, share_history: false, data_classes: [] }, event_schema: 1, api_version: 1 });
+    if (url.startsWith('/api/lucy-cloud/conversations?')) return json({ conversations: [] });
     if (url === '/api/account/lucy') return json({ enabled: true, phases: { chat: true, proposals: true, commit: true, memory: false, voice: false }, privacy: { share_lyrics: false, share_history: false }, tier: 'Lucy Basic', usage: { used: 0, limit: 40, fair_use: false, resets_at: null } });
     return new Response('{}', { status: 404 });
   }));
@@ -419,6 +421,30 @@ describe('the account chrome in the local-first shell (hosted frame parity)', ()
     // Lucy's own section of Account, with the tier the plan carries
     expect(await screen.findByRole('heading', { name: 'Lucy on your plan' })).toBeVisible();
     expect(await screen.findByText('Lucy Basic')).toBeVisible();
+  });
+
+  it('opens Lucy’s whole conversation when lucy.cloud_conversation is on, asking the account (ADR-0476)', async () => {
+    account = localFirst({ lucy: true, 'lucy.cloud_conversation': true });
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/mixes/lucy');
+    render(<CloudApp />);
+    // Lucy's page loads on first open, as in local mode
+    expect(await screen.findByText(/Using Lucy Basic/, undefined, { timeout: 15_000 })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Lucy' })).toBeVisible();
+    expect(screen.getByRole('textbox')).toBeEnabled();
+    const asked = vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+    expect(asked).toContain('/api/lucy-cloud/status');
+    expect(asked.some((url) => url.startsWith('/api/lucy/'))).toBe(false);
+  }, 30_000);
+
+  it('keeps Lucy’s conversation closed in the browser while lucy.cloud_conversation is off', async () => {
+    account = localFirst({ lucy: true, 'lucy.cloud_conversation': false });
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/mixes/lucy');
+    render(<CloudApp />);
+    await screen.findByRole('navigation', { name: 'Main' });
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).not.toContain('/api/lucy-cloud/status');
   });
 
   it('mounts the reconciliation only for a grandfathered account with stored media', async () => {

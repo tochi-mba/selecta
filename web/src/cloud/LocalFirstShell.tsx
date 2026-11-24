@@ -1,6 +1,6 @@
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
-import { setFlags, useFlags } from '../flags';
+import { accountFlagOn, setFlags, useFlags } from '../flags';
 import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
@@ -34,6 +34,8 @@ import { isHostedAccount } from './localFirstGate';
 import { CloudLibrary } from './CloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
 import { CurrentMix } from '../views/CurrentMix';
+import { LucyCloudSettings } from '../views/LucyCloudSettings';
+import { lucyTransport as currentLucyTransport, setLucyTransport } from '../lucy/client';
 import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './LocalFirstEmpty';
 import { useLocalFirstPlayer } from './localFirstPlayer';
 import { BROWSER_MIX_NEEDS } from './localFirstMixes';
@@ -109,8 +111,11 @@ export const NOT_IN_THE_BROWSER = {
 
 /** What this shell turns off, with Harmonic matches off too unless the browser's own version
  * (cloud.browser_harmonic) is on for the account. */
-function browserFlags(browserHarmonic: boolean): Record<string, boolean> {
-  return browserHarmonic ? { ...NOT_IN_THE_BROWSER } : { ...NOT_IN_THE_BROWSER, 'discover.harmonic': false };
+function browserFlags(browserHarmonic: boolean, lucyHere = false): Record<string, boolean> {
+  const off: Record<string, boolean> = browserHarmonic ? { ...NOT_IN_THE_BROWSER } : { ...NOT_IN_THE_BROWSER, 'discover.harmonic': false };
+  // ADR-0476: Lucy's conversation answers from the account (lucy.cloud_conversation)
+  if (lucyHere) delete off.lucy;
+  return off;
 }
 
 const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit: '/mix/current/edit', Library: '/library', Words: '/discover', Workshop: '/workshop' };
@@ -125,6 +130,9 @@ async function newestMix(recipes: { list: () => Promise<{ mix_id: string; name: 
 /** How long the speaker waits before telling the session its programme again after a refusal. */
 const PUBLISH_RETRY_MS = 10_000;
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
+const LUCY_POLL_MS = 500;
+// Lucy loads only when someone opens her, as in local mode, so she costs the shell nothing.
+const Lucy = lazy(() => import('../views/Lucy'));
 
 export function LocalFirstShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
   api: Api;
@@ -234,6 +242,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   }, [recipes]);
   // Harmonic matches (cloud.browser_harmonic): key profiles measured here, kept in this browser
   const browserHarmonic = on('cloud.browser_harmonic');
+  const lucyHere = accountFlagOn('lucy.cloud_conversation') && accountFlagOn('lucy');
   const offlineShell = on('cloud.offline_shell');
   // where the library shown came from: null from the server, or this device's kept copy
   const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
@@ -378,10 +387,24 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   useState(() => setJobsSource(false));
   useEffect(() => {
     setJobsSource(false);
-    setFlags(browserFlags(browserHarmonic));
+    setFlags(browserFlags(browserHarmonic, lucyHere));
     // Cloud has no jobs server at all, so the source stays off when this shell unmounts.
     return () => { setFlags(null); };
-  }, [browserHarmonic]);
+  }, [browserHarmonic, lucyHere]);
+  // ADR-0476: Lucy's page asks the account's API, and reads her events by asking. Set while
+  // rendering, because the page's own first read runs in an effect before this shell's do.
+  const lucyTransport = useMemo(() => (lucyHere ? { request: cloud, base: '/lucy-cloud', pollMs: LUCY_POLL_MS } : null), [lucyHere, cloud]);
+  setLucyTransport(lucyTransport);
+  const lucyAlive = useRef(false);
+  useEffect(() => {
+    lucyAlive.current = true;
+    setLucyTransport(lucyTransport);
+    // forgotten only once the shell is really gone: a re-run puts it straight back first
+    return () => {
+      lucyAlive.current = false;
+      window.setTimeout(() => { if (!lucyAlive.current && currentLucyTransport() === lucyTransport) setLucyTransport(null); }, 0);
+    };
+  }, [lucyTransport]);
 
   // cloud.offline_playback: said once when playing offline ended because another device took over
   const [takeoverSeen, setTakeoverSeen] = useState('');
@@ -845,6 +868,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         // Word connections are answered in the browser (localFirstLinks.ts) while
         // discover.word_links is on for the account; with it off this page is as it was
         if (route.tab === 'words' && on('discover.word_links')) return <Links {...shared} tab="words" />;
+        // falls through
+      case 'lucy':
+        // ADR-0476: Lucy's whole conversation, over the account's catalogue and mixes
+        if (route.page === 'lucy' && lucyHere) return <Suspense fallback={<Skeleton lines={4} label="Opening Lucy" />}><Lucy conversation={route.conversation} setMixData={setMixData} player={shellPlayer} request={request} settingsPanel={<LucyCloudSettings request={cloud} />} /></Suspense>;
         // falls through
       default: {
         const nearest = DESTINATIONS.find((place) => place.id === destinationOf(route) && place.id !== 'workspace') ?? DESTINATIONS.find((place) => place.id === 'library')!;

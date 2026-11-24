@@ -157,14 +157,14 @@ def install_routes(
         entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
         return meters.lucy_tier(plans.plan_for(entitlement.plan_id, entitlement.plan_version))
 
-    @app.get(f"{BASE}/status")
+    @app.get("/api/lucy-cloud/status")
     def status(request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008
         principal = who(request, claims)
         with transaction(engine, principal.workspace.id) as conn:
             return status_of(cloud_settings.choices(conn, principal.user.id),
                              tier_label(conn, principal))
 
-    @app.put(f"{BASE}/settings")
+    @app.put("/api/lucy-cloud/settings")
     def settings(
         body: cloud_settings.LucyChoices, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -178,7 +178,7 @@ def install_routes(
                     "code": "invalid_lucy_choice", "message": str(error)}) from error
             return status_of(choices, tier_label(conn, principal))
 
-    @app.get(f"{BASE}/conversations")
+    @app.get("/api/lucy-cloud/conversations")
     def conversations(
         request: Request, q: str = "", archived: int = 0,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -188,7 +188,7 @@ def install_routes(
             return {"conversations": cloud_store.list_conversations(
                 conn, principal.workspace.id, principal.user.id, q[:200], bool(archived))}
 
-    @app.post(f"{BASE}/conversations")
+    @app.post("/api/lucy-cloud/conversations")
     def create(
         body: NewConversation, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -198,7 +198,7 @@ def install_routes(
             return cloud_store.create_conversation(
                 conn, principal.workspace.id, principal.user.id, body.title, body.scope)
 
-    @app.get(f"{BASE}/conversations/{{conversation}}")
+    @app.get("/api/lucy-cloud/conversations/{conversation}")
     def conversation(
         conversation: str, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -218,7 +218,7 @@ def install_routes(
                 "event_schema": cloud_store.EVENT_SCHEMA,
             }
 
-    @app.patch(f"{BASE}/conversations/{{conversation}}")
+    @app.patch("/api/lucy-cloud/conversations/{conversation}")
     def update(
         conversation: str, body: ConversationChange, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -232,7 +232,7 @@ def install_routes(
             except NotFound as error:
                 raise _missing() from error
 
-    @app.delete(f"{BASE}/conversations/{{conversation}}")
+    @app.delete("/api/lucy-cloud/conversations/{conversation}")
     def delete(
         conversation: str, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -277,7 +277,7 @@ def install_routes(
         ))
         return {"turn": turn, "new": True, "run": plan.run_id}
 
-    @app.post(f"{BASE}/conversations/{{conversation}}/turns")
+    @app.post("/api/lucy-cloud/conversations/{conversation}/turns")
     def send(
         conversation: str, body: TurnBody, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -285,7 +285,7 @@ def install_routes(
         principal = who(request, claims)
         return start_turn(principal, conversation, body.client_id, body.text.strip())
 
-    @app.post(f"{BASE}/conversations/{{conversation}}/retry")
+    @app.post("/api/lucy-cloud/conversations/{conversation}/retry")
     def retry(
         conversation: str, body: RetryBody, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -300,7 +300,7 @@ def install_routes(
         return start_turn(principal, conversation, f"retry:{body.turn}:{cloud_agent.new_id()}"[:64],
                           text)
 
-    @app.post(f"{BASE}/conversations/{{conversation}}/stop")
+    @app.post("/api/lucy-cloud/conversations/{conversation}/stop")
     def stop(
         conversation: str, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -313,7 +313,7 @@ def install_routes(
                 cloud_store.set_turn(conn, principal.workspace.id, active.id, status="stopping")
         return {"stopped": runner.stop(conversation) or active is not None}
 
-    @app.get(f"{BASE}/conversations/{{conversation}}/events.json")
+    @app.get("/api/lucy-cloud/conversations/{conversation}/events.json")
     def events(
         conversation: str, request: Request, after: int = 0,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -324,7 +324,7 @@ def install_routes(
             return cloud_store.events_after(conn, principal.workspace.id, conversation,
                                             max(0, after))
 
-    @app.get(f"{BASE}/revisions/{{revision}}")
+    @app.get("/api/lucy-cloud/revisions/{revision}")
     def revision(
         revision: str, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -334,7 +334,7 @@ def install_routes(
             row = proposal_row(conn, principal, revision)
             return cloud_proposals.revision_json(conn, principal.workspace.id, row)
 
-    @app.get(f"{BASE}/revisions/{{revision}}/diff")
+    @app.get("/api/lucy-cloud/revisions/{revision}/diff")
     def diff(
         revision: str, request: Request, against: str = "",
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -348,7 +348,7 @@ def install_routes(
                 conn, principal.workspace.id, other)["snapshot"]["songs"]}
             return cloud_proposals.diff_ids(before, [int(i) for i in row.song_ids], titles)
 
-    @app.get(f"{BASE}/revisions/{{revision}}/readiness")
+    @app.get("/api/lucy-cloud/revisions/{revision}/readiness")
     def readiness(
         revision: str, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -358,7 +358,7 @@ def install_routes(
             row = proposal_row(conn, principal, revision)
             return cloud_proposals.readiness(len(row.song_ids))
 
-    @app.post(f"{BASE}/revisions/{{revision}}/edit")
+    @app.post("/api/lucy-cloud/revisions/{revision}/edit")
     def edit(
         revision: str, body: EditBody, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -372,7 +372,7 @@ def install_routes(
             except ProposalError as error:
                 raise _refused(error) from error
 
-    @app.post(f"{BASE}/proposals/{{proposal}}/current")
+    @app.post("/api/lucy-cloud/proposals/{proposal}/current")
     def make_current(
         proposal: str, body: CurrentBody, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -384,7 +384,7 @@ def install_routes(
                 raise _missing()
             return cloud_proposals.make_current(conn, principal.workspace.id, row)
 
-    @app.post(f"{BASE}/approvals")
+    @app.post("/api/lucy-cloud/approvals")
     def approve(
         body: ApproveBody, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -401,7 +401,7 @@ def install_routes(
             except ProposalError as error:
                 raise _refused(error) from error
 
-    @app.post(f"{BASE}/commits")
+    @app.post("/api/lucy-cloud/commits")
     def commit(
         body: CommitBody, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -417,7 +417,7 @@ def install_routes(
             except ProposalError as error:
                 raise _refused(error) from error
 
-    @app.get(f"{BASE}/commits/{{key}}")
+    @app.get("/api/lucy-cloud/commits/{key}")
     def commit_result(
         key: str, request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -430,7 +430,7 @@ def install_routes(
             mine(conn, principal, row.conversation_id)
             return cloud_proposals.commit_answer(row, None)
 
-    @app.get(f"{BASE}/memory")
+    @app.get("/api/lucy-cloud/memory")
     def memory(request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008
         who(request, claims)
         return {
