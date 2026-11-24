@@ -139,6 +139,8 @@ export function statusWords(status: number): string {
   if (status === 409) return 'That changed somewhere else. Reload and try again.';
   if (status === 413) return 'That is too large to send.';
   if (status === 429) return 'That’s a lot of requests at once. Wait a moment and try again.';
+  // 503 is what Render's maintenance mode and a deploy that is not ready yet answer
+  if (status === 503) return 'SelectaDJ is being updated and is back in a moment. Anything playing keeps playing.';
   if (status >= 500) return 'SelectaDJ’s service isn’t answering right now. Try again in a moment.';
   return 'That didn’t work. Try again, or contact support if it keeps happening.';
 }

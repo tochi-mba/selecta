@@ -22,11 +22,26 @@
       } catch (error) {}
     </script>
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icons/selecta-192.png" />
+    <link rel="apple-touch-icon" href="/brand/png/apple-touch-icon-180.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/png/favicon-32.png" />
+    <!-- Link previews (web/public/brand/BRAND.md): absolute, because previews are fetched by other sites -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SelectaDJ" />
+    <meta property="og:title" content="SelectaDJ" />
+    <meta property="og:description" content="Make and play mixes from your own music. A REX Technologies product." />
+    <meta property="og:image" content="https://app.selectadj.app/brand/png/social-card-1200x630.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SelectaDJ: make and play mixes from your own music" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SelectaDJ" />
+    <meta name="twitter:description" content="Make and play mixes from your own music." />
+    <meta name="twitter:image" content="https://app.selectadj.app/brand/png/social-card-1200x630.png" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8ff3a'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23100f0c'/%3E%3C/svg%3E" />
   </head>
   <body>
     <div id="root"></div>
+    <noscript><p style="max-width:32rem;margin:15vh auto;padding:0 16px;font:16px/1.5 system-ui,sans-serif">SelectaDJ needs JavaScript to make and play mixes. Turn it on for this site, or open SelectaDJ in another browser. Help: support@selectadj.app</p></noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
