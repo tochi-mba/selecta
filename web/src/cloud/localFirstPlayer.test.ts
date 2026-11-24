@@ -97,7 +97,8 @@ describe('the player’s controls', () => {
     await player.playFrom(2, 10);
     expect(act.playHere).toHaveBeenCalledTimes(1);
     // the new speaker begins where the press asked, not where the session last was (song 1, 30 s)
-    expect(act.playHere).toHaveBeenCalledWith({ song_index: 2, offset_ms: 10_000 });
+    // an ordinary press does not insist (abdf6bfa added the second argument)
+    expect(act.playHere).toHaveBeenCalledWith({ song_index: 2, offset_ms: 10_000 }, undefined);
     expect(act.command).not.toHaveBeenCalled();
   });
 
@@ -105,9 +106,9 @@ describe('the player’s controls', () => {
     const act = actions();
     const player = new LocalFirstPlayer(facts(), act);
     await player.playFrom(1);
-    expect(act.playHere).toHaveBeenLastCalledWith({ song_index: 1, offset_ms: 0 });
+    expect(act.playHere).toHaveBeenLastCalledWith({ song_index: 1, offset_ms: 0 }, undefined);
     await player.playFrom(0, 1.2504);
-    expect(act.playHere).toHaveBeenLastCalledWith({ song_index: 0, offset_ms: 1250 });
+    expect(act.playHere).toHaveBeenLastCalledWith({ song_index: 0, offset_ms: 1250 }, undefined);
     expect(act.command).not.toHaveBeenCalled();
   });
 

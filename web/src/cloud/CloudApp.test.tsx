@@ -57,7 +57,7 @@ beforeEach(() => {
       return json(account);
     }
     if (url === '/api/account' && init?.method === 'DELETE') return deleted ? deleted.clone() : new Response(null, { status: 204 });
-    if (url === '/api/account/sign-out-everywhere') return signOutEverywhere ?? json({ revoked_before: 1, sessions_revoked: 2, devices_signed_out: 1, playback_stopped: true });
+    if (url === '/api/account/sign-out-everywhere') return signOutEverywhere?.clone() ?? json({ revoked_before: 1, sessions_revoked: 2, devices_signed_out: 1, playback_stopped: true });
     if (url === '/api/events') {
       if (events === null) throw new TypeError('blocked');
       return new Response(events, { status: 200, headers: { 'content-type': 'text/event-stream' } });
@@ -180,7 +180,8 @@ describe('the Cloud app', () => {
     signOutEverywhere = new Response(JSON.stringify({ detail: { code: 'sign_out_incomplete', message: 'Signed out here, but some devices may stay signed in. Try again.' } }), { status: 502, headers: { 'content-type': 'application/json' } });
     render(<CloudApp />);
     await userEvent.click(await screen.findByRole('button', { name: 'Sign out everywhere' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('some devices may stay signed in');
+    // a keyed POST is tried again on a 5xx (cloud.idempotency), so the words come after the retries
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent('some devices may stay signed in');
     expect(auth.signOut).not.toHaveBeenCalled();
   });
 
@@ -241,7 +242,7 @@ describe('the Cloud app', () => {
     render(<CloudApp />);
     await userEvent.click(await screen.findByRole('button', { name: 'Delete account' }));
     const dialog = await screen.findByRole('alertdialog', { name: 'Delete your SelectaDJ Cloud account?' });
-    expect(dialog).toHaveTextContent('It is hidden and you are signed out at once. Final erasure happens after the 30 day recovery window');
+    expect(dialog).toHaveTextContent('It is hidden and you are signed out at once. It is erased for good after 30 days');
     expect(native).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Keep my account' }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
