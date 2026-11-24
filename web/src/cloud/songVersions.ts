@@ -22,9 +22,15 @@ export type Grouping = {
   /** Every file row as the server listed it. */
   files: CatalogueSong[];
   primaryOf: (songId: number) => number;
-  /** Every id of this song, the asked one first, then the primary, then the rest. */
+  /** Every id of this song, best version first (see `qualityOf`). */
   versionsOf: (songId: number) => number[];
 };
+
+/** Lossless first, then the common lossy formats by how well they usually sound. */
+const FORMAT_RANK: Record<string, number> = { flac: 5, wav: 5, aiff: 5, aif: 5, alac: 5, m4a: 3, aac: 3, ogg: 3, opus: 3, oga: 3, mp3: 2, wma: 1 };
+export function qualityOf(song: Pick<CatalogueSong, 'codec'>): number {
+  return FORMAT_RANK[(song.codec ?? '').toLowerCase()] ?? 0;
+}
 
 const EMPTY: Grouping = { songs: [], files: [], primaryOf: (id) => id, versionsOf: (id) => [id] };
 
@@ -57,9 +63,15 @@ export function groupVersions(files: readonly CatalogueSong[]): Grouping {
     });
   }
   const primaryOf = (id: number) => rootOf.get(id) ?? id;
+  // best first: lossless before lossy, then the longer file (less trimmed); the engine plays the
+  // first of these this device can open
+  const ranked = new Map<number, number[]>();
+  for (const [root, ids] of members) {
+    ranked.set(root, [...ids].sort((one, other) => qualityOf(byId.get(other)!) - qualityOf(byId.get(one)!) || (byId.get(other)!.duration_s ?? 0) - (byId.get(one)!.duration_s ?? 0) || one - other));
+  }
   const versionsOf = (id: number) => {
-    const ids = members.get(primaryOf(id)) ?? [id];
-    return [id, ...ids.filter((other) => other !== id)];
+    const ids = ranked.get(primaryOf(id));
+    return ids && ids.includes(id) ? ids : [id];
   };
   return { songs, files: [...files], primaryOf, versionsOf };
 }

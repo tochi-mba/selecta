@@ -228,3 +228,8 @@
 @media (max-width: 768px) {
   .admin-shell { grid-template-columns: minmax(0, 1fr); }
 }
+.admin-kpi strong { font: inherit; font-size: var(--text-xl); font-weight: var(--weight-strong); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.admin-role-card p { margin: 0; }
+.admin-headline { font-size: var(--text-lg); }
+.admin-nav { height: calc(100vh - var(--space-5)); max-height: none; }
+@media (max-width: 720px) { .admin-nav { height: auto; } }
