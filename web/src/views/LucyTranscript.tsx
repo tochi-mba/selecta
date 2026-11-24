@@ -159,7 +159,7 @@ export type Pending = { conversation: string | null; text: string; state: 'sendi
 
 type Entry = { key: number; order: number; node: ReactNode };
 
-export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide, onEdit, onRate }: {
+export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide, onEdit, onRate, onOlder }: {
   view: LucyView;
   still: boolean;
   pending: Pending | null;
@@ -170,6 +170,7 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   onDecide: (id: string, decision: 'allow' | 'deny') => Promise<void>;
   onEdit?: (text: string) => void;
   onRate?: (id: string, rating: 'up' | 'down') => Promise<void>;
+  onOlder?: () => Promise<void>;
 }) {
   const newest = [...view.messages].reverse().find((message) => message.role === 'assistant')?.id;
   const entries: Entry[] = view.messages.map((message) => ({
@@ -197,6 +198,7 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   return (
     <section className="lucy-transcript" aria-label="Conversation with Lucy">
       {!entries.length && !showPending && empty}
+      {view.more && onOlder && <p className="lucy-older"><Action className="quiet" working="Reading…" run={onOlder}>Show earlier messages</Action></p>}
       <div role="log" aria-live="off" aria-label="Messages">
         <ol className="lucy-log">
           {entries.map((entry) => entry.node)}

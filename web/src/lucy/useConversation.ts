@@ -20,6 +20,8 @@ export type Conversation = {
   reload: () => void;
   /** A revision the page itself just made current. */
   adopt: (revision: Revision) => void;
+  /** Read the page of messages before the first one shown (a long Cloud conversation). */
+  older: () => Promise<void>;
 };
 
 const RETRY_AFTER_MS = 4000;
@@ -169,5 +171,12 @@ export function useConversation(id: string | null, onSummary: (words: string[]) 
     dispatch({ type: 'current', revision: next });
   }, []);
 
-  return { view, revision, load, stream, reload, adopt };
+  const older = useCallback(async () => {
+    const first = viewRef.current.messages[0];
+    if (!id || !first) return;
+    const page = await lucy.older(id, first.seq);
+    dispatch({ type: 'older', messages: page.messages, more: page.more });
+  }, [id]);
+
+  return { view, revision, load, stream, reload, adopt, older };
 }
