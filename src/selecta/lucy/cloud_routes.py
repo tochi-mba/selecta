@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from selecta.ai import gateway
 from selecta.authz.roles import WorkspaceAction
@@ -47,6 +48,8 @@ class TurnBody(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_TEXT)
     expected_revision: str | None = Field(default=None, max_length=64)
     selection: dict[str, Any] | None = None
+    # the playback device this was typed on (ADR-0476 item 22); unknown ids are ignored
+    device_id: str | None = Field(default=None, max_length=36)
 
 
 class RetryBody(BaseModel):
@@ -208,14 +211,15 @@ def install_routes(
         with transaction(engine, ws) as conn:
             row = mine(conn, principal, conversation)
             cloud_store.settle_stale(conn, ws, row.id, runner.alive_turns())
+            cursor = cloud_store.cursor_of(conn, ws, row.id)
             return {
                 "conversation": cloud_store.get_conversation(conn, ws, principal.user.id,
                                                              row.id),
-                "messages": cloud_store.snapshot_messages(conn, ws, row.id),
+                "messages": cloud_store.snapshot_messages(conn, ws, row.id, cursor),
                 "proposal": cloud_proposals.snapshot(conn, ws, row.id),
                 "run": cloud_store.last_run(conn, ws, row.id),
                 "permissions": [], "cards": [],
-                "cursor": cloud_store.cursor_of(conn, ws, row.id),
+                "cursor": cursor,
                 "event_schema": cloud_store.EVENT_SCHEMA,
             }
 
@@ -248,7 +252,18 @@ def install_routes(
                 raise _missing() from error
         return {"deleted": True, "drafts_kept": True}
 
-    def start_turn(principal, conversation_id: str, client_id: str, text: str) -> dict:
+    def device_of(conn, principal, device_id: str | None) -> tuple[str | None, str | None]:
+        if not device_id:
+            return None, None
+        from selecta.playback import store as playback_store
+
+        device = playback_store.load_device(conn, principal.workspace.id, device_id)
+        if device is None or device.signed_out_at is not None:
+            return None, None
+        return device.id, device.name
+
+    def start_turn(principal, conversation_id: str, client_id: str, text: str,
+                   device_id: str | None = None) -> dict:
         ws = principal.workspace.id
         with transaction(engine, ws) as conn:
             mine(conn, principal, conversation_id)
@@ -262,16 +277,35 @@ def install_routes(
                         "new": False, "run": found.run_id}
         try:
             with transaction(engine, ws) as conn:
+                device, device_name = device_of(conn, principal, device_id)
                 plan = cloud_agent.admit(conn, ws, conversation_id, text,
                                          timezone=principal.user.timezone)
-                turn = cloud_store.add_turn(conn, ws, conversation_id, client_id, text)
+                turn = cloud_store.add_turn(conn, ws, conversation_id, client_id, text,
+                                            device, device_name)
                 cloud_store.set_turn(conn, ws, turn["id"], run_id=plan.run_id)
         except gateway.TurnRefused as refused:
+            message = refused.message
+            if refused.code == "busy":
+                with transaction(engine, ws) as conn:
+                    other = cloud_store.busy_with(conn, ws)
+                message = (f"Lucy is answering a message from {other}. Send this again when "
+                           "she's done; your words are kept." if other else
+                           "Lucy is answering another message. Send this again when she's "
+                           "done; your words are kept.")
             raise HTTPException(status_code=409, detail={
-                "code": refused.code, "message": refused.message}) from refused
+                "code": refused.code, "message": message}) from refused
+        except IntegrityError:
+            # the same send arrived twice at once: the first one made the turn
+            with transaction(engine, ws) as conn:
+                found = cloud_store.turn_by_client(conn, ws, conversation_id, client_id)
+            if found is None:
+                raise
+            return {"turn": {"id": found.id, "seq": found.seq, "status": found.status},
+                    "new": False, "run": found.run_id}
         runner.start(cloud_agent.Job(
             engine=engine, workspace_id=ws, user_id=principal.user.id,
             conversation_id=conversation_id, turn_id=turn["id"], text=text, plan=plan,
+            device_id=device,
             timezone=principal.user.timezone, proposals_on=choices["phases"]["proposals"],
             provider_factory=getattr(app.state, "lucy_cloud_provider", None)
             or cloud_agent.default_provider,
@@ -284,7 +318,8 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
         principal = who(request, claims)
-        return start_turn(principal, conversation, body.client_id, body.text.strip())
+        return start_turn(principal, conversation, body.client_id, body.text.strip(),
+                          body.device_id)
 
     @app.post("/api/lucy-cloud/conversations/{conversation}/retry")
     def retry(

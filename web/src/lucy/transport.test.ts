@@ -18,7 +18,7 @@ describe('Lucy transport', () => {
       asked.push([path, init]);
       return {};
     }) as Request;
-    setLucyTransport({ request, base: '/lucy-cloud', pollMs: 500 });
+    setLucyTransport({ request, base: '/lucy-cloud', pollMs: 500, device: () => 'device-1' });
 
     await lucy.status();
     await lucy.sendTurn('c 1', { client_id: 'x', text: 'hi', expected_revision: null });
@@ -30,7 +30,7 @@ describe('Lucy transport', () => {
       '/lucy-cloud/conversations/c1/events.json?after=7',
     ]);
     expect(asked[1][1]?.method).toBe('POST');
-    expect(JSON.parse(String(asked[1][1]?.body))).toEqual({ client_id: 'x', text: 'hi', expected_revision: null });
+    expect(JSON.parse(String(asked[1][1]?.body))).toEqual({ client_id: 'x', text: 'hi', expected_revision: null, device_id: 'device-1' });
   });
 
   it('reads events by asking at its own pace and never opens an EventSource', async () => {

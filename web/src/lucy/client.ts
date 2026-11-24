@@ -18,7 +18,11 @@ const at = (id: string) => encodeURIComponent(id);
 /** Where Lucy's requests go. Local mode asks this computer's server at `/api/lucy`; browser-first
  * Cloud (ADR-0476) installs its authenticated request and its own prefix, and reads events by
  * asking every `pollMs` (a bearer token can't ride on an EventSource). */
-export type LucyTransport = { request: Request; base: string; pollMs: number };
+export type LucyTransport = {
+  request: Request; base: string; pollMs: number;
+  /** The device this page runs on, sent with each message so Lucy knows what "here" means. */
+  device?: () => string | null;
+};
 let transport: LucyTransport | null = null;
 
 export function setLucyTransport(next: LucyTransport | null): void {
@@ -62,7 +66,10 @@ export const lucy = {
   deleteConversation: (id: string) => change<{ deleted: boolean; drafts_kept: true }>('DELETE', `/lucy/conversations/${at(id)}`),
   branchConversation: (id: string, message: string) => change<Conversation>('POST', `/lucy/conversations/${at(id)}/branch`, { message }),
 
-  sendTurn: (id: string, body: TurnBody) => change<TurnAccepted>('POST', `/lucy/conversations/${at(id)}/turns`, body),
+  sendTurn: (id: string, body: TurnBody) => {
+    const device = transport?.device?.() ?? null;
+    return change<TurnAccepted>('POST', `/lucy/conversations/${at(id)}/turns`, device ? { ...body, device_id: device } : body);
+  },
   stop: (id: string) => change<{ stopped: boolean }>('POST', `/lucy/conversations/${at(id)}/stop`, {}),
   retry: (id: string, turn: string) => change<TurnAccepted>('POST', `/lucy/conversations/${at(id)}/retry`, { turn }),
   events: (id: string, after: number) => get<EventsPage>(`/lucy/conversations/${at(id)}/events.json?after=${after}`),

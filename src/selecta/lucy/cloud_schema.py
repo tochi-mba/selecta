@@ -45,6 +45,10 @@ lucy_cloud_turns = sa.Table(
     # the gateway's run for this turn (selecta.ai.runs), once admitted
     sa.Column("run_id", Id, nullable=True),
     sa.Column("created_at", Epoch, nullable=False),
+    # the playback device it was sent from, and its name then ("here" means that device);
+    # added by `bf0476lucy02`
+    sa.Column("device_id", Id, nullable=True),
+    sa.Column("device_name", sa.String(60), nullable=True),
     sa.PrimaryKeyConstraint("workspace_id", "id"),
     sa.UniqueConstraint("workspace_id", "conversation_id", "client_id", name="uq_lucy_cloud_send"),
 )
