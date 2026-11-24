@@ -214,8 +214,10 @@
 .controller-devices li button { flex: none; min-height: var(--control-height); white-space: nowrap; }
 /* this device was asked to play and the browser needs one press first */
 .shell[data-mode='cloud'] .shell-banners > .asked-to-play { border-color: var(--edge-selected); }
-.shell[data-mode='cloud'] .shell-banners > .asked-to-play > button { min-height: var(--control-height); }
-.shell[data-mode='cloud'] .shell-banners > .asked-to-play > button + button { margin-inline-start: 0; }
+/* the sentence on its own line, then the two buttons together on one row, the main one first */
+.shell[data-mode='cloud'] .shell-banners > .asked-to-play { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.shell[data-mode='cloud'] .shell-banners > .asked-to-play > .asked-to-play-words { flex: 1 1 100%; }
+.shell[data-mode='cloud'] .shell-banners > .asked-to-play > button { min-height: var(--control-height); margin: 0; }
 /* ADR-0475 R1: every way to start the music from the device in hand */
 .remote-ways { display: grid; gap: var(--space-2); min-width: 0; }
 .remote-ways ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
