@@ -33,7 +33,7 @@ from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from selecta import flags
+from selecta import flags, ratelimit
 from selecta.admin import guard as admin_guard
 from selecta.admin import routes as admin_routes
 from selecta.admin import routes_controls as admin_control_routes
@@ -472,12 +472,12 @@ def create_cloud_app(
     if listener is not None:
         emergency_cache.listen(listener)
     admin_guard.install(app, emergency_cache)
+    ratelimit.install(app)  # per account and per IP, before any database work (§12.1)
     app.add_middleware(RequestMethodMiddleware)
     # One server span per request; job spans link to it (ADR-0410).
     tracing.install(app, "api")
-    tracing.configure_from_environment("api")
-    errors.configure_from_environment("api")
-    metrics.configure_from_environment("api")
+    for observer in (tracing, errors, metrics):
+        observer.configure_from_environment("api")
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
     app.add_middleware(
@@ -490,7 +490,7 @@ def create_cloud_app(
             "Authorization Content-Type Idempotency-Key Last-Event-ID "
             "X-Workspace-ID X-Operation-ID X-Admin-Session X-Upload-Batch"
         ).split(),
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "Retry-After"],
         max_age=600,
     )
 
