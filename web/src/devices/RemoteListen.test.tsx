@@ -191,21 +191,23 @@ describe('each press is one command', () => {
     expect(send.mock.calls).toEqual([['seek', { song_index: 1, offset_ms: 31_000 }]]);
   });
 
-  it('the volume slider shows when the session carries a volume, and sends once on release', async () => {
+  // ADR-0475 G1 (83e056d4): a dragged slider follows about ten times a second, and the final value
+  // always goes on release
+  it('the volume slider shows the session volume, follows a drag and sends the final value on release', async () => {
     const { send } = open(view());
     const slider = await screen.findByRole('slider', { name: 'Volume' });
     expect(slider).toHaveValue('60');
     fireEvent.change(slider, { target: { value: '45' } });
     fireEvent.change(slider, { target: { value: '30' } });
-    expect(send).not.toHaveBeenCalled();
+    expect(send.mock.calls).toEqual([['set_volume', { volume: 45 }]]);
     fireEvent.pointerUp(slider);
-    expect(send.mock.calls).toEqual([['set_volume', { volume: 30 }]]);
+    expect(send.mock.calls).toEqual([['set_volume', { volume: 45 }], ['set_volume', { volume: 30 }]]);
   });
 
-  it('there is no volume slider when the session carries none', async () => {
+  it('a session nobody has set a volume on shows the slider at the comfortable default', async () => {
     open(view({}, { volume: null }));
     await screen.findByTestId('remote-title');
-    expect(screen.queryByRole('slider', { name: 'Volume' })).toBeNull();
+    expect(screen.getByRole('slider', { name: 'Volume' })).toHaveValue('80');
   });
 });
 

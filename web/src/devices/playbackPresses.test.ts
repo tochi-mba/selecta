@@ -86,13 +86,14 @@ describe('a press the session did not take', () => {
   });
 });
 
-describe('volume on a session that keeps volume on each device', () => {
-  it('is never sent, and leaves no refusal behind', async () => {
+describe('volume from a remote', () => {
+  // ADR-0475 G1 (83e056d4): a personal session's volume is the speaker's mix level too, so it is sent
+  it('is sent on a personal session nobody has set a volume on, and leaves no refusal behind', async () => {
     const { api, sent } = remoteServer(() => session({ active_device_id: 'laptop' }), () => ({ status: 'applied' }));
     const hook = renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws', speaker: null }));
     await waitFor(() => expect(hook.result.current.view?.session).toBeTruthy(), { timeout: 4000 });
-    await act(async () => { expect(await hook.result.current.send('set_volume', { volume: 40 })).toBe(false); });
-    expect(sent).toEqual([]);
+    await act(async () => { expect(await hook.result.current.send('set_volume', { volume: 40 })).toBe(true); });
+    expect(sent.map((press) => press.command)).toEqual(['set_volume']);
     expect(hook.result.current.error).toBe('');
     hook.unmount();
   });
