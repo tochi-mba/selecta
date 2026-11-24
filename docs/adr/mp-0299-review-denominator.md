@@ -22,8 +22,8 @@ below and fails when this page and the data disagree.
 | --- | --- | --- | --- | --- |
 | Routes | 17 | 2882 | 220 | 0 |
 | Persistent surfaces | 6 | 264 | 44 | 0 |
-| Overlays | 31 | 1694 | 273 | 0 |
-| **Total** | **54** | **4840** | **537** | **0** |
+| Overlays | 33 | 1738 | 273 | 0 |
+| **Total** | **56** | **4884** | **537** | **0** |
 
-Captured is 11.1% of required and reviewed is 0%. These are machine captures, which are candidates for
+Captured is 11.0% of required and reviewed is 0%. These are machine captures, which are candidates for
 review, not a review.
