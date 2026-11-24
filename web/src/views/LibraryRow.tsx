@@ -15,7 +15,8 @@ export type LibraryRowActions = {
   open: (id: number) => void;
   start: (song: LibrarySong) => void | Promise<void>;
   analyse: (song: LibrarySong) => Promise<void>;
-  add: (song: LibrarySong, playNext: boolean) => Promise<void>;
+  /** false: nothing was added (I85: an offer to move the music is showing instead) */
+  add: (song: LibrarySong, playNext: boolean) => Promise<boolean | void>;
   priority: (song: LibrarySong) => Promise<void>;
   never: (song: LibrarySong) => Promise<void>;
 };
@@ -129,7 +130,7 @@ export const LibraryRow = memo(function LibraryRow({
           {/* I84: on a remote while another device plays, the row's one tap puts the song next
               there, says so for a screen reader, and confirms in the row */}
           {remoteNext
-            ? !inMix && <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={searching} run={async () => { await actions.add(song, true); setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
+            ? !inMix && <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={searching} run={async () => { if (await actions.add(song, true) === false) return; setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
             : facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
           {((!facts.setAside && neverFlag) || facts.canAdd) && (
             <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>

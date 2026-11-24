@@ -682,6 +682,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     audibleHere: playback.view?.speaker === 'here' && now.phase !== 'idle',
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
     askToPlay: (device, mixId) => void playOn.ask(device, mixId),
+    devices: () => holdings.devices ?? [],
   });
   // ADR-0475: with nobody playing elsewhere, the one rule decides where Play makes the sound
   const where = useWhereToPlay({
