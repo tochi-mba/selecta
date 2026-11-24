@@ -40,6 +40,7 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
+import { SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './localFirstGate';
 import { LocalFirstLabs } from './labs/LocalFirstLabs';
@@ -534,7 +535,7 @@ export function CloudApp() {
     <ConfirmDialog
       destructive
       title="Delete your SelectaDJ Cloud account?"
-      body="It is hidden and you are signed out at once. Final erasure happens after the 30 day recovery window; contact SelectaDJ support within it to keep the account."
+      body={`It is hidden and you are signed out at once. It is erased for good after 30 days; until then, write to ${SUPPORT_EMAIL} to keep it. A paid plan is cancelled straight away, with no refund for the rest of the period, and does not come back if the account is restored.`}
       confirmLabel="Delete my account"
       cancelLabel="Keep my account"
       working="Deleting…"

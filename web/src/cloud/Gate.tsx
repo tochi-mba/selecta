@@ -5,6 +5,7 @@ import { keptImportWaiting } from './importSession';
 import { ACCOUNT_PROBLEMS, AccountProblem, blockedMessage } from './accountStates';
 import type { BlockedCode } from './authConfig';
 import { ConnectionBanner } from './ConnectionBanner';
+import { supportHref } from '../support';
 
 // Every screen a person can meet before they are inside SelectaDJ Cloud, other than the landing
 // page (Welcome.tsx): checking the sign-in, signing in again, verifying an email, the one-question
@@ -191,6 +192,7 @@ export function BlockedAccount({ code, distinct, email, onSignOut }: { code: Blo
           : !email ? <GateButton working="Signing out…" hold run={onSignOut}>Sign out</GateButton> : undefined}>
       <p>{message.detail}</p>
       {signIn && keptImportWaiting() && <p>Your music import is kept on this device and carries on after you sign in.</p>}
+      {!signIn && code !== 'verified_email_required' && <p><a href={supportHref(`${eyebrow.words}: help with my account`)}>Contact support</a></p>}
     </GateScreen>
   );
 }
@@ -212,6 +214,7 @@ export function AccountProblemPage({ kind, onRetry, onSignOut, retrying, email }
             <button type="button" className="gate-button primary" onClick={onRetry} disabled={retrying} aria-busy={retrying || undefined} data-working={retrying || undefined}>{retrying ? 'Trying again…' : words.retry}</button>
             {!email && <GateButton working="Signing out…" hold run={onSignOut}>Sign out</GateButton>}
           </GateActions>
+          <p><a href={supportHref(`${PROBLEM_EYEBROW[kind]}: my account will not open`)}>Contact support</a></p>
         </section>
         {email && <SignedInAs email={email} onSignOut={onSignOut} />}
       </div>
