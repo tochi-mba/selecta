@@ -687,7 +687,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       : where.decide;
   // what Make a Mix says Play does: asks the speaker, or starts on the device the rule chose
   const chosenElsewhere = where.choice && (where.choice.kind === 'default' || where.choice.kind === 'only') && where.choice.device.device_id !== playback.device?.id ? where.choice.device : null;
-  const playsOn = speakerElsewhere ? { name: speakerElsewhere.name, now: false } : chosenElsewhere ? { name: chosenElsewhere.name, now: true } : !followsHere && bestHere ? { name: bestHere.name, now: true } : undefined;
+  const playsOn = speakerElsewhere ? { name: speakerElsewhere.name, now: false } : where.choice?.kind === 'ask' ? { name: '', now: true, ask: true } : chosenElsewhere ? { name: chosenElsewhere.name, now: true } : !followsHere && bestHere ? { name: bestHere.name, now: true } : undefined;
   const askedBanner = askedToPlay && (
     <p className="asked-to-play" role="alert" data-testid="asked-to-play">
       <span className="asked-to-play-words">{askedToPlay.asker_name} asked to play here. Press Play to allow sound from this tab.</span>
@@ -786,7 +786,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   ].map((place) => ({ id: place.id, label: place.label, path: place.path, about: place.id === 'workspace' && 'icon' in place ? 'Your library at a glance, connecting music, this browser’s storage and diagnostics' : place.about }));
   const controls = useServerFreeControls({ places, player: shellPlayer, now, hasMix: data.mix.length > 0, hasNext: data.mix.length > now.position + 1 });
   const currentMix = useCallback(() => data.mix, [data.mix]);
-  useMediaKeys({ on: on('listen.media_keys'), player: shellPlayer, getMix: currentMix, mixName: data.name, now });
+  // F47: media keys and the lock screen belong to the tab making the sound, never another tab
+  useMediaKeys({ on: on('listen.media_keys') && !playback.otherTab && !playback.carryOn, player: shellPlayer, getMix: currentMix, mixName: data.name, now });
   // The spine must import into the same index instance this shell reads (memory mirror and
   // session files are per-instance), or freshly connected songs read as on another device
   // until the page reloads.

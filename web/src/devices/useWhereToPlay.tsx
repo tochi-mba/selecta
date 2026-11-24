@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { AskState } from './playOn';
+import { tabLog } from './audioTab';
 import { showToast } from '../ui/toasts';
 import { navigate } from '../router';
 import type { DeviceHolding } from './controller';
@@ -63,6 +64,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   /** True when the press was handled here (asked elsewhere, picker opened, or nothing to do). */
   const decide = useCallback((): boolean => {
     const now = latest.current.choice;
+    tabLog('decide', now?.kind ?? 'no rule', latest.current.situation ? latest.current.situation.devices.map((one) => `${one.name}:${one.online ? 'open' : 'away'}:${one.songs}`).join(',') : 'no holdings');
     if (!now || now.kind === 'speaker') return false;
     if (now.kind === 'default') {
       if (now.device.device_id === latest.current.situation?.thisDeviceId) return false;
