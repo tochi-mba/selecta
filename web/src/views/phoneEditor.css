@@ -66,7 +66,7 @@
 .pe-not-saved p { flex: 1 1 14rem; margin: 0; font: var(--type-meta); }
 .pe-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .pe-actions > * { min-height: var(--control-height); }
-.pe-actions > .primary { flex: 1 1 12rem; display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
+.pe-actions > .primary { flex: 1 1 10rem; display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
 .pe-editor.is-panes .pe-actions > .primary { flex: 0 1 22rem; }
 .pe-more { display: inline-flex; align-items: center; gap: var(--icon-gap); white-space: nowrap; }
 
