@@ -4,6 +4,7 @@ import { Icon } from '../ui/Icon';
 import { OPTIMISTIC_MS, speakerOutput } from './PlayingBar';
 import { advancing, clock, soundWords, stateWords, upNext, whereWords } from './remoteNow';
 import type { Remote } from './useRemote';
+import { askWords, stillAsking, type AskState } from './playOn';
 import './devices.css';
 
 // Listen on a device that is not the speaker (flag `devices.remote_control`): what is playing on
@@ -27,10 +28,15 @@ function useRelease(send: (value: number) => void) {
   return { dragged, move, release };
 }
 
-export function RemoteListen({ remote, playableHere }: {
+/** ADR-0475: the speaker is away and another of the person's devices with music is open, so
+ * the music can be started there. */
+export type PlayElsewhere = { device: string; asking: AskState; onPlay: () => void };
+
+export function RemoteListen({ remote, playableHere, elsewhere }: {
   remote: Remote;
   /** How many songs this device could play itself; none makes it a remote and nothing more. */
   playableHere: number;
+  elsewhere?: PlayElsewhere | null;
 }) {
   const { view, session, current } = remote;
   const nextId = useId();
@@ -89,6 +95,12 @@ export function RemoteListen({ remote, playableHere }: {
           </div>
           {state && <p className="remote-state" role="status" data-testid="remote-state">{state}</p>}
           {sound && <p className="remote-sound" role="status" data-testid="remote-sound">{sound}</p>}
+          {view.speaker === 'offline' && elsewhere && (
+            <>
+              <button type="button" className="remote-elsewhere" disabled={stillAsking(elsewhere.asking)} data-testid="play-on" onClick={elsewhere.onPlay}><Icon name="play" /> Play on {elsewhere.device}</button>
+              {elsewhere.asking && <p className="controller-asking" role="status" data-testid="play-on-status" data-phase={elsewhere.asking.phase}>{askWords(elsewhere.asking.phase, elsewhere.asking.device)}</p>}
+            </>
+          )}
           <div className="remote-seek">
             {duration !== null ? (
               <input

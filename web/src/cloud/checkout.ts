@@ -25,8 +25,11 @@ export function consentVersionFor(account: Account | null, built = import.meta.e
   return account?.billing?.consent_version || built;
 }
 
-export function checkoutBody(plan: 'standard' | 'premium', interval: 'month' | 'year', consent: Consent, version: string) {
+/** `afterCancel`: the page came back from a Checkout the person cancelled, so the server lets a
+ * new one start at once instead of refusing it as `checkout_in_progress`. */
+export function checkoutBody(plan: 'standard' | 'premium', interval: 'month' | 'year', consent: Consent, version: string, afterCancel = false) {
   return {
+    ...(afterCancel ? { after_cancel: true } : {}),
     plan,
     interval,
     consent_version: version,
@@ -76,8 +79,13 @@ export function useCheckoutReturn(account: Account | null, refresh: () => Promis
     if ((phase !== 'confirming' && phase !== 'slow') || !account) return;
     if (account.entitlement.plan !== 'free') {
       setPhase('confirmed');
-      // Leave the address clean, so a reload doesn't start confirming again.
-      window.history.replaceState({}, '', window.location.pathname);
+      // Leave the address clean, so a reload doesn't start confirming again. Only Stripe's own two
+      // parameters go: anything else in the address, and its hash, stays.
+      const query = new URLSearchParams(window.location.search);
+      query.delete('checkout');
+      query.delete('session_id');
+      const rest = query.toString();
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
     }
   }, [phase, account]);
 

@@ -1,7 +1,7 @@
 import { LoginRequiredError } from '@workos-inc/authkit-react';
 import type { Api } from './api';
 import { CloudError } from './api';
-import { getConnection, isOnline, reportOk, reportSignedOut, reportUnreachable, waitForOnline } from './connection';
+import { getConnection, isOnline, reportOk, reportSignedOut, reportUnreachable, serviceAnswers, waitForOnline } from './connection';
 
 // One resilient request layer for Cloud (plan "Nothing is lost", section 1).
 //
@@ -48,6 +48,19 @@ export class OfflineError extends CloudError {
   }
 }
 
+export const NOT_REACHED = 'SelectaDJ couldn’t be reached. Try again.';
+
+/** Thrown when one request got no answer while the connection itself is fine: the browser has a
+ * network and SelectaDJ's status check answers. Something stopped this request (a browser
+ * extension, a cross-origin refusal) or it broke before it was sent. It is this request's
+ * failure, never "You're offline", and the connection state is left alone. */
+export class NotReachedError extends CloudError {
+  constructor(message: string = NOT_REACHED) {
+    super(message, 0, 'not_reached');
+    this.name = 'NotReachedError';
+  }
+}
+
 /** Thrown when a request ran past its time limit. */
 export class TimeoutError extends CloudError {
   constructor(message: string = FAILURE_WORDS.timeout) {
@@ -64,6 +77,8 @@ function isAbort(error: unknown): boolean {
 export function classify(error: unknown): FailureKind {
   if (error instanceof OfflineError) return 'offline';
   if (error instanceof TimeoutError) return 'timeout';
+  // one request's failure with the connection fine: asking again at once would fail the same way
+  if (error instanceof NotReachedError) return 'refused';
   if (error instanceof LoginRequiredError) return 'signed_out';
   if (error instanceof CloudError) {
     if (error.status === 401) return 'signed_out';
@@ -264,7 +279,9 @@ export function resilient(api: Api, options: ResilientOptions = {}): Api {
     } catch (error) {
       let thrown = error;
       if (limit?.timedOut()) thrown = new TimeoutError();
-      else if (classify(error) === 'offline' && !(error instanceof CloudError)) thrown = new OfflineError();
+      // No answer at all. That is only "offline" when the browser says it has no network or the
+      // status check gets no answer either; otherwise this one request failed and says so.
+      else if (classify(error) === 'offline' && !(error instanceof CloudError)) thrown = (await serviceAnswers()) ? new NotReachedError() : new OfflineError();
       noteOutcome(thrown);
       throw thrown;
     } finally {

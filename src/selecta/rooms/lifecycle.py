@@ -201,14 +201,24 @@ def update_settings(
     workspace_id: str,
     room_id: str,
     settings: RoomSettings | Mapping[str, Any],
+    *,
+    partial: bool = False,
 ) -> Room:
     """Change an open room's settings. The plan limits copied in at opening can only go down.
-    Turning the big screen off unpairs any display."""
-    if not isinstance(settings, RoomSettings):
+    Turning the big screen off unpairs any display.
+
+    `partial`: `settings` names only what changed, and is laid over the room's settings as
+    they are under the room's row lock. Two changes sent close together (the page saves each
+    one as it is made) then both land; merging before the lock let the second overwrite the
+    first with the settings it had read earlier."""
+    if not partial and not isinstance(settings, RoomSettings):
         settings = RoomSettings.from_json(settings)
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, None)
         room = live_room(conn, workspace_id, room_id)
+        if partial:
+            change = settings.to_json() if isinstance(settings, RoomSettings) else settings
+            settings = RoomSettings.from_json({**room.settings.to_json(), **change})
         settings = settings.keeping_limits_of(room.settings)
         ends_at = min(room.ends_at, room.created_at + settings.max_hours * 3600)
         save_room(conn, room.id, settings=settings, ends_at=ends_at)

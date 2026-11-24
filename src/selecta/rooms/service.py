@@ -53,9 +53,16 @@ class Rooms(RoomContext):
         return lifecycle.rotate_code(self, workspace_id, room_id, remove_everyone=remove_everyone)
 
     def update_settings(
-        self, workspace_id: str, room_id: str, settings: RoomSettings | Mapping[str, Any]
+        self,
+        workspace_id: str,
+        room_id: str,
+        settings: RoomSettings | Mapping[str, Any],
+        *,
+        partial: bool = False,
     ) -> Room:
-        return lifecycle.update_settings(self, workspace_id, room_id, settings)
+        return lifecycle.update_settings(
+            self, workspace_id, room_id, settings, partial=partial
+        )
 
     def end_room(self, workspace_id: str, room_id: str, *, now: float | None = None) -> Room:
         return lifecycle.end_room(self, workspace_id, room_id, now=now)

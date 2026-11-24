@@ -192,7 +192,9 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   // cloud.offline_shell: checkout and the billing portal open on the server
   const offline = useNeedsConnection();
   const ready = consentComplete(consent) && Boolean(consentVersion) && !busy && !offline;
-  const confirming = phase === 'confirming';
+  // back from Stripe and not confirmed yet ('slow' is the same wait, a minute on): the payment may
+  // already be made, so the way to start another one is not offered
+  const confirming = phase === 'confirming' || phase === 'slow';
   // the server says when this site cannot start a payment at all (no Stripe key or prices)
   const open = checkoutAvailable(account);
   const local = localFirst ?? sellsLocalFirst(account);

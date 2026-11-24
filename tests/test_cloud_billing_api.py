@@ -124,7 +124,8 @@ def test_checkout_uses_the_server_price_and_records_consent_with_its_version(
     client, stripe, cloud_engine
 ):
     response = checkout(client, {**ACCEPTED, "interval": "year"})
-    again = checkout(client, key="retry-2")
+    # a second Checkout is only opened once the first was cancelled (checkout_in_progress)
+    again = checkout(client, {**ACCEPTED, "after_cancel": True}, key="retry-2")
 
     assert response.status_code == 200
     assert response.json() == {"url": "https://checkout.stripe.com/c/pay/cs_new",
