@@ -115,7 +115,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
         </section>
       )}
       {error && <p className="cloud-feedback error" role="alert" data-testid="library-player-error">{error}</p>}
-      {transport.notice && <p className="cloud-feedback" role="status">{transport.notice} <button type="button" onClick={clearNotice}>OK</button></p>}
+      {transport.notice && <p className="cloud-feedback" role="status">{transport.notice} <button type="button" onClick={clearNotice}>Dismiss</button></p>}
     </section>
   );
 }

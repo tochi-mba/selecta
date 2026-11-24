@@ -94,6 +94,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `editor.suggestions` | **Song suggestions.** Songs suggested for a spot before you search, each saying how it would hand over. | `editor` |
 | `editor.locks` | **Locked songs.** A locked song stays where it is when the mix is rebuilt. | `editor` |
 | `editor.drag_preview` | **Move preview.** While a song is dragged, the transitions the drop would change are marked before it lands. | `editor` |
+| `editor.phone_layout` | **Editor for every screen.** The mix as a list of songs and the transitions between them, with the opened transition in a sheet on a phone and beside the list on a tablet or wider screen. Without it, the editor keeps its earlier layout at every size. | `editor` |
 | `seam_inspector` | **Transition inspector.** Pick the move for any transition, hear it, render it and see its checks. | `editor` |
 | `seam_inspector.exact_cues` | **Exact cues.** Choose the exact bars and phrase a transition leaves and lands on. | `seam_inspector` |
 | `seam_inspector.compare` | **Compare with before.** Hear a transition's earlier finished render beside the new one, once both really exist. | `seam_inspector` |
