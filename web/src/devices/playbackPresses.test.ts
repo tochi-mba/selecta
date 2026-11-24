@@ -157,3 +157,34 @@ describe('a press that lands while this speaker is sending its own programme', (
     hook.unmount();
   });
 });
+
+describe('a reloaded speaker tab pressed while it reconnects', () => {
+  it('starts the sound once, from the press, never again from the reconnect', async () => {
+    let looks = 0;
+    let firstLook: (value: unknown) => void = () => undefined;
+    const answer = () => ({ session: session(), speaker: 'here', speaker_device_id: 'me', speaker_name: 'Phone', ask_before_playing_here: false, server_time: clock() });
+    const api = (async (path: string) => {
+      if (path === '/devices') return DEVICE;
+      if (path === '/playback/reconnect') return { action: 'continue', session: session(), message: null, envelope_key: null };
+      if (path === '/playback/take-over') return { session: session(), previous_device: null, server_time: clock() };
+      if (path.startsWith('/playback/session')) {
+        looks += 1;
+        // the reconnect's check is slow: the press lands while it waits
+        if (looks === 1) await new Promise((resolve) => { firstLook = resolve; });
+        return answer();
+      }
+      if (path === '/playback/heartbeat') return { outcome: 'renewed', session: session(), server_time: clock() };
+      return {};
+    }) as Api;
+    const speaker = speakerWith(() => ({ song_index: 0, offset_ms: 0, state: 'playing' }));
+    const hook = renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws', speaker }));
+    await waitFor(() => expect(looks).toBe(1));
+    let pressed: Promise<void> = Promise.resolve();
+    act(() => { pressed = hook.result.current.playHere(); });
+    await act(async () => { await pressed; });
+    expect(speaker.start).toHaveBeenCalledTimes(1);
+    await act(async () => { firstLook(undefined); await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(speaker.start).toHaveBeenCalledTimes(1);
+    hook.unmount();
+  });
+});
