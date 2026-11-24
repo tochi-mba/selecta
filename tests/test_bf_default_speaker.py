@@ -80,10 +80,22 @@ def test_the_default_is_listed_cleared_on_sign_out_and_only_ever_my_own_device(p
     assert signed_out.status_code == 200
     listed = party.client.get("/api/devices", headers=auth(ALICE)).json()
     assert listed["default_speaker_id"] is None
+    # the person's own signed-out device: a clear refusal
+    refused = _default(party, ALICE, laptop)
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "device_signed_out"
     # null clears it
     phone = party.register(ALICE, "Phone")["device"]["id"]
     assert _default(party, ALICE, phone).status_code == 200
     assert _default(party, ALICE, None).json() == {"default_speaker_id": None}
+    # clearing again changes nothing and tells nobody again; each change was published
+    assert _default(party, ALICE, None).status_code == 200
+    from selecta.work.schema import outbox_events
+
+    with transaction(party.engine, party.workspaces[ALICE]) as conn:
+        told = conn.execute(
+            outbox_events.select().where(outbox_events.c.topic == "devices.default_speaker")
+        ).all()
+    assert [row.payload["default_speaker_id"] for row in told] == [laptop, phone, None]
 
 
 def test_the_default_needs_remote_control(party):

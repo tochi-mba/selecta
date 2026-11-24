@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DeviceHolding, Holdings } from './controller';
+import { onReconnect } from '../cloud/connection';
 
 // ADR-0475 holdings as this device sees them: the person's signed-in devices with how many songs
 // each can open and whether it is here now, and the catalogue ids the speaker can open. Read from
@@ -9,6 +10,8 @@ import type { DeviceHolding, Holdings } from './controller';
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 export const HOLDINGS_EVERY_MS = 15_000;
+/** Fired on window by the Cloud event stream when the default speaker changed (ADR-0475 C19). */
+export const DEFAULT_SPEAKER_EVENT = 'selecta:default-speaker';
 
 export type HoldingsView = {
   /** null until the first answer (or while the route is refused: an older server, the flag off) */
@@ -69,5 +72,13 @@ export function useHoldings(cloud: Request, enabled: boolean, speakerId: string 
 
   // a speaker that has reported nothing is unknown, not empty: it answers for itself
   const speakerSongs = speakerId ? ids.get(speakerId) ?? null : null;
+  // another device changed the default, or the connection is back: read again now
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const again = () => setAsked((count) => count + 1);
+    window.addEventListener(DEFAULT_SPEAKER_EVENT, again);
+    const off = onReconnect(again);
+    return () => { window.removeEventListener(DEFAULT_SPEAKER_EVENT, again); off(); };
+  }, [enabled]);
   return { devices, speakerSongs, ids, defaultId, refresh: useCallback(() => setAsked((count) => count + 1), []) };
 }
