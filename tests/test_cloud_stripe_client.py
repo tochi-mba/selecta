@@ -6,6 +6,7 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
+from selecta.billing import branding
 from selecta.billing.stripe_sync import StripeRefused, StripeUnavailable
 from selecta.billing.webhooks import HttpStripeClient
 
@@ -58,6 +59,10 @@ def test_create_checkout_session_sends_subscription_fields() -> None:
             "subscription_data[metadata][workspace_id]": ["workspace-1"],
             "success_url": ["https://app.example/success"],
             "cancel_url": ["https://app.example/cancel"],
+            # branded surfaces: the person's language and our words (billing/branding.py)
+            "locale": ["auto"],
+            "custom_text[submit][message]": [branding.SUBMIT_WORDS],
+            "custom_text[after_submit][message]": [branding.AFTER_SUBMIT_WORDS],
         }
         return httpx.Response(
             200, json={"id": "cs_123", "url": "https://checkout.stripe.com/c/pay/cs_123"}

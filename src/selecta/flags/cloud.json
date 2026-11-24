@@ -256,6 +256,7 @@
       "label": "Subscription portal",
       "about": "Manage or cancel an existing paid Selecta Cloud subscription.",
       "routes": ["POST /api/billing/portal"],
+      "cli": ["billing-portal-setup"],
       "surfaces": ["cloud.billing"],
       "words": ["Change plan or cancel"],
       "modes": ["cloud"],
