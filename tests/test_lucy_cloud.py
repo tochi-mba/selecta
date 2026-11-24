@@ -222,7 +222,8 @@ def test_a_provider_failure_ends_the_turn_truthfully_and_gives_it_back(lucy):
     conversation = converse(lucy, CAROL)
     send(lucy, CAROL, conversation, "hello")
     reply = snapshot(lucy, CAROL, conversation)["messages"][-1]
-    assert reply["status"] == "failed" and "unaffected" in reply["content"]
+    assert reply["status"] == "failed" and "Lucy is busy right now" in reply["content"]
+    assert "didn't use one of your turns" in reply["content"]
     with transaction(lucy.engine) as conn:
         assert conn.execute(sa.select(ai_runs.c.outcome)).scalar_one() == "failed"
 
@@ -393,3 +394,89 @@ def test_a_whole_new_mix_is_a_planning_turn():
     assert cloud_agent.request_class("make a 1 hour mix for a house party") is \
         RequestClass.PLANNING
     assert cloud_agent.request_class("what's playing next?") is RequestClass.EVERYDAY
+
+
+# Edge cases (ADR-0476 addendum) -------------------------------------------------------------
+
+
+def test_a_turn_left_running_by_a_restart_reads_as_interrupted_and_is_given_back(lucy):
+    from selecta.lucy import cloud_store
+    from selecta.lucy.cloud_schema import lucy_cloud_turns
+
+    conversation = converse(lucy, CAROL)
+    ws = lucy.workspaces[CAROL]
+    with transaction(lucy.engine, ws) as conn:
+        plan = cloud_agent.admit(conn, ws, conversation, "hello", timezone="UTC")
+        turn = cloud_store.add_turn(conn, ws, conversation, "lost", "hello")
+        cloud_store.set_turn(conn, ws, turn["id"], status="running", run_id=plan.run_id)
+        conn.execute(lucy_cloud_turns.update().values(created_at=1.0))
+    shown = snapshot(lucy, CAROL, conversation)
+    assert shown["run"]["state"] == "interrupted"
+    with transaction(lucy.engine) as conn:
+        outcome = conn.execute(sa.select(ai_runs.c.outcome)).scalar_one()
+    assert outcome == "abandoned"
+    # the account's run slot is free again
+    script(lucy, [{"chunks": ["Hi again."]}])
+    assert send(lucy, CAROL, conversation, "hello?", client_id="c2").status_code == 200
+
+
+def test_a_long_conversation_keeps_recent_turns_verbatim_and_names_older_asks(lucy, monkeypatch):
+    monkeypatch.setitem(cloud_agent.HISTORY_CHARS, "free", 60)
+    conversation = converse(lucy, CAROL)
+    for number in range(4):
+        script(lucy, [{"chunks": [f"Answer number {number} is here."]}])
+        send(lucy, CAROL, conversation, f"question number {number}", client_id=f"q{number}")
+    provider = script(lucy, [{"chunks": ["ok"]}])
+    send(lucy, CAROL, conversation, "last one", client_id="q9")
+    seen = provider.seen[0]
+    assert seen[0]["content"].startswith("(Earlier in this conversation I asked: question")
+    assert seen[-1]["content"] == "last one"
+    assert [m["role"] for m in seen] == ["user", "assistant"] * ((len(seen) - 1) // 2) + ["user"]
+
+
+def test_a_blank_model_answer_is_never_a_blank_bubble(lucy):
+    script(lucy, [{"chunks": []}])
+    conversation = converse(lucy, CAROL)
+    send(lucy, CAROL, conversation, "hm")
+    assert "Could you say it another way" in snapshot(lucy, CAROL, conversation)["messages"][-1][
+        "content"]
+
+
+def test_the_account_export_carries_the_persons_conversations(lucy):
+    from selecta.lucy import cloud_store
+
+    script(lucy, [{"chunks": ["Hello!"]}])
+    conversation = converse(lucy, CAROL)
+    send(lucy, CAROL, conversation, "hi")
+    user = _user(lucy, CAROL)
+    with transaction(lucy.engine, lucy.workspaces[CAROL]) as conn:
+        mine = cloud_store.export(conn, lucy.workspaces[CAROL], user)
+    assert [m["content"] for m in mine[0]["messages"]] == ["hi", "Hello!"]
+
+
+def _user(party, token):
+    from selecta.lucy.cloud_schema import lucy_cloud_conversations
+
+    with transaction(party.engine) as conn:
+        return conn.execute(sa.select(lucy_cloud_conversations.c.user_id).where(
+            lucy_cloud_conversations.c.workspace_id == party.workspaces[token])).scalar()
+
+
+def test_never_play_songs_are_marked_for_lucy(lucy):
+    ids = songs(lucy, CAROL, [("Skip Me", "Someone"), ("Keep Me", "Someone")])
+    lucy.client.post("/api/local-media/songs/never", headers=auth(CAROL),
+                     json={"never": True, "entries": [{"id": ids[0], "expected": False}]})
+    found = cloud_agent.cloud_tools.search_songs(_ctx(lucy, CAROL), query="Someone")
+    marked = {s["title"]: s.get("never_play", False) for s in found["songs"]}
+    assert marked == {"Skip Me": True, "Keep Me": False}
+
+
+def test_the_provider_names_the_anthropic_workspace_only_when_one_is_set(monkeypatch):
+    from selecta.lucy.providers import AnthropicProvider
+
+    monkeypatch.setenv("ANTHROPIC_WORKSPACE_ID", "wrkspc_test")
+    named = AnthropicProvider("test-key-not-real", "claude-haiku-5-5", None, 256)
+    assert named.client.default_headers.get("anthropic-workspace-id") == "wrkspc_test"
+    monkeypatch.delenv("ANTHROPIC_WORKSPACE_ID")
+    plain = AnthropicProvider("test-key-not-real", "claude-haiku-5-5", None, 256)
+    assert "anthropic-workspace-id" not in plain.client.default_headers

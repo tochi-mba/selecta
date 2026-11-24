@@ -44,13 +44,17 @@ from selecta.persistence import new_id, transaction
 
 FLUSH_CHARS = 80
 FLUSH_SECONDS = 0.15
-HISTORY_MESSAGES = 16
+HISTORY_MESSAGES = 200
+HISTORY_CHARS = {"free": 12_000, "standard": 40_000, "premium": 80_000}
+"""How much earlier conversation is sent verbatim, per plan (about 3k, 10k and 20k tokens)."""
 NOTE_CHARS = 700
 PLANNING = re.compile(
     r"\b(make|build|create|plan|start)\b.{0,40}\b(mix|set|playlist)\b|\b\d+\s*(hour|hr|h|min)",
     re.IGNORECASE,
 )
 
+BUSY_WORDS = ("Lucy is busy right now. Try again in a moment; this didn't use one of your "
+              "turns, and your mixes and music are unaffected.")
 ProviderFactory = Callable[[gateway.ProviderSettings, gateway.TurnPlan], Any]
 
 
@@ -141,6 +145,10 @@ class Runner:
                 if self.jobs.get(job.conversation_id) is job:
                     del self.jobs[job.conversation_id]
 
+    def alive_turns(self) -> set[str]:
+        with self.lock:
+            return {job.turn_id for job in self.jobs.values()}
+
     def stop(self, conversation_id: str) -> bool:
         with self.lock:
             job = self.jobs.get(conversation_id)
@@ -211,23 +219,40 @@ class Writer:
 
 
 def _model_history(job: Job, before_seq: int) -> list[dict[str, Any]]:
-    """Earlier messages for the model, alternating and starting with the person, each answer
-    carrying the note of the tool work it did (so "add two more" has the ids it needs)."""
+    """The whole conversation for the model, up to the plan's budget (`HISTORY_CHARS`): the
+    newest messages verbatim, each answer carrying the note of the tool work it did (so "add
+    two more" has the ids it needs), and anything older as one line listing what the person
+    asked. A tool call and its result live inside one answer's note, so a cut never splits
+    them. Alternating, starting with the person, as the providers need."""
     with transaction(job.engine, job.workspace_id) as conn:
         rows = cloud_store.history(conn, job.workspace_id, job.conversation_id, before_seq,
                                    HISTORY_MESSAGES)
-    out: list[dict[str, Any]] = []
-    for row in rows:
+    budget = HISTORY_CHARS.get(job.plan.tier.value, HISTORY_CHARS["free"])
+    kept: list[dict[str, Any]] = []
+    used = 0
+    for row in reversed(rows):
         content = (row["content"] or "").strip()
         note = (row["meta"] or {}).get("note")
         if row["role"] == "assistant" and note:
             content = f"{content}\n\n[Tool results I used: {note}]".strip()
         if not content:
             continue
-        if out and out[-1]["role"] == row["role"]:
-            out[-1]["content"] += "\n\n" + content
+        if used + len(content) > budget and kept:
+            break
+        used += len(content)
+        kept.append({"role": row["role"], "content": content})
+    older = [r for r in rows[: len(rows) - len(kept)] if r["role"] == "user" and r["content"]]
+    kept.reverse()
+    out: list[dict[str, Any]] = []
+    if older and len(kept) < len(rows):
+        asked = "; ".join(" ".join(r["content"].split())[:80] for r in older[-12:])
+        out = [{"role": "user", "content": f"(Earlier in this conversation I asked: {asked})"},
+               {"role": "assistant", "content": "(Noted.)"}]
+    for message in kept:
+        if out and out[-1]["role"] == message["role"]:
+            out[-1]["content"] += "\n\n" + message["content"]
         else:
-            out.append({"role": row["role"], "content": content})
+            out.append(message)
     while out and out[0]["role"] != "user":
         out.pop(0)
     if out and out[-1]["role"] == "user":
@@ -289,6 +314,10 @@ async def run_turn(job: Job) -> None:
             await writer.write(builtin_words(job, ctx))
         else:
             cycles, steps = await _model_loop(job, ctx, events, writer, usage, notes)
+            if not writer.text().strip():
+                # never a blank bubble
+                await writer.write("I don't have an answer for that. Could you say it another "
+                                   "way?")
     except Stopped:
         outcome, final, error_code = Outcome.CANCELLED, "cancelled", "stopped"
     except gateway.GatewayError as problem:
@@ -301,9 +330,12 @@ async def run_turn(job: Job) -> None:
         said = bool(writer.text())
         outcome = Outcome.INCOMPLETE if said else Outcome.FAILED
         final, error_code, error = "failed", problem.code, str(problem)
-        events.emit("error", {"code": problem.code, "message": str(problem),
+        words = (BUSY_WORDS if problem.recoverable else
+                 "Lucy can't answer right now because of a problem on SelectaDJ's side. Your "
+                 "mixes and music are safe, and this didn't use one of your turns.")
+        events.emit("error", {"code": problem.code, "message": words,
                               "recoverable": problem.recoverable})
-        await _say(writer, f"{problem} Your mixes and music are unaffected; try again.")
+        await _say(writer, words)
     except TimeoutError:
         outcome, final, error_code = Outcome.INCOMPLETE, "interrupted", "timeout"
         await _say(writer, "(I ran out of time for this message. Say \"continue\" to go on.)")

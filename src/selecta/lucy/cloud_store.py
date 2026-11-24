@@ -381,6 +381,53 @@ def snapshot_messages(
     ]
 
 
+STALE_SECONDS = 300
+"""Longer than any plan's turn may run (`selecta.ai.spend.TIER_LIMITS`) plus a margin."""
+
+
+def settle_stale(
+    conn: Connection, workspace_id: str, conversation_id: str, alive: set[str]
+) -> int:
+    """Turns whose server went away (restart, crash) mid-answer: say so truthfully. The
+    partial reply keeps its text and reads as interrupted, so the page offers "Try again", and
+    the gateway gives the turn back (`abandoned` is refunded)."""
+    from selecta.ai import gateway
+    from selecta.ai.runs import Outcome
+
+    cutoff = db_now(conn) - STALE_SECONDS
+    stuck = conn.execute(
+        sa.select(turns)
+        .where(turns.c.workspace_id == workspace_id)
+        .where(turns.c.conversation_id == conversation_id)
+        .where(turns.c.status.in_(ACTIVE_TURN))
+        .where(turns.c.created_at < cutoff)
+    ).all()
+    settled = 0
+    for turn in stuck:
+        if turn.id in alive:
+            continue
+        set_turn(conn, workspace_id, turn.id, status="interrupted")
+        conn.execute(
+            messages.update()
+            .where(messages.c.workspace_id == workspace_id)
+            .where(messages.c.turn_id == turn.id)
+            .where(messages.c.status == "streaming")
+            .values(status="interrupted")
+        )
+        if turn.run_id:
+            try:
+                gateway.finish_turn(conn, turn.run_id, outcome=Outcome.ABANDONED,
+                                    error_code="abandoned")
+            except gateway.GatewayError:
+                pass
+        append_event(conn, workspace_id, conversation_id, "run.state",
+                     {"state": "interrupted", "cycles": 0, "steps": 0,
+                      "error": "SelectaDJ restarted while Lucy was answering."},
+                     turn=turn.id, run=turn.run_id)
+        settled += 1
+    return settled
+
+
 def last_run(conn: Connection, workspace_id: str, conversation_id: str) -> dict[str, Any] | None:
     row = conn.execute(
         sa.select(turns)
@@ -396,6 +443,24 @@ def last_run(conn: Connection, workspace_id: str, conversation_id: str) -> dict[
     }.get(row.status, row.status)
     return {"id": row.run_id, "turn": row.id, "state": state, "cycles": 0, "steps": 0,
             "limits": {}, "usage": {}, "error": None}
+
+
+def export(conn: Connection, workspace_id: str, user_id: str) -> list[dict[str, Any]]:
+    """This person's conversations with what was said, for the account export."""
+    rows = conn.execute(
+        sa.select(conversations)
+        .where(conversations.c.workspace_id == workspace_id)
+        .where(conversations.c.user_id == user_id)
+        .order_by(conversations.c.created_at)
+    ).all()
+    return [
+        {"id": row.id, "title": row.title, "archived": bool(row.archived),
+         "created_at": iso(row.created_at),
+         "messages": [{"role": m["role"], "content": m["content"], "status": m["status"],
+                       "created_at": m["created_at"]}
+                      for m in snapshot_messages(conn, workspace_id, row.id)]}
+        for row in rows
+    ]
 
 
 # Proposals ---------------------------------------------------------------------------------
