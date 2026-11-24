@@ -262,6 +262,15 @@
       "kind": "release",
       "owner": "billing"
     },
+    "billing.standing": {
+      "label": "Billing notices and emails",
+      "about": "Tell the customer when a payment failed, needs confirming, or a plan is ending or has ended, in the app and by email.",
+      "surfaces": ["cloud.billing", "cloud.home"],
+      "words": ["Update your card to keep it"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "billing"
+    },
     "cloud.operations": {
       "label": "Cloud operations",
       "about": "Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct.",

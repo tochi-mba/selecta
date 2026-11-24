@@ -240,6 +240,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.local_media` | **Local media catalogue.** The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458). |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
+| `billing.standing` | **Billing notices and emails.** Tell the customer when a payment failed, needs confirming, or a plan is ending or has ended, in the app and by email. |  |
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
 | `cloud.tracing` | **Job tracing.** OpenTelemetry spans across the API, worker gateway, workers and storage, one trace per job with its id as a span attribute. |  |
 | `cloud.metrics` | **Service metrics.** OpenTelemetry metrics the SLOs and alerts read: lost jobs, webhook-to-entitlement time, queue age, quarantines, spend ceilings, audit writes, reconciliation drift, backups and the maintenance leader. |  |
