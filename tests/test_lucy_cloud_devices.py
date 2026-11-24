@@ -339,3 +339,20 @@ def test_another_device_reads_the_persons_words_from_the_events_alone(lucy):
     # nothing after it may stand in for the person's message with an empty one
     assert not [e for e in events if e["type"] == "message.started"
                 and e["payload"].get("role") == "user"]
+
+
+def test_two_devices_on_a_two_run_plan_still_get_one_turn_per_conversation(lucy):
+    # Premium may run two turns at once, in two conversations, but never two in one
+    phone = lucy.register(ALICE, "Alice's phone")["device"]["id"]
+    provider = gated(lucy)
+    conversation = converse(lucy, ALICE)
+    first = send(lucy, conversation, "from the laptop", "a1", token=ALICE)
+    assert first.status_code == 200 and provider.started.wait(10)
+    second = send(lucy, conversation, "from the phone", "a2", device=phone, token=ALICE)
+    assert second.status_code == 409 and second.json()["detail"]["code"] == "busy"
+    elsewhere = send(lucy, converse(lucy, ALICE), "another conversation", "a3", token=ALICE)
+    assert elsewhere.status_code == 200
+    provider.gate.set()
+    cloud_agent.RUNNER.wait()
+    again = send(lucy, conversation, "from the phone", "a4", device=phone, token=ALICE)
+    assert again.status_code == 200
