@@ -59,6 +59,7 @@ import { ConnectionBanner } from './ConnectionBanner';
 import { forgetAccountSnapshot, rememberAccount, rememberedAccount } from './offlineCache';
 import { syncOfflineShell } from './offlineShell';
 import { canHeal, classify, resilient } from './resilientRequest';
+import { announceSignedIn, announceSignedOut, onAccountMessage, signOutWarning, whatTabsAreDoing } from './accountTabs';
 import './cloud.css';
 // Shared business styles are scoped to .biz and loaded by the Cloud shell.
 import '../business/business.css';
@@ -151,6 +152,18 @@ export function CloudApp() {
     return (authSignOut as (...given: unknown[]) => unknown)(...args);
   }) as typeof authSignOut, [authSignOut]);
   const [account, setAccount] = useState<Account | null>(null);
+  // ADR-0475 R12: another tab of this browser signed out, or in as someone; and what a sign-out
+  // pressed here would stop, said first
+  const [elsewhere, setElsewhere] = useState<{ kind: 'out' } | { kind: 'in'; email: string } | null>(null);
+  const [signOutAsk, setSignOutAsk] = useState<string | null>(null);
+  useEffect(() => onAccountMessage((message) => {
+    if (message.kind === 'signed-out' && message.userId === (user?.id ?? null)) setElsewhere({ kind: 'out' });
+    if (message.kind === 'signed-in' && user && message.userId !== user.id) setElsewhere({ kind: 'in', email: message.email });
+    // the same person signed back in elsewhere: come back into the app, with nothing playing
+    if (message.kind === 'signed-in' && (!user || message.userId === user.id) && elsewhere) window.location.reload();
+  }), [user, elsewhere]);
+  const told = useRef<string | null>(null);
+  useEffect(() => { if (user && told.current !== user.id) { told.current = user.id; announceSignedIn(user.id, user.email); } }, [user]);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [blocked, setBlocked] = useState<BlockedCode | null>(null);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -633,6 +646,7 @@ export function CloudApp() {
       </Suspense>
     );
   }
+  if (elsewhere) return <OtherTabAccount state={elsewhere} onSignIn={startSignIn} />;
   if (!user) return <Welcome problem={signInProblem} onSignIn={startSignIn} onSignUp={() => signUp({ state: { returnTo: `${window.location.pathname}${window.location.search}` } })} />;
   if (signInAgain) return <SignInAgain onSignIn={signInAgainPressed} />;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} email={user.email} onSignOut={() => restartSignIn()} />;
@@ -671,7 +685,18 @@ export function CloudApp() {
   }
   const businessEntry = account && businessShown(account) ? <Suspense fallback={null}><PersonalSwitcher api={api} account={account} open={openPath} /></Suspense> : null;
   const quotaBlock = blockedByQuota(account);
-  const signOutHere = () => signOut({ returnTo: window.location.origin });
+  // R12: say first what signing out stops in any tab; sign this device out on the server (its
+  // playback ends cleanly and it leaves the account's device list), tell the other tabs, then go
+  const leave = async () => {
+    setSignOutAsk(null);
+    const here = account ? (() => { try { return localStorage.getItem(`selecta.device.${account.workspace.id}`); } catch { return null; } })() : null;
+    if (here && account) await api(`/devices/${encodeURIComponent(here)}/sign-out`, { method: 'POST' }, account.workspace.id).catch(() => undefined);
+    announceSignedOut(user.id);
+    await signOut({ returnTo: window.location.origin });
+  };
+  const signOutHere = () => {
+    void whatTabsAreDoing().then((busy) => { const warning = signOutWarning(busy); if (warning) setSignOutAsk(warning); else void leave(); });
+  };
   const openAdmin = () => { setInAdmin(true); window.history.pushState({}, '', '/admin'); setPath('/admin'); };
   // Both shared shells have their own router: a hosted page moves to the same address there,
   // which they serve from More (Account, Plan & billing, Add music) or their own pages.
@@ -741,6 +766,7 @@ export function CloudApp() {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
         <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
+        {signOutAsk && <ConfirmDialog title="Sign out?" body={signOutAsk} confirmLabel="Sign out" destructive onConfirm={() => void leave()} onClose={() => setSignOutAsk(null)} />}
       </Suspense>
     );
   }
@@ -854,4 +880,20 @@ function RoomsCard({ account, go }: { account: Account; go: (page: Page) => void
 
 function normalizedJoin(path: string) {
   return path.replace(/\/+$/, '') === BUSINESS_JOIN_PATH;
+}
+
+/** ADR-0475 R12: another tab of this browser signed out, or signed in as someone else. This tab
+ * stopped everything (it no longer renders the app) and says so in one calm page. */
+function OtherTabAccount({ state, onSignIn }: { state: { kind: 'out' } | { kind: 'in'; email: string }; onSignIn: () => void }) {
+  return (
+    <main className="gate" id="main">
+      <section className="gate-card" aria-labelledby="other-tab-title">
+        <h1 id="other-tab-title">{state.kind === 'out' ? 'You signed out in another tab.' : `Signed in as ${state.email} in another tab.`}</h1>
+        <p>{state.kind === 'out' ? 'Nothing plays here now. Sign in to carry on.' : 'SelectaDJ is signed in to one account per browser. Continue as that account, or use another browser profile for a second one.'}</p>
+        {state.kind === 'out'
+          ? <button type="button" className="primary" onClick={onSignIn}>Sign in</button>
+          : <button type="button" className="primary" onClick={() => window.location.reload()}>Continue</button>}
+      </section>
+    </main>
+  );
 }
