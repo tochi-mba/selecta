@@ -125,6 +125,10 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
   // room requests the browser holds while no read of the room is here to list them; once the room
   // has been read, its list is the only one, so every count and every list agree
   const loose = room ? [] : roomRows;
+  // ADR-0475 R4: "Ready to add" counts what can be added from this device; a request whose song
+  // waits on another device (its file is elsewhere, or its folder needs choosing) is not counted
+  const actionable = (row: Row | undefined) => !!row && !held(row.request, row.stage);
+  const readyHere = coming.filter((ask) => actionable(rowOf(ask))).length + loose.filter(actionable).length;
   const missing = !!mix && rows !== null && coming.some((ask) => !rowOf(ask));
   // An accepted request with no row in the browser's list yet: the list is asked for again at
   // once, then after 2, 4 and 4 seconds, then ever less often up to every 30 seconds. "Getting
@@ -184,9 +188,9 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
       <Action className="quiet" aria-label={`Dismiss: ${title}`} working={`Dismissing${ELLIPSIS}`} waiting={row.request.id < 0}
         run={() => settle(id, row.request, async () => { await mix.onDismiss(row.request); showToast(`${title} was dismissed.`); })}>Dismiss</Action>
     );
-    // a song whose file is on another device: say so, and offer the way to bring it here
-    // (with another device playing, connecting music here would not help: that device plays it)
-    if (why) return { note: why, buttons: <>{why === row.request.browser_note && row.stage !== 'in_mix' && !row.request.plays_on && <button type="button" onClick={() => navigate('/library')}>Connect music</button>}{dismiss}</> };
+    // a song whose file is on another device: say so, and offer the way to bring it here only
+    // when that is the way on (ADR-0475 R4: never while another device has the file or plays)
+    if (why) return { note: why, buttons: <>{why === row.request.browser_note && row.stage !== 'in_mix' && (row.request.connect_here ?? !row.request.plays_on) && <button type="button" className="quiet" onClick={() => navigate('/library')}>Connect music here</button>}{dismiss}</> };
     const start = row.stage === 'no_mix';
     const label = start ? 'Start a mix with this song' : mix.live ? 'Add next' : 'Add to mix';
     return {
@@ -229,7 +233,7 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
       )}
       {(coming.length > 0 || loose.length > 0) && (
         // counted: what the host can act on now; a request still on its way says so in its own row
-        <Group title={mix ? 'Ready to add' : 'Accepted'} count={(mix && rows !== null ? coming.filter((ask) => rowOf(ask)).length : coming.length) + loose.length}
+        <Group title={mix ? 'Ready to add' : 'Accepted'} count={mix && rows !== null ? readyHere : coming.length + loose.length}
           help={!mix ? undefined : noMix ? 'No mix yet. Start one with a request, then add the others.' : mix.live ? 'Add next plays a song right after the current one.' : 'Add to mix puts a song at the end of your mix.'}>
           {coming.map((ask) => {
             const row = rowOf(ask);
