@@ -146,7 +146,7 @@ A remote is any signed-in device of the same person that is not making the sound
 | Control (speaker's screen) | From a remote today | How |
 | --- | --- | --- |
 | Play, pause, next, previous, seek, skip to a song in Up next | Yes | Signed playback commands (ADR-0461), applied by the speaker once, in order |
-| Volume and mute | Yes (G1, 2026-11-24) | `set_volume` on the session, last write wins; the speaker ramps to it; a new speaker rises from quiet over a second; unset plays at 80 |
+| Volume and mute | Yes (G1, 2026-11-24) | `set_volume` on the session (every session carries `volume` now), last write wins; the speaker applies the session's level as it follows and sends its own only when its own slider moves; a new speaker rises from quiet over a second; unset plays at 80; at 100 "For more volume, turn up {speaker} itself." |
 | Add next, add a request | Yes (R4) | `set_programme` with the song after the playing one, `keep_position` |
 | Reorder, remove, clear Up next | Not yet | Same path as Add next (`set_programme`); not built |
 | Start a mix, a saved mix, Make a Mix | Yes (R8) | The account's current mix, played through the one rule (Play on {device}) |

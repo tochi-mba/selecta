@@ -27,6 +27,12 @@ These two belong together: a Room needs one device that is *the speaker*, and a 
 
 **Default speaker and the room's library (ADR-0475, revised R1).** A person may mark one device as their default speaker (Devices page). When nothing plays, Play starts on the session's speaker, else the default if it is open with music, else the only open device with music, else asks "Where should the music play?". A browser-first room offers guests only the songs the room's speaker holds now; with no speaker yet, or while it reconnects, guests are told so (never which device) and search waits. Two tabs of one browser never both make sound: a Web Lock picks the tab.
 
+**Where the music is going, said once.** When Play starts the music on another device, or that device does not answer, the Listen card says so in one line with its choices ("Starting on X." with Play here instead; "X isn't open. Open SelectaDJ there, or play somewhere else." with Try again and Choose another device; "Playing on Y because X isn't open."). Each replaces the one before; none is a toast over the controls. "Play here instead" takes the music from whichever device is starting or playing it.
+
+**Remote volume (ADR-0475 G1).** Every session carries one mix level (80 until someone sets it). Any of the person's devices can set it from the remote's slider or mute; the last level sent wins, the speaker ramps to it, and a new speaker rises from quiet over a second. The speaker sends a level only when its own slider moves. At 100 the remote says to turn up the speaker itself.
+
+**One tab per browser.** Two tabs of one browser are one device: a Web Lock picks the tab that makes the sound; the others say "Playing in another tab." with "Play in this tab instead", and carry on by themselves if that tab closes.
+
 **Browser realities (verify on real devices in Phase 6).**
 - iOS Safari and iOS home-screen apps suspend Web Audio when the screen locks or the app goes to the background (long-standing WebKit bugs, worse reports on iOS 26). The player is Web Audio based, so an iPhone is a poor speaker device. Selecta detects this and says plainly: "On iPhone, keep Selecta open with the screen on while it plays". It requests a screen wake lock where the browser supports it.
 - Laptops, desktops, Android Chrome and an on-screen iPad are the recommended speaker devices; phones make excellent remotes.

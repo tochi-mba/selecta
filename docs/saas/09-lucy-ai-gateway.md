@@ -56,13 +56,25 @@ Current implementation: `GET` and `PUT /api/account/lucy` (flag `account.lucy_se
 choices, stored per user under `lucy:` ids in the user preferences table. The answer adds the
 plan's tier ("Lucy Basic", "Lucy Standard", "Lucy Advanced") and this month's turn meter. A body
 naming a provider, model, key or budget is refused (422), and an unknown phase is refused by name.
-There is no Cloud memory or conversation history yet, so those rows of the table are not offered.
+Conversation history is kept in Cloud (§9.7); Lucy's memory facts and listening history are not, so the memory row is not offered and `GET /api/lucy-cloud/memory` says so.
 
 Server-side, API keys move from plaintext `lucy-secrets.json` to the hosting platform's secret store in cloud mode (local mode keeps the file but should restrict its permissions).
 
 ### 9.6 Quality gate for model changes
 
 A fixed Lucy evaluation set (synthetic libraries, scripted requests: mood + length, exclusions respected, no invented songs, current mix preserved unless approved, permission asked before big changes, valid tool calls, cost and latency within limits) must pass before a deployment becomes a tier default, then rolls out 5% → 25% → 100% with metrics compared against the previous deployment.
+
+### 9.7 Lucy's conversations in Cloud (ADR-0476, flag `lucy.cloud_conversation`)
+
+Built in PRs #133 and #134. The local Lucy page is reused in the browser-first Cloud shell at `/mixes/lucy`, talking to `/api/lucy-cloud/...` instead of the desktop server.
+
+- **What she works over.** The account's catalogue of song details and its mixes as recipes, never the music files (they stay on the person's devices). Her tools search the catalogue, list artists, read the current and saved mixes, and propose a mix; a proposal is a list of catalogue songs, and saving it writes a recipe revision. She also knows where the playing mix is and an open room's waiting requests.
+- **Storage.** Five tenant tables (`lucy_cloud_conversations`, `_messages`, `_turns`, `_events`, `_proposals`) with the workspace isolation policy (migrations `bf0476lucy01` to `03`). A conversation belongs to the workspace and the person who started it; anyone else gets the answer a made-up id gets. Conversations are in Download my data (`lucy-conversations.json`).
+- **Every turn through the gateway.** Admitted by `gateway.plan_turn` with the plan's tier and ceilings, settled with the real tokens, given back when it fails or is stopped. One turn in flight per conversation (a partial unique index); a refusal is answered at once in plain words and counts nothing. When the allowance or the dollar ceiling is used up, the built-in planner answers and says so, with the date turns come back.
+- **Several devices.** A turn records the device it came from; every device sees the same conversation, the person's words and the turns meter (`lucy.turns` on the workspace stream).
+- **Streaming.** The page reads the conversation's event log with a cursor every 500 ms while visible (a bearer token cannot ride on `EventSource`); text deltas are batched and pruned once a reply is complete.
+- **Not in Cloud yet.** Memory facts and listening history; a real-phone keyboard check; song titles in the playing position.
+- **Evaluation.** `tests/lucy_eval/` (72 cases) and `tools/lucy_eval.py`; run within the owner's spending limit.
 
 ---
 
