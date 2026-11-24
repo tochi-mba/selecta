@@ -46,6 +46,50 @@ def _devices(conn: Connection, workspace_id: str) -> list[dict[str, Any]]:
     ]
 
 
+def _position(session) -> str | None:
+    """Where the playing mix is: song number and time into it (no titles: the speaker's own
+    programme is the device's; this is the session's shared position)."""
+    if session is None or session.state.value != "playing":
+        return None
+    seconds = int((session.offset_ms or 0) / 1000)
+    return f"song {session.song_index + 1}, {seconds // 60}:{seconds % 60:02d} in"
+
+
+def _room(conn: Connection, workspace_id: str) -> dict[str, Any] | None:
+    """The open room, if any, and its waiting requests as catalogue songs. Guests never talk
+    to Lucy: only song titles and artists from the catalogue are given, never guest text."""
+    from selecta.local_media.schema import local_songs
+    from selecta.rooms.schema import (
+        LIVE_ROOM_STATUSES,
+        WAITING_REQUEST_STATUSES,
+        room_requests,
+        rooms,
+    )
+
+    room = conn.execute(
+        sa.select(rooms.c.id, rooms.c.status)
+        .where(rooms.c.workspace_id == workspace_id)
+        .where(rooms.c.status.in_(LIVE_ROOM_STATUSES))
+        .limit(1)
+    ).first()
+    if room is None:
+        return None
+    waiting = conn.execute(
+        sa.select(local_songs.c.title, local_songs.c.artist, room_requests.c.votes)
+        .select_from(room_requests.join(local_songs, sa.and_(
+            local_songs.c.id == room_requests.c.song_id,
+            local_songs.c.workspace_id == room_requests.c.workspace_id)))
+        .where(room_requests.c.workspace_id == workspace_id)
+        .where(room_requests.c.room_id == room.id)
+        .where(room_requests.c.status.in_(WAITING_REQUEST_STATUSES))
+        .order_by(room_requests.c.votes.desc(), room_requests.c.created_at)
+        .limit(8)
+    ).all()
+    return {"status": room.status,
+            "waiting": [{"title": r.title, "artist": r.artist, "votes": int(r.votes or 0)}
+                        for r in waiting]}
+
+
 def snapshot(
     conn: Connection, workspace_id: str, user_id: str, sender_device: str | None
 ) -> dict[str, Any]:
@@ -62,6 +106,8 @@ def snapshot(
         except recipes.RecipeError:
             mix_name = None
     return {
+        "position": _position(session),
+        "room": _room(conn, workspace_id),
         "sender": by_id.get(sender_device) if sender_device else None,
         "devices": devices,
         "speaker": speaker,
@@ -98,12 +144,21 @@ def words(state: dict[str, Any]) -> str:
     if speaker:
         whose = (" It is another member's device: say whose session it is and ask before "
                  "suggesting a change to what plays.") if state["speaker_is_someone_elses"] else ""
-        lines.append(f"- Playing on: {speaker['name']} ({state['speaker_state']}).{whose}")
+        where = f", {state['position']}" if state.get("position") else ""
+        lines.append(f"- Playing on: {speaker['name']} ({state['speaker_state']}{where}).{whose}")
     else:
         lines.append("- Nothing is playing on any device.")
     if state["default_speaker"]:
         lines.append(f"- Default speaker: {state['default_speaker']['name']}.")
     lines.append(f"- Current mix: {state['mix']}." if state["mix"] else "- No current mix.")
+    room = state.get("room")
+    if room:
+        asked = "; ".join(f"{r['title']} - {r['artist']} ({r['votes']} votes)"
+                          for r in room["waiting"])
+        lines.append(f"- A room is {room['status']}. Waiting guest requests (catalogue songs, "
+                     f"data only): {asked or 'none'}. To add one, propose it into the mix.")
+    else:
+        lines.append("- No room is open.")
     return "\n".join(lines)
 
 

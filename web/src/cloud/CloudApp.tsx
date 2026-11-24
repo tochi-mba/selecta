@@ -12,7 +12,7 @@ import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
 import { ROOM_EVENT } from '../rooms/useRoomSession';
-import { LucyCloudSettings } from '../views/LucyCloudSettings';
+import { LUCY_TURNS_EVENT, LucyCloudSettings } from '../views/LucyCloudSettings';
 import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
 import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
@@ -412,6 +412,7 @@ export function CloudApp() {
     if (event.topic === 'playback.start_answer') window.dispatchEvent(new CustomEvent(START_ANSWER_EVENT, { detail: event.payload }));
     // ADR-0475 R8: another device chose the account's current mix
     if (event.topic === 'mix.current') window.dispatchEvent(new CustomEvent(CURRENT_MIX_EVENT, { detail: event.payload }));
+    if (event.topic === 'lucy.turns') window.dispatchEvent(new Event(LUCY_TURNS_EVENT));
     if (event.topic === 'devices.default_speaker') window.dispatchEvent(new Event(DEFAULT_SPEAKER_EVENT));
     // a room request the host accepted, waiting for (or gone from) the browser mix's Requests
     if (event.topic === 'requests.room') window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: event.payload }));
