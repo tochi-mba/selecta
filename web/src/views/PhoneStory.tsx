@@ -1,4 +1,4 @@
-import { KeyboardEvent, PointerEvent as ReactPointerEvent, RefObject, useContext, useEffect, useRef, useState } from 'react';
+import { Fragment, KeyboardEvent, PointerEvent as ReactPointerEvent, RefObject, useContext, useEffect, useRef, useState } from 'react';
 import type { MixItem } from '../api';
 import { flagOn } from '../flags';
 import { clock } from '../lib';
@@ -7,7 +7,7 @@ import { Icon } from '../ui/Icon';
 import { SongMotif } from '../ui/MusicObjects';
 import { storySeamWords, TransitionsWorkedOutLive } from './editorMode';
 import { type PlayedSeam, PlayedTransitions, playedKey } from './liveTransitions';
-import { RequestTag } from './Requests';
+import { ComingSongs, RequestTag } from './Requests';
 
 /** A finger has to travel this far on the handle before it is a drag, so a tap is never a move. */
 const DRAG_FROM = 6;
@@ -48,8 +48,10 @@ export function PhoneStory(props: {
   onCarry: (from: string | null, over: string | null) => void;
   headingId: string;
   list: RefObject<HTMLOListElement | null>;
+  /** the current mix shows requested songs on their way after the song they follow */
+  requests: boolean;
 }) {
-  const { mix, keys, names, selectedSeam, selectedSong, playingIndex, movingKey, affected, onOpenSeam, onOpenSong, onMove, onCarry, headingId, list } = props;
+  const { mix, keys, names, selectedSeam, selectedSong, playingIndex, movingKey, affected, onOpenSeam, onOpenSong, onMove, onCarry, headingId, list, requests } = props;
   const live = useContext(TransitionsWorkedOutLive);
   const played = useContext(PlayedTransitions);
   const [drag, setDrag] = useState<StoryDrag | null>(null);
@@ -179,7 +181,8 @@ export function PhoneStory(props: {
           const lifted = drag?.from === index;
           const words = previous ? connectorWords(item, previous, names, live, played[playedKey(previous.song_id, item.song_id)]) : null;
           return (
-            <li key={key} className="pe-item" data-song-key={key} data-position={item.position}>
+            <Fragment key={key}>
+            <li className="pe-item" data-song-key={key} data-position={item.position}>
               {previous && words && (
                 <div className={`pe-seam ${selectedSeam === index ? 'is-open' : ''} ${affected?.has(index) ? 'is-affected' : ''}`} data-pe-seam={`${keys[index - 1]}>${key}`} data-seam={`${keys[index - 1]}>${key}`}>
                   <button type="button" className="pe-seam-open" aria-expanded={selectedSeam === index} onClick={() => onOpenSeam(index)}>
@@ -228,6 +231,8 @@ export function PhoneStory(props: {
                 {movingKey === key && <span className="status status-working pe-song-status" role="status">Moving…</span>}
               </div>
             </li>
+            {requests && <ComingSongs afterSongId={item.song_id} />}
+            </Fragment>
           );
         })}
       </ol>

@@ -215,6 +215,7 @@ export function PhoneEditor(props: PhoneEditorProps) {
             onCarry={(from, over) => { actions.current.dragFrom(from); actions.current.dragOver(over); }}
             headingId={heading}
             list={list}
+            requests={!inDraft}
           />
           <button type="button" className="pe-add" onClick={() => setAdding(keys[keys.length - 1])}><Icon name="plus" /> Add songs</button>
         </section>
