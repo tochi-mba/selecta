@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { browserName, capabilities, currentFacts, deviceKind } from './deviceInfo';
 import { holdWakeLock, WakeLockHold } from './wakeLock';
 import { flagOn } from '../flags';
 import { isOnline, onReconnect } from '../cloud/connection';
+import { audioTab } from './audioTab';
 
 // This browser as a playback device, and the account's one playback session (ADR-0415).
 //
@@ -224,6 +225,11 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const [standIn, setStandIn] = useState<string | null>(null);
   const [registerTry, setRegisterTry] = useState(0);
   const deviceId = device?.id ?? standIn;
+  // ADR-0475 F: which tab of this browser makes the sound (one device, many tabs: never two)
+  const tab = useMemo(() => audioTab(workspaceId), [workspaceId]);
+  useEffect(() => () => tab.close(), [tab]);
+  // another tab of this browser is the one making the sound
+  const [otherTab, setOtherTab] = useState(false);
 
   useEffect(() => {
     let current = true;
@@ -264,6 +270,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const becomeRemote = useCallback((why: string, fadeMs = FADE_MS) => {
     if (!speaking.current) return;
     speaking.current = false;
+    tab.release();
     adrift.current = false;
     beatTrouble.current = false;
     setOffline(false);
@@ -275,7 +282,17 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     wake.current = null;
     wakeWasHeld.current = false;
     setMessage(why);
-  }, [speaker]);
+  }, [speaker, tab]);
+  // another tab of this browser took the sound: stop here at once, before it starts
+  useEffect(() => {
+    tab.onTaken(() => {
+      if (!speaking.current) return;
+      speaking.current = false;
+      expiredSpeaker.current = false;
+      speaker?.stop(0);
+      setOtherTab(true);
+    });
+  }, [speaker, tab]);
 
   /** The sound could not start here. The session is told it stopped (so no device reads
    * "Playing on" over silence while the lease runs out), and this device becomes a remote. */
@@ -349,6 +366,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       expiredSpeaker.current = false;
       if (answer.action === 'continue' && answer.session) {
         learnKey(answer.envelope_key);
+        if (!(await tab.claim(false))) { setOtherTab(true); return; }
         await startSpeaking(answer.session);
         setMessage('');
       } else {
@@ -359,7 +377,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     } finally {
       recoveringExpired.current = false;
     }
-  }, [api, deviceId, speaker, startSpeaking, workspaceId]);
+  }, [api, deviceId, speaker, startSpeaking, tab, workspaceId]);
 
   /** A volume set here while offline goes to the session once the connection is back. */
   const sendHeldVolume = useCallback(async () => {
@@ -473,6 +491,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       if (speaking.current && next.speaker === 'here' && next.session) {
         leaseDeadline.current = next.session.lease_expires_at;
       }
+      // this device is the speaker but this tab is not making the sound: another tab is
+      setOtherTab(next.speaker === 'here' && !speaking.current && !tab.holds() && !claiming.current);
       if (speaking.current && next.speaker !== 'here') {
         becomeRemote(next.speaker_name ? `Playback moved to ${next.speaker_name}` : 'Playback stopped.');
       } else if (speaking.current && next.session) {
@@ -489,7 +509,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     } finally {
       looking.current -= 1;
     }
-  }, [api, becomeRemote, deviceId, follow, recoverExpired, workspaceId]);
+  }, [api, becomeRemote, deviceId, follow, recoverExpired, tab, workspaceId]);
 
   // When the page opens on the device that was the speaker, carry on or fade out as the
   // server says (it may have moved while this one was away).
@@ -508,6 +528,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         // a press on this reloaded tab is already taking over (or has): it starts the sound
         if (claiming.current || speaking.current) return;
         if (verified?.speaker === 'here' && verified.session) {
+          // another tab of this browser is already making the sound: this one stays quiet
+          if (!(await tab.claim(false))) { setOtherTab(true); return; }
           await startSpeaking(verified.session);
         } else if (!verified) {
           // Reconnect succeeded but verification could not reach the server.
@@ -517,7 +539,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       }
     }).catch(() => undefined).finally(() => { if (current) void poll(); });
     return () => { current = false; };
-  }, [api, deviceId, poll, speaker, startSpeaking, workspaceId]);
+  }, [api, deviceId, poll, speaker, startSpeaking, tab, workspaceId]);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -629,6 +651,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     commandRefused.current = false;
     setStarting(true); setMessage('Starting here...'); setError('');
     try {
+      // the person pressed here: any other tab of this browser stops first, then this one plays
+      if (!(await tab.claim(true))) throw new Error('Another tab of this browser is playing. Close it, or press Play there.');
+      setOtherTab(false);
       const sentAt = Date.now();
       const moved = await api<{ session: SessionState; previous_device: { name: string } | null; server_time: number; envelope_key?: string | null }>('/playback/take-over', {
         method: 'POST', body: JSON.stringify({
@@ -672,7 +697,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       setStarting(false);
       void poll();
     }
-  }, [api, deviceId, poll, speaker, startSpeaking, workspaceId]);
+  }, [api, deviceId, poll, speaker, startSpeaking, tab, workspaceId]);
 
   /** Sends a press; true when the server took it, false when it was refused or never sent. */
   const send = useCallback(async (name: string, args?: Record<string, unknown>): Promise<boolean> => {
@@ -863,5 +888,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
 
   return { device, notice, view, message, starting, error, playHere, publishProgramme, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, send, serverNow, isSpeaker: () => speaking.current,
     /** cloud.offline_playback: playing on while SelectaDJ can't be reached, and what was said when that ended. */
-    offline, offlineNotice, playOffline, heldVolume: () => heldVolume.current };
+    offline, offlineNotice, playOffline, heldVolume: () => heldVolume.current,
+    /** ADR-0475 F: another tab of this browser is making the sound. */
+    otherTab };
 }
