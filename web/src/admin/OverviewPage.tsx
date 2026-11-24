@@ -54,7 +54,7 @@ export function OverviewPage() {
         <div className="admin-kpis" data-tour="kpis">
           <Kpi label="Paying customers" value={b.paying.toLocaleString()} help={b.source} link={adminPath('billing')} />
           <Kpi label="Monthly recurring revenue" value={Object.entries(b.mrr_minor).map(([c, v]) => money(v, c)).join(' + ') || money(0, 'gbp')} help={`${b.source} Monthly amounts, yearly plans divided by 12.`} />
-          <Kpi label="Churn, 30 days" value={b.churn_30d === null ? 'No paying customers yet' : `${(b.churn_30d * 100).toFixed(1)}%`} help="Subscriptions that ended in the last 30 days, over those paying at the start." />
+          <Kpi label="Churn, 30 days" value={b.churn_30d === null ? 'None yet' : `${(b.churn_30d * 100).toFixed(1)}%`} help="Subscriptions that ended in the last 30 days, over those paying at the start." />
           <Kpi label="Sign-ups" value={`${b.signups.today} today · ${b.signups['7d']} this week`} help="New SelectaDJ accounts, from our own records." link={adminPath('customers')} />
           <Kpi label="Past due" value={b.past_due.toLocaleString()} tone={b.past_due ? 'warn' : undefined} help="Stripe could not take a payment; the customer keeps their plan during grace while Stripe retries." link={adminPath('billing', ['past_due'])} />
           <Kpi label="Stuck Stripe events" value={b.stuck_stripe_events.toLocaleString()} tone={b.stuck_stripe_events ? 'bad' : undefined} help="Stripe webhooks received but not processed after 15 minutes." link={adminPath('billing', ['events'])} />

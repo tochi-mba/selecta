@@ -27,6 +27,8 @@ export type CatalogueSong = {
   artist: string;
   album?: string | null;
   duration_s?: number | null;
+  /** The file's format, from its name (mp3, flac, m4a...). */
+  codec?: string | null;
   available_on?: number;
   /** "Never play" for the account: a mix SelectaDJ builds leaves it out (it can be added by hand). */
   never?: boolean;
@@ -106,7 +108,13 @@ export type AvailabilitySources = {
   };
 };
 /** `elsewhere`: which other devices of the person hold a song (ADR-0475 R6), when known. */
-export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number>; elsewhere?: import('../devices/controller').WhereHeld | null };
+export type Availability = {
+  here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>;
+  hosted: ReadonlySet<number>;
+  elsewhere?: import('../devices/controller').WhereHeld | null;
+  /** By file rather than by song, for a song's versions: this device's own answers and the rows. */
+  files?: { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; rows: ReadonlyMap<number, CatalogueSong> };
+};
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
 /** One song's availability: this device first, then a hosted copy, then the member's other devices. */
@@ -127,7 +135,14 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
   const here = availability !== 'nowhere';
   const playable = availability === 'here' || availability === 'hosted';
   const openElsewhere = playable ? null : known.elsewhere?.(song.id).online[0] ?? null;
+  const versions = song.versions && song.versions.length > 1
+    ? song.versions.map((id) => {
+      const row = known.files?.rows.get(id);
+      return { id, length: row?.duration_s ?? 0, format: row?.codec ?? null, here: known.files?.here.get(id) === 'here', primary: id === song.id };
+    })
+    : undefined;
   return {
+    ...(versions ? { versions } : {}),
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, bpm: null, camelot: null,
     detected_bpm: null, detected_camelot: null, override_bpm: null, override_camelot: null,
@@ -269,7 +284,10 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     lastGrouping = grouping;
     const here = (await sources.here?.().catch(() => null)) ?? NO_AVAILABILITY.here;
     const hosted = (await sources.hosted?.(grouping.files).catch(() => null)) ?? NO_AVAILABILITY.hosted;
-    return { here: hereBySong(grouping, here), hosted: setBySong(grouping, hosted), elsewhere: await holders() };
+    return {
+      here: hereBySong(grouping, here), hosted: setBySong(grouping, hosted), elsewhere: await holders(),
+      files: { here, rows: new Map(grouping.files.map((file) => [file.id, file])) },
+    };
   };
   const playable = async (): Promise<PlayableSong[]> => {
     const list = await songs();

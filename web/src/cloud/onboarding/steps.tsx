@@ -185,12 +185,13 @@ export function VerifyStep({ state, onChange, live, earlyContinue, onStop, onCon
       </>
     );
   }
-  const added = summary.imported + summary.duplicates;
+  // extra copies of a song are one song, so they are said apart, never counted as songs
+  const added = summary.imported;
   return (
     <>
       <p role="status">
         {added === 0 ? 'No songs were added.' : added === 1 ? '1 song is in your library.' : `${added} songs are in your library.`}
-        {summary.duplicates ? ` ${summary.duplicates} of them were already there.` : ''}
+        {summary.duplicates ? ` ${summary.duplicates} more ${summary.duplicates === 1 ? 'file was an extra copy' : 'files were extra copies'} of songs you already have.` : ''}
         {summary.failed ? ` ${summary.failed} could not be read.` : ''}
         {summary.skipped ? ` ${summary.skipped} files were not music and were left alone.` : ''}
         {reuseWords(summary) ? ` ${reuseWords(summary)}` : ''}

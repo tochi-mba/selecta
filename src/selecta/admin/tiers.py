@@ -48,8 +48,9 @@ _ACTIONS: tuple[ActionSpec, ...] = (
     ActionSpec("job.retry", "jobs.retry", Tier.CAREFUL, "Retry job", per_hour=200),
     ActionSpec("job.quarantine", "jobs.cancel", Tier.CAREFUL, "Hold job", reverse="job.release"),
     ActionSpec("job.release", "jobs.retry", Tier.CAREFUL, "Release job", reverse="job.quarantine"),
-    ActionSpec("job.cancel", "jobs.cancel", Tier.DANGEROUS, "Cancel job", per_hour=50,
-               confirm="name", reversible=False),
+    # Careful, not dangerous: one job, and Retry makes the work again.
+    ActionSpec("job.cancel", "jobs.cancel", Tier.CAREFUL, "Cancel job", per_hour=50,
+               reversible=False),
     ActionSpec("worker.drain", "workers.drain", Tier.CAREFUL, "Drain worker",
                reverse="worker.resume"),
     ActionSpec("worker.pause", "workers.drain", Tier.CAREFUL, "Pause worker",
