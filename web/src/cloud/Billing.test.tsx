@@ -48,8 +48,10 @@ describe('checkout consent', () => {
   it('keeps the plan buttons off until all three consents are ticked, then sends them', async () => {
     const onCheckout = vi.fn();
     render(<Billing account={cloudAccount()} busy={false} phase="idle" consentVersion="terms-2026-11" onCheckout={onCheckout} onPortal={noop} />);
-    // one button for the chosen plan (Premium to begin with), off until every consent is ticked
-    expect(screen.getByRole('radio', { name: /^Premium/ })).toBeChecked();
+    // one button for the chosen plan (the cheaper Standard to begin with), off until every consent is ticked
+    expect(screen.getByRole('radio', { name: /^Standard/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^Premium/ })).not.toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: /^Premium/ }));
     const premium = screen.getByRole('button', { name: 'Continue with Premium' });
     expect(premium).toBeDisabled();
     await userEvent.click(screen.getByLabelText('I agree to the subscription terms.'));
@@ -150,7 +152,7 @@ describe('a checkout that could not start', () => {
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent('Upgrades aren’t available right now. Nothing was charged. Try again later.');
     // in the hint slot, in the same row as the button it is about
-    expect(within(alert.parentElement!).getByRole('button', { name: 'Continue with Premium' })).toBeInTheDocument();
+    expect(within(alert.parentElement!).getByRole('button', { name: 'Continue with Standard' })).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/billing.not.configured/i);
   });
 
