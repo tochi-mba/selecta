@@ -107,6 +107,17 @@ export function idempotencyKey() {
   return crypto.randomUUID();
 }
 
+/** The request with an Idempotency-Key added when it is a write that has none (`on` is the
+ * `cloud.idempotency` flag). A caller that sets its own key keeps it. */
+export function withIdempotencyKey(init: RequestInit | undefined, on: boolean): RequestInit | undefined {
+  const method = (init?.method ?? 'GET').toUpperCase();
+  if (!on || method === 'GET' || method === 'HEAD') return init;
+  const headers = new Headers(init?.headers);
+  if (headers.has('Idempotency-Key')) return init;
+  headers.set('Idempotency-Key', idempotencyKey());
+  return { ...init, headers };
+}
+
 export function messageOf(payload: unknown, fallback: string) {
   if (payload && typeof payload === 'object' && 'detail' in payload) {
     const detail = (payload as { detail: unknown }).detail;

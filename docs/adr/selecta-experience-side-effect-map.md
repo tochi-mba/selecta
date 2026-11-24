@@ -22,6 +22,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.persist.asked` | local | `web/src/cloud/persistence.ts` | That the one storage-persistence ask after the first import has been made, so no browser re-asks on every import | Cloud storage card |
 | `selecta.` | local | `web/src/cloud/deviceData.ts` | A clearing prefix, not a key: Clear everything in this browser removes every `selecta.`-prefixed entry | Cloud device data |
 | `selecta.prefs` | local | `web/src/state/prefs.ts` | Theme, motion, density, rail and library layout choices | Shared foundation |
+| `selecta.notices.hidden` | local | `web/src/cloud/BillingStanding.tsx` | Numbers standing for the billing notices dismissed in this browser (one-way fingerprints, at most 20), so a dismissed notice stays hidden and a new one shows (`billing.standing`) | Cloud billing |
+| `selecta.reloadedForUpdate` | session | `web/src/ui/staleBuild.tsx` | That this tab already reloaded once for a new build, so a page that still will not open offers support instead of a reload loop | Shared foundation |
 | `selecta.sound` | local | `web/src/player.ts` | Volume and mute | Listen |
 | `selecta-now` | local | `web/src/lib.ts` | Where playback was, so a reload resumes without a surprise | Listen |
 | `selecta.listen` | local | `web/src/views/Now.tsx` | Listen display choices (spectrum shape and the like) | Listen |

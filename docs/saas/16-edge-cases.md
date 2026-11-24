@@ -4,7 +4,7 @@
 
 Grouped one-liners; each maps to a test or a documented policy. (The scenario catalogue in [§15.5](15-stress-testing.md#155-scenario-catalogue-each-becomes-a-named-automated-test) covers load and failure; these are product and correctness rules.)
 
-**Accounts**: same email signs up twice (one account) · email change to an address already used (refused) · sign-in from a new device (notify) · account deleted while jobs run (cancel, then delete) · deletion requested while a payment is pending (cancel subscription first) · user under 13 (refused) · suspended account (read-only access to own data and export, no processing).
+**Accounts**: same email signs up twice (one account) · email change to an address already used (refused) · sign-in from a new device (built: one email per new device with a Sign out everywhere link, `notify/device_mail.py`, flag `account.new_device_email`; `test_cloud_new_device_email.py`) · account deleted while jobs run (cancel, then delete) · deletion requested while a payment is pending (cancel subscription first) · user under 13 (refused) · suspended account (read-only access to own data and export, no processing).
 
 **Library**: duplicate inside one account (ask) · same file name, different audio (distinct assets) · tags missing or garbage (filename fallback, editable) · song is spoken word (existing is-music detection; excluded from mixes) · song longer than plan limit (rejected with reason) · song replaced by a new upload with the same name (new asset; old one stays until deleted) · deleting a song used in drafts and exports (drafts show a gap to fix; frozen exports unaffected) · 20,000+ songs (paged lists, server search).
 
