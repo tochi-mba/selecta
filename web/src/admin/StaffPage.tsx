@@ -97,6 +97,7 @@ function AddStaff({ onDone }: { onDone: () => void }) {
         <button>Find</button>
       </form>
       {error && <p className="admin-error" role="alert">{error}</p>}
+      <p className="admin-soft">To enter the console they must also be a member of the WorkOS staff organization. Until the console does it for you: WorkOS dashboard, Organizations, the staff organization, Members, Add member, their email. Check there that the organization requires MFA.</p>
       {found && <>
         <p>Found <strong>{found.label}</strong>. Choose a role:</p>
         <div className="admin-role-cards" role="radiogroup" aria-label="Role">
