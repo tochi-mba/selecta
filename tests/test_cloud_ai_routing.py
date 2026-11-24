@@ -72,13 +72,14 @@ STARTING_TABLE = [
     (Tier.FREE, RequestClass.EVERYDAY, "haiku-low"),
     (Tier.FREE, RequestClass.PLANNING, "haiku-low"),
     (Tier.FREE, RequestClass.DEEP_PLAN, "haiku-low"),
-    (Tier.STANDARD, RequestClass.QUICK, "haiku-medium"),
-    (Tier.STANDARD, RequestClass.EVERYDAY, "haiku-medium"),
+    # One model per plan (owner, 2026-11-24): Standard on Sonnet, Premium on Opus.
+    (Tier.STANDARD, RequestClass.QUICK, "sonnet-medium"),
+    (Tier.STANDARD, RequestClass.EVERYDAY, "sonnet-medium"),
     (Tier.STANDARD, RequestClass.PLANNING, "sonnet-medium"),
     (Tier.STANDARD, RequestClass.DEEP_PLAN, "sonnet-medium"),
-    (Tier.PREMIUM, RequestClass.QUICK, "haiku-low"),
-    (Tier.PREMIUM, RequestClass.EVERYDAY, "sonnet-medium"),
-    (Tier.PREMIUM, RequestClass.PLANNING, "sonnet-medium"),
+    (Tier.PREMIUM, RequestClass.QUICK, "opus-high"),
+    (Tier.PREMIUM, RequestClass.EVERYDAY, "opus-high"),
+    (Tier.PREMIUM, RequestClass.PLANNING, "opus-high"),
     (Tier.PREMIUM, RequestClass.DEEP_PLAN, "opus-high"),
 ]
 
@@ -559,6 +560,34 @@ def test_seeding_is_safe_to_run_on_every_start(cloud_engine):
     assert first.routing_version == 1
     assert second == registry.SeedResult()
     assert active.version == 1 and active.map == registry.normalise_map(DEFAULT_ROUTING)
+
+
+def test_seeding_moves_an_untouched_previous_starting_map_to_the_new_one(cloud_engine):
+    with transaction(cloud_engine) as conn:
+        registry.seed_defaults(conn)
+        old = registry.PREVIOUS_DEFAULT_ROUTINGS[0]
+        registry.create_routing_version(conn, old, "system", "old start", activate=True,
+                                        require_eval=False)
+    with transaction(cloud_engine) as conn:
+        moved = registry.seed_defaults(conn)
+        active = registry.active_routing(conn)
+
+    assert moved.routing_version == 3
+    assert active.map == registry.normalise_map(DEFAULT_ROUTING)
+
+
+def test_seeding_never_touches_a_map_an_admin_chose(cloud_engine):
+    with transaction(cloud_engine) as conn:
+        registry.seed_defaults(conn)
+        chosen = registry.normalise_map(DEFAULT_ROUTING)
+        chosen["premium"]["quick"] = ["haiku-low"]
+        registry.create_routing_version(conn, chosen, "staff", "quick on haiku", activate=True,
+                                        require_eval=False)
+    with transaction(cloud_engine) as conn:
+        again = registry.seed_defaults(conn)
+        active = registry.active_routing(conn)
+
+    assert again.routing_version is None and active.map == chosen
 
 
 # A run keeps what it started with --------------------------------------------------------

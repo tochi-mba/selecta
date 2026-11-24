@@ -175,8 +175,9 @@ def test_used_up_deep_plans_step_down_to_planning_on_the_next_model(engine, monk
     finish(engine, deep)
     stepped = plan(engine, tier=Tier.PREMIUM, request_class=D)
 
+    # Premium runs on Opus for every class, so the step down changes the allowance, not the model.
     assert deep.deployment.id == "opus-high" and deep.allowance_class is D
-    assert stepped.deployment.id == "sonnet-medium"
+    assert stepped.deployment.id == "opus-high"
     assert (stepped.request_class, stepped.requested_class) == (P, D)
     assert stepped.allowance_class is E and stepped.limited == "allowance"
 
@@ -188,7 +189,7 @@ def test_premium_falls_through_to_fair_use_quick_answers_when_everything_else_is
 
     turn = plan(engine, tier=Tier.PREMIUM, request_class=D)
 
-    assert turn.deployment.id == "haiku-low"
+    assert turn.deployment.id == "opus-high"
     assert turn.request_class is Q and turn.allowance_class is Q
 
 
@@ -206,17 +207,41 @@ def test_a_busy_account_is_refused_and_nothing_is_counted(engine):
     plan(engine, tier=Tier.FREE, request_class=E)
 
 
-def test_the_monthly_dollar_ceiling_steps_down_to_a_class_whose_model_fits(engine):
+def test_the_monthly_dollar_ceiling_steps_down_to_a_cheaper_model_that_fits(engine):
     with transaction(engine) as conn:
         month = allowance.month_key(gateway.db_now(conn))
         allowance.record_usage(conn, "w", month, E, tokens_in=0, tokens_out=0, cost_usd=6.2)
 
     turn = plan(engine, tier=Tier.PREMIUM, request_class=D)
 
-    # Opus's $0.60 worst case would pass Premium's $6.60; Sonnet's $0.15 still fits.
-    assert turn.deployment.id == "sonnet-medium"
-    assert turn.limited == "spend" and turn.allowance_class is E
-    assert turns_used(engine, "w", D) == 0
+    # Opus's $0.60 worst case would pass Premium's $6.60; Sonnet's $0.15 still fits. No smaller
+    # class routes to Sonnet on Premium, so the turn counts as the deep plan it was.
+    assert turn.deployment.id == "sonnet-medium" and turn.fallback_used
+    assert turn.limited == "spend" and turn.allowance_class is D
+    assert dict(turn.skipped)["opus-high"] == "spend"
+    assert turn.reserved_usd == pytest.approx(0.15)
+
+
+def test_near_the_ceiling_the_step_down_walks_the_chain_to_haiku(engine):
+    with transaction(engine) as conn:
+        month = allowance.month_key(gateway.db_now(conn))
+        allowance.record_usage(conn, "w", month, E, tokens_in=0, tokens_out=0, cost_usd=6.55)
+
+    turn = plan(engine, tier=Tier.PREMIUM, request_class=E)
+
+    assert turn.deployment.id == "haiku-medium" and turn.limited == "spend"
+    assert turn.reserved_usd == pytest.approx(0.02)
+
+
+def test_standard_near_its_ceiling_steps_down_from_sonnet_to_haiku(engine):
+    with transaction(engine) as conn:
+        month = allowance.month_key(gateway.db_now(conn))
+        allowance.record_usage(conn, "w", month, E, tokens_in=0, tokens_out=0, cost_usd=3.5)
+
+    turn = plan(engine, tier=Tier.STANDARD, request_class=E)
+
+    assert turn.deployment.id == "haiku-medium" and turn.limited == "spend"
+    assert turn.allowance_class is E
 
 
 def test_an_account_at_its_monthly_dollar_ceiling_gets_the_planner(engine):
@@ -265,25 +290,26 @@ def test_an_outage_of_every_model_degrades_to_the_planner_and_costs_no_turn(engi
     assert summary.cost_usd == 0.0 and leases(engine) == 0
 
 
-def test_a_deep_plan_served_by_sonnet_uses_a_planning_turn_not_a_deep_plan(engine):
+def test_a_deep_plan_served_by_sonnet_while_opus_is_down_counts_as_the_deep_plan(engine):
     turn = plan(engine, tier=Tier.PREMIUM, request_class=D, health=Health({"opus-high"}))
     with transaction(engine) as conn:
         run = get_run(conn, turn.run_id)
 
+    # No smaller Premium class routes to Sonnet, so the class asked for is the class served.
     assert turn.deployment.id == "sonnet-medium" and turn.fallback_used
-    assert (turn.requested_class, turn.request_class, turn.allowance_class) == (D, P, E)
-    assert (run.requested_class, run.request_class, run.allowance_class) == (D, P, E)
-    assert turns_used(engine, "w", D) == 0 and turns_used(engine, "w", E) == 1
+    assert (turn.requested_class, turn.request_class, turn.allowance_class) == (D, D, D)
+    assert (run.requested_class, run.request_class, run.allowance_class) == (D, D, D)
+    assert turns_used(engine, "w", D) == 1
     assert turn.limits.max_cost_usd == pytest.approx(0.15)
     assert turn.limited is None
 
 
-def test_a_planning_turn_served_by_haiku_uses_an_everyday_turn(engine):
+def test_a_planning_turn_served_by_haiku_while_sonnet_is_down(engine):
     turn = plan(engine, tier=Tier.STANDARD, request_class=P, health=Health({"sonnet-medium"}))
 
-    assert turn.deployment.id == "haiku-medium"
-    assert (turn.requested_class, turn.request_class, turn.allowance_class) == (P, E, E)
-    assert turns_used(engine, "w", P) == 0 and turns_used(engine, "w", E) == 1
+    assert turn.deployment.id == "haiku-medium" and turn.fallback_used
+    assert (turn.requested_class, turn.request_class, turn.allowance_class) == (P, P, P)
+    assert turns_used(engine, "w", P) == 1
 
 
 def test_a_fallback_with_no_smaller_class_of_its_own_counts_as_the_class_asked_for(engine):
@@ -299,12 +325,12 @@ def test_a_fallback_with_no_smaller_class_of_its_own_counts_as_the_class_asked_f
 
 
 def test_when_the_served_class_has_no_turns_left_the_turn_steps_down(engine, monkeypatch):
-    monkeypatch.setitem(allowance.ALLOWANCES, Tier.PREMIUM, {E: 0, D: 25, Q: 1000})
+    monkeypatch.setitem(allowance.ALLOWANCES, Tier.PREMIUM, {E: 0, D: 0, Q: 1000})
 
     turn = plan(engine, tier=Tier.PREMIUM, request_class=D, health=Health({"opus-high"}))
 
-    # Sonnet would have served it as planning, which counts as everyday: none left, so Haiku.
-    assert turn.deployment.id == "haiku-low"
+    # No deep plans or everyday turns left: Sonnet answers it as a fair-use quick turn.
+    assert turn.deployment.id == "sonnet-medium"
     assert (turn.request_class, turn.allowance_class, turn.limited) == (Q, Q, "allowance")
     assert turns_used(engine, "w", D) == 0
 

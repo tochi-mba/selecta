@@ -5,10 +5,10 @@ exports this month, each with the moment it resets. The numbers come from the sa
 server enforces with (`quota_state` and `allowance_counters`), so the page never shows a limit
 the server doesn't apply.
 
-Lucy turns are counted per model class, and the meter adds them up: "37 of 40 this month" on
-Free, "120 of 440" on Standard. A class under fair use has no limit, so a plan with one shows
-its limited classes' total and says the rest is fair use. Allowances reset at the person's own
-midnight, so the timezone passed in is the signed-in user's.
+Lucy turns are counted per purpose (everyday, planning, deep plan, quick), and the meter adds
+them up: "37 of 40 this month" on Free, "120 of 440" on Standard. A purpose under fair use has
+no limit, so a plan with one shows its limited purposes' total and says the rest is fair use.
+Allowances reset at the person's own midnight, so the timezone passed in is the signed-in user's.
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ def lucy_turns(
     fair_use = False
     resets_at = None
     for turns in plan.lucy:
-        kind = f"lucy_turn.{turns.model_class}"
+        kind = f"lucy_turn.{turns.purpose}"
         allowance = allowances.remaining(
             connection, workspace_id, kind, allowances.limit_for(plan, kind), timezone=timezone
         )

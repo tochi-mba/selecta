@@ -42,7 +42,7 @@ def test_account_reports_every_meter_with_its_reset(tmp_path, monkeypatch):
     with signed_up(tmp_path, monkeypatch) as world:
         add_asset(world.engine, world.objects, world.workspace_id, b"x" * 2_000)
         _consume(world.engine, world.workspace_id, "analysis_song", 3)
-        _consume(world.engine, world.workspace_id, "lucy_turn.haiku", 5)
+        _consume(world.engine, world.workspace_id, "lucy_turn.everyday", 5)
         _consume(world.engine, world.workspace_id, "export", 1)
         with world.engine.connect() as conn:
             now = db_now(conn)

@@ -275,20 +275,37 @@ DEFAULT_DEPLOYMENTS: tuple[Deployment, ...] = (
 
 _Q, _E, _P, _D = (c.value for c in RequestClass)
 DEFAULT_ROUTING: dict[str, dict[str, list[str]]] = {
+    # One model per plan (owner, 2026-11-24): Free on the cheapest, Standard on Sonnet, Premium
+    # on Opus. Each falls back down its own chain (Opus, Sonnet, Haiku, built-in), never up.
     "free": {_Q: ["haiku-low"], _E: ["haiku-low"], _P: ["haiku-low"], _D: ["haiku-low"]},
     "standard": {
-        _Q: ["haiku-medium"],
-        _E: ["haiku-medium"],
+        _Q: ["sonnet-medium"],
+        _E: ["sonnet-medium"],
         _P: ["sonnet-medium"],
         _D: ["sonnet-medium"],
     },
-    "premium": {
-        _Q: ["haiku-low"],
-        _E: ["sonnet-medium"],
-        _P: ["sonnet-medium"],
-        _D: ["opus-high"],
-    },
+    "premium": {_Q: ["opus-high"], _E: ["opus-high"], _P: ["opus-high"], _D: ["opus-high"]},
 }
+
+PREVIOUS_DEFAULT_ROUTINGS: tuple[dict[str, dict[str, list[str]]], ...] = (
+    {
+        "free": {_Q: ["haiku-low"], _E: ["haiku-low"], _P: ["haiku-low"], _D: ["haiku-low"]},
+        "standard": {
+            _Q: ["haiku-medium"],
+            _E: ["haiku-medium"],
+            _P: ["sonnet-medium"],
+            _D: ["sonnet-medium"],
+        },
+        "premium": {
+            _Q: ["haiku-low"],
+            _E: ["sonnet-medium"],
+            _P: ["sonnet-medium"],
+            _D: ["opus-high"],
+        },
+    },
+)
+"""Starting maps shipped before. A database still on one of these, untouched by an admin, is
+moved to `DEFAULT_ROUTING` by `seed_defaults`; a map an admin changed is never touched."""
 
 
 def _row_values(deployment: Deployment) -> dict[str, Any]:
@@ -607,4 +624,22 @@ def seed_defaults(conn: Connection, author: str = "system") -> SeedResult:
             require_eval=False,
         )
         result = replace(result, routing_version=version)
+    elif _on_a_previous_default(conn):
+        version = create_routing_version(
+            conn,
+            DEFAULT_ROUTING,
+            author,
+            "One model per plan: Free on Haiku, Standard on Sonnet, Premium on Opus.",
+            activate=True,
+            require_eval=False,
+        )
+        result = replace(result, routing_version=version)
     return result
+
+
+def _on_a_previous_default(conn: Connection) -> bool:
+    """The active map is a starting map this code shipped before, so no admin chose it."""
+    active = active_routing(conn)
+    if not active.active:
+        return False
+    return any(active.map == normalise_map(old) for old in PREVIOUS_DEFAULT_ROUTINGS)
