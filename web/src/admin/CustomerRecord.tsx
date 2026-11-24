@@ -22,7 +22,7 @@ type Customer = {
   devices?: { id: string; name: string | null; kind: string | null; last_seen_at: number | null; signed_out_at: number | null }[];
   rooms?: { open: number; total: number };
   lucy?: { turns_30d: number };
-  jobs?: { id: string; type: string; state: string; error_class: string | null; created_at: number }[];
+  jobs?: { id: string; type: string; state: string; error_class: string | null; created_at: number; waiting_reason?: string | null }[];
   activity: { id: string; created_at: number; actor_email: string | null; actor_id: string; action: string; result: string; reason: string | null }[];
   notes: { id: string; author: string; body: string; created_at: number }[];
 };
@@ -76,7 +76,7 @@ export function CustomerRecord({ userId, tab }: { userId: string; tab: string })
       </nav>
       <div className="admin-record-body">
         <div className="admin-record-main">
-          {tab === 'overview' && <Overview r={r} userId={userId} onChange={reload} />}
+          {tab === 'overview' && <><Overview r={r} userId={userId} onChange={reload} /><Jobs r={r} /></>}
           {tab === 'configuration' && <StorageMode api={ctx.api} userId={userId} canChange={ctx.can('accounts.configure') && ctx.changesUntil !== null} />}
           {tab === 'billing' && <><StripeLive userId={userId} email={email} /><Billing r={r} /></>}
           {tab === 'devices' && <Devices r={r} />}
@@ -138,6 +138,16 @@ function Overview({ r, userId, onChange }: { r: Customer; userId: string; onChan
             { key: 'state', label: 'State', render: (o) => o.revoked_at ? <Badge>Revoked</Badge> : <ActionButton permission="billing.overrides.create" onPress={() => void revoke(o.id)}>Revoke</ActionButton> }]} />
       </Section>
     </>
+  );
+}
+
+function Jobs({ r }: { r: Customer }) {
+  return (
+    <Section title="Recent jobs" help="Background work for this customer: analysis, renders, exports.">
+      <AdminTable caption="Recent jobs" rows={r.jobs ?? []} rowKey={(j) => j.id} empty={<Empty title="No jobs.">Browser accounts mostly do their work in the browser.</Empty>}
+        cols={[{ key: 'type', label: 'Job', render: (j) => words(j.type) }, { key: 'state', label: 'State', render: (j) => <>{words(j.state)}{j.waiting_reason && <> <small className="admin-warning">{j.waiting_reason}</small></>}</> },
+          { key: 'error_class', label: 'Error', render: (j) => j.error_class ?? '' }, { key: 'created_at', label: 'Started', render: (j) => <Time at={j.created_at} /> }]} />
+    </Section>
   );
 }
 

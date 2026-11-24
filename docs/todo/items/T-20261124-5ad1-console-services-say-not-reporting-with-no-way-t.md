@@ -2,7 +2,7 @@
 id: T-20261124-5ad1
 title: Console services say Not reporting with no way to connect them
 area: admin
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-24

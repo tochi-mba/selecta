@@ -2,7 +2,7 @@
 id: T-20261124-c922
 title: The console does not notice missing or misconfigured storage buckets
 area: admin
-status: open
+status: doing
 priority: high
 who: claude
 created: 2026-11-24

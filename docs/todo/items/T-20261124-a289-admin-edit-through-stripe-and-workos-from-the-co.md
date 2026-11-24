@@ -2,7 +2,7 @@
 id: T-20261124-a289
 title: Admin: edit through Stripe and WorkOS from the console
 area: admin
-status: open
+status: doing
 priority: high
 who: claude
 created: 2026-11-24
