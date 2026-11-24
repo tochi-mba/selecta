@@ -31,6 +31,7 @@ KILL_SWITCH = "flags.kill_switch"
 EMERGENCY = "platform.emergency_control"
 REPEAT_INFRINGER = "legal.repeat_infringer"
 OWNER_BOOTSTRAPPED = "security.owner_bootstrapped"
+BLAST_LIMIT = "security.blast_limit_reached"
 
 
 @dataclass(frozen=True)

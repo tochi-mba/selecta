@@ -143,8 +143,8 @@ def apply(
             anchor_at=now,
         )
     if name is Command.SET_VOLUME:
-        if session.zone_id is None:
-            raise CommandUnavailable("Volume is set on each device")
+        # ADR-0475 G1: a personal session's volume is the speaker's mix level too, so a remote
+        # can set it; the speaker applies it with a short ramp
         cap = max(0, min(100, volume_cap))
         return replace(session, volume=min(args["volume"], cap))
     if name is Command.PLAY:

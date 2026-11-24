@@ -15,15 +15,22 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.authz import audit, delayed
-from selecta.authz.check import Actor, Assignment, authorize, ensure_not_last_owner
+from selecta.authz.check import (
+    Actor,
+    Assignment,
+    active_assignments,
+    authorize,
+    ensure_not_last_owner,
+)
 from selecta.authz.check import platform_owners as _platform_owners
 from selecta.authz.errors import (
     ActionNotFound,
     AuthzError,
     DelayedActionRequired,
+    Forbidden,
     SelfApproval,
 )
-from selecta.authz.roles import StaffRole, check_scope, staff_role
+from selecta.authz.roles import ROLE_PERMISSIONS, StaffRole, check_scope, staff_role
 from selecta.authz.schema import role_assignments
 from selecta.authz.scopes import ResourceRef, Scope
 from selecta.identity.accounts import revoke_sessions
@@ -57,6 +64,31 @@ def _refuse_self(conn: Connection, actor: Actor, user_id: str, action: str) -> N
         request_id=actor.request_id,
     )
     raise SelfApproval("nobody may give themselves a staff role")
+
+
+def _refuse_above_own(conn: Connection, actor: Actor, role: StaffRole, user_id: str) -> None:
+    """Nobody gives a role holding a permission they don't hold platform-wide themselves, so
+    nobody can make someone more powerful than they are."""
+    held: set[str] = set()
+    for assignment in active_assignments(conn, actor.user_id):
+        if assignment.scope.is_platform_wide:
+            held |= ROLE_PERMISSIONS[assignment.role]
+    missing = ROLE_PERMISSIONS[role] - held
+    if not missing:
+        return
+    audit_id = audit.record_durably(
+        conn,
+        actor_id=actor.user_id,
+        action="security.roles.assign",
+        result=audit.AuditResult.DENY,
+        resource_type="role_assignment",
+        resource_id=user_id,
+        reason="role holds permissions the actor lacks",
+        request_id=actor.request_id,
+        metadata={"role": role.value, "missing": sorted(missing)[:20]},
+    )
+    raise Forbidden("security.roles.assign",
+                    f"you can't give {role.title}: it holds permissions you don't", audit_id)
 
 
 def get_assignment(conn: Connection, assignment_id: str) -> Assignment:
@@ -140,6 +172,7 @@ def assign_role(
     check_scope(role, scope)
     _refuse_self(conn, actor, user_id, "security.roles.assign")
     authorize(conn, actor, "security.roles.assign", _resource(user_id))
+    _refuse_above_own(conn, actor, role, user_id)
     _require_live_user(conn, user_id)
     return _insert(
         conn,
