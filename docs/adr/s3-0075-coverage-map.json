@@ -15,11 +15,11 @@
   "outside-route-tree": "Only mounted outside the local app routes (the control gallery specimen page, the device harness or the Cloud site), per the inventory fixture gap."
  },
  "totals": {
-  "states": 225,
+  "states": 230,
   "captured": 72,
   "uncovered": {
-   "in-flight": 42,
-   "needs-driver": 101,
+   "in-flight": 43,
+   "needs-driver": 105,
    "outside-route-tree": 10
   }
  },

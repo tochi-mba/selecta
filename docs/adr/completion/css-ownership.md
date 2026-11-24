@@ -145,6 +145,7 @@ wins, and the row says which.
 | `max-height: 450px` | `styles/cloud-shell.css` | very short windows: the Cloud rail's list fades above its account foot |
 | `max-height: 450px` | `styles/shell.css` | very short windows: context bar enters normal flow and phone navigation stops covering content |
 | `max-height: 520px` | `styles/shell.css` | short landscape: dialogs scroll inside, title and actions stay |
+| `max-height: 500px` | `styles/lucy.css` | a phone on its side: Lucy's heading gives its room to the conversation |
 | `max-height: 420px` | `styles/typography.css` | 400% zoom: the editor scope bar stops sticking |
 
 The Studio never changes structure by width; it scrolls with sticky lane labels, so Library rules
