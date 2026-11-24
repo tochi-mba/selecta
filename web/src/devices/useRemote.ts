@@ -20,6 +20,8 @@ import { levelOf, type SessionView } from './usePlaybackDevice';
 export type RemoteDevice = {
   view: SessionView | null;
   send: (name: string, args?: Record<string, unknown>) => Promise<boolean>;
+  /** The session state the last press made (its seq); 0 when unknown. */
+  sentSeq?: () => number;
   serverNow: () => number;
 };
 
@@ -37,6 +39,8 @@ export type Remote = {
   seekTo: (songIndex: number, offsetMs: number) => Promise<void>;
   skipTo: (songIndex: number) => Promise<void>;
   setVolume: (percent: number) => Promise<void>;
+  /** The session state the last press made. */
+  sentSeq: () => number;
   /** The same session through the shell's player contract, for the mini player. */
   player: PlayerLike;
   now: NowState;
@@ -198,7 +202,7 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
     locked: false,
     seam: null,
   };
-  return { view, session, book, current, playing, positionMs, toggle, next, previous, seekTo, skipTo, setVolume, player, now, song, hasNext: hasNext(session) };
+  return { view, session, book, current, playing, positionMs, toggle, next, previous, seekTo, skipTo, setVolume, player, now, song, hasNext: hasNext(session), sentSeq: () => latest.current.device.sentSeq?.() ?? 0 };
 }
 
 const IDLE_NOW: NowState = { phase: 'idle', position: 0, songTime: 0, duration: 0, inSeam: false, seamAt: null, notice: '', nextReady: false, lastSeamKey: null, volume: 1, muted: false };

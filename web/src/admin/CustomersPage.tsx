@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { bytes } from './adminApi';
+import { BulkGrant } from './BulkGrant';
 import { CustomerRecord } from './CustomerRecord';
 import { useLoad } from './parts';
 import { AdminRoute, adminPath, go, setQuery } from './route';
@@ -66,6 +67,7 @@ function CustomerSearch({ query, api }: { query: string; api: ReturnType<typeof 
             { key: 'recent_failures', label: 'Failed jobs (24 h)', numeric: true, optional: true, sort: (r) => r.recent_failures },
           ]} />
       </div>
+      <BulkGrant />
     </div>
   );
 }

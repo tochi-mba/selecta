@@ -244,6 +244,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const [carryOn, setCarryOn] = useState(false);
   // G70: the last change made from another device, said briefly on the speaker's own screen
   const [changedFrom, setChangedFrom] = useState<{ deviceId: string; command: string; at: number } | null>(null);
+  const lastLevel = useRef<number | null>(null);
+  const ownLevelAt = useRef(0);
+  const sentSeq = useRef(0);
 
   useEffect(() => {
     let current = true;
@@ -353,6 +356,12 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!remoteControl) return;
     // G1: the session's level, set from any device; the engine ramps each change (no clicks)
     speaker.setVolume?.(Math.min(1, Math.max(0, levelOf(session) / 100)));
+    // G70: a level this device did not send came from another one; said here even when the
+    // command's own event (which names the device) did not arrive
+    if (lastLevel.current !== null && session.volume !== lastLevel.current && Date.now() - ownLevelAt.current > 3000) {
+      setChangedFrom((was) => (was && was.command === 'set_volume' && Date.now() - was.at < 3000 ? was : { deviceId: '', command: 'set_volume', at: Date.now() }));
+    }
+    lastLevel.current = session.volume ?? null;
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
     const moved = !here || here.song_index !== session.song_index || Math.abs(here.offset_ms - target) > 2500;
@@ -774,8 +783,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     };
     if (hereOffline() && (adrift.current || !isOnline())) return actHere();
     if (!deviceId || !view?.session) return false;
+    if (name === 'set_volume') ownLevelAt.current = Date.now();
     try {
-      const answer = await api<{ status?: string } | null>('/playback/commands', {
+      const answer = await api<{ status?: string; session?: { seq?: number } } | null>('/playback/commands', {
         method: 'POST',
         body: JSON.stringify({
           device_id: deviceId,
@@ -795,6 +805,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       }
       commandRefused.current = false;
       setError('');
+      // the state this press made, so a control can tell its own answer from an older one
+      if (typeof answer?.session?.seq === 'number') sentSeq.current = answer.session.seq;
       return true;
     } catch (problem) {
       if (hereOffline() && neverReached(problem)) return actHere();
@@ -936,5 +948,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     /** F39: the tab that made the sound went away; a press here carries on where it was. */
     carryOn,
     /** G70: the last change made from another device (who and what), for a brief line here. */
-    changedFrom };
+    changedFrom,
+    /** The session state the last press made (its seq). */
+    sentSeq: () => sentSeq.current };
 }

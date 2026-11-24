@@ -473,6 +473,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   const songs = useRef(mix);
   songs.current = mix;
   const owner = useRef<string | null | undefined>(undefined);
+  // the person chose this device over whichever plays (Play here instead)
+  const insisting = useRef(false);
   // State, not a ref: the speaker usually lands (and this effect runs) before the session refresh
   // decides the lease is wanted, so the decision itself must re-run the effect.
   const [wantHere, setWantHere] = useState(false);
@@ -561,7 +563,9 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     setWantHere(false);
     const at = startAt.current;
     startAt.current = undefined;
-    void pb.playHere(owner.current, at);
+    // 'Play here instead': take over from whoever plays by then, with no condition on who that is
+    void pb.playHere(insisting.current ? undefined : owner.current, at);
+    insisting.current = false;
   }, [speaker, wantHere, pb.device, pb.playHere]);
 
   const playHere = useCallback(async (at?: StartAt, insist: boolean | 'free' = false): Promise<string> => {
@@ -614,7 +618,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     // another tab of this same browser is the speaker: the press here is the answer (ADR-0475 F)
     const sameDevice = !!latest.speaker_device_id && latest.speaker_device_id === pb.device?.id;
     // the person chose here over the device that is starting or playing: take over from it
-    if (insist === true) owner.current = latest.speaker_device_id ?? null;
+    insisting.current = insist === true;
     // asked from elsewhere: only while nobody plays; the take-over then requires that still
     if (insist === 'free') {
       if (latest.speaker === 'elsewhere') return '';
@@ -631,7 +635,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
       return '';
     }
     startAt.current = undefined;
-    await pb.playHere(owner.current, at);
+    await pb.playHere(insist === true ? undefined : owner.current, at);
     return '';
   }, [pb, refusal, resolve, speaker, starter, wiring]);
 
