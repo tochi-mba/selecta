@@ -162,7 +162,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const readinessAvailable = Number.isFinite(counts.ready);
   const readyCount = counts.ready;
   // a mix that's playing or paused is what would be replaced, so that's when to ask (EX-0117-04: idle builds straight away)
-  const replacing = mix.length > 0 && now.phase !== 'idle';
+  // ADR-0475 R8: with another device playing, a new mix replaces nothing there; that device is asked
+  const replacing = mix.length > 0 && now.phase !== 'idle' && !(playOn && !playOn.now);
   // the current mix by name, quoted, so a name like "Your songs, in your browser" never reads as
   // part of the sentence around it
   const current = `your current mix, “${mixName}”`;
