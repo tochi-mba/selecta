@@ -17,11 +17,11 @@ Rows that name each status (a row can name two, such as a fix that also needs an
 
 | Status | Rows |
 |---|---|
-| Fixed now | 26 |
-| Handled before | 22 |
+| Fixed now | 31 |
+| Handled before | 24 |
 | Needs the owner | 8 |
 | Other agent | 7 |
-| Not reviewed | 13 |
+| Not reviewed | 12 |
 
 ## The seven named gaps
 
@@ -134,7 +134,14 @@ and where that default is written.
 | Tests | Correction: `tests/test_cloud_*.py` already run on PostgreSQL on every pull request (the `cloud` job, four shards); the earlier row saying "only nightly" was wrong. What did wait: 21 other test files that use the same `cloud_engine` fixture, and two PostgreSQL-only race and fencing files, ran on SQLite alone | Fixed now: a `cloud-rest` job runs exactly those on PostgreSQL on every pull request, found by the fixture they use, and `verify` requires it. `pip-audit` runs as `python-advisories`, reported by `verify` but not yet required (the owner can make it required once it is green) |
 | Business hours | Overnight periods, the spring gap and the autumn repeat (fold) | `business/hours.py:9,158,187-195`; `tests/test_business_hours.py`, `test_business_zone_clock.py` | Handled before |
 | Admin | The last owner cannot be removed (`authz/errors.py LastOwner`) | Handled before; the rest of the admin pass is with the admin console agent |
-| Local app, kiosk left running for weeks, observability, docs against reality beyond the rows above, consistency of words | | Not reviewed |
+| Routes, creates | Every Cloud POST that creates something (mixes and revisions, rooms, devices, upload plans and parts, autopilot sessions, never-play marks) was listed from `build/routes.md`. Each is reached through the one Cloud `api`, which now sends a key per press, so the replay middleware covers it; the routes that keep their own keys or take no account token are the ones listed under H | Fixed now (with item 2) |
+| Local app | First run, upgrade (`tests/test_local_upgrade.py`: backs up, migrates once, never moves a newer file back), homes, backup and restore (`test_local_backup.py`), Unicode folder and song names (`test_library_edges.py`, `test_folder_relink.py`) | Handled before. The Cloud guards added here (rate limits, replays, body cap) are Cloud-only; the outer error frame and the deploy panel also cover the local app |
+| Local app | Windows paths over 260 characters: nothing in `src/selecta` adds Windows' long-path prefix or asks for long-path support, so a song deep in nested folders can fail to open unless Windows' LongPathsEnabled is on | Not fixed: the change belongs in the scanner and every file open, with Windows tests; recommended as its own piece of work |
+| Observability | A broken page's support reference stayed in the browser console, where support could never find it | Fixed now: `POST /api/account/problem-report` writes one log line (`client.problem R-XXXX-XXXX kind=… user=…`) and counts `selecta_client_problems_total{kind}`; refused requests count `selecta_rate_limited_total{bucket}`; nothing stored, no error text sent, 83e86a1c. Readiness (`/api/ready`) checks the database and that migrations are at head: honest |
+| Observability | Rolling back a deploy and a migration; backups tested by restore | `docs/operations/backup-and-restore.md` and the launch checklist's restore drill exist; the drill itself is an owner step | Needs the owner (run the staging restore drill) |
+| Kiosk for weeks | Play log capped at 5,000 entries (`kiosk/playLog.ts:10`); device token cookie lives 400 days and is renewed on each check-in (`routes/business_kiosk.py:229,326`); pairing and screen-code expiry use server time, not the device clock (`kiosk/controller.ts:236`); updates download in the background and apply only at a fade boundary or in closed hours, at most 60 s (`kiosk/update.ts`, `state.ts UPDATE_LIMIT_MS`); the wake lock is taken again on return (`kiosk/wake.ts`) | Handled before |
+| Docs | The launch checklist's email line, the security chapter's rate limits, the edge-case list's new-device line and this audit's own PostgreSQL row were wrong and are corrected | Fixed now |
+| Consistency | Putting a notice away: "Dismiss" 13 times, "OK" twice, "Got it" 3 times (one-time explanations, kept). The Cloud player's notice said OK | Fixed now for `cloud/CloudTransportDock.tsx`; `devices/ControllerNotices.tsx:73` is the device agent's. Sign in and Sign out are used throughout (no "log in"); one date formatter (`dateWords`) for billing dates |
 
 ## Handed to the other agents
 
