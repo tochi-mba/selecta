@@ -47,7 +47,7 @@ MAX_OVERRIDE_DAYS = 366
 MASS_OVERRIDE_MAX = 500
 # Commands called from code (tests, maintenance) carry no console intent: the change window and
 # tier rules still apply, but there is no version to compare.
-NO_INTENT = safety.Intent()
+NO_INTENT = safety.CODE
 
 
 def job_version(job: Job) -> str:
