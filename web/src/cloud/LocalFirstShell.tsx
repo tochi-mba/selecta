@@ -396,7 +396,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   }, [browserHarmonic, lucyHere]);
   // ADR-0476: Lucy's page asks the account's API, and reads her events by asking. Set while
   // rendering, because the page's own first read runs in an effect before this shell's do.
-  const lucyTransport = useMemo(() => (lucyHere ? { request: cloud, base: '/lucy-cloud', pollMs: LUCY_POLL_MS } : null), [lucyHere, cloud]);
+  const lucyTransport = useMemo(() => (lucyHere ? { request: cloud, base: '/lucy-cloud', pollMs: LUCY_POLL_MS, device: () => registeredDeviceId(workspaceId) } : null), [lucyHere, cloud, workspaceId]);
   setLucyTransport(lucyTransport);
   const lucyAlive = useRef(false);
   useEffect(() => {
