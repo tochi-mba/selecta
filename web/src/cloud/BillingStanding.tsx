@@ -13,18 +13,32 @@ import { Notice } from './AccountLayout';
 export const STANDING_FLAG = 'billing.standing';
 const DISMISSED = 'selecta.billing.dismissed';
 
-function dismissedKeys(): string[] {
+/** A one-way fingerprint of an event key (32-bit FNV-1a, hex): enough to tell events apart in
+ * one browser, and nothing about the billing event itself is ever kept in storage. */
+export function fingerprint(key: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < key.length; index += 1) {
+    hash ^= key.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `f${hash.toString(16).padStart(8, '0')}`;
+}
+
+/** Fingerprints of dismissed events. Anything else stored there (an older format) counts as not
+ * dismissed, so that notice simply shows once more. */
+function dismissedPrints(): string[] {
   try {
     const kept = JSON.parse(localStorage.getItem(DISMISSED) ?? '[]');
-    return Array.isArray(kept) ? kept.filter((key): key is string => typeof key === 'string') : [];
+    return Array.isArray(kept) ? kept.filter((print): print is string => typeof print === 'string' && /^f[0-9a-f]{8}$/.test(print)) : [];
   } catch {
     return [];
   }
 }
 
 function dismiss(key: string) {
+  const print = fingerprint(key);
   try {
-    localStorage.setItem(DISMISSED, JSON.stringify([...dismissedKeys().filter((kept) => kept !== key), key].slice(-20)));
+    localStorage.setItem(DISMISSED, JSON.stringify([...dismissedPrints().filter((kept) => kept !== print), print].slice(-20)));
   } catch {
     // storage refused (private browsing, full): it stays hidden for this visit only
   }
@@ -63,8 +77,8 @@ export function BillingStandingNotice({ account, onPortal, busy, place }: {
   place: 'shell' | 'billing';
 }) {
   const standing = account.billing?.standing ?? null;
-  const [hidden, setHidden] = useState(() => dismissedKeys());
-  if (!standing || !accountFlagOn(STANDING_FLAG, account.features) || hidden.includes(standing.key)) return null;
+  const [hidden, setHidden] = useState(() => dismissedPrints());
+  if (!standing || !accountFlagOn(STANDING_FLAG, account.features) || hidden.includes(fingerprint(standing.key))) return null;
   const words = standingWords(standing);
   const manager = standing.can_manage !== false;
   const portal = accountFlagOn('billing.portal', account.features);
@@ -73,7 +87,7 @@ export function BillingStandingNotice({ account, onPortal, busy, place }: {
       {busy ? 'Opening…' : words.action}
     </button>
   );
-  const close = () => { dismiss(standing.key); setHidden(dismissedKeys().concat(standing.key)); };
+  const close = () => { dismiss(standing.key); setHidden(dismissedPrints().concat(fingerprint(standing.key))); };
   return (
     <div className="cloud-billing-standing" data-state={standing.state} data-place={place}>
       <Notice tone={words.tone} role={words.tone === 'warn' ? 'alert' : 'status'} action={(

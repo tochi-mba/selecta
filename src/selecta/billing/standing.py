@@ -17,6 +17,7 @@ comes back for a new event and never for the same one.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping
 from typing import Any
 
@@ -32,6 +33,11 @@ ENDED_NOTICE_SECONDS = 30 * 86_400
 # Invoice events that settle whether a payment still waits on the person.
 _INVOICE_EVENTS = ("invoice.payment_action_required", "invoice.paid", "invoice.payment_failed")
 _PAYMENT_ENDED = frozenset({"past_due_expired", "unpaid"})
+
+
+def _opaque(event: str) -> str:
+    """A key that names one billing event without saying what it was or when."""
+    return hashlib.sha256(event.encode()).hexdigest()[:24]
 
 
 def _label(plan_id: str | None, version: int | None = None) -> str:
@@ -90,7 +96,7 @@ def describe(
     def said(state: str, plan_label: str, at: float | None) -> dict[str, Any]:
         when = round(float(at)) if at else None
         return {"state": state, "plan_label": plan_label, "at": when,
-                "key": f"{state}:{sub_id or workspace_id}:{when or 0}"}
+                "key": _opaque(f"{state}:{sub_id or workspace_id}:{when or 0}")}
 
     paid_label = _label(entitlement.plan_id, entitlement.plan_version)
     if entitlement.plan_id != "free":

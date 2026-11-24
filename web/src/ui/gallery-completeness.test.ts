@@ -61,6 +61,10 @@ const NOT_SHOWN: Record<string, string> = {
   setToastsQuiet: 'an app-level switch (quiet while Stage is up)', clearToasts: 'an app-level reset',
   // ui/useMediaQuery.ts, useReducedMotion.ts, useStickyClearance.ts, useVisiblePoll.ts
   useMediaQuery: 'a hook', useReducedMotion: 'a hook', scrollParent: 'layout helper', useStickyClearance: 'a hook', useVisiblePoll: 'the polling hook (state/pollingPolicy.ts)',
+  // ui/format.ts
+  dateWords: 'a date formatter, used by the billing notices',
+  // ui/staleBuild.tsx: a deploy under an open tab, tested in staleBuild.test.tsx
+  UPDATED_WORDS: 'the words of the updated panel', isChunkLoadError: 'error classification', markStale: 'sets the stale state', isStale: 'reads the stale state', reloadedBefore: 'reload-loop guard', reloadForUpdate: 'reloads the tab', lazyPage: 'React.lazy with a retry', listenForStaleBuilds: 'started once by main.tsx', useStale: 'a stale-state hook', StaleBuildPanel: 'shown only when a page file is gone after a deploy', VERSION_CHECK_MS: 'polling interval', useNewVersion: 'a new-build hook', UpdateLine: 'mounted once by main.tsx, shown only when a newer build is live',
 };
 
 /** Every value export of a module: functions, constants, classes and re-exported names. Types are not specimens. */
