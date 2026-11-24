@@ -18,7 +18,7 @@ from sqlalchemy.engine import Engine
 
 from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
-from selecta.local_media import store
+from selecta.local_media import store, versions
 from selecta.persistence import db_now, transaction
 from selecta.playback import default_speaker
 from selecta.playback.schema import devices as playback_devices
@@ -161,6 +161,11 @@ def install_routes(
     ) -> dict[str, Any]:
         workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_READ)
         with transaction(engine, workspace_id) as conn:
+            if after == 0:
+                # Each full read starts by putting songs and their versions right (idempotent;
+                # writes only what changed): copies registered before lengths counted, and
+                # versions of a song since removed (ADR-0469 amendment 2).
+                versions.regroup_versions(conn, workspace_id)
             songs, next_after = store.list_songs(conn, workspace_id, after=after, limit=limit)
             counts = store.availability_counts(conn, workspace_id, [s["id"] for s in songs])
         for song in songs:
@@ -196,6 +201,9 @@ def install_routes(
             if not store.exists(conn, workspace_id, song_id):
                 raise HTTPException(status_code=404, detail={"code": "song_not_found"})
             deleted = store.soft_delete(conn, workspace_id, song_id)
+            # a removed song's other versions find their primary again
+            if deleted:
+                versions.regroup_versions(conn, workspace_id)
         return {"id": song_id, "deleted": True, "already_deleted": not deleted}
 
     @app.get("/api/local-media/holdings")

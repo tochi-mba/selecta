@@ -225,6 +225,6 @@
 /* Nothing may push the page wider than the screen: the content column can shrink to zero. */
 .admin-shell { grid-template-columns: minmax(180px, 220px) minmax(0, 1fr); }
 .data-table-wrap { max-width: 100%; overflow-x: auto; }
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .admin-shell { grid-template-columns: minmax(0, 1fr); }
 }

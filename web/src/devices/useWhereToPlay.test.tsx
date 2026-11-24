@@ -1,4 +1,4 @@
-import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
+import { act, cleanup, render, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clearToasts, Toaster } from '../ui/toasts';
 import type { AskState } from './playOn';
@@ -23,8 +23,10 @@ describe('Play by the rule', () => {
     expect(handled).toBe(true);
     expect(askToPlay).toHaveBeenCalledWith(expect.objectContaining({ device_id: 'laptop' }));
     act(() => { hook.rerender({ ...args, asking: { phase: 'no_answer', device: 'laptop', deviceId: 'laptop' } }); });
-    expect(screen.getByText('laptop didn’t answer.')).toBeInTheDocument();
-    act(() => { screen.getByRole('button', { name: 'Try again' }).click(); });
+    // one line on Listen, not a toast (9bdbd8f7): the hook hands the notice to the page
+    const notice = hook.result.current.notice!;
+    expect(notice.text).toBe('laptop didn’t answer. It may be asleep; try again, or play somewhere else.');
+    act(() => { notice.actions.find((action) => action.label === 'Try again')!.run(); });
     expect(askToPlay).toHaveBeenCalledTimes(2);
   });
 
