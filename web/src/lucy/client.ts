@@ -86,6 +86,7 @@ export const lucy = {
   },
   stop: (id: string) => change<{ stopped: boolean }>('POST', `/lucy/conversations/${at(id)}/stop`, {}),
   retry: (id: string, turn: string) => change<TurnAccepted>('POST', `/lucy/conversations/${at(id)}/retry`, { turn }),
+  older: (id: string, before: number) => get<{ messages: import('./types').Message[]; more: boolean }>(`/lucy/conversations/${at(id)}/messages?before=${before}`),
   events: (id: string, after: number) => get<EventsPage>(`/lucy/conversations/${at(id)}/events.json?after=${after}`),
 
   revision: (id: string) => get<Revision>(`/lucy/revisions/${at(id)}`),

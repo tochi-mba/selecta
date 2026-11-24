@@ -383,6 +383,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
           onRetry={retry}
           onDecide={decide}
           onEdit={lucyTransport() ? fill : undefined}
+          onOlder={convo.older}
           onRate={lucyTransport() ? async (id, rating) => { await lucy.rate(id, rating); } : undefined}
           empty={(
             <div className="lucy-empty">
