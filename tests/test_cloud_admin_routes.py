@@ -13,6 +13,7 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from selecta import flags
+from selecta.admin.schema import staff_change_windows
 from selecta.api_cloud import create_cloud_app
 from selecta.authz.schema import audit_events, role_assignments
 from selecta.identity import accounts, privileged
@@ -77,6 +78,9 @@ def _staff(conn, claims: Claims, role: str) -> tuple[str, str]:
         )
     )
     session = privileged.start(conn, claims, staff_organization_id="staff-org", lifetime=3600)
+    # These tests act, so the session has pressed "Make changes" (doc 07b §7B.7).
+    conn.execute(staff_change_windows.insert().values(
+        session_id=session.id, user_id=session.user_id, opened_at=now, until=session.expires_at))
     return principal.workspace.id, session.id
 
 
@@ -241,6 +245,7 @@ COMMANDS = {
     "/api/admin/jobs/{job_id}/{command}": ("retry", "cancel", "quarantine", "release"),
     "/api/admin/workers/{worker_id}/{command}": ("drain", "pause", "resume"),
     "/api/admin/accounts/{user_id}/{command}": ("suspend", "restore"),
+    "/api/admin/customers/{user_id}/{command}": ("suspend", "restore"),
     "/api/admin/actions/{action_id}/{command}": ("approve", "cancel", "execute"),
     "/api/admin/emergency/{control}/{command}": ("engage", "release"),
     "/api/admin/takedowns/{notice_id}/{command}": ("act", "reject"),
@@ -275,9 +280,17 @@ EVERY_FIELD = {
     "price_minor": 0,
     "currency": "GBP",
     "invoice_terms": "net 30",
+    # the redesigned console (doc 07b)
+    "body": "A staff note",
+    "text": "A status banner",
+    "mode": "hosted",
+    "value": "default",
+    "why": "requested_by_customer",
 }
 # Routes any signed-in staff member may call: starting the admin session and reading who you are.
-SELF_ONLY = {"POST /api/admin/session", "GET /api/admin/me"}
+SELF_ONLY = {"POST /api/admin/session", "GET /api/admin/me",
+             # Leaving change mode only ever narrows what the session may do.
+             "DELETE /api/admin/session/changes"}
 # The audit log refuses every change, to everyone, before any check.
 APPEND_ONLY = {"PATCH /api/admin/audit/{event_id}", "DELETE /api/admin/audit/{event_id}"}
 

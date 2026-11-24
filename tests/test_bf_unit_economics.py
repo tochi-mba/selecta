@@ -306,6 +306,14 @@ def test_the_owner_cli_rehearses_on_a_fixture(tmp_path):
 
 def test_the_owner_cli_reads_a_database(world):
     _seed(world, "2026-11")
-    url = world.engine.url.render_as_string(hide_password=False)
+    url = world.engine.url
+    if world.engine.dialect.name == "postgresql":
+        # the run's tables live in its own schema, chosen by connection options, not by the URL
+        from cloud_db import connection_options
+
+        with world.engine.connect() as connection:
+            schema = connection.exec_driver_sql("SELECT current_schema()").scalar_one()
+        url = url.update_query_dict({"options": connection_options(schema)})
+    url = url.render_as_string(hide_password=False)
     report = _tool().run(["cost-per-mode", "--db", url, "--month", "2026-11"])
     assert report["modes"]["hosted"]["accounts"] >= 1 and report["live"] is True

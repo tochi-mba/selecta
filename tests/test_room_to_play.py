@@ -421,8 +421,11 @@ def test_a_requested_song_joins_the_programme_by_identity(cloud_engine, clock, m
     from selecta.playback.store import session_payload
 
     workspace, _speaker, phone, ids = _local_room(cloud_engine, clock, monkeypatch)
-    # Requestable in the Room: some device of the account holds it.
-    assert LocalMediaCatalog(cloud_engine).is_requestable(workspace, ids[1])
+    # The Room offers only what the speaker holds (ADR-0475, 692bfccf): the tablet's opener, not
+    # the phone's song; a controller can still put that one in the programme, by identity.
+    catalog = LocalMediaCatalog(cloud_engine)
+    assert catalog.is_requestable(workspace, ids[0])
+    assert not catalog.is_requestable(workspace, ids[1])
     sent = _programme(cloud_engine, workspace, phone, ids, key="request", song_index=1)
     payload = session_payload(sent.session, clock.now)
     assert payload["programme"] == [

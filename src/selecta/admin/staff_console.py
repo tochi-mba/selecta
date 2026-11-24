@@ -196,8 +196,14 @@ def assign_role(conn: Connection, actor: Actor, *, user_id: str, role: str, scop
 
 def revoke_role(conn: Connection, actor: Actor, assignment_id: str, *, reason: str,
                 intent: safety.Intent) -> dict[str, Any]:
-    found = assignments.get_assignment(conn, assignment_id)
-    permission = ("security.owners.assign" if found.role is StaffRole.OWNER
+    try:
+        found = assignments.get_assignment(conn, assignment_id)
+    except LookupError:
+        # Only staff who may change roles learn that an assignment id doesn't exist.
+        authorize(conn, actor, "security.roles.assign",
+                  ResourceRef("role_assignment", assignment_id))
+        raise
+    permission =("security.owners.assign" if found.role is StaffRole.OWNER
                   else "security.roles.assign")
     authorize(conn, actor, permission, ResourceRef("role_assignment", found.user_id))
     safety.guard(conn, actor, "role.revoke", intent,

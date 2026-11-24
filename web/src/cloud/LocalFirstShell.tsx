@@ -815,6 +815,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {
+    // ADR-0476: Lucy reads the account's API herself, so she opens at once, never behind the
+    // catalogue's first load (2,919 songs took about 30 s on staging)
+    if (route.page === 'lucy' && lucyHere) return <Suspense fallback={<Skeleton lines={4} label="Opening Lucy" />}><Lucy conversation={route.conversation} setMixData={setMixData} player={shellPlayer} request={request} settingsPanel={<LucyCloudSettings request={cloud} />} /></Suspense>;
     if (route.page === 'more') {
       const item = moreItems.find((place) => place.id === route.id);
       if (!item) return <NotOnThisAccount />;
@@ -901,10 +904,6 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         // Word connections are answered in the browser (localFirstLinks.ts) while
         // discover.word_links is on for the account; with it off this page is as it was
         if (route.tab === 'words' && on('discover.word_links')) return <Links {...shared} tab="words" />;
-        // falls through
-      case 'lucy':
-        // ADR-0476: Lucy's whole conversation, over the account's catalogue and mixes
-        if (route.page === 'lucy' && lucyHere) return <Suspense fallback={<Skeleton lines={4} label="Opening Lucy" />}><Lucy conversation={route.conversation} setMixData={setMixData} player={shellPlayer} request={request} settingsPanel={<LucyCloudSettings request={cloud} />} /></Suspense>;
         // falls through
       default: {
         const nearest = DESTINATIONS.find((place) => place.id === destinationOf(route) && place.id !== 'workspace') ?? DESTINATIONS.find((place) => place.id === 'library')!;
