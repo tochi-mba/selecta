@@ -11,6 +11,14 @@ import './devices.css';
 // their reason. Cancelling plays nothing and chooses nothing. "Make this my default" is saved on
 // Confirm even if the start then fails: it is the stated wish.
 
+const FORGOTTEN_AFTER_S = 30 * 86_400;
+const seenWords = (seconds: number) => {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if (minutes < 90) return `Last seen ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+  const hours = Math.round(minutes / 60);
+  return hours < 36 ? `Last seen ${hours} hours ago` : `Last seen ${Math.round(hours / 24)} days ago`;
+};
+
 export function SpeakerPicker({ options, suggested, defaultAway, total, thisDeviceId, now, onChoose, onCancel }: {
   options: readonly PickerOption[];
   suggested: string;
@@ -30,11 +38,17 @@ export function SpeakerPicker({ options, suggested, defaultAway, total, thisDevi
   const [picked, setPicked] = useState(suggested);
   const [makeDefault, setMakeDefault] = useState(false);
   const chosen = shown.find((option) => option.device.device_id === picked);
+  // choices are the open devices; the rest are named under one collapsed row, and a device not
+  // seen for 30 days is left to the Devices page (Forget)
+  const open = shown.filter((option) => option.device.online);
+  const away = shown.filter((option) => !option.device.online && now - option.device.last_seen_at < FORGOTTEN_AFTER_S);
   const name = useId();
   const words = (option: PickerOption) => {
     const what = option.held === null ? countOf(option.device.songs, 'song') : total ? (option.held >= total ? `All ${countOf(total, 'song')}` : `${option.held} of ${countOf(total, 'song')}`) : countOf(option.held, 'song');
     const apart = telling(option.device, shown.map((one) => one.device), thisDeviceId, now);
-    return [apart, option.why ?? what].filter(Boolean).join(' · ');
+    // the reason without the name: the row already says which device it is
+    const why = option.why?.startsWith(option.device.name) ? option.why.slice(option.device.name.length).trim().replace(/^./, (first) => first.toUpperCase()) : option.why;
+    return [apart, why ?? what].filter(Boolean).join(' · ');
   };
   return (
     <Dialog title="Where should the music play?" onClose={onCancel} className="speaker-picker" footer={(
@@ -48,7 +62,7 @@ export function SpeakerPicker({ options, suggested, defaultAway, total, thisDevi
       {defaultAway && <p className="speaker-picker-note" role="status">{defaultAwayWords(defaultAway.name)}</p>}
       {chosen && !chosen.usable && <p className="speaker-picker-note" role="status">{chosen.why}</p>}
       <div role="radiogroup" aria-label="Devices" className="speaker-picker-list">
-        {shown.map((option) => (
+        {open.map((option) => (
           <label key={option.device.device_id} className="speaker-picker-row" data-usable={option.usable || undefined}>
             <input type="radio" name={name} value={option.device.device_id} checked={picked === option.device.device_id} disabled={!option.usable}
               onChange={() => setPicked(option.device.device_id)} aria-label={`${option.device.name}: ${words(option)}`} />
@@ -60,6 +74,17 @@ export function SpeakerPicker({ options, suggested, defaultAway, total, thisDevi
           </label>
         ))}
       </div>
+      {away.length > 0 && (
+        // devices that are not open are not choices: named once, out of the way
+        <details className="speaker-picker-away">
+          <summary>Not open right now ({away.length})</summary>
+          <ul>
+            {away.map((option) => (
+              <li key={option.device.device_id}><b dir="auto">{option.device.name}</b> <span>{seenWords(now - option.device.last_seen_at)}</span></li>
+            ))}
+          </ul>
+        </details>
+      )}
       <label className="speaker-picker-default">
         <input type="checkbox" checked={makeDefault} onChange={(event) => setMakeDefault(event.target.checked)} />
         Make this my default

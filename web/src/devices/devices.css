@@ -239,3 +239,7 @@
 .speaker-picker-default input { width: var(--space-5); height: var(--space-5); margin: 0; }
 /* ADR-0475: the device chosen to make the sound when several could */
 .devices-default { display: inline-flex; align-items: center; gap: var(--icon-gap); width: fit-content; color: var(--selected); font: var(--type-caption); font-weight: var(--weight-label); }
+.speaker-picker-away { margin-top: var(--space-2); color: var(--text-soft); font: var(--type-meta); }
+.speaker-picker-away summary { min-height: var(--control-height); display: flex; align-items: center; cursor: pointer; }
+.speaker-picker-away ul { list-style: none; margin: 0; padding: 0 0 0 var(--space-3); display: grid; gap: var(--space-1); }
+.speaker-picker-away b { font-weight: var(--weight-label); color: var(--text); }
