@@ -62,7 +62,17 @@
 .term-hint-more { display: inline-flex; align-items: center; margin-inline-start: var(--space-2); min-height: var(--control-height); }
 
 @media (pointer: coarse) {
-  .term-hint-button { min-width: 44px; min-height: 44px; }
+  /* A 44px press, drawn as the same 28px circle: the extra is a clear border, and the negative
+     block margin keeps it from pushing apart the lines of the sentence it ends. */
+  .term-hint-button {
+    min-width: 44px;
+    min-height: 44px;
+    margin-block: calc(-1 * var(--space-2));
+    border: var(--space-2) solid transparent;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .term-hint-button[aria-expanded='true'] { border-color: transparent; box-shadow: inset 0 0 0 1px var(--selected); }
 }
 
 @media (forced-colors: active) {

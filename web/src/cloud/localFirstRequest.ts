@@ -83,6 +83,9 @@ export type AvailabilitySources = {
   controller?: () => import('../devices/controller').ControllerLink | null;
   /** ADR-0475 R4: which of the person's other devices hold a song; null until known. */
   holders?: () => import('../devices/controller').WhereHeld | null;
+  /** ADR-0475 R8: songs another device holds now that a mix made here may use (the device R1
+   * would choose, when it has more of the music than this one); null when none. */
+  mixable?: () => ReadonlySet<number> | null;
   /** Whether this account has Rooms. False: a room's requests are never asked for (the server
    * answers 404 to an account without Rooms). Left out: asked, as before. */
   rooms?: boolean;
@@ -247,7 +250,8 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     const known = await availability(list);
     return list.map((song) => {
       const where = availabilityOf(song, known);
-      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted', never: song.never === true };
+      const elsewhere = sources.mixable?.()?.has(song.id) ?? false;
+      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' || elsewhere, never: song.never === true };
     });
   };
   // R5: a result is placed by the device playing (it plays there, it is on another device, or on none)

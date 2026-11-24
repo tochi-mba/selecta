@@ -1,6 +1,7 @@
 import type { MixData, MixItem, Request, Status } from '../api';
 import { BROWSER_MOVE_WORDS, browserMovesOn, defaultBrowserMove, type BrowserMove } from './browserMoves';
 import { withOutbox, type KnownSong, type RecipeChange } from './outbox';
+import { accountCurrent } from './currentMix';
 
 /** The local-first recipe store (ADR-0458 portable recipes, BF-0462-05).
  *
@@ -54,8 +55,13 @@ function write(key: string, value: string | null) {
 }
 
 export type RecipeStore = {
+  /** The current mix as this browser holds it: the account's (ADR-0475 R8), or, while SelectaDJ
+   * can't be reached, the last one this browser knew. */
   current: () => string | null;
+  /** Choose the current mix here and tell the account (compare-and-set; see currentMix.ts). */
   setCurrent: (mixId: string | null) => void;
+  /** The account side of the current mix; absent in stores made for tests. */
+  account?: ReturnType<typeof accountCurrent>;
   steering: () => Status['steering'];
   setSteering: (next: Status['steering']) => void;
   /** `known` names the songs, so a mix made while offline can be shown before the server answers.
@@ -95,9 +101,12 @@ export function recipeStore(cloud: Request, workspaceId: string): RecipeStore {
 }
 
 function serverRecipes(cloud: Request, workspaceId: string): RecipeStore {
+  const pointer = { read: () => read(pointerKey(workspaceId)), write: (mixId: string | null) => write(pointerKey(workspaceId), mixId) };
+  const account = accountCurrent(cloud, workspaceId, pointer);
   return {
-    current: () => read(pointerKey(workspaceId)),
-    setCurrent: (mixId) => write(pointerKey(workspaceId), mixId),
+    current: pointer.read,
+    setCurrent: (mixId) => { pointer.write(mixId); void account.tell(mixId); },
+    account,
     steering: () => {
       const saved = read(steeringKey(workspaceId));
       if (!saved) return DEFAULT_STEERING;
