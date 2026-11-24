@@ -20,6 +20,7 @@ back as unavailable, which is the repair flow's starting point (ADR-0458, BF-045
 from __future__ import annotations
 
 import json
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from typing import Any
@@ -49,6 +50,9 @@ BROWSER_MOVES = frozenset(
 """The moves the browser engine can play (web/src/dsp/seamScript.ts); 'auto' is stored as none."""
 
 Pair = tuple[str, str]
+
+# names the mix made by a create sent with an idempotency key (`keyed_id`)
+_KEYED = uuid.UUID("5b1c2f0e-6a7d-4c2e-9f3a-0d8e7b6a5c41")
 
 
 class RecipeError(Exception):
@@ -170,12 +174,34 @@ def _with_availability(conn: Connection, workspace_id: str, contract: MixContrac
     return body
 
 
+def keyed_id(workspace_id: str, key: str) -> str:
+    """The mix id a create sent with idempotency key `key` gets: the same key always names the
+    same mix, so a create sent again (an offline queue that lost the answer) finds the first."""
+    return uuid.uuid5(_KEYED, f"{workspace_id}:{key}").hex
+
+
+def made_for(conn: Connection, workspace_id: str, key: str) -> dict[str, Any] | None:
+    """The recipe a create with this key already made, as it was made, or None."""
+    chain = _chain(conn, workspace_id, keyed_id(workspace_id, key))
+    return _with_availability(conn, workspace_id, chain[0]) if chain else None
+
+
 def create(
-    conn: Connection, workspace_id: str, user_id: str, name: str, song_ids: Sequence[int]
+    conn: Connection,
+    workspace_id: str,
+    user_id: str,
+    name: str,
+    song_ids: Sequence[int],
+    key: str | None = None,
 ) -> dict[str, Any]:
+    if key:
+        first = made_for(conn, workspace_id, key)
+        if first is not None:
+            return first
     songs = _songs(conn, workspace_id, song_ids)
     try:
-        contract = new_contract(new_id(), name or "", SOURCE, songs)
+        mix_id = keyed_id(workspace_id, key) if key else new_id()
+        contract = new_contract(mix_id, name or "", SOURCE, songs)
     except ContractError as error:
         raise RecipeError("invalid_mix", str(error)) from error
     _store(conn, workspace_id, user_id, contract)
