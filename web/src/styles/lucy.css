@@ -387,7 +387,9 @@
 }
 .lucy-settings legend { padding-inline: var(--space-1); font-weight: 700; }
 .lucy-setting-line { align-items: flex-start; }
-.lucy-setting-line input { margin-top: var(--space-1); }
+/* never squeezed by a long label: at phone widths the boxes shrank to dots */
+.lucy-setting-line input { flex: none; margin-top: var(--space-1); }
+.lucy-send-problem { margin: var(--space-1) 0 0; }
 .lucy-provider-fields { display: grid; gap: var(--space-3); margin-top: var(--space-2); }
 .lucy-consent { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--edge-interactive); border-radius: var(--radius-sm); background: var(--surface); }
 .lucy-consent :is(p, ul) { margin: 0; }

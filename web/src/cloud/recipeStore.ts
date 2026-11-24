@@ -58,8 +58,9 @@ export type RecipeStore = {
   setCurrent: (mixId: string | null) => void;
   steering: () => Status['steering'];
   setSteering: (next: Status['steering']) => void;
-  /** `known` names the songs, so a mix made while offline can be shown before the server answers. */
-  create: (name: string, songIds: number[], known?: readonly KnownSong[]) => Promise<Recipe>;
+  /** `known` names the songs, so a mix made while offline can be shown before the server answers.
+   * `key` is sent as the Idempotency-Key: the same key always gets the mix the first send made. */
+  create: (name: string, songIds: number[], known?: readonly KnownSong[], key?: string) => Promise<Recipe>;
   read: (mixId: string) => Promise<Recipe>;
   list: () => Promise<RecipeSummary[]>;
   /** A new revision of the recipe: the editor's writes, checked against `baseRevision`. */
@@ -103,9 +104,9 @@ function serverRecipes(cloud: Request, workspaceId: string): RecipeStore {
       try { return { ...DEFAULT_STEERING, ...(JSON.parse(saved) as Partial<Status['steering']>) }; } catch { return DEFAULT_STEERING; }
     },
     setSteering: (next) => write(steeringKey(workspaceId), JSON.stringify(next)),
-    create: async (name, songIds) => (await cloud<{ mix: Recipe }>('/local-media/recipes', {
+    create: async (name, songIds, _known, key) => (await cloud<{ mix: Recipe }>('/local-media/recipes', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...(key ? { 'idempotency-key': key } : {}) },
       body: JSON.stringify({ name, song_ids: songIds }),
     })).mix,
     read: async (mixId) => (await cloud<{ mix: Recipe }>(`/local-media/recipes/${encodeURIComponent(mixId)}`)).mix,

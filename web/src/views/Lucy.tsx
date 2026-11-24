@@ -215,6 +215,9 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
     let id = conversation;
     unsent.hold();
     setPending({ conversation: id, text, state: 'sending' });
+    // whoever sends is following the conversation now: their message and Lucy's answer come
+    // into view, rather than arriving out of sight behind a "New messages" count
+    if (conversation) sticky.jump();
     try {
       if (!id) {
         const scope = askedScope ?? undefined;
@@ -255,6 +258,8 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
         attempt.current = null;
       }
       setPending({ conversation: id, text, state: 'failed', message });
+      // said, not only shown: the box keeps the focus, and nothing else tells a screen reader
+      announcer.say([`Not sent. ${message.replace(/[.\s]+$/, '')}`]);
       // the words go back in the box for this conversation, unless something new was typed meanwhile
       const shown = unsentNow.current;
       if (shown.key === unsentKey(id)) {
@@ -387,6 +392,7 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
           running={running && !!conversation}
           sending={pending?.state === 'sending'}
           blocked={blocked}
+          problem={pending?.state === 'failed' && pending.conversation === conversation ? `Not sent. ${pending.message ?? 'Couldn’t send this.'}` : ''}
           voice={voice}
           boxRef={box}
           above={selection && (

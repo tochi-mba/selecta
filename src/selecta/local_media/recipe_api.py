@@ -14,6 +14,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
@@ -81,13 +82,27 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
         workspace_id, user_id = member(request, claims, WorkspaceAction.MIXES_EDIT)
+        # An offline queue sends its create again when it never heard the answer: the same key
+        # gets the mix the first one made, never a second copy.
+        key = (request.headers.get("idempotency-key") or "").strip()[:128] or None
         try:
             with transaction(engine, workspace_id) as conn:
                 return {
-                    "mix": recipes.create(conn, workspace_id, user_id, body.name, body.song_ids)
+                    "mix": recipes.create(
+                        conn, workspace_id, user_id, body.name, body.song_ids, key=key
+                    )
                 }
         except recipes.RecipeError as error:
             raise _refused(error) from error
+        except IntegrityError:
+            # two sends with the same key at once: the other one made it first
+            if key is None:
+                raise
+            with transaction(engine, workspace_id) as conn:
+                first = recipes.made_for(conn, workspace_id, key)
+            if first is None:
+                raise
+            return {"mix": first}
 
     @app.get("/api/local-media/recipes/{mix_id}")
     def read_recipe(
