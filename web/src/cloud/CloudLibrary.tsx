@@ -31,11 +31,28 @@ type ConnectProps = Omit<Parameters<typeof ConnectMusic>[0], 'variant' | 'ref'>;
  * header holds the counts and Connect music, one banner says when songs need choosing again to
  * play here, and the songs follow straight after the toolbar. Adding music reports its progress
  * in the same place, wherever it was started from. */
-export function CloudLibrary({ shared, connected, connect }: {
+/** Where this account's songs live, said once at the top of the Library (staging walkthrough
+ * item 4): on this device, in Cloud storage, or both, and which button adds to which. */
+export function whereWords(cloudStorage: boolean): string | null {
+  if (!cloudStorage) return null;
+  return 'Your songs live in two places. Songs from your music folder stay on this device: Connect music adds them. Songs you upload are kept in Cloud storage and play on any of your devices: Add music uploads them.';
+}
+
+/** Why fewer songs can play here than a moment ago (staging walkthrough item 15): the songs
+ * chosen in this browser before whose permission it has forgotten since. */
+export function settleWords(playable: number, keptHere: number): string | null {
+  const lapsed = keptHere - playable;
+  if (lapsed <= 0) return null;
+  return `${countOf(lapsed, 'song')} chosen here before ${lapsed === 1 ? 'needs' : 'need'} this browser’s permission again. Browsers forget it between visits, so the count went down after checking.`;
+}
+
+export function CloudLibrary({ shared, connected, connect, cloudStorage = false }: {
   shared: ViewProps;
   /** how many songs the library lists */
   connected: number;
   connect: ConnectProps;
+  /** this account also keeps songs in Cloud storage (hosted media) */
+  cloudStorage?: boolean;
 }) {
   const handle = useRef<ConnectMusicHandle>(null);
   const session = useImportSession(connect.workspaceId);
@@ -95,6 +112,7 @@ export function CloudLibrary({ shared, connected, connect }: {
   return (
     <Library {...shared} browser={{ action }} lead={(
       <div className="lw-lead">
+        {whereWords(cloudStorage) && <p className="lw-remote-line" data-testid="library-where-line"><Icon name="music" size="toolbar" /><span>{whereWords(cloudStorage)}</span></p>}
         {needsFolder && fresh && holder && (
           // ADR-0475 R6: another device has the music, so this one is its remote; connecting
           // music here is a choice, not the way forward
@@ -117,7 +135,7 @@ export function CloudLibrary({ shared, connected, connect }: {
         {needsFolder && !fresh && (
           <div className="banner" data-tone="info" role="status">
             <Icon name="folder" size="toolbar" />
-            <p><b>{`${formatCount(playable)} of ${countOf(connected, 'song')} can play here.`}</b> Choose your music folder to open the rest.</p>
+            <p><b>{`${formatCount(playable)} of ${countOf(connected, 'song')} can play here.`}</b> {settleWords(playable, keptHere) ?? ''} Choose your music folder to open the rest.</p>
             <button type="button" onClick={() => handle.current?.chooseFolder()}>{choose}</button>
             <button type="button" className="quiet" onClick={() => setDismissed(true)}>Dismiss</button>
           </div>
