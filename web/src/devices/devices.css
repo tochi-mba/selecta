@@ -189,7 +189,13 @@
   .remote-card > .remote-state,
   .remote-card > .remote-sound,
   .remote-card > .remote-seek,
-  .remote-card > .remote-volume { grid-column: 1 / -1; }
+  .remote-card > .remote-volume,
+  .remote-card > .play-notice,
+  .remote-card > .remote-ways,
+  .remote-card > .remote-refusal { grid-column: 1 / -1; }
+  /* the speaker picker fits a phone on its side: shorter rows, so the choice and Play show */
+  .speaker-picker-row { min-height: 0; padding-block: var(--space-1); }
+  .speaker-picker-default, .speaker-picker-away summary { min-height: 36px; margin-top: 0; }
   .remote-song h2 { font: var(--type-song); }
   .remote-song p { font: var(--type-meta); }
   .remote-song p.remote-place { display: none; }
