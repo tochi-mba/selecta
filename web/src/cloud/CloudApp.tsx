@@ -41,6 +41,7 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
+import { WorkspaceNameOffer } from './WorkspaceNameOffer';
 import { SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './localFirstGate';
@@ -679,6 +680,7 @@ export function CloudApp() {
     profile={[
       <AccountStrip email={user.email} plan={planName(account)} workspace={account.workspace.name} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />,
       framed && businessEntry,
+      <WorkspaceNameOffer account={account} rename={async (name) => { await api('/account/workspace-name', { method: 'PUT', body: JSON.stringify({ name }) }, account.workspace.id); await refreshAccount(); }} />,
       framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />,
       !framed && flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />,
     ]}

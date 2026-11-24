@@ -262,6 +262,16 @@
       "kind": "release",
       "owner": "billing"
     },
+    "account.workspace_name": {
+      "label": "Workspace name",
+      "about": "Rename the personal workspace from its starting name, offered once on Workspace.",
+      "routes": ["PUT /api/account/workspace-name"],
+      "surfaces": ["cloud.settings"],
+      "words": ["Rename it"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "identity"
+    },
     "account.new_device_email": {
       "label": "New device email",
       "about": "Email the person once when a new device signs in to their account, with a way to sign out everywhere.",

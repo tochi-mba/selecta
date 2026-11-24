@@ -10,6 +10,8 @@ export type Usage = {
   analysis_today: Allowance;
   exports_month: Allowance & { retention_days: number; blocked: boolean };
   lucy_turns_month: LucyTurns;
+  /** Songs in the library against the plan's soft cap: mentioned calmly, never a refusal. */
+  library?: { songs: number; soft_cap: number };
 };
 /** The billing moment the customer should hear about (billing/standing.py), or null for none.
  * `at` is epoch seconds; `key` changes whenever the event does, so a dismissal is per event. */
