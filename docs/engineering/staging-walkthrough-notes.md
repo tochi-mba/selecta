@@ -11,6 +11,13 @@ Things to refine, found by walking staging (app.staging.selectadj.app) as the ow
 4. **The Library mixes both modes without explaining.** After the switch, Library still leads with "Connect music" and "2,918 of 2,919 songs can play here. Choose your music folder", next to a new "Add music" upload page. Good: one clear explanation of where this account's songs live (on this device, in Cloud storage, or both) and which button does what. [audit + editor]
 5. **The Library took about 30 seconds to open** (2,919 songs) and showed "This is taking longer than expected. You can keep waiting." Good: first rows within a second (paged, or from the offline catalogue), the rest streaming in. [audit]
 
+### Hosted storage after the buckets were created (same evening)
+12. **Upload now works end to end to storage.** After creating the four EU buckets and their app-origin CORS rule, the same MP3 said "Upload accepted" and the object is in `selecta-staging-originals` under the account's own `w/{workspace}/a/` prefix.
+13. **The uploaded song is nowhere in the app.** Library still says 2,919 songs and lists only the folder songs; there is no hosted section, no "In Cloud storage" filter and no processing state for the upload. Good: a hosted upload appears in Library at once with "Preparing" then "Ready", marked as stored in Cloud, playable on any device. [audit]
+14. **Nothing processes it on staging.** Workers (Modal) report nothing, so analysis and server rendering cannot run. The app must say so honestly ("Your song is stored. Preparing it for mixes is waiting.") and the console must show the waiting job. [audit + admin]
+15. **Library counts jump while it settles.** "2,918 of 2,919 can play here" became "2,405 of 2,919" and "513 songs need your permission again" seconds later, with no explanation of what changed. [audit]
+16. **Artist parsing from file names.** "Adekunle Gold - Call on Me.mp3" shows title "Adekunle Gold - Call on Me" and artist "Unknown Artist"; an "Artist - Title" file name should be split when tags are missing. [fingerprint/import owner]
+
 ### Admin console
 6. **System and Overview did not catch the missing bucket.** "File storage (R2): Not reporting" is all it said. Good: the System page checks each configured bucket exists and is writable, and Overview turns red with "Storage bucket selecta-staging-originals doesn't exist" and the fix. [admin]
 7. **Most services "Not reporting".** Fine as honest, but each needs a one-line "how to connect" and the important ones (API, Stripe webhooks, storage) should report from the API itself, not only from tasks that may not run on staging. [admin]
