@@ -40,8 +40,10 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { programmeTurn, type ControllerLink } from '../devices/controller';
+import { bestHolder, programmeTurn, type ControllerLink } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
+import { ControllerListen } from '../devices/ControllerListen';
+import { soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
@@ -114,6 +116,11 @@ const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit
 const IDLE = (): void => {};
 const NO_SONGS: readonly number[] = [];
 const NOT_THIS_MIX = (): void => {};
+/** The account's most recently saved mix, or null when there is none (or it cannot be read). */
+async function newestMix(recipes: { list: () => Promise<{ mix_id: string; name: string; songs: number; updated_at: number }[]> }): Promise<{ mix_id: string; name: string; songs: number } | null> {
+  const all = await recipes.list().catch(() => []);
+  return [...all].sort((one, other) => other.updated_at - one.updated_at)[0] ?? null;
+}
 /** How long the speaker waits before telling the session its programme again after a refusal. */
 const PUBLISH_RETRY_MS = 10_000;
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
@@ -388,7 +395,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const followsHere = (status?.counts.ready ?? 0) > 0;
   const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: followsHere ? songOrder : NO_SONGS, loadSongs: loadRemoteSongs });
   // ADR-0475: what the speaker can open, so a request is judged by the device that will play it
-  const holdings = useHoldings(cloud, on('devices.remote_control'), remote ? playback.view?.speaker_device_id ?? null : null);
+  const holdings = useHoldings(cloud, on('devices.remote_control') && (!!remote || !followsHere), remote ? playback.view?.speaker_device_id ?? null : null);
   const remoteProgramme = remote ? remote.session.programme.map((entry) => entry.song_id).join(',') : '';
   const remoteMix = useMemo<MixData['mix']>(() => (remoteProgramme ? remoteProgramme.split(',').map(Number).map((songId, position) => {
     const known = remote?.book.get(songId);
@@ -525,6 +532,56 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // browser; room requests the host accepted arrive on the event stream and join this list
   // with another device playing, requests are added to its programme: the list is judged against
   // what that device is playing, and nothing here changes this device's own mix
+  // ADR-0475 R2, "Play on {device}". Asked to play: this device checks it has a mix, that it
+  // holds the mix's music now, and that the browser lets this tab start sound, in that order,
+  // then takes over and plays by its own action. One press here is needed when the tab has not
+  // been pressed since it loaded; the asker is told to wait for it.
+  const [askedToPlay, setAskedToPlay] = useState<StartAsk | null>(null);
+  const startAskedMix = useCallback(async (ask: StartAsk, pressed: boolean): Promise<StartResult> => {
+    // the mix the asker named; else the one this device already has; else the account's newest
+    // saved mix (which mix is "current" is remembered per browser, so a fresh tab has none)
+    const wanted = ask.mix_id ?? recipes.current() ?? (await newestMix(recipes))?.mix_id ?? null;
+    if (wanted && recipes.current() !== wanted) recipes.setCurrent(wanted);
+    const mix = await request<MixData>('/mix').catch(() => null);
+    if (!mix?.mix.length) return 'no_mix';
+    const here = await sources.here?.().catch(() => null);
+    if (!mix.mix.some((item) => here?.get(item.song_id) === 'here')) {
+      showToast(`${ask.asker_name} asked to play here. Choose your music folder again to play.`, { actions: [{ label: 'Choose music', run: () => navigate('/library') }] });
+      return 'needs_music';
+    }
+    if (!pressed && !soundAllowedHere()) { setAskedToPlay(ask); return 'needs_gesture'; }
+    setMixData(mix);
+    void shellPlayer.playFrom(0);
+    return 'starting';
+  }, [recipes, request, setMixData, shellPlayer, sources]);
+  // what "Play on {device}" would play when this device has no current mix of its own: the
+  // account's newest saved mix, read while Listen shows that card
+  const [newest, setNewest] = useState<{ mix_id: string; name: string; songs: number } | null>(null);
+  const wantsNewest = on('devices.remote_control') && !followsHere && !remote && !data.mix.length && path === '/listen';
+  useEffect(() => {
+    if (!wantsNewest) return undefined;
+    let live = true;
+    void newestMix(recipes).then((found) => { if (live) setNewest(found); });
+    return () => { live = false; };
+  }, [recipes, wantsNewest]);
+  const playOn = usePlayOn({
+    cloud, deviceId: playback.device?.id ?? null, enabled: on('devices.remote_control'), serverNow: playback.serverNow,
+    onAsk: (ask) => startAskedMix(ask, false),
+  });
+  // the other device is the speaker now: what was said while asking has done its job
+  const resetAsk = playOn.reset;
+  const speakerHereNow = remote?.view.speaker === 'elsewhere';
+  useEffect(() => { if (speakerHereNow) resetAsk(); }, [speakerHereNow, resetAsk]);
+  // the speaker is away: another of this person's devices that is open and holds music can take over
+  const otherHolder = remote && remote.view.speaker === 'offline' && holdings.devices
+    ? bestHolder(holdings.devices.filter((device) => device.device_id !== playback.view?.speaker_device_id), playback.device?.id ?? null) : null;
+  const askedBanner = askedToPlay && (
+    <p className="asked-to-play" role="alert" data-testid="asked-to-play">
+      {askedToPlay.asker_name} asked to play here. Press Play to allow sound from this tab.
+      <button className="primary" onClick={() => { const ask = askedToPlay; setAskedToPlay(null); void startAskedMix(ask, true).then((result) => playOn.answer(ask, result)); }}>Play</button>
+      <button onClick={() => { const ask = askedToPlay; setAskedToPlay(null); void playOn.answer(ask, 'declined'); }}>Not now</button>
+    </p>
+  );
   const requestsPlayback = useMemo(() => (remote ? { mix: remoteMix, player: remote.player, onMix: NOT_THIS_MIX } : { mix: data.mix, player: shellPlayer, onMix: setMixData }), [data.mix, remote?.player, remoteMix, setMixData, shellPlayer, !!remote]);
   const songRequests = useRequests(requestsPlayback, notify, request);
   const [requesting, setRequesting] = useState(false);
@@ -679,7 +736,18 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         )}{localExport}</>;
       case 'listen':
         // something is playing on another device and this one does not hold that mix: the remote
-        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} />;
+        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} elsewhere={otherHolder ? { device: otherHolder.name, asking: playOn.state, onPlay: () => void playOn.ask(otherHolder, recipes.current() ?? null) } : null} />;
+        // nothing is playing and this device holds no music: the one thing to do is play on a
+        // device that does (ADR-0475 R1, R2), never a Play button that cannot work here
+        if (on('devices.remote_control') && !followsHere && status && holdings.devices && holdings.devices.some((device) => device.songs > 0 && device.device_id !== playback.device?.id)) {
+          return (
+            <ControllerListen
+              mixName={data.mix.length ? data.name : newest?.name ?? ''} mixSongs={data.mix.length || (newest?.songs ?? 0)} devices={holdings.devices} thisDeviceId={playback.device?.id ?? null}
+              now={playback.serverNow()} asking={playOn.state}
+              onPlayOn={(device) => void playOn.ask(device, recipes.current() ?? newest?.mix_id ?? null)}
+            />
+          );
+        }
         return (
           <>
             {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
@@ -738,7 +806,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
             {roomAdd.onTheWay > 0 && <span className="room-open-waiting">{countOf(roomAdd.onTheWay, 'request')} on the way</span>}
           </a>
         ) : undefined}
-        banner={<>{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{askedBanner}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section>

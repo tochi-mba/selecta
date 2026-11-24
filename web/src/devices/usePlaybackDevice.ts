@@ -637,6 +637,14 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       await startSpeaking(startAt ? {
         ...current.session, song_index: startAt.song_index, offset_ms: startAt.offset_ms, anchor_at: null, state: 'playing',
       } : current.session);
+      // Say where the music starts at once. Until the first regular heartbeat (up to five
+      // seconds) the session still held the last speaker's place, so a remote showed this song
+      // at its end.
+      if (startAt) {
+        void api('/playback/heartbeat', {
+          method: 'POST', body: JSON.stringify({ device_id: deviceId, song_index: startAt.song_index, offset_ms: startAt.offset_ms, state: 'playing', seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }), ...outputReport(speaker) }),
+        }, workspaceId).catch(() => undefined);
+      }
       setMessage('');
     } catch (problem) {
       setError((problem as Error).message);
