@@ -104,3 +104,24 @@ describe('screen reader summaries', () => {
     expect(said).toEqual(['Lucy is replying', '2 steps finished', 'New proposal: revision 3']);
   });
 });
+
+describe('a long Cloud conversation and its follow-ups (ADR-0476)', () => {
+  const message = (id: string, seq: number) => ({ id, seq, role: 'user', turn: null, run: null, content: id, status: 'complete', revision: null, meta: {}, created_at: '' });
+
+  it('puts an older page before what is shown, once, and remembers whether more wait', () => {
+    const shown = reduce(EMPTY_VIEW, { type: 'snapshot', snapshot: { ...snapshot(), messages: [message('c', 3)], more: true } as unknown as Snapshot });
+    expect(shown.more).toBe(true);
+    const older = reduce(shown, { type: 'older', messages: [message('a', 1), message('b', 2), message('c', 3)] as never, more: false });
+    expect(older.messages.map((item) => item.id)).toEqual(['a', 'b', 'c']);
+    expect(older.more).toBe(false);
+  });
+
+  it('keeps the follow-ups a finished answer carries', () => {
+    nextId = 1;
+    const view = reduce(reduce(EMPTY_VIEW, { type: 'snapshot', snapshot: snapshot() }), { type: 'events', events: [
+      event('message.started', { message: 'm1', role: 'assistant', seq: 2 }),
+      event('message.completed', { message: 'm1', status: 'complete', content: 'Done.', meta: { followups: ['Make it shorter'] } }),
+    ] });
+    expect(view.messages[0].meta).toEqual({ followups: ['Make it shorter'] });
+  });
+});

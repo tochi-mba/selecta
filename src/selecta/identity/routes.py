@@ -61,6 +61,13 @@ def request_method() -> str | None:
     return REQUEST_METHOD.get()
 
 
+class ProblemReport(BaseModel):
+    reference: str = Field(pattern=r"^R-[A-Z0-9]{4}-[A-Z0-9]{4}$")
+    kind: str = Field(pattern="^(page_crash|stale_build)$")
+    where: str = Field(default="", max_length=200)
+    build: str = Field(default="", max_length=80)
+
+
 class WorkspaceNameRequest(BaseModel):
     name: str = Field(min_length=1, max_length=60)
 
@@ -247,6 +254,21 @@ def install_routes(
                 "sessions_listed": result.listed,
             },
         )
+
+    @app.post("/api/account/problem-report", status_code=204)
+    def problem_report(body: ProblemReport, claims: SignedIn):
+        """A page stopped drawing, or could not load after a deploy: one log line with the
+        reference the person was shown, so support can find it, and a count by kind. No page
+        content, no error text (it can hold personal data), nothing stored."""
+        from selecta.observability import metrics
+
+        principal = principal_or_refusal(engine, claims, allow_suspended=True)
+        where = "".join(char for char in body.where if char.isprintable())[:200]
+        logger.warning(
+            "client.problem %s kind=%s user=%s where=%r build=%r", body.reference, body.kind,
+            principal.user.id, where, body.build[:80],
+        )
+        metrics.add("selecta_client_problems_total", kind=body.kind)
 
     @app.put("/api/account/workspace-name")
     def rename_workspace(body: WorkspaceNameRequest, request: Request, claims: SignedIn):

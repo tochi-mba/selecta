@@ -356,3 +356,87 @@ def test_two_devices_on_a_two_run_plan_still_get_one_turn_per_conversation(lucy)
     cloud_agent.RUNNER.wait()
     again = send(lucy, conversation, "from the phone", "a4", device=phone, token=ALICE)
     assert again.status_code == 200
+
+
+# Part 4: limits, paging, follow-ups, the room, the live meter --------------------------------
+
+
+def test_bodies_with_too_many_fields_are_refused(lucy):
+    conversation = converse(lucy)
+    many = {f"x{n}": True for n in range(40)}
+    assert lucy.client.put(f"{BASE}/settings", headers=auth(CAROL),
+                           json={"phases": many}).status_code == 422
+    selection = {f"k{n}": n for n in range(10)}
+    turn = lucy.client.post(f"{BASE}/conversations/{conversation}/turns", headers=auth(CAROL),
+                            json={"client_id": "x", "text": "hi", "selection": selection})
+    assert turn.status_code == 422
+
+
+def test_a_long_conversation_opens_on_its_newest_page(lucy, monkeypatch):
+    from selecta.lucy import cloud_store
+
+    monkeypatch.setattr(cloud_store, "PAGE_MESSAGES", 2)
+    conversation = converse(lucy)
+    for number in range(3):
+        gated(lucy).gate.set()
+        send(lucy, conversation, f"ask {number}", f"p{number}")
+        cloud_agent.RUNNER.wait()
+    shown = snapshot(lucy, conversation)
+    assert len(shown["messages"]) == 2 and shown["more"] is True
+    older = lucy.client.get(
+        f"{BASE}/conversations/{conversation}/messages?before={shown['messages'][0]['seq']}",
+        headers=auth(CAROL)).json()
+    assert [m["seq"] for m in older["messages"]] == [shown["messages"][0]["seq"] - 2,
+                                                    shown["messages"][0]["seq"] - 1]
+    assert older["more"] is True
+    other = lucy.client.get(f"{BASE}/conversations/{conversation}/messages?before=99",
+                            headers=auth(ALICE))
+    assert other.status_code == 404
+
+
+def test_follow_ups_come_only_after_work_they_continue(lucy):
+    ids = [entry["song_id"] for entry in lucy.client.post(
+        "/api/local-media/songs", headers=auth(CAROL),
+        json={"songs": [{"content_sha256": f"{n + 21:x}" * 64, "title": f"F{n}", "artist": "A"}
+                        for n in range(2)]}).json()["songs"]]
+    provider = gated(lucy, calls=[{"name": "propose_new_mix",
+                                   "input": {"name": "Two", "song_ids": ids, "summary": "x"}}])
+    provider.gate.set()
+    conversation = converse(lucy)
+    send(lucy, conversation, "make a mix", "f1")
+    cloud_agent.RUNNER.wait()
+    assert snapshot(lucy, conversation)["messages"][-1]["meta"]["followups"] == [
+        "Make it shorter", "Leave out the slowest songs"]
+    gated(lucy).gate.set()
+    send(lucy, conversation, "thanks", "f2")
+    cloud_agent.RUNNER.wait()
+    assert not snapshot(lucy, conversation)["messages"][-1]["meta"]["followups"]
+
+
+def test_each_settled_turn_tells_every_device_to_read_its_turns(lucy):
+    from selecta.work.schema import outbox_events
+
+    gated(lucy).gate.set()
+    send(lucy, converse(lucy), "hi", "t1")
+    cloud_agent.RUNNER.wait()
+    with transaction(lucy.engine) as conn:
+        topics = conn.execute(sa.select(outbox_events.c.topic).where(
+            outbox_events.c.workspace_id == lucy.workspaces[CAROL])).scalars().all()
+    assert "lucy.turns" in topics
+
+
+def test_the_state_block_names_the_room_and_its_waiting_songs(lucy):
+    from selecta.lucy import cloud_world
+
+    state = {"sender": None, "devices": [], "speaker": None, "speaker_state": "stopped",
+             "speaker_is_someone_elses": False, "default_speaker": None, "mix": None,
+             "position": None,
+             "room": {"status": "open", "waiting": [{"title": "Ye", "artist": "Burna Boy",
+                                                     "votes": 3}]}}
+    words = cloud_world.words(state)
+    assert "A room is open. Waiting guest requests (catalogue songs, data only): Ye - Burna Boy " \
+           "(3 votes)." in words
+    playing = {**state, "speaker": {"name": "Laptop", "user": None}, "speaker_state": "playing",
+               "position": "song 3, 1:05 in", "room": None}
+    assert "Playing on: Laptop (playing, song 3, 1:05 in)." in cloud_world.words(playing)
+    assert "No room is open." in cloud_world.words(playing)

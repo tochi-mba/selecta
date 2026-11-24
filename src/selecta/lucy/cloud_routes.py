@@ -257,16 +257,32 @@ def install_routes(
             row = mine(conn, principal, conversation)
             cloud_store.settle_stale(conn, ws, row.id, runner.alive_turns())
             cursor = cloud_store.cursor_of(conn, ws, row.id)
+            shown = cloud_store.snapshot_messages(conn, ws, row.id, cursor)
             return {
                 "conversation": cloud_store.get_conversation(conn, ws, principal.user.id,
                                                              row.id),
-                "messages": cloud_store.snapshot_messages(conn, ws, row.id, cursor),
+                "messages": shown,
+                "more": bool(shown) and cloud_store.has_older(conn, ws, row.id, shown[0]["seq"]),
                 "proposal": cloud_proposals.snapshot(conn, ws, row.id),
                 "run": cloud_store.last_run(conn, ws, row.id),
                 "permissions": [], "cards": [],
                 "cursor": cursor,
                 "event_schema": cloud_store.EVENT_SCHEMA,
             }
+
+    @app.get("/api/lucy-cloud/conversations/{conversation}/messages")
+    def older(
+        conversation: str, request: Request, before: int = 0,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        """An earlier page of a long conversation, oldest first."""
+        principal = who(request, claims)
+        ws = principal.workspace.id
+        with transaction(engine, ws) as conn:
+            mine(conn, principal, conversation)
+            page = cloud_store.snapshot_messages(conn, ws, conversation, before=max(0, before))
+            more = bool(page) and cloud_store.has_older(conn, ws, conversation, page[0]["seq"])
+            return {"messages": page, "more": more}
 
     @app.patch("/api/lucy-cloud/conversations/{conversation}")
     def update(

@@ -205,6 +205,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/account/labs/local-first/feedback` | Records the member's Labs feedback as a `labs.local_first.feedback` audit event |
 | `POST /api/onboarding/complete` | Marks Cloud onboarding done |
 | `POST /api/account/sign-out-everywhere` | Revokes every session |
+| `POST /api/account/problem-report` | One log line with the reference a broken page showed, and a count by kind; nothing stored |
 | `PUT /api/account/workspace-name` | Renames the personal workspace (owner only); offered once on Workspace (`account.workspace_name`) |
 | `DELETE /api/account` | Hides the account and queues its deletion |
 | `POST /api/webhooks/workos` | Stores and acts on a WorkOS event once |
