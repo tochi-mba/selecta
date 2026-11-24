@@ -28,12 +28,18 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.local_media.schema import local_songs
+from selecta.local_media.versions_schema import local_song_versions_state
+from selecta.persistence import db_now
 
 log = logging.getLogger(__name__)
 
 # Two files of one recording rarely differ by more than encoder padding and a trimmed silence;
 # a radio edit against an extended mix differs by much more.
 VERSION_TOLERANCE_S = 3.0
+
+# Bumped whenever the grouping rule changes, so every workspace is regrouped once more.
+# 1: same normalised title and artist, length within VERSION_TOLERANCE_S.
+RULE_VERSION = 1
 
 
 def name_key(title: str, artist: str) -> tuple[str, str]:
@@ -132,6 +138,31 @@ def regroup_versions(conn: Connection, workspace_id: str) -> dict[str, int]:
     return made
 
 
+def ensure_regrouped(conn: Connection, workspace_id: str) -> dict[str, int] | None:
+    """Regroup this workspace once under the current rule, then never again until the rule
+    changes: existing data is repaired on the first load after a deploy. None when it already
+    was. Callers must be allowed to change the library; a viewer's read never writes."""
+    done = conn.execute(
+        sa.select(local_song_versions_state.c.rule_version)
+        .where(local_song_versions_state.c.workspace_id == workspace_id)
+    ).first()
+    if done is not None and int(done.rule_version) >= RULE_VERSION:
+        return None
+    made = regroup_versions(conn, workspace_id)
+    now = db_now(conn)
+    if done is None:
+        conn.execute(local_song_versions_state.insert().values(
+            workspace_id=workspace_id, rule_version=RULE_VERSION, regrouped_at=now))
+    else:
+        conn.execute(
+            local_song_versions_state.update()
+            .where(local_song_versions_state.c.workspace_id == workspace_id)
+            .values(rule_version=RULE_VERSION, regrouped_at=now)
+        )
+    log.info("song versions checked for workspace %s under rule %d", workspace_id, RULE_VERSION)
+    return made
+
+
 def groups_of(conn: Connection, workspace_id: str, song_ids: Iterable[int]) -> dict[int, list[int]]:
     """For each id asked about: every live id in its group, primary first."""
     wanted = sorted({int(song_id) for song_id in song_ids})
@@ -171,7 +202,9 @@ def primary_of(conn: Connection, workspace_id: str, song_id: int) -> int:
 
 
 __all__ = [
+    "RULE_VERSION",
     "VERSION_TOLERANCE_S",
+    "ensure_regrouped",
     "groups_of",
     "listed_songs",
     "name_key",
