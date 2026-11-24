@@ -128,7 +128,7 @@ The owner's library on staging held several chart folders with the same songs. S
 **Server** (`src/selecta/local_media/versions.py`):
 - `register_songs` chooses a new file's group with the length rule.
 - `listed_songs()` is the one query for what a person sees: live primaries only. Lucy's song list uses it; rooms' catalogue offers primaries only, a song being requestable when the speaker holds any of its versions; `is_requestable` reads an older id as its song.
-- `regroup_versions()` re-evaluates every live row in id order and writes only what changed: rows grouped by name alone before lengths counted, rows pointing at a removed primary, chains. It is idempotent, logs what it changed, and runs at the start of each full catalogue read (`GET /api/local-media/songs` from the first page) and after a song is removed, so existing data is repaired the first time the owner's browser reads the catalogue, without a migration.
+- `regroup_versions()` re-evaluates every live row in id order and writes only what changed: rows grouped by name alone before lengths counted, rows pointing at a removed primary, chains. It is idempotent and logs what it changed. It runs after every registration and removal (where groups can change), and once per workspace per grouping rule (`RULE_VERSION`, kept in `local_song_versions_state`, migration `bf0469vers01`) on the first full catalogue read by a member who may change the library, so existing data is repaired on the first load after a deploy and never again until the rule changes. A viewer's read never writes.
 - The catalogue route still lists every file, each with `duplicate_of`, because a browser must know which file it holds.
 
 **Browser** (`web/src/cloud/songVersions.ts`):
