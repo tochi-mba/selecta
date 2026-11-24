@@ -40,7 +40,7 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { bestHolder, HolderContext, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
+import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { ControllerListen } from '../devices/ControllerListen';
 import { soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
@@ -399,7 +399,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // A device with none of its music chosen cannot follow the mix itself, even when the account's
   // current mix is the very one that is playing: it is a remote too.
   const followsHere = (status?.counts.ready ?? 0) > 0;
-  const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: followsHere ? songOrder : NO_SONGS, loadSongs: loadRemoteSongs });
+  // ADR-0475 R8: the current mix is the account's, so every device has the speaker's mix. A device
+  // that is not the speaker steers it from the remote, whatever music it holds itself; before R8 a
+  // device whose own mix was the programme showed the ordinary Listen, with a Play that played here.
+  const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: NO_SONGS, loadSongs: loadRemoteSongs });
   // ADR-0475: what the speaker can open, so a request is judged by the device that will play it
   const [holderId, setHolderId] = useState<string | null>(null);
   const holdings = useHoldings(cloud, on('devices.remote_control'), remote ? playback.view?.speaker_device_id ?? null : holderId);
@@ -626,6 +629,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       void shellPlayer.playFrom(at, offset);
     },
     now: playback.serverNow(),
+    ofMix: (device: { device_id: string }) => ({ held: mixHeld(holdings.ids, device.device_id, remoteMix.map((item) => item.song_id)), total: remoteMix.length }),
   } : null;
   // ADR-0475 R8: a mix made here when another device makes the sound. With a speaker playing
   // elsewhere, the new mix is offered to it (Play on {speaker} now, or Later); with none and no
@@ -797,7 +801,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       case 'library':
         return <CloudLibrary shared={shared} connected={connected} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
       case 'mixes':
-        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={now.phase} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
+        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
         // R8: a device with little or no music makes mixes from the songs the device R1 chooses holds
         return <>{mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
           <MixesEmpty

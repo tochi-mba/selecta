@@ -9,7 +9,7 @@ import './cloudMusic.css';
 
 /** Make a Mix in a browser, as three short steps and one Play: the music this device can open,
  * how long, an optional shape. Views/Mixes.tsx owns the building; this only draws the choices. */
-export function QuickMix({ hero, pending, playable, total, songs, onSongs, building, blocked, onPlay, shape, replacing, problem }: {
+export function QuickMix({ hero, pending, playable, total, songs, onSongs, building, blocked, onPlay, shape, replacing, problem, playOn }: {
   /** SelectaDJ's pick; undefined while it loads or when it could not be read. */
   hero?: VibeCard;
   pending: boolean;
@@ -26,7 +26,11 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
   /** What pressing Play does to the mix that is playing, when there is one. */
   replacing?: string;
   problem?: ReactNode;
+  /** ADR-0475 R8: the mix plays on another device (see ViewProps.playOn). */
+  playOn?: { name: string; now: boolean };
 }) {
+  // the songs counted are the ones the device that plays the mix holds
+  const where = playOn?.now ? playOn.name : 'this device';
   const available = hero?.songs ?? playable;
   const short = available < songs;
   return (
@@ -37,7 +41,7 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
           <span className="quick-step-mark" aria-hidden="true"><Icon name="check" size="compact" /></span>
           <div className="quick-step-body">
             <h3>Your music</h3>
-            <p>{playable < total ? `${playable} of ${countOf(total, 'song')} can play on this device.` : `${countOf(playable, 'song')} ready on this device.`}</p>
+            <p>{playable < total ? `${playable} of ${countOf(total, 'song')} can play on ${where}.` : `${countOf(playable, 'song')} ready on ${where}.`}</p>
           </div>
           <PageLink to="/library" className="button small quiet">{playable < total ? 'Connect more' : 'Library'}</PageLink>
         </li>
@@ -81,7 +85,7 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
           )}
         </div>
         <Action className="primary big" disabled={!hero?.ready || blocked} busy={building} working="Building…" run={onPlay}>
-          <Icon name="play" /> Play
+          <Icon name="play" /> {playOn?.now ? `Play on ${playOn.name}` : 'Play'}
         </Action>
       </footer>
       {hero && !hero.ready && <p className="hint">{hero.name} needs {hero.needs} more {hero.needs === 1 ? 'song' : 'songs'} this device can play.</p>}

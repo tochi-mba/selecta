@@ -116,3 +116,20 @@ describe('following the account on an open device', () => {
     expect(recipes.current()).toBe('old');
   });
 });
+
+describe('with cloud.local_media off (the routes refused)', () => {
+  it('behaves as before: the browser keeps its own current mix and nothing is shown', async () => {
+    const refused = (async () => { throw new ApiError('That feature is off.', 403, 'flag_off'); }) as Request;
+    let pointer: string | null = 'mine';
+    const mine = accountCurrent(refused, 'ws', { read: () => pointer, write: (next) => { pointer = next; } });
+    await mine.tell('other');
+    expect(pointer).toBe('mine');
+    await expect(mine.sync()).rejects.toMatchObject({ status: 403 });
+    // the shell's follower swallows the refusal and changes nothing
+    const recipes = { current: () => pointer, setCurrent: vi.fn(), account: mine } as unknown as RecipeStore;
+    render(<Harness recipes={recipes} audible={false} onPlay={vi.fn()} />);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(recipes.setCurrent).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('new-mix-arrived')).toBeNull();
+  });
+});
