@@ -255,23 +255,6 @@
   .library-browser .library-rows:not(.library-cards) .lw-start { padding: 0; }
   .library-browser .library-rows:not(.library-cards) .lw-start > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
-/* ADR-0475 I91: the Library on a phone shows songs, not chrome. The top bar already names the
-   page; on a remote the intro, the count and where the music lives are one line; Connect music
-   is a small second action; the search stays at the top while the list scrolls; the filters fade
-   at the edge when there are more; sort and view sit on one compact row. */
-@media (max-width: 600px) {
-  .library-browser .page-header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .library-browser .page-header[data-remote] .page-lead { display: none; }
-  .library-browser .page-header[data-remote] { gap: var(--space-2); margin-bottom: var(--space-2); }
-  .library-browser .page-header[data-remote] .page-header-actions { margin: 0; }
-  .library-browser .page-header[data-remote] .lw-connect-menu,
-  .library-browser .page-header[data-remote] .lw-connect-menu > button { width: auto; min-height: var(--control-height); }
-  .library-browser .lw-lead .lw-remote-line[data-remote-only] { display: none; }
-  .library-browser .lw-toolbar { position: sticky; top: 0; z-index: var(--layer-sticky); padding-block: var(--space-2); background: var(--bg); }
-  .lw-chips { mask-image: linear-gradient(to right, var(--text) 85%, transparent); }
-  .lw-toolbar-end { justify-content: flex-start; gap: var(--space-2); }
-  .lw-sort > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
 @media (max-width: 768px) {
   .lw-toolbar .search-field { flex-basis: 100%; max-width: none; }
   .lw-toolbar .search-field input, .lw-sort select { min-height: var(--control-height); }
@@ -301,6 +284,33 @@
   .lw-facts li { grid-template-columns: auto minmax(0, 1fr); }
   .lw-facts li > span:last-child { grid-column: 2; }
 }
+/* ADR-0475 I91: the Library on a phone shows songs, not chrome. The top bar already names the
+   page; on a remote the intro, the count and where the music lives are one line; Connect music
+   is a small second action; the search stays at the top while the list scrolls; the filters fade
+   at the edge when there are more; sort and view sit on one compact row. */
+@media (max-width: 600px) {
+  .library-browser .page-header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .library-browser .page-header[data-remote] .page-lead { display: none; }
+  .library-browser .page-header[data-remote] { gap: var(--space-2); }
+  .library-browser .page-header[data-remote] .page-header-actions { margin: 0; }
+  .library-browser .page-header[data-remote] .lw-connect-menu,
+  .library-browser .page-header[data-remote] .lw-connect-menu > button { width: auto; min-height: var(--control-height); }
+  .library-browser .lw-lead .lw-remote-line[data-remote-only] { display: none; }
+  .library-browser .lw-lead:not(:has(.banner, .lw-import, .lw-disclosure, .lw-welcome, .lw-remote-line:not([data-remote-only]))) { display: none; }
+  .library-browser:has(.page-header[data-remote]) { padding-top: var(--space-3); }
+  .library-browser .page-header[data-remote] { margin-bottom: 0; }
+  .library-browser .lw-toolbar { margin-bottom: var(--space-1); }
+  .library-browser .lw-toolbar { position: sticky; top: var(--header-block); z-index: var(--layer-sticky); padding-block: var(--space-2); background: var(--bg); }
+  .library-browser .lw-chips { mask-image: linear-gradient(to right, var(--text) 85%, transparent); }
+  .library-browser .page-header[data-remote] { flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: space-between; }
+  .library-browser .page-header[data-remote] .lw-total { display: none; }
+  .library-browser .lw-chips { flex: 1 1 0; min-width: 0; margin-inline-end: 0; }
+  .library-browser .lw-chips button { flex: none; white-space: nowrap; }
+  .library-browser .lw-toolbar-end { flex: none; gap: var(--space-1); }
+  .library-browser .lw-sort select { max-width: 6.5rem; }
+  .library-browser .lw-state { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); }
+  .library-browser .lw-sort > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 @media (max-width: 480px) {
   .lw-tile { padding: var(--space-3); }
   /* Interface choices: one tidy column, each choice the full width, instead of a ragged wrap */
@@ -311,5 +321,7 @@
 @media (forced-colors: active) {
   .lw-segment button[aria-pressed='true'], .lw-meta[data-selecting], .library-browser .lw-row.selected { border-color: Highlight; }
 }
-/* I84: what the row's tap did, said in the row itself for a moment */
-.lw-added { color: var(--status-ready); font: var(--type-caption); white-space: nowrap; }
+/* I84: what the row's tap did, said in the row for a moment; empty, it takes no room */
+.lw-added { color: var(--status-ready); font-size: var(--text-sm); white-space: nowrap; }
+.lw-added.lw-in-mix { color: var(--text-soft); }
+.lw-added:empty { display: none; }

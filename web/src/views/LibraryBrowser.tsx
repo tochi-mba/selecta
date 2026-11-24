@@ -32,7 +32,7 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
         {/* I83: with another device holding music, the Library is the whole account's */}
         <p className="page-lead">{holder ? 'Your songs, and where each one plays.' : 'Your songs, and which of them can play on this device.'}</p>
         <p className="lw-stats">
-          {total !== null && <span><b>{total}</b> {songs === 1 ? 'song' : 'songs'}</span>}
+          {total !== null && <span className="lw-total"><b>{total}</b> {songs === 1 ? 'song' : 'songs'}</span>}
           {holder && <span data-testid="library-holder">{songs !== undefined && holder.songs >= songs ? <>All on <b>{holder.name}</b></> : <><b>{holder.songs.toLocaleString()}</b> on {holder.name}</>}</span>}
           {/* a remote with none of the music says nothing about it here; the line below says it */}
           {here !== null && (holder ? playable !== 0 && <span><b>{here}</b> on this device</span> : <span><b>{here}</b> ready to play here</span>)}

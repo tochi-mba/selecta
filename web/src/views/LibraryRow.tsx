@@ -122,14 +122,15 @@ export const LibraryRow = memo(function LibraryRow({
         <span className="lw-state">
           <Status kind={chip.kind} title={chip.why || undefined}>{chip.words}</Status>
           {chip.why && chip.kind !== 'ready' && <small className="lw-why">{chip.why}</small>}
+          {/* I84: what the row's tap did, said in the row itself for a moment */}
+          {remoteNext && <span className={added ? 'lw-added' : 'lw-added lw-in-mix'} role="status">{added ? `Added to ${holder?.name}’s mix` : inMix ? 'In the mix' : ''}</span>}
         </span>
         <div className="song-actions lw-actions">
           {/* I84: on a remote while another device plays, the row's one tap puts the song next
               there, says so for a screen reader, and confirms in the row */}
           {remoteNext
-            ? <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={inMix || searching} run={async () => { await actions.add(song, true); setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
+            ? !inMix && <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={searching} run={async () => { await actions.add(song, true); setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
             : facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
-          {added && <span className="lw-added" role="status">Added to {holder?.name}’s mix</span>}
           {((!facts.setAside && neverFlag) || facts.canAdd) && (
             <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
               <Action role="menuitem" run={() => actions.open(song.id)}>Song details</Action>
