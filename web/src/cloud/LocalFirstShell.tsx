@@ -399,7 +399,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // A device with none of its music chosen cannot follow the mix itself, even when the account's
   // current mix is the very one that is playing: it is a remote too.
   const followsHere = (status?.counts.ready ?? 0) > 0;
-  const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: followsHere ? songOrder : NO_SONGS, loadSongs: loadRemoteSongs });
+  // ADR-0475 R8: the current mix is the account's, so every device has the speaker's mix. A device
+  // that is not the speaker steers it from the remote, whatever music it holds itself; before R8 a
+  // device whose own mix was the programme showed the ordinary Listen, with a Play that played here.
+  const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: NO_SONGS, loadSongs: loadRemoteSongs });
   // ADR-0475: what the speaker can open, so a request is judged by the device that will play it
   const [holderId, setHolderId] = useState<string | null>(null);
   const holdings = useHoldings(cloud, on('devices.remote_control'), remote ? playback.view?.speaker_device_id ?? null : holderId);
