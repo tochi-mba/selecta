@@ -25,7 +25,7 @@ from selecta.api_cloud import CloudSettings, create_cloud_app
 from selecta.billing import api as billing_api
 from selecta.devstack import billing, guard, lucy_practice, objects
 from selecta.devstack.rooms import LibraryCatalog, QueuePlanner
-from selecta.devstack.settings import CLIENT_ID, DevSettings
+from selecta.devstack.settings import CLIENT_ID, STAFF_ORGANIZATION_ID, DevSettings
 from selecta.local_media.catalog import LocalMediaCatalog
 from selecta.persistence import make_engine, migrate
 from selecta.rooms.cloud_ports import BrowserPlanner, RoomPorts
@@ -95,6 +95,7 @@ def cloud_settings(settings: DevSettings) -> CloudSettings:
         workos_api_key=guard.LOCAL_WORKOS_KEY,
         workos_webhook_secret=settings.secret("workos-webhook"),
         require_workos=True,
+        staff_organization_id=STAFF_ORGANIZATION_ID,
     )
 
 

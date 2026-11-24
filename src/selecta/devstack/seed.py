@@ -23,6 +23,10 @@ import soundfile as sf
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
+from selecta.authz.assignments import BOOTSTRAP_ISSUER, _insert, bootstrap_owner
+from selecta.authz.check import active_assignments, platform_owners
+from selecta.authz.roles import StaffRole
+from selecta.authz.scopes import Scope
 from selecta.billing import plans, stripe_sync
 from selecta.devstack import guard
 from selecta.devstack.identity_store import IdentityStore
@@ -95,6 +99,47 @@ def add_song(
     return asset_id
 
 
+def make_local_owner(engine: Engine, user_id: str) -> bool:
+    """Make the seeded account the staff Owner, when the local database has none. Dev only:
+    `guard.require_development()` has already run, and a deployment never runs the seeder."""
+    guard.require_development()
+    with transaction(engine) as conn:
+        if platform_owners(conn):
+            return False
+        bootstrap_owner(conn, user_id, reason="local developer seed: dev.cmd cloud --seed")
+    return True
+
+
+def staff_accounts(settings: DevSettings, *, engine: Engine | None = None) -> dict[str, str]:
+    """One local sign-in per staff role (`staff-<role>@selectadj.test`) and one in the staff
+    organization holding no role (`staff-none@...`), for walking the console as each. Dev only."""
+    guard.require_development()
+    store = IdentityStore(settings.identity_folder)
+    owns = engine is None
+    engine = engine or make_engine(settings.database_url)
+    made: dict[str, str] = {}
+    try:
+        for role in [*(r.value for r in StaffRole if r is not StaffRole.OWNER), "none"]:
+            email = f"staff-{role.replace('_', '-')}@selectadj.test"
+            person = store.by_email(email) or store.create(email, PASSWORD, verified=True)
+            store.mark_staff(person.id)
+            now = time.time()
+            claims = Claims(subject=person.id, issued_at=now, expires_at=now + 60)
+            who = WorkOSUser(id=person.id, email=email, email_verified=True, created_at=now)
+            with transaction(engine) as conn:
+                user = accounts.provision(conn, claims, age_confirmed=True,
+                                          timezone="Europe/London", identity=who).user
+                held = {a.role.value for a in active_assignments(conn, user.id)}
+                if role != "none" and role not in held:
+                    _insert(conn, user_id=user.id, role=StaffRole(role), scope=Scope.platform(),
+                            issued_by=BOOTSTRAP_ISSUER, reason="local developer seed")
+            made[role] = email
+        return made
+    finally:
+        if owns:
+            engine.dispose()
+
+
 def seed(settings: DevSettings, *, engine: Engine | None = None) -> dict[str, object]:
     guard.require_development()
     store = IdentityStore(settings.identity_folder)
@@ -125,6 +170,8 @@ def seed(settings: DevSettings, *, engine: Engine | None = None) -> dict[str, ob
                     expires_at=db_now(conn) + 30 * 86_400,
                 )
                 quota.set_limit(conn, workspace_id, plans.plan_for("premium"))
+        store.mark_staff(person.id)
+        make_local_owner(engine, made.user.id)
         added = 0
         if has_songs is None:
             objects = DiskObjects.in_folder(settings.objects, settings.site_url)
