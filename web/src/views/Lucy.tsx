@@ -1,4 +1,4 @@
-import { KeyboardEvent, memo, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { KeyboardEvent, memo, ReactNode, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError, MixData, problemKind, ProblemKind } from '../api';
 import { useApi } from '../requestContext';
 import { lucy, newId } from '../lucy/client';
@@ -87,9 +87,13 @@ function savedHistoryOpen(): boolean {
 
 /** Only what Lucy needs from the app, all of it stable, so the player's once-a-second updates don't
  * redraw the conversation. */
-export type LucyProps = { conversation: string | null; setMixData: ViewProps['setMixData']; player: ViewProps['player']; request?: ViewProps['request'] };
+export type LucyProps = {
+  conversation: string | null; setMixData: ViewProps['setMixData']; player: ViewProps['player']; request?: ViewProps['request'];
+  /** Cloud (ADR-0476): the account's own settings card in place of the bring-your-own-AI one. */
+  settingsPanel?: ReactNode;
+};
 
-export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
+export function Lucy({ conversation, setMixData, player, request, settingsPanel }: LucyProps) {
   // ADR-0462: this page's own mix read goes through the injected request; standalone local mounts
   // (and the existing tests) keep the local client by default.
   const { get } = useApi(request);
@@ -332,8 +336,8 @@ export function Lucy({ conversation, setMixData, player, request }: LucyProps) {
   );
 
   const settings = settingsOpen && status && (
-    <Drawer title="Lucy settings" onClose={() => setSettingsOpen(false)}>
-      <LucySettings status={status} onSaved={setStatus} />
+    <Drawer title="Lucy settings" onClose={() => { setSettingsOpen(false); if (settingsPanel) void readStatus(); }}>
+      {settingsPanel ?? <LucySettings status={status} onSaved={setStatus} />}
     </Drawer>
   );
 
