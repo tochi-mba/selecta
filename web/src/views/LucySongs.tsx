@@ -120,7 +120,7 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
   const live = lucyTransport() !== null;
 
   return (
-    <ol className="lucy-songs" ref={list} aria-label="Songs in order, with the transitions between them">
+    <ol className={`lucy-songs ${live ? 'is-compact' : ''}`} ref={list} aria-label="Songs in order, with the transitions between them">
       {songs.map((song, index) => {
         const previous = songs[index - 1];
         const nextSong = songs[index + 1];
@@ -142,7 +142,7 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
             <div className={`lucy-song ${songSelected ? 'is-selected' : ''} ${song.locked ? 'is-locked' : ''}`} data-occ={song.occurrence}>
               <span className="lucy-song-n" aria-hidden="true">{index + 1}</span>
               <div className="lucy-song-main">
-                <SongMotif songId={song.song_id} />
+                {!live && <SongMotif songId={song.song_id} />}
                 <p className="lucy-song-name"><span className="visually-hidden">Song {index + 1}: </span><b dir="auto">{name}</b> <span className="soft" dir="auto">{song.artist || 'Unknown artist'}</span></p>
                 <p className="lucy-song-facts">
                   {song.duration > 0 ? clock(song.duration) : 'Length unknown'}{!live && <> · {bpmWords(song.bpm)} · {keyWords(song.key)} · {energyWords(song.energy)}</>}

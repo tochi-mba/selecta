@@ -6,6 +6,7 @@ import type { Approval, ApproveAction, Commit, Revision } from '../lucy/types';
 import { PageLink } from '../shell/PageLink';
 import { Action, Dialog } from '../ui/controls';
 import { LifecyclePill } from './LucyProposal';
+import { length } from '../lib';
 
 /** Turning a proposal into something real. Saving and saving-then-playing are separate buttons, each
  * checked by the server first and confirmed in a dialog that says exactly what will be saved. The
@@ -295,13 +296,22 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
             </>
           )}
         >
-          <dl className="lucy-facts">
-            <div><dt>Name</dt><dd dir="auto">{preflight.title || 'Untitled mix'}</dd></div>
-            {typeof revision.number === 'number' && <div><dt>Revision</dt><dd>{revision.number} (current)</dd></div>}
-            <div><dt>Songs</dt><dd>{preflight.songs}</dd></div>
-            <div><dt>Transitions ready</dt><dd>{preflight.ready} of {preflight.needed}</dd></div>
-            <div><dt>Only transitions that are already ready</dt><dd>{preflight.ready_only ? 'Yes, this rule is on' : 'No'}</dd></div>
-          </dl>
+          {lucyTransport() ? (
+            <dl className="lucy-facts">
+              <div><dt>Name</dt><dd dir="auto">{preflight.title || 'Untitled mix'}</dd></div>
+              <div><dt>Songs</dt><dd>{preflight.songs}</dd></div>
+              {typeof preflight.seconds === 'number' && preflight.seconds > 0 && <div><dt>Length</dt><dd>{length(preflight.seconds)}</dd></div>}
+              {playing && <div><dt>Plays on</dt><dd dir="auto">{preflight.plays_on ?? 'The device you choose next'}</dd></div>}
+            </dl>
+          ) : (
+            <dl className="lucy-facts">
+              <div><dt>Name</dt><dd dir="auto">{preflight.title || 'Untitled mix'}</dd></div>
+              {typeof revision.number === 'number' && <div><dt>Revision</dt><dd>{revision.number} (current)</dd></div>}
+              <div><dt>Songs</dt><dd>{preflight.songs}</dd></div>
+              <div><dt>Transitions ready</dt><dd>{preflight.ready} of {preflight.needed}</dd></div>
+              <div><dt>Only transitions that are already ready</dt><dd>{preflight.ready_only ? 'Yes, this rule is on' : 'No'}</dd></div>
+            </dl>
+          )}
           {missingStrictEdges && <p className="warn" role="alert">This ready-only mix is missing {preflight.needed - preflight.ready} verified transition{preflight.needed - preflight.ready === 1 ? '' : 's'}. Nothing will be saved; change the plan and check again.</p>}
           {problems.length > 0 && (
             <div className="problem" role="alert">

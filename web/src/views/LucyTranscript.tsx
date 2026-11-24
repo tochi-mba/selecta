@@ -131,8 +131,8 @@ function RateAnswer({ id, rated, onRate }: { id: string; rated: 'up' | 'down' | 
   };
   return (
     <span className="lucy-rate" role="group" aria-label="Was this answer useful?">
-      <button type="button" className="quiet" aria-pressed={mine === 'up'} aria-label="Useful" title="Useful" onClick={() => void rate('up')}><Icon name="check" size="compact" /></button>
-      <button type="button" className="quiet" aria-pressed={mine === 'down'} aria-label="Not useful" title="Not useful" onClick={() => void rate('down')}><Icon name="close" size="compact" /></button>
+      <button type="button" className="quiet" aria-pressed={mine === 'up'} title="Tell SelectaDJ this was a good answer" onClick={() => void rate('up')}><Icon name="check" size="compact" /> Good answer</button>
+      <button type="button" className="quiet" aria-pressed={mine === 'down'} title="Tell SelectaDJ this answer missed" onClick={() => void rate('down')}><Icon name="close" size="compact" /> Bad answer</button>
     </span>
   );
 }

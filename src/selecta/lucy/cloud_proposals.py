@@ -190,7 +190,8 @@ def revision_json(conn: Connection, workspace_id: str, row: Any) -> dict[str, An
                              "exact": True},
                 "energy": [None for _song in songs], "warnings": warnings, "objective": {},
             },
-            "versions": {"target": "current mix" if row.mix_id else "new mix"},
+            "versions": {"target": "current mix" if row.mix_id else "new mix",
+                         "saved": row.commit_key is not None, "played": bool(row.played)},
             "diff": diff, "revision": row.id, "number": int(row.number),
         },
         "ledger": readiness(len(songs)),
@@ -288,11 +289,26 @@ def approve(conn: Connection, workspace_id: str, row: Any, hash_: str, action: s
     token = base64.urlsafe_b64encode(
         json.dumps({"r": row.id, "a": action, "e": expires}).encode()
     ).decode()
+    seconds = sum(float((store.get_song(conn, workspace_id, i) or {}).get("duration_s") or 0)
+                  for i in ids)
     return {
         "token": token, "expires_at": expires, "action": action,
         "preflight": {"ok": not problems, "problems": problems, "songs": len(ids), "ready": 0,
-                      "needed": 0, "ready_only": False, "title": row.name},
+                      "needed": 0, "ready_only": False, "title": row.name,
+                      "seconds": round(seconds), "plays_on": _speaker_name(conn, workspace_id)},
     }
+
+
+def _speaker_name(conn: Connection, workspace_id: str) -> str | None:
+    """The device playing now, which Save and play's mix starts on; None when nothing plays
+    (the app then asks where the music should play)."""
+    from selecta.playback import store as playback_store
+
+    session = playback_store.load_session(conn, workspace_id)
+    if session is None or not session.active_device_id:
+        return None
+    device = playback_store.load_device(conn, workspace_id, session.active_device_id)
+    return device.name if device is not None else None
 
 
 def read_token(token: str) -> dict[str, Any]:

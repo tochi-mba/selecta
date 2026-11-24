@@ -117,6 +117,30 @@ A folder of 103 MP3s (783 MB). Account A imported it first: 103 files hashed, 78
 2. In the browser console: `localStorage.setItem('selecta.debug.fingerprint', '1')`, then import. Each line is logged under `[fingerprint]`, with a summary line at the end.
 3. The log lives in memory for this tab and this workspace only. It holds only the signed-in account's own file names and hash prefixes; another account's import is never shown.
 
+## Amendment 2 (2026-11-24): one song, however many files of it
+
+The owner's library on staging held several chart folders with the same songs. Searching Requests for "Agora" showed "Agora Hills, Doja Cat" three times (ids 2447, 3271, 3296), one marked "In your mix" and the other two still offering "Request", and the Library count (2,919) counted every copy.
+
+**Cause.** `local_media/store.py` `register_songs` registered a different file with the same normalised title and artist as its own row, marked `duplicate_of` the earlier one and "never merged". The local app hides such rows everywhere (`duplicate_of IS NULL` in every listing), but the Cloud browser-first catalogue never did: `/api/local-media/songs`, the browser's catalogue (`localFirstRequest.ts`), Requests search, mix picking, rooms' catalogue (`local_media/catalog.py`) and the counts all listed every copy. Identical bytes were never the problem: `(workspace_id, content_sha256)` is unique, so the same file under two names or in two folders was already one row, and the fingerprint memo cannot change that (a memo hit is the same hash, so the same row).
+
+**Rule.** A different file is a VERSION of a song when its normalised title and artist match AND its length is within 3 seconds of the song's (either length unknown counts as a match). Its `duplicate_of` points at the group's PRIMARY: the earliest live row, whose id mixes, requests and rooms already use. Same name with a clearly different length (a remix, a live take, an extended mix) is a different song with its own title and length. Rows are grouped, never merged, and no id changes.
+
+**Server** (`src/selecta/local_media/versions.py`):
+- `register_songs` chooses a new file's group with the length rule.
+- `listed_songs()` is the one query for what a person sees: live primaries only. Lucy's song list uses it; rooms' catalogue offers primaries only, a song being requestable when the speaker holds any of its versions; `is_requestable` reads an older id as its song.
+- `regroup_versions()` re-evaluates every live row in id order and writes only what changed: rows grouped by name alone before lengths counted, rows pointing at a removed primary, chains. It is idempotent, logs what it changed, and runs at the start of each full catalogue read (`GET /api/local-media/songs` from the first page) and after a song is removed, so existing data is repaired the first time the owner's browser reads the catalogue, without a migration.
+- The catalogue route still lists every file, each with `duplicate_of`, because a browser must know which file it holds.
+
+**Browser** (`web/src/cloud/songVersions.ts`):
+- `groupVersions` is the one place the catalogue becomes songs: one row per song under its primary id, with every version's id. The request adapter reads only that, so Library, search, Requests, Make a Mix, the editor's suggestions, the queue and the counts all see songs.
+- A song is on this device when any version is; the device resolver (`withVersions`) plays the best version this device can open (lossless first, then the longer file).
+- "In your mix", requests, votes and the speaker's holdings are compared by song: mix ids, the speaker's programme and holdings are read through `primaryOf`. "Never play" is set on every version of the song.
+- An old mix or request holding a version's id is read as its song; nothing is rewritten.
+- The song's details list its versions (length, format, whether this device holds it) with "Remove the extra copy from my library", which removes the catalogue row only and never touches a file.
+- The import summary counts extra copies apart from songs: "2,405 songs connected, 514 extra copies of songs you already have."
+
+**File names.** A file whose artist tag is missing or a placeholder ("Unknown Artist", "<unknown>", "Various Artists") and whose title tag or file name reads "Artist - Title" is split into artist and title. Songs registered before this keep their old names until the folder is connected again (the fingerprint memo makes that quick); registering the same bytes again updates the names.
+
 ## Checklist
 
 - [x] Device song index is one IndexedDB database per workspace; callers pass the workspace. Implemented (66506d6b)
@@ -141,5 +165,8 @@ A folder of 103 MP3s (783 MB). Account A imported it first: 103 files hashed, 78
 - [x] Amendment 1: tonal profiles, waveforms and durations produced into and read from the shared store through the workspace's proven hashes; older per-workspace profiles migrated lazily and kept. Implemented (amendment 1 commits)
 - [x] Amendment 1: fingerprint memo with the memo rule (hint for listing, proven before play or shared reads, background sample check). Implemented (amendment 1 commits)
 - [x] Amendment 1: import summary says what was recognised; fingerprint log in Settings and under `[fingerprint]` in the console. Implemented (amendment 1 commits)
+- [x] Amendment 2: versions grouped by name and length on the server, primaries only in rooms and Lucy, idempotent repair of existing groups. Implemented (amendment 2 commits)
+- [x] Amendment 2: one grouped catalogue in the browser, any version plays, old ids read as their song, versions in the song's details with removing an extra copy, import words count extra copies. Implemented (amendment 2 commits)
+- [ ] Amendment 2: pytest for `versions.py` and the rooms catalogue, Vitest for `songVersions.ts`, and a guard test that no listing selects `local_songs` outside `listed_songs`. Needs follow-up (features first)
 - [ ] Amendment 1: Vitest for the derived store, the memo rule and the reuse words. Needs follow-up (features first; tests in a later pass)
 - [x] Pytest `tests/test_shared_derivations.py`: possession-gated reads, claimed hashes refused, refusal equals absence, verified writes only, user data refused, flag off, reference count, erasure drops rows. Implemented (8af7c9cf; PostgreSQL variants run where a PostgreSQL test database is configured)
