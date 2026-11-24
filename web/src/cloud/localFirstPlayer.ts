@@ -20,6 +20,7 @@ import { mediaDeviceId } from './ConnectMusic';
 import type { MediaResolver } from '../media';
 import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
+import { tabLog } from '../devices/audioTab';
 
 /** The shell player for local-first Cloud (ADR-0462 BF-0462-06): the browser engine's speaker
  * (ADR-0457 BrowserSpeaker) driven through the ADR-0415 playback session (usePlaybackDevice),
@@ -247,6 +248,7 @@ export class LocalFirstPlayer implements PlayerLike {
     // a session left past the end of this mix (an older, longer mix) names no song: this mix
     // starts from its first song instead of stopping in silence
     const pastEnd = (this.facts.view?.session?.song_index ?? 0) >= this.facts.mix.length && !(this.speaking && this.facts.here);
+    tabLog('togglePause', { speaking: this.speaking, speaker: this.facts.view?.speaker, mix: this.facts.mix.length });
     if (!this.speaking && this.facts.view?.speaker !== 'elsewhere') {
       const problem = await this.actions.playHere();
       if (!problem && pastEnd) return this.seekTo(0, 0);
@@ -546,6 +548,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   }, [speaker, wantHere, pb.device, pb.playHere]);
 
   const playHere = useCallback(async (at?: StartAt): Promise<string> => {
+    tabLog('player playHere', { refusal: !!refusal, speaker: !!speaker });
     if (refusal) return '';
     startAt.current = at;
     // Open the AudioContext synchronously from the player's press, before the session fetch.

@@ -17,6 +17,12 @@ type Locks = {
 };
 type Channel = { postMessage: (data: unknown) => void; addEventListener: (type: 'message', listener: (event: MessageEvent) => void) => void; close: () => void };
 
+/** Off unless `localStorage['selecta.debug.tabs']` is set: each step of a hand-over, for the
+ * harness that proves two tabs never sound at once. */
+export function tabLog(...words: unknown[]): void {
+  try { if (localStorage.getItem('selecta.debug.tabs')) console.info('[tabs]', ...words); } catch { /* no storage: no log */ }
+}
+
 export type AudioTab = {
   /** Make this the audio tab. `takeOver`: the person pressed here, so another tab is asked to
    * stop first; otherwise only a free lock is taken. True when this tab may make sound. */
@@ -38,15 +44,18 @@ export function audioTab(workspaceId: string, deps: { locks?: Locks | null; chan
 
   const release = () => { const free = letGo; letGo = null; free?.(); };
   channel?.addEventListener('message', (event) => {
+    tabLog('message received', JSON.stringify(event.data), 'holding:', !!letGo);
     if ((event.data as { kind?: string } | null)?.kind !== 'take' || !letGo) return;
     // stop the sound before the lock is free, so the new tab can never overlap this one
     stopHere();
+    tabLog('stopped; releasing');
     release();
   });
 
   const hold = (ifAvailable: boolean) => new Promise<boolean>((granted) => {
     void locks!.request(name, ifAvailable ? { ifAvailable: true } : {}, (lock) => {
-      if (!lock) { granted(false); return Promise.resolve(); }
+      if (!lock) { tabLog('lock busy'); granted(false); return Promise.resolve(); }
+      tabLog('lock granted');
       return new Promise<void>((free) => { letGo = free; granted(true); });
     }).catch(() => granted(false));
   });
@@ -57,6 +66,7 @@ export function audioTab(workspaceId: string, deps: { locks?: Locks | null; chan
       if (letGo) return true;
       if (await hold(true)) return true;
       if (!takeOver) return false;
+      tabLog('asking the audio tab to let go');
       channel?.postMessage({ kind: 'take' });
       return hold(false);
     },
