@@ -1,7 +1,8 @@
 // The business pages, each its own lazy chunk, chosen by route (ADR-0453 D2). The pages are built
 // by the other BZ-6 builders and read everything they need from useBusiness().
 
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import { lazyPage as lazy } from '../../ui/staleBuild';
 import { Problem } from '../../ui/controls';
 import type { BusinessRoute } from '../context';
 import { SHELL_COPY } from '../copy/shell';

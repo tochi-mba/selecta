@@ -46,6 +46,19 @@ export function countOf(count: number, singular: string, plural = `${singular}s`
   return `${new Intl.NumberFormat(locale).format(count)} ${rule === 'one' ? singular : plural}`;
 }
 
+/** A calendar date in the reader's language and their own time zone: "4 December 2026" (or
+ * "December 4, 2026"). Every billing and account date goes through this one. `timeZone` is for a
+ * test or an account's own zone; left out, the browser's zone is used. */
+export function dateWords(epochSeconds: number, options: { locale?: string; timeZone?: string } = {}): string {
+  const when = new Date(epochSeconds * 1000);
+  const shape: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+  try {
+    return when.toLocaleDateString(options.locale ?? userLocale(), { ...shape, timeZone: options.timeZone });
+  } catch {
+    return when.toLocaleDateString(undefined, shape);
+  }
+}
+
 /** Shortens text to at most `max` characters, ending with the one ellipsis character. Prefer
  * `Truncate`, which lets CSS do it and keeps the whole text; this is for places with no CSS, such
  * as a document title or a notification. */

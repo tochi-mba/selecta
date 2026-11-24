@@ -12,7 +12,6 @@ export function browserFacts(): Record<string, unknown> {
   const win = typeof window === 'undefined' ? null : window;
   return {
     page: win ? win.location.pathname.replace(/\/[0-9a-f-]{16,}/gi, '/…') : null,
-    browser: nav?.userAgent ?? null,
     language: nav?.language ?? null,
     online: nav ? nav.onLine : null,
     web_audio: typeof AudioContext !== 'undefined',

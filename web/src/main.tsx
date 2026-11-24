@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RuntimeApp } from './RuntimeApp';
 import { captureInstallPrompt } from './cloud/install';
+import { Section } from './ui/controls';
+import { listenForStaleBuilds, UpdateLine } from './ui/staleBuild';
 import './styles/tokens.css';
 import './styles/boot.css';
 import './style.css';
@@ -22,9 +24,15 @@ import './styles/typography.css';
 
 // The browser's install offer can arrive before any page has loaded, so it is kept from the start.
 captureInstallPrompt();
+// A page file a deploy removed is caught and said calmly, never a blank page (ui/staleBuild.tsx).
+listenForStaleBuilds();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RuntimeApp />
+    {/* the outermost frame: a crash with nothing above it still shows a page with a way out */}
+    <Section name="SelectaDJ" whole>
+      <RuntimeApp />
+    </Section>
+    <UpdateLine />
   </StrictMode>,
 );

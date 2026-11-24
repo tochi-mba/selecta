@@ -30,6 +30,9 @@ export type AudioTab = {
   /** Let go (this tab stopped making sound). */
   release: () => void;
   holds: () => boolean;
+  /** Wait until no tab holds the sound (the audio tab closed, crashed or was discarded), then
+   * hold it here. Resolves false if `signal` is aborted first. */
+  waitFree: (signal: AbortSignal) => Promise<boolean>;
   /** Called when another tab of this browser took the sound: stop now, synchronously. */
   onTaken: (stop: () => void) => void;
   close: () => void;
@@ -72,6 +75,12 @@ export function audioTab(workspaceId: string, deps: { locks?: Locks | null; chan
     },
     release,
     holds: () => !locks || letGo !== null,
+    waitFree: (signal) => new Promise<boolean>((granted) => {
+      if (!locks) { granted(false); return; }
+      if (letGo) { granted(true); return; }
+      void locks.request(name, { signal }, () => new Promise<void>((free) => { letGo = free; tabLog('lock free; held here'); granted(true); }))
+        .catch(() => granted(false));
+    }),
     onTaken: (stop) => { stopHere = stop; },
     close: () => { release(); channel?.close(); },
   };

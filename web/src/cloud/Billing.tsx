@@ -6,6 +6,7 @@ import { checkoutAvailable, CheckoutPhase, Consent, consentComplete, NO_CONSENT,
 import { hasMeters, Meters } from './Meters';
 import { useNeedsConnection } from './connection';
 import { Icon } from '../ui/Icon';
+import { BillingStandingNotice } from './BillingStanding';
 
 // Plan & billing (docs/saas/11-ui-ux.md §11.1): the current plan, the usage meters, and the way
 // to change plan, each in its own titled card. A free account picks a plan, ticks the three UK
@@ -206,6 +207,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   return (
     <div className="cloud-billing">
       <CheckoutStatus phase={phase} account={account} />
+      <BillingStandingNotice account={account} place="billing" busy={opening('change')} onPortal={() => openPortal('change')} />
       <SettingsCard
         id="cloud-plan"
         title="Your plan"

@@ -80,10 +80,22 @@ def test_the_default_is_listed_cleared_on_sign_out_and_only_ever_my_own_device(p
     assert signed_out.status_code == 200
     listed = party.client.get("/api/devices", headers=auth(ALICE)).json()
     assert listed["default_speaker_id"] is None
+    # the person's own signed-out device: a clear refusal
+    refused = _default(party, ALICE, laptop)
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "device_signed_out"
     # null clears it
     phone = party.register(ALICE, "Phone")["device"]["id"]
     assert _default(party, ALICE, phone).status_code == 200
     assert _default(party, ALICE, None).json() == {"default_speaker_id": None}
+    # clearing again changes nothing and tells nobody again; each change was published
+    assert _default(party, ALICE, None).status_code == 200
+    from selecta.work.schema import outbox_events
+
+    with transaction(party.engine, party.workspaces[ALICE]) as conn:
+        told = conn.execute(
+            outbox_events.select().where(outbox_events.c.topic == "devices.default_speaker")
+        ).all()
+    assert [row.payload["default_speaker_id"] for row in told] == [laptop, phone, None]
 
 
 def test_the_default_needs_remote_control(party):
@@ -147,3 +159,38 @@ def test_the_sessions_speaker_comes_first_and_a_lapsed_one_is_reconnecting(party
         )
     assert catalog.music_state(workspace) == "reconnecting"
     assert catalog.search(workspace, "", None, 20) == []
+
+
+def test_two_devices_pressing_play_at_once_have_one_winner(party, on):
+    """B11: with nobody playing, two devices press Play together; the take-over is a conditional
+    write under the session lock (observed owner: nobody), so exactly one becomes the speaker and
+    the other is told playback moved."""
+    import threading
+
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    phone = party.register(ALICE, "Phone")["device"]["id"]
+    gate = threading.Barrier(2)
+    answers: dict[str, int] = {}
+
+    def press(device: str) -> None:
+        gate.wait()
+        answers[device] = party.client.post(
+            "/api/playback/take-over",
+            headers=auth(ALICE),
+            json={
+                "device_id": device,
+                "start_playing": True,
+                "require_observed_owner": True,
+                "observed_owner_id": None,
+            },
+        ).status_code
+
+    threads = [threading.Thread(target=press, args=(device,)) for device in (laptop, phone)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert sorted(answers.values()) == [200, 409], answers
+    winner = next(device for device, status in answers.items() if status == 200)
+    view = party.client.get(f"/api/playback/session?device_id={winner}", headers=auth(ALICE))
+    assert view.json()["speaker"] == "here"

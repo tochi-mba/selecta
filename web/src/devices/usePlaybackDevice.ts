@@ -4,6 +4,7 @@ import { holdWakeLock, WakeLockHold } from './wakeLock';
 import { flagOn } from '../flags';
 import { isOnline, onReconnect } from '../cloud/connection';
 import { audioTab, tabLog } from './audioTab';
+import { soundAllowedHere } from './playOn';
 
 // This browser as a playback device, and the account's one playback session (ADR-0415).
 //
@@ -233,6 +234,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   useEffect(() => () => tab.release(), [tab]);
   // another tab of this browser is the one making the sound
   const [otherTab, setOtherTab] = useState(false);
+  // F39: the audio tab went away and this tab may carry on, but only with a press here
+  const [carryOn, setCarryOn] = useState(false);
 
   useEffect(() => {
     let current = true;
@@ -514,6 +517,28 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     }
   }, [api, becomeRemote, deviceId, follow, recoverExpired, tab, workspaceId]);
 
+  // F39: while another tab of this browser makes the sound, wait for it to go away (closed,
+  // crashed, discarded: the lock frees itself). Then carry on here by itself when this tab may
+  // make sound (it has had a press and has its player), else offer "Carry on here".
+  useEffect(() => {
+    if (!otherTab) return undefined;
+    const stop = new AbortController();
+    void tab.waitFree(stop.signal).then(async (free) => {
+      if (!free || stop.signal.aborted) return;
+      const now = await poll(true);
+      setOtherTab(false);
+      if (!now || now.speaker !== 'here' || !now.session || speaking.current || now.session.state === 'stopped') { if (!speaking.current) tab.release(); return; }
+      if (speaker && now.session.state === 'playing' && soundAllowedHere()) {
+        tabLog('carrying on by itself');
+        await startSpeaking(now.session).catch(() => undefined);
+        return;
+      }
+      tabLog('offering Carry on here');
+      setCarryOn(true);
+    });
+    return () => stop.abort();
+  }, [otherTab, poll, speaker, startSpeaking, tab]);
+
   // When the page opens on the device that was the speaker, carry on or fade out as the
   // server says (it may have moved while this one was away).
   useEffect(() => {
@@ -657,6 +682,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     try {
       // the person pressed here: any other tab of this browser stops first, then this one plays
       tabLog('playHere: claiming');
+      setCarryOn(false);
       if (!(await tab.claim(true))) throw new Error('Another tab of this browser is playing. Close it, or press Play there.');
       setOtherTab(false);
       const sentAt = Date.now();
@@ -895,5 +921,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     /** cloud.offline_playback: playing on while SelectaDJ can't be reached, and what was said when that ended. */
     offline, offlineNotice, playOffline, heldVolume: () => heldVolume.current,
     /** ADR-0475 F: another tab of this browser is making the sound. */
-    otherTab };
+    otherTab,
+    /** F39: the tab that made the sound went away; a press here carries on where it was. */
+    carryOn };
 }
