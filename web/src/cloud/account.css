@@ -82,6 +82,14 @@
 .acct-notice-text { display: grid; gap: var(--space-hair); min-width: 0; font: var(--type-meta); }
 .acct-notice-text strong { font-weight: var(--weight-label); color: var(--text); }
 .acct-notice-text span { color: var(--text-soft); }
+/* a billing moment (BillingStanding.tsx): the words, then its buttons, wrapping on a phone */
+.cloud-billing-standing { margin-block-end: var(--space-3); }
+.cloud-billing-standing .acct-notice-text p { margin: 0; }
+.cloud-billing-standing-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+@media (max-width: 560px) {
+  .cloud-billing-standing-actions { width: 100%; }
+  .cloud-billing-standing-actions > * { flex: 1 1 auto; min-height: 44px; }
+}
 /* a group whose every card turned out to have nothing to show takes no room */
 .acct-group:not(:has(.acct-card, .cloud-card, .ui-card)) { display: none; }
 

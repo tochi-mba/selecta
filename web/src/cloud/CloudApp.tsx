@@ -1,5 +1,6 @@
 import { LoginRequiredError, useAuth } from '@workos-inc/authkit-react';
-import { FormEvent, lazy, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazyPage as lazy } from '../ui/staleBuild';
 import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
@@ -38,6 +39,7 @@ import { LibraryPanel } from './Library';
 import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
+import { BillingStandingNotice } from './BillingStanding';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './localFirstGate';
 import { LocalFirstLabs } from './labs/LocalFirstLabs';
@@ -709,6 +711,7 @@ export function CloudApp() {
     {account.user.suspended && (exact ? <SuspendedPanel go={goShell} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
     {problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
     <OverQuotaBanner account={account} go={goShell} />
+    {place !== PATHS.billing && <BillingStandingNotice account={account} place="shell" busy={busy('portal')} onPortal={() => void openPortal()} />}
     {renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>}
     {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
   </>;
@@ -774,6 +777,7 @@ export function CloudApp() {
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         <OverQuotaBanner account={account} go={choosePage} />
+        {account && view !== 'billing' && <BillingStandingNotice account={account} place="shell" busy={busy('portal')} onPortal={() => void openPortal()} />}
         {renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>}
         {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
         {flagOn(OFFLINE_SHELL) && <ConnectionBanner />}

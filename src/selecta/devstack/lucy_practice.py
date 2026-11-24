@@ -22,6 +22,8 @@ from selecta.persistence import transaction
 
 ENV = "SELECTA_DEV_LUCY_PRACTICE"
 WORD_SECONDS = 0.25
+NO_KEY = "practice-lucy-calls-no-ai"
+"""Stands in for a deployment key so the gateway admits practice turns; never sent anywhere."""
 
 
 class PracticeLucy:

@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { showProblem } from './toasts';
 import { Icon, IconName } from './Icon';
 import { exitGhost, usePresence } from './exitMotion';
+import { newReference, supportHref } from '../support';
+import { isChunkLoadError, StaleBuildPanel } from './staleBuild';
 export { Skeleton } from './Skeleton';
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
@@ -91,24 +93,39 @@ export function Problem({ children, retry }: { children: ReactNode; retry?: () =
   );
 }
 
-export class Section extends Component<{ name: string; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+/** A page that stopped drawing: its own frame says so and the rest of the app (the player above it
+ * included) keeps going. It offers Try again, Reload and Contact support with a short reference,
+ * and never shows the error itself. A page file a deploy removed shows the updated panel instead.
+ * `whole` is the outermost frame, around the entire app, for a crash with nothing above it. */
+export class Section extends Component<{ name: string; children: ReactNode; whole?: boolean }, { failed: boolean; reference: string; stale: boolean }> {
+  state = { failed: false, reference: '', stale: false };
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown) {
+    return { failed: true, reference: newReference(), stale: isChunkLoadError(error) };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`${this.props.name} stopped working`, error, info.componentStack);
+    // the reference goes to the console with the error, so a support copy can be matched to it
+    console.error(`${this.props.name} stopped working (reference ${this.state.reference})`, error, info.componentStack);
   }
 
   render() {
     if (!this.state.failed) return this.props.children;
+    if (this.state.stale) return <StaleBuildPanel />;
+    const { name, whole } = this.props;
+    const reference = this.state.reference;
     return (
-      <main className="page" id="main">
-        <h1 className="display small">{this.props.name} stopped working.</h1>
-        <p className="lede">Your music, mixes and anything playing are fine. This page just needs to start again.</p>
-        <button className="primary" onClick={() => this.setState({ failed: false })}>Start this page again</button>
+      <main className="page section-failed" id="main" role="alert">
+        <h1 className="display small">{whole ? 'SelectaDJ stopped working.' : `${name} stopped working.`}</h1>
+        <p className="lede">{whole
+          ? 'Your music, mixes and account are safe. Try again, or reload the page.'
+          : 'Your music, mixes and anything playing are fine. This page just needs to start again.'}</p>
+        <div className="section-failed-actions">
+          <button type="button" className="primary" onClick={() => this.setState({ failed: false })}>Try again</button>
+          <button type="button" onClick={() => window.location.reload()}>Reload</button>
+          <a className="button quiet" href={supportHref(`${whole ? 'SelectaDJ' : name} stopped working`, reference)}>Contact support</a>
+        </div>
+        <p className="hint">If you contact support, quote reference <code>{reference}</code>.</p>
       </main>
     );
   }

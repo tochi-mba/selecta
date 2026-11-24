@@ -109,3 +109,39 @@ gate.
 ---
 
 [← 07a-authentication.md](07a-authentication.md) · [Contents](README.md#chapters) · [09-lucy-ai-gateway.md →](09-lucy-ai-gateway.md)
+
+### 8.5 Telling the customer about billing moments (`billing.standing`)
+
+The server works out one billing moment per workspace (`src/selecta/billing/standing.py`) and
+sends it in `/api/account` as `billing.standing`. The app shell and Plan & billing show it as a
+calm notice (`web/src/cloud/BillingStanding.tsx`), dated in the person's own time zone:
+
+| Moment | Notice | Button |
+|---|---|---|
+| Renewal failed, 7 days of grace running | We couldn't take your last payment. Your {plan} stays until {date}. Update your card to keep it. | Update card (portal) |
+| The bank wants a payment confirmed (3D Secure, `incomplete` or `invoice.payment_action_required`) | Your bank wants you to confirm your last payment. | Confirm payment (portal) |
+| Cancelled, running to period end | Your {plan} plan ends on {date}. After that you're on Free. | Keep my plan (portal) |
+| Dropped to Free because payment failed (shown for 30 days) | Your {plan} plan ended on {date} because payment failed. Your music and mixes are still here. | none |
+
+Dismissing hides that one event in this browser for good; a new state or date shows again. A
+member who cannot manage billing is told the workspace owner can update the payment details.
+
+### 8.6 Which emails Stripe sends and which SelectaDJ sends
+
+One email per event, never two. SelectaDJ's own are in `src/selecta/notify/billing_mail.py` and
+go once each through the `emails` maintenance task.
+
+| Event | Sent by | Stripe dashboard setting (Settings, Billing, Customer emails) |
+|---|---|---|
+| Receipt and invoice for every payment | Stripe | "Successful payments": on |
+| Refund | Stripe | "Refunds": on |
+| Confirm a payment (3D Secure) | Stripe, with its hosted link | "Send a Stripe-hosted link for customers to confirm their payments when required": on |
+| Renewal failed | SelectaDJ (`billing_payment_failed`, with the grace date) | "Failed payments" (Manage failed payments, customer emails): **off** |
+| Card about to expire | Stripe | "Expiring cards": on |
+| Cancelled plan ends in 3 days | SelectaDJ (`billing_plan_ending`) | none in Stripe |
+| Plan ended (payment failed or cancelled) | SelectaDJ (`billing_plan_ended`) | "Canceled subscriptions" email, if offered: **off** |
+| Plan started or changed | SelectaDJ (`billing_plan_now`, no amounts) | none in Stripe; the receipt carries the amount and VAT |
+| Upcoming renewal reminder (yearly) | Stripe | "Upcoming renewals": on for yearly prices |
+
+The owner must set the two **off** switches before launch; until then a customer gets Stripe's
+failed-payment email and ours for the same failure.

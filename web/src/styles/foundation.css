@@ -152,4 +152,31 @@ summary::before {
   vertical-align: 0.1em;
 }
 details[open] > summary::before { transform: rotate(45deg); }
+
+/* A page that stopped drawing (ui/controls.tsx Section) and a page a deploy removed
+   (ui/staleBuild.tsx): the way out is a row of buttons that wraps on a phone. */
+.section-failed-actions,
+.stale-build-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-4); }
+.section-failed code { user-select: all; }
+/* "A new version is ready": fixed at the foot, so it never pushes the page about */
+.update-line {
+  position: fixed;
+  inset-inline: var(--space-4);
+  inset-block-end: var(--space-4);
+  z-index: var(--layer-toast);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  max-width: 34rem;
+  margin-inline: auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--edge-overlay);
+  border-radius: var(--radius);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
 @media (prefers-reduced-motion: reduce) { summary::before { transition: none; } }
