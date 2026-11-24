@@ -23,7 +23,9 @@ from selecta.persistence import db_now, transaction
 from selecta.playback import default_speaker
 from selecta.playback.schema import devices as playback_devices
 
-_MAX_PAGE_SIZE = 100
+# A library of 20,000 songs is 20 pages: the Library is waiting on the whole list (staging
+# walkthrough item 5, 30 s at 100 a page on staging). A row is a few hundred bytes.
+_MAX_PAGE_SIZE = 1000
 _MAX_AVAILABILITY_SNAPSHOT_IDS = 20_000
 # ADR-0475: a device counts as online when it was seen this recently. A device with the app
 # open reads its playback session every second or two, which keeps its last-seen time fresh.
