@@ -591,7 +591,9 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
       }
       return pb.error || 'SelectaDJ could not reach your account just now. Try again.';
     }
-    if (latest.ask_before_playing_here && owner.current !== latest.speaker_device_id) {
+    // another tab of this same browser is the speaker: the press here is the answer (ADR-0475 F)
+    const sameDevice = !!latest.speaker_device_id && latest.speaker_device_id === pb.device?.id;
+    if (latest.ask_before_playing_here && !sameDevice && owner.current !== latest.speaker_device_id) {
       // the same confirmation the playing bar asks for, as a second press
       owner.current = latest.speaker_device_id;
       return `Playing on ${latest.speaker_name ?? 'another device'}. Press play again to move it here.`;
