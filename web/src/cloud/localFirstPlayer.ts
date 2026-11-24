@@ -13,7 +13,7 @@ import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvi
 /** A scheduled seam and the two songs (by id) it joined when it was planned. */
 export type PlayedRecord = SeamRecord & { pair?: readonly [number | null, number | null] };
 import { playbackStatusText, type PlaybackStatus } from '../copy';
-import { Api, extrapolate, Position, SessionView, StartAt, usePlaybackDevice } from '../devices/usePlaybackDevice';
+import { Api, extrapolate, levelOf, Position, SessionView, StartAt, usePlaybackDevice } from '../devices/usePlaybackDevice';
 import { createEngine, type BrowserSpeaker, type Engine, type EngineState } from '../engine';
 import { workerCalibrationState, type WorkerCalibration } from '../dsp/budget';
 import { mediaDeviceId } from './ConnectMusic';
@@ -155,7 +155,11 @@ export class LocalFirstPlayer implements PlayerLike {
     // what the last press said stays until the next press replaces it
     this.facts = { ...facts, said: this.facts.said };
     this.actions = actions;
-    const sessionVolume = facts.heldVolume ?? facts.view?.session?.volume;
+    // ADR-0475 G1: the session's level is the one truth (the comfortable default until someone
+    // sets one). This player sends a level only when the person moves its own slider; it never
+    // pushes its local value over one a remote set, and leaves applying it to the speaker's
+    // follow (which rises from quiet on a new speaker), so the two never fight.
+    const sessionVolume = facts.heldVolume ?? (facts.view?.session ? levelOf(facts.view.session) : null);
     // the session has caught up with the level chosen here, or never will: it speaks again
     if (this.chosen && (sessionVolume === Math.round(this.chosen.level * 100) || Date.now() >= this.chosen.until)) this.chosen = null;
     if (!this.chosen && typeof sessionVolume === 'number' && Number.isFinite(sessionVolume)) {
@@ -163,7 +167,6 @@ export class LocalFirstPlayer implements PlayerLike {
       this.sound.muted = this.sound.volume === 0;
       if (!this.sound.muted) this.sound.lastAudibleVolume = this.sound.volume;
     }
-    if (actions.speaker) actions.speaker.setVolume(this.sound.muted ? 0 : this.sound.volume);
     this.publish();
     this.landJump();
   }
