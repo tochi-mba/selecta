@@ -23,7 +23,7 @@ from fastapi import FastAPI
 
 from selecta.api_cloud import CloudSettings, create_cloud_app
 from selecta.billing import api as billing_api
-from selecta.devstack import billing, guard, objects
+from selecta.devstack import billing, guard, lucy_practice, objects
 from selecta.devstack.rooms import LibraryCatalog, QueuePlanner
 from selecta.devstack.settings import CLIENT_ID, DevSettings
 from selecta.local_media.catalog import LocalMediaCatalog
@@ -121,6 +121,9 @@ def application() -> FastAPI:
             pepper=pepper, catalog=LocalMediaCatalog(engine), planner=BrowserPlanner(engine)
         )
     app = create_cloud_app(cloud_settings(settings), engine=engine, room_ports=ports)
+    if os.environ.get(lucy_practice.ENV) == "1":
+        # ADR-0476: walk Lucy's conversation in a browser with no AI and no spend
+        app.state.lucy_cloud_provider = lucy_practice.factory(engine)
     store = objects.DiskObjects.in_folder(settings.objects, settings.site_url)
     objects.install_routes(app, store)
     app.add_middleware(guard.LoopbackOnly)

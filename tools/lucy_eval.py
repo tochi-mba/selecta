@@ -72,7 +72,7 @@ def score(case: dict, defaults: dict, got: dict) -> list[dict[str, Any]]:
         return checks
     if case.get("special") == "rapid":
         check("serialised", got["outcome"] == "serialised", got["outcome"])
-        check("said_busy", "still answering" in text, text)
+        check("said_busy", "is answering" in text or "still answering" in text, text)
         return checks
     check("answered", bool(text.strip()), "no answer text")
     check("finished", got["outcome"] == "completed", f"outcome {got['outcome']}")

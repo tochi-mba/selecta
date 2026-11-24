@@ -43,6 +43,8 @@ from selecta.lucy.providers import (
 from selecta.persistence import new_id, transaction
 
 STOP_CHECK_SECONDS = 1.0
+LAST_ROUND = ("\n(This is your last round of work for this message: answer now, and make the "
+              "proposal if you have the songs for it.)")
 FLUSH_CHARS = 80
 FLUSH_SECONDS = 0.15
 HISTORY_MESSAGES = 200
@@ -100,10 +102,17 @@ def admit(
     )
 
 
+CALL_SECONDS = 25.0
+"""One model call's own limit, so a stalled request is retried once well inside the turn's
+limit (Free's is 60 s) instead of using all of it."""
+
+
 def default_provider(settings: gateway.ProviderSettings, plan: gateway.TurnPlan) -> Any:
     if settings.provider["kind"] == Provider.OPENAI.value:
         return OpenAICompatibleProvider(**settings.provider_args())
-    return AnthropicProvider(**settings.provider_args())
+    provider = AnthropicProvider(**settings.provider_args())
+    provider.client = provider.client.with_options(timeout=CALL_SECONDS, max_retries=1)
+    return provider
 
 
 @dataclass
@@ -511,6 +520,10 @@ async def _model_turns(
         events.emit("plan.completed", {"ok": all(ok for _c, _t, ok in outputs),
                                        "duration_ms": int((time.monotonic() - started) * 1000)},
                     plan=plan_id)
+        if cycles == limits.max_cycles - 1 and outputs:
+            # the next round is the last this message allows: say so, so it ends with an answer
+            call, text, ok = outputs[-1]
+            outputs[-1] = (call, text + LAST_ROUND, ok)
         messages += provider.results(result, outputs)
         events.state("evaluating", cycles, steps)
     return cycles, steps
@@ -529,8 +542,11 @@ def _note(name: str, arguments: Any, text: str) -> str:
         body = json.loads(text)
     except ValueError:
         return name
-    songs = body.get("songs") or (body.get("mix") or {}).get("order") or []
-    listed = ", ".join(f"{s['id']}={s['title']} - {s['artist']}" for s in songs[:12])
+    songs = _songs_in(body)
+    listed = ", ".join(
+        f"{s['id']}={s['title']} - {s['artist']}" + (f" ({s['min']} min)" if s.get("min") else "")
+        for s in songs[:12]
+    )
     if body.get("proposal"):
         return f"{name}: proposed {body['proposal']['songs']} songs"
     args = json.dumps(arguments, ensure_ascii=False)[:80] if arguments else ""
@@ -542,9 +558,15 @@ def _count_of(text: str) -> int | None:
         body = json.loads(text)
     except ValueError:
         return None
-    if isinstance(body.get("songs"), list):
-        return len(body["songs"])
-    return None
+    songs = _songs_in(body)
+    return len(songs) if songs or "songs" in body or "results" in body else None
+
+
+def _songs_in(body: dict) -> list[dict]:
+    """The songs a tool answer holds: one search, several searches, or the mix."""
+    if isinstance(body.get("results"), list):
+        return [s for one in body["results"] for s in (one.get("songs") or [])]
+    return body.get("songs") or (body.get("mix") or {}).get("order") or []
 
 
 def _error_of(text: str) -> str:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-PROMPT_VERSION = "cloud-lucy-4"
+PROMPT_VERSION = "cloud-lucy-5"
 
 INSTRUCTIONS = """You are Lucy, the assistant inside SelectaDJ, an auto DJ app. You help one \
 person with the music in their own library and with their mixes. SelectaDJ plays mixes in the \
@@ -111,16 +111,18 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "name": "search_songs",
         "description": "Find songs in the person's library by words in the title, artist or "
         "album. Use it before naming or proposing any song. Returns songs with their ids and "
-        "length in minutes (min). One search per artist or title works best.",
+        "length in minutes (min). For several artists or titles, pass them all at once in "
+        "`queries` (up to 8) instead of searching one by one.",
         "schema": {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Words to look for, e.g. an artist "
                           "name or part of a title."},
+                "queries": {"type": "array", "items": {"type": "string"}, "maxItems": 8,
+                            "description": "Several searches at once, e.g. artist names."},
                 "limit": {"type": "integer", "minimum": 1, "maximum": 25,
                           "description": "How many songs to return (default 10)."},
             },
-            "required": ["query"],
         },
     },
     {
