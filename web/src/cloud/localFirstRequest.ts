@@ -8,6 +8,7 @@ import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeSto
 import { requestsFamily } from './localFirstRequests';
 import { readCached, writeCached } from './offlineCache';
 import { canHeal, classify } from './resilientRequest';
+import { groupVersions, hereBySong, linkBySong, rememberGrouping, setBySong, whereBySong, type Grouping } from './songVersions';
 
 /** The local-first shell's request adapter (ADR-0462 "one adapter per route family").
  *
@@ -29,6 +30,11 @@ export type CatalogueSong = {
   available_on?: number;
   /** "Never play" for the account: a mix SelectaDJ builds leaves it out (it can be added by hand). */
   never?: boolean;
+  /** Another file of an earlier song (same title and artist, about the same length): that song's
+   * id. Such a row is a version, never a song of its own (songVersions.ts). */
+  duplicate_of?: number | null;
+  /** On a grouped song only: every version's id, the primary first. */
+  versions?: number[];
 };
 
 export const NOT_HERE_YET = 'SelectaDJ can’t do that in your browser yet.';
@@ -202,7 +208,8 @@ export const EMPTY_MIX: MixData = { mix: [], name: 'Current mix', can_undo: fals
 
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
 export function localFirstRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
-  let catalogue: Promise<CatalogueSong[]> | null = null;
+  let catalogue: Promise<Grouping> | null = null;
+  let lastGrouping: Grouping | null = null;
   let readAt = 0;
   // `cloud.offline_shell`: the server's answer is kept here, and served back (with this device's
   // own songs) when the server cannot be reached; a refusal or an ended sign-in still throws
@@ -235,36 +242,51 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   // One catalogue read serves every request until something changes it: a write through here
   // forgets it (below), and so does the server saying the library changed.
   let readChanges = catalogueChanges;
-  const songs = () => {
+  // ADR-0469 amendment 2: the one place the catalogue becomes songs. Every family below reads
+  // the grouped list, so a song is one row however many files of it the person has.
+  const grouped = () => {
     if (!catalogue || readChanges !== catalogueChanges || performance.now() - readAt > CATALOGUE_KEEP_MS) {
       readAt = performance.now();
       readChanges = catalogueChanges;
-      catalogue = fromServer();
+      catalogue = fromServer().then((list) => {
+        const grouping = groupVersions(list);
+        rememberGrouping(sources.workspaceId, grouping);
+        lastGrouping = grouping;
+        return grouping;
+      });
       catalogue.catch(() => { catalogue = null; });
     }
     return catalogue;
   };
+  const songs = async () => (await grouped()).songs;
+  // the playing device and the other devices, as songs rather than files
+  const holders = async () => whereBySong(await grouped(), sources.holders?.() ?? null);
+  const linkNow = () => (lastGrouping ? linkBySong(lastGrouping, sources.controller?.() ?? null) : sources.controller?.() ?? null);
+  const holdersNow = () => (lastGrouping ? whereBySong(lastGrouping, sources.holders?.() ?? null) : sources.holders?.() ?? null);
   // asked fresh with each Library read: a permission granted a moment ago shows at once
-  const availability = async (list: CatalogueSong[]): Promise<Availability> => ({
-    here: (await sources.here?.().catch(() => null)) ?? NO_AVAILABILITY.here,
-    hosted: (await sources.hosted?.(list).catch(() => null)) ?? NO_AVAILABILITY.hosted,
-    elsewhere: sources.holders?.() ?? null,
-  });
+  const availability = async (_list: CatalogueSong[]): Promise<Availability> => {
+    const grouping = await grouped();
+    lastGrouping = grouping;
+    const here = (await sources.here?.().catch(() => null)) ?? NO_AVAILABILITY.here;
+    const hosted = (await sources.hosted?.(grouping.files).catch(() => null)) ?? NO_AVAILABILITY.hosted;
+    return { here: hereBySong(grouping, here), hosted: setBySong(grouping, hosted), elsewhere: await holders() };
+  };
   const playable = async (): Promise<PlayableSong[]> => {
     const list = await songs();
     const known = await availability(list);
+    const mixable = setBySong(await grouped(), sources.mixable?.() ?? new Set());
     return list.map((song) => {
       const where = availabilityOf(song, known);
-      const elsewhere = sources.mixable?.()?.has(song.id) ?? false;
+      const elsewhere = mixable.has(song.id);
       return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' || elsewhere, never: song.never === true };
     });
   };
   // R5: a result is placed by the device playing (it plays there, it is on another device, or on none)
   const placeOf: SongPlace = (songId) => {
-    const link = sources.controller?.();
+    const link = linkNow();
     if (!link) return { rank: 0, where: null };
     if (speakerHolds(link, songId)) return { rank: 0, where: playsOn(link.speakerName) };
-    const where = sources.holders?.()?.(songId);
+    const where = holdersNow()?.(songId);
     if (where?.online.length) return { rank: 1, where: `Only on ${where.online[0]}` };
     if (where?.before.length) return { rank: 1, where: `On ${where.before[0]}, not open now` };
     return { rank: where ? 2 : 1, where: where ? 'On no device right now' : notOnSpeaker(link.speakerName).replace(/:.*$/, '') };
@@ -281,7 +303,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   }) : null;
   // requests join the current recipe through the mix routes above, so they need the store too
   const requests = sources.recipes && sources.workspaceId
-    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, controller: sources.controller, holders: sources.holders, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
+    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, controller: sources.controller ? linkNow : undefined, holders: sources.holders ? holdersNow : undefined, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);
@@ -345,18 +367,26 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       catalogue = null;
       return {};
     };
+    // "Never play" is about the song: every version of it is set, each with what it was
+    const everyVersion = async (entries: { id: number; expected: boolean }[]) => {
+      const grouping = await grouped();
+      const rawNever = new Map(grouping.files.map((file) => [file.id, file.never === true]));
+      return entries.flatMap((entry) => grouping.versionsOf(entry.id).map((id) => ({ id, expected: rawNever.get(id) === true })));
+    };
     const toggle = route.match(/^\/songs\/(\d+)\/never$/);
     if (toggle) {
       const id = Number(toggle[1]);
       return (async () => {
         const current = (await songs()).find((song) => song.id === id)?.never === true;
-        return write(!current, [{ id, expected: current }]);
+        const entries = await everyVersion([{ id, expected: current }]);
+        return write(!current, entries);
       })();
     }
     if (route !== '/library/batch') return undefined;
     const body = JSON.parse(String(init?.body ?? '{}')) as { action?: string; entries?: { id: number; expected: unknown }[] };
     if (body.action !== 'never' && body.action !== 'allow') return undefined;
-    return write(body.action === 'never', (body.entries ?? []).map((entry) => ({ id: entry.id, expected: entry.expected === true })));
+    return everyVersion((body.entries ?? []).map((entry) => ({ id: entry.id, expected: entry.expected === true })))
+      .then((entries) => write(body.action === 'never', entries));
   };
   return adapted as Request;
 }
