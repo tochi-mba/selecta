@@ -9,8 +9,6 @@ measurements are exempt; so are writes to the audit log, which are refused and a
 tampering by their own route.
 """
 
-from __future__ import annotations
-
 import asyncio
 import re
 from collections.abc import Callable
