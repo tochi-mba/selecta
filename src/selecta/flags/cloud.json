@@ -476,6 +476,7 @@
         "GET /api/room-requests",
         "POST /api/room-requests/{request_id}/played",
         "POST /api/room-requests/{request_id}/dismiss",
+        "POST /api/room-requests/{request_id}/waiting",
         "POST /api/guest/join",
         "GET /api/guest/rooms/{room_id}",
         "GET /api/guest/rooms/{room_id}/search",
