@@ -364,6 +364,25 @@ def history(
     ]
 
 
+def rate(conn: Connection, workspace_id: str, message_id: str, rating: str) -> str | None:
+    """Keep the person's rating on one of Lucy's answers; the conversation it belongs to."""
+    row = conn.execute(
+        sa.select(messages.c.conversation_id, messages.c.meta)
+        .where(messages.c.workspace_id == workspace_id)
+        .where(messages.c.id == message_id)
+        .where(messages.c.role == "assistant")
+    ).first()
+    if row is None:
+        return None
+    conn.execute(
+        messages.update()
+        .where(messages.c.workspace_id == workspace_id)
+        .where(messages.c.id == message_id)
+        .values(meta={**(row.meta or {}), "rating": rating})
+    )
+    return row.conversation_id
+
+
 def snapshot_messages(
     conn: Connection, workspace_id: str, conversation_id: str, upto: int | None = None
 ) -> list[dict[str, Any]]:
@@ -384,7 +403,9 @@ def snapshot_messages(
         found.append({
             "id": row.id, "seq": int(row.seq), "role": row.role, "turn": row.turn_id,
             "run": row.run_id, "content": content, "status": row.status,
-            "revision": row.revision, "meta": {}, "created_at": iso(row.created_at),
+            "revision": row.revision,
+            "meta": {"rating": (row.meta or {}).get("rating")} if row.role == "assistant" else {},
+            "created_at": iso(row.created_at),
         })
     return found
 

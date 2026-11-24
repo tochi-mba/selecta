@@ -110,7 +110,8 @@
         "POST /api/lucy-cloud/approvals",
         "POST /api/lucy-cloud/commits",
         "GET /api/lucy-cloud/commits/{key}",
-        "GET /api/lucy-cloud/memory"
+        "GET /api/lucy-cloud/memory",
+        "POST /api/lucy-cloud/messages/{message}/rating"
       ],
       "surfaces": ["lucy"],
       "modes": ["cloud"],
