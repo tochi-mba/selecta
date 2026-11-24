@@ -26,7 +26,7 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
   // ADR-0475 R6: where the music is, when that is another of this person's devices
   const holder = useContext(HolderContext);
   return (
-    <header className="page-header">
+    <header className="page-header" data-remote={holder ? '' : undefined}>
       <div className="page-header-text">
         <h1 className="display small">Library</h1>
         {/* I83: with another device holding music, the Library is the whole account's */}

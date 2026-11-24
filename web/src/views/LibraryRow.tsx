@@ -1,4 +1,4 @@
-import { memo, useContext } from 'react';
+import { memo, useContext, useState } from 'react';
 import { HolderContext, type MusicHolder } from '../devices/controller';
 import { LibrarySong } from '../api';
 import { clock, etaWords } from '../lib';
@@ -89,12 +89,14 @@ export const LibraryRow = memo(function LibraryRow({
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
   const holder = useContext(HolderContext);
+  const [added, setAdded] = useState(false);
   const title = song.title ?? 'Untitled';
   const name = duplicate ? `${title} (song ${song.id})` : title;
   const spoken = duplicate || !sharedTitle ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
   const queued = linePlace >= 0;
   if (browser) {
     const artist = song.artist ?? 'Unknown artist';
+    const remoteNext = !!holder && playing && facts.canAdd && song.availability !== 'here' && song.availability !== 'hosted';
     const chip = facts.setAside || song.never
       ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
       : song.availability && HERE[song.availability]
@@ -122,7 +124,12 @@ export const LibraryRow = memo(function LibraryRow({
           {chip.why && chip.kind !== 'ready' && <small className="lw-why">{chip.why}</small>}
         </span>
         <div className="song-actions lw-actions">
-          {facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
+          {/* I84: on a remote while another device plays, the row's one tap puts the song next
+              there, says so for a screen reader, and confirms in the row */}
+          {remoteNext
+            ? <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={inMix || searching} run={async () => { await actions.add(song, true); setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
+            : facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
+          {added && <span className="lw-added" role="status">Added to {holder?.name}’s mix</span>}
           {((!facts.setAside && neverFlag) || facts.canAdd) && (
             <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
               <Action role="menuitem" run={() => actions.open(song.id)}>Song details</Action>
