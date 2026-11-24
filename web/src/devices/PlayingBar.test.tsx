@@ -101,9 +101,11 @@ describe('overlapping device polls (AV-0419-05)', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Play here' })).toBeEnabled());
     await userEvent.click(screen.getByRole('button', { name: 'Play here' }));
     await waitFor(() => expect(reads).toBe(1));
-    // Device registration's reconnect finishes after the click and starts a newer poll.
+    // Device registration's reconnect finishes after the click. Its own look now waits for the
+    // click's look instead of starting on top of it, so the button's answer cannot be overtaken.
     finishReconnect({ action: 'stop_moved', session, message: null });
-    await waitFor(() => expect(reads).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(reads).toBe(1);
     finishClickRead(elsewhere);
     expect(await screen.findByRole('alertdialog', { name: 'Move playback here?' })).toBeVisible();
     expect(takeover).not.toHaveBeenCalled();
