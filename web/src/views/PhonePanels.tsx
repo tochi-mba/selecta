@@ -73,8 +73,8 @@ export function TransitionPicture({ previous, item, names, live, waveformOf }: {
         {family === 'cut' && <line className="pe-picture-cut" x1="50" x2="50" y1="0" y2="64" />}
       </svg>
       <figcaption>
-        <span><SongMotif songId={previous.song_id} /> End of <b dir="auto">{previous.title}</b></span>
-        <span><SongMotif songId={item.song_id} /> Start of <b dir="auto">{item.title}</b></span>
+        <span>End of <b dir="auto">{previous.title}</b></span>
+        <span>Start of <b dir="auto">{item.title}</b></span>
       </figcaption>
     </figure>
   );
@@ -123,15 +123,13 @@ export function LiveTransitionPanel(props: {
       <p className="pe-panel-now">
         <Status kind={words.kind}>{chosen !== 'auto' && live && seam.state.status === 'none' && !played ? nameOf(chosen) : words.headline}</Status>
       </p>
-      {words.detail && <p className="hint">{words.detail}</p>}
       {played?.fellBack && <p className="warn pe-panel-fix">This one fell back. Choose another move below, or let SelectaDJ pick.</p>}
       <div className="pe-panel-row">
-        <button type="button" className="primary" onClick={onHear}><Icon name="play" /> Hear it</button>
+        <button type="button" className="primary" aria-description={hearWords} onClick={onHear}><Icon name="play" /> Hear it</button>
         {pickable.length > 0 && (chosen !== 'auto'
           ? <Action run={() => choose('auto')}>Try SelectaDJ’s pick</Action>
           : mine && <Action run={() => choose(mine)}>Back to {nameOf(mine)}</Action>)}
       </div>
-      <p className="hint">{hearWords}</p>
       {pickable.length > 0 && (
         <fieldset className="pe-moves">
           <legend>How it moves into {item.title}</legend>
@@ -145,6 +143,7 @@ export function LiveTransitionPanel(props: {
           {pickable.find(([, , reason]) => reason)?.[2] && <p className="hint">{pickable.find(([, , reason]) => reason)?.[2]}</p>}
         </fieldset>
       )}
+      <p className="hint">{hearWords}{words.detail ? ` ${words.detail}` : ''}</p>
       {stems?.offer(chosen)}
       {stems?.readiness(playedKey(previous.song_id, item.song_id))}
       {problem && <p className="warn" role="alert">{problem}</p>}

@@ -68,7 +68,7 @@
 .pe-actions > * { min-height: var(--control-height); }
 .pe-actions > .primary { flex: 1 1 12rem; display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
 .pe-editor.is-panes .pe-actions > .primary { flex: 0 1 22rem; }
-.pe-more { display: inline-flex; align-items: center; gap: var(--icon-gap); }
+.pe-more { display: inline-flex; align-items: center; gap: var(--icon-gap); white-space: nowrap; }
 
 /* ---------- the mix strip ---------- */
 .pe-map {
@@ -205,7 +205,6 @@
 }
 .pe-editor.is-sheet .pe-song-open .song-motif { display: none; }
 .pe-song-open .song-motif, .pe-panel-song .song-motif { flex: none; width: var(--space-6); height: var(--space-6); }
-.pe-picture .song-motif { flex: none; width: var(--icon-size); height: var(--icon-size); }
 .pe-tag { font-weight: var(--weight-label); color: var(--playing); }
 .pe-song .request-tag { grid-column: 2; justify-self: start; margin-block-end: var(--space-2); }
 .pe-icon-button, .pe-handle {
@@ -269,6 +268,7 @@
 /* where a carried song will land */
 .pe-drop-line {
   position: absolute;
+  z-index: var(--layer-header);
   inset-inline: 0;
   height: var(--marker);
   margin-block-start: calc(-1 * var(--space-hair));
@@ -403,14 +403,16 @@
   font: var(--type-caption);
   color: var(--text-soft);
 }
-.pe-picture figcaption span { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
-.pe-picture figcaption span:last-child { text-align: end; justify-content: flex-end; }
-.pe-picture figcaption b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-picture figcaption span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-picture figcaption span:last-child { text-align: end; }
 
 /* ---------- the sheets ---------- */
+/* a sheet rises from the bottom at every width; on a wide window it is a column, not the whole width */
+.overlay.pe-sheet { align-items: flex-end; justify-content: center; --overlay-travel: translateY(100%); }
 .overlay.pe-sheet .overlay-panel {
-  width: 100%;
+  width: min(100%, 44rem);
   max-width: none;
+  border-radius: var(--radius) var(--radius) 0 0;
   transition: height var(--motion-overlay) var(--motion-ease), transform var(--motion-overlay) var(--motion-ease);
   padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
 }
@@ -463,3 +465,7 @@
   .pe-title { -webkit-line-clamp: 1; font-size: var(--text-lg); }
   .pe-map { position: static; margin-inline: 0; padding-inline: 0; border-bottom: 0; }
 }
+
+/* adding songs in a sheet: the sheet is the card, and its Close is the way out */
+.pe-sheet .adder { padding: 0; border: 0; background: none; box-shadow: none; }
+.pe-sheet .adder > .row:first-child > button { display: none; }

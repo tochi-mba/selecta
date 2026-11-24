@@ -41,7 +41,6 @@
     "editor.phone_layout": {
       "label": "Editor for every screen",
       "about": "The mix as a list of songs and the transitions between them, with the opened transition in a sheet on a phone and beside the list on a tablet or wider screen. Without it, the editor keeps its earlier layout at every size.",
-      "default": false,
       "requires": ["editor"],
       "surfaces": ["edit"],
       "words": ["Mix actions", "Hear it"]
