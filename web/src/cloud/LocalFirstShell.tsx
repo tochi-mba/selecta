@@ -40,7 +40,7 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { HolderContext, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
+import { bestHolder, HolderContext, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { ControllerListen } from '../devices/ControllerListen';
 import { soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
@@ -66,6 +66,7 @@ import { profilesBySong, startTonalProfiler, tonalStore } from './tonalProfiles'
 import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
+import { useAccountMix } from './useAccountMix';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -242,9 +243,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // further down each render, once the session is known; read by the adapter at each press.
   const controllerLink = useRef<ControllerLink | null>(null);
   const whereHeld = useRef<WhereHeld | null>(null);
+  // ADR-0475 R8: songs the device R1 would choose holds now, which a mix made here may use
+  const mixableIds = useRef<ReadonlySet<number> | null>(null);
   const sources = useMemo<AvailabilitySources>(() => ({
     controller: () => controllerLink.current,
     holders: () => whereHeld.current,
+    mixable: () => mixableIds.current,
     here: async () => {
       const opened = await openStore();
       const found = new Map<number, 'here' | 'reauth' | 'reconnect'>();
@@ -463,12 +467,21 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     playWaiting.current = null;
     void player.playFrom(waiting.from, waiting.offset).finally(waiting.done);
   }, [data.mix, player]);
+  // set each render below: what Play does when another device makes the sound; null plays here
+  const soundElsewhere = useRef<(() => void) | null>(null);
+  const hereOnPurpose = useRef(false);
   const shellPlayer = useMemo(() => new Proxy(player, {
     get(target, key) {
       if (key === 'playFrom') {
-        return (from: number, offset?: number) => (mixJustSet.current
+        return (from: number, offset?: number) => {
+          // ADR-0475 R8: the sound is made on another device, so Play never starts it here
+          const away = hereOnPurpose.current ? null : soundElsewhere.current;
+          hereOnPurpose.current = false;
+          if (away) { away(); return Promise.resolve(); }
+          return mixJustSet.current
           ? new Promise<void>((done) => { playWaiting.current = { from, offset, done }; })
-          : target.playFrom(from, offset));
+          : target.playFrom(from, offset);
+        };
       }
       const value = Reflect.get(target, key, target) as unknown;
       return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(target) : value;
@@ -560,6 +573,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     }
     if (!pressed && !soundAllowedHere()) { setAskedToPlay(ask); return 'needs_gesture'; }
     setMixData(mix);
+    hereOnPurpose.current = true;
     void shellPlayer.playFrom(0);
     return 'starting';
   }, [recipes, request, setMixData, shellPlayer, sources]);
@@ -608,10 +622,29 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       const at = remote.session.song_index;
       const offset = remote.positionMs() / 1000;
       setMixData({ ...data, mix: remoteMix });
+      hereOnPurpose.current = true;
       void shellPlayer.playFrom(at, offset);
     },
     now: playback.serverNow(),
   } : null;
+  // ADR-0475 R8: a mix made here when another device makes the sound. With a speaker playing
+  // elsewhere, the new mix is offered to it (Play on {speaker} now, or Later); with none and no
+  // music here, Play asks the device R1 chooses to play it.
+  const bestHere = on('devices.remote_control') && holdings.devices ? bestHolder(holdings.devices, playback.device?.id ?? null) : null;
+  mixableIds.current = bestHere && bestHere.songs > (status?.counts.ready ?? 0) ? holdings.ids.get(bestHere.device_id) ?? null : null;
+  const speakerElsewhere = remote && remote.view.speaker === 'elsewhere' && playback.view?.speaker_device_id
+    ? { device_id: playback.view.speaker_device_id, name: playback.view.speaker_name ?? 'the other device' } : null;
+  const playsOn = speakerElsewhere ? { name: speakerElsewhere.name, now: false } : !followsHere && bestHere ? { name: bestHere.name, now: true } : undefined;
+  const accountMix = useAccountMix({
+    recipes, request, refreshMix, setMixData,
+    audibleHere: playback.view?.speaker === 'here' && now.phase !== 'idle',
+    playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
+    askToPlay: (device, mixId) => void playOn.ask(device, mixId),
+  });
+  soundElsewhere.current = !on('devices.remote_control') ? null
+    : speakerElsewhere ? () => accountMix.offerLater(speakerElsewhere)
+      : !followsHere && bestHere ? () => { void playOn.ask(bestHere, recipes.current()); navigate('/listen'); }
+        : null;
   const askedBanner = askedToPlay && (
     <p className="asked-to-play" role="alert" data-testid="asked-to-play">
       {askedToPlay.asker_name} asked to play here. Press Play to allow sound from this tab.
@@ -697,8 +730,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false, waveformOf,
     startedAMix: (savedMixes ?? 0) > 0,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
+    playOn: playsOn,
   };
   const song = data.mix[now.position];
+  const mixReady = Math.max(status?.counts.ready ?? 0, mixableIds.current?.size ?? 0);
   const localExport: ReactNode = null;
   // Ctrl K, the single keys and their help, for what this shell really has (W5's server-free
   // subset); the media keys and what the OS shows as playing drive the browser player.
@@ -763,7 +798,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         return <CloudLibrary shared={shared} connected={connected} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
       case 'mixes':
         if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={now.phase} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
-        return <>{(status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (
+        // R8: a device with little or no music makes mixes from the songs the device R1 chooses holds
+        return <>{mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
           <MixesEmpty
             current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
             connected={connected}
@@ -846,7 +882,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
             {roomAdd.onDevice > 0 && <span className="room-open-waiting" data-testid="room-on-device">{countOf(roomAdd.onDevice, 'request')} waiting on a device</span>}
           </a>
         ) : undefined}
-        banner={<>{askedBanner}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{askedBanner}{accountMix.banner}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section></HolderContext.Provider>
