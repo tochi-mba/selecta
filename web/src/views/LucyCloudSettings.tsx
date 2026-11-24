@@ -24,6 +24,16 @@ export type CloudLucy = {
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
+/** A failure in words a person can use: a server's bare "Internal Server Error" (or no words at
+ * all) said nothing, so it is said plainly; a reason the server gave on purpose is kept. */
+export function plainProblem(error: unknown): string {
+  const message = error instanceof Error ? error.message.trim() : '';
+  if (!message || /^(internal server error|bad gateway|service unavailable|gateway timeout|not found)\.?$/i.test(message)) {
+    return 'SelectaDJ couldn’t do that just now. Try again in a moment.';
+  }
+  return message;
+}
+
 function resetDate(epoch: number | null) {
   if (!epoch) return '';
   return new Date(epoch * 1000).toLocaleDateString(userLocale(), { day: 'numeric', month: 'short' });
@@ -64,14 +74,22 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
   const asked = useRef(request);
   asked.current = request;
   const live = useRef(true);
-  const load = useCallback(async () => {
+  const load = useCallback(async (retried = false) => {
     setProblem('');
     try {
       const next = await asked.current<CloudLucy>('/account/lucy');
       if (!live.current) return;
       setStatus(next); setEnabled(next.enabled); setPhases(next.phases); setPrivacy(next.privacy);
+      // Try again goes away once the settings are here, and the keyboard's focus went with it to
+      // the top of the page: it lands on the card's title instead
+      if (retried) window.requestAnimationFrame(() => {
+        const title = document.getElementById('lucy-cloud-title');
+        if (!title || document.activeElement !== document.body) return;
+        title.tabIndex = -1;
+        title.focus();
+      });
     } catch (error) {
-      if (live.current) setProblem((error as Error).message || 'Check your connection.');
+      if (live.current) setProblem(plainProblem(error));
     }
   }, []);
   useEffect(() => {
@@ -85,7 +103,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       <SettingsCard id="lucy-cloud" className="lucy-settings" title="Lucy" about="Whether to use Lucy, and what it may share." busy={!problem}>
         {problem
           // a way on from here: without it the only way to try again was to reload the page
-          ? <Notice tone="danger" role="alert" action={<Action run={load} working="Trying again…">Try again</Action>}><strong>Lucy’s settings could not be loaded.</strong> <span>{problem}</span></Notice>
+          ? <Notice tone="danger" role="alert" action={<Action run={() => load(true)} working="Trying again…">Try again</Action>}><strong>Lucy’s settings could not be loaded.</strong> <span>{problem}</span></Notice>
           : <Skeleton variant="rows" lines={3} label="Loading Lucy’s settings" />}
       </SettingsCard>
     );
@@ -104,7 +122,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       setStatus(next); setEnabled(next.enabled); setPhases(next.phases); setPrivacy(next.privacy);
       // said once, in the line beside the button (a toast as well was the same news twice)
       setSaved('Saved.');
-    } catch (error) { setProblem((error as Error).message); }
+    } catch (error) { setProblem(plainProblem(error)); }
     finally { setSaving(false); }
   };
 
