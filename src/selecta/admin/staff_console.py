@@ -21,7 +21,7 @@ from sqlalchemy.engine import Connection
 
 from selecta.admin import alerts, console_reads, pages, safety, tiers
 from selecta.admin.schema import BANNER_LEVELS, platform_alerts, staff_preferences, status_banners
-from selecta.authz import assignments, audit, delayed
+from selecta.authz import assignments, audit, delayed, permissions
 from selecta.authz.check import Actor, active_assignments, authorize
 from selecta.authz.roles import ROLE_PERMISSIONS, StaffRole
 from selecta.authz.schema import audit_events, role_assignments
@@ -78,9 +78,11 @@ def me(conn: Connection, actor: Actor) -> dict[str, Any]:
         "can_write": any(spec.tier is not tiers.Tier.SAFE and spec.permission in out["permissions"]
                          for spec in tiers.ACTIONS.values()),
         "actions": tiers.as_json(),
-        "role_matrix": {role.value: {"title": role.title,
+        "role_matrix": {role.value: {"title": role.title, "purpose": ROLE_PURPOSE[role],
+                                     "cannot": ROLE_CANNOT[role],
                                      "permissions": sorted(ROLE_PERMISSIONS[role])}
                         for role in StaffRole},
+        "permission_info": {p.name: p.description for p in permissions.PERMISSIONS.values()},
         "preferences": preferences(conn, actor),
     })
     return out
@@ -179,7 +181,8 @@ def assign_role(conn: Connection, actor: Actor, *, user_id: str, role: str, scop
                 reason: str, expires_at: float | None, intent: safety.Intent) -> dict[str, Any]:
     authorize(conn, actor, "security.roles.assign", ResourceRef("role_assignment", user_id))
     safety.guard(conn, actor, "role.assign", intent,
-                 current_version=_person_version(conn, user_id), target=_email(conn, user_id))
+                 current_version=_person_version(conn, user_id) if intent.version else None,
+                 target=_email(conn, user_id))
     made = assignments.assign_role(conn, actor, user_id=user_id, role=role, reason=reason,
                                    scope=Scope.parse(scope), expires_at=expires_at)
     safety.record(conn, actor, "role.assign", resource_type="role_assignment",
@@ -196,7 +199,7 @@ def revoke_role(conn: Connection, actor: Actor, assignment_id: str, *, reason: s
                   else "security.roles.assign")
     authorize(conn, actor, permission, ResourceRef("role_assignment", found.user_id))
     safety.guard(conn, actor, "role.revoke", intent,
-                 current_version=_person_version(conn, found.user_id),
+                 current_version=(_person_version(conn, found.user_id) if intent.version else None),
                  target=_email(conn, found.user_id))
     done = assignments.revoke_assignment(conn, actor, assignment_id, reason=reason)
     safety.record(conn, actor, "role.revoke", resource_type="role_assignment",
@@ -209,7 +212,8 @@ def propose_owner(conn: Connection, actor: Actor, *, user_id: str, reason: str,
                   intent: safety.Intent) -> delayed.DangerousAction:
     authorize(conn, actor, "security.owners.assign", ResourceRef("role_assignment", user_id))
     safety.guard(conn, actor, "owner.propose", intent,
-                 current_version=_person_version(conn, user_id), target=_email(conn, user_id))
+                 current_version=_person_version(conn, user_id) if intent.version else None,
+                 target=_email(conn, user_id))
     action = assignments.propose_owner(conn, actor, user_id=user_id, reason=reason)
     safety.record(conn, actor, "owner.propose", resource_type="role_assignment",
                   resource_id=user_id, workspace_id=None, reason=reason, action_id=action.id)

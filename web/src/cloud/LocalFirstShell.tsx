@@ -60,18 +60,21 @@ import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, onboardingPutOff, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
-import { StorageCard } from './StorageCard';
 import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
 import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
-import { profilesBySong, startTonalProfiler, tonalStore } from './tonalProfiles';
+import { profilesBySong, provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
+import { waveformFor } from './sharedWaveforms';
 import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
 import { useAccountMix } from './useAccountMix';
+import { MixProblem, StatusProblem, ThisDevice } from './localFirstParts';
+import { setTabBusy } from './accountTabs';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
+import { ChangedFromLine } from '../devices/ChangedFromLine';
 import { PlayNoticeLine } from '../devices/PlayNoticeLine';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
@@ -250,7 +253,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const offlineShell = on('cloud.offline_shell');
   // where the library shown came from: null from the server, or this device's kept copy
   const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
-  const tonal = useMemo(() => tonalStore(workspaceId), [workspaceId]);
+  const sharedDerived = on('cloud.content_cache');
+  const tonal = useMemo(() => tonalStore(workspaceId, sharedDerived ? { held: async () => provenHashes(await (await openStore()).all()) } : undefined), [workspaceId, sharedDerived, openStore]);
   const roomsHere = on('rooms') && !account.feature_locks.rooms;
   // ADR-0475: the device that is playing when it is not this one, for the request adapter. Set
   // further down each render, once the session is known; read by the adapter at each press.
@@ -472,18 +476,16 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const waveformOf = useCallback((songId: number) => {
     let made = waveforms.current.get(songId);
     if (!made) {
-      made = (async () => {
-        const track = await resolveTrack(songId);
-        if (!track || typeof OfflineAudioContext === 'undefined') return null;
-        const decoded = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(await track.data());
-        return peaksFrom(decoded);
-      })().catch(() => null);
+      made = waveformFor(songId, {
+        resolve: resolveTrack, openStore, shared: sharedDerived,
+        decode: async (bytes) => peaksFrom(await new OfflineAudioContext(1, 1, 44100).decodeAudioData(bytes)),
+      }).catch(() => null);
       waveforms.current.set(songId, made);
       // a song not readable yet (not connected this visit) is tried again next time
       void made.then((peaks) => { if (!peaks) waveforms.current.delete(songId); });
     }
     return made;
-  }, [resolveTrack]);
+  }, [resolveTrack, openStore, sharedDerived]);
   // Make a Mix sets the new mix and asks to play it in the same breath (local mode's player reads
   // the mix from its server). Here the engine learns the mix from the next render, so a play asked
   // for straight after a new mix waits for that render instead of playing the old one.
@@ -602,7 +604,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       return 'needs_music';
     }
     if (!pressed && !soundAllowedHere()) { setAskedToPlay(ask); return 'needs_gesture'; }
+    // another device became the speaker meanwhile (its own Play here instead): stand down
+    if ((await playback.refreshSession())?.speaker === 'elsewhere') return 'declined';
     setMixData(mix);
+    player.startFreeOnce = true;
     hereOnPurpose.current = true;
     void shellPlayer.playFrom(0);
     return 'starting';
@@ -762,6 +767,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   }, [api, workspaceId, request, setMixData, roomsPlace, requestsOn]);
   const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
   const roomWaiting = room ? room.toApprove : 0;
+  // R12: what a sign-out in any tab of this browser would stop, answered from here
+  setTabBusy({ playing: playback.isSpeaker() && now.phase === 'playing', room: !!room, importing: importLive.phase === 'running' });
   const roomShown = useRoomLive();
   // "N requests to add" counts only what the Requests list can add now; the rest are on the way
   const roomAdd = roomShown && requestsOn ? addable(roomShown.coming, songRequests.requests) : { ready: room?.toAdd ?? 0, onTheWay: 0, onDevice: 0 };
@@ -931,7 +938,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
             {roomAdd.onDevice > 0 && <span className="room-open-waiting" data-testid="room-on-device" title={`${countOf(roomAdd.onDevice, 'request')} waiting on another device`}>{roomAdd.onDevice} waiting on a device</span>}
           </a>
         ) : undefined}
-        banner={<>{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{playback.view?.speaker === 'here' && <ChangedFromLine change={playback.changedFrom} nameOf={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null} />}{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section></HolderContext.Provider>
@@ -948,44 +955,5 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     </PlayedTransitions.Provider>
     </RequestsContext.Provider>
     </RequestContext.Provider>
-  );
-}
-
-/** More > This device: the music connected here and the storage it uses (workspace extras). */
-function ThisDevice({ openStore, children }: { openStore: () => Promise<MediaStore>; children: ReactNode }) {
-  const [degraded, setDegraded] = useState(false);
-  useEffect(() => {
-    let live = true;
-    void openStore().then((opened) => { if (live) setDegraded(opened.degraded); }).catch(() => undefined);
-    return () => { live = false; };
-  }, [openStore]);
-  return (
-    <main className="page" id="main">
-      <h1 className="display small">This device</h1>
-      <StorageCard degraded={degraded} />
-      {children}
-    </main>
-  );
-}
-
-/** The library could not be opened (cloud.offline_shell): plain words and one way on. */
-function StatusProblem({ words, onRetry }: { words: string; onRetry: () => void }) {
-  return (
-    <div className="stack" role="alert">
-      <p>SelectaDJ couldn’t open your library. {words}</p>
-      <div><button type="button" onClick={onRetry}>Try again</button></div>
-    </div>
-  );
-}
-
-/** The current mix could not be read (cloud.offline_shell): never shown as an empty mix. */
-function MixProblem({ onRetry }: { onRetry: () => void }) {
-  return (
-    <main className="page" id="main">
-      <div className="stack" role="alert">
-        <p>SelectaDJ couldn’t load your mix. It is still saved; try again, or wait for the connection to come back.</p>
-        <div><button type="button" onClick={onRetry}>Try again</button></div>
-      </div>
-    </main>
   );
 }

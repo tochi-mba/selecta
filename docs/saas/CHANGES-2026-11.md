@@ -1,6 +1,6 @@
 # What changed in November 2026
 
-*For the owner, in plain words. Covers pull requests #127 to #134 (#134 still open). The details
+*For the owner, in plain words. Covers pull requests #127 to #134, and #135 as it lands. The details
 live in the chapters linked; this page says what is different for a person using SelectaDJ, and
 ends with everything that needs you.*
 
@@ -66,6 +66,11 @@ ends with everything that needs you.*
 - Download my data now includes saved mixes, the current mix and the library's song details.
 - Settings like theme and motion are kept as your own choices only, so better defaults reach you,
   and Interface has **Reset to defaults**. The starting "Personal" workspace can be renamed once.
+
+## The local app
+
+- Songs in folders deeper than Windows' old 260-character limit are now found, read and played
+  (#135). Nothing already in the library changes.
 
 ## Staff console
 

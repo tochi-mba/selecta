@@ -1,6 +1,8 @@
 import { SettingsCard } from './AccountLayout';
 import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { clearEverythingOnDevice, forgetWorkspaceOnDevice } from './deviceData';
+import { flagOn } from '../flags';
+import { FingerprintLog } from './FingerprintLog';
 
 // This browser's copy of SelectaDJ data (ADR-0469, flag `cloud.local_media`). Signing out keeps
 // it so coming back is instant; these two actions let it go on purpose. Neither touches the
@@ -60,6 +62,7 @@ export function DeviceDataCard({ workspaceId, onCleared }: { workspaceId: string
           <div className="cloud-actions"><button ref={keep} disabled={working} onClick={() => setAsking(null)}>Keep it</button><button className="destructive" disabled={working} aria-busy={working || undefined} onClick={() => void run('everything')}>{working ? 'Clearing…' : 'Clear everything'}</button></div>
         </div>
       )}
+      {flagOn('cloud.content_cache') && <FingerprintLog workspaceId={workspaceId} />}
     </SettingsCard>
   );
 }
