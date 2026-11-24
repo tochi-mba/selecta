@@ -91,9 +91,9 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
     void remote.seekTo(session.song_index, ms);
   });
   const volume = useRelease((percent) => {
-    setLevel({ percent, seq: session.seq });
-    sentLevels.current.add(percent);
-    void remote.setVolume(percent);
+    // held until the answer says which state the press made
+    setLevel({ percent, seq: Number.MAX_SAFE_INTEGER });
+    void remote.setVolume(percent).then(() => setLevel((held) => (held && held.percent === percent ? { percent, seq: remote.sentSeq() || session.seq + 1 } : held)));
   });
   // G1: while dragging, the speaker follows about ten times a second; the final value always goes
   const sentAt = useRef(0);
@@ -101,8 +101,6 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
     volume.move(percent);
     if (Date.now() - sentAt.current < VOLUME_EVERY_MS) return;
     sentAt.current = Date.now();
-    setLevel({ percent, seq: session.seq });
-    sentLevels.current.add(percent);
     void remote.setVolume(percent);
   };
 
@@ -113,13 +111,9 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
   // G50: the level set here stands until the session reports it (or the wait runs out), so a
   // late answer never moves the slider back under the finger
   const shownVolume = volume.dragged ?? (level ? level.percent : reportedVolume);
-  // ...or until the session reports a level this remote never sent: another device changed it,
-  // and that wins (two remotes dragging settle on the same value)
-  const sentLevels = useRef(new Set<number>());
-  useEffect(() => {
-    // only a state newer than the one the level was set on can say another device changed it
-    if (level && (reportedVolume === level.percent || (session.seq > level.seq && !sentLevels.current.has(reportedVolume)))) { setLevel(null); sentLevels.current.clear(); }
-  }, [level, reportedVolume, session.seq]);
+  // ...that is, until the session reaches the state this level's press made (or a newer one,
+  // where another device's level wins: two remotes dragging settle on the same value)
+  useEffect(() => { if (level && session.seq >= level.seq) setLevel(null); }, [level, session.seq]);
   // said about the speaker, by name: this device cannot play its check tone
   const sound = soundWords(view, speakerOutput(session));
   const state = stateWords(view, session);
