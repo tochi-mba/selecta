@@ -32,21 +32,32 @@ export type CatalogueSong = {
 
 export const NOT_HERE_YET = 'SelectaDJ can’t do that in your browser yet.';
 const PAGE = 100;
-/** Enough for a large personal library; the catalogue pages at 100. */
-const MAX_PAGES = 200;
+/** How long one catalogue read is kept. A write through this adapter (`/local-media`, Never play)
+ * or a library event from the server (`CATALOGUE_CHANGED_EVENT`) forgets it at once, so this only
+ * bounds how long a change made on another device can go unseen. It was 3 s, which, with a
+ * request waiting (polled every 4 s), read every page of the catalogue again on every poll. */
+export const CATALOGUE_KEEP_MS = 5 * 60_000;
+/** Said on `window` when the server says the library changed (CloudApp's event stream). */
+export const CATALOGUE_CHANGED_EVENT = 'selecta:catalogue-changed';
+// counted once for the page, so an adapter made again (its sources changed) leaves no listener behind
+let catalogueChanges = 0;
+if (typeof window !== 'undefined') window.addEventListener(CATALOGUE_CHANGED_EVENT, () => { catalogueChanges += 1; });
 
 export function notHereYet(path: string): ApiError {
   return new ApiError(NOT_HERE_YET, 404, 'flag_off', `local-first:${path.split('?')[0]}`);
 }
 
-/** Every catalogue song, page by page. `cloud` is the authenticated client (paths without /api). */
+/** Every catalogue song, page by page, however many pages there are (it used to stop silently at
+ * 200 pages, 20,000 songs). `cloud` is the authenticated client (paths without /api). */
 export async function readCatalogue(cloud: Request): Promise<CatalogueSong[]> {
   const songs: CatalogueSong[] = [];
   let after = 0;
-  for (let page = 0; page < MAX_PAGES; page += 1) {
-    const answer = await cloud<{ songs: CatalogueSong[]; next?: number }>(`/local-media/songs?after=${after}&limit=${PAGE}`);
+  for (;;) {
+    const answer = await cloud<{ songs: CatalogueSong[]; next?: number | null }>(`/local-media/songs?after=${after}&limit=${PAGE}`);
     songs.push(...answer.songs);
     if (answer.next === undefined || answer.next === null) break;
+    // a cursor that doesn't move on would ask for the same page for ever
+    if (!(answer.next > after) || !answer.songs.length) break;
     after = answer.next;
   }
   return songs;
@@ -212,10 +223,13 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       return mergeSongs(kept?.value ?? [], device);
     }
   };
-  // one catalogue read serves a burst of requests (status, the library page, a search)
+  // One catalogue read serves every request until something changes it: a write through here
+  // forgets it (below), and so does the server saying the library changed.
+  let readChanges = catalogueChanges;
   const songs = () => {
-    if (!catalogue || performance.now() - readAt > 3000) {
+    if (!catalogue || readChanges !== catalogueChanges || performance.now() - readAt > CATALOGUE_KEEP_MS) {
       readAt = performance.now();
+      readChanges = catalogueChanges;
       catalogue = fromServer();
       catalogue.catch(() => { catalogue = null; });
     }

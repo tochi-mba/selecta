@@ -31,6 +31,7 @@ import { AccountProblemPage, BlockedAccount, GateLoading, OfflineWait, SignInAga
 import { Welcome } from './Welcome';
 import { CloudEvent, useCloudEvents } from './events';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
+import { CATALOGUE_CHANGED_EVENT } from './localFirstRequest';
 import { LIBRARY_STATES_FLAG } from './libraryState';
 import { LibraryPanel } from './Library';
 import { MakeCloudMix } from './MakeCloudMix';
@@ -404,6 +405,8 @@ export function CloudApp() {
     // room session, which reads the room again on whichever page the host is (useRoomSession)
     if (event.topic === 'requests.room' || event.topic.startsWith('room.')) window.dispatchEvent(new Event(ROOM_EVENT));
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); }
+    // the browser-first catalogue is kept until the library changes (localFirstRequest.ts)
+    if (/^(upload|asset|library|local_media)\./.test(event.topic)) window.dispatchEvent(new Event(CATALOGUE_CHANGED_EVENT));
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);
   const stream = useCloudEvents({ token: getAccessToken, workspaceId: account?.workspace.id ?? null, onEvent, refresh: refreshAll });
