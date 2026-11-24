@@ -602,7 +602,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       return 'needs_music';
     }
     if (!pressed && !soundAllowedHere()) { setAskedToPlay(ask); return 'needs_gesture'; }
+    // another device became the speaker meanwhile (its own Play here instead): stand down
+    if ((await playback.refreshSession())?.speaker === 'elsewhere') return 'declined';
     setMixData(mix);
+    player.startFreeOnce = true;
     hereOnPurpose.current = true;
     void shellPlayer.playFrom(0);
     return 'starting';
