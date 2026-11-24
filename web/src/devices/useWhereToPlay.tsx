@@ -1,4 +1,5 @@
-import { ReactNode, useCallback, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import type { AskState } from './playOn';
 import { showToast } from '../ui/toasts';
 import { navigate } from '../router';
 import type { DeviceHolding } from './controller';
@@ -13,7 +14,7 @@ import { becauseWords, NOBODY_OPEN, whereToPlay, type Choice, type Situation } f
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 type Device = { device_id: string; name: string };
 
-export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings }: {
+export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told }: {
   enabled: boolean;
   /** null until the holdings are read (then the press plays here, as before) */
   situation: Situation | null;
@@ -23,9 +24,14 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   /** Ask another device to play the current mix (ADR-0475 R2). */
   askToPlay: (device: Device) => void;
   refreshHoldings: () => void;
+  /** What the asked device said (usePlayOn): no answer in time makes it unusable this once. */
+  asking?: AskState;
 }): { decide: () => boolean; picker: ReactNode; choice: Choice | null } {
   const [asking, setAsking] = useState<Extract<Choice, { kind: 'ask' }> | null>(null);
   const said = useRef(new Set<string>());
+  // A1: devices that did not answer an ask this visit, left out until the next press
+  const silent = useRef(new Set<string>());
+  const started = useRef<string | null>(null);
   const choice = enabled && situation ? whereToPlay(situation) : null;
   const latest = useRef({ choice, situation });
   latest.current = { choice, situation };
@@ -46,6 +52,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
       playHere();
       return;
     }
+    started.current = device.device_id;
     askToPlay(device);
     navigate('/listen');
     // the person is holding this device while the sound starts elsewhere: one way back
@@ -72,6 +79,22 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     showToast(NOBODY_OPEN, { actions: [{ label: 'Connect music here', run: () => navigate('/library') }] });
     return true;
   }, [startOn]);
+
+  // A1: the device asked did not answer: say so once, with Try again and Choose another device
+  const phase = told?.phase;
+  const toldId = told?.deviceId;
+  useEffect(() => {
+    if (phase !== 'no_answer' || !toldId || toldId !== started.current) return;
+    started.current = null;
+    silent.current.add(toldId);
+    const name = latest.current.situation?.devices.find((one) => one.device_id === toldId)?.name ?? 'That device';
+    const others = latest.current.situation ? { ...latest.current.situation, devices: latest.current.situation.devices.filter((one) => !silent.current.has(one.device_id)) } : null;
+    const next = others ? whereToPlay(others) : null;
+    showToast(`${name} didn’t answer.`, { tone: 'problem', actions: [
+      { label: 'Try again', run: () => { silent.current.delete(toldId); const again = latest.current.situation?.devices.find((one) => one.device_id === toldId); if (again) startOn(again); } },
+      ...(next && next.kind !== 'speaker' && next.kind !== 'none' ? [{ label: 'Choose another device', run: () => { if (next.kind === 'ask') setAsking(next); else startOn(next.device); } }] : []),
+    ] });
+  }, [phase, toldId, startOn]);
 
   const live = choice?.kind === 'ask' ? choice : asking;
   const picker = asking && live && situation ? (

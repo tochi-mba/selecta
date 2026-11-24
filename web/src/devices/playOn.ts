@@ -19,7 +19,9 @@ export type StartAnswer = { ask_id: string; asker_device_id: string; target_devi
 export const START_ASK_EVENT = 'selecta-start-ask';
 export const START_ANSWER_EVENT = 'selecta-start-answer';
 /** How long the asker waits for any answer before saying the device did not answer. */
-export const START_ASK_WAIT_MS = 10_000;
+/** ADR-0475 A1: a device that does not answer in this long (asleep, a locked phone) is not
+ * usable for this attempt; the rule moves on. */
+export const START_ASK_WAIT_MS = 8_000;
 /** How long "Starting on {device}" may stand before the asker stops claiming even that. */
 export const STARTING_WAIT_MS = 20_000;
 

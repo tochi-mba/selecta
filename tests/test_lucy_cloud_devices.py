@@ -324,3 +324,18 @@ def test_practice_lucy_proposes_from_the_catalogue_with_no_ai(lucy, monkeypatch)
     shown = snapshot(lucy, conversation)
     assert shown["proposal"]["current"]["snapshot"]["title"] == "Practice mix"
     assert "nothing is saved until you press Save" in shown["messages"][-1]["content"]
+
+
+def test_another_device_reads_the_persons_words_from_the_events_alone(lucy):
+    provider = gated(lucy)
+    provider.gate.set()
+    conversation = converse(lucy)
+    cursor = snapshot(lucy, conversation)["cursor"]
+    send(lucy, conversation, "words typed on the laptop", "w1")
+    cloud_agent.RUNNER.wait()
+    events = events_after(lucy, conversation, cursor)
+    accepted = [e for e in events if e["type"] == "turn.accepted"]
+    assert accepted[0]["payload"]["text"] == "words typed on the laptop"
+    # nothing after it may stand in for the person's message with an empty one
+    assert not [e for e in events if e["type"] == "message.started"
+                and e["payload"].get("role") == "user"]
