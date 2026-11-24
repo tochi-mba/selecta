@@ -1,7 +1,7 @@
 # ADR-0476 - Lucy in Cloud: the full conversation over the catalogue and recipes
 
 - **Decision:** Proposed (the owner asked for "the full convo" in browser-first Cloud on 2026-11-24; approval is the owner's).
-- **Implementation:** In progress on branch `feat/controller` (PR #133). See "What is built" at the end.
+- **Implementation:** Built on branch `feat/controller` (PR #133, merged; continued in PR #134). See "What is built" at the end.
 - **Independent verification:** None.
 - **Programme/date/baseline:** Browser-first Cloud (BF); 2026-11-24; `feat/controller` at `a8a7469a`.
 - **Existing ADR owners:** ADR-0311 (Lucy's agent run), ADR-0404 (the Lucy AI gateway), ADR-0458 (catalogue and portable recipes), ADR-0475 (the account's current mix). None is replaced.
@@ -144,4 +144,15 @@ Each item names where it is handled; "decided" lines say what happens and why.
 
 ## What is built
 
-See the "Lucy in Cloud" section of PR #133 for the current state; it is kept up to date there.
+- Server: `selecta.lucy.cloud_schema`, `cloud_store`, `cloud_tools`, `cloud_prompt`, `cloud_agent`, `cloud_proposals`, `cloud_world`, `cloud_routes`; migrations `bf0476lucy01` (tables, isolation policy), `bf0476lucy02` (the device a turn came from), `bf0476lucy03` (one turn in flight per conversation). Practice Lucy for the dev stack: `selecta.devstack.lucy_practice` (`SELECTA_DEV_LUCY_PRACTICE=1`).
+- Page: the local Lucy page reused through `setLucyTransport` (`web/src/lucy/client.ts`), opened by the local-first shell at `/mixes/lucy` while `lucy.cloud_conversation` is on. Cloud-only words where Cloud differs (Save, not Save as draft; transitions worked out as the mix plays; one answer at a time); suggested first asks from the person's library; Copy, Try again, Edit and a useful/not useful rating on answers; times on hover, focus or touch; quieter turns.
+- Evaluation: `tests/lucy_eval/requests.json` (72 cases), `tests/lucy_eval/library.json`, `tools/lucy_eval.py`.
+- Proved in a browser on the practice stack with two devices (laptop 1280x800, phone 360x740): items 15, 16, 18 and 21.
+
+### Not built yet
+
+- A "Clear" button in the page header (deleting a conversation is in the Conversations list).
+- Follow-up suggestion chips after an answer; a one-line "why" on each choice.
+- The remaining-turns count updating live on other devices; paging very long conversations.
+- Room requests and the playing position in Lucy's state block.
+- `interactive-widget=resizes-content` in the viewport meta (the shell already keeps the box above the keyboard from `visualViewport`); not checked on a real phone's keyboard.

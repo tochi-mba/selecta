@@ -531,3 +531,15 @@ def test_a_plan_change_between_turns_is_said_once(lucy):
             if e["type"] == "run.limit" and e["payload"].get("limit") == "plan"]
     assert said == ["Your plan changed, so Lucy Standard answers from here on; the conversation "
                     "so far is kept."]
+
+
+def test_an_answer_can_be_rated_by_its_owner_only(lucy):
+    script(lucy, [{"chunks": ["Here you go."]}])
+    conversation = converse(lucy, CAROL)
+    send(lucy, CAROL, conversation, "hi")
+    answer = snapshot(lucy, CAROL, conversation)["messages"][-1]
+    path = f"{BASE}/messages/{answer['id']}/rating"
+    assert lucy.client.post(path, headers=auth(BOB), json={"rating": "up"}).status_code == 404
+    assert lucy.client.post(path, headers=auth(CAROL), json={"rating": "down"}).status_code == 200
+    assert snapshot(lucy, CAROL, conversation)["messages"][-1]["meta"] == {"rating": "down"}
+    assert lucy.client.post(path, headers=auth(CAROL), json={"rating": "meh"}).status_code == 422
