@@ -152,7 +152,7 @@ describe('Workspace in the local-first shell (cloud.workspace)', () => {
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Workspace' })).toBeVisible());
     await waitFor(() => expect(within(screen.getByRole('navigation', { name: 'Workspace' })).getAllByRole('link').map((tab) => tab.textContent))
       .toEqual(['Overview', 'Sources', 'Storage', 'Diagnostics']));
-    await waitFor(() => expect(screen.getByRole('region', { name: 'In the background' })).toBeVisible());
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Activity' })).toBeVisible());
     expect(screen.queryByRole('heading', { level: 1, name: 'This device' })).toBeNull();
   });
 
@@ -170,7 +170,7 @@ describe('Workspace in the local-first shell (cloud.workspace)', () => {
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     window.history.replaceState({}, '', '/library');
     render(<CloudApp />);
-    const links = within(await openMore()).getAllByRole('link').map((link) => link.textContent);
+    const links = within(await openMore()).getAllByRole('link').map((link) => link.getAttribute('aria-label'));
     expect(links[0]).toBe('Workspace');
     expect(links).toContain('Account');
     expect(links).not.toContain('This device');
@@ -182,11 +182,11 @@ describe('Workspace in the local-first shell (cloud.workspace)', () => {
     window.history.replaceState({}, '', '/account');
     const onAccount = render(<CloudApp />);
     await screen.findByRole('region', { name: 'Signed in as' });
-    expect(screen.queryByRole('heading', { name: 'What SelectaDJ keeps here' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'What this browser keeps' })).toBeNull();
     onAccount.unmount();
     window.history.replaceState({}, '', '/workshop/storage');
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'What SelectaDJ keeps here' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'What this browser keeps' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Browser storage' })).toBeVisible();
   });
 
@@ -197,13 +197,13 @@ describe('Workspace in the local-first shell (cloud.workspace)', () => {
     const device = render(<CloudApp />);
     expect(await screen.findByRole('heading', { level: 1, name: 'This device' })).toBeVisible();
     expect(screen.queryByRole('navigation', { name: 'Workspace' })).toBeNull();
-    const links = within(await openMore()).getAllByRole('link').map((link) => link.textContent);
+    const links = within(await openMore()).getAllByRole('link').map((link) => link.getAttribute('aria-label'));
     expect(links).toContain('This device');
     expect(links).not.toContain('Workspace');
     device.unmount();
     window.history.replaceState({}, '', '/account');
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'What SelectaDJ keeps here' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'What this browser keeps' })).toBeVisible();
   });
 });
 
@@ -297,6 +297,30 @@ describe('what the local-first shell mounts', () => {
   });
 });
 
+describe('the Library Connect music menu', () => {
+  it('has a name, opens from the keyboard on its first item, and Escape gives focus back', async () => {
+    account = withExperience(true, false, true);
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/library');
+    render(<CloudApp />);
+    const trigger = await waitFor(() => {
+      const found = screen.getAllByRole('button', { name: 'Connect music' }).find((button) => button.getAttribute('aria-expanded') !== null);
+      expect(found).toBeDefined();
+      return found!;
+    });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    trigger.focus();
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole('menu');
+    const items = within(menu).getAllByRole('menuitem');
+    expect(items.map((item) => item.textContent)).toEqual(['Choose a folder', 'Choose songs']);
+    await waitFor(() => expect(items[0]).toHaveFocus());
+    fireEvent.keyDown(items[0], { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(trigger).toHaveFocus();
+  });
+});
+
 describe('designed empty states, never a blank table', () => {
   it('Listen with nothing to play points at the next step', async () => {
     account = withExperience(true, false, true);
@@ -314,7 +338,7 @@ describe('designed empty states, never a blank table', () => {
     window.history.replaceState({}, '', '/mixes');
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { name: 'Choose your music again to make a mix' })).toBeVisible();
-    expect(screen.getByText(/this browser can open fewer than two of them/)).toBeVisible();
+    expect(screen.getByText(/This browser lets go of your music when the page closes, so choose your 1 song again/)).toBeVisible();
   });
 
   it('My Mixes with no current mix offers a next step', async () => {
@@ -322,8 +346,13 @@ describe('designed empty states, never a blank table', () => {
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     window.history.replaceState({}, '', '/mixes/mine');
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'Nothing’s playing yet' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Find a mix' })).toBeVisible();
+    // the page is drawn twice while the library answers, so each look is retried
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'My Mixes' })).toBeVisible();
+      // the next step: the page's own way to Make a Mix
+      const next = [...document.querySelectorAll<HTMLElement>('main a, main button')].find((control) => control.textContent?.trim() === 'Make a mix');
+      expect(next).toBeVisible();
+    });
   });
 
   it('loads browser recipe drafts through the Cloud request boundary, not the local draft route', async () => {
@@ -347,9 +376,9 @@ describe('designed empty states, never a blank table', () => {
 
     render(<CloudApp />);
 
-    expect(await screen.findByText(/A place for your next mix/)).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'No saved mixes yet' })).toBeVisible();
     // the saved list sits inside My Mixes' own main landmark, never after it (L1)
-    const saved = screen.getByRole('heading', { name: 'Your saved mixes' });
+    const saved = screen.getByRole('heading', { name: 'Saved mixes' });
     expect(screen.getAllByRole('main')).toHaveLength(1);
     expect(screen.getByRole('main')).toContainElement(saved);
     expect(calls).toContain('GET /api/local-media/recipes');
@@ -387,7 +416,9 @@ describe('the account chrome in the local-first shell (hosted frame parity)', ()
     account = localFirst({ lucy: true, 'account.lucy_settings': true });
     window.history.replaceState({}, '', '/account');
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'Lucy Basic' })).toBeVisible();
+    // Lucy's own section of Account, with the tier the plan carries
+    expect(await screen.findByRole('heading', { name: 'Lucy on your plan' })).toBeVisible();
+    expect(await screen.findByText('Lucy Basic')).toBeVisible();
   });
 
   it('mounts the reconciliation only for a grandfathered account with stored media', async () => {
@@ -460,10 +491,15 @@ describe('the import session in the shell (BF-0463-02 progressive import)', () =
     held.emit({ kind: 'collected', total: 4, skipped: 0 });
     held.emit({ kind: 'checked', name: 'a.mp3', resumed: false });
     held.emit({ kind: 'file', name: 'a.mp3', stage: 'done', songId: 2 });
-    expect(await screen.findByText('Checking your music: 1 of 4 checked.')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'See import progress' })).toBeVisible();
+    const chip = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>('.cloud-import-chip');
+      expect(found).toHaveTextContent('1 of 4 checked');
+      return found!;
+    });
+    expect(chip).toHaveTextContent('Adding your music');
+    expect(within(chip).getByRole('button', { name: /See (import )?progress/ })).toBeVisible();
     held.finish({ imported: 1, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false });
-    await waitFor(() => expect(screen.queryByText(/Checking your music:/)).toBeNull());
+    await waitFor(() => expect(document.querySelector('.cloud-import-chip')).toBeNull());
     expect(recorded).toEqual([{ imported: 1, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false }]);
   });
 

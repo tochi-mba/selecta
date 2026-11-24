@@ -180,9 +180,8 @@ def install_routes(
         workspace_id = workspace(request, claims)
         service = rooms()
         try:
-            current = service.host_view(workspace_id, room_id).settings
-            merged = RoomSettings.from_json({**current.to_json(), **body})
-            service.update_settings(workspace_id, room_id, merged)
+            # laid over the room's settings under its row lock, never over an earlier read
+            service.update_settings(workspace_id, room_id, body, partial=True)
         except ValueError as error:
             raise HTTPException(
                 status_code=422, detail={"code": "invalid_settings", "message": str(error)}

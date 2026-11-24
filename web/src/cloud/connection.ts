@@ -144,6 +144,16 @@ export function probeNow(): Promise<boolean> {
   return probing;
 }
 
+let asking: Promise<boolean> | null = null;
+/** Whether SelectaDJ's service answers right now, asked without changing the connection state:
+ * for telling one request that failed (blocked, or broken) from the connection being down. A
+ * burst of failures shares one question. */
+export function serviceAnswers(): Promise<boolean> {
+  if (!browserOnline()) return Promise.resolve(false);
+  asking ??= probe().catch(() => false).finally(() => { asking = null; });
+  return asking;
+}
+
 /** Listen for changes; returns the unsubscribe. */
 export function subscribe(listener: Listener): () => void {
   start();
@@ -233,6 +243,7 @@ export function configureConnection(options: { probe?: () => Promise<boolean>; r
     clearProbe();
     probeFailures = 0;
     probing = null;
+    asking = null;
     probe = options.probe ?? defaultProbe;
     state = { status: browserOnline() ? 'online' : 'offline', since: browserOnline() ? null : Date.now(), reconnecting: false, nextTryAt: null, backAt: null, signedOut: false };
     for (const listener of [...listeners]) listener();

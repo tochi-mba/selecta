@@ -134,7 +134,9 @@ def test_a_guest_sees_what_is_playing_what_is_coming_and_their_own_requests(host
     ]
     assert [(i.request_id, i.mine, i.votes) for i in view.waiting] == [(waiting.id, True, 1)]
     assert view.coming_up[0].song == host.catalog.songs[3]
-    assert [(m.request_id, m.text) for m in view.my_requests] == [(waiting.id, "Sent")]
+    assert [(m.request_id, m.text) for m in view.my_requests] == [
+        (waiting.id, "Waiting for the host to approve it")
+    ]
 
 
 def test_nicknames_are_shown_to_other_guests_only_if_the_host_chose_that(host):

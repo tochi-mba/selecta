@@ -33,6 +33,7 @@ GUEST: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/guest/rooms/{room_id}"): None,
     ("GET", "/api/guest/rooms/{room_id}/search"): None,
     ("POST", "/api/guest/rooms/{room_id}/requests"): {"song_id": 3},
+    ("POST", "/api/guest/rooms/{room_id}/requests/batch"): {"song_ids": [3]},
     ("DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}"): None,
     ("POST", "/api/guest/rooms/{room_id}/requests/{request_id}/vote"): None,
     ("DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}/vote"): None,

@@ -89,7 +89,11 @@ describe('file pickers keep a keyboard path', () => {
     for (const { file, tag } of pickers) {
       if (!/\shidden[\s/>]|tabIndex=\{-1\}|aria-hidden="true"|display:\s*'none'/.test(tag)) continue;
       const ref = tag.match(/ref=\{(\w+)\}/)?.[1];
-      const opened = ref && new RegExp(`<button\\b[^>]*onClick=\\{[^}]*\\b${ref}\\.current\\??!?\\.click\\(\\)`).test(readSource(file));
+      const source = readSource(file);
+      const inline = ref && new RegExp(`<button\\b[^>]*onClick=\\{[^}]*\\b${ref}\\.current\\??!?\\.click\\(\\)`).test(source);
+      // or through a named handler in the same file that clicks the ref, itself a button's onClick
+      const handlers = ref ? [...source.matchAll(new RegExp(`const (\\w+) = \\(\\) => [^;\\n]*\\b${ref}\\b[^;\\n]*\\.current\\??!?\\.click\\(\\)`, 'g'))].map((match) => match[1]) : [];
+      const opened = inline || handlers.some((handler) => new RegExp(`<button\\b[^>]*onClick=\\{${handler}\\}`).test(source));
       if (!opened) off.push(`${file}: ${tag}`);
     }
     expect(off).toEqual([]);

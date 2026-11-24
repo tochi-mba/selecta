@@ -22,6 +22,9 @@ export interface PlayerLike {
   stop(): void;
   toggleMute(): void;
   setVolume(volume: number): void;
+  /** False when this player has no volume to set (a remote for a session that keeps volume on
+   * each device): the volume control is then not drawn at all. Left out: it can. */
+  canSetVolume?: boolean;
   /** One frame of the live spectrum, or null when no analyser is running. */
   getSpectrum(): Uint8Array | null;
   /** Unsmoothed stereo analyser taps for the visualizer; optional, the spectrum alone also works. */

@@ -72,7 +72,7 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { playe
           Request<span className="count" aria-hidden={!waiting}>{waiting || '\u00a0'}</span>
         </button>
       )}
-      <div className="mini-volume"><VolumeControl player={player} now={now} /></div>
+      {player.canSetVolume !== false && <div className="mini-volume"><VolumeControl player={player} now={now} /></div>}
     </aside>
   );
 }

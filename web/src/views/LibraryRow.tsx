@@ -1,4 +1,5 @@
-import { memo } from 'react';
+import { memo, useContext } from 'react';
+import { HolderContext } from '../devices/controller';
 import { LibrarySong } from '../api';
 import { clock, etaWords } from '../lib';
 import { availabilityFacts } from '../state/availability';
@@ -70,6 +71,7 @@ export const LibraryRow = memo(function LibraryRow({
 }: LibraryRowProps) {
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
+  const holder = useContext(HolderContext);
   const title = song.title ?? 'Untitled';
   const name = duplicate ? `${title} (song ${song.id})` : title;
   const spoken = duplicate || !sharedTitle ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
@@ -79,7 +81,10 @@ export const LibraryRow = memo(function LibraryRow({
     const chip = facts.setAside || song.never
       ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
       : song.availability && HERE[song.availability]
-        ? { ...HERE[song.availability], why: song.availability === 'elsewhere' ? 'Choose your music folder in this browser to play it here.' : where?.reason ?? '' }
+        // ADR-0475 R6: another of this person's devices holds it, so say which, not "not here"
+        ? song.availability === 'elsewhere' && holder && (holder.ids ? holder.ids.has(song.id) : true)
+          ? { kind: 'unavailable' as StatusKind, words: `On ${holder.name}`, why: `${holder.name} has this song’s file and makes the sound. Connect music here only if you want this device to play it.` }
+          : { ...HERE[song.availability], why: song.availability === 'elsewhere' ? 'Choose your music folder in this browser to play it here.' : where?.reason ?? '' }
         : { kind: facts.kind, words: facts.words, why: facts.reason };
     return (
       <li data-library-page={page} className={`song-row lw-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`}>

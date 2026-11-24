@@ -116,7 +116,14 @@ export function Composer({ value, onChange, onSend, onStop, running, sending, bl
   };
   const canSend = !blocked && !sending && !!value.trim();
   return (
-    <form className="lucy-composer" onSubmit={(event) => { event.preventDefault(); if (canSend) onSend(); }}>
+    <form className="lucy-composer" onSubmit={(event) => {
+      event.preventDefault();
+      if (!canSend) return;
+      // Send is disabled the moment the box empties, and a disabled button drops the keyboard's
+      // focus to the top of the page: someone who pressed Send itself goes back to the box
+      if (document.activeElement instanceof HTMLButtonElement && document.activeElement.type === 'submit') boxRef.current?.focus({ preventScroll: true });
+      onSend();
+    }}>
       {above}
       <label className="visually-hidden" htmlFor={`${hintId}-box`}>Message to Lucy</label>
       <textarea

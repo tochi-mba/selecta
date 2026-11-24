@@ -101,6 +101,7 @@ const REFUSAL_MESSAGES: Record<string, string> = {
   untrusted_origin: 'This address isn’t allowed to start a payment.',
   untrusted_return_url: 'This address isn’t allowed to start a payment.',
   consent_required: 'Tick all three boxes to continue.',
+  checkout_in_progress: 'Your payment is still being confirmed. This page updates by itself.',
   billing_not_permitted: 'Only the workspace owner can change the plan.',
 };
 

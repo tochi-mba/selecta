@@ -54,6 +54,7 @@ def _song_json(row: Any) -> dict[str, Any]:
         "codec": row.codec,
         "sample_rate": row.sample_rate,
         "duplicate_of": int(row.duplicate_of) if row.duplicate_of is not None else None,
+        "never": bool(row.never_play),
         "created_at": row.created_at,
         "updated_at": row.updated_at,
     }
@@ -180,6 +181,47 @@ def soft_delete(conn: Connection, workspace_id: str, song_id: int) -> bool:
         .values(deleted_at=db_now(conn), updated_at=db_now(conn))
     )
     return changed.rowcount > 0
+
+
+class NeverConflict(Exception):
+    """A "Never play" change was refused whole: some songs are gone, or changed since they were
+    shown (another tab or device). Nothing was changed."""
+
+    def __init__(self, missing: list[int], stale: list[int]) -> None:
+        super().__init__(f"missing {missing}, changed {stale}")
+        self.missing = missing
+        self.stale = stale
+
+
+def set_never(
+    conn: Connection, workspace_id: str, entries: list[tuple[int, bool]], never: bool
+) -> list[int]:
+    """Set "Never play" to `never` on exactly these songs, all or none.
+
+    Each entry pairs a song id with the value the caller was showing. If any song is gone, or its
+    value differs from what was shown, nothing changes and `NeverConflict` names them. Returns the
+    ids this call really changed (a song already at `never` is left alone and not listed)."""
+    ids = [song_id for song_id, _ in entries]
+    rows = conn.execute(
+        sa.select(local_songs.c.id, local_songs.c.never_play)
+        .where(local_songs.c.workspace_id == workspace_id)
+        .where(local_songs.c.id.in_(ids))
+        .where(local_songs.c.deleted_at.is_(None))
+    ).all()
+    found = {int(row.id): bool(row.never_play) for row in rows}
+    missing = [song_id for song_id in ids if song_id not in found]
+    stale = [song_id for song_id, seen in entries if song_id in found and found[song_id] != seen]
+    if missing or stale:
+        raise NeverConflict(missing, stale)
+    changed = [song_id for song_id in ids if found[song_id] != never]
+    if changed:
+        conn.execute(
+            local_songs.update()
+            .where(local_songs.c.workspace_id == workspace_id)
+            .where(local_songs.c.id.in_(changed))
+            .values(never_play=never, updated_at=db_now(conn))
+        )
+    return changed
 
 
 def exists(conn: Connection, workspace_id: str, song_id: int) -> bool:

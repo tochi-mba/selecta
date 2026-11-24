@@ -28,6 +28,7 @@ from selecta.authz.schema import audit_events
 from selecta.rooms import api_guest, guessing, limits
 from selecta.rooms.codes import generate
 from selecta.rooms.schema import room_guests, room_requests
+from selecta.rooms.settings import RoomSettings
 
 IP_HEADER = "x-test-client-ip"
 
@@ -159,7 +160,9 @@ def test_one_guest_flooding_requests_is_held_to_its_limits_from_any_address(part
             .select_from(room_requests)
             .where(room_requests.c.room_id == room_id)
         ).scalar_one()
-    assert mine == 1  # the room's own limit: one waiting request per guest
+    # the room's own limit still holds under the flood: three waiting requests per guest, the
+    # default a room opens with (it was one when this was written)
+    assert mine == RoomSettings().pending_per_guest == 3
     reads = [guest.get(f"/api/guest/rooms/{room_id}").status_code for _ in range(130)]
     assert reads[:120] == [200] * 120 and set(reads[120:]) == {429}
     clock.advance(61)

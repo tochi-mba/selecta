@@ -49,7 +49,17 @@ def _call(client: TestClient, route: str):
 @pytest.mark.parametrize("flag_id", WITH_ROUTES)
 def test_every_route_of_a_turned_off_feature_is_refused(app_client, flag_id):
     flags.use(f"-{flag_id}")
-    for route in flags.registry()[flag_id].routes:
+    # A feature in both modes can own a route only the Cloud app serves (word connections reads
+    # the Cloud catalogue at /api/local-media/links). The local app has no such address, so it
+    # is checked on the Cloud app below, where it exists.
+    served = {
+        f"{method} {route.path}"
+        for route in app_client.app.routes
+        for method in getattr(route, "methods", None) or ()
+    }
+    routes = [route for route in flags.registry()[flag_id].routes if route in served]
+    assert routes, flag_id
+    for route in routes:
         response = _call(app_client, route)
         assert response.status_code == 403, route
         body = response.json()
@@ -63,6 +73,15 @@ def cloud_client(tmp_path):
     with TestClient(app) as client:
         yield client
     engine.dispose()
+
+
+def test_a_cloud_only_route_of_a_feature_in_both_modes_is_refused_on_the_cloud_app(cloud_client):
+    flags.use("-discover.word_links")
+    assert "GET /api/local-media/links" in flags.registry()["discover.word_links"].routes
+    response = cloud_client.get("/api/local-media/links")
+    assert response.status_code == 403, response.text
+    body = response.json()
+    assert body["code"] == "flag_off" and body["flag"] == "discover.word_links"
 
 
 @pytest.mark.parametrize("flag_id", CLOUD_WITH_ROUTES)

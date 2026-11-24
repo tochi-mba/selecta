@@ -52,6 +52,7 @@ CAPABILITY_ONLY = {
     ("GET", "/api/guest/rooms/{room_id}"),
     ("GET", "/api/guest/rooms/{room_id}/search"),
     ("POST", "/api/guest/rooms/{room_id}/requests"),
+    ("POST", "/api/guest/rooms/{room_id}/requests/batch"),
     ("DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}"),
     ("POST", "/api/guest/rooms/{room_id}/requests/{request_id}/vote"),
     ("DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}/vote"),
@@ -444,6 +445,8 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/rooms/{room_id}/requests/{request_id}/approve"): None,
     ("POST", "/api/rooms/{room_id}/requests/{request_id}/pass"): None,
     # the host's browser reads and resolves accepted room requests (rooms/browser_requests.py)
+    # what each of the workspace's devices can open, by song id (ADR-0475, local_media/api.py)
+    ("GET", "/api/local-media/holdings"): None,
     ("GET", "/api/room-requests"): None,
     ("POST", "/api/room-requests/{request_id}/played"): None,
     ("POST", "/api/room-requests/{request_id}/dismiss"): None,

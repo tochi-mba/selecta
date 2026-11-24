@@ -35,6 +35,8 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 **Proposed follow-on to ADR-0410:** [ADR-0470](adr-0470-live-dependency-health-and-readiness.md) to [ADR-0474](adr-0474-monitoring-plane-security-reliability-and-release-gates.md), programme prefix OP. These ADRs turn the existing admin health placeholders into a complete contract for live dependency probes, provider quotas and cost guardrails, incident routing, a truthful operator overview and an independently survivable monitoring plane. They cover Render, Postgres, Cloudflare R2, Modal, WorkOS, Stripe, Anthropic, Resend, Grafana and Sentry. No provider monitoring is claimed complete merely because a UI row or mock fixture exists. Track all 30 tasks in the [Service Operations implementation checklist](selecta-service-operations-implementation-checklist.md).
 
+**Proposed, building on ADR-0415 and ADR-0461:** [ADR-0475](adr-0475-every-device-a-controller.md), every signed-in device a controller: a device that is not the speaker steers it and sees what each device can play.
+
 **Start here:** [goal and two Cloud modes (0455)](adr-0455-browser-first-cloud-goal-and-two-cloud-modes.md), [hosted-media gating (0456)](adr-0456-hosted-media-mode-preservation-and-flag-gating.md), [remote-control fencing (0461)](adr-0461-remote-control-protocol-commands-fencing-takeover.md), [release gates (0466)](adr-0466-release-gates-tests-and-independent-verification.md), [one shell and the design system (0468)](adr-0468-one-shell-and-design-system-consolidation.md).
 
 ---

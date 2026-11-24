@@ -114,6 +114,86 @@ def test_play_here_moves_the_lease_and_names_the_old_speaker(party):
     assert "playback.moved" in topics and "playback.state" in topics
 
 
+def _events(party, topic: str) -> list[dict]:
+    with transaction(party.engine) as conn:
+        return [
+            dict(row.payload)
+            for row in conn.execute(
+                outbox_events.select().where(
+                    outbox_events.c.workspace_id == party.workspaces[ALICE],
+                    outbox_events.c.topic == topic,
+                )
+            )
+        ]
+
+
+def test_one_device_asks_another_to_start_and_hears_its_answer(party):
+    """ADR-0475 R2: the ask and the answer travel on the workspace's event stream; the asked
+    device takes over by its own action, so nothing here changes who the speaker is."""
+    client = party.client
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    phone = party.register(ALICE, "Phone")["device"]["id"]
+    asked = client.post(
+        "/api/playback/start-asks",
+        headers=auth(ALICE),
+        json={"device_id": phone, "target_device_id": laptop, "mix_id": "mix-1"},
+    )
+    assert asked.status_code == 201, asked.text
+    ask = asked.json()
+    assert ask["target_name"] == "Laptop" and ask["asker_name"] == "Phone"
+    assert ask["expires_at"] - ask["server_time"] == 10.0
+    [sent] = _events(party, "playback.start_ask")
+    assert sent["ask_id"] == ask["ask_id"] and sent["target_device_id"] == laptop
+    assert sent["mix_id"] == "mix-1" and sent["asker_device_id"] == phone
+    # asking is not a take-over: nobody is the speaker yet
+    view = client.get(f"/api/playback/session?device_id={laptop}", headers=auth(ALICE)).json()
+    assert view["speaker"] == "none"
+
+    answered = client.post(
+        f"/api/playback/start-asks/{ask['ask_id']}/answer",
+        headers=auth(ALICE),
+        json={"device_id": laptop, "asker_device_id": phone, "result": "needs_gesture"},
+    )
+    assert answered.status_code == 200, answered.text
+    [heard] = _events(party, "playback.start_answer")
+    assert heard == {
+        "ask_id": ask["ask_id"], "asker_device_id": phone, "target_device_id": laptop,
+        "target_name": "Laptop", "result": "needs_gesture",
+    }
+    unknown = client.post(
+        f"/api/playback/start-asks/{ask['ask_id']}/answer",
+        headers=auth(ALICE),
+        json={"device_id": laptop, "asker_device_id": phone, "result": "took_over_for_you"},
+    )
+    assert unknown.status_code == 422
+
+
+def test_a_start_ask_only_reaches_my_own_device_that_is_open(party):
+    client = party.client
+    phone = party.register(ALICE, "Phone")["device"]["id"]
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    theirs = party.register(BOB, "Bob laptop")["device"]["id"]
+    ask = lambda target: client.post(  # noqa: E731
+        "/api/playback/start-asks",
+        headers=auth(ALICE),
+        json={"device_id": phone, "target_device_id": target},
+    )
+    assert ask(theirs).status_code == 404
+    assert ask(phone).status_code == 400
+    # the laptop has not been seen for a minute: it cannot be asked, and the asker is told
+    from selecta.playback.schema import devices as playback_devices
+
+    with transaction(party.engine, party.workspaces[ALICE]) as conn:
+        conn.execute(
+            playback_devices.update()
+            .where(playback_devices.c.id == laptop)
+            .values(last_seen_at=playback_devices.c.last_seen_at - 60)
+        )
+    away = ask(laptop)
+    assert away.status_code == 409 and away.json()["detail"]["code"] == "target_offline"
+    assert _events(party, "playback.start_ask") == []
+
+
 def test_cloud_browser_takeover_rejects_an_unconfirmed_or_changed_live_owner(party):
     client = party.client
     laptop = party.register(ALICE, "Laptop")["device"]["id"]

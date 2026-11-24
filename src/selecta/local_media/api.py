@@ -64,6 +64,29 @@ class AvailabilityReport(BaseModel):
         return self
 
 
+class NeverEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int = Field(gt=0)
+    # the value the page was showing, so a change made elsewhere meanwhile refuses the whole batch
+    expected: bool
+
+
+class NeverRequest(BaseModel):
+    """Set "Never play" on a batch of songs, all or none (the Library's batch and row actions)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    never: bool
+    entries: list[NeverEntry] = Field(min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def one_entry_per_song(self) -> NeverRequest:
+        if len({entry.id for entry in self.entries}) != len(self.entries):
+            raise ValueError("each song may appear once")
+        return self
+
+
 def install_routes(
     app: FastAPI,
     *,
@@ -93,6 +116,40 @@ def install_routes(
                 conn, workspace_id, [song.model_dump() for song in body.songs]
             )
         return {"songs": answers}
+
+    @app.post("/api/local-media/songs/never")
+    def set_never(
+        body: NeverRequest,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """Keep songs out of the mixes SelectaDJ builds, or let them back in, for the account."""
+        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_WRITE)
+        entries = [(entry.id, entry.expected) for entry in body.entries]
+        try:
+            with transaction(engine, workspace_id) as conn:
+                changed = store.set_never(conn, workspace_id, entries, body.never)
+        except store.NeverConflict as conflict:
+            if conflict.missing:
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "code": "song_not_found",
+                        "message": "Some of these songs are no longer in your library. "
+                        "Nothing was changed.",
+                        "ids": conflict.missing,
+                    },
+                ) from conflict
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "library_changed",
+                    "message": "Some of these songs changed on another screen. Nothing was "
+                    "changed; look again and try once more.",
+                    "ids": conflict.stale,
+                },
+            ) from conflict
+        return {"never": body.never, "changed": changed}
 
     @app.get("/api/local-media/songs")
     def list_songs(
