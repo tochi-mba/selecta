@@ -29,6 +29,7 @@ from selecta.admin import (
     http,
     safety,
     stripe_admin,
+    workos_admin,
 )
 from selecta.admin import staff_console as staff
 from selecta.authz.check import Actor
@@ -287,6 +288,19 @@ def install_routes(app: FastAPI, *, engine: Engine,
         return run(request, claims, lambda conn, actor: stripe_admin.refund(
             conn, actor, user_id, invoice_id, amount=body.amount, why=body.why,
             reason=body.reason, intent=body.intent()))
+
+    @app.get("/api/admin/customers/{user_id}/sign-ins")
+    def admin_sign_ins(user_id: str, request: Request, claims: SignedIn):
+        workos = getattr(app.state, "workos", None)
+        return run(request, claims,
+                   lambda conn, actor: workos_admin.sign_ins(conn, actor, user_id, workos))
+
+    @app.post("/api/admin/customers/{user_id}/sign-ins/{session_id}/revoke")
+    def admin_revoke_sign_in(user_id: str, session_id: str, body: Guarded, request: Request,
+                             claims: SignedIn):
+        workos = getattr(app.state, "workos", None)
+        return run(request, claims, lambda conn, actor: workos_admin.revoke_sign_in(
+            conn, actor, user_id, session_id, workos, reason=body.reason, intent=body.intent()))
 
     @app.post("/api/admin/customers/{user_id}/portal-link")
     def admin_portal_link(user_id: str, body: PortalBody, request: Request, claims: SignedIn):

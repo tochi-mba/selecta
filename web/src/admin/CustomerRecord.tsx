@@ -5,6 +5,7 @@ import { useLoad } from './parts';
 import { adminPath, go } from './route';
 import { ActionButton, careful, REASONS, useConsole, write } from './safety';
 import { StorageMode } from './StorageMode';
+import { SignInsPanel } from './SignIns';
 import { StripeLive } from './StripeLive';
 import { AdminTable, Badge, CopyId, Empty, Problem, Section, Skeleton, Time, words } from './ui';
 
@@ -26,7 +27,7 @@ type Customer = {
   notes: { id: string; author: string; body: string; created_at: number }[];
 };
 
-const TABS = [['overview', 'Overview'], ['configuration', 'Configuration'], ['billing', 'Billing'], ['devices', 'Devices and rooms'], ['activity', 'Staff activity'], ['notes', 'Notes']] as const;
+const TABS = [['overview', 'Overview'], ['configuration', 'Configuration'], ['billing', 'Billing'], ['devices', 'Devices and rooms'], ['sign-ins', 'Sign-ins'], ['activity', 'Staff activity'], ['notes', 'Notes']] as const;
 const SOURCE: Record<string, string> = { stripe: 'a paid subscription', override: 'a staff override', grace: 'payment grace', default: 'the free plan', free: 'the free plan' };
 
 /** One customer (Stripe's customer page shape): identity and the main actions on top, the
@@ -79,6 +80,7 @@ export function CustomerRecord({ userId, tab }: { userId: string; tab: string })
           {tab === 'configuration' && <StorageMode api={ctx.api} userId={userId} canChange={ctx.can('accounts.configure') && ctx.changesUntil !== null} />}
           {tab === 'billing' && <><StripeLive userId={userId} email={email} /><Billing r={r} /></>}
           {tab === 'devices' && <Devices r={r} />}
+          {tab === 'sign-ins' && <SignInsPanel userId={userId} />}
           {tab === 'activity' && <Activity r={r} />}
           {tab === 'notes' && <Notes r={r} userId={userId} onChange={reload} />}
         </div>

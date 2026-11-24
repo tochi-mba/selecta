@@ -662,6 +662,8 @@
           "POST /api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/retry",
           "POST /api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/refund",
           "POST /api/admin/customers/{user_id}/portal-link",
+          "GET /api/admin/customers/{user_id}/sign-ins",
+          "POST /api/admin/customers/{user_id}/sign-ins/{session_id}/revoke",
           "POST /api/admin/customers/{user_id}/{command}",
           "POST /api/admin/overrides/mass/dry-run",
           "GET /api/admin/billing",
