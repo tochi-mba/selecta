@@ -19,7 +19,7 @@ from collections.abc import Collection, Mapping
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
-from selecta.local_media import store
+from selecta.local_media import store, versions
 from selecta.local_media.schema import local_song_availability, local_songs
 from selecta.persistence import db_now, transaction
 from selecta.playback.default_speaker import RoomSpeaker, room_speaker
@@ -29,14 +29,25 @@ from selecta.rooms.ports import SongSummary
 def _requestable(fresh_after: float, speaker: str | None) -> sa.Select:
     """Songs not deleted and recently reported present on the room's speaker (ADR-0475: a room
     offers only what the device making the sound can play), as (id, title, artist, duration_s)
-    rows; callers add their workspace filter. No speaker: nothing."""
+    rows; callers add their workspace filter. No speaker: nothing.
+
+    One row per song (ADR-0469 amendment 2): only primaries are listed, and a song is offered
+    when the speaker holds any of its versions."""
+    member = local_songs.alias("member")
     present = (
         sa.select(local_song_availability.c.song_id)
-        .where(local_song_availability.c.workspace_id == local_songs.c.workspace_id)
-        .where(local_song_availability.c.song_id == local_songs.c.id)
+        .where(local_song_availability.c.workspace_id == member.c.workspace_id)
+        .where(local_song_availability.c.song_id == member.c.id)
         .where(local_song_availability.c.device_id == (speaker or ""))
         .where(local_song_availability.c.present.is_(True))
         .where(local_song_availability.c.reported_at >= fresh_after)
+    )
+    held = (
+        sa.select(member.c.id)
+        .where(member.c.workspace_id == local_songs.c.workspace_id)
+        .where(member.c.deleted_at.is_(None))
+        .where(sa.or_(member.c.id == local_songs.c.id, member.c.duplicate_of == local_songs.c.id))
+        .where(present.exists())
     )
     return (
         sa.select(
@@ -46,7 +57,8 @@ def _requestable(fresh_after: float, speaker: str | None) -> sa.Select:
             local_songs.c.duration_s,
         )
         .where(local_songs.c.deleted_at.is_(None))
-        .where(present.exists())
+        .where(local_songs.c.duplicate_of.is_(None))
+        .where(held.exists())
     )
 
 
@@ -85,6 +97,8 @@ class LocalMediaCatalog:
     def is_requestable(self, workspace_id: str, song_id: int) -> bool:
         with transaction(self.engine, workspace_id) as conn:
             fresh_after = db_now(conn) - store.AVAILABILITY_TTL_SECONDS
+            # an id from an older list may be another version: the song is what is asked for
+            song_id = versions.primary_of(conn, workspace_id, song_id)
             query = (
                 _requestable(fresh_after, speaker_of(conn, workspace_id).device_id)
                 .where(local_songs.c.workspace_id == workspace_id)

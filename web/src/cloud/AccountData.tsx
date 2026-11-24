@@ -6,7 +6,7 @@ import { Icon } from '../ui/Icon';
 import { Meter } from '../ui/Meter';
 import { showToast } from '../ui/toasts';
 import { Notice, SettingsCard, SettingsRow } from './AccountLayout';
-import { apiOrigin, bytes, CloudError, messageOf } from './api';
+import { apiOrigin, bytes, CloudError, messageOf, statusWords } from './api';
 import { useNeedsConnection } from './connection';
 import { SUPPORT_EMAIL } from '../support';
 
@@ -36,13 +36,22 @@ async function readAll(response: Response, onProgress?: (progress: ExportProgres
   return new Blob(parts, { type: response.headers?.get('Content-Type') ?? 'application/zip' });
 }
 
+/** Plain words for the export's own refusals (routes/cloud_export.py), which carry only a code. */
+const EXPORT_REFUSALS: Record<string, string> = {
+  asset_export_unavailable: 'Your audio files couldn’t be read from storage just now. Nothing was lost. Try again in a moment.',
+  asset_integrity_unavailable: 'One of your audio files didn’t check out against what was stored, so the export stopped. Nothing was lost. Try again, or contact support if it keeps happening.',
+};
+
 export async function downloadExport(token: string, workspaceId: string, fetchImpl: typeof fetch = fetch, onProgress?: (progress: ExportProgress) => void) {
   const response = await fetchImpl(`${apiOrigin}/api/account/export`, {
     headers: { Authorization: `Bearer ${token}`, 'X-Workspace-ID': workspaceId },
   });
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    throw new CloudError(messageOf(payload, `Export failed (${response.status}).`), response.status);
+    // a bare code is never shown (9c3fd508): the two the export can answer get plain words, any other refusal its status words
+    const code = (payload as { detail?: { code?: unknown } } | null)?.detail?.code;
+    const fallback = typeof code === 'string' && Object.hasOwn(EXPORT_REFUSALS, code) ? EXPORT_REFUSALS[code] : statusWords(response.status);
+    throw new CloudError(messageOf(payload, fallback), response.status);
   }
   const blob = await readAll(response, onProgress);
   const url = URL.createObjectURL(blob);
