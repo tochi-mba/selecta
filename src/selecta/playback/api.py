@@ -139,7 +139,8 @@ class HandBackBody(DeviceBody):
 
 class CommandBody(DeviceBody):
     command: str = Field(max_length=32)
-    args: dict[str, Any] | None = None
+    # a few named arguments at most; a programme's songs are capped by MAX_PROGRAMME
+    args: dict[str, Any] | None = Field(default=None, max_length=16)
     based_on_seq: int = Field(ge=0)
     idempotency_key: str | None = Field(default=None, max_length=128)
     # ADR-0461: every press is issued under an explicit fence and expires from server time.
