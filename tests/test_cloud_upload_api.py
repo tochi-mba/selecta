@@ -364,7 +364,7 @@ def test_a_batch_over_500_files_is_refused_before_planning(cloud_engine):
         (BatchTooLarge("too many"), 422, "batch_too_large"),
         (QuotaExceeded("workspace-a", 10, 0), 413, "storage_quota_exceeded"),
         (ValueError("bad"), 400, "invalid_upload"),
-        (R2Error("down", status=503), 503, "storage_temporarily_unavailable"),
+        (R2Error("down", status=503), 503, "storage_unavailable"),
     ],
 )
 def test_planning_errors_map_to_clear_statuses(cloud_engine, monkeypatch, error, status, code):
@@ -403,7 +403,8 @@ def test_reading_a_planned_upload_starts_it_once_r2_is_back(cloud_engine):
         assert planned["session"]["status"] == "planned"
         down = client.get(f"/api/uploads/{session_id}", headers=HEADERS)
         assert down.status_code == 503
-        assert down.json()["detail"] == {"code": "storage_temporarily_unavailable"}
+        assert down.json()["detail"]["code"] == "storage_unavailable"
+        assert "Nothing was lost" in down.json()["detail"]["message"]
         body = client.get(f"/api/uploads/{session_id}", headers=HEADERS).json()
     assert body["upload"]["status"] == "uploading"
     assert body["uploaded_parts"] == []
