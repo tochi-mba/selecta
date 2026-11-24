@@ -30,7 +30,7 @@ import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
 import { planName } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
-import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
+import { forgetHostedAssets, hostedAssets, hostedResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CloudLibrary } from './CloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
@@ -170,7 +170,6 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
   const coexisting = isHostedAccount(account) && on('cloud.stored_media');
-  const hostedCopies = useRef<Promise<HostedAsset[]> | null>(null);
   // BF-0462-04: the Library says where each song can play from, against this device's own
   // connected files and, for a grandfathered account, its hosted copies
   // Probing every handle means opening every file, which at thousands of songs cannot happen
@@ -283,7 +282,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       return found;
     },
     hosted: coexisting ? async (songs) => {
-      const listing = (hostedCopies.current ??= readHostedAssets(api, workspaceId).catch((problem) => { hostedCopies.current = null; throw problem; }));
+      const listing = hostedAssets(api, workspaceId); // read again after an upload (hostedMedia.ts)
       const assets = await listing;
       return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
     } : undefined,
@@ -355,6 +354,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // back online: read the library and the mix again
   useEffect(() => (offlineShell ? onReconnect(() => { refreshStatus(); refreshMix(); }) : undefined), [offlineShell, refreshStatus, refreshMix]);
   refreshStatusRef.current = refreshStatus;
+  // an upload accepted (or a stored song changed): read the hosted copies and the catalogue again
+  useEffect(() => {
+    const changed = () => { forgetHostedAssets(workspaceId); refreshStatus(); };
+    window.addEventListener(LIBRARY_CHANGED_EVENT, changed);
+    return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, changed);
+  }, [workspaceId, refreshStatus]);
   useEffect(() => { refreshStatus(); refreshMix(); void sweepLapsed(true); }, [refreshStatus, refreshMix, sweepLapsed]);
   useEffect(() => {
     const refreshWhenActive = () => {
