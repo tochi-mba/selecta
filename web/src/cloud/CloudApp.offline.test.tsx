@@ -80,7 +80,8 @@ describe('CloudApp offline and after a sign-in ends', () => {
     await waitFor(() => expect(rememberedAccount()).not.toBeNull());
     const buttons = await screen.findAllByRole('button', { name: 'Sign out' });
     await userEvent.click(buttons[0]);
-    expect(auth.state.signOut).toHaveBeenCalled();
+    // sign out first asks the other tabs what they are doing (ADR-0475 R12, 492d087d)
+    await waitFor(() => expect(auth.state.signOut).toHaveBeenCalled());
     expect(rememberedAccount()).toBeNull();
     window.history.replaceState({}, '', '/');
   });
@@ -94,7 +95,8 @@ describe('CloudApp offline and after a sign-in ends', () => {
     // the shell is its own chunk: it arrives a moment after the first drawing
     expect(await screen.findByText(/you’ll be signed in again when the connection is back/, undefined, { timeout: 15_000 })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create account' })).toBeNull();
-  });
+    // the test's own limit covers the 15 s the shell chunk may take to arrive on a busy runner
+  }, 20_000);
 
   it('opened offline with no sign-in: any other account waits on a plain page that opens by itself', async () => {
     rememberAccount('user-1', cloudAccount());
