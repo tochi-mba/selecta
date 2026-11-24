@@ -29,7 +29,7 @@ export function JobsPage({ api, can }: { api: AdminFetch; can: (permission: stri
           <button className="primary">Search</button>
         </form>
         <Failure error={jobs.error} />
-        <DataTable caption="Jobs" rows={jobs.data?.jobs ?? []} rowKey={(j) => j.id} onPick={(j) => setPicked(j.id)} pickLabel={(j) => `Open job ${j.id}`}
+        <DataTable stacked="auto" caption="Jobs" rows={jobs.data?.jobs ?? []} rowKey={(j) => j.id} onPick={(j) => setPicked(j.id)} pickLabel={(j) => `Open job ${j.id}`}
           empty="No jobs match."
           columns={[{ key: 'id', label: 'Job', render: (j) => j.id.slice(0, 13) }, { key: 'type', label: 'Type' }, { key: 'state', label: 'State' },
             { key: 'pool', label: 'Pool and lane', render: (j) => `${j.pool} / ${j.lane}` }, { key: 'attempt_count', label: 'Attempts', numeric: true },
@@ -67,11 +67,11 @@ function JobDetail({ api, jobId, can, onChanged }: { api: AdminFetch; jobId: str
           {can('jobs.retry') && <Command label="Release" note="Puts a quarantined job back in line." run={(r) => run('release', r)} />}
         </div>
         <h3>Depends on</h3>
-        <DataTable caption="Prerequisites" rows={detail.data?.depends_on ?? []} rowKey={(d) => d.id} empty="Needs nothing."
+        <DataTable stacked="auto" caption="Prerequisites" rows={detail.data?.depends_on ?? []} rowKey={(d) => d.id} empty="Needs nothing."
           columns={[{ key: 'id', label: 'Job' }, { key: 'type', label: 'Type' }, { key: 'state', label: 'State' }]} />
         <p className="admin-note">{detail.data?.needed_by.length ?? 0} jobs wait on this one.</p>
         <h3>Attempts and leases</h3>
-        <DataTable caption="Attempts" rows={detail.data?.attempts ?? []} rowKey={(a) => a.id} empty="Not started yet."
+        <DataTable stacked="auto" caption="Attempts" rows={detail.data?.attempts ?? []} rowKey={(a) => a.id} empty="Not started yet."
           columns={[{ key: 'worker_id', label: 'Worker' }, { key: 'started_at', label: 'Started', render: (a) => when(a.started_at) },
             { key: 'lease_expires_at', label: 'Lease until', render: (a) => when(a.lease_expires_at) }, { key: 'outcome', label: 'Outcome', render: (a) => a.outcome ?? 'running' },
             { key: 'cost_s', label: 'Cost (s)', numeric: true, render: (a) => String(a.cost_s ?? '') }]} />
@@ -86,7 +86,7 @@ function Workers({ api, canDrain }: { api: AdminFetch; canDrain: boolean }) {
   return (
     <Panel title="Workers">
       <Failure error={workers.error} />
-      <DataTable caption="Workers" rows={workers.data?.workers ?? []} rowKey={(w) => w.id} empty="No workers registered."
+      <DataTable stacked="auto" caption="Workers" rows={workers.data?.workers ?? []} rowKey={(w) => w.id} empty="No workers registered."
         columns={[{ key: 'id', label: 'Worker' }, { key: 'pool', label: 'Pool' }, { key: 'slots', label: 'Slots', numeric: true },
           { key: 'last_seen', label: 'Last seen', render: (w) => <Fresh reading={w.last_seen} format={(v) => when(v)} /> },
           { key: 'hold', label: 'Hold', render: (w) => w.hold ?? 'none' },

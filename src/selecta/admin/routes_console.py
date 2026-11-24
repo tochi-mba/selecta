@@ -122,8 +122,22 @@ def _change_window_check(engine: Engine, app: FastAPI, request: Request) -> JSON
     session_id = (request.headers.get(http.HEADER) or "").strip()
     if not session_id:
         return None  # the route answers "enter the admin console" itself
+    from selecta.authz import permissions
+    from selecta.authz.check import active_assignments
+    from selecta.authz.roles import ROLE_PERMISSIONS
+    from selecta.identity.schema import privileged_sessions as s
+
     with transaction(engine) as conn:
         if safety.change_window(conn, session_id) is not None:
+            return None
+        owner = conn.execute(s.select().with_only_columns(s.c.user_id)
+                             .where(s.c.id == session_id)).scalar()
+        if owner is None:
+            return None  # no such session: the route refuses it in its own words
+        held = {p for a in active_assignments(conn, owner) for p in ROLE_PERMISSIONS[a.role]}
+        if not any(permissions.get(p).danger > permissions.Danger.READ for p in held):
+            # A person who can change nothing is refused by the route's permission check, which
+            # names the permission, rather than told to press a button they don't have.
             return None
     return JSONResponse(status_code=403, content={"detail": {
         "code": "view_mode",

@@ -138,7 +138,8 @@ def test_the_console_refuses_to_work_as_a_bulk_account_export(world):
 
 
 def test_nobody_approves_their_own_dangerous_action(world):
-    assert world.post("/api/admin/emergency/app.read_only/engage", reason="drill").status_code \
+    assert world.post("/api/admin/emergency/app.read_only/engage", reason="drill",
+                      confirm="app.read_only").status_code \
         == 200
     action = world.post("/api/admin/emergency/app.read_only/release", reason="done").json()
     action_id, digest = action["action"]["id"], action["action"]["payload_hash"]
