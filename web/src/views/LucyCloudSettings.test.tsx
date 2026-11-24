@@ -18,7 +18,9 @@ function fakeRequest() {
 describe('Lucy settings in Cloud', () => {
   it('shows the plan’s Lucy level and this month’s turns, not a provider, model, key or limits', async () => {
     render(<LucyCloudSettings request={fakeRequest()} />);
-    expect(await screen.findByRole('heading', { name: 'Lucy Standard' })).toBeInTheDocument();
+    // the card is titled for the plan, with the plan's Lucy level as its badge
+    expect(await screen.findByRole('heading', { name: 'Lucy on your plan' })).toBeInTheDocument();
+    expect(screen.getByText('Lucy Standard')).toBeInTheDocument();
     expect(screen.getByText('120 of 440 turns this month', { selector: 'b' })).toBeInTheDocument();
     expect(screen.getByText(/resets (1 Dec|Dec 1)/)).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Lucy turns this month' })).toHaveAttribute('aria-valuenow', '27');
@@ -38,8 +40,8 @@ describe('Lucy settings in Cloud', () => {
     render(<LucyCloudSettings request={request} />);
     await userEvent.click(await screen.findByRole('checkbox', { name: /Memory and history/ }));
     await userEvent.click(screen.getByRole('checkbox', { name: /Share a summary of your listening/ }));
-    await userEvent.click(screen.getByRole('button', { name: 'Save Lucy settings' }));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Saved.'));
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('All changes saved.'));
     const [path, init] = request.mock.calls.at(-1)!;
     expect(path).toBe('/account/lucy');
     expect(init?.method).toBe('PUT');
@@ -50,7 +52,7 @@ describe('Lucy settings in Cloud', () => {
 
   it('leaves out a phase whose feature is off for this account', async () => {
     render(<LucyCloudSettings request={fakeRequest()} features={{ 'lucy.voice': false }} />);
-    await screen.findByRole('heading', { name: 'Lucy Standard' });
+    await screen.findByRole('heading', { name: 'Lucy on your plan' });
     expect(screen.queryByRole('checkbox', { name: /Voice input/ })).toBeNull();
     expect(screen.getByRole('checkbox', { name: /Proposals/ })).toBeInTheDocument();
   });
