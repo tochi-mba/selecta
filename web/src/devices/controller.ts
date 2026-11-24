@@ -99,6 +99,33 @@ export function programmeWithNext(link: ControllerLink, songId: number): { songs
   return { songs, song_index: at, keep_position: true };
 }
 
+/** How many songs of a mix a device holds; null when it has not said which songs it has. */
+export function mixHeld(ids: ReadonlyMap<string, ReadonlySet<number>>, deviceId: string, mixIds: readonly number[]): number | null {
+  const held = ids.get(deviceId);
+  return held ? mixIds.filter((id) => held.has(id)).length : null;
+}
+
+/** R1 with a mix known: the online device holding the most of its songs (a device that has not
+ * said which counts by its total); null when no online device holds any. */
+export function bestForMix(devices: readonly DeviceHolding[], ids: ReadonlyMap<string, ReadonlySet<number>>, mixIds: readonly number[], exceptId?: string | null): DeviceHolding | null {
+  if (!mixIds.length) return bestHolder(devices, exceptId);
+  const score = (device: DeviceHolding) => mixHeld(ids, device.device_id, mixIds) ?? (device.songs > 0 ? 0.5 : 0);
+  const able = devices.filter((device) => device.online && device.device_id !== exceptId && score(device) > 0);
+  able.sort((one, other) => score(other) - score(one) || other.last_seen_at - one.last_seen_at);
+  return able[0] ?? null;
+}
+
+/** R3's pre-flight line: what the chosen device will skip. Null when it holds the whole mix or
+ * has not said. */
+export function preflightWords(device: string, held: number | null, total: number): string | null {
+  if (held === null || held >= total || total === 0) return null;
+  const skipped = total - held;
+  return `${device} has ${held} of these ${total} songs. The other ${skipped === 1 ? 'one' : skipped} will be skipped.`;
+}
+
+/** R3: marked on a song the speaker cannot open. */
+export const notOn = (speakerName: string) => `Not on ${speakerName}`;
+
 /** R1: the device that should make the sound when nothing is playing: an online device holding
  * the most songs, the most recently seen first among equals; null when no online device holds any. */
 export function bestHolder(devices: readonly DeviceHolding[], exceptId?: string | null): DeviceHolding | null {

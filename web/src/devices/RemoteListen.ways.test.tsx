@@ -5,6 +5,7 @@ import { RemoteListen, type PlayWays } from './RemoteListen';
 import { useRemote } from './useRemote';
 import { NO_SPEAKER_WORDS, type SessionView } from './usePlaybackDevice';
 import type { DeviceHolding } from './controller';
+import { ControllerListen, holdingWords } from './ControllerListen';
 
 // ADR-0475 R1 on a remote: when the speaker is away, or a press found nobody playing, the device
 // in hand offers every way on from there, never only a sentence.
@@ -16,9 +17,9 @@ const seen = (speaker: SessionView['speaker']): SessionView => ({
 });
 const device = (over: Partial<DeviceHolding>): DeviceHolding => ({ device_id: 'tablet', name: 'Tablet', last_seen_at: 990, online: true, songs: 40, reported_at: 900, ...over });
 
-function Harness({ view, ways, refusal }: { view: SessionView; ways: PlayWays; refusal?: string }) {
+function Harness({ view, ways, refusal, held }: { view: SessionView; ways: PlayWays; refusal?: string; held?: ReadonlySet<number> }) {
   const remote = useRemote({ remoteControl: true, device: { view, send: async () => true, serverNow: () => 1000 }, mixSongIds: [], loadSongs: async () => SONGS });
-  return remote ? <RemoteListen remote={remote} playableHere={0} ways={ways} refusal={refusal} /> : null;
+  return remote ? <RemoteListen remote={remote} playableHere={0} ways={ways} refusal={refusal} speakerSongs={held} /> : null;
 }
 const ways = (over: Partial<PlayWays> = {}): PlayWays => ({ devices: [], asking: null, onPlayOn: vi.fn(), hereSongs: 0, onPlayHere: vi.fn(), now: 1000, ...over });
 
@@ -52,5 +53,33 @@ describe('every way on from a remote', () => {
     render(<Harness view={seen('elsewhere')} ways={ways({ devices: [device({})] })} />);
     await screen.findByTestId('remote-title');
     expect(screen.queryByTestId('play-ways')).toBeNull();
+  });
+});
+
+describe('R3: songs the speaker does not hold', () => {
+  it('are marked "Not on {speaker}" in Up next', async () => {
+    render(<Harness view={seen('elsewhere')} ways={ways()} held={new Set([11, 12])} />);
+    const marks = await screen.findAllByTestId('not-on-speaker');
+    expect(marks.map((mark) => mark.textContent)).toEqual(['Not on Laptop']);
+  });
+});
+
+describe('R1 picker and R3 pre-flight with the mix known', () => {
+  const ids = new Map<string, ReadonlySet<number>>([['tablet', new Set([1, 2])], ['laptop', new Set([1, 2, 3, 4])]]);
+  it('suggests the device with most of the mix, and says how many of it each holds', () => {
+    render(<ControllerListen mixName="Friday" mixSongs={4} mixIds={[1, 2, 3, 4]} ids={ids} devices={[device({ songs: 900 }), device({ device_id: 'laptop', name: 'Laptop', songs: 40 })]} thisDeviceId="phone" now={1000} asking={null} onPlayOn={vi.fn()} />);
+    expect(screen.getByTestId('play-on')).toHaveTextContent('Play on Laptop');
+    expect(screen.queryByTestId('preflight')).toBeNull();
+    expect(screen.getByText('All 4 songs')).toBeInTheDocument();
+    expect(screen.getByText('2 of 4 songs')).toBeInTheDocument();
+  });
+  it('says what the suggested device will skip, and offers one that has them all', () => {
+    const onPlayOn = vi.fn();
+    const partial = new Map<string, ReadonlySet<number>>([['tablet', new Set([1, 2, 3])], ['laptop', new Set([1, 2, 3, 4])]]);
+    // the laptop is not open, so the tablet is suggested
+    render(<ControllerListen mixName="Friday" mixSongs={4} mixIds={[1, 2, 3, 4]} ids={partial} devices={[device({}), device({ device_id: 'laptop', name: 'Laptop', online: false })]} thisDeviceId="phone" now={1000} asking={null} onPlayOn={onPlayOn} />);
+    expect(screen.getByTestId('preflight')).toHaveTextContent('Tablet has 3 of these 4 songs. The other one will be skipped.');
+    expect(screen.queryByTestId('play-on-whole')).toBeNull();
+    expect(holdingWords(device({}), 1000, { held: 0, total: 4 })).toBe('None of these songs');
   });
 });

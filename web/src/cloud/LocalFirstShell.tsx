@@ -565,12 +565,19 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   }, [recipes, request, setMixData, shellPlayer, sources]);
   // what "Play on {device}" would play when this device has no current mix of its own: the
   // account's newest saved mix, read while Listen shows that card
-  const [newest, setNewest] = useState<{ mix_id: string; name: string; songs: number } | null>(null);
+  const [newest, setNewest] = useState<{ mix_id: string; name: string; songs: number; ids?: number[] } | null>(null);
   const wantsNewest = on('devices.remote_control') && !followsHere && !remote && !data.mix.length && path === '/listen';
   useEffect(() => {
     if (!wantsNewest) return undefined;
     let live = true;
-    void newestMix(recipes).then((found) => { if (live) setNewest(found); });
+    // its songs too, so each device can be judged by how many of them it holds (R1, R3)
+    void newestMix(recipes).then(async (found) => {
+      if (!live) return;
+      setNewest(found);
+      if (!found) return;
+      const read = await recipes.read(found.mix_id).catch(() => null);
+      if (live && read) setNewest({ ...found, ids: read.songs.map((song) => song.song_id) });
+    });
     return () => { live = false; };
   }, [recipes, wantsNewest]);
   const playOn = usePlayOn({
@@ -766,7 +773,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         )}{localExport}</>;
       case 'listen':
         // something is playing on another device and this one does not hold that mix: the remote
-        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} />;
+        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} speakerSongs={holdings.speakerSongs} />;
         // nothing is playing (no speaker at all) and this device holds no music, but the person
         // has another device: play on one that has music (ADR-0475 R1, R2), or say which is
         // missing; never a Play button that cannot work here
@@ -774,6 +781,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           return (
             <ControllerListen
               mixName={data.mix.length ? data.name : newest?.name ?? ''} mixSongs={data.mix.length || (newest?.songs ?? 0)} devices={holdings.devices} thisDeviceId={playback.device?.id ?? null}
+              mixIds={data.mix.length ? songOrder : newest?.ids ?? []} ids={holdings.ids}
               now={playback.serverNow()} asking={playOn.state}
               onPlayOn={(device) => void playOn.ask(device, recipes.current() ?? newest?.mix_id ?? null)}
             />

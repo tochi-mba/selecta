@@ -5,7 +5,7 @@ import { OPTIMISTIC_MS, speakerOutput } from './PlayingBar';
 import { advancing, clock, soundWords, stateWords, upNext, whereWords } from './remoteNow';
 import type { Remote } from './useRemote';
 import { askWords, stillAsking, type AskState } from './playOn';
-import { bestHolder, type DeviceHolding } from './controller';
+import { bestHolder, notOn, type DeviceHolding } from './controller';
 import { holdingWords } from './ControllerListen';
 import { NO_SPEAKER_WORDS } from './usePlaybackDevice';
 import { countOf } from '../ui/format';
@@ -46,13 +46,15 @@ export type PlayWays = {
   now: number;
 };
 
-export function RemoteListen({ remote, playableHere, ways, refusal }: {
+export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs }: {
   remote: Remote;
   /** How many songs this device could play itself; none makes it a remote and nothing more. */
   playableHere: number;
   ways?: PlayWays | null;
   /** What the last press was told when the session did not take it. */
   refusal?: string;
+  /** R3: the songs the speaker reported it can open; null when it has not said. */
+  speakerSongs?: ReadonlySet<number> | null;
 }) {
   const { view, session, current } = remote;
   const nextId = useId();
@@ -171,7 +173,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal }: {
                   <li key={entry.index}>
                     <button type="button" onClick={() => void remote.skipTo(entry.index)} title={`Play ${entry.title} now`}>
                       <span className="remote-next-place" aria-hidden="true">{entry.index + 1}</span>
-                      <span className="remote-next-words"><b dir="auto">{entry.title}</b>{entry.artist && <span dir="auto">{entry.artist}</span>}</span>
+                      <span className="remote-next-words"><b dir="auto">{entry.title}</b>{entry.artist && <span dir="auto">{entry.artist}</span>}{speakerSongs && !speakerSongs.has(entry.songId) && <span className="remote-next-missing" data-testid="not-on-speaker">{notOn(view.speaker_name ?? 'the speaker')}</span>}</span>
                     </button>
                   </li>
                 ))}
