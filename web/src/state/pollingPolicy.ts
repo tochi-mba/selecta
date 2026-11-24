@@ -58,6 +58,7 @@ export const POLLING: readonly PollRule[] = [
   { file: 'cloud/ConnectionBanner.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down to the next connection try and clears "Back online" only while either shows; the probe itself is connection.ts (cloud.offline_shell)' },
   { file: 'cloud/ImportChip.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down "Trying again in 8 s" only while an import waits for the service; never reads the server (cloud.resilient_import)' },
   { file: 'cloud/ImportStatus.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down "Trying again in 8 s" only while an import waits for the service; never reads the server (cloud.resilient_import)' },
+  { file: 'ui/staleBuild.tsx', reads: '/index.html (the site, not the API)', everyMs: 'VERSION_CHECK_MS (30 min), and on return to the tab', hidden: 'pauses', why: 'whether a newer build is live, for the quiet "A new version is ready" line shown when nothing plays; plus a 15 s tick that reads no server (product audit gap 4)' },
   { file: 'engine/scheduler.ts', reads: null, everyMs: 'audio clock tick', hidden: 'continues', why: 'schedules the next song and seam on the audio clock while music plays in a hidden tab (ADR-0457)' },
 ];
 

@@ -126,7 +126,7 @@ describe('the side bar account menu', () => {
     expect(opener).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(opener);
     const menu = screen.getByRole('menu', { name: 'Account' });
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent?.trim())).toEqual(['Account', 'Plan & billing', 'Sign out']);
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent?.trim())).toEqual(['Account', 'Plan & billing', 'Help and support', 'Sign out']);
     expect(within(menu).getByRole('menuitem', { name: 'Plan & billing' })).toHaveAttribute('href', '/account/billing');
     fireEvent.keyDown(menu, { key: 'Escape' });
     expect(screen.queryByRole('menu', { name: 'Account' })).toBeNull();

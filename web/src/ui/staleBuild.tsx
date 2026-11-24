@@ -87,9 +87,9 @@ export function useStale(): boolean {
 export function StaleBuildPanel() {
   const again = reloadedBefore();
   return (
-    <main className="page stale-build" id="main" role="alert">
+    <main className="page stale-build" id="main">
       <h1 className="display small">{again ? 'This page still will not open.' : 'SelectaDJ has been updated.'}</h1>
-      <p className="lede">{again
+      <p className="lede" role="alert">{again
         ? 'Check your connection, then reload. If it keeps happening, contact support.'
         : 'Reload to carry on. Anything playing keeps playing until you do.'}</p>
       <div className="stale-build-actions">

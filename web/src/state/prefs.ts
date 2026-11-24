@@ -36,17 +36,23 @@ const listeners = new Set<() => void>();
 
 function read(): Prefs {
   try {
-    const saved = JSON.parse(window.localStorage.getItem(KEY) ?? '{}') as Partial<Prefs>;
+    const saved = (JSON.parse(window.localStorage.getItem(KEY) ?? '{}') ?? {}) as Partial<Prefs>;
+    // A value the person chose is kept; anything missing or unknown reads as DEFAULT_PREFS, the one
+    // place each default is written (docs/saas/11-ui-ux.md "Defaults").
+    const pick = <K extends keyof Prefs>(key: K, allowed: readonly Prefs[K][]): Prefs[K] =>
+      allowed.includes(saved[key] as Prefs[K]) ? saved[key] as Prefs[K] : DEFAULT_PREFS[key];
+    const flag = (key: 'railCollapsed' | 'palette' | 'singleKeys' | 'classicNav' | 'termHints') =>
+      typeof saved[key] === 'boolean' ? saved[key] as boolean : DEFAULT_PREFS[key];
     return {
-      theme: saved.theme === 'light' || saved.theme === 'dark' ? saved.theme : 'system',
-      motion: saved.motion === 'still' || saved.motion === 'expressive' ? saved.motion : 'subtle',
-      railCollapsed: saved.railCollapsed === true,
-      density: saved.density === 'compact' ? 'compact' : 'comfortable',
-      libraryLayout: saved.libraryLayout === 'cards' ? 'cards' : 'list',
-      palette: saved.palette !== false,
-      singleKeys: saved.singleKeys !== false,
-      classicNav: saved.classicNav === true,
-      termHints: saved.termHints !== false,
+      theme: pick('theme', ['system', 'light', 'dark']),
+      motion: pick('motion', ['still', 'subtle', 'expressive']),
+      railCollapsed: flag('railCollapsed'),
+      density: pick('density', ['comfortable', 'compact']),
+      libraryLayout: pick('libraryLayout', ['list', 'cards']),
+      palette: flag('palette'),
+      singleKeys: flag('singleKeys'),
+      classicNav: flag('classicNav'),
+      termHints: flag('termHints'),
     };
   } catch {
     return DEFAULT_PREFS;
@@ -86,11 +92,35 @@ export function setPrefs(change: Partial<Prefs>) {
       stored = null;
     }
     const kept = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
-    window.localStorage.setItem(KEY, JSON.stringify({ ...kept, ...next }));
+    // Only what the person chose is stored, never the defaults around it, so a better default
+    // later reaches everyone who never chose that setting.
+    window.localStorage.setItem(KEY, JSON.stringify({ ...kept, ...change }));
   } catch {
     // it holds until the page is closed, and that's all
   }
   apply(next);
+  for (const listener of listeners) listener();
+}
+
+/** The settings this browser has away from their defaults, for "Reset to defaults" to list. */
+export function changedPrefs(): (keyof Prefs)[] {
+  const now = prefs();
+  return (Object.keys(DEFAULT_PREFS) as (keyof Prefs)[]).filter((key) => now[key] !== DEFAULT_PREFS[key]);
+}
+
+/** Every setting back to DEFAULT_PREFS: the person's choices are forgotten (a newer build's
+ * unknown choices are kept, as setPrefs keeps them). */
+export function resetPrefs() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(KEY) ?? '{}');
+    const kept = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored as Record<string, unknown> : {};
+    for (const key of Object.keys(DEFAULT_PREFS)) delete kept[key];
+    window.localStorage.setItem(KEY, JSON.stringify(kept));
+  } catch {
+    // nothing stored to forget
+  }
+  current = { ...DEFAULT_PREFS };
+  apply(current);
   for (const listener of listeners) listener();
 }
 

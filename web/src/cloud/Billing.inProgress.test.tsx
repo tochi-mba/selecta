@@ -22,7 +22,7 @@ describe('one payment at a time', () => {
 
   it('offers the plans again once a checkout was cancelled', () => {
     render(<Billing account={cloudAccount()} busy={false} phase="cancelled" consentVersion="terms-2026-11" onCheckout={noop} onPortal={noop} />);
-    expect(screen.getByRole('button', { name: 'Continue with Premium' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue with Standard' })).toBeInTheDocument();
   });
 
   it('says a refused second checkout in plain words, never the code', () => {
