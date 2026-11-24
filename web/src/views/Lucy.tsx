@@ -27,6 +27,8 @@ import '../styles/lucy.css';
  * unset or unreachable never gets in the way of Make a Mix. */
 
 const SPLIT_AT = 1100;
+/** The longest message the server takes (TurnBody's limit). */
+const MAX_MESSAGE = 4000;
 const HISTORY_AT = 1280;
 const HISTORY_KEY = 'selecta.lucy.history';
 
@@ -215,6 +217,13 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
   const send = async () => {
     const text = unsent.text.trim();
     if (!text || sending.current || blocked) return;
+    if (text.length > MAX_MESSAGE) {
+      // said before sending, with the count, and the words stay in the box (the server refuses past this too)
+      const message = `That message is ${text.length.toLocaleString()} characters; Lucy reads up to ${MAX_MESSAGE.toLocaleString()}. Shorten it and send again.`;
+      setPending({ conversation, text, state: 'failed', message });
+      announcer.say([`Not sent. ${message.replace(/[.\s]+$/, '')}`]);
+      return;
+    }
     sending.current = true;
     let id = conversation;
     unsent.hold();
