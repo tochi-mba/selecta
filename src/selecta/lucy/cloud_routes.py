@@ -112,17 +112,25 @@ def suggestions(conn, workspace_id: str) -> list[str]:
     import sqlalchemy as sa
 
     from selecta.local_media import current_mix
-    from selecta.local_media.schema import local_songs
+    from selecta.local_media.schema import local_song_availability, local_songs
+    from selecta.lucy.cloud_tools import music_artists
 
     rows = conn.execute(
-        sa.select(local_songs.c.artist, sa.func.count().label("n"))
+        sa.select(local_songs.c.id, local_songs.c.title, local_songs.c.artist,
+                  local_songs.c.album, local_songs.c.duration_s, local_songs.c.never_play)
         .where(local_songs.c.workspace_id == workspace_id)
         .where(local_songs.c.deleted_at.is_(None))
-        .group_by(local_songs.c.artist)
-        .order_by(sa.func.count().desc(), local_songs.c.artist)
-        .limit(2)
     ).all()
-    artists = [row.artist for row in rows if row.artist]
+    held = dict(conn.execute(
+        sa.select(local_song_availability.c.song_id, sa.func.count())
+        .where(local_song_availability.c.workspace_id == workspace_id)
+        .where(local_song_availability.c.present.is_(True))
+        .group_by(local_song_availability.c.song_id)
+    ).all())
+    songs = [{"id": int(r.id), "title": r.title, "artist": r.artist, "album": r.album,
+              "duration_s": r.duration_s, "never": bool(r.never_play)} for r in rows]
+    # music only, most held first: an author or a podcast is never a suggested mix
+    artists = [name for name, _count in music_artists(songs, held, limit=2)]
     asks = []
     if len(artists) >= 2:
         asks.append(f"An hour of {artists[0]} and {artists[1]}")

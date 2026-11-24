@@ -111,6 +111,46 @@ def song_line(song: dict[str, Any]) -> dict[str, Any]:
     return line
 
 
+SPOKEN = re.compile(
+    r"\b(chapter|audiobook|audio book|unabridged|abridged|podcast|episode|ep\.? ?\d|lecture|"
+    r"sermon|interview|part \d+ of|disc \d+ track|narrated|read by|talk|meditation)\b",
+    re.IGNORECASE,
+)
+MUSIC_SECONDS = (45, 900)
+"""A song runs between 45 seconds and 15 minutes; a chapter or an episode usually doesn't."""
+
+
+def looks_spoken(song: dict[str, Any]) -> bool:
+    """No measured is-music signal reaches Cloud, so: an audiobook, podcast or talk by its
+    words or its length."""
+    words = f"{song.get('title') or ''} {song.get('album') or ''}"
+    seconds = song.get("duration_s")
+    too_long_or_short = seconds is not None and not (
+        MUSIC_SECONDS[0] <= float(seconds) <= MUSIC_SECONDS[1])
+    return bool(SPOKEN.search(words)) or too_long_or_short
+
+
+def music_artists(songs: list[dict[str, Any]], held: dict[int, int] | None = None,
+                  limit: int = 12) -> list[tuple[str, int]]:
+    """Artists of music only, most held first (songs a device of the person holds now),
+    then most songs. An artist whose songs are mostly spoken word (an author, a podcast)
+    is left out altogether."""
+    total: Counter[str] = Counter()
+    music: Counter[str] = Counter()
+    holding: Counter[str] = Counter()
+    for song in songs:
+        artist = song.get("artist")
+        if not artist or song.get("never"):
+            continue
+        total[artist] += 1
+        if not looks_spoken(song):
+            music[artist] += 1
+            holding[artist] += 1 if (held or {}).get(song["id"]) else 0
+    kept = [a for a in music if music[a] >= max(1, 0.6 * total[a])]
+    kept.sort(key=lambda a: (-holding[a], -music[a], fold(a)))
+    return [(a, music[a]) for a in kept[:limit]]
+
+
 def library_summary(ctx: CloudCtx) -> dict[str, Any]:
     songs = ctx.songs()
     artists = Counter(song["artist"] for song in songs if song["artist"])
@@ -119,7 +159,7 @@ def library_summary(ctx: CloudCtx) -> dict[str, Any]:
         "songs": len(songs),
         "artists": len(artists),
         "hours": round(total / 3600, 1),
-        "top_artists": [f"{name} ({count})" for name, count in artists.most_common(12)],
+        "top_artists": [f"{name} ({count})" for name, count in music_artists(songs)],
     }
 
 
