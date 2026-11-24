@@ -15,7 +15,7 @@
 | Prompt injection via tags/lyrics | Untrusted content marking; tools authorise nothing on their own |
 | Abuse of Free (mass accounts for storage/compute) | [§12.6](#126-abuse-controls-for-the-free-tier) |
 | Webhook forgery | Stripe signature verification, replay window |
-| DoS / API flooding | Cloudflare WAF and rate limits, per-account and per-IP limits in the API, upload concurrency limits |
+| DoS / API flooding | Cloudflare WAF rate rules in front of the API (an owner setting); in the API itself (`src/selecta/ratelimit.py`, flag `cloud.rate_limits`) per-IP 1,200 a minute and per-account 600 a minute, with stricter buckets for checkout and portal (10), account changes (10), upload plans (60) and search (120), answered with 429, `Retry-After` and plain words. The buckets are kept in each API process's memory, so N processes allow N times each limit; webhooks, health checks and the guest, display, kiosk and venue room routes are left to their own limits. Upload concurrency limits |
 | Room abuse (code guessing, request spam, strangers joining from a leaked code) | 40-bit codes looked up by hash, join rate limits, per-guest/IP/room request limits, host lock/approve/ban, code rotation ([§11A.2](11a-devices-and-rooms.md#11a2-rooms-premium)) |
 | Guest tokens used beyond their room | Guest tokens can only read that room's snapshot and requestable-song metadata and create requests; no audio, no host account data |
 | Flag rules leaking targeting (user lists, segments) | Rules evaluated server-side only; browsers receive decisions, never rules ([§11B.4](11b-feature-flags.md#11b4-enforcement-in-the-cloud)) |

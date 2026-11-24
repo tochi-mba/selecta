@@ -359,6 +359,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/account"): None,
     ("GET", "/api/account/labs"): None,
     ("PUT", "/api/account/labs/{flag_id}"): {"enabled": False},
+    ("PUT", "/api/account/workspace-name"): {"name": "Tenant check"},
     ("GET", "/api/account/labs/local-first"): None,
     ("POST", "/api/account/labs/local-first/leave"): None,
     ("GET", "/api/account/export"): None,

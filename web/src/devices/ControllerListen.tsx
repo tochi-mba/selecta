@@ -3,6 +3,8 @@ import { PageLink } from '../shell/PageLink';
 import { countOf } from '../ui/format';
 import { bestForMix, mixHeld, preflightWords, type DeviceHolding } from './controller';
 import { askWords, stillAsking, type AskState } from './playOn';
+import { PlayNoticeLine } from './PlayNoticeLine';
+import type { PlayNotice } from './useWhereToPlay';
 import './devices.css';
 
 // Listen on a device that holds none of the music, while nothing is playing (ADR-0475 R1, R2).
@@ -28,7 +30,7 @@ export function holdingWords(device: DeviceHolding, now: number, mix?: { held: n
   return device.online ? has : `${has}. Not open right now, last open ${ago(now - device.last_seen_at)}`;
 }
 
-export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices, thisDeviceId, now, asking, onPlayOn }: {
+export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices, thisDeviceId, now, asking, onPlayOn, notice, onDismissNotice }: {
   /** The current mix on this device's account view; empty when there is none. */
   mixName: string;
   mixSongs: number;
@@ -42,6 +44,9 @@ export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices,
   now: number;
   asking: AskState;
   onPlayOn: (device: DeviceHolding) => void;
+  /** The one message about where the music is going; replaces the asking line. */
+  notice?: PlayNotice | null;
+  onDismissNotice?: () => void;
 }) {
   const others = devices.filter((device) => device.device_id !== thisDeviceId);
   const known = ids ?? new Map<string, ReadonlySet<number>>();
@@ -82,7 +87,7 @@ export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices,
               {away.length ? 'None of your devices with music is open right now. Open SelectaDJ on one of them.' : 'None of your devices has music connected yet.'}
             </p>
           )}
-          {asking && <p className="controller-asking" role="status" data-testid="play-on-status" data-phase={asking.phase}>{askWords(asking.phase, asking.device)}</p>}
+          {notice ? <PlayNoticeLine notice={notice} onDismiss={() => onDismissNotice?.()} /> : asking && <p className="controller-asking" role="status" data-testid="play-on-status" data-phase={asking.phase}>{askWords(asking.phase, asking.device)}</p>}
         </section>
         <div className="remote-side">
           {(able.length > 1 || away.length > 0) && (

@@ -6,6 +6,7 @@ import { checkoutAvailable, CheckoutPhase, Consent, consentComplete, NO_CONSENT,
 import { hasMeters, Meters } from './Meters';
 import { useNeedsConnection } from './connection';
 import { Icon } from '../ui/Icon';
+import { countOf } from '../ui/format';
 import { BillingStandingNotice } from './BillingStanding';
 
 // Plan & billing (docs/saas/11-ui-ux.md §11.1): the current plan, the usage meters, and the way
@@ -110,6 +111,12 @@ function currentIncludes(account: Account, local: boolean): Axis[] {
   const sold = PLANS.find((item) => item.id === plan);
   if (sold && !local) lines.push({ name: 'Extras', words: aboutPlan(sold, account) });
   return lines;
+}
+
+/** Whether the library is past the plan's soft cap, a sanity bound (never a refusal). */
+export function overSoftCap(account: Account): boolean {
+  const library = account.usage?.library;
+  return !!library && library.soft_cap > 0 && library.songs > library.soft_cap;
 }
 
 /** A price as its figure and its period ("£6.99" and "/ month"), so the figure can be read at a glance. */
@@ -226,6 +233,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
             ? 'Upgrades start straight away and are prorated. Downgrades start at the end of the period, and your music and mixes stay exactly as they are.'
             : 'Upgrades start straight away and are prorated. Downgrades start at the end of the period; a library bigger than the new plan stays playable and nothing is deleted. Finished exports are kept for the new plan’s time, counted from the day it starts.'}</p>
           : checkout && open && <p className="acct-plan-foot">Upgrade whenever you like. You can change or cancel at any time.</p>}
+        {overSoftCap(account) && <p className="acct-plan-foot" data-testid="library-soft-cap">{`Your library holds ${countOf(account.usage!.library!.songs, 'song')}, more than the ${countOf(account.usage!.library!.soft_cap, 'song')} ${planName(account)} is made for. Everything still plays and nothing is removed; a very large library can make some pages slower.`}</p>}
         {offline && <p className="needs-connection">{offline}</p>}
       </SettingsCard>
       {hasMeters(account) && (

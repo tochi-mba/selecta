@@ -20,7 +20,7 @@ import { SettingsLayout, settingsPlaces } from './AccountLayout';
 import { AccountPage, AccountStrip } from './AccountPage';
 export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
-import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
+import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
 import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
@@ -41,6 +41,7 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
+import { WorkspaceNameOffer } from './WorkspaceNameOffer';
 import { SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './localFirstGate';
@@ -201,7 +202,12 @@ export function CloudApp() {
   // time, so the client keeps its identity when the account's flags arrive.
   const api = useMemo(() => {
     const layered = resilient(rawApi);
-    return (<T,>(path: string, init?: RequestInit, workspaceId?: string): Promise<T> => (flagOn(OFFLINE_SHELL) ? layered<T>(path, init, workspaceId) : rawApi<T>(path, init, workspaceId)));
+    return (<T,>(path: string, init?: RequestInit, workspaceId?: string): Promise<T> => {
+      // `cloud.idempotency`: one key per press, made before any retry, so a write whose answer
+      // was lost is answered again by the server instead of being done twice
+      const keyed = withIdempotencyKey(init, flagOn('cloud.idempotency'));
+      return flagOn(OFFLINE_SHELL) ? layered<T>(path, keyed, workspaceId) : rawApi<T>(path, keyed, workspaceId);
+    });
   }, [rawApi]);
   const connectionNow = useConnection();
   const shownAccount = useRef(account);
@@ -674,6 +680,7 @@ export function CloudApp() {
     profile={[
       <AccountStrip email={user.email} plan={planName(account)} workspace={account.workspace.name} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />,
       framed && businessEntry,
+      <WorkspaceNameOffer account={account} rename={async (name) => { await api('/account/workspace-name', { method: 'PUT', body: JSON.stringify({ name }) }, account.workspace.id); await refreshAccount(); }} />,
       framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />,
       !framed && flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />,
     ]}

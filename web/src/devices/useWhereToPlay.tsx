@@ -17,7 +17,7 @@ type Device = { device_id: string; name: string };
 /** The one message about where the music is going, with its choices inline. */
 export type PlayNotice = { deviceId: string | null; text: string; actions: { label: string; run: () => void }[] };
 
-export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told }: {
+export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told, playingOn = null }: {
   enabled: boolean;
   /** null until the holdings are read (then the press plays here, as before) */
   situation: Situation | null;
@@ -29,6 +29,8 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   refreshHoldings: () => void;
   /** What the asked device said (usePlayOn): no answer in time makes it unusable this once. */
   asking?: AskState;
+  /** The device the session shows playing now, wherever it is. */
+  playingOn?: string | null;
 }): { decide: () => boolean; picker: ReactNode; choice: Choice | null; notice: PlayNotice | null; clearNotice: () => void } {
   const [asking, setAsking] = useState<Extract<Choice, { kind: 'ask' }> | null>(null);
   const said = useRef(new Set<string>());
@@ -105,6 +107,12 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
       actions: [{ label: 'Try again', run: () => { setNotice(null); silent.current.delete(toldId); const again = latest.current.situation?.devices.find((one) => one.device_id === toldId); if (again) startOn(again); } }, ...choose],
     });
   }, [phase, toldId, startOn]);
+
+  // the device named started playing: the session says so now, so the notice has done its job
+  const playingThere = playingOn;
+  useEffect(() => {
+    if (notice?.deviceId && playingThere === notice.deviceId && notice.text.startsWith('Starting on')) setNotice(null);
+  }, [notice, playingThere]);
 
   const live = choice?.kind === 'ask' ? choice : asking;
   const picker = asking && live && situation ? (

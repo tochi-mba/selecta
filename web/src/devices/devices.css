@@ -243,3 +243,8 @@
 .speaker-picker-away summary { min-height: var(--control-height); display: flex; align-items: center; cursor: pointer; }
 .speaker-picker-away ul { list-style: none; margin: 0; padding: 0 0 0 var(--space-3); display: grid; gap: var(--space-1); }
 .speaker-picker-away b { font-weight: var(--weight-label); color: var(--text); }
+/* ADR-0475: the one message about where the music is going; its choices wrap as one group */
+.play-notice { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-3); border-inline-start: var(--marker) solid var(--selected); background: var(--surface-raised); border-radius: var(--radius-sm); min-width: 0; }
+.play-notice p { margin: 0; flex: 1 1 10rem; font: var(--type-meta); color: var(--text); }
+.play-notice-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.play-notice-actions button { min-height: var(--control-height); }
