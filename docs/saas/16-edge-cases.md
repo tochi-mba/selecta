@@ -30,7 +30,7 @@ Grouped one-liners; each maps to a test or a documented policy. (The scenario ca
 
 **Feature flags**: see [§11B.7](11b-feature-flags.md#11b7-edge-cases-for-flags).
 
-**Local mode regressions** (must not break the existing app): first run with a folder path · gathering old homes · backups/restore · BYO-key Lucy · offline use · Windows paths with Unicode · the live dev site running from the main checkout during refactors.
+**Local mode regressions** (must not break the existing app): first run with a folder path · gathering old homes · backups/restore · BYO-key Lucy · offline use · Windows paths with Unicode and paths over 260 characters (`selecta/longpaths.py`, `tests/test_long_paths.py`) · the live dev site running from the main checkout during refactors.
 
 ---
 

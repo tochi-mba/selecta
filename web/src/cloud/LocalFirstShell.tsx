@@ -73,6 +73,7 @@ import { plainMessage } from './resilientRequest';
 import { useAccountMix } from './useAccountMix';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
+import { ChangedFromLine } from '../devices/ChangedFromLine';
 import { PlayNoticeLine } from '../devices/PlayNoticeLine';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
@@ -602,7 +603,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       return 'needs_music';
     }
     if (!pressed && !soundAllowedHere()) { setAskedToPlay(ask); return 'needs_gesture'; }
+    // another device became the speaker meanwhile (its own Play here instead): stand down
+    if ((await playback.refreshSession())?.speaker === 'elsewhere') return 'declined';
     setMixData(mix);
+    player.startFreeOnce = true;
     hereOnPurpose.current = true;
     void shellPlayer.playFrom(0);
     return 'starting';
@@ -931,7 +935,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
             {roomAdd.onDevice > 0 && <span className="room-open-waiting" data-testid="room-on-device" title={`${countOf(roomAdd.onDevice, 'request')} waiting on another device`}>{roomAdd.onDevice} waiting on a device</span>}
           </a>
         ) : undefined}
-        banner={<>{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{playback.view?.speaker === 'here' && <ChangedFromLine change={playback.changedFrom} nameOf={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null} />}{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section></HolderContext.Provider>
