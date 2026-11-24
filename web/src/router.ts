@@ -46,7 +46,8 @@ export function parseRoute(pathname: string): Route {
   if (path === '/listening') return { page: 'listening' };
   if (path === '/mix/current/edit') return { page: 'edit', draft: null };
   if (path === '/mixes/lucy') return { page: 'lucy', conversation: null };
-  const conversation = /^\/mixes\/lucy\/([A-Za-z0-9_]+)$/.exec(path);
+  // local ids look like `cv_...`; Cloud's are UUIDs, with hyphens (ADR-0476)
+  const conversation = /^\/mixes\/lucy\/([A-Za-z0-9_-]+)$/.exec(path);
   if (conversation) return { page: 'lucy', conversation: conversation[1] };
   const workshop = /^\/workshop\/([a-z]+)$/.exec(path);
   if (workshop && WORKSHOP_TABS.includes(workshop[1] as WorkshopTab)) {
