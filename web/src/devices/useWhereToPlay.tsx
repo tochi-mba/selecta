@@ -86,15 +86,16 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   const phase = told?.phase;
   const toldId = told?.deviceId;
   useEffect(() => {
-    if (phase !== 'no_answer' || !toldId || toldId !== started.current) return;
+    // not answering, or already known not to be open (the server refused the ask)
+    if ((phase !== 'no_answer' && phase !== 'offline') || !toldId || toldId !== started.current) return;
     started.current = null;
     silent.current.add(toldId);
     const name = latest.current.situation?.devices.find((one) => one.device_id === toldId)?.name ?? 'That device';
-    const others = latest.current.situation ? { ...latest.current.situation, devices: latest.current.situation.devices.filter((one) => !silent.current.has(one.device_id)) } : null;
+    const others = latest.current.situation ? { ...latest.current.situation, devices: latest.current.situation.devices.map((one) => (silent.current.has(one.device_id) ? { ...one, online: false } : one)) } : null;
     const next = others ? whereToPlay(others) : null;
-    showToast(`${name} didn’t answer.`, { tone: 'problem', actions: [
+    showToast(phase === 'offline' ? `${name} isn’t open right now.` : `${name} didn’t answer.`, { tone: 'problem', actions: [
       { label: 'Try again', run: () => { silent.current.delete(toldId); const again = latest.current.situation?.devices.find((one) => one.device_id === toldId); if (again) startOn(again); } },
-      ...(next && next.kind !== 'speaker' && next.kind !== 'none' ? [{ label: 'Choose another device', run: () => { if (next.kind === 'ask') setAsking(next); else startOn(next.device); } }] : []),
+      ...(next && next.kind !== 'speaker' && next.kind !== 'none' ? [{ label: 'Choose another device', run: () => { if (next.kind === 'ask') setAsking(next); else startOn(next.device, next.kind === 'only' && next.defaultAway ? becauseWords(next.device.name, next.defaultAway.name) : undefined); } }] : []),
     ] });
   }, [phase, toldId, startOn]);
 
