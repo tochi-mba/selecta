@@ -41,7 +41,7 @@ from selecta.admin import routes_economics as admin_economics_routes
 from selecta.admin.state import EmergencyCache
 from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
-from selecta.billing import plans, stripe_sync
+from selecta.billing import plans, standing, stripe_sync
 from selecta.business import admin_routes as business_admin_routes
 from selecta.business import billing_routes as business_billing_routes
 from selecta.business import controls_wiring as business_controls
@@ -655,13 +655,13 @@ def create_cloud_app(
         claims: Claims = Depends(current_claims),
     ):
         snapshot = rule_snapshot()
-        workspace_id = request.headers.get("x-workspace-id")
-        principal = _principal(engine, claims, workspace_id)
+        principal = _principal(engine, claims, request.headers.get("x-workspace-id"))
         with transaction(engine, principal.workspace.id) as conn:
             entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             storage = quota.usage(conn, principal.workspace.id)
             now = db_now(conn)
+            billing_now = standing.for_account(conn, principal, entitlement, now)
             preferences = flag_rules.user_preferences(conn, principal.user.id)
             decisions = targeting.decide_all(
                 feature_context(principal, plan, now),
@@ -711,6 +711,7 @@ def create_cloud_app(
             "billing": {
                 "consent_version": os.environ.get("SELECTA_CHECKOUT_CONSENT_VERSION", "").strip(),
                 "checkout_available": billing_api.checkout_available(),
+                "standing": billing_now,
             },
             "lucy": {"tier": meters.lucy_tier(plan)},
             "features": decisions.snapshot(),
