@@ -22,7 +22,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.local_media import current_mix, recipes, store
-from selecta.local_media.schema import local_songs
+from selecta.local_media.schema import local_song_availability, local_songs
 from selecta.lucy import cloud_proposals
 from selecta.mix_contract import MAX_SONGS, NAME_LIMIT
 from selecta.persistence import transaction
@@ -75,6 +75,24 @@ class CloudCtx:
             ]
         return self._songs
 
+    def mark_where(self, lines: list[dict[str, Any]]) -> None:
+        """ADR-0475: a song no open device of the person's holds right now can still go in a
+        mix, but won't play until one that has it is open. Said only once any device reports."""
+        ids = [line["id"] for line in lines]
+        if not ids:
+            return
+        with transaction(self.engine, self.workspace_id) as conn:
+            reporting = conn.execute(
+                sa.select(local_song_availability.c.song_id)
+                .where(local_song_availability.c.workspace_id == self.workspace_id).limit(1)
+            ).first()
+            if reporting is None:
+                return
+            counts = store.availability_counts(conn, self.workspace_id, ids)
+        for line in lines:
+            if not counts.get(line["id"]):
+                line["not_on_an_open_device"] = True
+
     def by_id(self) -> dict[int, dict[str, Any]]:
         return {song["id"]: song for song in self.songs()}
 
@@ -124,6 +142,7 @@ def search_songs(ctx: CloudCtx, query: str = "", limit: int = 10, **_: Any) -> d
         scored.append((hits * 2 + exact + (all(w in haystack for w in words)) * 2, song))
     scored.sort(key=lambda item: (-item[0], fold(item[1]["artist"]), fold(item[1]["title"])))
     found = [song_line(song) for _score, song in scored[:limit]]
+    ctx.mark_where(found)
     ctx.seen_ids.update(line["id"] for line in found)
     return {"query": query, "matches": len(scored), "songs": found,
             "note": None if found else "Nothing in this library matches those words."}
@@ -170,6 +189,7 @@ def get_current_mix(ctx: CloudCtx, **_: Any) -> dict[str, Any]:
         for i, song in enumerate(songs[:MIX_SONGS_SHOWN])
     ]
     ctx.seen_ids.update(line["id"] for line in shown)
+    ctx.mark_where(shown)
     return {"mix": {"name": mix["name"], "songs": len(songs), "minutes": round(total / 60),
                     "order": shown,
                     "more": max(0, len(songs) - MIX_SONGS_SHOWN) or None}}
@@ -316,10 +336,6 @@ def run_tool(ctx: CloudCtx, name: str, arguments: Any) -> tuple[str, bool]:
         return json.dumps({"error": problem.message}), False
     ok = "error" not in answer
     return json.dumps(answer, ensure_ascii=False, separators=(",", ":")), ok
-
-
-def store_exists(conn: Connection, workspace_id: str, song_id: int) -> bool:
-    return store.exists(conn, workspace_id, song_id)
 
 
 __all__ = ["CloudCtx", "PROPOSAL_TOOLS", "TITLES", "TOOLS", "TOOL_SCHEMA_VERSION", "run_tool"]

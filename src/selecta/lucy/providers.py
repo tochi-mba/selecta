@@ -10,6 +10,7 @@ lives in builtin.py.
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -83,9 +84,12 @@ class AnthropicProvider:
         self.effort = effort or DEFAULT_EFFORT
         # The host itself, not a substring: "https://other.example/api.anthropic.com" is not it.
         self.default_host = not base_url or urlsplit(base_url).hostname == "api.anthropic.com"
+        # A key that isn't scoped to one Anthropic workspace must name it on every request.
+        workspace = os.environ.get("ANTHROPIC_WORKSPACE_ID", "").strip()
         self.client = anthropic.AsyncAnthropic(
             api_key=api_key, base_url=None if self.default_host else base_url,
             max_retries=2, timeout=120.0,
+            default_headers={"anthropic-workspace-id": workspace} if workspace else None,
         )
 
     def tool(self, name: str, description: str, schema: dict) -> dict:

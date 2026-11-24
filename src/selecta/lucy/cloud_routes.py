@@ -207,6 +207,7 @@ def install_routes(
         ws = principal.workspace.id
         with transaction(engine, ws) as conn:
             row = mine(conn, principal, conversation)
+            cloud_store.settle_stale(conn, ws, row.id, runner.alive_turns())
             return {
                 "conversation": cloud_store.get_conversation(conn, ws, principal.user.id,
                                                              row.id),

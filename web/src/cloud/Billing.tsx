@@ -32,7 +32,7 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
     headline: 'More from Lucy',
     eyebrow: 'For everyday mixing',
     axes: [
-      { name: 'Lucy', words: 'Standard: 400 everyday turns and 40 planning turns a month, answered by Claude Sonnet.', flag: 'lucy' },
+      { name: 'Lucy', words: 'Standard: 400 everyday turns and 40 planning turns a month, usually answered by Claude Sonnet (a very heavy month moves to a lighter model).', flag: 'lucy' },
       { name: 'Discovery', words: 'Scheduled discovery sweeps for new links between your songs.' },
       { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
     ],
@@ -42,7 +42,7 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
     eyebrow: 'For hosting',
     axes: [
       { name: 'Rooms', words: 'Open a room for up to 100 guests, for up to 12 hours, with song requests.', flag: 'rooms' },
-      { name: 'Lucy', words: 'Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use, answered by Claude Opus.', flag: 'lucy' },
+      { name: 'Lucy', words: 'Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use, usually answered by Claude Opus (a very heavy month moves to a lighter model).', flag: 'lucy' },
       { name: 'Discovery', words: 'Larger scheduled discovery sweeps.' },
       { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
     ],
