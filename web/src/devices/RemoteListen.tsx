@@ -100,6 +100,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
     volume.move(percent);
     if (Date.now() - sentAt.current < VOLUME_EVERY_MS) return;
     sentAt.current = Date.now();
+    setLevel({ percent, seq: session.seq });
     void remote.setVolume(percent);
   };
 
@@ -107,7 +108,10 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
   const held = sought && sought.seq === session.seq && sought.index === session.song_index ? sought.ms : null;
   const position = seek.dragged ?? held ?? remote.positionMs();
   const reportedVolume = Math.round(levelOf(session));
-  const shownVolume = volume.dragged ?? (level && level.seq === session.seq ? level.percent : reportedVolume);
+  // G50: the level set here stands until the session reports it (or the wait runs out), so a
+  // late answer never moves the slider back under the finger
+  const shownVolume = volume.dragged ?? (level ? level.percent : reportedVolume);
+  useEffect(() => { if (level && reportedVolume === level.percent) setLevel(null); }, [level, reportedVolume]);
   // said about the speaker, by name: this device cannot play its check tone
   const sound = soundWords(view, speakerOutput(session));
   const state = stateWords(view, session);
