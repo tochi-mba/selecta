@@ -40,7 +40,7 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { bestHolder, programmeTurn, type ControllerLink } from '../devices/controller';
+import { bestHolder, HolderContext, musicHolder, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { ControllerListen } from '../devices/ControllerListen';
 import { soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
@@ -395,7 +395,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const followsHere = (status?.counts.ready ?? 0) > 0;
   const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: followsHere ? songOrder : NO_SONGS, loadSongs: loadRemoteSongs });
   // ADR-0475: what the speaker can open, so a request is judged by the device that will play it
-  const holdings = useHoldings(cloud, on('devices.remote_control') && (!!remote || !followsHere), remote ? playback.view?.speaker_device_id ?? null : null);
+  const [holderId, setHolderId] = useState<string | null>(null);
+  const holdings = useHoldings(cloud, on('devices.remote_control') && (!!remote || !followsHere), remote ? playback.view?.speaker_device_id ?? null : holderId);
+  // ADR-0475 R6: the device to name as where the music is (the speaker, else the best holder)
+  const holderDevice = holdings.devices ? musicHolder(holdings.devices, playback.device?.id ?? null, remote ? playback.view?.speaker_device_id ?? null : null) : null;
+  useEffect(() => { setHolderId(holderDevice?.device_id ?? null); }, [holderDevice?.device_id]);
+  const holderValue = useMemo<MusicHolder | null>(() => (holderDevice ? { deviceId: holderDevice.device_id, name: holderDevice.name, songs: holderDevice.songs, online: holderDevice.online, ids: holdings.speakerSongs } : null), [holderDevice?.device_id, holderDevice?.name, holderDevice?.songs, holderDevice?.online, holdings.speakerSongs]);
   const remoteProgramme = remote ? remote.session.programme.map((entry) => entry.song_id).join(',') : '';
   const remoteMix = useMemo<MixData['mix']>(() => (remoteProgramme ? remoteProgramme.split(',').map(Number).map((songId, position) => {
     const known = remote?.book.get(songId);
@@ -809,7 +814,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         banner={<>{askedBanner}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
-        <Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section>
+        <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section></HolderContext.Provider>
         <footer className="cloud-footer">SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.</footer>
       </Shell>
       {requesting && on('requests') && (

@@ -1,3 +1,5 @@
+import { createContext } from 'react';
+
 // ADR-0475, every device a controller. A device that is not the speaker still sees and steers
 // everything in the account: this is the link it holds to the device that is making the sound,
 // and the rules for changing that device's programme from here. Only making sound needs files.
@@ -21,6 +23,20 @@ export type ControllerLink = {
 /** A device as the holdings route lists it: what it can open, and whether it is here now. */
 export type DeviceHolding = { device_id: string; name: string; last_seen_at: number; online: boolean; songs: number; reported_at: number | null };
 export type Holdings = { devices: DeviceHolding[]; server_time: number; device_id?: string; song_ids?: number[] };
+
+/** ADR-0475 R6: another of the person's devices that holds music, for the pages that say where a
+ * song is. `ids` are the catalogue ids it reported; null when it has not said which. */
+export type MusicHolder = { deviceId: string; name: string; songs: number; online: boolean; ids: ReadonlySet<number> | null };
+export const HolderContext = createContext<MusicHolder | null>(null);
+
+/** The device to name as where the music is: the speaker when one is playing elsewhere, else the
+ * open device holding the most songs, else the one holding the most that is not open. */
+export function musicHolder(devices: readonly DeviceHolding[], thisDeviceId: string | null, speakerId: string | null): DeviceHolding | null {
+  const others = devices.filter((device) => device.device_id !== thisDeviceId && device.songs > 0);
+  const speaker = speakerId ? others.find((device) => device.device_id === speakerId) : undefined;
+  if (speaker) return speaker;
+  return bestHolder(others) ?? [...others].sort((one, other) => other.songs - one.songs || other.last_seen_at - one.last_seen_at)[0] ?? null;
+}
 
 /** R9: one wording for where a song will make sound when it is not this device. */
 export const playsOn = (speakerName: string) => `Plays on ${speakerName}`;
