@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Account, BillingStanding } from './api';
-import { BillingStandingNotice, standingWords } from './BillingStanding';
+import { BillingStandingNotice, fingerprint, standingWords } from './BillingStanding';
 
 const AT = Date.UTC(2026, 11, 4, 12) / 1000;
 
@@ -36,6 +36,11 @@ describe('billing moments', () => {
     expect(screen.getByRole('link', { name: 'Contact support' }).getAttribute('href')).toMatch(/^mailto:support@selectadj\.app\?/);
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByRole('alert')).toBeNull();
+    // storage keeps a one-way fingerprint, never the event key itself
+    const stored = Object.keys(localStorage).map((name) => localStorage.getItem(name) ?? '').join(' ');
+    expect(stored).not.toContain(failed.key);
+    expect(stored).not.toContain('payment');
+    expect(stored).toContain(fingerprint(failed.key));
     rerender(<BillingStandingNotice account={account(failed)} place="shell" onPortal={portal} />);
     expect(screen.queryByRole('alert')).toBeNull();
     // a new event (cancelling) has a new key and shows again
