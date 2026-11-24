@@ -473,7 +473,9 @@ def submit_command_in(
         status = CommandStatus.SUPERSEDED
     elif expires_at <= now:
         status = CommandStatus.EXPIRED
-    elif based_on_seq != session.seq:
+    # ADR-0475 G1: a volume is a level, not a step from where things were: the last one sent
+    # wins, so a slider dragged on two devices at once settles on one value, never "try again"
+    elif based_on_seq != session.seq and name is not commands.Command.SET_VOLUME:
         status = CommandStatus.STALE
     elif (
         name is commands.Command.PLAY

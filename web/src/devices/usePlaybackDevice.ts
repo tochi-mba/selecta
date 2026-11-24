@@ -130,6 +130,12 @@ export const HEARTBEAT_MS = 5000;
 export const SPEAKER_POLL_MS = 1000;
 export const REMOTE_POLL_MS = 2000;
 export const FADE_MS = 1000;
+/** ADR-0475 G1: the mix level a session starts at before anyone sets one (comfortable, not full). */
+export const DEFAULT_VOLUME = 80;
+/** A new speaker rises to the session's level over this long, so a hand-over never jumps loud. */
+export const VOLUME_RISE_MS = 1000;
+/** The session's level as the speaker plays it: its own value, or the comfortable default. */
+export const levelOf = (session: { volume?: number | null } | null | undefined) => (typeof session?.volume === 'number' ? session.volume : DEFAULT_VOLUME);
 /** The old speaker hears within SPEAKER_POLL_MS and fades over FADE_MS; wait a little more. */
 export const START_DELAY_MS = SPEAKER_POLL_MS + FADE_MS + 400;
 /** Said when this device kept playing offline and found another device had taken over. */
@@ -320,9 +326,12 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     appliedSeq.current = session.seq;
     if (!wake.current) wake.current = holdWakeLock();
     wakeWasHeld.current = false;
-    if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
+    // G51: start quiet and rise to the session's level, so taking over never jumps loud
+    const target = Math.min(1, Math.max(0, levelOf(session) / 100));
+    speaker.setVolume?.(0);
     try {
       await speaker.start(session.song_index, extrapolate(session, serverNow()), session.state === 'playing');
+      for (let step = 1; step <= 10; step += 1) window.setTimeout(() => { if (speaking.current) speaker.setVolume?.(target * step / 10); }, (VOLUME_RISE_MS / 10) * step);
     } catch (problem) {
       // it could not make sound: stop holding the lease, or every other device would read
       // "Playing on this device" over silence
@@ -340,7 +349,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (publishing.current) return;
     appliedSeq.current = session.seq;
     if (!remoteControl) return;
-    if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
+    // G1: the session's level, set from any device; the engine ramps each change (no clicks)
+    speaker.setVolume?.(Math.min(1, Math.max(0, levelOf(session) / 100)));
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
     const moved = !here || here.song_index !== session.song_index || Math.abs(here.offset_ms - target) > 2500;
@@ -762,9 +772,6 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     };
     if (hereOffline() && (adrift.current || !isOnline())) return actHere();
     if (!deviceId || !view?.session) return false;
-    // a personal session has no shared volume (each device sets its own), so none is sent:
-    // the server would refuse it, and the refusal used to be shown as why a later press failed
-    if (name === 'set_volume' && typeof view.session.volume !== 'number') return false;
     try {
       const answer = await api<{ status?: string } | null>('/playback/commands', {
         method: 'POST',
