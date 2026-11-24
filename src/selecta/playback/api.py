@@ -12,7 +12,6 @@ with an idempotency key and the sequence they were based on. A stale command is 
 
 from __future__ import annotations
 
-import uuid
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -25,7 +24,7 @@ from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
-from selecta.playback import devices, envelope, fencing, session, zone_session
+from selecta.playback import devices, envelope, fencing, session, start_asks, zone_session
 from selecta.playback import store as playback_store
 from selecta.playback.model import (
     MAX_SIGNED_IN_DEVICES,
@@ -52,17 +51,12 @@ from selecta.playback.model import (
     UnknownZone,
     ZonePaused,
 )
-from selecta.playback.ports import START_ANSWER, START_ASK, PlaybackEvents
+from selecta.playback.ports import PlaybackEvents
 from selecta.playback.store import load_device, session_payload, touch_device
 from selecta.playback.zones import ZoneDirectory
 
 # The legacy name; each workspace now has its own cookie (`business.device_cookie`, ADR-0442).
 DEVICE_COOKIE = device_cookie.LEGACY_COOKIE
-# ADR-0475 R2: how long an ask to start on another device stands, how recently that device must
-# have been seen to be asked, and what it may answer.
-START_ASK_SECONDS = 10.0
-TARGET_ONLINE_SECONDS = 30.0
-START_ANSWERS = frozenset({"starting", "needs_music", "needs_gesture", "no_mix", "declined"})
 # ADR-0475: how often a device seen through its own playback reads has that written down.
 SEEN_EVERY_SECONDS = 10.0
 NOT_FOUND = {"code": "unknown_device", "message": "That device isn't signed in here."}
@@ -143,21 +137,6 @@ class CommandBody(DeviceBody):
     # ADR-0461: every press is issued under an explicit fence and expires from server time.
     fence: int = Field(ge=0)
     ttl_seconds: int | None = Field(default=None, ge=0, le=fencing.MAX_TTL_SECONDS)
-
-
-class StartAskBody(DeviceBody):
-    """ADR-0475 R2: ask another of my devices to become the speaker and start playing."""
-
-    target_device_id: str = Field(min_length=1, max_length=64)
-    # the saved mix to play; left out, the target plays the mix it already has
-    mix_id: str | None = Field(default=None, max_length=64)
-
-
-class StartAnswerBody(DeviceBody):
-    """What the asked device said. It performs any take-over itself (ADR-0461)."""
-
-    asker_device_id: str = Field(min_length=1, max_length=64)
-    result: str = Field(max_length=32)
 
 
 class AckBody(DeviceBody):
@@ -648,70 +627,11 @@ def install_routes(
             )
         return answer
 
-    @app.post("/api/playback/start-asks", status_code=201)
-    def playback_start_ask(
-        body: StartAskBody,
-        request: Request,
-        claims: Claims = Depends(current_claims),  # noqa: B008
-    ) -> dict[str, Any]:
-        """ADR-0475 R2. Not a remote take-over: the ask reaches the target on the workspace's
-        event stream, and the target decides and takes over by its own action. Nothing is
-        stored; an ask nobody answers simply runs out on the asker after `START_ASK_SECONDS`."""
-        found = principal(request, claims, "devices.remote_control")
-        here = mine(found, body.device_id, request)
-        if body.target_device_id == here:
-            raise HTTPException(status_code=400, detail={"code": "same_device"})
-        with transaction(engine, found.workspace.id) as conn:
-            target = load_device(conn, found.workspace.id, body.target_device_id)
-            asker = load_device(conn, found.workspace.id, here)
-            if target is None or target.user_id != found.user.id or not target.signed_in:
-                raise HTTPException(status_code=404, detail=NOT_FOUND)
-            now = db_now(conn)
-            if now - target.last_seen_at > TARGET_ONLINE_SECONDS:
-                raise HTTPException(
-                    status_code=409,
-                    detail={
-                        "code": "target_offline",
-                        "message": f"{target.name} isn't open right now.",
-                    },
-                )
-            ask = {
-                "ask_id": uuid.uuid4().hex,
-                "target_device_id": target.id,
-                "target_name": target.name,
-                "asker_device_id": here,
-                "asker_name": asker.name if asker else "Another device",
-                "mix_id": body.mix_id,
-                "expires_at": now + START_ASK_SECONDS,
-            }
-            events.publish(conn, found.workspace.id, START_ASK, ask)
-        return {**ask, "server_time": now}
-
-    @app.post("/api/playback/start-asks/{ask_id}/answer")
-    def playback_start_answer(
-        ask_id: str,
-        body: StartAnswerBody,
-        request: Request,
-        claims: Claims = Depends(current_claims),  # noqa: B008
-    ) -> dict[str, Any]:
-        found = principal(request, claims, "devices.remote_control")
-        here = mine(found, body.device_id, request)
-        if body.result not in START_ANSWERS:
-            raise HTTPException(status_code=422, detail={"code": "unknown_answer"})
-        with transaction(engine, found.workspace.id) as conn:
-            asker = load_device(conn, found.workspace.id, body.asker_device_id)
-            target = load_device(conn, found.workspace.id, here)
-            if asker is None or asker.user_id != found.user.id:
-                raise HTTPException(status_code=404, detail=NOT_FOUND)
-            answer = {
-                "ask_id": ask_id[:64],
-                "asker_device_id": asker.id,
-                "target_device_id": here,
-                "target_name": target.name if target else "That device",
-                "result": body.result,
-            }
-            events.publish(conn, found.workspace.id, START_ANSWER, answer)
-        return answer
+    # ADR-0475 R2: asking another device to start (playback/start_asks.py)
+    start_asks.install_routes(
+        app, engine=engine, current_claims=current_claims, principal=principal, mine=mine,
+        events=events,
+    )
 
     @app.post("/api/playback/commands/{command_id}/ack")
     def playback_command_ack(
