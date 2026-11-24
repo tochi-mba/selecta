@@ -1,6 +1,6 @@
 # The mix editor on phones, tablets and desktops: research and design
 
-Owner: the editor views (`web/src/views/Mix.tsx` and the files it imports). Flag: `editor.phone_layout`.
+Owner: the editor views (`web/src/views/Mix.tsx` and the files it imports). Flag: `editor.phone_layout` (on).
 Written 2026-11-24, before the code. The "before" screenshots this starts from are described in
 [What was wrong](#1-what-was-wrong-before).
 
@@ -55,7 +55,7 @@ Each finding: what it is, where it comes from, and what SelectaDJ does with it.
 | The active mix area should be the most prominent thing on screen; configuration and rare actions belong in secondary places, and the hierarchy should stay the same across views. Decorative motion "adds cognitive cost without adding information". | DJ.Studio, [Clean, modern, visual UI principles](https://dj.studio/blog/clean-modern-visual-ui-principles) | The song list starts on the first phone screen. Rare actions (Save a copy, New mix, Clear, Ask Lucy, Download) move into one "Mix actions" sheet. Motion is only the sheet rising and a row settling. |
 | Show transitions with their entry and exit points, and keep their parameters visible and editable in context, not hidden in menus. | DJ.Studio, same article; [Transition editor help](https://help.dj.studio/en/articles/8106059-transition-editor) | Each transition is a connector between its two songs, saying what happens in words. Opening it shows the end of one song and the start of the next as real waveforms, and the choices beside them. |
 | DJ.Studio separates a quick preset route (Carousel) from detailed work (Studio). | [DJ.Studio Studio view help](https://help.dj.studio/en/articles/8106005-studio-view-editing-arranging-controls) | The transition sheet shows the few choices that matter first; anything more detailed (Studio, exact cues, quality checks, where the server offers them) sits one step further in, in its own section. |
-| Space is the scarcest thing on a small screen: IMG.LY let people collapse the timeline at any time and sized it to its contents. | IMG.LY, [Designing a timeline for mobile video editing](https://img.ly/blog/designing-a-timeline-for-mobile-video-editing/) | The header collapses to one line once the list scrolls; the sheet opens at half height so the list stays in view above it. |
+| Space is the scarcest thing on a small screen: IMG.LY let people collapse the timeline at any time and sized it to its contents. | IMG.LY, [Designing a timeline for mobile video editing](https://img.ly/blog/designing-a-timeline-for-mobile-video-editing/) | The header scrolls away with the page and only the slim mix strip stays pinned; the sheet opens at half height so the list stays in view above it. |
 | IMG.LY snaps only to points visible on screen, gives "subtle feedback for snapping", and makes handle hit areas more than twice their drawn size. | IMG.LY, same article | Drag targets are the gaps between rows, the drop line snaps to the nearest gap, and the handle's 44px hit area is wider than its drawn mark. |
 | Adobe balanced the player, the timeline and the inspectors on iPhone with progressive disclosure; tools expand from a single ribbon only when needed, and clearly labelled bottom-toolbar functions needed no training. | Adobe Design, [Behind the design: Premiere on iOS](https://adobe.design/ideas/behind-the-design-adobe-premiere-on-ios) | Every button has a word on it, not only an icon. Detail (what played here, what else is possible) is revealed inside the opened transition, not on the list. |
 | YouTube Create keeps a sticky preview on top and puts tools in a context-aware bottom sheet in the thumb zone; the timeline stays partly visible while the sheet is open. | [Learning from YouTube Create](https://simplearyan.github.io/kinetix/blog/learning-from-youtube-create) (a third-party teardown) | The transition sheet opens to half height, so the two songs it joins stay visible above it. Its choices sit at the bottom of the sheet, where a thumb reaches. |
@@ -144,7 +144,7 @@ The transition sheet, opened at half height:
 - **What happens now**, in a sentence, with its state.
 - **The move**, as large choices in a grid, "Let SelectaDJ pick" first. A move the device can't play
   says why.
-- **Hear it.** Plays the current mix from twenty seconds before this transition (a draft offers "Play
+- **Hear it.** Plays the current mix from 35 seconds before this transition (a draft offers "Play
   the draft from {song}").
 - **Compare with SelectaDJ's pick.** When a move is chosen: "Try SelectaDJ's pick" switches to the
   default and plays the transition again; "Back to {move}" switches back. Both are real choices saved
@@ -208,9 +208,37 @@ percent zoom the page is narrower than 640 CSS px, so it gets the one-column lay
 
 `editor.phone_layout`, on by default. Off: the editor is exactly as before at every size.
 
-## 4. What could not be checked here
+## 4. What was proved, and how
+
+Measured on a local Cloud stack with a real ten-song browser mix playing, in Playwright.
+
+- **Screenshots** at 360x740, 390x844, 430x932, 740x360, 820x1180, 1024x768 and 1440x900, Light and Dark: the
+  list (top, middle, end), a transition open at half and full height, a song's menu, carrying a song,
+  adding a song and a refused change. Each was opened and compared with the same state before. No page
+  scrolls sideways at any size, and the end of the list (Add songs) clears the mini player and the
+  bottom bar.
+- **Touch, Chromium (real touch events through the DevTools protocol): 17 of 17.** A finger on a row
+  scrolls the list and moves nothing; the handle carries a song, the other rows stay still, a line shows
+  where it lands and letting go moves it; a second finger during the carry is ignored; Move to the top
+  in the song's menu puts it back; a transition opens at half height (432px of 720px), swipes up to full
+  (672px), down to half and down again to close; Back closes it and stays in the editor; Escape closes
+  it and focus returns to the transition; the strip names the song under the finger and letting go
+  plays from it.
+- **Touch, WebKit (pointer events as a touch makes them, since Playwright's WebKit has no touch
+  protocol): 14 of 15.** Everything above but real scrolling, which needs real touch. Focus going back
+  to the transition first failed here, because Safari does not focus a button it was pressed with; the
+  pressed button now takes focus itself, and it passes. The strip's play could not be checked: this
+  WebKit build cannot decode the test MP3s, so it hands playback to the other open device.
+- **Unit tests**: `web/src/views/editorLayout.test.ts` and `web/src/views/PhoneEditor.test.tsx`.
+
+## 5. What could not be checked here
 
 - Real phones: everything was measured in Playwright's Chromium and WebKit with touch emulation.
   Haptics, the iOS Safari toolbar, the real on-screen keyboard and the system Back gesture need a
   real device.
 - Redo: the server keeps one undo, not a redo history, so there is no Redo button.
+- Fine adjustment of a browser mix's transition (its length and where it starts): the browser runtime
+  takes only the move, so there is nothing honest to adjust yet. Exact cues stay where the server
+  renders transitions (local mode's inspector, `seam_inspector.exact_cues`).
+- The current mix's name is not editable from the editor: there is no rename for the current mix, only
+  for drafts (Mix actions, Rename) and Save a copy.

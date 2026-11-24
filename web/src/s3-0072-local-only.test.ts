@@ -17,6 +17,12 @@ const manifest = import.meta.glob('../public/manifest.webmanifest', { query: '?r
 const allowed = /^https?:\/\/(www\.w3\.org|localhost)(?=[:/'"`\s]|$)/;
 
 const licenceLinks = new Set(['https://pplprs.co.uk', 'https://www.ascap.com', 'https://www.bmi.com', 'https://www.sesac.com', 'https://globalmusicrights.com', 'https://www.gema.de', 'https://www.sacem.fr', 'https://www.imro.ie', 'https://www.sena.nl', 'https://www.sgae.es']);
+// The staff console (a separate app, never shipped in the local page) links out to a customer's Stripe
+// record and to its runbooks on GitHub; these are links a person opens, not requests the page makes.
+const adminLinks: Record<string, Set<string>> = {
+  './admin/CustomerRecord.tsx': new Set(['https://dashboard.stripe.com']),
+  './admin/help.ts': new Set(['https://github.com']),
+};
 const remoteHosts = (text: string) => [...text.matchAll(/https?:\/\/[A-Za-z0-9.-]+/g)].map((match) => match[0]).filter((url) => !allowed.test(url));
 
 describe('S3-0072-08 nothing the page ships reaches past this computer', () => {
@@ -28,7 +34,7 @@ describe('S3-0072-08 nothing the page ships reaches past this computer', () => {
   });
 
   it('no source file or stylesheet names a remote host', () => {
-    const found = Object.entries({ ...sources, ...styles }).flatMap(([file, text]) => remoteHosts(text).filter((url) => !(file === './business/copy/console.ts' && licenceLinks.has(url))).map((url) => `${file}: ${url}`));
+    const found = Object.entries({ ...sources, ...styles }).flatMap(([file, text]) => remoteHosts(text).filter((url) => !(file === './business/copy/console.ts' && licenceLinks.has(url)) && !adminLinks[file]?.has(url)).map((url) => `${file}: ${url}`));
     expect(found).toEqual([]);
   });
 
