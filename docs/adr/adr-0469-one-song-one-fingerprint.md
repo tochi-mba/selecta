@@ -107,9 +107,13 @@ The memo is a hint, never proof.
 
 `ImportSummary.reuse` counts songs recognised from this browser and songs analysed. The summary line adds, for example: "2,918 recognised from this browser, so nothing had to be analysed again.", or "2,900 recognised from this browser, 18 new songs analysed.", or, for a browser that has never seen them, "None of these songs had been seen in this browser before, so each one was analysed. Next time, they'll be recognised."
 
+### Measured (local Cloud stack, Edge, one browser profile, 2026-11-24)
+
+A folder of 103 MP3s (783 MB). Account A imported it first: 103 files hashed, 783.2 MB read, 202.9 s from pick to finished. Account B then picked the same folder in the same profile: 103 recognised, 0 hashed, 0 bytes read, every duration reused, 15.6 s from pick to finished (the rest is tag reading and registration); the background sample check hashed 3 files and all matched. With one file changed (7 bytes appended), B's next import recognised 102, hashed 1 (9.7 MB read) and said "102 recognised from this browser, 1 new song analysed."
+
 ### How to watch the fingerprint log
 
-1. Settings, card "What this browser keeps" (`cloud.local_media`), section "Fingerprint log (for developers)" (`cloud.content_cache`). Open it before or during an import in the same tab. Totals sit at the top (files, recognised, hashed, bytes read and not read, time spent, an estimate of time saved at this run's own hashing speed, the sample check); below, one line per file, newest first: name, hash prefix, how the hash was found and how long it took, tags, duration, tonal profile, waveform, registration.
+1. Workshop, Storage tab (`/workshop/storage`; on Account settings instead where `cloud.workspace` is off), card "What this browser keeps" (`cloud.local_media`), section "Fingerprint log (for developers)" (`cloud.content_cache`). A new account sees the Workshop once it leaves the welcome steps ("Finish later"). Open it before or during an import in the same tab. Totals sit at the top (files, recognised, hashed, bytes read and not read, time spent, an estimate of time saved at this run's own hashing speed, the sample check); below, one line per file, newest first: name, hash prefix, how the hash was found and how long it took, tags, duration, tonal profile, waveform, registration.
 2. In the browser console: `localStorage.setItem('selecta.debug.fingerprint', '1')`, then import. Each line is logged under `[fingerprint]`, with a summary line at the end.
 3. The log lives in memory for this tab and this workspace only. It holds only the signed-in account's own file names and hash prefixes; another account's import is never shown.
 
