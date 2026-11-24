@@ -167,6 +167,27 @@ def status_of(choices: dict[str, Any], tier_label: str,
     }
 
 
+def _check_at_startup(app: FastAPI, engine: Engine) -> None:
+    """Once the app has started (staging and production, or SELECTA_LUCY_SELF_CHECK=1): say
+    whether Lucy can reach her models, on a thread, so start-up never waits on Anthropic."""
+    import threading
+    from contextlib import asynccontextmanager
+
+    from selecta.lucy import cloud_health
+
+    started = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def with_check(application):
+        async with started(application) as state:
+            if cloud_health.wanted():
+                threading.Thread(target=cloud_health.boot_check, args=(engine,), daemon=True,
+                                 name="lucy-self-check").start()
+            yield state
+
+    app.router.lifespan_context = with_check
+
+
 def install_routes(
     app: FastAPI,
     *,
@@ -176,6 +197,7 @@ def install_routes(
     runner: cloud_agent.Runner | None = None,
 ) -> None:
     runner = runner or cloud_agent.RUNNER
+    _check_at_startup(app, engine)
 
     def who(request: Request, claims: Claims, action=WorkspaceAction.MIXES_READ):
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
