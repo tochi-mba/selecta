@@ -13,7 +13,6 @@ with an idempotency key and the sequence they were based on. A stale command is 
 from __future__ import annotations
 
 import uuid
-
 from collections.abc import Callable
 from typing import Any, Literal
 
