@@ -1,6 +1,6 @@
 import { useContext, useRef, useState } from 'react';
 import { HolderContext } from '../devices/controller';
-import type { ImportSummary } from '../media';
+import { dirPicker, type ImportSummary } from '../media';
 import { Menu, Status } from '../ui/controls';
 import { countOf } from '../ui/format';
 import { Icon } from '../ui/Icon';
@@ -10,6 +10,8 @@ import { ConnectMusic, summaryWords, type ConnectMusicHandle } from './ConnectMu
 import { formatCount } from './ImportStatus';
 import { useImportSession } from './importSession';
 import './libraryWorkspace.css';
+
+const KEEP_SAID = 'selecta.library.keep-said';
 
 type ConnectProps = Omit<Parameters<typeof ConnectMusic>[0], 'variant' | 'ref'>;
 
@@ -31,6 +33,10 @@ export function CloudLibrary({ shared, connected, connect }: {
   const [resultSeen, setResultSeen] = useState<ImportSummary | null>(null);
   const playable = shared.status.counts.ready ?? 0;
   const holder = useContext(HolderContext);
+  // ADR-0475 R7: a browser that cannot keep folder access (most phones) says so once, never on
+  // every page; the songs are asked for again when they are needed
+  const [keepSaid, setKeepSaid] = useState(() => { try { return localStorage.getItem(KEEP_SAID) === '1'; } catch { return true; } });
+  const sayKept = () => { setKeepSaid(true); try { localStorage.setItem(KEEP_SAID, '1'); } catch { /* said for this visit */ } };
   const doneWords = (summary: ImportSummary) => {
     if (playable === 0 && summary.imported + summary.duplicates > 0) return summaryWords(summary);
     const failed = summary.failed ? ` ${countOf(summary.failed, 'file')} could not be read.` : '';
@@ -74,7 +80,10 @@ export function CloudLibrary({ shared, connected, connect }: {
           // music here is a choice, not the way forward
           <p className="lw-remote-line" data-testid="library-remote-line">
             <Icon name="system" size="toolbar" />
-            <span>{holder.online ? `This device is a remote for ${holder.name}.` : `Your music is on ${holder.name}, which isn’t open right now.`} Connect music here only if you want this device to make the sound.</span>
+            <span>{playable > 0
+              // R7: a device with some music of its own plays those; the rest are on the other device
+              ? `${formatCount(playable)} of ${countOf(connected, 'song')} are on this device. The rest are on ${holder.name}${holder.online ? '' : ', which isn’t open right now'}.`
+              : `${holder.online ? `This device is a remote for ${holder.name}.` : `Your music is on ${holder.name}, which isn’t open right now.`} Connect music here only if you want this device to make the sound.`}</span>
           </p>
         )}
         {needsFolder && fresh && !holder && (
@@ -94,6 +103,13 @@ export function CloudLibrary({ shared, connected, connect }: {
             <button type="button" onClick={() => handle.current?.chooseFolder()}>{choose}</button>
             <button type="button" className="quiet" onClick={() => setDismissed(true)}>Dismiss</button>
           </div>
+        )}
+        {!keepSaid && playable > 0 && !dirPicker().supported && (
+          <p className="lw-remote-line" data-testid="library-keep-line">
+            <Icon name="system" size="toolbar" />
+            <span>This browser can’t keep access to your music between visits. When a song is needed again, SelectaDJ asks you to choose it.</span>
+            <button type="button" className="quiet" onClick={sayKept}>Got it</button>
+          </p>
         )}
         <ConnectMusic {...connectProps} ref={handle} variant="status" />
       </div>
