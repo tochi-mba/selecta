@@ -13,13 +13,15 @@ unless its test was run; where a fix was not checked in a browser the row says s
 
 ## Counts
 
+Rows that name each status (a row can name two, such as a fix that also needs an owner setting):
+
 | Status | Rows |
 |---|---|
-| Fixed now | 19 |
-| Handled before | 14 |
-| Needs the owner | 17 |
+| Fixed now | 16 |
+| Handled before | 17 |
+| Needs the owner | 9 |
 | Other agent | 7 |
-| Not reviewed | 18 |
+| Not reviewed | 13 |
 
 ## The seven named gaps
 
