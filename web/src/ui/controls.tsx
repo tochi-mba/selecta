@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { showProblem } from './toasts';
 import { Icon, IconName } from './Icon';
 import { exitGhost, usePresence } from './exitMotion';
-import { newReference, supportHref } from '../support';
+import { newReference, reportProblem, supportHref } from '../support';
 import { isChunkLoadError, StaleBuildPanel } from './staleBuild';
 export { Skeleton } from './Skeleton';
 
@@ -107,6 +107,7 @@ export class Section extends Component<{ name: string; children: ReactNode; whol
   componentDidCatch(error: Error, info: ErrorInfo) {
     // the reference goes to the console with the error, so a support copy can be matched to it
     console.error(`${this.props.name} stopped working (reference ${this.state.reference})`, error, info.componentStack);
+    reportProblem(this.state.reference, isChunkLoadError(error) ? 'stale_build' : 'page_crash');
   }
 
   render() {

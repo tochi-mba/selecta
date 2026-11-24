@@ -89,6 +89,8 @@ CAPABILITY_ONLY = {
 SELF_ONLY = {
     ("POST", "/api/onboarding/complete"),
     ("POST", "/api/account/sign-out-everywhere"),
+    # a log line and a count about the caller's own page; reads no workspace
+    ("POST", "/api/account/problem-report"),
     ("DELETE", "/api/account"),
     # ADR-0453 S1: emails REX Technologies sales from the signed-in person; reads no workspace.
     ("POST", "/api/business/pilot-interest"),
