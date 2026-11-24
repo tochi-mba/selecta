@@ -393,7 +393,8 @@ const SAID_REPLY_CHARS = 300;
 
 /** A finished reply as a screen reader hears it: plain words, cut at a word near the limit. */
 function replyWords(content: string): string {
-  const plain = content.replace(/[*_`#>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+  // without its closing full stop: the announcer ends every sentence with its own
+  const plain = content.replace(/[*_`#>|]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '');
   if (plain.length <= SAID_REPLY_CHARS) return plain;
   const cut = plain.slice(0, SAID_REPLY_CHARS);
   return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), SAID_REPLY_CHARS / 2))}… The rest is in the conversation`;

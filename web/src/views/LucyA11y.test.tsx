@@ -30,7 +30,7 @@ describe('a finished answer is said in its own words', () => {
       event('message.completed', { message: 'msg_1', status: 'complete' }),
     ];
     const after = reduce(before, { type: 'events', events });
-    expect(summarize(events, after)).toEqual(['Lucy is replying', 'Lucy replied: Here is a slow mix: 6 songs.']);
+    expect(summarize(events, after)).toEqual(['Lucy is replying', 'Lucy replied: Here is a slow mix: 6 songs']);
   });
 
   it('cuts a long reply at a word and says where the rest is', () => {
