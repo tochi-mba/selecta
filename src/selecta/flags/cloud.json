@@ -379,6 +379,7 @@
         "POST /api/playback/commands",
         "GET /api/local-media/holdings",
         "POST /api/playback/start-asks",
+        "PUT /api/devices/default-speaker",
         "POST /api/playback/start-asks/{ask_id}/answer",
         "POST /api/playback/commands/{command_id}/ack"
       ],

@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.persistence import db_now, new_id
-from selecta.playback import ports
+from selecta.playback import default_speaker, ports
 from selecta.playback.model import (
     Capabilities,
     Device,
@@ -353,6 +353,8 @@ def sign_out_devices(
         events.publish(
             conn, workspace_id, ports.SIGNED_OUT, {"device_id": device_id, "reason": reason}
         )
+    # ADR-0475: a signed-out device is no longer the default speaker
+    default_speaker.forget(conn, workspace_id, ids)
     # The personal session, and every zone session of a business workspace (ADR-0443).
     candidates = [load_session(conn, workspace_id), *zone_sessions(conn, workspace_id)]
     stopped = False

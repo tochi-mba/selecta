@@ -22,7 +22,7 @@ export type ControllerLink = {
 
 /** A device as the holdings route lists it: what it can open, and whether it is here now. */
 export type DeviceHolding = { device_id: string; name: string; last_seen_at: number; online: boolean; songs: number; reported_at: number | null };
-export type Holdings = { devices: DeviceHolding[]; server_time: number; device_id?: string; song_ids?: number[] };
+export type Holdings = { devices: DeviceHolding[]; server_time: number; device_id?: string; song_ids?: number[]; default_speaker_id?: string | null };
 
 /** ADR-0475 R6: another of the person's devices that holds music, for the pages that say where a
  * song is. `ids` are the catalogue ids it reported; null when it has not said which. */

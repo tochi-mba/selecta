@@ -22,16 +22,19 @@ from sqlalchemy.engine import Engine
 from selecta.local_media import store
 from selecta.local_media.schema import local_song_availability, local_songs
 from selecta.persistence import db_now, transaction
+from selecta.playback.default_speaker import RoomSpeaker, room_speaker
 from selecta.rooms.ports import SongSummary
 
 
-def _requestable(fresh_after: float) -> sa.Select:
-    """Songs not deleted and recently reported present on a device, as (id, title, artist,
-    duration_s) rows; callers add their workspace filter."""
+def _requestable(fresh_after: float, speaker: str | None) -> sa.Select:
+    """Songs not deleted and recently reported present on the room's speaker (ADR-0475: a room
+    offers only what the device making the sound can play), as (id, title, artist, duration_s)
+    rows; callers add their workspace filter. No speaker: nothing."""
     present = (
         sa.select(local_song_availability.c.song_id)
         .where(local_song_availability.c.workspace_id == local_songs.c.workspace_id)
         .where(local_song_availability.c.song_id == local_songs.c.id)
+        .where(local_song_availability.c.device_id == (speaker or ""))
         .where(local_song_availability.c.present.is_(True))
         .where(local_song_availability.c.reported_at >= fresh_after)
     )
@@ -56,17 +59,34 @@ def _summary(row) -> SongSummary:
     )
 
 
+def _holds(conn, workspace_id: str, now: float) -> dict[str, int]:
+    counts = store.holding_counts(conn, workspace_id)
+    return {device: held["songs"] for device, held in counts.items()}
+
+
+def speaker_of(conn, workspace_id: str) -> RoomSpeaker:
+    """The device whose songs the room offers now (playback/default_speaker.py)."""
+    return room_speaker(conn, workspace_id, _holds)
+
+
 class LocalMediaCatalog:
-    """The metadata catalogue as Rooms sees it; requestable means device-available."""
+    """The metadata catalogue as Rooms sees it; requestable means on the room's speaker."""
 
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
+
+    def music_state(self, workspace_id: str) -> str:
+        """For the guest page (ADR-0475): ready (a device plays and its songs are offered),
+        choosing (the host is choosing where the music plays), reconnecting (the speaker's
+        device is coming back), none (no device with music is open)."""
+        with transaction(self.engine, workspace_id) as conn:
+            return speaker_of(conn, workspace_id).state
 
     def is_requestable(self, workspace_id: str, song_id: int) -> bool:
         with transaction(self.engine, workspace_id) as conn:
             fresh_after = db_now(conn) - store.AVAILABILITY_TTL_SECONDS
             query = (
-                _requestable(fresh_after)
+                _requestable(fresh_after, speaker_of(conn, workspace_id).device_id)
                 .where(local_songs.c.workspace_id == workspace_id)
                 .where(local_songs.c.id == song_id)
             )
@@ -77,7 +97,10 @@ class LocalMediaCatalog:
     ) -> list[SongSummary]:
         with transaction(self.engine, workspace_id) as conn:
             fresh_after = db_now(conn) - store.AVAILABILITY_TTL_SECONDS
-            wanted = _requestable(fresh_after).where(local_songs.c.workspace_id == workspace_id)
+            speaker = speaker_of(conn, workspace_id).device_id
+            wanted = _requestable(fresh_after, speaker).where(
+                local_songs.c.workspace_id == workspace_id
+            )
             for word in query.split():
                 # A guest's "%" or "_" is a character to find, never a wildcard.
                 escaped = (
@@ -102,7 +125,10 @@ class LocalMediaCatalog:
     def count_requestable(self, workspace_id: str, crate: frozenset[int] | None) -> int:
         with transaction(self.engine, workspace_id) as conn:
             fresh_after = db_now(conn) - store.AVAILABILITY_TTL_SECONDS
-            wanted = _requestable(fresh_after).where(local_songs.c.workspace_id == workspace_id)
+            speaker = speaker_of(conn, workspace_id).device_id
+            wanted = _requestable(fresh_after, speaker).where(
+                local_songs.c.workspace_id == workspace_id
+            )
             if crate is not None:
                 wanted = wanted.where(local_songs.c.id.in_(sorted(crate)))
             counted = sa.select(sa.func.count()).select_from(wanted.subquery())

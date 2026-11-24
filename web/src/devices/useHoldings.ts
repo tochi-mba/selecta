@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DeviceHolding, Holdings } from './controller';
 
 // ADR-0475 holdings as this device sees them: the person's signed-in devices with how many songs
@@ -18,6 +18,10 @@ export type HoldingsView = {
   /** Each reporting device's ids (ADR-0475 R4, R6: which device holds a song). A device that has
    * reported nothing is absent: unknown, not empty. */
   ids: ReadonlyMap<string, ReadonlySet<number>>;
+  /** The account's default speaker (ADR-0475); null when none is set. */
+  defaultId: string | null;
+  /** Read again now (after the default changed here). */
+  refresh: () => void;
 };
 
 const NO_IDS: ReadonlyMap<string, ReadonlySet<number>> = new Map();
@@ -27,6 +31,8 @@ const NO_IDS: ReadonlyMap<string, ReadonlySet<number>> = new Map();
 export function useHoldings(cloud: Request, enabled: boolean, speakerId: string | null): HoldingsView {
   const [devices, setDevices] = useState<DeviceHolding[] | null>(null);
   const [ids, setIds] = useState<ReadonlyMap<string, ReadonlySet<number>>>(NO_IDS);
+  const [defaultId, setDefaultId] = useState<string | null>(null);
+  const [asked, setAsked] = useState(0);
   // the report each kept set came from, so an unchanged set is not read again
   const kept = useRef(new Map<string, { reportedAt: number; songs: ReadonlySet<number> }>());
 
@@ -38,6 +44,7 @@ export function useHoldings(cloud: Request, enabled: boolean, speakerId: string 
         const counts = await cloud<Holdings>('/local-media/holdings');
         if (!live) return;
         setDevices(counts.devices);
+        setDefaultId(counts.default_speaker_id ?? null);
         const next = new Map<string, { reportedAt: number; songs: ReadonlySet<number> }>();
         let changed = kept.current.size !== counts.devices.filter((device) => device.reported_at !== null).length;
         for (const device of counts.devices) {
@@ -58,9 +65,9 @@ export function useHoldings(cloud: Request, enabled: boolean, speakerId: string 
     void read();
     const timer = window.setInterval(() => void read(), HOLDINGS_EVERY_MS);
     return () => { live = false; window.clearInterval(timer); };
-  }, [cloud, enabled]);
+  }, [cloud, enabled, asked]);
 
   // a speaker that has reported nothing is unknown, not empty: it answers for itself
   const speakerSongs = speakerId ? ids.get(speakerId) ?? null : null;
-  return { devices, speakerSongs, ids };
+  return { devices, speakerSongs, ids, defaultId, refresh: useCallback(() => setAsked((count) => count + 1), []) };
 }

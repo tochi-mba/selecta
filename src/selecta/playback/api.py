@@ -24,7 +24,15 @@ from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
-from selecta.playback import devices, envelope, fencing, session, start_asks, zone_session
+from selecta.playback import (
+    default_speaker,
+    devices,
+    envelope,
+    fencing,
+    session,
+    start_asks,
+    zone_session,
+)
 from selecta.playback import store as playback_store
 from selecta.playback.model import (
     MAX_SIGNED_IN_DEVICES,
@@ -422,9 +430,12 @@ def install_routes(
         found = principal(request, claims)
         here = cookie_device(found, request, device_id)
         listed = devices.list_devices(engine, found.workspace.id, user_id=found.user.id)
+        with transaction(engine, found.workspace.id) as conn:
+            chosen = default_speaker.read(conn, found.workspace.id)
         return {
             "devices": [device_json(device, this_device=here) for device in listed],
             "limit": MAX_SIGNED_IN_DEVICES,
+            "default_speaker_id": chosen,
         }
 
     @app.patch("/api/devices/{device_id}")
@@ -627,6 +638,10 @@ def install_routes(
             )
         return answer
 
+    # ADR-0475: the default speaker (playback/default_speaker.py)
+    default_speaker.install_routes(
+        app, engine=engine, current_claims=current_claims, principal=principal
+    )
     # ADR-0475 R2: asking another device to start (playback/start_asks.py)
     start_asks.install_routes(
         app, engine=engine, current_claims=current_claims, principal=principal, mine=mine,

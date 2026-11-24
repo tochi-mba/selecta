@@ -195,11 +195,17 @@ def install_routes(
 
     def view(token: str, ref: GuestRef) -> dict[str, Any]:
         try:
-            return guest_json(rooms().guest_view(token), guest_status(ref),
-                              host_allows(ref, "rooms.votes"),
-                              host_allows(ref, "rooms.nickname_confirm"))
+            answer = guest_json(rooms().guest_view(token), guest_status(ref),
+                                host_allows(ref, "rooms.votes"),
+                                host_allows(ref, "rooms.nickname_confirm"))
         except RoomError as error:
             raise refusal(error) from error
+        # ADR-0475: a browser-first room offers only the speaker's songs, so the guest page says
+        # when there is no speaker yet, or it is reconnecting
+        music = getattr(rooms().catalog, "music_state", None)
+        if callable(music):
+            answer["music"] = music(ref.workspace_id)
+        return answer
 
     def cookie_path(room_id: str) -> str:
         return f"/api/guest/rooms/{room_id}"

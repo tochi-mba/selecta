@@ -55,6 +55,7 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.account-snapshot` | local | `web/src/cloud/offlineCache.ts` | The signed-in person's last account answer (user id, when, account), so a page opened offline still knows its workspace and features; forgotten with the workspace's device data (Cloud, `cloud.offline_shell`) | Cloud |
 | `selecta.cloud.verify-asked` | session | `web/src/cloud/Gate.tsx` | That the member pressed "I've verified my email", kept across the reload that follows, so a page that comes back unchanged can say the address still isn't verified (Cloud sign-in) | Cloud |
 | `selecta.controller.notices.seen` | local | `web/src/devices/ControllerNotices.tsx` | The ids of the last 60 remote-control notices this browser dismissed, so a dismissed notice stays dismissed across page loads (Cloud, `devices.remote_control`) | Cloud |
+| `selecta.library.keep-said` | local | `web/src/cloud/CloudLibrary.tsx` | Set once the person pressed Got it on the line saying this browser cannot keep access to their music between visits, so it is said once (Cloud, ADR-0475 R7) | Cloud |
 | `selecta.debug.auth` | session | `web/src/cloud/authTrail.ts` | The last 20 sign-in problems in this tab (when, where, the error's name, message, status and isTransient; never a token), so a false "Sign in again" can be read afterwards (Cloud sign-in) | Cloud |
 | `selecta-mix-outbox-alias:<workspace>` | local | `web/src/cloud/outbox.ts` | Local mix ids matched to the server's once a queued create or edit lands, so later queued changes and a reloaded tab find the right mix (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-mix-outbox-notices:<workspace>` | local | `web/src/cloud/outbox.ts` | The last few plain notices about queued mix changes the server turned down, shown once and then removed (Cloud, `cloud.mix_outbox`) | My Mixes |
@@ -233,6 +234,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/playback/commands` | Sends a transport command to the playing device |
 | `POST /api/playback/commands/{command_id}/ack` | Records that the playing device received a command, never that it was audible (ADR-0461) |
 | `POST /api/playback/start-asks` | Asks another of the member's own signed-in devices to become the speaker and start; publishes the ask on the workspace event stream, stores nothing (ADR-0475 R2) |
+| `PUT /api/devices/default-speaker` | Sets or clears which of the member's own signed-in devices is the account's default speaker; one per workspace, cleared when that device signs out (ADR-0475) |
 | `POST /api/playback/start-asks/{ask_id}/answer` | The asked device says what it did (starting, needs music, needs a press, no mix, declined); publishes the answer, stores nothing |
 | `POST /api/zones/{zone_id}/playback/heartbeat` | Updates a zone's active device lease and accepted playback position |
 | `POST /api/zones/{zone_id}/playback/take-over` | Transfers the zone playback lease to this device |
