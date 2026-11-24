@@ -847,7 +847,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     }
     switch (route.page) {
       case 'library':
-        return <CloudLibrary shared={shared} connected={connected} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
+        // I84: on a remote, the Library's Play next follows the speaker's music, not this device's
+        return <CloudLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
       case 'mixes':
         if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
         // R8: a device with little or no music makes mixes from the songs the device R1 chooses holds
