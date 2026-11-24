@@ -60,7 +60,6 @@ import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, onboardingPutOff, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
-import { StorageCard } from './StorageCard';
 import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
 import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
@@ -71,6 +70,7 @@ import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
 import { useAccountMix } from './useAccountMix';
+import { MixProblem, StatusProblem, ThisDevice } from './localFirstParts';
 import { setTabBusy } from './accountTabs';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
@@ -955,44 +955,5 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     </PlayedTransitions.Provider>
     </RequestsContext.Provider>
     </RequestContext.Provider>
-  );
-}
-
-/** More > This device: the music connected here and the storage it uses (workspace extras). */
-function ThisDevice({ openStore, children }: { openStore: () => Promise<MediaStore>; children: ReactNode }) {
-  const [degraded, setDegraded] = useState(false);
-  useEffect(() => {
-    let live = true;
-    void openStore().then((opened) => { if (live) setDegraded(opened.degraded); }).catch(() => undefined);
-    return () => { live = false; };
-  }, [openStore]);
-  return (
-    <main className="page" id="main">
-      <h1 className="display small">This device</h1>
-      <StorageCard degraded={degraded} />
-      {children}
-    </main>
-  );
-}
-
-/** The library could not be opened (cloud.offline_shell): plain words and one way on. */
-function StatusProblem({ words, onRetry }: { words: string; onRetry: () => void }) {
-  return (
-    <div className="stack" role="alert">
-      <p>SelectaDJ couldn’t open your library. {words}</p>
-      <div><button type="button" onClick={onRetry}>Try again</button></div>
-    </div>
-  );
-}
-
-/** The current mix could not be read (cloud.offline_shell): never shown as an empty mix. */
-function MixProblem({ onRetry }: { onRetry: () => void }) {
-  return (
-    <main className="page" id="main">
-      <div className="stack" role="alert">
-        <p>SelectaDJ couldn’t load your mix. It is still saved; try again, or wait for the connection to come back.</p>
-        <div><button type="button" onClick={onRetry}>Try again</button></div>
-      </div>
-    </main>
   );
 }
