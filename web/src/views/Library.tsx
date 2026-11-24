@@ -17,10 +17,12 @@ import { hasEarlyLibrary, libraryUrl, takeEarlyLibrary } from './libraryPrefetch
 import { ViewProps } from './shared';
 import { SongDetails } from './SongDetails';
 
-/** `measures`: only where SelectaDJ analyses songs; a browser library is never analysed. */
-const FILTERS: ({ name: string; label: string; measures?: true } & Gate)[] = [
+/** `measures`: only where SelectaDJ analyses songs; a browser library is never analysed.
+ * `browserOnly`: only in browser-first Cloud, where songs live on several devices (ADR-0475 R6). */
+const FILTERS: ({ name: string; label: string; measures?: true; browserOnly?: true } & Gate)[] = [
   { name: 'all', label: 'Everything' },
   { name: 'ready', label: 'Ready' },
+  { name: 'playable_now', label: 'Can play now', browserOnly: true },
   { name: 'not_yet', label: 'Not analysed yet', measures: true },
   { name: 'attention', label: 'Needs attention' },
   { name: 'priority', label: 'Priority list', flag: 'library.priority', measures: true },
@@ -602,7 +604,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {lead}
       {browser && (
         <BrowserLibraryToolbar typed={typed} onTyped={setTyped}
-          filters={visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => ({ name: option.name, label: option.name === 'all' ? 'All' : option.label }))}
+          filters={visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => ({ name: option.name, label: option.name === 'all' ? 'All' : option.name === 'ready' ? 'On this device' : option.label }))}
           filter={filter} onFilter={(name) => setAddressQuery({ show: name === 'all' ? null : name, pages: null }, { push: true })}
           sorts={SORTS.filter((option) => analysisAvailable || option.name !== 'tempo')} sort={sort}
           onSort={(name) => setAddressQuery({ sort: name === 'title' ? null : name, pages: null }, { push: true })}
@@ -628,7 +630,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         )}
       </div>
       <div className="chips library-filters" role="group" aria-label="Filter Library recordings">
-        {visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => (
+        {visible(FILTERS).filter((option) => (analysisAvailable || !option.measures) && !option.browserOnly).map((option) => (
           <button key={option.name} aria-pressed={filter === option.name} onClick={() => setAddressQuery({ show: option.name === 'all' ? null : option.name, pages: null }, { push: true })}>
             {option.label}
           </button>
@@ -712,7 +714,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
       {browser && committedRows?.length === 0 && !failed && (
-        <BrowserLibraryEmpty query={query} filterLabel={filter === 'all' ? null : FILTERS.find((option) => option.name === filter)?.label ?? filter}
+        <BrowserLibraryEmpty query={query} filterLabel={filter === 'all' ? null : filter === 'ready' ? 'On this device' : FILTERS.find((option) => option.name === filter)?.label ?? filter}
           onClearSearch={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}
           onShowAll={() => setAddressQuery({ show: null, pages: null }, { push: true })} />
       )}

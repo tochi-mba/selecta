@@ -84,7 +84,8 @@ export type AvailabilitySources = {
     onServed?: (from: { cached: false } | { cached: true; at: number | null }) => void;
   };
 };
-export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number> };
+/** `elsewhere`: which other devices of the person hold a song (ADR-0475 R6), when known. */
+export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number>; elsewhere?: import('../devices/controller').WhereHeld | null };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
 /** One song's availability: this device first, then a hosted copy, then the member's other devices. */
@@ -137,6 +138,8 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
       if (state === 'all' || state === 'not_yet') return true;
       const where = availabilityOf(song, known);
       if (state === 'ready') return where === 'here' || where === 'hosted';
+      // R6: plays now, here or on another of the person's devices that is open
+      if (state === 'playable_now') return where === 'here' || where === 'hosted' || (known.elsewhere?.(song.id).online.length ?? 0) > 0;
       if (state === 'attention') return where === 'reauth' || where === 'reconnect' || where === 'nowhere';
       return state === 'missing' && where === 'nowhere';
     })
@@ -222,6 +225,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   const availability = async (list: CatalogueSong[]): Promise<Availability> => ({
     here: (await sources.here?.().catch(() => null)) ?? NO_AVAILABILITY.here,
     hosted: (await sources.hosted?.(list).catch(() => null)) ?? NO_AVAILABILITY.hosted,
+    elsewhere: sources.holders?.() ?? null,
   });
   const playable = async (): Promise<PlayableSong[]> => {
     const list = await songs();

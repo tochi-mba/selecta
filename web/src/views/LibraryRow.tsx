@@ -1,5 +1,5 @@
 import { memo, useContext } from 'react';
-import { HolderContext } from '../devices/controller';
+import { HolderContext, type MusicHolder } from '../devices/controller';
 import { LibrarySong } from '../api';
 import { clock, etaWords } from '../lib';
 import { availabilityFacts } from '../state/availability';
@@ -63,6 +63,22 @@ const HERE: Record<string, { kind: StatusKind; words: string }> = {
   nowhere: { kind: 'failed', words: 'Missing' },
 };
 
+/** ADR-0475 R6 row status, when the person has another device with music: "This device", "On
+ * {device}" (open, has the file), "Needs its folder again on {device}" (had it, not open now), or
+ * "No device right now". Null leaves the plain availability words. */
+export function deviceChip(songId: number, availability: string, holder: MusicHolder | null): { kind: StatusKind; words: string; why: string } | null {
+  if (!holder) return null;
+  if (availability === 'here' || availability === 'hosted') return { kind: 'ready', words: 'This device', why: 'This device has the file, so it can play here.' };
+  if (availability !== 'elsewhere' && availability !== 'nowhere') return null;
+  const places = holder.places?.(songId);
+  const open = places ? places.online[0] : holder.online && (holder.ids ? holder.ids.has(songId) : true) ? holder.name : undefined;
+  if (open) return { kind: 'unavailable', words: `On ${open}`, why: `${open} has this song’s file and makes the sound. Connect music here only if you want this device to play it.` };
+  const away = places ? places.before[0] : holder.ids?.has(songId) ? holder.name : undefined;
+  if (away) return { kind: 'needs-action', words: `Needs its folder again on ${away}`, why: `${away} had this song’s file but isn’t open now. Open SelectaDJ there, and choose its music folder again if it asks.` };
+  if (!places && availability === 'elsewhere') return null;
+  return { kind: 'failed', words: 'No device right now', why: 'None of your devices has this song’s file right now.' };
+}
+
 const lineWords = (place: number) => place < 0 ? 'Analyse now' : place === 0 ? 'Analysing…' : `Waiting, ${place} ahead`;
 
 export const LibraryRow = memo(function LibraryRow({
@@ -81,10 +97,8 @@ export const LibraryRow = memo(function LibraryRow({
     const chip = facts.setAside || song.never
       ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
       : song.availability && HERE[song.availability]
-        // ADR-0475 R6: another of this person's devices holds it, so say which, not "not here"
-        ? song.availability === 'elsewhere' && holder && (holder.ids ? holder.ids.has(song.id) : true)
-          ? { kind: 'unavailable' as StatusKind, words: `On ${holder.name}`, why: `${holder.name} has this song’s file and makes the sound. Connect music here only if you want this device to play it.` }
-          : { ...HERE[song.availability], why: song.availability === 'elsewhere' ? 'Choose your music folder in this browser to play it here.' : where?.reason ?? '' }
+        // ADR-0475 R6: the person has other devices, so say which one has the song, not "not here"
+        ? deviceChip(song.id, song.availability, holder) ?? { ...HERE[song.availability], why: song.availability === 'elsewhere' ? 'Choose your music folder in this browser to play it here.' : where?.reason ?? '' }
         : { kind: facts.kind, words: facts.words, why: facts.reason };
     return (
       <li data-library-page={page} className={`song-row lw-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`}>
