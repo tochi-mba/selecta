@@ -1,6 +1,7 @@
 import { ApiError, MixData, SongRow, Status, Suggestion, VibeCard } from '../api';
 import { browserMovesAllowed, browserMovesOn } from './browserMoves';
 import { asMixData, copyName, RecipeStore, WORKED_OUT_LIVE } from './recipeStore';
+import { currentGrouping } from './songVersions';
 
 /** The mix route family of the local-first adapter (ADR-0462 "one adapter per route family",
  * BF-0462-05): `/vibes`, `/vibes/{key}/build`, `/mix`, `/steer` and the destination search the
@@ -142,7 +143,8 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     const id = store.current();
     if (!id) throw refuse('There is no current browser mix to edit. Press Play on Make a Mix first.', 'no_mix', 404);
     const recipe = await store.read(id);
-    const ids = recipe.songs.map((song) => song.song_id);
+    const songOf = currentGrouping().primaryOf;
+    const ids = recipe.songs.map((song) => songOf(song.song_id));
     const expected = orderHeader(init);
     if (expected !== null && expected !== ids.join(',')) {
       throw refuse('The mix changed under this press, so nothing happened. It has been redrawn.', 'mix_changed', 409);
@@ -168,7 +170,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     if (!id) throw refuse('There is no current browser mix to change. Press Play on Make a Mix first.', 'no_mix', 404);
     const recipe = await store.read(id);
     const expected = orderHeader(init);
-    if (expected !== null && expected !== recipe.songs.map((song) => song.song_id).join(',')) {
+    if (expected !== null && expected !== recipe.songs.map((song) => currentGrouping().primaryOf(song.song_id)).join(',')) {
       throw refuse('The mix changed under this press, so nothing happened. It has been redrawn.', 'mix_changed', 409);
     }
     if (!(position >= 1 && position < recipe.songs.length)) throw refuse('That transition isn’t in this mix any more.', 'mix_changed', 409);
@@ -181,7 +183,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     const inMix = new Set<number>();
     const id = store.current();
     if (id) {
-      try { for (const song of (await store.read(id)).songs) inMix.add(song.song_id); } catch { /* suggest from the library anyway */ }
+      try { for (const song of (await store.read(id)).songs) inMix.add(currentGrouping().primaryOf(song.song_id)); } catch { /* suggest from the library anyway */ }
     }
     return {
       songs: (await songs())

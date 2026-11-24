@@ -4,6 +4,7 @@ import { countOf, Truncate } from '../ui/format';
 import type { Api } from './api';
 import { completeOutcome, completeStatusWords, uploadSummary, UploadResult, withUnreached } from './libraryState';
 import { fileSha256, resumableFor, sendParts, unfinishedUploads, UploadEntry, UploadSession, UploadStatus } from './uploadParts';
+import { UnfinishedUploads } from './UnfinishedUploads';
 
 type Item = UploadResult;
 
@@ -172,13 +173,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
     <section className="cloud-upload-panel">
       <div className="cloud-upload-intro"><p className="cloud-eyebrow">Private library</p><h2>Add your tracks</h2><p>Files transfer directly to private object storage. SelectaDJ checks the actual audio format, file size and duration before accepting an upload.</p></div>
       {blocked && <p className="cloud-inline-error" role="status">{blocked}</p>}
-      {unfinished.length > 0 && (
-        <section className="cloud-unfinished" aria-label="Unfinished uploads">
-          <h3>Unfinished uploads</h3>
-          <p>Choose the same file again and SelectaDJ carries on from where it stopped.</p>
-          <ul>{unfinished.map((session) => <li key={session.id}><Truncate text={session.name} /><small>{countOf(session.part_count, 'part')}</small></li>)}</ul>
-        </section>
-      )}
+      <UnfinishedUploads api={api} workspaceId={workspaceId} sessions={unfinished} onChanged={() => void loadUnfinished()} />
       <label className={`cloud-drop${blocked ? ' disabled' : ''}`}>
         <input type="file" multiple disabled={Boolean(blocked)} accept="audio/*,.aiff,.aif,.flac,.mp3,.m4a,.wav,.ogg,.opus" onChange={selected} />
         <span className="cloud-drop-icon">＋</span>

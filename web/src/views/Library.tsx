@@ -56,7 +56,7 @@ const pagesFrom = (text: string | null) => {
 /** `lead`: what a shell puts first under the header, such as connecting music again in a browser.
  * `tail`: what it puts after the songs, inside the same page column.
  * `browser`: browser-first Cloud's frame (header, toolbar, selection bar); local mode never sets it. */
-export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead, tail, browser }: ViewProps & { lead?: ReactNode; tail?: ReactNode; browser?: LibraryBrowserChrome }) {
+export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead, tail, browser, playOn }: ViewProps & { lead?: ReactNode; tail?: ReactNode; browser?: LibraryBrowserChrome }) {
   // ADR-0462: every read and write on this page goes through the injected request.
   const { get, post } = useApi(request);
   const query = useQueryParam('q') ?? '';
@@ -426,7 +426,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const requestStart = (song: LibrarySong) => {
     // A new mix takes over the current one. Ask consistently with Explore
     // rather than replacing live music directly from a Library row.
-    if (mix.length > 0 && now.phase !== 'idle') {
+    // ADR-0475: with another device playing, a new mix replaces nothing there; that device is asked
+    if (mix.length > 0 && now.phase !== 'idle' && !(playOn && !playOn.now)) {
       setConfirmStart({ song, order: orderOf(mix) });
       return;
     }

@@ -12,7 +12,7 @@ const holder: MusicHolder = { deviceId: 'laptop', name: 'Laptop', songs: 2, onli
 describe('Library row status across devices', () => {
   it('names this device, the open device with the file, the one that needs its folder, or none', () => {
     expect(deviceChip(1, 'here', holder)?.words).toBe('This device');
-    expect(deviceChip(2, 'elsewhere', holder)?.words).toBe('On Laptop');
+    expect(deviceChip(2, 'elsewhere', holder)?.words).toBe('Plays on Laptop');
     expect(deviceChip(3, 'elsewhere', holder)?.words).toBe('Needs its folder again on Tablet');
     expect(deviceChip(4, 'nowhere', holder)?.words).toBe('No device right now');
   });
