@@ -220,6 +220,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           shape={shaping ? { summary: buildSummary(status.steering), open: () => setCustomizing(true) } : undefined}
           replacing={replacing ? 'The mix that is playing stays in My Mixes.' : undefined}
           problem={problem ? <p className="warn" role="alert">{problem}</p> : undefined}
+          playOn={playOn}
         />
       )}
       {!analysisAvailable && on('lucy') && <p className="quick-mix-more"><PageLink to="/mixes/lucy" className="button">Plan a mix with Lucy</PageLink></p>}
