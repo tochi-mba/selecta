@@ -59,6 +59,8 @@ export const POLLING: readonly PollRule[] = [
   { file: 'cloud/ImportChip.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down "Trying again in 8 s" only while an import waits for the service; never reads the server (cloud.resilient_import)' },
   { file: 'cloud/ImportStatus.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'counts down "Trying again in 8 s" only while an import waits for the service; never reads the server (cloud.resilient_import)' },
   { file: 'ui/staleBuild.tsx', reads: '/index.html (the site, not the API)', everyMs: 'VERSION_CHECK_MS (30 min), and on return to the tab', hidden: 'pauses', why: 'whether a newer build is live, for the quiet "A new version is ready" line shown when nothing plays; plus a 15 s tick that reads no server (product audit gap 4)' },
+  { file: 'admin/AdminArea.tsx', reads: 'admin pending actions and security alerts (the notification bell)', everyMs: '60000 bell; 15000 tick that reads no server', hidden: 'continues', why: 'staff must see a waiting dangerous action or a new alert; the 15 s tick only counts down the change window (admin console)' },
+  { file: 'views/MixMap.tsx', reads: null, everyMs: 500, hidden: 'continues', why: 'the mix map playhead follows the song position from the local player only while a song plays; it reads no server (editor.phone_layout)' },
   { file: 'engine/scheduler.ts', reads: null, everyMs: 'audio clock tick', hidden: 'continues', why: 'schedules the next song and seam on the audio clock while music plays in a hidden tab (ADR-0457)' },
 ];
 

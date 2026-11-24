@@ -30,11 +30,11 @@
   text-transform: uppercase;
   color: var(--text);
 }
-.pe-scope.is-current b { color: var(--accent); }
+.pe-scope.is-current b { color: var(--word-ink); }
 .pe-title {
   margin: 0;
   font: var(--type-section);
-  font-size: clamp(1.3rem, 5vw, 1.9rem);
+  font-size: var(--text-xl);
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -77,7 +77,7 @@
   z-index: var(--layer-sticky);
   margin-inline: calc(-1 * var(--page-gutter));
   padding: var(--space-2) var(--page-gutter);
-  background: var(--bg);
+  background: var(--surface);
   border-bottom: var(--separator) solid var(--edge-decorative);
 }
 .pe-map-strip {
@@ -395,7 +395,7 @@
 }
 .pe-picture-overlap { fill: var(--surface-selected); }
 .pe-picture-out rect { fill: var(--text-soft); }
-.pe-picture-in rect { fill: var(--accent); }
+.pe-picture-in rect { fill: var(--motif); }
 .pe-picture-cut { stroke: var(--selected); stroke-width: 0.6; }
 .pe-picture figcaption {
   display: flex;
