@@ -15,7 +15,7 @@ describe('security headers', () => {
     // any case, any attributes, any spacing before the closing >; a script with src= is not inline
     for (const page of ['index.html', 'guest.html', 'kiosk.html', 'display.html']) {
       const html = fs.readFileSync(`${node.cwd()}/${page}`, 'utf8').replace(/\r\n/g, '\n');
-      for (const [, body] of html.matchAll(/<scriptb(?![^>]*bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
+      for (const [, body] of html.matchAll(/<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
         const hash = crypto.createHash('sha256').update(body).digest('base64');
         expect(policy, `${page} has an inline script whose hash is not in _headers`).toContain(`'sha256-${hash}'`);
       }

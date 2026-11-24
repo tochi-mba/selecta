@@ -93,6 +93,14 @@ def _refused(error: ProposalError) -> HTTPException:
                          detail={"code": error.code, "message": error.message})
 
 
+def busy_words(device: str | None) -> str:
+    if device:
+        return (f"Lucy is answering a message from {device}. Send this again when she's done; "
+                "your words are kept.")
+    return ("Lucy is answering another message. Send this again when she's done; your words "
+            "are kept.")
+
+
 def status_of(choices: dict[str, Any], tier_label: str) -> dict[str, Any]:
     """The local status shape, with the plan's Lucy level in place of a provider and model."""
     return {
@@ -275,6 +283,8 @@ def install_routes(
             if found is not None:
                 return {"turn": {"id": found.id, "seq": found.seq, "status": found.status},
                         "new": False, "run": found.run_id}
+            # a turn a restart left behind no longer holds the conversation (item 34)
+            cloud_store.settle_stale(conn, ws, conversation_id, runner.alive_turns())
         try:
             with transaction(engine, ws) as conn:
                 device, device_name = device_of(conn, principal, device_id)
@@ -287,21 +297,20 @@ def install_routes(
             message = refused.message
             if refused.code == "busy":
                 with transaction(engine, ws) as conn:
-                    other = cloud_store.busy_with(conn, ws)
-                message = (f"Lucy is answering a message from {other}. Send this again when "
-                           "she's done; your words are kept." if other else
-                           "Lucy is answering another message. Send this again when she's "
-                           "done; your words are kept.")
+                    message = busy_words(cloud_store.busy_with(conn, ws))
             raise HTTPException(status_code=409, detail={
                 "code": refused.code, "message": message}) from refused
-        except IntegrityError:
-            # the same send arrived twice at once: the first one made the turn
+        except IntegrityError as clash:
+            # the same send arrived twice at once (the first made the turn), or another device
+            # got a turn into this conversation first (one in flight per conversation)
             with transaction(engine, ws) as conn:
                 found = cloud_store.turn_by_client(conn, ws, conversation_id, client_id)
-            if found is None:
-                raise
-            return {"turn": {"id": found.id, "seq": found.seq, "status": found.status},
-                    "new": False, "run": found.run_id}
+                other = cloud_store.busy_with(conn, ws) if found is None else None
+            if found is not None:
+                return {"turn": {"id": found.id, "seq": found.seq, "status": found.status},
+                        "new": False, "run": found.run_id}
+            raise HTTPException(status_code=409, detail={
+                "code": "busy", "message": busy_words(other)}) from clash
         runner.start(cloud_agent.Job(
             engine=engine, workspace_id=ws, user_id=principal.user.id,
             conversation_id=conversation_id, turn_id=turn["id"], text=text, plan=plan,

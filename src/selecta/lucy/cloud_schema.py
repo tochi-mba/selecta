@@ -51,6 +51,13 @@ lucy_cloud_turns = sa.Table(
     sa.Column("device_name", sa.String(60), nullable=True),
     sa.PrimaryKeyConstraint("workspace_id", "id"),
     sa.UniqueConstraint("workspace_id", "conversation_id", "client_id", name="uq_lucy_cloud_send"),
+    # one turn in flight per conversation, decided by the database itself (ADR-0476 item 16):
+    # a second device's insert fails here even when the plan allows two runs at once
+    sa.Index(
+        "uq_lucy_cloud_one_active", "workspace_id", "conversation_id", unique=True,
+        sqlite_where=sa.text("status IN ('queued','running','stopping')"),
+        postgresql_where=sa.text("status IN ('queued','running','stopping')"),
+    ),
 )
 
 lucy_cloud_messages = sa.Table(

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Request } from '../api';
+import { ApiError, type Request } from '../api';
 import { lucy, setLucyTransport } from './client';
 import { openStream } from './stream';
 
@@ -58,5 +58,14 @@ describe('Lucy transport', () => {
     expect(seen).toEqual([3]);
     expect(asked).toEqual(['/lucy-cloud/conversations/c1/events.json?after=2', '/lucy-cloud/conversations/c1/events.json?after=3']);
     vi.unstubAllGlobals();
+  });
+
+  it('turns the transport client’s refusals into ApiError, keeping status and code', async () => {
+    class CloudError extends Error { constructor(message: string, readonly status: number, readonly code?: string) { super(message); } }
+    const request = (async () => { throw new CloudError('Lucy is answering a message from Phone.', 409, 'busy'); }) as Request;
+    setLucyTransport({ request, base: '/lucy-cloud', pollMs: 500 });
+    const refused = await lucy.status().catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(ApiError);
+    expect(refused).toMatchObject({ status: 409, code: 'busy', message: 'Lucy is answering a message from Phone.' });
   });
 });
