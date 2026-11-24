@@ -115,7 +115,7 @@ export function PhoneStory(props: {
   const press = (index: number) => (event: ReactPointerEvent<HTMLButtonElement>) => {
     // a second finger (the thumb holding the phone) never starts a second drag
     if (held.current || !event.isPrimary || event.button > 0) return;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* a pointer the browser no longer tracks */ }
     held.current = { id: event.pointerId, from: index, startY: event.clientY + window.scrollY, lastY: event.clientY, moved: false, tops: [], frame: 0 };
   };
   const carry = (event: ReactPointerEvent<HTMLButtonElement>) => {
