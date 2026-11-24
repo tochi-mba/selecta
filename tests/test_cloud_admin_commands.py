@@ -92,7 +92,10 @@ def test_suspend_and_restore_go_through_the_account_service(world):
     assert (denied.status_code, denied.json()["detail"]["code"]) == (403, "forbidden")
     assert audit_actions(world.engine, action="accounts.suspend", result="deny")
 
-    assert world.post(f"/api/admin/accounts/{target}/suspend", reason="abuse").status_code == 200
+    seen = world.get(f"/api/admin/customers/{target}").json()
+    assert world.post(f"/api/admin/accounts/{target}/suspend", reason="abuse",
+                      version=seen["version"], read_at=seen["read_at"],
+                      confirm=seen["user"]["email"]).status_code == 200
     with world.engine.connect() as conn:
         assert accounts.get_user(conn, target).suspended_at is not None
     write = world.http.put("/api/account/labs/account.labs", headers=world.headers("customer"),
@@ -104,7 +107,7 @@ def test_suspend_and_restore_go_through_the_account_service(world):
     events = [row["action"] for row in audit_actions(world.engine, resource_id=target)]
     assert "account.suspended" in events and "account.restored" in events
     own = world.post(f"/api/admin/accounts/{world.users['owner']}/suspend", reason="oops")
-    assert own.status_code == 400
+    assert (own.status_code, own.json()["detail"]["code"]) == (403, "self_approval")
 
 
 def test_an_override_needs_a_reason_and_a_bounded_expiry(world):

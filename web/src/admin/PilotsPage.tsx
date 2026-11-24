@@ -27,7 +27,7 @@ export function PilotsPage({ api }: { api: AdminFetch }) {
       <Panel title="Pilot organisations">
         <p className="admin-note">Free pilots made by REX Technologies staff: no card and no charge. Every change needs a reason and is audited.</p>
         <Failure error={pilots.error} />
-        <DataTable caption="Pilots" rows={pilots.data?.pilots ?? []} rowKey={(row) => row.id} onPick={(row) => setPicked(row.id)} pickLabel={(row) => `Open ${row.org_name}`}
+        <DataTable stacked="auto" caption="Pilots" rows={pilots.data?.pilots ?? []} rowKey={(row) => row.id} onPick={(row) => setPicked(row.id)} pickLabel={(row) => `Open ${row.org_name}`}
           empty="No pilots yet."
           columns={[
             { key: 'org_name', label: 'Organisation' },

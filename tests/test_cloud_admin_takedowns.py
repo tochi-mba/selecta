@@ -78,7 +78,8 @@ def test_a_notice_is_logged_with_its_deadline_and_audited(world):
 def test_acting_hides_the_asset_and_starts_its_deletion(world):
     asset_id = add_asset(world)
     notice = log(world, asset_id).json()["notice"]
-    acted = world.post(f"/api/admin/takedowns/{notice['id']}/act", reason="valid notice")
+    acted = world.post(f"/api/admin/takedowns/{notice['id']}/act", reason="valid notice",
+                       confirm=notice["id"][:8])
     assert acted.status_code == 200, acted.text
     body = acted.json()
     assert body["notice"]["status"] == "actioned" and body["valid_notices"] == 1
@@ -92,7 +93,8 @@ def test_acting_hides_the_asset_and_starts_its_deletion(world):
     assert ledger.kind == "song" and body["notice"]["deletion_id"] == ledger.id
     actioned = audit_actions(world.engine, action="legal.takedown.actioned")
     assert actioned[0]["metadata"]["within_target"] is True
-    again = world.post(f"/api/admin/takedowns/{notice['id']}/act", reason="twice")
+    again = world.post(f"/api/admin/takedowns/{notice['id']}/act", reason="twice",
+                       confirm=notice["id"][:8])
     assert again.status_code == 400
 
 
@@ -114,7 +116,8 @@ def test_a_rejected_notice_leaves_the_asset_alone(world):
 def test_repeated_valid_notices_suspend_uploads_until_lifted(world):
     for _ in range(2):
         notice = log(world, add_asset(world)).json()["notice"]
-        last = world.post(f"/api/admin/takedowns/{notice['id']}/act", reason="valid")
+        last = world.post(f"/api/admin/takedowns/{notice['id']}/act", reason="valid",
+                      confirm=notice["id"][:8])
     assert last.json()["uploads_restricted"] is True
     assert audit_actions(world.engine, action="legal.uploads.restricted")
     with world.engine.connect() as conn:
@@ -171,6 +174,7 @@ def test_deciding_a_notice_runs_as_the_notice_workspace(world, monkeypatch, comm
         return real(engine, workspace_id)
 
     monkeypatch.setattr(admin_http, "transaction", recording)
-    answer = world.post(f"/api/admin/takedowns/{notice['id']}/{command}", reason="decided")
+    answer = world.post(f"/api/admin/takedowns/{notice['id']}/{command}", reason="decided",
+                        confirm=notice["id"][:8])
     assert answer.status_code == 200, answer.text
     assert world.workspaces["customer"] in named

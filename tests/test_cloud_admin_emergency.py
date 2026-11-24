@@ -33,8 +33,9 @@ def world(cloud_engine):
 
 
 def engage(world, control: str, target: str | None = None, who: str = "owner"):
+    # Engaging is a dangerous console action: the control's name is typed back (doc 07b).
     return world.post(f"/api/admin/emergency/{control}/engage", who,
-                      reason="game day", target=target)
+                      reason="game day", target=target, confirm=control)
 
 
 def release(world, control: str, target: str | None = None) -> None:

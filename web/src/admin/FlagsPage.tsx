@@ -77,7 +77,7 @@ export function FlagsPage({ api, can }: { api: AdminFetch; can: (permission: str
       <Trace api={api} />
       {areas.map(([area, flags]) => (
         <Panel key={area} title={area}>
-          <DataTable caption={`${area} flags`} rows={flags} rowKey={(f) => f.id} onPick={(f) => setPicked(f.id)} pickLabel={(f) => `Open flag ${f.id}`}
+          <DataTable stacked="auto" caption={`${area} flags`} rows={flags} rowKey={(f) => f.id} onPick={(f) => setPicked(f.id)} pickLabel={(f) => `Open flag ${f.id}`}
             columns={[{ key: 'id', label: 'Flag' }, { key: 'label', label: 'Feature' }, { key: 'build_on', label: 'Build default', render: (f) => f.core ? 'Core' : f.build_on ? 'On' : 'Off' },
               { key: 'rules', label: 'Rules', render: (f) => f.rules.length ? f.rules.map(describe).join('; ') : 'none' }]} />
         </Panel>
@@ -130,7 +130,7 @@ function FlagDetail({ api, flag, can, onChanged }: { api: AdminFetch; flag: Flag
         <Failure error={error} />
         {impact && <div className="admin-impact" aria-label="Impact preview">
           <p><strong>{counts?.changed ?? 0}</strong> of {impact.accounts} accounts change ({counts?.turned_off ?? 0} lose it, {counts?.turned_on ?? 0} gain it).</p>
-          <DataTable caption="By plan" rows={Object.entries(counts?.by_plan ?? {})} rowKey={([plan]) => plan}
+          <DataTable stacked="auto" caption="By plan" rows={Object.entries(counts?.by_plan ?? {})} rowKey={([plan]) => plan}
             columns={[{ key: 'plan', label: 'Plan', render: ([plan]) => plan }, { key: 'changed', label: 'Accounts changing', numeric: true, render: ([, c]) => String(c.changed) }, { key: 'total', label: 'Accounts', numeric: true, render: ([, c]) => String(c.total) }]} />
           {impact.dependents.length > 0 && <p>These follow it, because they need it: {impact.dependents.join(', ')}.</p>}
           {impact.broad && action !== 'kill_switch' && <p className="admin-note">This is a broad change: it will wait 15 minutes before it runs.</p>}
@@ -145,7 +145,7 @@ function FlagDetail({ api, flag, can, onChanged }: { api: AdminFetch; flag: Flag
       {outcome && <p role="status">{outcome}</p>}
       <h3>History</h3>
       <Failure error={history.error} />
-      <DataTable caption="Rule versions" rows={history.data?.versions ?? []} rowKey={(v) => String(v.version)} empty="No changes yet."
+      <DataTable stacked="auto" caption="Rule versions" rows={history.data?.versions ?? []} rowKey={(v) => String(v.version)} empty="No changes yet."
         columns={[{ key: 'version', label: 'Version', numeric: true }, { key: 'change', label: 'Change' }, { key: 'rules', label: 'Rules', render: (v) => v.rules.map(describe).join('; ') || 'none' },
           { key: 'author', label: 'By' }, { key: 'reason', label: 'Why' }, { key: 'created_at', label: 'When', render: (v) => when(v.created_at) },
           { key: 'rollback', label: 'Rollback', render: (v) => can('flags.rules.propose') && v.change !== 'preview_on' && v.change !== 'preview_off' ? <>
@@ -180,7 +180,7 @@ function Trace({ api }: { api: AdminFetch }) {
           <p><b>Browser-first Cloud:</b> {trace.browser_first_experience.local_first_on ? 'On' : 'Off'}: {trace.browser_first_experience.local_first_reason}</p>
           <p><b>Hosted media:</b> {trace.browser_first_experience.hosted_media_on ? 'On' : 'Off'}: {trace.browser_first_experience.hosted_media_reason}</p>
         </section>}
-        <DataTable caption={`Decisions for ${trace.user_id} on ${trace.plan} (rules version ${trace.rule_version})`} rows={rows} rowKey={(f) => f.flag_id} empty="Every feature is on."
+        <DataTable stacked="auto" caption={`Decisions for ${trace.user_id} on ${trace.plan} (rules version ${trace.rule_version})`} rows={rows} rowKey={(f) => f.flag_id} empty="Every feature is on."
           columns={[{ key: 'flag_id', label: 'Flag' }, { key: 'on', label: 'Decision', render: (f) => f.on ? 'On' : 'Off' }, { key: 'reason', label: 'Reason' },
             { key: 'steps', label: 'Each layer', render: (f) => f.steps.map((s) => `${s.layer}: ${s.on === null ? 'n/a' : s.on ? 'yes' : 'no'} (${s.reason})`).join(' · ') }]} />
       </>}
