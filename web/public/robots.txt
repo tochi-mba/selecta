@@ -1,0 +1,11 @@
+# SelectaDJ (app.selectadj.app). Only the welcome page is for search engines; a room link is an
+# invitation for the people it was shared with, and everything else needs a sign-in.
+User-agent: *
+Allow: /$
+Disallow: /r/
+Disallow: /account
+Disallow: /admin
+Disallow: /b/
+Disallow: /display
+Disallow: /kiosk
+Disallow: /errors/

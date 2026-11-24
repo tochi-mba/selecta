@@ -33,14 +33,51 @@ def _message(
 ) -> Message:
     label, url = action
     text = "\n\n".join([*lines, *([f"{label}: {url}"] if url else []), FOOTER])
-    paragraphs = "".join(f"<p>{escape(line)}</p>" for line in lines)
-    button = f'<p><a href="{escape(url, quote=True)}">{escape(label)}</a></p>' if url else ""
-    html = (
-        '<!doctype html><html><body style="font-family:sans-serif;line-height:1.5">'
-        f"{paragraphs}{button}"
-        f'<p style="color:#666;font-size:12px">{escape(FOOTER)}</p></body></html>'
-    )
+    html = _branded_html(subject, lines, label, url)
     return Message(to=to, subject=subject, text=text, html=html, kind=kind, idempotency_key=key)
+
+
+# The brand kit's colours (web/public/brand/BRAND.md). Emails use the Light palette, which every
+# mail client renders, and say `color-scheme: light dark` so a client in dark mode may adapt it;
+# the button keeps its dark ink on the lime and its dark edge either way.
+_PAGE, _CARD, _INK, _SOFT, _LIME, _LIME_INK, _EDGE = (
+    "#f5f2e9", "#fffdf6", "#16140e", "#6a6555", "#e8ff3a", "#14140a", "#16140e"
+)
+_FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+
+
+def _branded_html(subject: str, lines: list[str], label: str, url: str) -> str:
+    """One email page in the brand: the mark and name, the words, one button, the footer."""
+    origin = "/".join(url.split("/")[:3]) if url.startswith("https://") else ""
+    mark = (
+        f'<img src="{escape(origin, quote=True)}/brand/png/email-logo-96.png" width="32" '
+        'height="32" alt="" style="vertical-align:middle;border:0;margin-right:10px">'
+        if origin else ""
+    )
+    paragraphs = "".join(
+        f'<p style="margin:0 0 16px;color:{_INK};font:16px/1.5 {_FONT}">{escape(line)}</p>'
+        for line in lines
+    )
+    button = (
+        f'<p style="margin:24px 0 8px"><a href="{escape(url, quote=True)}" '
+        f'style="display:inline-block;padding:12px 20px;border:1px solid {_EDGE};'
+        f"border-radius:8px;background:{_LIME};color:{_LIME_INK};font:600 16px/1.2 {_FONT};"
+        f'text-decoration:none">{escape(label)}</a></p>'
+        if url else ""
+    )
+    return (
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="color-scheme" content="light dark">'
+        '<meta name="supported-color-schemes" content="light dark">'
+        f"<title>{escape(subject)}</title></head>"
+        f'<body style="margin:0;padding:24px 12px;background:{_PAGE}">'
+        f'<div style="max-width:560px;margin:0 auto">'
+        f'<p style="margin:0 0 16px;font:900 20px/1 {_FONT};color:{_INK}">{mark}SelectaDJ</p>'
+        f'<div style="padding:24px;border:1px solid #d5cfbd;border-radius:10px;'
+        f'background:{_CARD}">{paragraphs}{button}</div>'
+        f'<p style="margin:16px 0 0;color:{_SOFT};font:12px/1.5 {_FONT}">{escape(FOOTER)}</p>'
+        "</div></body></html>"
+    )
 
 
 def job_label(job_type: str) -> str:
