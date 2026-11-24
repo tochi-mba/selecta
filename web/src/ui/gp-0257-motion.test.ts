@@ -38,6 +38,29 @@ const INVENTORY: Record<string, Severity> = {
   'g-breathe': 'waiting', // a request waiting for the host, loading outlines
   'g-working': 'waiting', // a busy button
   'g-eq': 'waiting', // the playing-now bars while the music plays
+  'g-turn': 'waiting', // the ring on a waiting line or a busy button
+  'g-bump': 'answers-you', // the count beside a request, when a press changed it
+  'g-no-a': 'answers-you', // a row that says no to a press (twice named, so a second no replays)
+  'g-no-b': 'answers-you',
+  // the Room display (display.css), continued
+  'd-turn': 'waiting', // the ring while the display connects
+  'd-eq': 'waiting', // the playing-now bars while the music plays
+  // the host's request list (rooms.css)
+  'ask-in': 'arrives', // a guest's request arriving in the list
+  // Cloud pages (cloud-ui.css)
+  'cloud-spin': 'waiting', // the ring before a busy button's words
+  'cloud-arrive': 'arrives', // a page, or a card in a grid, coming into place
+  'meter-fill': 'arrives', // a meter filling to its value when it is first drawn
+  // the welcome page and the gates (boot.css)
+  'rise-in': 'arrives', // the headline, the lead and the cards coming up as the page opens
+  // The blend drawing on the welcome and not-found pages loops, slowly, for as long as the page
+  // waits to be acted on: decoration that shows what a blend is, never a thing to wait for. As
+  // with the Room display's drift, a loop that nobody started is filed as waiting.
+  'blend-head': 'waiting',
+  'blend-skip': 'waiting',
+  'blend-ring': 'waiting',
+  'blend-kick': 'waiting',
+  'blend-tag': 'waiting',
 };
 
 const SRC = join(process.cwd(), 'src');

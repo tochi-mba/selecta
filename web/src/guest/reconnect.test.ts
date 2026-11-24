@@ -21,7 +21,9 @@ const view = {
   now_playing: null, up_next: [], coming_up: [], waiting: [], my_requests: [],
 };
 const flush = async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); };
-const notice = () => document.getElementById('g-notice')?.textContent;
+// the connection banner at the top of the screen: shown (data-state) while the room cannot be
+// reached and for a moment when it can again; without the attribute it says nothing
+const notice = () => (document.getElementById('g-net')?.hasAttribute('data-state') ? document.getElementById('g-net-text')?.textContent : '');
 
 afterEach(() => {
   vi.useRealTimers();
@@ -54,7 +56,8 @@ describe('the guest page', () => {
     expect(back.path).toBe('/api/guest/rooms/room-9');
     back.resolve(view);
     await flush();
-    expect(notice()).toBe('Back in the room.');
+    expect(document.getElementById('g-net')).toHaveAttribute('data-state', 'back');
+    expect(notice()).toBe('Back in the room');
 
     // and polls at the normal pace again, which is what tells the host they're here
     vi.advanceTimersByTime(5000);
