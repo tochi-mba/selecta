@@ -103,6 +103,63 @@ platform_alerts = sa.Table(
     sa.Index("ix_platform_alerts_created_at", "created_at"),
 )
 
+staff_change_windows = sa.Table(
+    # An admin session is read-only until its holder presses "Make changes" (doc 07b §7B.7):
+    # that opens a window of 15 minutes, renewed by each change and closed by hand.
+    "staff_change_windows",
+    metadata,
+    sa.Column("session_id", Id, primary_key=True),
+    sa.Column("user_id", Id, nullable=False),
+    sa.Column("opened_at", Epoch, nullable=False),
+    sa.Column("until", Epoch, nullable=False),
+)
+
+staff_preferences = sa.Table(
+    # Per staff member console state kept on the server: welcome seen, tours done, the Owner
+    # setup checklist. Small JSON values, never customer data.
+    "staff_preferences",
+    metadata,
+    sa.Column("user_id", Id, primary_key=True),
+    sa.Column("key", sa.String(64), primary_key=True),
+    sa.Column("value", JSONColumn, nullable=False),
+    sa.Column("updated_at", Epoch, nullable=False),
+)
+
+staff_notes = sa.Table(
+    # Staff notes about a customer, never shown to the customer. Keyed by the person, not a
+    # workspace; they are shown only while the account is live.
+    "staff_notes",
+    metadata,
+    sa.Column("id", Id, primary_key=True),
+    sa.Column("subject_user_id", Id, nullable=False),
+    sa.Column("author_id", Id, nullable=False),
+    sa.Column("body", sa.Text, nullable=False),
+    sa.Column("created_at", Epoch, nullable=False),
+    sa.Index("ix_staff_notes_subject_user_id", "subject_user_id", "created_at"),
+)
+
+BANNER_LEVELS = ("info", "maintenance", "incident")
+
+status_banners = sa.Table(
+    # The banner every signed-in customer sees (doc 07b §7B.4, Communications).
+    "status_banners",
+    metadata,
+    sa.Column("id", Id, primary_key=True),
+    sa.Column("text", sa.String(280), nullable=False),
+    sa.Column("level", sa.String(16), nullable=False),
+    sa.Column("starts_at", Epoch, nullable=False),
+    sa.Column("ends_at", Epoch),
+    sa.Column("dismissable", sa.Boolean, nullable=False),
+    sa.Column("created_by", Id, nullable=False),
+    sa.Column("created_at", Epoch, nullable=False),
+    sa.Column("ended_at", Epoch),
+    sa.Column("ended_by", Id),
+    sa.CheckConstraint(_one_of("level", BANNER_LEVELS), name="level"),
+    sa.Index("ix_status_banners_starts_at", "starts_at"),
+)
+
+CONSOLE_TABLES = (staff_change_windows, staff_preferences, staff_notes, status_banners)
+
 admin_metrics = sa.Table(
     "admin_metrics",
     metadata,
