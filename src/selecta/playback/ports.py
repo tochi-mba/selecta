@@ -24,6 +24,9 @@ SIGNED_OUT = "device.signed_out"
 MISSED = "playback.missed"
 # BF-0461-05: the speaker could not play a song here; controllers get alternatives.
 UNAVAILABLE = "playback.unavailable"
+# ADR-0475 R2: one device asks another to become the speaker and start, and hears what it said.
+START_ASK = "playback.start_ask"
+START_ANSWER = "playback.start_answer"
 
 
 class PlaybackEvents(Protocol):

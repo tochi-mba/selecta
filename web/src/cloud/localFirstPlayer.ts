@@ -125,12 +125,21 @@ export type PlayerActions = {
   speaker: BrowserSpeaker | null;
 };
 
+/** A volume slider moves many times in one drag: the last level is sent once it is still. */
+export const VOLUME_SETTLE_MS = 300;
+/** How long a level chosen here stands in for the session's while the session catches up. */
+export const VOLUME_HOLD_MS = 5000;
+
 export class LocalFirstPlayer implements PlayerLike {
   state: NowState;
   onChange: (state: NowState) => void = () => {};
   private facts: PlayerFacts;
   private actions: PlayerActions;
   private sound = { volume: 1, muted: false, lastAudibleVolume: 1 };
+  /** A level set here that the session has not said back yet (0 to 1), and when to stop waiting
+   * for it. While it stands, the session's older volume does not replace what the person chose. */
+  private chosen: { level: number; until: number } | null = null;
+  private volumeTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(facts: PlayerFacts, actions: PlayerActions) {
     this.facts = facts;
@@ -144,7 +153,9 @@ export class LocalFirstPlayer implements PlayerLike {
     this.facts = { ...facts, said: this.facts.said };
     this.actions = actions;
     const sessionVolume = facts.heldVolume ?? facts.view?.session?.volume;
-    if (typeof sessionVolume === 'number' && Number.isFinite(sessionVolume)) {
+    // the session has caught up with the level chosen here, or never will: it speaks again
+    if (this.chosen && (sessionVolume === Math.round(this.chosen.level * 100) || Date.now() >= this.chosen.until)) this.chosen = null;
+    if (!this.chosen && typeof sessionVolume === 'number' && Number.isFinite(sessionVolume)) {
       this.sound.volume = Math.max(0, Math.min(1, sessionVolume / 100));
       this.sound.muted = this.sound.volume === 0;
       if (!this.sound.muted) this.sound.lastAudibleVolume = this.sound.volume;
@@ -170,7 +181,7 @@ export class LocalFirstPlayer implements PlayerLike {
 
   private publish(said?: string) {
     if (said !== undefined) this.facts = { ...this.facts, said };
-    const next = nowStateFrom(this.facts, this.sound);
+    const next = nowStateFrom(this.shownFacts(), this.sound);
     if (JSON.stringify(next) === JSON.stringify(this.state)) return;
     // The render loop must never be the clock: a publish re-renders the host, the host's
     // effect updates this player, and time has moved a little, so publishing on time alone
@@ -180,6 +191,23 @@ export class LocalFirstPlayer implements PlayerLike {
     if (timeless(next) === timeless(this.state) && Math.abs(next.songTime - this.state.songTime) < 0.2) return;
     this.state = next;
     this.onChange(next);
+  }
+
+  /** The facts with the level chosen here in place of the session's, until the session says it. */
+  private shownFacts(): PlayerFacts {
+    return this.chosen ? { ...this.facts, heldVolume: Math.round(this.chosen.level * 100) } : this.facts;
+  }
+
+  /** Tell the session the volume, once per drag: a slider moves many times, and every press but
+   * the first would be based on a sequence the first had already moved on (refused as stale, with
+   * the level jumping back). The last level is sent when the slider has been still for a moment. */
+  private sendVolume(volume: number) {
+    if (!this.actions.remoteControl) return;
+    this.chosen = { level: volume, until: Date.now() + VOLUME_HOLD_MS };
+    clearTimeout(this.volumeTimer);
+    this.volumeTimer = setTimeout(() => {
+      void this.actions.command('set_volume', { volume: Math.round(volume * 100) });
+    }, VOLUME_SETTLE_MS);
   }
 
   /** Say a sentence about playback (a stop after playing offline) until the next press. */
@@ -287,9 +315,7 @@ export class LocalFirstPlayer implements PlayerLike {
     }
     const volume = this.sound.volume;
     this.actions.speaker?.setVolume(volume);
-    if (this.actions.remoteControl) {
-      void this.actions.command('set_volume', { volume: Math.round(volume * 100) });
-    }
+    this.sendVolume(volume);
     this.publish('');
   }
 
@@ -299,9 +325,7 @@ export class LocalFirstPlayer implements PlayerLike {
     this.sound.muted = this.sound.volume === 0;
     if (!this.sound.muted) this.sound.lastAudibleVolume = this.sound.volume;
     this.actions.speaker?.setVolume(this.sound.volume);
-    if (this.actions.remoteControl) {
-      void this.actions.command('set_volume', { volume: Math.round(this.sound.volume * 100) });
-    }
+    this.sendVolume(this.sound.volume);
     this.publish('');
   }
 
