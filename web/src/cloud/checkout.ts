@@ -79,8 +79,13 @@ export function useCheckoutReturn(account: Account | null, refresh: () => Promis
     if ((phase !== 'confirming' && phase !== 'slow') || !account) return;
     if (account.entitlement.plan !== 'free') {
       setPhase('confirmed');
-      // Leave the address clean, so a reload doesn't start confirming again.
-      window.history.replaceState({}, '', window.location.pathname);
+      // Leave the address clean, so a reload doesn't start confirming again. Only Stripe's own two
+      // parameters go: anything else in the address, and its hash, stays.
+      const query = new URLSearchParams(window.location.search);
+      query.delete('checkout');
+      query.delete('session_id');
+      const rest = query.toString();
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
     }
   }, [phase, account]);
 
