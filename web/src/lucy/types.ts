@@ -259,6 +259,8 @@ export type Snapshot = {
   cards: Card[];
   cursor: number;
   event_schema: number;
+  /** Cloud: older messages exist before the first one here (read them a page at a time). */
+  more?: boolean;
 };
 
 export type Selection = { occurrence?: string; seam?: [string, string] };

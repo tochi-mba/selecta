@@ -120,7 +120,7 @@ class ZoneTakeOverBody(DeviceBody):
 
 class ZoneCommandBody(DeviceBody):
     command: str = Field(max_length=32)
-    args: dict[str, Any] | None = None
+    args: dict[str, Any] | None = Field(default=None, max_length=16)
     based_on_seq: int = Field(ge=0)
     idempotency_key: str | None = Field(default=None, max_length=128)
     # Commands from a controller must be fenced; accepting omission would revive
