@@ -38,8 +38,25 @@ export function makeResolver(
   const scope = { workspaceId: store.workspaceId, shared: options.sharedCache === true };
   return async (songId) => {
     const session = store.sessionFile(songId);
-    if (session) return { id: songId, data: () => session.arrayBuffer() };
     const song = await store.get(songId);
+    if (session) {
+      // A song whose hash came from the fingerprint memo is checked once against the bytes
+      // before they first play (ADR-0469 memo rule); a picked file this import hashed itself is not.
+      if (song?.fingerprint !== 'remembered') return { id: songId, data: () => session.arrayBuffer() };
+      return {
+        id: songId,
+        data: async () => {
+          const bytes = await session.arrayBuffer();
+          if (await bytesSha256(bytes) !== song.identity.content_sha256) {
+            await store.markChanged(songId);
+            onAvailability?.(songId, false, 'changed');
+            throw new Error('This song’s file has changed since it was connected, so SelectaDJ will not play it as this song.');
+          }
+          await store.confirmFingerprint(songId);
+          return bytes;
+        },
+      };
+    }
     if (song?.ref.kind === 'handle') {
       const handle = song.ref.handle;
       try {
@@ -61,6 +78,7 @@ export function makeResolver(
               throw new Error('This song’s file has changed since it was connected, so SelectaDJ will not play it as this song.');
             }
             if (song.availabilityIssue === 'changed') await store.clearChanged(songId);
+            if (song.fingerprint) await store.confirmFingerprint(songId);
             onAvailability?.(songId, true);
             return bytes;
           },
@@ -75,7 +93,8 @@ export function makeResolver(
     // The cache is keyed by the hash this device computed when it imported the file (never a
     // server-supplied one), and a hit is re-hashed before use, so shared bytes are always the
     // registered song.
-    const bytes = song ? await readSongBytes(song, scope, cache) : null;
+    // A remembered hash is not yet proven, so it never names shared cached bytes.
+    const bytes = song ? await readSongBytes(song, song.fingerprint ? { ...scope, shared: false } : scope, cache) : null;
     if (bytes) return { id: songId, data: async () => bytes };
     return null;
   };
