@@ -317,6 +317,9 @@ async def run_turn(job: Job) -> None:
                              run_id=plan.run_id)
     events.emit("message.started", {"message": message["id"], "role": "assistant",
                                     "seq": message["seq"]})
+    changed = _plan_change(job)
+    if changed:
+        events.emit("run.limit", {"limit": "plan", "text": changed})
     ctx = cloud_tools.CloudCtx(job.engine, job.workspace_id, job.user_id, job.conversation_id,
                                job.turn_id, proposals_on=job.proposals_on)
 
@@ -536,6 +539,33 @@ async def _model_turns(
         messages += provider.results(result, outputs)
         events.state("evaluating", cycles, steps)
     return cycles, steps
+
+
+TIER_WORDS = {"free": "Lucy Basic", "standard": "Lucy Standard", "premium": "Lucy Advanced"}
+
+
+def _plan_change(job: Job) -> str | None:
+    """Said once, on the first turn after the plan changed: which level answers now."""
+    import sqlalchemy as sa
+
+    from selecta.ai.schema import ai_runs
+    from selecta.lucy.cloud_schema import lucy_cloud_turns
+
+    with transaction(job.engine, job.workspace_id) as conn:
+        before = conn.execute(
+            sa.select(ai_runs.c.tier)
+            .select_from(lucy_cloud_turns.join(ai_runs, ai_runs.c.id == lucy_cloud_turns.c.run_id))
+            .where(lucy_cloud_turns.c.workspace_id == job.workspace_id)
+            .where(lucy_cloud_turns.c.conversation_id == job.conversation_id)
+            .where(lucy_cloud_turns.c.id != job.turn_id)
+            .order_by(lucy_cloud_turns.c.seq.desc())
+            .limit(1)
+        ).scalar()
+    now = job.plan.tier.value
+    if before is None or before == now:
+        return None
+    return (f"Your plan changed, so {TIER_WORDS.get(now, 'Lucy')} answers from here on; "
+            "the conversation so far is kept.")
 
 
 def _tell(messages: list[dict], note: str) -> None:

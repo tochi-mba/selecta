@@ -100,20 +100,43 @@
 .lucy-thread-title { font: var(--type-section); margin: 0 0 var(--space-3); overflow-wrap: anywhere; }
 
 /* the conversation */
-.lucy-log { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
-.lucy-msg article {
+/* Turns are told apart by place and weight, not loud bubbles: the person's words sit to the
+   right on a quiet well; Lucy's answer is plain text at the reading measure, as a page reads. */
+.lucy-log { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); }
+.lucy-msg article { padding: 0; border: 0; border-radius: var(--radius); background: none; }
+.lucy-msg.is-user article {
+  justify-self: end;
+  max-width: min(85%, 60ch);
+  margin-left: auto;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-raised);
+  background: var(--surface-control);
 }
-.lucy-msg.is-user article { margin-left: clamp(0px, 8vw, 80px); background: var(--surface-control); }
-.lucy-msg.is-assistant article { margin-right: clamp(0px, 6vw, 60px); }
-.lucy-msg.is-notice article { background: none; border-style: dashed; }
-.lucy-msg:is(.is-interrupted, .is-cancelled, .is-failed) article { border-style: dashed; border-color: var(--status-warning); }
-.lucy-msg.is-sending article { border-style: dashed; }
-.lucy-msg-who { margin: 0 0 var(--space-1); font: 700 var(--text-sm) var(--body); }
+.lucy-msg.is-user { display: grid; }
+.lucy-msg.is-assistant article { padding-inline-end: clamp(0px, 6vw, 60px); }
+.lucy-msg.is-notice article { padding: var(--space-2) var(--space-3); border: 1px dashed var(--border); }
+.lucy-msg:is(.is-interrupted, .is-cancelled, .is-failed) article {
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 3px solid var(--status-warning);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-overlay);
+}
+.lucy-msg.is-sending article { opacity: 0.8; }
+.lucy-msg-who {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font: var(--type-label);
+  color: var(--text-soft);
+}
+.lucy-msg.is-assistant .lucy-msg-who { color: var(--text); }
 .lucy-msg-state { font-weight: 400; color: var(--text-soft); }
+/* the time shows when the message is pointed at or focused; on touch screens, always */
+.lucy-msg-time { font: var(--type-caption); color: var(--text-soft); opacity: 0; transition: opacity var(--motion-fast) ease; }
+.lucy-msg:is(:hover, :focus-within) .lucy-msg-time { opacity: 1; }
+@media (hover: none) { .lucy-msg-time { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .lucy-msg-time { transition: none; } }
+:root[data-motion='still'] .lucy-msg-time { transition: none; }
 /* LX-0356-01: a readable measure however wide the chat column gets */
 .lucy-text { max-width: 72ch; }
 .lucy-text p { margin: 0 0 var(--space-2); }

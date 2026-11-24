@@ -76,19 +76,57 @@ function MessageItem({ message, superseded, onBranch, onRetry, canBranch }: {
   const who = message.role === 'user' ? 'You' : message.role === 'assistant' ? 'Lucy' : 'Note';
   const state = message.role === 'user' ? (superseded ? 'Replaced by a newer request' : '') : STATE_WORDS[message.status] ?? '';
   const unfinished = message.role === 'assistant' && ['interrupted', 'cancelled', 'failed'].includes(message.status);
+  const answered = message.role === 'assistant' && message.status !== 'streaming' && !!message.content;
+  const when = timeOf(message.created_at);
   return (
     <li className={`lucy-msg is-${message.role} is-${message.status}`}>
       <article aria-labelledby={headingId}>
-        <h3 id={headingId} className="lucy-msg-who">{who}{state && <span className="lucy-msg-state"> · {state}</span>}</h3>
-        {message.content ? <RichText text={message.content} /> : message.status === 'streaming' ? <p className="soft">Thinking…</p> : null}
-        {(canBranch || unfinished) && !message.id.startsWith('turn:') && message.status !== 'streaming' && (
+        <h3 id={headingId} className="lucy-msg-who">
+          {who}{state && <span className="lucy-msg-state"> · {state}</span>}
+          {when && <time className="lucy-msg-time" dateTime={when.iso}>{when.words}</time>}
+        </h3>
+        {message.content ? <RichText text={message.content} /> : message.status === 'streaming' ? <p className="soft lucy-thinking">Thinking…</p> : null}
+        {(canBranch || unfinished || answered) && !message.id.startsWith('turn:') && message.status !== 'streaming' && (
           <div className="lucy-msg-actions">
             {unfinished && message.turn && <Action className="quiet" working="Trying again…" run={() => onRetry(message.turn!)}>Try again</Action>}
+            {answered && <CopyAnswer text={message.content} />}
             {canBranch && <Action className="quiet" working="Branching…" run={() => onBranch(message.id)} aria-label={`Branch from here: a new conversation from this ${who === 'You' ? 'message of yours' : 'reply'}`}>Branch from here</Action>}
           </div>
         )}
       </article>
     </li>
+  );
+}
+
+/** When a message was written, as a clock time today or a short date, for the hover/focus line. */
+function timeOf(value: Message['created_at']): { iso: string; words: string } | null {
+  const at = typeof value === 'number' ? new Date(value * 1000) : value ? new Date(value) : null;
+  if (!at || Number.isNaN(at.getTime())) return null;
+  const today = new Date().toDateString() === at.toDateString();
+  const words = today
+    ? at.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    : at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return { iso: at.toISOString(), words };
+}
+
+/** Copy one answer's text; says so for a moment, and politely for a screen reader. */
+function CopyAnswer({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch { /* the browser refused; nothing to undo */ }
+  };
+  return (
+    <button type="button" className="quiet" onClick={() => void copy()} aria-label={copied ? 'Copied' : 'Copy this answer'}>
+      <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
+    </button>
   );
 }
 
