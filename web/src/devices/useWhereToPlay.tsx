@@ -17,7 +17,7 @@ type Device = { device_id: string; name: string };
 /** The one message about where the music is going, with its choices inline. */
 export type PlayNotice = { deviceId: string | null; text: string; actions: { label: string; run: () => void }[] };
 
-export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told, playingOn = null }: {
+export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told, playingOn = null, playHereInstead }: {
   enabled: boolean;
   /** null until the holdings are read (then the press plays here, as before) */
   situation: Situation | null;
@@ -31,6 +31,8 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   asking?: AskState;
   /** The device the session shows playing now, wherever it is. */
   playingOn?: string | null;
+  /** "Play here instead": take the music from whichever device is starting or playing it. */
+  playHereInstead?: () => void;
 }): { decide: () => boolean; picker: ReactNode; choice: Choice | null; notice: PlayNotice | null; clearNotice: () => void } {
   const [asking, setAsking] = useState<Extract<Choice, { kind: 'ask' }> | null>(null);
   const said = useRef(new Set<string>());
@@ -64,7 +66,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     navigate('/listen');
     // the person is holding this device while the sound starts elsewhere: one way back
     const thisHolds = latest.current.situation?.devices.some((one) => one.device_id === here && one.online && one.songs > 0);
-    setNotice({ deviceId: device.device_id, text: note ?? `Starting on ${device.name}.`, actions: thisHolds ? [{ label: 'Play here instead', run: () => { setNotice(null); playHere(); } }] : [] });
+    setNotice({ deviceId: device.device_id, text: note ?? `Starting on ${device.name}.`, actions: thisHolds ? [{ label: 'Play here instead', run: () => { setNotice(null); (playHereInstead ?? playHere)(); } }] : [] });
   }, [askToPlay, playHere]);
 
   /** True when the press was handled here (asked elsewhere, picker opened, or nothing to do). */

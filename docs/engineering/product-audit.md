@@ -17,9 +17,9 @@ Rows that name each status (a row can name two, such as a fix that also needs an
 
 | Status | Rows |
 |---|---|
-| Fixed now | 16 |
-| Handled before | 17 |
-| Needs the owner | 9 |
+| Fixed now | 26 |
+| Handled before | 22 |
+| Needs the owner | 8 |
 | Other agent | 7 |
 | Not reviewed | 13 |
 

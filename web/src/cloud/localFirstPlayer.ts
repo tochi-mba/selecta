@@ -119,7 +119,9 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
 /** What the player can ask of the device session and the engine. */
 export type PlayerActions = {
   /** Make this device the speaker (from a press); resolves with a sentence when it could not. */
-  playHere(startAt?: StartAt): Promise<string>;
+  /** `insist`: the person chose this device over the one playing (Play here instead): take over
+   * from whichever device the session names now, without asking again. */
+  playHere(startAt?: StartAt, insist?: boolean): Promise<string>;
   command(name: 'play' | 'pause' | 'skip' | 'seek' | 'set_volume', args?: Record<string, unknown>): Promise<void>;
   /** Whether remote commands work; when off, this device steers its own speaker directly. */
   remoteControl: boolean;
@@ -222,6 +224,12 @@ export class LocalFirstPlayer implements PlayerLike {
   }
 
   private get speaking() { return this.facts.speaking; }
+
+  /** ADR-0475: "Play here instead": the music moves here from wherever it is starting or playing. */
+  async playHereInstead(): Promise<void> {
+    if (!this.facts.mix.length) return this.publish(NOTHING_TO_PLAY);
+    this.publish(await this.actions.playHere(undefined, true));
+  }
 
   async playFrom(position: number, offset = 0): Promise<void> {
     if (!this.facts.mix.length) return this.publish(NOTHING_TO_PLAY);
@@ -547,7 +555,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     void pb.playHere(owner.current, at);
   }, [speaker, wantHere, pb.device, pb.playHere]);
 
-  const playHere = useCallback(async (at?: StartAt): Promise<string> => {
+  const playHere = useCallback(async (at?: StartAt, insist = false): Promise<string> => {
     tabLog('player playHere', { refusal: !!refusal, speaker: !!speaker });
     if (refusal) return '';
     startAt.current = at;
@@ -596,7 +604,9 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     }
     // another tab of this same browser is the speaker: the press here is the answer (ADR-0475 F)
     const sameDevice = !!latest.speaker_device_id && latest.speaker_device_id === pb.device?.id;
-    if (latest.ask_before_playing_here && !sameDevice && owner.current !== latest.speaker_device_id) {
+    // the person chose here over the device that is starting or playing: take over from it
+    if (insist) owner.current = latest.speaker_device_id ?? null;
+    if (!insist && latest.ask_before_playing_here && !sameDevice && owner.current !== latest.speaker_device_id) {
       // the same confirmation the playing bar asks for, as a second press
       owner.current = latest.speaker_device_id;
       return `Playing on ${latest.speaker_name ?? 'another device'}. Press play again to move it here.`;

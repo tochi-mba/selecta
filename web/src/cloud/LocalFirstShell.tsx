@@ -681,7 +681,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     cloud, refreshHoldings: holdings.refresh,
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
     askToPlay: (device) => void playOn.ask(device, recipes.current()),
-    asking: playOn.state, playingOn: playback.view?.speaker === 'elsewhere' ? playback.view.speaker_device_id : null,
+    asking: playOn.state, playHereInstead: () => { playOn.reset(); void player.playHereInstead(); }, playingOn: playback.view?.speaker === 'elsewhere' ? playback.view.speaker_device_id : null,
   });
   soundElsewhere.current = !on('devices.remote_control') ? null
     : speakerElsewhere ? () => { accountMix.offerLater(speakerElsewhere); return true; }

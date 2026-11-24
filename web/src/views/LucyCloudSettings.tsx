@@ -60,6 +60,9 @@ export function LucyTurnsMeter({ usage }: { usage: CloudLucy['usage'] }) {
   );
 }
 
+/** Said on `window` when the server says a Lucy turn was settled (CloudApp's event stream). */
+export const LUCY_TURNS_EVENT = 'selecta:lucy-turns';
+
 export function LucyCloudSettings({ request, features = {} }: { request: Request; features?: Record<string, boolean> }) {
   const [status, setStatus] = useState<CloudLucy | null>(null);
   const [enabled, setEnabled] = useState(true);
@@ -97,6 +100,17 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
     void load();
     return () => { live.current = false; };
   }, [load]);
+  // ADR-0476 item 31: a turn settled on any device; only the meter is read again, so choices
+  // ticked here but not saved yet stay as they are
+  useEffect(() => {
+    const again = () => {
+      void asked.current<CloudLucy>('/account/lucy')
+        .then((next) => { if (live.current) setStatus((was) => (was ? { ...was, usage: next.usage } : was)); })
+        .catch(() => {});
+    };
+    window.addEventListener(LUCY_TURNS_EVENT, again);
+    return () => window.removeEventListener(LUCY_TURNS_EVENT, again);
+  }, []);
 
   if (!status || !phases) {
     return (
