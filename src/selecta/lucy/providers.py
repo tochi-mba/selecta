@@ -56,6 +56,10 @@ class TurnResult:
     stop: str = "end_turn"
     tokens_in: int = 0
     tokens_out: int = 0
+    cache_read: int = 0
+    """Of `tokens_in`, how many were read from or written to the provider's prompt cache, so a
+    turn's cost can bill them at their own rates (the Cloud gateway does)."""
+    cache_write: int = 0
     assistant: Any = None
     """The provider-native assistant message to append before tool results."""
 
@@ -152,7 +156,10 @@ class AnthropicProvider:
                             tokens_in=(final.usage.input_tokens or 0)
                             + (getattr(final.usage, "cache_read_input_tokens", 0) or 0)
                             + (getattr(final.usage, "cache_creation_input_tokens", 0) or 0),
-                            tokens_out=final.usage.output_tokens or 0)
+                            tokens_out=final.usage.output_tokens or 0,
+                            cache_read=getattr(final.usage, "cache_read_input_tokens", 0) or 0,
+                            cache_write=getattr(final.usage, "cache_creation_input_tokens", 0)
+                            or 0)
         result.text = "".join(b.text for b in final.content if b.type == "text")
         if result.stop in {"refusal", "max_tokens"}:
             return result  # a truncated or declined tool call is never run

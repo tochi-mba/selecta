@@ -205,6 +205,17 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/webhooks/workos` | Stores and acts on a WorkOS event once |
 | `POST /api/admin/session` | Starts a privileged admin session |
 | `PUT /api/account/lucy` | Saves Cloud Lucy settings |
+| `PUT /api/lucy-cloud/settings` | Saves the person's Cloud Lucy choices (on/off, phases, sharing), the same store as `PUT /api/account/lucy` |
+| `POST /api/lucy-cloud/conversations` | Starts a Lucy conversation for this person in this workspace |
+| `PATCH /api/lucy-cloud/conversations/{conversation}` | Renames or archives one of this person's Lucy conversations |
+| `DELETE /api/lucy-cloud/conversations/{conversation}` | Deletes a Lucy conversation, its messages, events and proposals; mixes saved from it stay |
+| `POST /api/lucy-cloud/conversations/{conversation}/turns` | Stores the person's message, admits a turn through the AI gateway (counts a Lucy turn, takes the run slot, reserves its cost) and starts Lucy's answer |
+| `POST /api/lucy-cloud/conversations/{conversation}/retry` | Sends an earlier message again as a new turn (counted like any turn) |
+| `POST /api/lucy-cloud/conversations/{conversation}/stop` | Stops Lucy's running answer; the stopped turn is given back |
+| `POST /api/lucy-cloud/revisions/{revision}/edit` | Removes or moves a song in Lucy's proposal as a new proposal revision; no mix changes |
+| `POST /api/lucy-cloud/proposals/{proposal}/current` | Makes an earlier proposal revision the current one; no mix changes |
+| `POST /api/lucy-cloud/approvals` | Checks a proposal can be saved and returns a short-lived approval; nothing is saved |
+| `POST /api/lucy-cloud/commits` | Saves an approved proposal as the next recipe revision (or a new recipe), once per idempotency key; Save and play also makes it the account's current mix and publishes `mix.current` |
 | `POST /api/billing/checkout` | Opens a Stripe checkout |
 | `POST /api/billing/portal` | Opens the Stripe billing portal |
 | `POST /api/webhooks/stripe` | Applies a Stripe billing event |

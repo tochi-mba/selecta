@@ -1,5 +1,5 @@
 import { ApiError } from '../api';
-import { lucy } from './client';
+import { lucy, lucyTransport } from './client';
 import type { LucyEvent } from './types';
 
 /** Lucy's live event log for one conversation. Events arrive once each and in order: anything at or
@@ -25,10 +25,12 @@ export function openStream(
   let pollTimer: number | undefined;
   let hiddenTimer: number | undefined;
   let pollGeneration = 0;
-  let pollDelay = POLL_MS;
+  // Cloud (ADR-0476) has no EventSource for Lucy: it asks, more often than the fallback does
+  const pollMs = lucyTransport()?.pollMs ?? POLL_MS;
+  let pollDelay = pollMs;
   let stopped = false;
   let paused = false;
-  let polling = typeof EventSource === 'undefined';
+  let polling = typeof EventSource === 'undefined' || lucyTransport() !== null;
 
   const closeTransport = () => {
     source?.close();
@@ -117,7 +119,7 @@ export function openStream(
           return;
         }
         if (!accept(Array.isArray(page.events) ? page.events : [])) return;
-        pollDelay = POLL_MS;
+        pollDelay = pollMs;
         onState('polling');
       } catch (error) {
         if (stopped || mine !== pollGeneration) return;
