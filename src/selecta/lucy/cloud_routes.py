@@ -47,7 +47,7 @@ class TurnBody(BaseModel):
     client_id: str = Field(min_length=1, max_length=64)
     text: str = Field(min_length=1, max_length=MAX_TEXT)
     expected_revision: str | None = Field(default=None, max_length=64)
-    selection: dict[str, Any] | None = None
+    selection: dict[str, Any] | None = Field(default=None, max_length=4)
     # the playback device this was typed on (ADR-0476 item 22); unknown ids are ignored
     device_id: str | None = Field(default=None, max_length=36)
 
@@ -60,7 +60,7 @@ class RetryBody(BaseModel):
 class EditBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected: str = Field(min_length=1, max_length=64)
-    op: dict[str, Any]
+    op: dict[str, Any] = Field(max_length=4)
 
 
 class CurrentBody(BaseModel):
