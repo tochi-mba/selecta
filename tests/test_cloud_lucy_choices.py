@@ -72,8 +72,8 @@ def test_the_turn_meter_counts_this_months_turns(tmp_path, monkeypatch):
     with signed_up(tmp_path, monkeypatch) as world:
         with transaction(world.engine, world.workspace_id) as conn:
             allowances.try_consume(
-                conn, world.workspace_id, "lucy_turn.haiku", 7,
-                plan_for("free").lucy_turns("haiku"),
+                conn, world.workspace_id, "lucy_turn.everyday", 7,
+                plan_for("free").lucy_turns("everyday"),
             )
         usage = world.client.get("/api/account/lucy", headers=HEADERS).json()["usage"]
         assert (usage["used"], usage["limit"]) == (7, 40)

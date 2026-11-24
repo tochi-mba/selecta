@@ -193,6 +193,30 @@ def _served_class(
     return routed_for
 
 
+def _cheaper_route(
+    deployments: Mapping[str, Deployment], routing: RoutingVersion, tier: Tier,
+    request_class: RequestClass, workspace_id: str, health: HealthPort, needs: frozenset[str],
+    route: RoutedDeployment, room_usd: float,
+) -> RoutedDeployment | None:
+    """The first model down `route`'s fallback chain whose turn cap fits in `room_usd`, so a
+    heavy month steps down to a cheaper model instead of costing more than the plan earns."""
+    skipped = (*route.skipped, (route.deployment.id, "spend"))
+    step_id = route.deployment.fallback_id
+    while step_id and step_id != BUILTIN_ID:
+        only = RoutingVersion(routing.version, {tier.value: {request_class.value: [step_id]}})
+        found = choose_route(deployments, only, tier, request_class, workspace_id, health, needs)
+        if found.deployment.is_builtin:
+            return None
+        if turn_limits(found.deployment, tier).max_cost_usd <= room_usd:
+            return replace(
+                found, first_choice=route.first_choice, fallback_used=True,
+                skipped=skipped + found.skipped,
+            )
+        skipped = (*skipped, *found.skipped, (found.deployment.id, "spend"))
+        step_id = found.deployment.fallback_id
+    return None
+
+
 def plan_turn(
     conn: Connection, *, workspace_id: str, tier: Tier | str, request_class: RequestClass | str,
     prompt_version: str, tool_schema_version: str, conversation_id: str | None = None,
@@ -237,15 +261,23 @@ def plan_turn(
         if route.deployment.is_builtin:
             chosen, limited = route, limited or "no_model"
             break
+        ceiling = tier_limits.monthly_cost_ceiling_usd + CAP_TOLERANCE_USD
+        if spent + turn_limits(route.deployment, tier).max_cost_usd > ceiling:
+            limited = "spend"
+            # A cheaper model down this deployment's own chain may still fit (Opus, Sonnet,
+            # Haiku); then a smaller class's model; then the built-in planner.
+            cheaper = _cheaper_route(
+                deployments, routing, tier, candidate, workspace_id, health, needs, route,
+                ceiling - spent,
+            )
+            if cheaper is None:
+                continue
+            route = cheaper
         served = _served_class(routing, tier, candidate, route)
         bucket_here = bucket_for(tier, served)
         if bucket_here in used_up:
             continue
         limits = turn_limits(route.deployment, tier)
-        ceiling = tier_limits.monthly_cost_ceiling_usd + CAP_TOLERANCE_USD
-        if spent + limits.max_cost_usd > ceiling:
-            limited = "spend"  # a smaller class's cheaper model may still fit
-            continue
         start = _start_turn(conn, workspace_id, tier, served, month)
         if not start.admitted:
             used_up.add(bucket_here)

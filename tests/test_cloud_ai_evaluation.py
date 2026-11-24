@@ -154,7 +154,8 @@ def test_every_tier_default_is_gated_and_then_routing_accepts_them(seeded):
             registry.validate_routing_map(routing, registry.load_deployments(conn))
         reports = evaluation.gate_tiers(conn, subject_for, tools=TOOLS)
         assert reports.passed
-        assert set(reports.reports) == {"haiku-low", "haiku-medium", "sonnet-medium", "opus-high"}
+        # Every routed first choice; haiku-medium is only a fallback now (one model per plan).
+        assert set(reports.reports) == {"haiku-low", "sonnet-medium", "opus-high"}
         registry.validate_routing_map(routing, registry.load_deployments(conn))
     assert all(len(subject.seen) == 6 for subject in subjects.values())
 

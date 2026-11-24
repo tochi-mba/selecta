@@ -9,11 +9,11 @@ Plans grant a **capability**; a routing table maps capabilities to **deployments
 | Plan | Capability | Starting deployment | Why |
 |---|---|---|---|
 | Free | `lucy_basic` | Claude Haiku 5.5 (`claude-haiku-5-5`), effort low | $0.10/$0.50 per M tokens: cheap enough to give Free users a real Lucy |
-| Standard | `lucy_standard` | Haiku 5.5 at medium/high effort for everyday turns; Claude Sonnet 5.5 (`claude-sonnet-5-5`, $2/$10) for a monthly allowance of whole-mix planning turns | Keeps a maxed-out Standard user well inside a £6.99 plan |
-| Premium | `lucy_advanced` | Sonnet 5.5 for everyday turns; Claude Opus 5.5 (`claude-opus-5-5`, $4/$20) for "deep plan" turns within an allowance; Haiku for quick questions | Opus only where it earns its cost |
+| Standard | `lucy_standard` | Claude Sonnet 5.5 (`claude-sonnet-5-5`, $2/$10, effort medium) for every turn: 400 everyday and 40 whole-mix planning turns a month | One clearly better model than Free; the monthly dollar ceiling keeps a maxed-out member inside a £6.99 plan |
+| Premium | `lucy_advanced` | Claude Opus 5.5 (`claude-opus-5-5`, $4/$20, effort high) for every turn: 150 everyday, 25 deep plans, quick answers on fair use | The best model; the ceiling steps a heavy month down to Sonnet, then Haiku |
 | Fallbacks | - | Per-tier chain: next smaller model of the same family → built-in planner (`lucy/builtin.py`) | Lucy degrades, never breaks the app |
 
-**Routing down, never up.** Within a tier, the gateway sends simple requests (help questions, "skip this song", small edits) to the cheapest model the tier allows, and keeps the bigger model for planning. It never routes a request to a model above the tier.
+**One model per plan, routing down never up.** Since 2026-11-24 (owner decision) each plan answers every kind of request with its own model: Free on Haiku, Standard on Sonnet, Premium on Opus. A request only ever moves down: when its model is unhealthy or disabled it falls back along the deployment's chain (Opus, Sonnet, Haiku, built-in planner), and when the next turn's worst case would pass the account's monthly dollar ceiling the gateway steps down the same chain to a cheaper model that fits before giving the turn to the built-in planner. It never routes a request to a model above the tier. A database still on an earlier starting map is moved to the new one at start; a map an admin chose is never touched.
 
 Model IDs and prices are from Anthropic's current published table (Oct 2026); re-check before launch. The registry also allows a second provider via the existing OpenAI-compatible adapter in `lucy/providers.py` if a different vendor proves better or cheaper for a tier.
 
