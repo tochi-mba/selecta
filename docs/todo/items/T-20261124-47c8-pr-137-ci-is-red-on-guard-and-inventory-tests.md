@@ -2,7 +2,7 @@
 id: T-20261124-47c8
 title: PR #137 CI is red on guard and inventory tests
 area: ci
-status: open
+status: doing
 priority: now
 who: claude
 created: 2026-11-24
