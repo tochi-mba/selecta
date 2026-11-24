@@ -19,13 +19,23 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.admin import actions, alerts, commands, http, pages, read_models
+from selecta.admin import (
+    actions,
+    alerts,
+    commands,
+    console_reads,
+    http,
+    pages,
+    read_models,
+    safety,
+    staff_console,
+)
 from selecta.admin import state as emergency_state
 from selecta.admin.http import CommandRefused
-from selecta.authz import assignments, audit
+from selecta.authz import audit
 from selecta.authz.check import Actor, active_assignments, authorize
 from selecta.authz.roles import ROLE_PERMISSIONS
-from selecta.authz.scopes import ResourceRef, Scope
+from selecta.authz.scopes import ResourceRef
 from selecta.identity.tokens import Claims
 
 JOB_COMMANDS: dict[str, Callable[..., Any]] = {
@@ -38,6 +48,13 @@ JOB_COMMANDS: dict[str, Callable[..., Any]] = {
 
 class Reason(BaseModel):
     reason: str = Field(min_length=1, max_length=2000)
+    # What the console knew when the button was pressed (`admin.safety.Intent`).
+    version: str | None = Field(default=None, max_length=64)
+    read_at: float | None = None
+    confirm: str | None = Field(default=None, max_length=320)
+
+    def intent(self) -> safety.Intent:
+        return safety.Intent(version=self.version, read_at=self.read_at, confirm=self.confirm)
 
 
 class OverrideRequest(Reason):
@@ -71,6 +88,10 @@ def install_routes(
     emergency: emergency_state.EmergencyCache,
 ) -> None:
     SignedIn = Annotated[Claims, Depends(current_claims)]
+    # The redesigned console (doc 07b) and its view-mode middleware for every admin write.
+    from selecta.admin import routes_console
+
+    routes_console.install_routes(app, engine=engine, current_claims=current_claims)
 
     def staff(request: Request, claims: Claims) -> Actor:
         return http.staff_actor(engine, request, claims)
@@ -83,7 +104,7 @@ def install_routes(
 
     @app.get("/api/admin/me")
     def admin_me(request: Request, claims: SignedIn):
-        return run(request, claims, pages.me)
+        return run(request, claims, staff_console.me)
 
     @app.get("/api/admin/overview")
     def admin_overview(request: Request, claims: SignedIn):
@@ -96,6 +117,7 @@ def install_routes(
                 for c, t in sorted(emergency_state.load(conn).engaged)
             ]
             out["alerts"] = [vars(a) for a in alerts.recent(conn, limit=10)]
+            out.update(console_reads.overview_extra(conn, out["metrics"]))
             return out
 
         return run(request, claims, read)
@@ -140,7 +162,8 @@ def install_routes(
                 return None
 
         workspace_id = http.run(engine, actor, authorized_workspace)
-        job = http.run(engine, actor, lambda conn: do(conn, actor, job_id, reason=body.reason),
+        job = http.run(engine, actor, lambda conn: do(conn, actor, job_id, reason=body.reason,
+                                                      intent=body.intent()),
                        workspace_id=workspace_id)
         return {"job": {"id": job.id, "state": str(job.state), "workspace_id": job.workspace_id,
                         "error_class": job.error_class}}
@@ -154,11 +177,11 @@ def install_routes(
                              claims: SignedIn):
         if command == "resume":
             return run(request, claims, lambda conn, actor: commands.resume_worker(
-                conn, actor, worker_id, reason=body.reason))
+                conn, actor, worker_id, reason=body.reason, intent=body.intent()))
         if command not in commands.WORKER_HOLDS:
             raise HTTPException(404, detail={"code": "unknown_command"})
         return run(request, claims, lambda conn, actor: commands.hold_worker(
-            conn, actor, worker_id, command, reason=body.reason))
+            conn, actor, worker_id, command, reason=body.reason, intent=body.intent()))
 
     @app.get("/api/admin/accounts")
     def admin_accounts(request: Request, claims: SignedIn, q: str = "",
@@ -178,19 +201,22 @@ def install_routes(
         if do is None:
             raise HTTPException(404, detail={"code": "unknown_command"})
         return run(request, claims, lambda conn, actor: do(conn, actor, user_id,
-                                                           reason=body.reason))
+                                                           reason=body.reason,
+                                                           intent=body.intent()))
 
     @app.post("/api/admin/overrides", status_code=201)
     def admin_override(body: OverrideRequest, request: Request, claims: SignedIn):
         return run(request, claims, lambda conn, actor: commands.grant_override(
             conn, actor, workspace_id=body.workspace_id, plan_id=body.plan_id,
-            reason=body.reason, expires_at=body.expires_at), workspace_id=body.workspace_id)
+            reason=body.reason, expires_at=body.expires_at, intent=body.intent()),
+            workspace_id=body.workspace_id)
 
     @app.post("/api/admin/overrides/mass", status_code=202)
     def admin_mass_override(body: MassOverrideRequest, request: Request, claims: SignedIn):
         action = run(request, claims, lambda conn, actor: commands.propose_mass_override(
             conn, actor, workspace_ids=body.workspace_ids, plan_id=body.plan_id,
-            reason=body.reason, expires_at=body.expires_at))
+            reason=body.reason, expires_at=body.expires_at,
+            intent=body.intent() if body.version else None))
         return {"action": actions.action_json(action)}
 
     @app.delete("/api/admin/overrides/{override_id}")
@@ -210,11 +236,9 @@ def install_routes(
     @app.post("/api/admin/security/roles", status_code=201)
     def admin_assign_role(body: RoleRequest, request: Request, claims: SignedIn):
         def assign(conn: Connection, actor: Actor) -> dict:
-            made = assignments.assign_role(
-                conn, actor, user_id=body.user_id, role=body.role, reason=body.reason,
-                scope=Scope.parse(body.scope), expires_at=body.expires_at)
-            return {"id": made.id, "user_id": made.user_id, "role": made.role.value,
-                    "scope": str(made.scope)}
+            return staff_console.assign_role(
+                conn, actor, user_id=body.user_id, role=body.role, scope=body.scope,
+                reason=body.reason, expires_at=body.expires_at, intent=body.intent())
 
         return run(request, claims, assign, self_kind=alerts.ESCALATION)
 

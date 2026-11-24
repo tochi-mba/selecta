@@ -13,7 +13,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.admin import actions, emergency, flags_admin, http, takedowns
+from selecta.admin import actions, emergency, flags_admin, http, safety, takedowns
 from selecta.admin import state as emergency_state
 from selecta.authz.check import Actor, authorize
 from selecta.authz.scopes import ResourceRef
@@ -24,7 +24,18 @@ from selecta.identity.tokens import Claims
 from selecta.persistence import db_now
 
 
-class ControlRequest(BaseModel):
+class Intended(BaseModel):
+    """What the console knew when the button was pressed (`admin.safety.Intent`)."""
+
+    version: str | None = Field(default=None, max_length=64)
+    read_at: float | None = None
+    confirm: str | None = Field(default=None, max_length=320)
+
+    def intent(self) -> safety.Intent:
+        return safety.Intent(version=self.version, read_at=self.read_at, confirm=self.confirm)
+
+
+class ControlRequest(Intended):
     reason: str = Field(min_length=1, max_length=2000)
     target: str | None = Field(default=None, max_length=64)
 
@@ -55,7 +66,7 @@ class NoticeRequest(BaseModel):
     received_at: float | None = None
 
 
-class Decision(BaseModel):
+class Decision(Intended):
     reason: str = Field(min_length=1, max_length=2000)
 
 
@@ -94,13 +105,17 @@ def install_routes(
         control: str, command: str, body: ControlRequest, request: Request, claims: SignedIn
     ):
         if command == "engage":
-            row = run(
-                request,
-                claims,
-                lambda conn, actor: emergency.engage(
-                    conn, actor, control, body.target, reason=body.reason
-                ),
-            )
+
+            def engage(conn: Connection, actor: Actor):
+                authorize(conn, actor, "platform.emergency_controls.manage")
+                safety.guard(conn, actor, "emergency.engage", body.intent(), target=control)
+                row = emergency.engage(conn, actor, control, body.target, reason=body.reason)
+                safety.record(conn, actor, "emergency.engage", resource_type="emergency_control",
+                              resource_id=control, workspace_id=None, reason=body.reason,
+                              target=body.target)
+                return row
+
+            row = run(request, claims, engage)
             emergency_cache.invalidate()
             return {"control": vars(row)}
         if command == "release":
@@ -247,14 +262,18 @@ def install_routes(
 
         workspace_id = http.run(engine, actor, authorized_workspace)
         if command == "act":
-            return run(
-                request,
-                claims,
-                lambda conn, actor: takedowns.act_on_notice(
-                    conn, actor, notice_id, reason=body.reason
-                ),
-                workspace_id=workspace_id,
-            )
+
+            def act(conn: Connection, actor: Actor):
+                authorize(conn, actor, "legal.takedowns.manage",
+                          ResourceRef("takedown_notice", notice_id))
+                safety.guard(conn, actor, "takedown.act", body.intent(), target=notice_id[:8])
+                done = takedowns.act_on_notice(conn, actor, notice_id, reason=body.reason)
+                safety.record(conn, actor, "takedown.act", resource_type="takedown_notice",
+                              resource_id=notice_id, workspace_id=workspace_id,
+                              reason=body.reason)
+                return done
+
+            return run(request, claims, act, workspace_id=workspace_id)
 
         def reject(conn: Connection, actor: Actor) -> dict:
             notice = takedowns.reject_notice(conn, actor, notice_id, reason=body.reason)
