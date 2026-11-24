@@ -15,32 +15,42 @@ export type HoldingsView = {
   devices: DeviceHolding[] | null;
   /** The ids the speaker can open; null when there is no speaker elsewhere or it has not said. */
   speakerSongs: ReadonlySet<number> | null;
+  /** Each reporting device's ids (ADR-0475 R4, R6: which device holds a song). A device that has
+   * reported nothing is absent: unknown, not empty. */
+  ids: ReadonlyMap<string, ReadonlySet<number>>;
 };
 
-/** `speakerId`: the device playing elsewhere, whose ids are worth reading; null reads counts only. */
+const NO_IDS: ReadonlyMap<string, ReadonlySet<number>> = new Map();
+
+/** `speakerId`: the device playing elsewhere (its ids are `speakerSongs`); null when none is.
+ * Every reporting device's ids are read too, each again only when its report changes. */
 export function useHoldings(cloud: Request, enabled: boolean, speakerId: string | null): HoldingsView {
   const [devices, setDevices] = useState<DeviceHolding[] | null>(null);
-  const [speakerSongs, setSpeakerSongs] = useState<ReadonlySet<number> | null>(null);
-  // the report the kept ids came from, so an unchanged set is not read again
-  const kept = useRef<{ id: string; reportedAt: number | null } | null>(null);
+  const [ids, setIds] = useState<ReadonlyMap<string, ReadonlySet<number>>>(NO_IDS);
+  // the report each kept set came from, so an unchanged set is not read again
+  const kept = useRef(new Map<string, { reportedAt: number; songs: ReadonlySet<number> }>());
 
   useEffect(() => {
-    if (!enabled) { setDevices(null); setSpeakerSongs(null); kept.current = null; return undefined; }
+    if (!enabled) { setDevices(null); setIds(NO_IDS); kept.current = new Map(); return undefined; }
     let live = true;
     const read = async () => {
       try {
         const counts = await cloud<Holdings>('/local-media/holdings');
         if (!live) return;
         setDevices(counts.devices);
-        const speaker = speakerId ? counts.devices.find((device) => device.device_id === speakerId) : undefined;
-        if (!speakerId || !speaker) { kept.current = null; setSpeakerSongs(null); return; }
-        if (kept.current?.id === speakerId && kept.current.reportedAt === speaker.reported_at) return;
-        // a speaker that has reported nothing is unknown, not empty: it answers for itself
-        if (speaker.reported_at === null) { kept.current = { id: speakerId, reportedAt: null }; setSpeakerSongs(null); return; }
-        const one = await cloud<Holdings>(`/local-media/holdings?device_id=${encodeURIComponent(speakerId)}`);
-        if (!live) return;
-        kept.current = { id: speakerId, reportedAt: speaker.reported_at };
-        setSpeakerSongs(new Set(one.song_ids ?? []));
+        const next = new Map<string, { reportedAt: number; songs: ReadonlySet<number> }>();
+        let changed = kept.current.size !== counts.devices.filter((device) => device.reported_at !== null).length;
+        for (const device of counts.devices) {
+          if (device.reported_at === null) continue;
+          const had = kept.current.get(device.device_id);
+          if (had && had.reportedAt === device.reported_at) { next.set(device.device_id, had); continue; }
+          const one = await cloud<Holdings>(`/local-media/holdings?device_id=${encodeURIComponent(device.device_id)}`);
+          if (!live) return;
+          next.set(device.device_id, { reportedAt: device.reported_at, songs: new Set(one.song_ids ?? []) });
+          changed = true;
+        }
+        kept.current = next;
+        if (changed) setIds(new Map([...next].map(([id, held]) => [id, held.songs])));
       } catch {
         // refused or unreachable: what is known stays; nothing is claimed that was not read
       }
@@ -48,7 +58,9 @@ export function useHoldings(cloud: Request, enabled: boolean, speakerId: string 
     void read();
     const timer = window.setInterval(() => void read(), HOLDINGS_EVERY_MS);
     return () => { live = false; window.clearInterval(timer); };
-  }, [cloud, enabled, speakerId]);
+  }, [cloud, enabled]);
 
-  return { devices, speakerSongs };
+  // a speaker that has reported nothing is unknown, not empty: it answers for itself
+  const speakerSongs = speakerId ? ids.get(speakerId) ?? null : null;
+  return { devices, speakerSongs, ids };
 }

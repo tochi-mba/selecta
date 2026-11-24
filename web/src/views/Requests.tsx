@@ -34,7 +34,7 @@ export type RequestRow = {
   saving?: boolean; picked?: number[] | null; behind?: string; bridge_lost?: boolean;
   /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */
   browser_note?: string;
-  plays_on?: string; where_note?: string; // ADR-0475: the device that will play this, and the line saying so
+  plays_on?: string; where_note?: string; connect_here?: boolean; // ADR-0475: who plays it, the line saying so, and whether connecting here is the only way
   /** Cloud in the browser: the room a guest asked in, and the guest's nickname when it is known. */
   room_name?: string; asked_by?: string | null; room_request_id?: string;
 };

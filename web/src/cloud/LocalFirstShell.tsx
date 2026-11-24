@@ -40,7 +40,7 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { HolderContext, musicHolder, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
+import { HolderContext, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { ControllerListen } from '../devices/ControllerListen';
 import { soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
@@ -241,8 +241,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // ADR-0475: the device that is playing when it is not this one, for the request adapter. Set
   // further down each render, once the session is known; read by the adapter at each press.
   const controllerLink = useRef<ControllerLink | null>(null);
+  const whereHeld = useRef<WhereHeld | null>(null);
   const sources = useMemo<AvailabilitySources>(() => ({
     controller: () => controllerLink.current,
+    holders: () => whereHeld.current,
     here: async () => {
       const opened = await openStore();
       const found = new Map<number, 'here' | 'reauth' | 'reconnect'>();
@@ -396,7 +398,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: followsHere ? songOrder : NO_SONGS, loadSongs: loadRemoteSongs });
   // ADR-0475: what the speaker can open, so a request is judged by the device that will play it
   const [holderId, setHolderId] = useState<string | null>(null);
-  const holdings = useHoldings(cloud, on('devices.remote_control') && (!!remote || !followsHere), remote ? playback.view?.speaker_device_id ?? null : holderId);
+  const holdings = useHoldings(cloud, on('devices.remote_control'), remote ? playback.view?.speaker_device_id ?? null : holderId);
+  // R4, R6: which of the person's other devices hold a song (this device and the speaker are judged on their own)
+  whereHeld.current = holdings.devices ? whereHeldFrom(holdings.devices, holdings.ids, [playback.device?.id ?? null, remote ? playback.view?.speaker_device_id ?? null : null]) : null;
   // ADR-0475 R6: the device to name as where the music is (the speaker, else the best holder)
   const holderDevice = holdings.devices ? musicHolder(holdings.devices, playback.device?.id ?? null, remote ? playback.view?.speaker_device_id ?? null : null) : null;
   useEffect(() => { setHolderId(holderDevice?.device_id ?? null); }, [holderDevice?.device_id]);
@@ -676,7 +680,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const roomWaiting = room ? room.toApprove : 0;
   const roomShown = useRoomLive();
   // "N requests to add" counts only what the Requests list can add now; the rest are on the way
-  const roomAdd = roomShown && requestsOn ? addable(roomShown.coming, songRequests.requests) : { ready: room?.toAdd ?? 0, onTheWay: 0 };
+  const roomAdd = roomShown && requestsOn ? addable(roomShown.coming, songRequests.requests) : { ready: room?.toAdd ?? 0, onTheWay: 0, onDevice: 0 };
   // a room that opened or closed changes which requests wait: a closed room's leave the list and the count
   const openRoomNow = room?.id;
   useEffect(() => { if (requestsOn) void refreshRoomRequests.current?.(); }, [openRoomNow, requestsOn]);
@@ -831,6 +835,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
             {roomWaiting > 0 && <span className="room-open-waiting">{countOf(roomWaiting, 'request')} to approve</span>}
             {roomAdd.ready > 0 && <span className="room-open-waiting">{countOf(roomAdd.ready, 'request')} to add</span>}
             {roomAdd.onTheWay > 0 && <span className="room-open-waiting">{countOf(roomAdd.onTheWay, 'request')} on the way</span>}
+            {roomAdd.onDevice > 0 && <span className="room-open-waiting" data-testid="room-on-device">{countOf(roomAdd.onDevice, 'request')} waiting on a device</span>}
           </a>
         ) : undefined}
         banner={<>{askedBanner}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
