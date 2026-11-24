@@ -86,7 +86,7 @@ def main() -> None:
             table = rows(local, "local") + rows(cloud, "cloud")
         finally:
             engine.dispose()
-    print("| Method | Path | App | Flag | Signed in | Workspace | Idempotency-Key | 429 in source |")
+    print("| Method | Path | App | Flag | Signed in | Workspace | Idempotency-Key | 429 |")
     print("|---|---|---|---|---|---|---|---|")
     for row in sorted(table, key=lambda item: (item[2], item[1], item[0])):
         print("| " + " | ".join(row) + " |")
