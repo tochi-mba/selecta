@@ -188,7 +188,7 @@
     },
     "cloud.content_cache": {
       "label": "Reuse work on the same song by fingerprint",
-      "about": "Derived data on this device (cached song bytes) is keyed by the song's content hash, computed here from the file itself, so the same file under another account or another title reuses it; off, the cache is keyed per workspace and nothing is shared (ADR-0469).",
+      "about": "Derived data on this device is keyed by the song's content hash, computed here from the file itself, so the same file under another account or another title reuses it: cached song bytes, and a device-wide store of tonal profiles, waveforms and durations, with a fingerprint memo so a folder imported here before is not read in full again (ADR-0469 amendment). Off, everything is keyed per workspace, every import hashes every file, and nothing is shared.",
       "surfaces": ["cloud.library", "cloud.listen"],
       "modes": ["cloud"],
       "default": true,

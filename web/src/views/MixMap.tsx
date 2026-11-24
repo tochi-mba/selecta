@@ -44,7 +44,7 @@ export function MixMap(props: {
   const down = (event: PointerEvent<HTMLDivElement>) => {
     if (held.current !== null || !event.isPrimary) return;
     held.current = event.pointerId;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* a pointer the browser no longer tracks */ }
     setAim(songAt(event.clientX));
   };
   const move = (event: PointerEvent<HTMLDivElement>) => {
