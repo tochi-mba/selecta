@@ -33,7 +33,7 @@ from selecta.ai.allowance import month_resets_at
 from selecta.ai.registry import Provider, RequestClass, Tier
 from selecta.ai.runs import Outcome
 from selecta.billing import plans, stripe_sync
-from selecta.lucy import cloud_prompt, cloud_store, cloud_tools
+from selecta.lucy import cloud_prompt, cloud_store, cloud_tools, cloud_world
 from selecta.lucy.providers import (
     AnthropicProvider,
     OpenAICompatibleProvider,
@@ -42,6 +42,7 @@ from selecta.lucy.providers import (
 )
 from selecta.persistence import new_id, transaction
 
+STOP_CHECK_SECONDS = 1.0
 FLUSH_CHARS = 80
 FLUSH_SECONDS = 0.15
 HISTORY_MESSAGES = 200
@@ -117,6 +118,7 @@ class Job:
     timezone: str | None
     proposals_on: bool = True
     provider_factory: ProviderFactory = default_provider
+    device_id: str | None = None
     stop: threading.Event = field(default_factory=threading.Event)
     result: dict[str, Any] = field(default_factory=dict)
 
@@ -164,16 +166,24 @@ class Runner:
 
 
 class Events:
-    """Writes one turn's events, each in its own short transaction, so the page can read them
-    while the turn is still going."""
+    """Writes one turn's events, each in its own short transaction, so every device can read
+    them while the turn is still going. A conversation deleted meanwhile (from any device)
+    takes no more events: nothing a running turn writes can bring it back."""
 
     def __init__(self, job: Job, run: str) -> None:
         self.job, self.run = job, run
+        self.gone = False
 
     def emit(self, kind: str, payload: dict, *, plan: str | None = None,
              step: str | None = None) -> None:
         job = self.job
+        if self.gone:
+            return
         with transaction(job.engine, job.workspace_id) as conn:
+            if not cloud_store.exists(conn, job.workspace_id, job.conversation_id):
+                self.gone = True
+                job.stop.set()
+                return
             cloud_store.append_event(conn, job.workspace_id, job.conversation_id, kind, payload,
                                      turn=job.turn_id, run=self.run, plan=plan, step=step)
 
@@ -299,7 +309,20 @@ async def run_turn(job: Job) -> None:
     ctx = cloud_tools.CloudCtx(job.engine, job.workspace_id, job.user_id, job.conversation_id,
                                job.turn_id, proposals_on=job.proposals_on)
 
+    checked = {"at": 0.0}
+
     def stopped() -> bool:
+        """Stop pressed on any device: this process hears it at once; another server
+        running the turn reads the turn's `stopping` mark within a second."""
+        if job.stop.is_set():
+            return True
+        now = time.monotonic()
+        if now - checked["at"] >= STOP_CHECK_SECONDS:
+            checked["at"] = now
+            with transaction(job.engine, job.workspace_id) as conn:
+                row = cloud_store.turn_row(conn, job.workspace_id, job.turn_id)
+            if row is None or row.status == "stopping":
+                job.stop.set()
         return job.stop.is_set()
 
     writer = Writer(events, message["id"], stopped)
@@ -320,6 +343,9 @@ async def run_turn(job: Job) -> None:
                                    "way?")
     except Stopped:
         outcome, final, error_code = Outcome.CANCELLED, "cancelled", "stopped"
+        done = ("I had already proposed a change, which is in the Your mix pane; nothing was "
+                "saved." if ctx.proposed else "Nothing was changed.")
+        await _say(writer, f"(Stopped. {done})")
     except gateway.GatewayError as problem:
         outcome, final, error_code, error = Outcome.FAILED, "failed", problem.code, problem.message
         events.emit("error", {"code": problem.code, "message": "Lucy couldn't start.",
@@ -408,12 +434,13 @@ async def _model_turns(
         cloud_prompt.INSTRUCTIONS,
         cloud_prompt.dynamic(cloud_tools.library_summary(ctx),
                              dt.datetime.now(dt.UTC).strftime("%A %d %B %Y"), job.proposals_on),
+        _right_now(job),
     ]
     limits = plan.limits
     deadline = time.monotonic() + limits.max_seconds
     cycles = steps = 0
     while True:
-        if job.stop.is_set():
+        if writer.stopped():
             raise Stopped()
         if cycles >= limits.max_cycles:
             events.emit("run.limit", {"limit": "cycles", "used": cycles, "max": limits.max_cycles,
@@ -487,6 +514,13 @@ async def _model_turns(
         messages += provider.results(result, outputs)
         events.state("evaluating", cycles, steps)
     return cycles, steps
+
+
+def _right_now(job: Job) -> str:
+    """Fresh state for this message (items 22-25): read now, never remembered."""
+    with transaction(job.engine, job.workspace_id) as conn:
+        state = cloud_world.snapshot(conn, job.workspace_id, job.user_id, job.device_id)
+    return cloud_world.words(state)
 
 
 def _note(name: str, arguments: Any, text: str) -> str:

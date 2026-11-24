@@ -262,7 +262,8 @@ def active_turn(conn: Connection, workspace_id: str, conversation_id: str):
 
 
 def add_turn(
-    conn: Connection, workspace_id: str, conversation_id: str, client_id: str, text: str
+    conn: Connection, workspace_id: str, conversation_id: str, client_id: str, text: str,
+    device_id: str | None = None, device_name: str | None = None,
 ) -> dict[str, Any]:
     seq = _next_seq(conn, workspace_id, conversation_id)
     turn_id = new_id()
@@ -271,6 +272,7 @@ def add_turn(
         turns.insert().values(
             workspace_id=workspace_id, id=turn_id, conversation_id=conversation_id,
             client_id=client_id, seq=seq, text=text, status="queued", created_at=now,
+            device_id=device_id, device_name=device_name,
         )
     )
     message_id = new_id()
@@ -290,8 +292,8 @@ def add_turn(
     if row is not None and not row.title:
         values["title"] = _title_from(text)
     touch(conn, workspace_id, conversation_id, **values)
-    append_event(conn, workspace_id, conversation_id, "turn.accepted", {"seq": seq, "text": text},
-                 turn=turn_id)
+    append_event(conn, workspace_id, conversation_id, "turn.accepted",
+                 {"seq": seq, "text": text, "device": device_name}, turn=turn_id)
     append_event(conn, workspace_id, conversation_id, "message.started",
                  {"message": message_id, "role": "user", "seq": seq}, turn=turn_id)
     if "title" in values:
@@ -363,22 +365,68 @@ def history(
 
 
 def snapshot_messages(
-    conn: Connection, workspace_id: str, conversation_id: str
+    conn: Connection, workspace_id: str, conversation_id: str, upto: int | None = None
 ) -> list[dict[str, Any]]:
+    """Every message in server order (`seq`, never a device's clock). An answer still
+    streaming carries its text so far, rebuilt from its delta events up to `upto` (the cursor
+    the snapshot hands out), so a device joining mid-answer then reads exactly the rest."""
     rows = conn.execute(
         sa.select(messages)
         .where(messages.c.workspace_id == workspace_id)
         .where(messages.c.conversation_id == conversation_id)
         .order_by(messages.c.seq)
     ).all()
-    return [
-        {
+    found = []
+    for row in rows:
+        content = row.content
+        if row.status == "streaming":
+            content = streamed_so_far(conn, workspace_id, conversation_id, row.id, upto)
+        found.append({
             "id": row.id, "seq": int(row.seq), "role": row.role, "turn": row.turn_id,
-            "run": row.run_id, "content": row.content, "status": row.status,
+            "run": row.run_id, "content": content, "status": row.status,
             "revision": row.revision, "meta": {}, "created_at": iso(row.created_at),
-        }
-        for row in rows
-    ]
+        })
+    return found
+
+
+def streamed_so_far(
+    conn: Connection, workspace_id: str, conversation_id: str, message_id: str,
+    upto: int | None,
+) -> str:
+    statement = (
+        sa.select(events.c.payload)
+        .where(events.c.workspace_id == workspace_id)
+        .where(events.c.conversation_id == conversation_id)
+        .where(events.c.type == "message.delta")
+        .order_by(events.c.id)
+    )
+    if upto is not None:
+        statement = statement.where(events.c.id <= upto)
+    return "".join(
+        str((payload or {}).get("text") or "")
+        for payload in conn.execute(statement).scalars()
+        if (payload or {}).get("message") == message_id
+    )
+
+
+def busy_with(conn: Connection, workspace_id: str) -> str | None:
+    """The device name of the turn Lucy is answering in this account now, if one is."""
+    row = conn.execute(
+        sa.select(turns.c.device_name)
+        .where(turns.c.workspace_id == workspace_id)
+        .where(turns.c.status.in_(ACTIVE_TURN))
+        .order_by(turns.c.created_at.desc())
+        .limit(1)
+    ).first()
+    return None if row is None else (row.device_name or "")
+
+
+def exists(conn: Connection, workspace_id: str, conversation_id: str) -> bool:
+    return conn.execute(
+        sa.select(conversations.c.id)
+        .where(conversations.c.workspace_id == workspace_id)
+        .where(conversations.c.id == conversation_id)
+    ).first() is not None
 
 
 STALE_SECONDS = 300

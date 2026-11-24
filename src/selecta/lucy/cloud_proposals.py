@@ -319,7 +319,9 @@ def commit(
         raise ProposalError("approval_expired", "This check has run out. Press Save again.", 409)
     row = row_by_id(conn, workspace_id, asked["revision"])
     if row.commit_key is not None:
-        return {**commit_answer(row, None), "repeat": True}  # saved already: never twice
+        # saved already, from this device or another: never twice, and said plainly
+        raise ProposalError("already_saved", "This was already saved, from this or another "
+                            "device. Nothing changed.", 409)
     if not row.current:
         raise ProposalError("stale_revision", "Make this the current revision to save it.", 409)
     ids = [int(i) for i in row.song_ids]
