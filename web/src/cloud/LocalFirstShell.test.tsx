@@ -435,6 +435,13 @@ describe('the account chrome in the local-first shell (hosted frame parity)', ()
     const asked = vi.mocked(fetch).mock.calls.map(([url]) => String(url));
     expect(asked).toContain('/api/lucy-cloud/status');
     expect(asked.some((url) => url.startsWith('/api/lucy/'))).toBe(false);
+    // a message past the server's limit is refused here, with its count, and stays in the box
+    const box = screen.getByRole('textbox', { name: 'Message to Lucy' });
+    fireEvent.change(box, { target: { value: 'a'.repeat(4001) } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    expect((await screen.findAllByText(/That message is 4,001 characters; Lucy reads up to 4,000/))[0]).toBeVisible();
+    expect((box as HTMLTextAreaElement).value).toHaveLength(4001);
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/turns'))).toBe(false);
   }, 30_000);
 
   it('keeps Lucy’s conversation closed in the browser while lucy.cloud_conversation is off', async () => {
