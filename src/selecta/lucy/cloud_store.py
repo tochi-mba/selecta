@@ -294,8 +294,8 @@ def add_turn(
     touch(conn, workspace_id, conversation_id, **values)
     append_event(conn, workspace_id, conversation_id, "turn.accepted",
                  {"seq": seq, "text": text, "device": device_name}, turn=turn_id)
-    append_event(conn, workspace_id, conversation_id, "message.started",
-                 {"message": message_id, "role": "user", "seq": seq}, turn=turn_id)
+    # no message.started for the person's words: the page would replace turn.accepted's
+    # copy of them with an empty message (local mode doesn't send one either)
     if "title" in values:
         append_event(conn, workspace_id, conversation_id, "conversation.updated",
                      {"title": values["title"]})
