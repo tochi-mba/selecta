@@ -4,6 +4,7 @@ import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
+import { START_ANSWER_EVENT, START_ASK_EVENT } from '../devices/playOn';
 import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
@@ -394,6 +395,9 @@ export function CloudApp() {
     if (event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.') || event.topic.startsWith('session.')) void refreshAccount();
     // ADR-0461: commands reach the speaker hook (usePlaybackDevice), which checks and acks them.
     if (event.topic === 'playback.command') window.dispatchEvent(new CustomEvent(PLAYBACK_COMMAND_EVENT, { detail: event.payload }));
+    // ADR-0475 R2: one device asking another to start, and what it answered (devices/playOn.ts)
+    if (event.topic === 'playback.start_ask') window.dispatchEvent(new CustomEvent(START_ASK_EVENT, { detail: event.payload }));
+    if (event.topic === 'playback.start_answer') window.dispatchEvent(new CustomEvent(START_ANSWER_EVENT, { detail: event.payload }));
     // a room request the host accepted, waiting for (or gone from) the browser mix's Requests
     if (event.topic === 'requests.room') window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: event.payload }));
     // anything about the open room (a request, a guest, its settings, its end) reaches the shell's
