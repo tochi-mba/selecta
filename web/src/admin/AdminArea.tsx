@@ -147,7 +147,7 @@ export default function AdminArea({ token, onLeave, origin, email, features, onS
         <nav className="admin-nav" aria-label="Console pages">
           <p className="admin-brand">SelectaDJ staff</p>
           {visible.map((p) => <a key={p.id} href={adminPath(p.id)} aria-current={current?.id === p.id ? 'page' : undefined} onClick={(event) => { event.preventDefault(); go(adminPath(p.id)); }}>{p.label}</a>)}
-          <button type="button" className="quiet" onClick={onLeave}>Leave console</button>
+          <button type="button" className="admin-leave" onClick={onLeave}>Leave console</button>
         </nav>
         <div className="admin-body">
           <header className="admin-top">
@@ -161,6 +161,7 @@ export default function AdminArea({ token, onLeave, origin, email, features, onS
               </form>
               <Bell api={api} />
               <button type="button" aria-label="Help for this page" onClick={() => setOverlay('help')}>?</button>
+              <button type="button" className="quiet" onClick={onLeave}>Back to my workspace</button>
             </div>
           </header>
           <div className={`admin-mode ${viewing ? 'viewing' : 'changing'}`} data-tour="mode" role="status">
@@ -190,7 +191,7 @@ export default function AdminArea({ token, onLeave, origin, email, features, onS
         {overlay === 'help' && current && <HelpPanel page={current.id} onClose={() => setOverlay(null)} onTour={() => setOverlay('tour')} onWelcome={() => { setOverlay(null); setWelcome(true); }} />}
         {playbook && <PlaybookView id={playbook} onClose={() => go(adminPath(current?.id ?? 'overview', location.rest))} />}
         {overlay === 'tour' && current && <Tour page={current.id} can={can} onDone={(finished) => { setOverlay(null); savePref('tours', { ...(me.preferences?.tours as Record<string, unknown> ?? {}), [current.id]: finished ? 'done' : 'ended' }); }} />}
-        {overlay === 'palette' && <Palette api={api} pages={visible} onClose={() => setOverlay(null)} onPlaybook={(id) => go(adminPath(current?.id ?? 'overview', location.rest, { playbook: id }))} />}
+        {overlay === 'palette' && <Palette api={api} pages={visible} onLeave={onLeave} onClose={() => setOverlay(null)} onPlaybook={(id) => go(adminPath(current?.id ?? 'overview', location.rest, { playbook: id }))} />}
         {danger && <DangerDialog request={danger} environment={environment} onClose={() => setDanger(null)} />}
         <Toasts toasts={toasts} dismiss={(id) => setToasts((all) => all.filter((t) => t.id !== id))} />
       </div>

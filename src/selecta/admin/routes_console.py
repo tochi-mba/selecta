@@ -28,6 +28,7 @@ from selecta.admin import (
     customers,
     http,
     safety,
+    stripe_admin,
 )
 from selecta.admin import staff_console as staff
 from selecta.authz.check import Actor
@@ -79,6 +80,20 @@ class ExportBody(Guarded):
     action: str | None = Field(default=None, max_length=128)
     result: str | None = Field(default=None, max_length=16)
     since: float | None = None
+
+
+class CancelBody(Guarded):
+    cancel: bool = True
+
+
+class RefundBody(Guarded):
+    amount: int | None = Field(default=None, ge=1, le=10_000_000)
+    why: str = Field(default="requested_by_customer", max_length=32)
+
+
+class PortalBody(Guarded):
+    return_url: str = Field(default="https://app.selectadj.app/account/billing", max_length=300,
+                            pattern=r"^https://")
 
 
 class ModeBody(Guarded):
@@ -240,6 +255,44 @@ def install_routes(app: FastAPI, *, engine: Engine,
             intent=body.intent()))
         _invalidate_rules(app)
         return out
+
+    # --- Stripe, live (admin.stripe_admin) ---------------------------------------------------
+
+    @app.get("/api/admin/customers/{user_id}/stripe")
+    def admin_customer_stripe(user_id: str, request: Request, claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.live(conn, actor, user_id))
+
+    @app.post("/api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-at-period-end")
+    def admin_sub_cancel_later(user_id: str, sub_id: str, body: CancelBody, request: Request,
+                               claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.set_cancel_at_period_end(
+            conn, actor, user_id, sub_id, cancel=body.cancel, reason=body.reason,
+            intent=body.intent()))
+
+    @app.post("/api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-now")
+    def admin_sub_cancel_now(user_id: str, sub_id: str, body: Guarded, request: Request,
+                             claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.cancel_now(
+            conn, actor, user_id, sub_id, reason=body.reason, intent=body.intent()))
+
+    @app.post("/api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/retry")
+    def admin_invoice_retry(user_id: str, invoice_id: str, body: Guarded, request: Request,
+                            claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.retry_invoice(
+            conn, actor, user_id, invoice_id, reason=body.reason, intent=body.intent()))
+
+    @app.post("/api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/refund")
+    def admin_invoice_refund(user_id: str, invoice_id: str, body: RefundBody, request: Request,
+                             claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.refund(
+            conn, actor, user_id, invoice_id, amount=body.amount, why=body.why,
+            reason=body.reason, intent=body.intent()))
+
+    @app.post("/api/admin/customers/{user_id}/portal-link")
+    def admin_portal_link(user_id: str, body: PortalBody, request: Request, claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.portal_link(
+            conn, actor, user_id, return_url=body.return_url, reason=body.reason,
+            intent=body.intent()))
 
     @app.post("/api/admin/customers/{user_id}/{command}")
     def admin_customer_command(user_id: str, command: str, body: Guarded, request: Request,

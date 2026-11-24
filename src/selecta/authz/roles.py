@@ -120,6 +120,8 @@ _BUNDLES: dict[StaffRole, frozenset[str]] = {
             "accounts.read_metadata",
             "billing.subscriptions.read",
             "billing.subscriptions.reconcile",
+            "billing.subscriptions.manage",
+            "billing.refunds.create",
             "billing.overrides.create",
             "accounts.configure",
             "business.billing.refund",
