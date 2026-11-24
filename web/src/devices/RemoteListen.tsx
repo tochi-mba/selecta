@@ -112,7 +112,8 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
       </header>
       <div className="remote-layout">
         <section className="remote-card" aria-label="Remote control">
-          <p className="remote-where" data-testid="remote-where"><Icon name={view.speaker === 'offline' ? 'warning' : 'music'} size="compact" />{whereWords(view)}</p>
+          {/* a notice about the speaker itself is the one message about it: no second line above */}
+          {!(notice && notice.deviceId === view.speaker_device_id) && <p className="remote-where" data-testid="remote-where"><Icon name={view.speaker === 'offline' ? 'warning' : 'music'} size="compact" />{whereWords(view)}</p>}
           <div className="remote-song">
             <h2 dir="auto" data-testid="remote-title">{current.title}</h2>
             {current.artist && <p dir="auto" data-testid="remote-artist">{current.artist}</p>}
