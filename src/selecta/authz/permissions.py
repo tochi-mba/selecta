@@ -86,6 +86,12 @@ _DECLARED: tuple[Permission, ...] = (
     ),
     Permission("billing.subscriptions.read", "Read subscriptions and Stripe state.", R),
     Permission("billing.subscriptions.reconcile", "Re-sync a subscription from Stripe.", C),
+    Permission(
+        "billing.subscriptions.manage",
+        "Cancel or un-cancel a subscription, retry an invoice, send a billing portal link.",
+        S,
+    ),
+    Permission("billing.refunds.create", "Refund a payment through Stripe, with a reason.", D),
     Permission("billing.overrides.create", "Propose an entitlement override with expiry.", S),
     Permission("billing.overrides.approve", "Approve entitlement overrides.", D),
     Permission("jobs.read", "Search jobs, attempts and leases.", R),
