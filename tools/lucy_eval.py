@@ -33,12 +33,14 @@ import sqlalchemy as sa
 
 ROOT = Path(__file__).resolve().parents[1]
 SET = ROOT / "tests" / "lucy_eval"
-TOKEN = "eval-host-token"
 ORIGIN = "https://app.test"
+ACTIVE = {"token": "eval-default"}
+"""Each library variant is its own signed-up host and workspace; cases switch between them."""
+BIG_EXTRA = 20_000
 
 
 def _headers() -> dict[str, str]:
-    return {"Authorization": f"Bearer {TOKEN}", "Origin": ORIGIN}
+    return {"Authorization": f"Bearer {ACTIVE['token']}", "Origin": ORIGIN}
 
 
 def load_set() -> tuple[dict, dict]:
@@ -65,6 +67,13 @@ def score(case: dict, defaults: dict, got: dict) -> list[dict[str, Any]]:
     def check(name: str, ok: bool, why: str = "") -> None:
         checks.append({"rule": name, "ok": bool(ok), "why": "" if ok else why})
 
+    if case.get("special") == "empty":
+        check("refused", got["outcome"] == "refused", got["outcome"])
+        return checks
+    if case.get("special") == "rapid":
+        check("serialised", got["outcome"] == "serialised", got["outcome"])
+        check("said_busy", "still answering" in text, text)
+        return checks
     check("answered", bool(text.strip()), "no answer text")
     check("finished", got["outcome"] == "completed", f"outcome {got['outcome']}")
     limit = case.get("max_chars", defaults.get("max_chars"))
@@ -142,10 +151,10 @@ def make_world(plan: str, folder: Path):
 
     class Host:
         def verify(self, token: str) -> Claims:
-            if token != TOKEN:
+            if not token.startswith("eval-"):
                 raise BadSignature("unknown")
-            return Claims(subject="user_eval", issued_at=1_000, expires_at=4_000_000_000,
-                          email="host@example.test", email_verified=True)
+            return Claims(subject=f"user_{token}", issued_at=1_000, expires_at=4_000_000_000,
+                          email=f"{token}@example.test", email_verified=True)
 
     flags.use("+cloud.local_media +lucy.cloud_conversation")
     tier = Tier(plan)
@@ -162,27 +171,53 @@ def make_world(plan: str, folder: Path):
     app = create_cloud_app(settings, engine=engine, verifier=Host())
     client = TestClient(app, base_url="https://testserver")
     client.__enter__()
-    made = client.post("/api/onboarding/complete", headers=_headers(), json={"age_confirmed": True})
-    made.raise_for_status()
-    workspace = made.json()["workspace_id"]
-    if plan != "free":
-        with transaction(engine) as conn:
-            stripe_sync.grant_override(conn, workspace_id=workspace, plan_id=plan,
-                                       reason="lucy eval", actor="eval",
-                                       expires_at=db_now(conn) + 86_400)
-    return client, engine, workspace
+
+    def onboard(token: str) -> str:
+        made = client.post("/api/onboarding/complete", json={"age_confirmed": True},
+                           headers={"Authorization": f"Bearer {token}", "Origin": ORIGIN})
+        made.raise_for_status()
+        workspace = made.json()["workspace_id"]
+        if plan != "free":
+            with transaction(engine) as conn:
+                stripe_sync.grant_override(conn, workspace_id=workspace, plan_id=plan,
+                                           reason="lucy eval", actor="eval",
+                                           expires_at=db_now(conn) + 86_400)
+        return workspace
+
+    return client, engine, onboard
 
 
-def seed(client, library: dict) -> dict[str, int]:
+def seed(client, library: dict, variant: str = "default") -> dict[str, int]:
+    songs = library["songs"]
+    if variant == "empty":
+        return {}
+    if variant == "one":
+        songs = songs[:1]
     rows = [
         {"content_sha256": f"{index + 1:064x}", "title": t, "artist": a, "album": al,
          "duration_s": float(seconds)}
-        for index, (t, a, al, seconds) in enumerate(library["songs"])
+        for index, (t, a, al, seconds) in enumerate(songs)
     ]
-    answer = client.post("/api/local-media/songs", headers=_headers(), json={"songs": rows})
-    answer.raise_for_status()
-    ids = {row["title"]: entry["song_id"]
-           for row, entry in zip(rows, answer.json()["songs"], strict=True)}
+    if variant == "big":
+        rows += [
+            {"content_sha256": f"{10_000_000 + n:064x}", "title": f"Track {n:05d}",
+             "artist": f"Artist {n % 4000:04d}", "album": None, "duration_s": 200.0}
+            for n in range(BIG_EXTRA)
+        ]
+    ids: dict[str, int] = {}
+    for start in range(0, len(rows), 500):
+        batch = rows[start:start + 500]
+        answer = client.post("/api/local-media/songs", headers=_headers(), json={"songs": batch})
+        answer.raise_for_status()
+        ids.update({row["title"]: entry["song_id"]
+                    for row, entry in zip(batch, answer.json()["songs"], strict=True)})
+    never = [ids[t] for t in library.get("never_play", []) if t in ids]
+    if never:
+        client.post("/api/local-media/songs/never", headers=_headers(), json={
+            "never": True, "entries": [{"id": i, "expected": False} for i in never]
+        }).raise_for_status()
+    if variant == "one":
+        return ids
     mix = library["current_mix"]
     made = client.post("/api/local-media/recipes", headers=_headers(),
                        json={"name": mix["name"], "song_ids": [ids[t] for t in mix["songs"]]})
@@ -196,6 +231,8 @@ def seed(client, library: dict) -> dict[str, int]:
 def reset_mix(client, library: dict, ids: dict[str, int]) -> None:
     """Every case starts from the same current mix."""
     current = client.get("/api/local-media/current", headers=_headers()).json()["mix_id"]
+    if current is None:
+        return
     mix = client.get(f"/api/local-media/recipes/{current}", headers=_headers()).json()["mix"]
     wanted = [ids[t] for t in library["current_mix"]["songs"]]
     if [s["song_id"] for s in mix["songs"]] != wanted:
@@ -205,13 +242,31 @@ def reset_mix(client, library: dict, ids: dict[str, int]) -> None:
 
 
 def run_case(client, engine, case: dict) -> dict[str, Any]:
-    from selecta.ai.schema import ai_runs
     from selecta.lucy import cloud_agent
-    from selecta.persistence import transaction
 
     conversation = client.post("/api/lucy-cloud/conversations", headers=_headers(),
                                json={}).json()["id"]
     started = time.monotonic()
+    special = case.get("special")
+    if special == "empty":
+        sent = client.post(f"/api/lucy-cloud/conversations/{conversation}/turns",
+                           headers=_headers(), json={"client_id": "empty", "text": ""})
+        return {"answer": f"(refused with {sent.status_code})", "outcome":
+                "refused" if sent.status_code == 422 else f"accepted {sent.status_code}",
+                "tools": [], "proposal": None, "seconds": 0, "runs": []}
+    if special == "rapid":
+        first = client.post(f"/api/lucy-cloud/conversations/{conversation}/turns",
+                            headers=_headers(), json={"client_id": "r1", "text": case["turns"][0]})
+        second = client.post(f"/api/lucy-cloud/conversations/{conversation}/turns",
+                             headers=_headers(), json={"client_id": "r2",
+                                                       "text": case["turns"][1]})
+        cloud_agent.RUNNER.wait(240)
+        detail = second.json().get("detail", {}) if second.status_code != 200 else {}
+        outcome = ("serialised" if first.status_code == 200 and second.status_code == 409
+                   else f"{first.status_code}/{second.status_code}")
+        return {"answer": detail.get("message", "(second send accepted)"), "outcome": outcome,
+                "tools": [], "proposal": None, "seconds": round(time.monotonic() - started, 2),
+                "runs": _runs(engine, conversation)}
     for number, text in enumerate(case["turns"]):
         sent = client.post(f"/api/lucy-cloud/conversations/{conversation}/turns",
                            headers=_headers(), json={"client_id": f"{case['id']}-{number}",
@@ -244,17 +299,25 @@ def run_case(client, engine, case: dict) -> dict[str, Any]:
             "songs": [{"title": s["title"], "artist": s["artist"]} for s in songs],
             "summary": revision["summary"],
         }
-    with transaction(engine) as conn:
-        runs = [dict(r) for r in conn.execute(
-            sa.select(ai_runs.c.deployment_id, ai_runs.c.outcome, ai_runs.c.tokens_in,
-                      ai_runs.c.tokens_out, ai_runs.c.cache_read_tokens,
-                      ai_runs.c.cache_write_tokens, ai_runs.c.cost_usd, ai_runs.c.limited)
-            .where(ai_runs.c.conversation_id == conversation)
-        ).mappings()]
+    runs = _runs(engine, conversation)
     answer = shown["messages"][-1]["content"] if shown["messages"] else ""
     last = runs[-1] if runs else {}
     return {"answer": answer, "outcome": last.get("outcome", "none"), "tools": tools,
             "proposal": proposal, "seconds": seconds, "runs": runs}
+
+
+def _runs(engine, conversation: str) -> list[dict]:
+    from selecta.ai.schema import ai_runs
+    from selecta.persistence import transaction
+
+    with transaction(engine) as conn:
+        return [dict(r) for r in conn.execute(
+            sa.select(ai_runs.c.deployment_id, ai_runs.c.outcome, ai_runs.c.tokens_in,
+                      ai_runs.c.tokens_out, ai_runs.c.cache_read_tokens,
+                      ai_runs.c.cache_write_tokens, ai_runs.c.cost_usd, ai_runs.c.limited)
+            .where(ai_runs.c.conversation_id == conversation)
+            .order_by(ai_runs.c.started_at)
+        ).mappings()]
 
 
 def write_report(folder: Path, meta: dict, results: list[dict]) -> None:
@@ -265,7 +328,10 @@ def write_report(folder: Path, meta: dict, results: list[dict]) -> None:
         f"# Lucy evaluation: {meta['label']} ({meta['plan']}, {meta['model']})", "",
         f"{passed} of {len(results)} cases pass. Spend ${meta['spend_usd']:.4f}; "
         f"{meta['tokens_in']} tokens in, {meta['tokens_out']} out; "
-        f"{meta['seconds']:.0f} s.", "",
+        f"{meta['seconds']:.0f} s. Prompt cache: {meta['cache_read']} tokens read, "
+        f"{meta['cache_write']} written "
+        f"({100 * meta['cache_read'] / max(1, meta['tokens_in']):.0f}% of input read from it).",
+        "",
         "| case | kind | verdict | tools | $ | s |", "| --- | --- | --- | --- | --- | --- |",
     ]
     for r in results:
@@ -290,6 +356,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--label", default="run")
     parser.add_argument("--only", default="", help="comma-separated case ids")
     parser.add_argument("--budget-usd", type=float, default=2.0)
+    parser.add_argument("--failed-from", default="", help="a results.json: rerun its failures")
     parser.add_argument("--out", default=os.environ.get("LUCY_EVAL_OUT") or str(
         Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "selecta-lucy-eval"))
     args = parser.parse_args(argv)
@@ -298,11 +365,22 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     cases, library = load_set()
     wanted = {name.strip() for name in args.only.split(",") if name.strip()}
+    if args.failed_from:
+        earlier = json.loads(Path(args.failed_from).read_text("utf-8"))["results"]
+        wanted |= {r["id"] for r in earlier if r["verdict"] != "pass"}
     chosen = [c for c in cases["cases"] if not wanted or c["id"] in wanted]
     folder = Path(args.out) / f"{time.strftime('%Y%m%d-%H%M%S')}-{args.plan}-{args.label}"
     folder.mkdir(parents=True, exist_ok=True)
-    client, engine, _workspace = make_world(args.plan, folder)
-    ids = seed(client, library)
+    client, engine, onboard = make_world(args.plan, folder)
+    worlds: dict[str, dict[str, int]] = {}
+
+    def world(variant: str) -> dict[str, int]:
+        ACTIVE["token"] = f"eval-{variant}"
+        if variant not in worlds:
+            onboard(ACTIVE["token"])
+            worlds[variant] = seed(client, library, variant)
+        return worlds[variant]
+
     results: list[dict] = []
     spent = 0.0
     started = time.monotonic()
@@ -311,6 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         if spent >= args.budget_usd:
             print(f"Budget of ${args.budget_usd} reached; {case['id']} and later not run.")
             break
+        ids = world(case.get("library", "default"))
         reset_mix(client, library, ids)
         got = run_case(client, engine, case)
         cost = sum(float(r["cost_usd"] or 0) for r in got["runs"])
@@ -320,12 +399,15 @@ def main(argv: list[str] | None = None) -> int:
         result = {"id": case["id"], "kind": case["kind"], "turns": case["turns"], **got,
                   "cost_usd": round(cost, 6), "checks": checks, "verdict": verdict(checks)}
         results.append(result)
-        print(f"{case['id']:<20} {result['verdict'][:100]}  ${cost:.4f}  {got['seconds']}s")
+        print(f"{case['id']:<20} {result['verdict'][:90]}  ${cost:.4f} "
+              f"(total ${spent:.4f})  {got['seconds']}s", flush=True)
     meta = {
         "label": args.label, "plan": args.plan, "model": model,
         "spend_usd": round(spent, 6), "seconds": time.monotonic() - started,
         "tokens_in": sum(r2["tokens_in"] for r in results for r2 in r["runs"]),
         "tokens_out": sum(r2["tokens_out"] for r in results for r2 in r["runs"]),
+        "cache_read": sum(r2["cache_read_tokens"] for r in results for r2 in r["runs"]),
+        "cache_write": sum(r2["cache_write_tokens"] for r in results for r2 in r["runs"]),
         "prompt_version": __import__("selecta.lucy.cloud_prompt",
                                      fromlist=["PROMPT_VERSION"]).PROMPT_VERSION,
     }
