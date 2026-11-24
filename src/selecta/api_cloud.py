@@ -472,7 +472,7 @@ def create_cloud_app(
     if listener is not None:
         emergency_cache.listen(listener)
     admin_guard.install(app, emergency_cache)
-    ratelimit.install(app)  # per account and per IP, before any database work (§12.1)
+    ratelimit.install_guards(app)  # rate limits (§12.1), then replayed keyed writes
     app.add_middleware(RequestMethodMiddleware)
     # One server span per request; job spans link to it (ADR-0410).
     tracing.install(app, "api")
