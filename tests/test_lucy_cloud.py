@@ -506,7 +506,8 @@ def test_an_answer_cut_off_before_it_acted_is_asked_again_once(lucy):
 
 
 def test_first_asks_come_from_the_persons_own_library(lucy):
-    ids = songs(lucy, CAROL, [("Ye", "Burna Boy"), ("Last Last", "Burna Boy"), ("Essence", "Wizkid")])
+    ids = songs(lucy, CAROL, [("Ye", "Burna Boy"), ("Last Last", "Burna Boy"),
+                              ("Essence", "Wizkid")])
     _mix(lucy, CAROL, ids)
     asks = lucy.client.get(f"{BASE}/status", headers=auth(CAROL)).json()["suggestions"]
     assert asks[0] == "An hour of Burna Boy and Wizkid"
