@@ -111,6 +111,9 @@ def score(case: dict, defaults: dict, got: dict) -> list[dict[str, Any]]:
         if "proposal_excludes_artists" in case:
             kept = [a for a in artists if a in case["proposal_excludes_artists"]]
             check("proposal_excludes_artists", not kept, f"has {sorted(set(kept))}")
+        if "proposal_includes" in case:
+            missing = [t for t in case["proposal_includes"] if t not in titles]
+            check("proposal_includes", not missing, f"missing {missing}")
         if "proposal_first" in case:
             check("proposal_first", bool(titles) and titles[0] == case["proposal_first"],
                   f"starts with {titles[:1]}")
@@ -118,7 +121,8 @@ def score(case: dict, defaults: dict, got: dict) -> list[dict[str, Any]]:
         check("says_any", any(re.search(p, text, re.IGNORECASE) for p in pattern),
               f"matched none of {pattern}")
     for pattern in [*defaults.get("says_none", []), *case.get("says_none", [])]:
-        check(f"says_none:{pattern}", not re.search(pattern, text, re.IGNORECASE),
+        check(f"says_none:{pattern}", not re.search(pattern, text,
+                                                     re.IGNORECASE | re.MULTILINE),
               "said it")
     if case.get("language") == "es":
         check("language", len(SPANISH.findall(text)) >= 2, "not answered in Spanish")
