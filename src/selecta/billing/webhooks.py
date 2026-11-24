@@ -28,6 +28,7 @@ import httpx
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from selecta.billing import branding
 from selecta.billing.schema import insert_ignore, stripe_events, subscriptions
 from selecta.billing.stripe_sync import (
     PriceMap,
@@ -502,7 +503,7 @@ class HttpStripeClient:
     @staticmethod
     def _require_stripe_host(url: str, expected: str) -> str:
         parsed = httpx.URL(url)
-        if parsed.host != expected:
+        if parsed.host not in branding.hosted_hosts(expected):  # a custom domain the owner set
             raise StripeUnavailable("Stripe returned a session URL on an unexpected host.")
         return url
 
@@ -546,6 +547,8 @@ class HttpStripeClient:
             "subscription_data[metadata][workspace_id]": workspace_id,
             "success_url": success_url,
             "cancel_url": cancel_url,
+            # our words, the person's language and, once Terms exist, the terms box (branding.py)
+            **branding.checkout_extras(),
         }
         payload = self._post("/v1/checkout/sessions", data, idempotency_key)
         self._require_response_string(payload, "id", "cs_")
@@ -559,11 +562,11 @@ class HttpStripeClient:
         return_url: str,
         idempotency_key: str,
     ) -> dict[str, Any]:
-        payload = self._post(
-            "/v1/billing_portal/sessions",
-            {"customer": customer_id, "return_url": return_url},
-            idempotency_key,
-        )
+        data = {"customer": customer_id, "return_url": return_url}
+        configuration = branding.portal_configuration_id()
+        if configuration:
+            data["configuration"] = configuration  # SelectaDJ's own portal (billing-portal-setup)
+        payload = self._post("/v1/billing_portal/sessions", data, idempotency_key)
         self._require_response_string(payload, "id", "bps_")
         self._require_stripe_host(self._require_session_url(payload), "billing.stripe.com")
         return payload

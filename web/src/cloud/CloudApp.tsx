@@ -766,7 +766,7 @@ export function CloudApp() {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
         <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
-        {signOutAsk && <ConfirmDialog title="Sign out?" body={signOutAsk} confirmLabel="Sign out" destructive onConfirm={() => void leave()} onClose={() => setSignOutAsk(null)} />}
+        {signOutAsk && <ConfirmDialog title="Sign out?" body={signOutAsk} confirmLabel="Sign out" cancelLabel="Cancel" onConfirm={() => void leave()} onClose={() => setSignOutAsk(null)} />}
       </Suspense>
     );
   }

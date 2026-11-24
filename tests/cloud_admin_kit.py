@@ -25,6 +25,7 @@ from cloud_helpers import cloud_settings
 from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
 
+from selecta.admin.schema import staff_change_windows
 from selecta.admin.state import DbWorkControls
 from selecta.api_cloud import create_cloud_app
 from selecta.authz.schema import audit_events, dangerous_actions, role_assignments
@@ -84,7 +85,8 @@ def _give(conn, user_id: str, role: str) -> None:
         issued_by="setup", reason="test setup", created_at=db_now(conn) - 10))
 
 
-def make_world(engine: Engine, *, staff: tuple[str, ...] = ("owner", "auditor")) -> World:
+def make_world(engine: Engine, *, staff: tuple[str, ...] = ("owner", "auditor"),
+               changes: bool = True) -> World:
     tokens = Tokens()
     users, workspaces, sessions = {}, {}, {}
     with transaction(engine) as conn:
@@ -100,8 +102,14 @@ def make_world(engine: Engine, *, staff: tuple[str, ...] = ("owner", "auditor"))
     # Sessions start after the role rows, so a role change can't have ended them.
     with transaction(engine) as conn:
         for name in staff:
-            sessions[name] = privileged.start(conn, tokens.claims[name],
-                                              staff_organization_id="staff-org").id
+            started = privileged.start(conn, tokens.claims[name], staff_organization_id="staff-org")
+            sessions[name] = started.id
+            if changes:
+                # The console opens read-only (doc 07b §7B.7); these tests act, so each session
+                # has pressed "Make changes".
+                conn.execute(staff_change_windows.insert().values(
+                    session_id=started.id, user_id=started.user_id, opened_at=db_now(conn),
+                    until=started.expires_at))
     settings = cloud_settings()
     settings = dataclasses.replace(settings, staff_organization_id="staff-org")
     app = create_cloud_app(settings, engine=engine, verifier=tokens)
