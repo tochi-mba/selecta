@@ -120,6 +120,7 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
   const availability = availabilityOf(song, known);
   const here = availability !== 'nowhere';
   const playable = availability === 'here' || availability === 'hosted';
+  const openElsewhere = playable ? null : known.elsewhere?.(song.id).online[0] ?? null;
   return {
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, bpm: null, camelot: null,
@@ -129,8 +130,12 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     // the availability line says where it is; readiness only says how far analysis has got
     // in a browser mix a song that plays here is ready: its transitions are worked out from the
     // audio as the mix plays, so nothing has to be measured first (BF-0462-05)
+    // ADR-0475 I83: a song another open device holds plays there, so it can be played, added
+    // and started from here, on that device
     readiness: playable
       ? { status: 'mix_ready', reason: WORKED_OUT_LIVE }
+      : openElsewhere
+        ? { status: 'mix_ready', reason: `Plays on ${openElsewhere}.` }
       : here
         ? { status: 'analysed_incomplete', reason: availability === 'reconnect' ? 'Plays once you connect it again.' : 'Plays once it is on this device.' }
         : { status: 'missing', reason: '' },
@@ -290,6 +295,23 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     if (method === 'GET' && route === '/status') {
       const list = await songs();
       return statusFrom(list, await availability(list), mixes?.steering()) as T;
+    }
+    // ADR-0475 I84: another device is playing, so a song added from the Library joins its
+    // programme (next, or at the end), the same signed press a request uses
+    const link = sources.controller?.() ?? null;
+    if (link && method === 'POST' && route === '/mix/songs') {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number; position?: number };
+      const songId = Number(body.song_id);
+      if (!speakerHolds(link, songId)) throw new ApiError(notOnSpeaker(link.speakerName), 409, 'not_on_speaker');
+      const next = Number.isInteger(body.position) && Number(body.position) <= link.songIndex + 1;
+      const order = [...link.programme];
+      order.splice(next ? link.songIndex + 1 : order.length, 0, songId);
+      if (!(await link.send('set_programme', { songs: order, song_index: link.songIndex, keep_position: true }))) throw new ApiError(`${link.speakerName} didn’t take that. Try again.`, 409, 'speaker_refused');
+      const list = await songs();
+      return { name: '', can_undo: false, mix: order.map((id, position) => {
+        const found = list.find((one) => one.id === id);
+        return { position, song_id: id, artist: found?.artist ?? '', title: found?.title ?? 'A song', duration: found?.duration_s ?? 0, bpm: null, key: null, locked: false, seam: null };
+      }) } as T;
     }
     const requestAnswer = requests?.answer(method, route, new URLSearchParams(query), init);
     if (requestAnswer) return (await requestAnswer) as T;
