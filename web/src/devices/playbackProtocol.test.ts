@@ -163,6 +163,13 @@ describe('what controllers are told (BF-0461-04/05)', () => {
     await waitFor(() => expect(screen.queryByTestId('unavailable-here')).toBeNull());
   });
 
+  it('a song from an earlier programme is not news about this one', () => {
+    const programme = [{ song_id: 6, sha256: 'b'.repeat(64) }];
+    const old = { command_id: 'old', command: 'skip', issued_by: 'phone', acked_at: clock(), song_id: 5, alternatives: [] };
+    const { container } = render(createElement(ControllerNotices, { notices: notices({ unavailable: [old] }), speakerName: 'Laptop', session: session({ programme }), send: vi.fn() }));
+    expect(container.innerHTML).toBe('');
+  });
+
   it('renders nothing when there is nothing to tell', () => {
     const { container } = render(createElement(ControllerNotices, { notices: notices(), speakerName: null, session: null, send: vi.fn() }));
     expect(container.innerHTML).toBe('');
