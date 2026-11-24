@@ -293,7 +293,9 @@ export type Approval = {
   token: string;
   expires_at: number;
   action: ApproveAction;
-  preflight: { ok: boolean; problems: string[]; songs: number; ready: number; needed: number; ready_only: boolean; title: string };
+  preflight: { ok: boolean; problems: string[]; songs: number; ready: number; needed: number; ready_only: boolean; title: string;
+    /** Cloud (ADR-0476): the mix's length, and the device playing now (null: the app will ask). */
+    seconds?: number; plays_on?: string | null };
 };
 
 export type Commit = {

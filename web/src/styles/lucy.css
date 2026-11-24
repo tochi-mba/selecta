@@ -356,6 +356,28 @@
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
 }
+/* Cloud: one line a song, as the phone editor's rows, so nine songs fit a small pane */
+.lucy-songs.is-compact { gap: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-raised); }
+.lucy-songs.is-compact .lucy-song {
+  grid-template-columns: 2em minmax(0, 1fr) auto;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.lucy-songs.is-compact .lucy-song-slot + .lucy-song-slot .lucy-song { border-top: 1px solid var(--border); }
+.lucy-songs.is-compact .lucy-song-n { padding-top: 0; }
+.lucy-songs.is-compact .lucy-song-main { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
+.lucy-songs.is-compact .lucy-song-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lucy-songs.is-compact .lucy-song-facts { flex: none; }
+.lucy-songs.is-compact .lucy-song-actions { grid-column: 3; flex-wrap: nowrap; gap: 0; }
+.lucy-songs.is-compact .lucy-song-actions button { min-width: 36px; padding-inline: var(--space-1); background: none; border-color: transparent; }
+.lucy-songs.is-compact .lucy-song-actions [data-act='ask'] { font-size: var(--text-xs); }
+@media (max-width: 480px) {
+  .lucy-songs.is-compact .lucy-song { grid-template-columns: 1.6em minmax(0, 1fr); }
+  .lucy-songs.is-compact .lucy-song-actions { grid-column: 2; }
+}
 .lucy-song.is-selected { box-shadow: 0 0 0 2px var(--selected); background: var(--surface-selected); }
 .lucy-song.is-locked { box-shadow: inset var(--marker) 0 0 var(--text); }
 .lucy-song.is-selected.is-locked { box-shadow: 0 0 0 2px var(--selected), inset var(--marker) 0 0 var(--text); }
