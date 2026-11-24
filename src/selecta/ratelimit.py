@@ -206,4 +206,17 @@ def install(app: FastAPI, on: Callable[[], bool] | None = None,
     return kept
 
 
-__all__ = ["ACCOUNT", "EXEMPT", "FLAG", "IP", "STRICT", "Buckets", "Rule", "install", "refused"]
+def install_guards(app: FastAPI) -> Buckets:
+    """The request guards that run before any route: keyed writes are replayed
+    (`replay.middleware`, inner), and the rate limits run first (outer), so a flood costs
+    nothing more than a dictionary lookup."""
+    from selecta.replay import middleware as replay
+
+    replay.install(app)
+    return install(app)
+
+
+__all__ = [
+    "ACCOUNT", "EXEMPT", "FLAG", "IP", "STRICT", "Buckets", "Rule", "install", "install_guards",
+    "refused",
+]

@@ -61,6 +61,10 @@ def request_method() -> str | None:
     return REQUEST_METHOD.get()
 
 
+class WorkspaceNameRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
 class OnboardingRequest(BaseModel):
     age_confirmed: bool = Field(
         description="The signed-in person confirms they meet the minimum account age."
@@ -243,6 +247,33 @@ def install_routes(
                 "sessions_listed": result.listed,
             },
         )
+
+    @app.put("/api/account/workspace-name")
+    def rename_workspace(body: WorkspaceNameRequest, request: Request, claims: SignedIn):
+        """Rename the personal workspace (it starts as "Personal"). Its owner only; a name is
+        one line of plain text, 1 to 60 characters once trimmed."""
+        import sqlalchemy as sa
+
+        from selecta.authz.roles import WorkspaceAction
+        from selecta.identity.schema import workspaces
+
+        name = " ".join(body.name.split())
+        if not name or any(ord(char) < 32 for char in body.name if char not in "	 "):
+            raise HTTPException(status_code=400, detail={
+                "code": "workspace_name_invalid", "message": "Give the workspace a short name.",
+            })
+        principal = principal_or_refusal(engine, claims, request.headers.get("x-workspace-id"))
+        if not principal.can(WorkspaceAction.MEMBERS_MANAGE):
+            raise HTTPException(status_code=403, detail={
+                "code": "workspace_rename_not_permitted",
+                "message": "Only the workspace owner can rename it.",
+            })
+        with transaction(engine, principal.workspace.id) as conn:
+            conn.execute(
+                sa.update(workspaces).where(workspaces.c.id == principal.workspace.id)
+                .values(name=name)
+            )
+        return {"name": name}
 
     @app.delete("/api/account", status_code=202)
     def delete_account(claims: SignedIn):

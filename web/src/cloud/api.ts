@@ -10,6 +10,8 @@ export type Usage = {
   analysis_today: Allowance;
   exports_month: Allowance & { retention_days: number; blocked: boolean };
   lucy_turns_month: LucyTurns;
+  /** Songs in the library against the plan's soft cap: mentioned calmly, never a refusal. */
+  library?: { songs: number; soft_cap: number };
 };
 /** The billing moment the customer should hear about (billing/standing.py), or null for none.
  * `at` is epoch seconds; `key` changes whenever the event does, so a dismissal is per event. */
@@ -105,6 +107,17 @@ export class CloudError extends Error {
 
 export function idempotencyKey() {
   return crypto.randomUUID();
+}
+
+/** The request with an Idempotency-Key added when it is a write that has none (`on` is the
+ * `cloud.idempotency` flag). A caller that sets its own key keeps it. */
+export function withIdempotencyKey(init: RequestInit | undefined, on: boolean): RequestInit | undefined {
+  const method = (init?.method ?? 'GET').toUpperCase();
+  if (!on || method === 'GET' || method === 'HEAD') return init;
+  const headers = new Headers(init?.headers);
+  if (headers.has('Idempotency-Key')) return init;
+  headers.set('Idempotency-Key', idempotencyKey());
+  return { ...init, headers };
 }
 
 export function messageOf(payload: unknown, fallback: string) {

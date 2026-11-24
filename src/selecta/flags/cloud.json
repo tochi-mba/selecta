@@ -262,6 +262,25 @@
       "kind": "release",
       "owner": "billing"
     },
+    "account.workspace_name": {
+      "label": "Workspace name",
+      "about": "Rename the personal workspace from its starting name, offered once on Workspace.",
+      "routes": ["PUT /api/account/workspace-name"],
+      "surfaces": ["cloud.settings"],
+      "words": ["Rename it"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "identity"
+    },
+    "account.new_device_email": {
+      "label": "New device email",
+      "about": "Email the person once when a new device signs in to their account, with a way to sign out everywhere.",
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "identity",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "An email sent by the maintenance task; nothing on a Cloud screen changes"
+    },
     "cloud.rate_limits": {
       "label": "API rate limits",
       "about": "Per-account and per-IP request limits in the Cloud API, with stricter limits for checkout, account changes, search and upload plans.",

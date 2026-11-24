@@ -9,6 +9,9 @@ stream carries it; the outbox keeps rows seven days, longer than every look-back
 - **Over quota**: a workspace that went over its storage limit within the last `QUOTA_LOOKBACK_S`
   (`quota_state.over_since`), mailed to its owner once per time it goes over.
 
+- **New device** (`account.new_device_email`): a person's second or later device signed in,
+  once per device, from `device_mail`.
+
 - **Personal plan billing** (`billing.standing`): payment failed, plan ending in 3 days, plan
   ended, and "your plan is now {plan}", from `billing_mail` (which also says what Stripe sends).
 
@@ -36,7 +39,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.identity.schema import users, workspaces
-from selecta.notify import billing_mail, templates
+from selecta.notify import billing_mail, device_mail, templates
 from selecta.notify.mail import EmailError, Message, Sender, enabled, valid_address
 from selecta.persistence import db_now, transaction
 from selecta.usage.schema import quota_state
@@ -194,6 +197,8 @@ def run(engine: Engine, sender: Sender, site_url: str = "", fence=None) -> RunRe
             due += billing_emails.due(conn, now, site_url)
         if billing_mail.on():
             due += billing_mail.due(conn, now, site_url)
+        if device_mail.on():
+            due += device_mail.due(conn, now, site_url)
     for message in due:
         send_once(engine, sender, message, already, result, fence)
     return result
