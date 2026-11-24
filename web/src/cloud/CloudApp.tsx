@@ -460,7 +460,7 @@ export function CloudApp() {
       try {
         const result = await api<{ url: string }>('/billing/checkout', {
           method: 'POST', headers: { 'Idempotency-Key': idempotencyKey() },
-          body: JSON.stringify(checkoutBody(plan, interval, consent, consentVersion)),
+          body: JSON.stringify(checkoutBody(plan, interval, consent, consentVersion, checkout === 'cancelled')),
         }, account.workspace.id);
         window.location.assign(result.url);
       } catch (problem) {

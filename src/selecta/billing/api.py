@@ -41,6 +41,9 @@ class CheckoutRequest(BaseModel):
     accepted_terms: bool
     requested_immediate_access: bool = False
     acknowledged_cancellation_right: bool = False
+    # The page came back from a Checkout the person cancelled: there is no payment of that
+    # session's to wait for, so starting again is allowed at once.
+    after_cancel: bool = False
 
 
 class PortalRequest(BaseModel):
@@ -61,6 +64,25 @@ def _stripe_idempotency(namespace: str, workspace_id: str, client_key: str) -> s
     """Scope a caller's retry key to one route and tenant before sending it to Stripe."""
     digest = hashlib.sha256(client_key.encode()).hexdigest()
     return f"selecta-{namespace}-{workspace_id}-{digest}"
+
+
+# How long a Checkout that was opened but has not become a subscription blocks another one.
+CHECKOUT_IN_PROGRESS_SECONDS = 30 * 60
+
+
+def _in_progress(conn: Any, workspace_id: str) -> set[str]:
+    """The Checkout sessions this workspace opened in the last half hour that have not become
+    a subscription yet. A payment made in one of them is confirmed by a webhook that may not
+    have arrived, and until then the workspace still reads as Free."""
+    since = db_now(conn) - CHECKOUT_IN_PROGRESS_SECONDS
+    found = conn.execute(
+        select(checkout_consents.c.checkout_session_id).where(
+            checkout_consents.c.workspace_id == workspace_id,
+            checkout_consents.c.stripe_subscription_id.is_(None),
+            checkout_consents.c.accepted_at > since,
+        )
+    ).scalars()
+    return {session_id for session_id in found if session_id}
 
 
 def _checkout_prices() -> dict[str, PricePlan]:
@@ -172,6 +194,7 @@ def install_routes(
                 if entitlement.plan_id != "free":
                     raise HTTPException(status_code=409, detail={"code": "subscription_exists"})
                 customer_id = conn.execute(customer_of).scalar_one_or_none()
+                waiting = set() if body.after_cancel else _in_progress(conn, workspace_id)
             if customer_id is None:
                 customer = billing.create_customer(
                     workspace_id=workspace_id,
@@ -203,6 +226,14 @@ def install_routes(
                 cancel_url=cancel_url,
                 idempotency_key=_stripe_idempotency("checkout", workspace_id, idempotency_key),
             )
+            if session["id"] in waiting:
+                # The same press sent again (its first answer was lost): Stripe gave the same
+                # session back for the same key, and its consent is already recorded.
+                return {"url": session["url"], "session_id": session["id"]}
+            if waiting:
+                # A second Checkout while the first may already be paid for would be a second
+                # subscription. Its link is never handed over, so it cannot be paid.
+                raise HTTPException(status_code=409, detail={"code": "checkout_in_progress"})
             ip_key = os.environ.get("SELECTA_IP_HASH_KEY", "").encode()
             client_ip = request.client.host if request.client else ""
             ip_hash = (

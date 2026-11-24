@@ -25,8 +25,11 @@ export function consentVersionFor(account: Account | null, built = import.meta.e
   return account?.billing?.consent_version || built;
 }
 
-export function checkoutBody(plan: 'standard' | 'premium', interval: 'month' | 'year', consent: Consent, version: string) {
+/** `afterCancel`: the page came back from a Checkout the person cancelled, so the server lets a
+ * new one start at once instead of refusing it as `checkout_in_progress`. */
+export function checkoutBody(plan: 'standard' | 'premium', interval: 'month' | 'year', consent: Consent, version: string, afterCancel = false) {
   return {
+    ...(afterCancel ? { after_cancel: true } : {}),
     plan,
     interval,
     consent_version: version,
