@@ -12,9 +12,10 @@ const policy = headers.match(/Content-Security-Policy-Report-Only: (.+)/)?.[1] ?
 
 describe('security headers', () => {
   it('allows exactly the inline scripts each page has, by hash', () => {
+    // any case, any attributes, any spacing before the closing >; a script with src= is not inline
     for (const page of ['index.html', 'guest.html', 'kiosk.html', 'display.html']) {
       const html = fs.readFileSync(`${node.cwd()}/${page}`, 'utf8').replace(/\r\n/g, '\n');
-      for (const [, body] of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
+      for (const [, body] of html.matchAll(/<scriptb(?![^>]*bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
         const hash = crypto.createHash('sha256').update(body).digest('base64');
         expect(policy, `${page} has an inline script whose hash is not in _headers`).toContain(`'sha256-${hash}'`);
       }
