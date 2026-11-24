@@ -33,7 +33,7 @@ from selecta.ai.allowance import month_resets_at
 from selecta.ai.registry import Provider, RequestClass, Tier
 from selecta.ai.runs import Outcome
 from selecta.billing import plans, stripe_sync
-from selecta.lucy import cloud_prompt, cloud_store, cloud_tools, cloud_world
+from selecta.lucy import cloud_health, cloud_prompt, cloud_store, cloud_tools, cloud_world
 from selecta.lucy.providers import (
     AnthropicProvider,
     OpenAICompatibleProvider,
@@ -363,6 +363,14 @@ async def run_turn(job: Job) -> None:
         await _say(writer, f"(Stopped. {done})")
     except gateway.GatewayError as problem:
         outcome, final, error_code, error = Outcome.FAILED, "failed", problem.code, problem.message
+        cloud_health.log.warning(
+            "lucy gateway failure conversation=%s turn=%s tier=%s deployment=%s code=%s",
+            job.conversation_id, job.turn_id, plan.tier.value, plan.deployment.id, problem.code)
+        if problem.code == "secret_missing":
+            cloud_health.raise_once(
+                job.engine, f"Lucy can't reach Anthropic: no API key is set for "
+                f"{plan.deployment.id}. Fix: set {plan.deployment.secret_ref}.",
+                {"deployment": plan.deployment.id, "tier": plan.tier.value})
         events.emit("error", {"code": problem.code, "message": "Lucy couldn't start.",
                               "recoverable": True})
         await _say(writer, "Lucy couldn't start this one. Your mixes and music are safe; "
@@ -381,6 +389,8 @@ async def run_turn(job: Job) -> None:
         outcome, final, error_code = Outcome.INCOMPLETE, "interrupted", "timeout"
         await _say(writer, "(I ran out of time for this message. Say \"continue\" to go on.)")
     except Exception:  # noqa: BLE001 - a turn must always end truthfully and give its slot back
+        cloud_health.log.exception("lucy turn failed conversation=%s turn=%s",
+                                   job.conversation_id, job.turn_id)
         outcome, final, error_code = Outcome.FAILED, "failed", "internal"
         events.emit("error", {"code": "internal", "message": "Something went wrong inside "
                               "Lucy.", "recoverable": True})
@@ -437,15 +447,58 @@ async def _say(writer: Writer, words: str) -> None:
     await writer.write(("\n\n" if writer.text() else "") + words)
 
 
+def _step_down_plans(engine: Engine, plan: gateway.TurnPlan) -> list[gateway.TurnPlan]:
+    """The turn's own deployment, then each one down its fallback chain (Opus, Sonnet,
+    Haiku) that the tier may use; never the built-in planner, never up."""
+    from dataclasses import replace
+
+    from selecta.ai.spend import turn_limits
+
+    chain = [plan]
+    try:
+        with transaction(engine) as conn:
+            deployments = registry.load_deployments(conn)
+    except Exception:  # noqa: BLE001 - no registry, no step-down: the turn's own model only
+        return chain
+    step = deployments.get(plan.deployment.fallback_id or "")
+    while step is not None and not step.is_builtin and len(chain) < 4:
+        if step.allowed_for(plan.tier) and step.status.value == "active":
+            chain.append(replace(plan, deployment=step, limits=turn_limits(step, plan.tier)))
+        step = deployments.get(step.fallback_id or "")
+    return chain
+
+
 async def _model_loop(
     job: Job, ctx: cloud_tools.CloudCtx, events: Events, writer: Writer,
     usage: dict[str, int], notes: list[str],
 ) -> tuple[int, int]:
-    plan = job.plan
+    """The model's work for this turn. A failure that isn't the key or a missing header
+    (both shared by every model) steps down to the next model, quietly, before nothing has
+    been said; the last failure is the person's to hear."""
+    chain = _step_down_plans(job.engine, job.plan)
+    for index, plan in enumerate(chain):
+        try:
+            return await _one_model(job, ctx, events, writer, usage, notes, plan)
+        except ProviderError as problem:
+            cloud_health.report_failure(
+                job.engine, problem, conversation=job.conversation_id, turn=job.turn_id,
+                tier=job.plan.tier.value, deployment=plan.deployment.id,
+                model=plan.deployment.model_id,
+            )
+            shared = problem.status in {401} or (problem.status == 400 and problem.configuration)
+            if shared or writer.text().strip() or index == len(chain) - 1:
+                raise
+    raise AssertionError("unreachable")
+
+
+async def _one_model(
+    job: Job, ctx: cloud_tools.CloudCtx, events: Events, writer: Writer,
+    usage: dict[str, int], notes: list[str], plan: gateway.TurnPlan,
+) -> tuple[int, int]:
     settings = gateway.provider_settings_for(plan)
     provider = job.provider_factory(settings, plan)
     try:
-        return await _model_turns(job, ctx, events, writer, usage, notes, provider)
+        return await _model_turns(job, ctx, events, writer, usage, notes, provider, plan)
     finally:
         client = getattr(provider, "client", None)
         if client is not None and hasattr(client, "close"):
@@ -454,9 +507,8 @@ async def _model_loop(
 
 async def _model_turns(
     job: Job, ctx: cloud_tools.CloudCtx, events: Events, writer: Writer,
-    usage: dict[str, int], notes: list[str], provider: Any,
+    usage: dict[str, int], notes: list[str], provider: Any, plan: gateway.TurnPlan,
 ) -> tuple[int, int]:
-    plan = job.plan
     tools = [provider.tool(spec["name"], spec["description"], spec["schema"])
              for spec in cloud_prompt.tool_specs(job.proposals_on)]
     with transaction(job.engine, job.workspace_id) as conn:
