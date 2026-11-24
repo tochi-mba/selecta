@@ -40,7 +40,7 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { bestHolder, HolderContext, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
+import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { ControllerListen } from '../devices/ControllerListen';
 import { soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
@@ -629,6 +629,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       void shellPlayer.playFrom(at, offset);
     },
     now: playback.serverNow(),
+    ofMix: (device: { device_id: string }) => ({ held: mixHeld(holdings.ids, device.device_id, remoteMix.map((item) => item.song_id)), total: remoteMix.length }),
   } : null;
   // ADR-0475 R8: a mix made here when another device makes the sound. With a speaker playing
   // elsewhere, the new mix is offered to it (Play on {speaker} now, or Later); with none and no

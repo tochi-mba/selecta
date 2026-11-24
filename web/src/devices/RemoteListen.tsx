@@ -44,6 +44,8 @@ export type PlayWays = {
   onPlayHere: () => void;
   /** The server's time, for "last open". */
   now: number;
+  /** How many of the programme's songs a device holds, when known ("2 of 12 songs"). */
+  ofMix?: (device: DeviceHolding) => { held: number | null; total: number } | undefined;
 };
 
 export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs }: {
@@ -204,7 +206,7 @@ function WaysOn({ ways, total }: { ways: PlayWays; total: number }) {
         <ul>
           {open.map((device) => (
             <li key={device.device_id}>
-              <span className="controller-device-words"><b dir="auto">{device.name}</b><span>{holdingWords(device, ways.now)}</span></span>
+              <span className="controller-device-words"><b dir="auto">{device.name}</b><span>{holdingWords(device, ways.now, ways.ofMix?.(device))}</span></span>
               <button type="button" className={device === best ? 'primary' : undefined} disabled={busy} data-testid="play-on" onClick={() => ways.onPlayOn(device)}><Icon name="play" /> Play on {device.name}</button>
             </li>
           ))}
