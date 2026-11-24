@@ -227,3 +227,20 @@ def test_expiry_never_takes_committed_bytes_below_what_is_really_stored(cloud_en
     with transaction(cloud_engine) as conn:
         assert quota.usage(conn, "ws-old").committed_bytes == 40 * MB
         assert export_expiry.charged(conn, "ws-old", charged) == 3 * MB
+
+
+def test_a_drop_to_free_gives_free_retention_again_from_the_drop(cloud_engine):
+    """Product audit gap 3: a Premium account that drops to Free must not lose its 8 to 90 day
+    old exports the hour it drops. Free's 7 days run again from the drop."""
+    with transaction(cloud_engine) as conn:
+        for version, plan_id, when in ((1, "premium", NOW - 60 * DAY), (2, "free", NOW - DAY)):
+            conn.execute(entitlement_snapshots.insert().values(
+                id=new_id(), workspace_id="ws-down", version=version, plan_id=plan_id,
+                plan_version=None, source="stripe", reason="active", computed_at=when,
+                verified_at=when,
+            ))
+        old = _export(conn, "ws-down", 40)
+    assert export_expiry.expire_exports(cloud_engine, now=NOW) == []
+    assert _left(cloud_engine, "ws-down") == {old}
+    later = NOW + 7 * DAY
+    assert [e.export_id for e in export_expiry.expire_exports(cloud_engine, now=later)] == [old]
