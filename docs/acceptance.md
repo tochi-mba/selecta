@@ -187,3 +187,7 @@ Each task in the Selecta 2.0 tracker is listed in [implementation-evidence.md](a
 - Whether anything sounds good, especially the moves not yet heard.
 - Beat, downbeat and key accuracy on rap and Latin tracks.
 - Whether the interface is actually easy to use. Every screen was walked in a browser at desktop and phone width, with page tests in `web/src`, but that can't judge taste.
+
+## SelectaDJ Cloud
+
+This ledger is the local app's. SelectaDJ Cloud's acceptance is kept in [the Cloud implementation checklist](adr/selecta-cloud-implementation-checklist.md) (each ticked task needs its evidence; the `checklist-evidence` CI job checks it) and, for what a paying customer meets, in [the product audit](engineering/product-audit.md). What changed in November 2026, in plain words, is in [CHANGES-2026-11](saas/CHANGES-2026-11.md).
