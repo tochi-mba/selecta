@@ -104,7 +104,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         const counted = `${actual} ${actual === 1 ? 'song' : 'songs'}`;
         notify(analysisAvailable ? `${name}: generated ${actual} of ${songs} requested songs, about ${length(duration)} of source audio before transitions. Review the actual order in Edit.`
           // ADR-0475 R8: never claim it plays here when another device makes the sound
-          : playOn ? (playOn.now ? `Your new mix: ${counted}. Starting it on ${playOn.name}.` : `Your new mix is ready: ${counted}. ${playOn.name} is still playing.`)
+          : playOn ? (playOn.ask ? `Your new mix: ${counted}. Choose where it plays.` : playOn.now ? `Your new mix: ${counted}. Starting it on ${playOn.name}.` : `Your new mix is ready: ${counted}. ${playOn.name} is still playing.`)
             : `Your new mix is playing: ${counted}.`, true);
         if (open) {
           setView('Edit');
@@ -374,7 +374,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                     {/* MP-0274-04: the actions close the card, so Play and Shape first share one line across a row of
                         cards however a name, summary or this disclosure wraps */}
                     <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
-                      <Action className="primary" disabled={!!building && building !== card.key} busy={building === card.key} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>{playOn?.now ? `Play on ${playOn.name}` : 'Play'}</Action>
+                      <Action className="primary" disabled={!!building && building !== card.key} busy={building === card.key} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>{playOn?.now && !playOn.ask ? `Play on ${playOn.name}` : 'Play'}</Action>
                       {on('editor') && <Action className="quiet" disabled={!!building && building !== `${card.key}:open`} busy={building === `${card.key}:open`} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
                       {on('drafts') && <Action className="quiet save-draft" disabled={!!building && building !== `${card.key}:draft`} busy={building === `${card.key}:draft`} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
                     </div>
