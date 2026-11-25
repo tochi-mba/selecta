@@ -25,7 +25,8 @@ export function ZoneSocial({ zone, rooms, off }: { zone: Zone; rooms: RoomsClien
   const [round, setRound] = useState<string | null>(null);
   const [pairing, setPairing] = useState('');
   const [recap, setRecap] = useState<string[] | null>(null);
-  if (!social.data) return null;
+  // nothing to show until the room's social answer is in, or when a read came back without one
+  if (!social.data?.on) return null;
   const { settings, on, screens, lines, display_on: displayOn } = social.data;
   const anything = on.keeps || on.reactions || on.rounds || on.dedications || on.recap;
   if (!anything && !displayOn) return null;
