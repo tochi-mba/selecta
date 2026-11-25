@@ -25,6 +25,7 @@ STAFF_ONLY = {
     ("DELETE", "/api/admin/overrides/{override_id}"),
     ("GET", "/api/admin/ai"),
     ("PUT", "/api/admin/ai/workspaces/{workspace_id}/multiplier"),
+    ("PUT", "/api/admin/ai/workspaces/{workspace_id}/cutover"),
     ("GET", "/api/admin/security"),
     ("POST", "/api/admin/security/roles"),
     ("GET", "/api/admin/audit"),

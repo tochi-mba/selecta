@@ -93,10 +93,15 @@ def core_tasks(engine: Engine) -> list[Task]:
 
 
 def maintain_lucy_runs(conn: Connection) -> int:
+    from selecta.ai import usage_rollout
     from selecta.ai.gateway import sweep_abandoned
     from selecta.ai.usage_events import publish_due_resets
+    from selecta.flags.rules import load_snapshot
+    from selecta.persistence import db_now
 
-    return len(sweep_abandoned(conn)) + publish_due_resets(conn)
+    # granted workspaces get their switch time, due ones switch, withdrawn ones go back
+    moved = usage_rollout.maintain(conn, load_snapshot(conn), db_now(conn))
+    return len(sweep_abandoned(conn)) + publish_due_resets(conn) + moved
 
 
 def usage_reconciliation(conn: Connection) -> int:

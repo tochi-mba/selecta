@@ -320,6 +320,31 @@ def set_lucy_multiplier(
     return {"workspace_id": workspace_id, "multiplier_milli": multiplier_milli}
 
 
+def set_lucy_cutover(
+    conn: Connection, actor: Actor, *, workspace_id: str, reason: str, when: str,
+) -> dict[str, Any]:
+    """Switch one workspace to the session and week allowance now, or take its switch away
+    (ADR-0487 rules 6 and 7). The workspace still needs the `lucy.usage_windows` grant."""
+    from selecta.ai import usage_rollout
+
+    reason = _need_reason(reason)
+    if when not in {"now", "cancel"}:
+        raise ValueError("Say 'now' to switch the workspace or 'cancel' to take the switch away.")
+    resource = ResourceRef("workspace", workspace_id, workspace_id)
+    permission = "billing.overrides.create"
+    authorize(conn, actor, permission, resource)
+    if conn.scalar(sa.select(workspaces.c.id).where(workspaces.c.id == workspace_id)) is None:
+        raise LookupError(f"There's no workspace {workspace_id!r}.")
+    now = db_now(conn)
+    if when == "now":
+        usage_rollout.switch_now(conn, workspace_id, now)
+        changed = True
+    else:
+        changed = usage_rollout.cancel(conn, workspace_id, now)
+    _audit(conn, actor, "admin.lucy.cutover", resource, reason, when=when, changed=changed)
+    return {"workspace_id": workspace_id, "when": when, "changed": changed}
+
+
 def revoke_override(conn: Connection, actor: Actor, override_id: str, *, reason: str,
                     intent: safety.Intent = NO_INTENT) -> dict:
     reason = _need_reason(reason)

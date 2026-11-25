@@ -109,3 +109,31 @@ def test_staff_cannot_change_their_own_workspace(admin_world):  # noqa: F811
 
 def test_an_unknown_workspace_is_not_created(admin_world):  # noqa: F811
     assert put(admin_world, 2_000, workspace="no-such-workspace").status_code >= 400
+
+
+def cutover(world, when, reason="testing the new allowance", headers=None):
+    return world.http.put(
+        f"/api/admin/ai/workspaces/{world.customer_workspace_id}/cutover",
+        headers=headers or world.headers, json={"when": when, "reason": reason},
+    )
+
+
+def test_staff_can_switch_one_account_now_and_take_it_back_with_an_audit_trail(admin_world):  # noqa: F811
+    on = cutover(admin_world, "now")
+    assert on.status_code < 300, on.text
+    switched = state(admin_world)
+    assert switched["cutover_at"] is not None and switched["enforced_since"] is not None
+
+    off = cutover(admin_world, "cancel", "it misbehaved")
+    assert off.status_code < 300 and off.json()["changed"] is True
+    assert state(admin_world)["cutover_at"] is None
+    with transaction(admin_world.engine) as conn:
+        actions = conn.execute(sa.select(audit_events.c.action, audit_events.c.result).where(
+            audit_events.c.action == "admin.lucy.cutover")).all()
+    assert [tuple(row) for row in actions] == [("admin.lucy.cutover", "success")] * 2
+
+
+def test_the_switch_needs_a_reason_the_permission_and_a_known_word(admin_world):  # noqa: F811
+    assert cutover(admin_world, "tomorrow").status_code == 422
+    assert cutover(admin_world, "now", reason="  ").status_code >= 400
+    assert cutover(admin_world, "now", headers=admin_world.denied_headers).status_code == 403
