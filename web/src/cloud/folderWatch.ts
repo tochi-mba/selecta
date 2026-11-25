@@ -522,13 +522,27 @@ export function importLooseHandles(handles: FileHandleLike[]): void {
   void startImport(own, handles, { kind: 'files', resume: marker && !marker.folderId ? marker : null });
 }
 
+/** How long an Allow press waits for the browser's own prompt to be answered. */
+const ALLOW_WAIT_MS = 30_000;
+
 /** Allow, from the member's press: one prompt restores every song in the folder at once, then
  * the availability report tells Rooms and the member's other devices, and the folder is checked. */
 export async function allowFolder(id: string): Promise<boolean> {
   const row = state.rows?.find((one) => one.id === id);
   if (!row?.handle) return false;
   let answer = 'granted';
-  try { if (row.handle.requestPermission) answer = await row.handle.requestPermission({ mode: 'read' }); } catch { answer = 'denied'; }
+  // A browser can swallow the prompt (the press did not count as the person's own, or the prompt
+  // was dismissed without an answer) and then never settles the request. Without a limit the button
+  // said "Asking" for ever with no way to ask again, so an unanswered request counts as not allowed
+  // and the row offers Allow again.
+  try {
+    if (row.handle.requestPermission) {
+      answer = await Promise.race([
+        row.handle.requestPermission({ mode: 'read' }),
+        new Promise<string>((resolve) => { setTimeout(() => resolve('unanswered'), ALLOW_WAIT_MS); }),
+      ]);
+    }
+  } catch { answer = 'denied'; }
   if (answer !== 'granted') return false;
   const next = setRow(id, { state: row.checkedAt ? 'watching' : 'unchecked' });
   if (next) await persist(next);
