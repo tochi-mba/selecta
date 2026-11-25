@@ -7,7 +7,7 @@
 
 ## Context
 
-At the baseline a turn that cannot run on the plan's model steps down silently: class, then model, then the built-in planner. The person is told one thing, "You've used this month's Lucy turns", for both the allowance and the dollar ceiling, with a date worked out in UTC. Nothing offers a next step. Gemini moves a subscriber to its smallest model at the cap; Claude asks them to wait or spend credits.
+At the baseline a turn that cannot run on the plan's model steps down silently: class, then model, then the built-in planner. The person is told one thing, "You've used this month's Lucy turns", for both the allowance and the dollar ceiling. Nothing offers a next step. Gemini moves a subscriber to its smallest model at the cap; Claude asks them to wait or spend credits.
 
 ## Decision
 
@@ -35,7 +35,7 @@ At the baseline a turn that cannot run on the plan's model steps down silently: 
 
 - A paying member is never left with nothing inside a week unless the week itself is spent.
 - Lucy admits to answering with a lighter model, which ADR-0476 edge case 7 kept silent. That rule was written for the hidden ceiling; with a visible limit, silence would be the misleading choice.
-- The built-in planner's date bug (UTC) disappears with the shared time function.
+- Lucy's words and the meter take their reset time from one function, so they cannot disagree.
 
 ## Rejected alternatives
 

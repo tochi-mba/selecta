@@ -16,7 +16,7 @@ Reading the code at the baseline found five faults in the present model:
 
 1. **The meter does not read what is enforced.** The gateway counts turns in the `ai_usage` table. The meters read `lucy_turn.*` allowance counters (`src/selecta/usage/meters.py`), and nothing under `src/` writes those counters. The meter most likely shows nothing used however much Lucy is used.
 2. **Two of the four classes cannot happen.** `request_class` in `src/selecta/lucy/cloud_agent.py` returns only everyday or planning. Premium's 25 deep plans are never drawn on, and its quick "fair use" of 1,000 becomes 1,000 further Opus turns once everyday runs out, held back only by the dollar ceiling.
-3. **One message for two causes.** When either the turn allowance or the dollar ceiling is used up, Lucy says "You've used this month's Lucy turns on your plan". When the ceiling was the cause that is not true. The date she gives is worked out in UTC, not the account's time zone.
+3. **One message for two causes.** When either the turn allowance or the dollar ceiling is used up, Lucy says "You've used this month's Lucy turns on your plan". When the ceiling was the cause that is not true.
 4. **Two tables kept in step by hand.** Allowances are written in `src/selecta/billing/plans.py` and again in `src/selecta/ai/allowance.py`.
 5. **What is sold is not what is delivered.** A plan card promises 400 turns; the ceiling delivers about 170 on the plan's model and then quietly answers with a smaller one.
 
