@@ -1,3 +1,307 @@
 /* The feel system (ADR-0477): the feel system applied to the shared components: fields, checks, switches, menus, tooltips, tabs, dialogs, sheets, toasts, skeletons, meters, lists and empty states.
  * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
- * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md. */
+ * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md.
+ *
+ * The components write a few attributes these rules read; each is inert without its data-feel word:
+ *   [role='tabpanel'][data-feel-from]   ui/primitives.tsx Tabs: the side the new tab sits on
+ *   [data-active], [data-feel-keys]     useListHighlight (ui/primitives.tsx): the one highlight in a
+ *                                       menu or listbox, and whether the keyboard moved it last
+ *   [data-feel-first]                   staggerIn: a menu opening for the first time
+ *   .tooltip-anchor[data-warm]          a neighbour's tooltip was open a moment ago
+ *   .toast-row --depth, [data-dragging] ui/toasts.tsx: newer toasts in front, a swipe in progress
+ *   .meter[data-complete]               ui/Meter.tsx: progress that reached done while on screen
+ *
+ * Every keyframe here runs once (the skeleton's light band three times at most, like the breathing it
+ * replaces) and ends on the element's own resting look, so Still and reduced motion show the end. */
+
+/* ---------- Tabs and link tabs ----------
+   One mark slides under the choice (feel/indicator.ts), so the choice's own underline steps aside
+   while the mark is drawn. In forced colours the mark is not drawn and the underline stays. */
+@media (forced-colors: none) {
+  :where(:root[data-feel~='motion']) :is(.inspector-tabs, .tabs)[data-indicator] > :is([aria-selected='true'], [aria-current='page']) {
+    border-bottom-color: transparent;
+  }
+}
+/* A new panel arrives a short way from the side its tab sits on, mirrored for right-to-left. */
+:where(:root[data-feel~='motion']) [role='tabpanel'][data-feel-from] {
+  --feel-panel-from: var(--space-2);
+  animation: feel-panel-in var(--motion-spring-snappy) var(--spring-snappy) backwards;
+}
+:where(:root[data-feel~='motion']) [role='tabpanel'][data-feel-from='start'],
+:where(:root[data-feel~='motion']) [role='tabpanel'][data-feel-from='end']:dir(rtl) {
+  --feel-panel-from: calc(-1 * var(--space-2));
+}
+:where(:root[data-feel~='motion']) [role='tabpanel'][data-feel-from='start']:dir(rtl) {
+  --feel-panel-from: var(--space-2);
+}
+@keyframes feel-panel-in {
+  from { opacity: 0; translate: var(--feel-panel-from) 0; }
+}
+
+/* ---------- Menus, popovers and the combobox list ----------
+   They grow out of the control that opened it (growFrom sets the transform-origin) instead of the
+   small pop. Closing keeps the exit protocol's fade (polish.css), so these skip [data-closing]. */
+:where(:root[data-feel~='motion']) :is(.menu-list, .popover-panel)[data-motion='pop']:not([data-closing]) {
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+:where(:root[data-feel~='motion']) .combobox [role='listbox']:not([hidden]) {
+  transform-origin: 50% 0;
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+/* the first time a menu opens, its items arrive one after another (staggerIn sets --i) */
+:where(:root[data-feel~='motion']) .menu-list[data-feel-first]:not([data-closing]) > :not(.feel-indicator) {
+  animation: feel-item-in var(--motion-spring-snappy) var(--spring-gentle) backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * var(--motion-stagger));
+}
+@keyframes feel-item-in {
+  from { opacity: 0; translate: 0 calc(-1 * var(--space-1)); }
+}
+/* One highlight. It sits behind the items (the list is its own layer and the mark goes under its
+   items), in the colour a hovered item had, slides quickly for the mouse and jumps for the keyboard. */
+:where(:root[data-feel~='motion']) :is(.menu-list, .combobox [role='listbox'])[data-indicator] {
+  isolation: isolate;
+}
+:where(:root[data-feel~='motion']) :is(.menu-list, .combobox [role='listbox'])[data-indicator] > .feel-indicator {
+  z-index: -1;
+  background: var(--surface-control);
+}
+:where(:root[data-feel~='motion']) :is(.menu-list, .combobox [role='listbox'])[data-indicator='live'] > .feel-indicator {
+  transition: transform var(--motion-fast) var(--spring-gentle);
+}
+:where(:root[data-feel~='motion']) :is(.menu-list, .combobox [role='listbox'])[data-indicator][data-feel-keys] > .feel-indicator {
+  transition: none;
+}
+/* while the mark is drawn it is the highlight, so an item's own hover and focus fill steps aside;
+   in forced colours the mark is not drawn and the items keep theirs */
+@media (forced-colors: none) {
+  :where(:root[data-feel~='motion']) .menu-list[data-indicator] button:not(:disabled):is(:hover, :focus) {
+    background: none;
+  }
+}
+
+/* ---------- Tooltips ----------
+   The first one waits a moment under a resting pointer; one reached within a moment of the last
+   (data-warm) shows at once, and so does one the keyboard reaches. */
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='motion']) .tooltip-anchor:hover > .tooltip[data-motion='pop']:not([data-closing]) {
+    animation: feel-pop var(--motion-fast) var(--motion-ease) both;
+    animation-delay: calc(var(--motion-slow) * 2);
+  }
+  :where(:root[data-feel~='motion']) .tooltip-anchor[data-warm]:hover > .tooltip[data-motion='pop']:not([data-closing]) {
+    animation-delay: initial;
+  }
+}
+:where(:root[data-feel~='motion']) .tooltip-anchor:focus-within > .tooltip[data-motion='pop']:not([data-closing]) {
+  animation: feel-pop var(--motion-fast) var(--motion-ease) both;
+}
+
+/* ---------- Dialogs, drawers and sheets ----------
+   The scrim fades in; a dialog grows out of the control that opened it (growFrom in controls.tsx)
+   with no overshoot, because dialogs hold data (ADR-0137); a drawer or sheet glides in on the gentle
+   spring. Leaving stays on the exit protocol (polish.css, ui/exitMotion.ts). No glass blur: there is
+   no blur token yet. */
+:where(:root[data-feel~='motion']) .overlay:not([data-closing]) {
+  animation: feel-fade-in var(--motion-overlay) var(--motion-ease) both;
+}
+:where(:root[data-feel~='motion']) .overlay-dialog:not([data-closing]) > .overlay-panel {
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-gentle) both;
+}
+:where(:root[data-feel~='motion']) :is(.overlay-drawer, .overlay-sheet):not([data-closing]) > .overlay-panel {
+  animation: drawer-appear var(--motion-spring-glide) var(--spring-gentle) both;
+}
+@keyframes feel-fade-in {
+  from { opacity: 0; }
+}
+
+/* ---------- Toasts ----------
+   A toast rises in on a spring, can be swiped or dragged sideways (it follows the pointer by its
+   own translate and springs back when let go short), and older toasts sit back behind the newest
+   until the pointer or focus reaches the stack. The arrival fills backwards only, so the drag's
+   translate is never held under a finished animation. */
+:where(:root[data-feel~='motion']) .toast-row:not([data-closing]) {
+  touch-action: pan-y;
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) backwards;
+  transition: translate var(--motion-spring-release) var(--spring-bouncy), opacity var(--motion-fast) var(--motion-ease), scale var(--motion-spring-snappy) var(--spring-snappy);
+}
+:where(:root[data-feel~='motion']) .toast-row[data-dragging] {
+  cursor: grabbing;
+  transition: none;
+}
+:where(:root[data-feel~='depth']) .toast-row:not([data-closing]) {
+  transform-origin: 50% 100%;
+  scale: calc(1 - var(--depth, 0) * (1 - var(--press-scale)));
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='depth']) .toasts:hover > .toast-row:not([data-closing]) {
+    scale: 1;
+  }
+}
+:where(:root[data-feel~='depth']) .toasts:focus-within > .toast-row:not([data-closing]) {
+  scale: 1;
+}
+/* the undo ring: a ring that empties over the real time left (ui/toasts.tsx sets its length) */
+:where(:root[data-feel~='motion']) .toast-row button:has(> .toast-ring) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+:where(:root[data-feel~='motion']) .toast-ring {
+  flex: none;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  rotate: -90deg;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke-toolbar);
+}
+:where(:root[data-feel~='motion']) .toast-ring circle {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+:where(:root[data-feel~='motion']) .toast-ring .toast-ring-left {
+  animation: feel-countdown var(--motion-slow) linear both;
+}
+@keyframes feel-countdown {
+  to { stroke-dashoffset: 1; }
+}
+/* the drawn tick on a success toast (its path is .feel-tick, styles/feel.css) */
+:where(:root[data-feel~='motion']) .toast-tick {
+  flex: none;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke-toolbar);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Fields ----------
+   The focus ring draws in onto the field from a little way out; the error under a field slides in
+   4px; a valid field's tick pops in (.feel-pop, styles/feel.css) in the ready colour. */
+:where(:root[data-feel~='motion']) :is(.field, .search-field) :is(input, select, textarea) {
+  transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease), outline-offset var(--motion-fast) var(--spring-snappy);
+}
+:where(:root[data-feel~='motion']) :is(.field, .search-field) :is(input, select, textarea):not(:focus-visible) {
+  outline-offset: var(--space-2);
+}
+:where(:root[data-feel~='motion']) .field > .warn[role='alert'] {
+  animation: feel-nudge var(--motion-reveal) var(--motion-ease) both;
+}
+:where(:root[data-feel~='motion']) .field > label > .field-valid {
+  color: var(--status-ready);
+}
+@keyframes feel-nudge {
+  from { opacity: 0; translate: 0 calc(-1 * var(--space-1)); }
+}
+/* A check or a radio choice springs as it is taken. Only the one just pressed (it holds focus), so a
+   page full of checked boxes never pops as it is drawn. */
+:where(:root[data-feel~='motion']) input:is([type='checkbox'], [type='radio']):checked:focus {
+  animation: feel-check var(--motion-spring-snappy) var(--spring-bouncy);
+}
+@keyframes feel-check {
+  from { scale: 0.7; }
+}
+
+/* ---------- Skeletons ----------
+   One band of light travels across the whole placeholder instead of each bar breathing; it crosses
+   three times at most, as the breathing did, and the reveal wait (Skeleton.tsx) is unchanged. */
+:where(:root[data-feel~='motion']) .skeleton i {
+  animation: none;
+}
+:where(:root[data-feel~='motion']) .skeleton-content {
+  position: relative;
+  overflow: clip;
+}
+:where(:root[data-feel~='motion']) .skeleton-content::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%, var(--pointer-light) 50%, transparent 65%);
+  translate: -100% 0;
+  animation: feel-skeleton-sweep var(--motion-loop-breathe) var(--motion-ease) 3 both;
+}
+@keyframes feel-skeleton-sweep {
+  to { translate: 100% 0; }
+}
+
+/* ---------- Meters ----------
+   The fill springs to its value; progress that reaches done while on screen blooms once. */
+:where(:root[data-feel~='motion']) .meter:not([data-indeterminate]) .meter-fill {
+  transition: inline-size var(--motion-spring-snappy) var(--spring-snappy);
+}
+:where(:root[data-feel~='depth']) .meter[data-complete] .meter-track {
+  animation: feel-bloom calc(var(--motion-slow) * 3) var(--motion-ease) both;
+}
+@keyframes feel-bloom {
+  from { box-shadow: var(--glow-accent); }
+}
+
+/* ---------- Tables ----------
+   A row under the pointer or holding focus tints and grows a marker at its start; the marker scales
+   in place, because rows are hovered hundreds of times a day. New rows carry .feel-flash and stacked
+   cards data-lift (ui/DataTable.tsx), both from styles/feel.css. */
+:where(:root[data-feel~='motion']) .data-table tbody tr:not(:has(> .data-table-empty)) > :first-child {
+  position: relative;
+}
+:where(:root[data-feel~='motion']) .data-table tbody tr:not(:has(> .data-table-empty)) > :first-child::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--marker);
+  background: var(--edge-interactive);
+  pointer-events: none;
+  scale: 1 0;
+  transition: scale var(--motion-fast) var(--spring-snappy);
+}
+:where(:root[data-feel~='depth']) .data-table tbody tr {
+  transition: background-color var(--motion-fast) var(--motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='motion']) .data-table tbody tr:hover > :first-child::before {
+    scale: 1;
+  }
+  :where(:root[data-feel~='depth']) .data-table tbody tr:not(:has(> .data-table-empty)):hover {
+    background-color: color-mix(in srgb, var(--surface-control) 50%, transparent);
+  }
+}
+:where(:root[data-feel~='motion']) .data-table tbody tr:focus-within > :first-child::before {
+  scale: 1;
+}
+:where(:root[data-feel~='depth']) .data-table tbody tr:not(:has(> .data-table-empty)):focus-within {
+  background-color: color-mix(in srgb, var(--surface-control) 50%, transparent);
+}
+
+/* ---------- Empty states ----------
+   The motif catches the light when the pointer or focus is in the empty place, and the one primary
+   action that fills it glows at rest (it is the region's one lime peak). */
+:where(:root[data-feel~='depth']) .empty-state .empty-state-icon {
+  transition: box-shadow var(--motion-fast) var(--motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='depth']) .empty-state:hover .empty-state-icon {
+    box-shadow: var(--shadow-lift), var(--edge-light);
+  }
+}
+:where(:root[data-feel~='depth']) .empty-state:focus-within .empty-state-icon {
+  box-shadow: var(--shadow-lift), var(--edge-light);
+}
+:where(:root[data-feel~='depth']) .empty-state :is(button, a.button).primary:not(:hover, :active, :focus-visible, :disabled, [aria-disabled='true']) {
+  box-shadow: var(--glow-accent);
+}
+
+/* ---------- Forced colours ----------
+   Borders and outlines carry every state; light, glow and bloom would only be noise. */
+@media (forced-colors: active) {
+  :where(:root[data-feel]) .skeleton-content::after {
+    display: none;
+  }
+  :where(:root[data-feel]) :is(.meter-track, .empty-state-icon) {
+    box-shadow: none;
+  }
+  :where(:root[data-feel]) .empty-state :is(button, a.button).primary:not(:hover, :active, :focus-visible, :disabled, [aria-disabled='true']) {
+    box-shadow: none;
+  }
+}

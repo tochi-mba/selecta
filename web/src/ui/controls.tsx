@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, cloneElement, Component, ErrorInfo, KeyboardEvent, ReactElement, ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { ButtonHTMLAttributes, cloneElement, Component, ErrorInfo, HTMLAttributes, KeyboardEvent, ReactElement, ReactNode, RefObject, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { returnFocus } from './focusReturn';
 import { createPortal } from 'react-dom';
 import { showProblem } from './toasts';
@@ -7,6 +7,8 @@ import { exitGhost, usePresence } from './exitMotion';
 import { newReference, reportProblem, supportHref } from '../support';
 import { isChunkLoadError, StaleBuildPanel } from './staleBuild';
 import { feelOn } from '../feel/root';
+import { INDICATOR_CLASS } from '../feel/indicator';
+import { growFrom, staggerIn, useListHighlight } from './primitives';
 export { Skeleton } from './Skeleton';
 
 /** How long the drawn tick shows after an Action finishes, before its label comes back (ADR-0477). */
@@ -161,6 +163,18 @@ export class Section extends Component<{ name: string; children: ReactNode; whol
   }
 }
 
+/** The control a dialog grows out of (ADR-0477): the last thing pressed, remembered for a moment by
+ * one listener on the whole page. A keyboard press fires click too, so it counts. Only with the
+ * feel's motion on; otherwise nothing is measured. */
+let lastPress: { rect: DOMRect; at: number } | null = null;
+const PRESS_FRESH_MS = 1000;
+function rememberPress(event: Event) {
+  if (!feelOn('motion')) return;
+  const control = event.target instanceof Element ? event.target.closest('button, a, summary, [role="button"], [role^="menuitem"]') : null;
+  if (control) lastPress = { rect: control.getBoundingClientRect(), at: Date.now() };
+}
+if (typeof document !== 'undefined') document.addEventListener('click', rememberPress, true);
+
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary,[tabindex]:not([tabindex="-1"])';
 let openOverlays = 0;
 let previousOverflow = '';
@@ -267,6 +281,12 @@ function Overlay({
     const first = [...(panel.current?.querySelectorAll<HTMLElement>('[data-autofocus]') ?? [])]
       .find((node) => canFocusInOverlay(node, panel.current)) ?? panel.current;
     first?.focus();
+    // With the feel on, a dialog grows out of the control that opened it: the one just pressed, or
+    // the one that had focus; with neither, from its own centre (the stylesheet's default).
+    if (kind === 'dialog') {
+      const pressed = lastPress && Date.now() - lastPress.at < PRESS_FRESH_MS ? lastPress.rect : null;
+      growFrom(panel.current, pressed ?? (before && before !== document.body && before.isConnected ? before : null));
+    }
     // A control that goes away once it has done its job, like "Use what was measured" after it has,
     // would leave focus on nothing, where Escape and Tab no longer reach this overlay. Focus comes back
     // to the overlay itself instead, as it does when a notice's own button goes.
@@ -371,6 +391,15 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
   const menuId = useId();
   const firstOnOpen = useRef<'first' | 'last'>('first');
   const shown = usePresence<HTMLDivElement>(open);
+  // The feel (ADR-0477): the list grows out of its button, and the very first time it opens its
+  // items arrive one after another. Both are no-ops with the feel's motion off.
+  const openedBefore = useRef(false);
+  useLayoutEffect(() => {
+    if (!open) return;
+    growFrom(shown.ref.current, opener.current);
+    if (!openedBefore.current) staggerIn(shown.ref.current);
+    openedBefore.current = true;
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const away = (event: MouseEvent) => {
@@ -431,8 +460,8 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
       <button ref={opener} type="button" title={title} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
       {shown.present && (
         // a press on anything inside closes it, because each item is the end of the job
-        <div
-          ref={shown.ref}
+        <MenuList
+          listRef={shown.ref}
           id={shown.closing ? undefined : menuId}
           role="menu"
           className="menu-list"
@@ -441,11 +470,23 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
           aria-hidden={shown.closing || undefined}
           inert={shown.closing || undefined}
           onClick={() => { if (!shown.closing) { setOpen(false); returnFocus(opener.current); } }}
-        >{children}</div>
+        >{children}</MenuList>
       )}
     </div>
   );
 }
+
+/** The open menu's list. A component of its own so its one sliding highlight starts and stops with
+ * it; the highlight's mark is the last child, hidden from everyone and drawn only with the feel on. */
+function MenuList({ listRef, children, ...rest }: HTMLAttributes<HTMLDivElement> & { listRef: RefObject<HTMLDivElement | null>; inert?: boolean; 'data-motion'?: string; 'data-closing'?: string }) {
+  useListHighlight(listRef, 'button');
+  return <div ref={listRef} {...rest} data-indicator-shape="fill">{children}<span className={INDICATOR_CLASS} aria-hidden="true" /></div>;
+}
+
+/** When the last tooltip went away. A neighbour's tooltip opened soon after shows at once instead
+ * of waiting again (ADR-0477), as moving along a toolbar reads its labels one after another. */
+let tooltipLeftAt = -Infinity;
+const TOOLTIP_WARM_MS = 300;
 
 /** A few words about a control, for a pointer resting on it or the keyboard reaching it. Escape
  * puts it away without moving focus, and the pointer can move onto it to read it. */
@@ -453,10 +494,19 @@ export function Tooltip({ text, children }: { text: string; children: ReactEleme
   const id = useId();
   const [dismissed, setDismissed] = useState(false);
   const shown = usePresence<HTMLSpanElement>(!dismissed);
+  // with the feel's motion on the first tooltip waits a moment (styles/feel-components.css) and a
+  // neighbour reached soon after shows at once
+  const [warm, setWarm] = useState(false);
   return (
     <span
       className="tooltip-anchor"
-      onMouseLeave={() => setDismissed(false)}
+      data-warm={warm || undefined}
+      onMouseEnter={() => setWarm(feelOn('motion') && Date.now() - tooltipLeftAt < TOOLTIP_WARM_MS)}
+      onMouseLeave={() => {
+        tooltipLeftAt = Date.now();
+        setWarm(false);
+        setDismissed(false);
+      }}
       onBlur={() => setDismissed(false)}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && !dismissed) {

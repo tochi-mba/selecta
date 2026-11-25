@@ -1,10 +1,90 @@
-import { ButtonHTMLAttributes, InputHTMLAttributes, KeyboardEvent, ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { ButtonHTMLAttributes, InputHTMLAttributes, KeyboardEvent, ReactNode, RefObject, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { PageLink } from '../shell/PageLink';
 import { Icon, IconName } from './Icon';
 import { usePresence } from './exitMotion';
+import { feelOn } from '../feel/root';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
+import { tick } from '../feel/haptics';
 
 /** The smaller building blocks. Each one has one job and one way of behaving, so every page gets the
  * same keyboard handling, names and error wiring without having to think about it. */
+
+/* ---- the feel's shared helpers for floating lists (ADR-0477, plan 3.0) ----
+ * Each one does nothing unless feelOn('motion'), so with the flags off, Still or reduced motion a
+ * menu, popover or dialog opens exactly as it did. */
+
+/** Sets a floating panel's transform-origin to the middle of `from` (the control that opened it), so
+ * its arrival grows out of that control. The panel may already be part-way into its arrival when this
+ * measures it, scaled about its own centre, so the centre is taken from the drawn box and the size
+ * from the laid-out one. */
+export function growFrom(panel: HTMLElement | null, from: Element | DOMRect | null) {
+  if (!panel || !from || !feelOn('motion')) return;
+  const rect = from instanceof Element ? from.getBoundingClientRect() : from;
+  if (!rect.width && !rect.height) return;
+  const drawn = panel.getBoundingClientRect();
+  const left = drawn.left + drawn.width / 2 - panel.offsetWidth / 2;
+  const top = drawn.top + drawn.height / 2 - panel.offsetHeight / 2;
+  panel.style.transformOrigin = `${Math.round(rect.left + rect.width / 2 - left)}px ${Math.round(rect.top + rect.height / 2 - top)}px`;
+}
+
+/** The first time a list opens its items arrive one after another; later opens only grow, because
+ * a menu is opened often and should answer at once (rule 1 of ADR-0477). */
+export function staggerIn(list: HTMLElement | null) {
+  if (!list || !feelOn('motion')) return;
+  list.setAttribute('data-feel-first', '');
+  [...list.children].filter((child) => !child.classList.contains(INDICATOR_CLASS))
+    .forEach((child, index) => (child as HTMLElement).style.setProperty('--i', String(index)));
+}
+
+/** One highlight for a list: it slides between items under the mouse and jumps straight to an item
+ * the keyboard reaches. The item under the highlight carries `data-active`, which the sliding
+ * indicator follows; the list carries `data-feel-keys` while the keyboard moved it last, which
+ * styles/feel-components.css reads to drop the travel. The list renders the indicator as its last
+ * child (`<span className={INDICATOR_CLASS} aria-hidden="true" />`). Returns `mark`, for a list
+ * whose keyboard position is held elsewhere (the combobox's active option). One listener per list,
+ * never one per item. */
+export function useListHighlight(listRef: RefObject<HTMLElement | null>, itemSelector: string) {
+  useSlidingIndicator(listRef, '[data-active]');
+  const mark = useRef<(item: Element | null, keys: boolean) => void>(() => {});
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return undefined;
+    const set = (item: Element | null, keys: boolean) => {
+      for (const node of list.querySelectorAll('[data-active]')) if (node !== item) node.removeAttribute('data-active');
+      if (!feelOn('motion')) {
+        list.removeAttribute('data-feel-keys');
+        return;
+      }
+      list.toggleAttribute('data-feel-keys', keys);
+      if (item && !item.hasAttribute('data-active')) item.setAttribute('data-active', '');
+    };
+    mark.current = set;
+    const itemAt = (target: EventTarget | null) => {
+      const item = target instanceof Element ? target.closest(itemSelector) : null;
+      return item && list.contains(item) && !item.matches(':disabled, [aria-disabled="true"]') ? item : null;
+    };
+    const over = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') return;
+      const item = itemAt(event.target);
+      if (item) set(item, false);
+    };
+    // the mouse leaving hands the highlight back to whatever has focus inside, or takes it away
+    const leave = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') set(itemAt(document.activeElement), false);
+    };
+    const focus = (event: FocusEvent) => set(itemAt(event.target), true);
+    list.addEventListener('pointerover', over);
+    list.addEventListener('pointerleave', leave);
+    list.addEventListener('focusin', focus);
+    return () => {
+      list.removeEventListener('pointerover', over);
+      list.removeEventListener('pointerleave', leave);
+      list.removeEventListener('focusin', focus);
+      mark.current = () => {};
+    };
+  }, [listRef, itemSelector]);
+  return mark;
+}
 
 /** A button that shows only an icon. Its name is required, so it can never be unlabelled. */
 export function IconButton({ icon, label, className = '', ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'aria-label'> & { icon: IconName; label: string }) {
@@ -18,11 +98,20 @@ export function IconButton({ icon, label, className = '', ...rest }: Omit<Button
 /** Subpages with real addresses: links, not tabs, so Back, reload and sharing a link all work. */
 export function LinkTabs({ label, items, current }: { label: string; items: { path: string; label: string }[]; current: string }) {
   if (items.length < 2) return null;  // one tab on its own is no choice, so there are no tabs
+  return <LinkTabStrip label={label} items={items} current={current} />;
+}
+
+/** The strip itself, a component of its own so the sliding indicator starts whenever the strip
+ * appears, even when a page gains its second tab later. */
+function LinkTabStrip({ label, items, current }: { label: string; items: { path: string; label: string }[]; current: string }) {
+  const strip = useRef<HTMLElement>(null);
+  useSlidingIndicator(strip, '[aria-current="page"]');
   return (
-    <nav className="tabs" aria-label={label}>
+    <nav ref={strip} className="tabs" aria-label={label}>
       {items.map((item) => (
         <PageLink key={item.path} to={item.path} aria-current={current === item.path ? 'page' : undefined}>{item.label}</PageLink>
       ))}
+      <span className={INDICATOR_CLASS} aria-hidden="true" />
     </nav>
   );
 }
@@ -43,6 +132,27 @@ export function Tabs<T extends string>({ label, tabs, current, onChange, childre
     watch.observe(node, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'tabindex', 'href'] });
     return () => watch.disconnect();
   }, [current]);
+  // The feel (ADR-0477): one mark slides under the chosen tab, and a new panel arrives from the side
+  // its tab sits on, so moving right reads as moving right.
+  const strip = useRef<HTMLDivElement>(null);
+  useSlidingIndicator(strip, '[aria-selected="true"]');
+  const shownTab = useRef(current);
+  useLayoutEffect(() => {
+    const before = shownTab.current;
+    shownTab.current = current;
+    const node = panel.current;
+    if (!node || before === current || !feelOn('motion')) return;
+    const from = tabs.findIndex((tab) => tab.id === before);
+    const to = tabs.findIndex((tab) => tab.id === current);
+    // taking the attribute away and reading the layout restarts the arrival on the same element
+    node.removeAttribute('data-feel-from');
+    void node.offsetWidth;
+    node.setAttribute('data-feel-from', to < from ? 'start' : 'end');
+  }, [current]);
+  const choose = (tab: T) => {
+    if (tab !== current) tick();
+    onChange(tab);
+  };
   const keys = (event: KeyboardEvent, index: number) => {
     const last = tabs.length - 1;
     // Arrow keys follow the visual order in RTL as well as LTR tab lists.
@@ -53,12 +163,12 @@ export function Tabs<T extends string>({ label, tabs, current, onChange, childre
     if (target === null) return;
     event.preventDefault();
     event.stopPropagation();
-    onChange(tabs[target].id);
+    choose(tabs[target].id);
     document.getElementById(`${base}-${tabs[target].id}`)?.focus();
   };
   return (
     <>
-      <div className="inspector-tabs" role="tablist" aria-label={label}>
+      <div ref={strip} className="inspector-tabs" role="tablist" aria-label={label}>
         {tabs.map((tab, index) => (
           <button
             key={tab.id}
@@ -67,27 +177,30 @@ export function Tabs<T extends string>({ label, tabs, current, onChange, childre
             aria-controls={`${base}-${tab.id}-panel`}
             aria-selected={current === tab.id}
             tabIndex={current === tab.id ? 0 : -1}
-            onClick={() => onChange(tab.id)}
+            onClick={() => choose(tab.id)}
             onKeyDown={(event) => keys(event, index)}
           >
             {tab.label}
           </button>
         ))}
+        <span className={INDICATOR_CLASS} aria-hidden="true" />
       </div>
       <div ref={panel} role="tabpanel" id={`${base}-${current}-panel`} aria-labelledby={`${base}-${current}`} tabIndex={panelStop ? 0 : -1}>{children}</div>
     </>
   );
 }
 
-/** A label, the control, help and any error, joined up so a screen reader hears all of it. */
-export function Field({ label, help, error, children, className = '' }: { label: ReactNode; help?: ReactNode; error?: string; children: (props: { id: string; 'aria-describedby'?: string; 'aria-invalid'?: true }) => ReactNode; className?: string }) {
+/** A label, the control, help and any error, joined up so a screen reader hears all of it.
+ * `valid` puts a small tick beside the label once the value is right (it pops in with the feel on);
+ * the tick is decoration, so whatever made the value right should still say so in words. */
+export function Field({ label, help, error, valid, children, className = '' }: { label: ReactNode; help?: ReactNode; error?: string; valid?: boolean; children: (props: { id: string; 'aria-describedby'?: string; 'aria-invalid'?: true }) => ReactNode; className?: string }) {
   const id = useId();
   const helpId = `${id}-help`;
   const errorId = `${id}-error`;
   const described = [help ? helpId : '', error ? errorId : ''].filter(Boolean).join(' ') || undefined;
   return (
     <div className={`field ${className}`}>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{label}{valid && !error && <>{' '}<Icon name="check" size="compact" className="field-valid feel-pop" /></>}</label>
       {children({ id, 'aria-describedby': described, 'aria-invalid': error ? true : undefined })}
       {help && <p className="field-help" id={helpId}>{help}</p>}
       {error && <p className="warn" id={errorId} role="alert">{error}</p>}
@@ -120,14 +233,25 @@ export function SearchField({ label, value, onChange, placeholder, onEscape, ...
           rest.onKeyDown?.(event);
         }}
       />
-      {value && <IconButton icon="close" label={`Clear ${label.toLowerCase()}`} type="button" onClick={() => { onChange(''); box.current?.focus(); }} />}
+      {/* feel-pop: with the feel's motion on, the clear button pops in when there is something to clear */}
+      {value && <IconButton icon="close" label={`Clear ${label.toLowerCase()}`} type="button" className="feel-pop" onClick={() => { onChange(''); box.current?.focus(); }} />}
     </div>
   );
 }
 
 /** A range with a spoken value, so it says "about 8 GB" rather than a bare number. */
 export function Slider({ label, valueText, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { label: string; valueText?: string }) {
-  return <input {...rest} type="range" aria-label={label} aria-valuetext={valueText} />;
+  // Each step the value moves is a small tick on a phone (feel/haptics, a no-op everywhere else).
+  return <input {...rest} type="range" aria-label={label} aria-valuetext={valueText} onChange={rest.onChange ? (event) => { stepTick(); rest.onChange?.(event); } : undefined} />;
+}
+
+/** At most one haptic tick per 40ms, so dragging fast across many steps is a texture, not a buzz. */
+let lastStepTick = 0;
+function stepTick() {
+  const now = Date.now();
+  if (now - lastStepTick < 40) return;
+  lastStepTick = now;
+  tick();
 }
 
 /** A small non-modal panel that opens under a button. Escape and clicking away close it, and focus
@@ -145,6 +269,10 @@ export function Popover({ label, children, className = '' }: { label: ReactNode;
     };
     document.addEventListener('mousedown', away);
     return () => document.removeEventListener('mousedown', away);
+  }, [open]);
+  // with the feel on, the panel grows out of the button that opened it
+  useLayoutEffect(() => {
+    if (open) growFrom(shown.ref.current, opener.current);
   }, [open]);
   return (
     <div

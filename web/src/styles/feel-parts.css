@@ -36,6 +36,10 @@
 }
 /* a fill sits behind the words of the choice, never over them */
 :where(:root[data-feel~='motion']) [data-indicator-shape='fill'] > :not(.feel-indicator) { position: relative; }
+/* the mark is the last child, so without this it would paint over the words: the strip becomes its
+   own layer and the mark goes to the back of it */
+:where(:root[data-feel~='motion']) [data-indicator][data-indicator-shape='fill'] { isolation: isolate; }
+:where(:root[data-feel~='motion']) [data-indicator][data-indicator-shape='fill'] > .feel-indicator { z-index: -1; }
 @media (forced-colors: active) {
   /* the choice's own border and outline carry it; a painted block would hide in forced colours */
   :where(:root[data-feel~='motion']) [data-indicator] > .feel-indicator { display: none; }
