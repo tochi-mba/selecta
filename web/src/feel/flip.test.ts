@@ -83,7 +83,9 @@ describe('FL-0477-06 flip', () => {
       () => setPrefs({ motion: 'still' }),
       () => vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))),
       () => setFlags({ 'app.feel_motion': false }),
+      () => { document.documentElement.dataset.lowPower = 'auto'; },
     ]) {
+      delete document.documentElement.dataset.lowPower;
       setPrefs({ motion: 'expressive' });
       setFlags({});
       vi.unstubAllGlobals();
@@ -94,6 +96,26 @@ describe('FL-0477-06 flip', () => {
       expect(mutate).toHaveBeenCalledOnce();
       expect(played).toHaveLength(0);
     }
+    delete document.documentElement.dataset.lowPower;
+  });
+
+  it('a second flip stops the first one where it got to and starts from there', async () => {
+    const cancels: ReturnType<typeof vi.fn>[] = [];
+    Element.prototype.animate = function animate(this: Element, keyframes: Keyframe[] | PropertyIndexedKeyframes | null, options?: number | KeyframeAnimationOptions) {
+      played.push({ element: this, keyframes: keyframes as Keyframe[], options: options as KeyframeAnimationOptions });
+      const cancel = vi.fn();
+      cancels.push(cancel);
+      return { cancel, onfinish: null } as unknown as Animation;
+    };
+    const a = row({ left: 0, top: 0, width: 100, height: 20 });
+    await flip([a], () => { boxes.set(a, { left: 0, top: 40, width: 100, height: 20 }); });
+    expect(played).toHaveLength(1);
+    // part way: the element is measured at 25, the first move is cancelled, the next starts there
+    boxes.set(a, { left: 0, top: 25, width: 100, height: 20 });
+    await flip([a], () => { boxes.set(a, { left: 0, top: 0, width: 100, height: 20 }); });
+    expect(cancels[0]).toHaveBeenCalledOnce();
+    expect(played).toHaveLength(2);
+    expect(played[1].keyframes[0].transform).toBe('translate(0.0px, 25.0px) scale(1.000, 1.000)');
   });
 
   it('waits for an asynchronous change before measuring again', async () => {

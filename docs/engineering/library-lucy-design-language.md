@@ -24,8 +24,11 @@ with `.library`. Neither area restyles the other or the shared shell.
 ## Song identity (LX-0364-02)
 
 A song looks the same wherever it appears: its `SongMotif` (`web/src/ui/MusicObjects.tsx`), drawn
-only from the recording id, then title and artist. There is no artwork, real or invented. In Lucy a
-song row is also known by its occurrence id, so the same recording twice is two rows.
+only from the recording id, then title and artist. With `library.art_embedded` on (ADR-0478), a
+Library row shows the song's cover instead, only through `web/src/views/CoverArt.tsx`: the file's own
+picture or a confident catalogue match, otherwise the generated tile; never an invented picture.
+Lucy's rows still draw the motif. In Lucy a song row is also known by its occurrence id, so the same
+recording twice is two rows.
 
 ## States in words and shape, never colour alone (LX-0364-04)
 

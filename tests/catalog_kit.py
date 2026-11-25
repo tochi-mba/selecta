@@ -83,6 +83,34 @@ def cover(data: bytes | None = None, content_type: str = "image/jpeg") -> httpx.
                           headers={"Content-Type": content_type})
 
 
+def add_song(engine, workspace_id: str, *, title: str = "Lanterns Over the Water",
+             artist: str = "Night Harbour", seconds: float | None = 241.0,
+             album: str | None = "Low Tide") -> int:
+    """A song in the workspace's local media catalogue (only its tags, as in Cloud)."""
+    import hashlib
+
+    from selecta.local_media.schema import local_songs
+    from selecta.persistence import db_now, new_id, transaction
+
+    with transaction(engine, workspace_id) as conn:
+        now = db_now(conn)
+        return int(conn.execute(local_songs.insert().values(
+            workspace_id=workspace_id, content_sha256=hashlib.sha256(new_id().encode()).hexdigest(),
+            title=title, artist=artist, album=album, duration_s=seconds, created_at=now,
+            updated_at=now,
+        )).inserted_primary_key[0])
+
+
+def isrc_replay(**extra) -> Replay:
+    """MusicBrainz knows the ISRC and the recording; the archive has every front cover."""
+    return Replay({
+        f"/ws/2/isrc/{ISRC}": "isrc_two_recordings",
+        "/ws/2/recording/": "recording",
+        "/release/": cover(),
+        **extra,
+    })
+
+
 def musicbrainz(replay: Replay, *, slept: list[float] | None = None,
                 gate: client.Gate | None = None) -> client.MusicBrainz:
     sleeps = slept if slept is not None else []
