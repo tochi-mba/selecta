@@ -694,7 +694,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
         song={playing}
         showPlayer={route.page !== 'listen' && !!playing && active}
         hasMix={mix.length > 0}
-        hasNext={mix.length > now.position + 1}
+        hasNext={mix.length > now.position + 1} next={mix[now.position + 1]}
         stage={stage}
         waitingRequests={waitingRequests}
         onRequests={() => setRequesting(true)}

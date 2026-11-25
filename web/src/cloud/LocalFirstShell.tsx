@@ -960,7 +960,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         showPlayer={route.page !== 'listen' && (remote ? remote.now.phase !== 'idle' : !!song && now.phase !== 'idle')}
         hasMix={data.mix.length > 0}
         hasNext={remote ? remote.hasNext : data.mix.length > now.position + 1}
-        stage={false}
+        stage={false} next={remote ? undefined : data.mix[now.position + 1]}
         waitingRequests={on('requests') ? waitingCount(roomShown, songRequests.requests) : 0}
         onRequests={() => setRequesting(true)}
         onHelp={controls.onHelp}
