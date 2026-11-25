@@ -27,8 +27,7 @@ import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
 import { RequestsContext, RequestsPanel, useRequests, type RequestRow } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
-import type { Account, Api } from './api';
-import { planName } from './api';
+import { planName, type Account, type Api } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
 import { forgetHostedAssets, hostedAssets, hostedResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
@@ -77,7 +76,6 @@ import { MixProblem, StatusProblem, ThisDevice } from './localFirstParts';
 import { setTabBusy } from './accountTabs';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
-import { DEVICE_REGISTERED } from '../devices/playbackWire';
 import { ChangedFromLine } from '../devices/ChangedFromLine';
 import { PlayNoticeLine } from '../devices/PlayNoticeLine';
 import { HostedMix } from './hosted/HostedMix';
@@ -378,9 +376,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     window.addEventListener(DEVICE_REGISTERED, registered);
     window.addEventListener('focus', refreshWhenActive);
     document.addEventListener('visibilitychange', refreshWhenActive);
-    // ADR-0475: the startup sweep can finish before this browser is registered as a device, and
-    // then had no device to report for; once registered, the songs here are reported (a sweep
-    // reports only while no report has gone yet), so Play counts this device's music
+    // ADR-0475: the startup sweep can finish before this browser is registered as a device;
+    // once registered, the songs here are reported so Play counts this device's music
     window.addEventListener(DEVICE_REGISTERED, refreshWhenActive);
     return () => {
       window.removeEventListener(DEVICE_REGISTERED, registered);
