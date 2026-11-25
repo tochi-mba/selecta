@@ -26,6 +26,8 @@ export const START_ANSWER_EVENT = 'selecta-start-answer';
 export const START_ASK_WAIT_MS = 8_000;
 /** How long "Starting on {device}" may stand before the asker stops claiming even that. */
 export const STARTING_WAIT_MS = 20_000;
+/** B14: how long the asker waits for that tap before saying the device didn't answer. */
+export const TAP_WAIT_MS = 60_000;
 
 export type AskPhase = 'asking' | StartResult | 'no_answer' | 'offline' | 'failed';
 export type AskState = { phase: AskPhase; device: string; deviceId: string } | null;
@@ -36,7 +38,8 @@ export function askWords(phase: AskPhase, device: string): string {
     case 'asking': return `Asking ${device}…`;
     case 'starting': return `Starting on ${device}…`;
     case 'needs_music': return `${device} needs its music folder again. Choose it on ${device}.`;
-    case 'needs_gesture': return `${device} needs one press of Play. Press Play on ${device} to allow sound.`;
+    // B14: the browser there needs a tap before it may make sound; never "Playing" before that
+    case 'needs_gesture': return `Waiting for a tap on ${device}. Press Play there to allow sound.`;
     case 'no_mix': return `${device} has no mix to play. Make a mix first.`;
     case 'declined': return `Not started on ${device}.`;
     case 'offline': return `${device} isn’t open right now. Open SelectaDJ on it.`;
@@ -116,7 +119,7 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
       const told = (phase: AskPhase) => setState({ phase, device: one.target_name, deviceId: one.target_device_id });
       told(one.result);
       // waiting on a press there, or on its start: the ask stays the one being answered
-      if (one.result === 'needs_gesture') { waiting.current = { askId: one.ask_id, timer: 0 }; return; }
+      if (one.result === 'needs_gesture') { waiting.current = { askId: one.ask_id, timer: window.setTimeout(() => { waiting.current = { askId: null, timer: 0 }; told('no_answer'); }, TAP_WAIT_MS) }; return; }
       if (one.result === 'starting') {
         waiting.current = { askId: one.ask_id, timer: window.setTimeout(() => { waiting.current = { askId: null, timer: 0 }; told('no_answer'); }, STARTING_WAIT_MS) };
         return;

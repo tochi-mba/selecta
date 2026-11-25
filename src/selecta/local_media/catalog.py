@@ -136,6 +136,23 @@ class LocalMediaCatalog:
         # Cloud keeps no play history for local media; see the module docstring.
         return None
 
+    def songs_waiting_for_a_speaker(
+        self, workspace_id: str, crate: frozenset[int] | None
+    ) -> int:
+        """ADR-0475 D30: with no device open a room still opens (its guests are told the host is
+        choosing where the music plays) when the account has songs at all: how many."""
+        with transaction(self.engine, workspace_id) as conn:
+            if speaker_of(conn, workspace_id).device_id is not None:
+                return 0
+            songs = sa.select(sa.func.count()).select_from(local_songs).where(
+                local_songs.c.workspace_id == workspace_id,
+                local_songs.c.deleted_at.is_(None),
+                local_songs.c.duplicate_of.is_(None),
+            )
+            if crate is not None:
+                songs = songs.where(local_songs.c.id.in_(sorted(crate)))
+            return int(conn.execute(songs).scalar_one())
+
     def count_requestable(self, workspace_id: str, crate: frozenset[int] | None) -> int:
         with transaction(self.engine, workspace_id) as conn:
             fresh_after = db_now(conn) - store.AVAILABILITY_TTL_SECONDS

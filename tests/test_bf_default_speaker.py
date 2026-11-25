@@ -202,3 +202,18 @@ def test_two_devices_pressing_play_at_once_have_one_winner(party, on):
     winner = next(device for device, status in answers.items() if status == 200)
     view = party.client.get(f"/api/playback/session?device_id={winner}", headers=auth(ALICE))
     assert view.json()["speaker"] == "here"
+
+
+def test_with_no_device_open_the_account_songs_still_let_a_room_open(party, on):
+    # ADR-0475 D30: the room opens (lifecycle asks this when nothing is requestable yet) and
+    # its guests are told the host is choosing; once a device with music is open, it is that
+    one, two = _songs(party, ALICE, 2)
+    catalog = LocalMediaCatalog(party.engine)
+    workspace = party.workspaces[ALICE]
+    assert catalog.count_requestable(workspace, None) == 0
+    assert catalog.songs_waiting_for_a_speaker(workspace, None) == 2
+    assert catalog.music_state(workspace) == "none"
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    _holds(party, laptop, [one, two])
+    assert catalog.songs_waiting_for_a_speaker(workspace, None) == 0
+    assert catalog.count_requestable(workspace, None) == 2

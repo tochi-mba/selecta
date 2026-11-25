@@ -1,3 +1,4 @@
+import { isOnline } from '../cloud/connection';
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { AskState } from './playOn';
 import { tabLog } from './audioTab';
@@ -16,6 +17,9 @@ type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 type Device = { device_id: string; name: string };
 /** The one message about where the music is going, with its choices inline. */
 export type PlayNotice = { deviceId: string | null; text: string; actions: { label: string; run: () => void }[] };
+
+/** A5: after this long unseen, the default speaker's note offers to forget it. */
+export const GHOST_AFTER_SECONDS = 30 * 24 * 3600;
 
 export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told, playingOn = null, playHereInstead }: {
   enabled: boolean;
@@ -54,7 +58,18 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     }
   }, [cloud, refreshHoldings]);
 
-  const startOn = useCallback((device: DeviceHolding, note?: string) => {
+  // A5: a default speaker not seen for 30 days is likely a ghost (its browser's storage was
+  // cleared and it came back as a new device): the note about it offers to forget it
+  const forgetGhost = useCallback((away: DeviceHolding | null): { label: string; run: () => void }[] => {
+    const now = Date.now() / 1000;
+    if (!away || now - away.last_seen_at < GHOST_AFTER_SECONDS) return [];
+    return [{ label: `Forget ${away.name}`, run: () => {
+      setNotice(null);
+      void cloud(`/devices/${encodeURIComponent(away.device_id)}/sign-out`, { method: 'POST' }).then(refreshHoldings, () => showToast(`Couldn’t forget ${away.name}. Try again from Devices.`, { tone: 'problem' }));
+    } }];
+  }, [cloud, refreshHoldings]);
+
+  const startOn = useCallback((device: DeviceHolding, note?: string, extra: { label: string; run: () => void }[] = []) => {
     const here = latest.current.situation?.thisDeviceId;
     if (device.device_id === here) {
       setNotice(note ? { deviceId: device.device_id, text: note, actions: [] } : null);
@@ -66,7 +81,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     navigate('/listen');
     // the person is holding this device while the sound starts elsewhere: one way back
     const thisHolds = latest.current.situation?.devices.some((one) => one.device_id === here && one.online && one.songs > 0);
-    setNotice({ deviceId: device.device_id, text: note ?? `Starting on ${device.name}.`, actions: thisHolds ? [{ label: 'Play here instead', run: () => { setNotice(null); (playHereInstead ?? playHere)(); } }] : [] });
+    setNotice({ deviceId: device.device_id, text: note ?? `Starting on ${device.name}.`, actions: [...(thisHolds ? [{ label: 'Play here instead', run: () => { setNotice(null); (playHereInstead ?? playHere)(); } }] : []), ...extra] });
   }, [askToPlay, playHere]);
 
   /** True when the press was handled here (asked elsewhere, picker opened, or nothing to do). */
@@ -74,6 +89,9 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     const now = latest.current.choice;
     tabLog('decide', now?.kind ?? 'no rule', latest.current.situation ? latest.current.situation.devices.map((one) => `${one.name}:${one.online ? 'open' : 'away'}:${one.songs}`).join(',') : 'no holdings');
     if (!now || now.kind === 'speaker') return false;
+    // E34: with no connection the other devices can't be asked and what they hold may be stale:
+    // no picker and no ask; this device plays if it can, under the usual offline words
+    if (!isOnline()) return false;
     if (now.kind === 'default') {
       if (now.device.device_id === latest.current.situation?.thisDeviceId) return false;
       startOn(now.device);
@@ -82,13 +100,13 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     if (now.kind === 'only') {
       const note = now.defaultAway ? becauseWords(now.device.name, now.defaultAway.name) : undefined;
       if (now.device.device_id === latest.current.situation?.thisDeviceId && !note) return false;
-      startOn(now.device, note);
+      startOn(now.device, note, forgetGhost(now.defaultAway));
       return true;
     }
     if (now.kind === 'ask') { setAsking(now); return true; }
     setNotice({ deviceId: null, text: NOBODY_OPEN, actions: [{ label: 'Connect music here', run: () => navigate('/library') }] });
     return true;
-  }, [startOn]);
+  }, [forgetGhost, startOn]);
 
   // A1: the device asked did not answer: say so once, with Try again and Choose another device
   const phase = told?.phase;

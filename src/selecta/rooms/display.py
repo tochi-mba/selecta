@@ -71,6 +71,9 @@ class DisplayView:
     up_next: tuple[SongSummary, ...] = ()
     upcoming: tuple[UpcomingItem, ...] = ()
     music_paused: bool = False
+    # ADR-0475 D29: the speaker's state as the guest page says it (ready, choosing, reconnecting,
+    # none), when the room's catalogue can tell; None where it can't
+    music: str | None = None
 
 
 def start_pairing(ctx: RoomContext, *, now: float | None = None) -> PairingStart:
@@ -278,4 +281,10 @@ def display_view(ctx: RoomContext, display_token: str, *, now: float | None = No
         up_next=playing.up_next,
         upcoming=as_items(coming_up, songs, names, show_names=room.settings.names_shown),
         music_paused=not ctx.speakers.speaker_online(workspace_id),
+        music=_music_state(ctx, workspace_id),
     )
+
+
+def _music_state(ctx: RoomContext, workspace_id: str) -> str | None:
+    state = getattr(ctx.catalog, "music_state", None)
+    return state(workspace_id) if callable(state) else None

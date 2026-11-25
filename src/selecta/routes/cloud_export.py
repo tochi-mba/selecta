@@ -30,6 +30,7 @@ from selecta.identity.tokens import Claims
 from selecta.lucy import cloud_settings as lucy_cloud
 from selecta.lucy import cloud_store as lucy_conversations
 from selecta.persistence import transaction
+from selecta.playback.default_speaker_schema import playback_default_speakers
 from selecta.playback.schema import devices, playback_sessions
 from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets
 from selecta.storage.keys import Bucket, original_key
@@ -156,6 +157,14 @@ def install_routes(
                 .mappings()
                 .all()
             ]
+            # ADR-0475 C20: which of them is the default speaker
+            default_id = conn.execute(
+                select(playback_default_speakers.c.device_id).where(
+                    playback_default_speakers.c.workspace_id == workspace.id
+                )
+            ).scalar()
+            for row in device_rows:
+                row["default_speaker"] = row["id"] == default_id
             session = (
                 conn.execute(
                     select(

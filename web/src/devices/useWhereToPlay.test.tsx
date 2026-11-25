@@ -40,3 +40,27 @@ describe('Play by the rule', () => {
     expect(hook.result.current.decide()).toBe(false);
   });
 });
+
+describe('A5 and E34', () => {
+  it('offers to forget a default speaker not seen for 30 days, and signs it out', async () => {
+    const cloud = vi.fn(async () => ({}));
+    const refreshHoldings = vi.fn();
+    const ghost = device('old-laptop', { online: false, last_seen_at: Date.now() / 1000 - 31 * 24 * 3600 });
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: situation({ devices: [ghost, device('laptop'), device('phone', { songs: 0 })], defaultId: 'old-laptop' }), cloud: cloud as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings }));
+    act(() => { hook.result.current.decide(); });
+    const forget = hook.result.current.notice!.actions.find((action) => action.label === 'Forget old-laptop');
+    expect(forget).toBeDefined();
+    await act(async () => { forget!.run(); });
+    expect(cloud).toHaveBeenCalledWith('/devices/old-laptop/sign-out', { method: 'POST' });
+    expect(refreshHoldings).toHaveBeenCalled();
+  });
+
+  it('offline, opens no picker and asks no device: this device plays if it can', () => {
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const askToPlay = vi.fn();
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: situation(), cloud: vi.fn() as never, playHere: vi.fn(), askToPlay, refreshHoldings: vi.fn() }));
+    expect(hook.result.current.decide()).toBe(false);
+    expect(askToPlay).not.toHaveBeenCalled();
+    online.mockRestore();
+  });
+});
