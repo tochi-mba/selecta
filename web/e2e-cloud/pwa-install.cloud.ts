@@ -29,16 +29,17 @@ test('the page links the manifest, and the storage card offers to keep this devi
 
   const card = page.getByRole('region', { name: 'Browser storage' });
   const words = card.locator('[data-persist]');
-  await expect(words).toContainText('SelectaDJ is using');
-  await expect(words).toContainText('Your music files are never in browser storage');
+  // how much SelectaDJ uses is a meter; the card says the music itself is never stored here
+  await expect(card.getByRole('meter', { name: 'Used by SelectaDJ' })).toBeVisible();
+  await expect(card).toContainText('Your music files are never in browser storage');
   await accessible(page, 'This device storage card');
   const before = await words.getAttribute('data-persist');
   if (before === 'granted') {
-    await expect(words).toContainText("This browser keeps SelectaDJ's details on this device");
+    await expect(words).toContainText('This browser keeps SelectaDJ’s details on this device');
     return;
   }
   expect(before).toBe('not_granted');
-  const keep = card.getByRole('button', { name: "Keep this device's details safe" });
+  const keep = card.getByRole('button', { name: 'Keep these details safe' });
   await expect(keep).toBeVisible();
   await keep.click();
   await expect(words).not.toHaveAttribute('data-persist', 'not_granted');
@@ -46,6 +47,6 @@ test('the page links the manifest, and the storage card offers to keep this devi
   const persisted = await page.evaluate(() => navigator.storage.persisted());
   // the card says granted only when the browser really did
   expect(after === 'granted').toBe(persisted);
-  if (after === 'granted') await expect(words).toContainText("This browser keeps SelectaDJ's details");
+  if (after === 'granted') await expect(words).toContainText('This browser keeps SelectaDJ’s details');
   else await expect(words).toContainText('The browser may clear them');
 });

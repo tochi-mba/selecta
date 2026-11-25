@@ -32,6 +32,16 @@ export async function hostWithRoom(browser: Browser, as = 'alice', name = 'Garde
   return { context, host, code, joinPath: `/r/${code.replace('-', '')}` };
 }
 
+/** Press one of the room's options (Lock, a new code, Close), kept in the Room options menu. */
+export async function roomOption(host: Page, name: string): Promise<void> {
+  await host.getByRole('button', { name: 'Room options' }).click();
+  await host.getByRole('menuitem', { name, exact: true }).click();
+}
+
+/** What a press said: the room panel says it in a toast (a problem as an alert), never a line. */
+export const said = (host: Page, words: string | RegExp) => host.getByRole('status').filter({ hasText: words });
+export const refused = (host: Page, words: string | RegExp) => host.getByRole('alert').filter({ hasText: words });
+
 /** End whatever room this person has open, through the API, so tests start clean. */
 export async function endRooms(page: Page, as = 'alice'): Promise<void> {
   const headers = { Authorization: `Bearer ${as}` };

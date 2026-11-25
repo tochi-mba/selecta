@@ -31,6 +31,8 @@ const OWN_CLIENTS = [
   'cloud/connection.ts',
   'devcloud/authkit.tsx',
   'cloud/hostedMedia.ts', 'devices/audioSpeaker.ts',
+  // the hosted mix player: fetches the signed R2 links its timeline hands it, never the API
+  'cloud/hosted/timelinePlayer.ts',
   // the site's own index.html, read to learn whether a newer build is live (not an API call)
   'ui/staleBuild.tsx',
   // the stem model file, a one-off static download with Range resume, not an API call

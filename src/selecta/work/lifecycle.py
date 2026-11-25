@@ -41,7 +41,7 @@ from selecta.work.model import (
     after_failure,
     lookup,
 )
-from selecta.work.ports import ApplyContext, ArtifactOutput
+from selecta.work.ports import ApplyContext, ArtifactOutput, standing_in
 from selecta.work.schema import job_attempts, jobs
 from selecta.work.state import lock_job, read_job, set_state, update_fields
 
@@ -115,7 +115,9 @@ def free_slot(
 ) -> None:
     """Release the attempt's place in its head and correct V by what it really cost."""
     config = store.config
-    tier = lane_tier(store.entitlements.standing(attempt.workspace_id).tier, attempt.lane)
+    tier = lane_tier(
+        standing_in(store.entitlements, connection, attempt.workspace_id).tier, attempt.lane
+    )
     heads.job_finished(
         connection,
         attempt.pool,

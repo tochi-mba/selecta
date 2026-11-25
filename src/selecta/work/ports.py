@@ -137,3 +137,11 @@ class NoWorkControls:
 
     def admission_block(self, connection: Connection, pool: str, lane: str) -> str | None:
         return None
+
+
+def standing_in(entitlements: Entitlements, connection: Connection, workspace_id: str):
+    """An account's standing read inside `connection`'s transaction when the port can, so a
+    caller already holding a write transaction never opens a second one (that deadlocks SQLite,
+    which `dev.cmd cloud` runs on); other ports answer as before."""
+    inside = getattr(entitlements, "standing_in", None)
+    return inside(connection, workspace_id) if inside else entitlements.standing(workspace_id)

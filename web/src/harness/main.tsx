@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { PlayingBar } from '../devices/PlayingBar';
 import { RoomPanel } from '../rooms/RoomPanel';
+import { Toaster } from '../ui/toasts';
 import { CloudGallery } from './CloudGallery';
 import { RuntimeHarness } from './runtime';
 
@@ -49,6 +50,8 @@ function Harness() {
         <RoomPanel api={api} workspaceId={ws} locked={account.feature_locks.rooms} votesOn={account.features['rooms.votes'] !== false} displayOn={account.features['rooms.display'] !== false} />
       )}
       <DevicesPanel api={api} workspaceId={ws} />
+      {/* what happened after a press is said in a toast, as in the Cloud app (CloudApp, Shell) */}
+      <Toaster />
     </main>
   );
 }

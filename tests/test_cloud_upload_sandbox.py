@@ -101,6 +101,23 @@ def test_sniffing_reads_magic_bytes_only():
         assert sniff(junk) is None
 
 
+def test_an_id3_tag_longer_than_the_sniff_window_is_skipped(tmp_path):
+    # Real chart MP3s carry cover art in ID3v2 tags of 100 to 200 KiB; reading only the first
+    # 64 KiB found no audio and refused 9 of 14 of them (hosted walkthrough, 2026-11-25).
+    size = 180_000
+    syncsafe = bytes([(size >> 21) & 0x7F, (size >> 14) & 0x7F, (size >> 7) & 0x7F, size & 0x7F])
+    path = tmp_path / "art.mp3"
+    path.write_bytes(b"ID3\3\0\0" + syncsafe + b"\0" * size + b"\xff\xfb\x90\x64" + b"\0" * 4096)
+    with path.open("rb") as handle:
+        head = audio_check.read_head(handle, path.stat().st_size)
+    assert audio_check.sniff(head) == "mp3"
+    # a tag that claims to run past the end of the file is left for the sniff to refuse
+    short = tmp_path / "lie.mp3"
+    short.write_bytes(b"ID3\3\0\0" + syncsafe + b"\0" * 100)
+    with short.open("rb") as handle:
+        assert audio_check.sniff(audio_check.read_head(handle, short.stat().st_size)) is None
+
+
 def test_a_hung_child_is_killed_at_the_timeout(tmp_path):
     path = GOOD["wav"](tmp_path / "song.wav")
     started = time.monotonic()

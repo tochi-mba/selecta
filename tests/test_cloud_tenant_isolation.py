@@ -459,6 +459,14 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/assets/{asset_id}/playback-proxy"): None,
     ("GET", "/api/assets/{asset_id}/playback-proxy"): None,
     ("POST", "/api/storage/derived-playback-url"): None,  # body built per test: Alice's key
+    # Hosted processing (cloud.hosted_render): each names the caller's workspace first, and
+    # `test_hosted_processing_never_reaches_another_accounts_songs` checks the songs themselves.
+    ("GET", "/api/hosted/songs"): None,
+    ("POST", "/api/hosted/songs/prepare"): {},
+    ("POST", "/api/hosted/mixes/plan"): {"count": 4},
+    ("POST", "/api/hosted/mixes/render"): {"songs": [{"asset_id": "tenant-a"}]},
+    ("POST", "/api/hosted/mixes/export"): {"songs": [{"asset_id": "tenant-a"}]},
+    ("GET", "/api/hosted/exports/{job_id}"): None,
     ("POST", "/api/devices"): {"name": "Browser", "kind": "laptop"},
     ("GET", "/api/devices"): None,
     ("PATCH", "/api/devices/{device_id}"): {"name": "Kitchen"},
@@ -699,6 +707,7 @@ def world(tmp_path, monkeypatch):
                 "device_id": new_id(),
                 "room_id": new_id(),
                 "mix_id": new_id(),
+                "job_id": new_id(),
                 "display_id": new_id(),
                 "request_id": new_id(),
                 "guest_id": new_id(),
@@ -887,3 +896,44 @@ def test_onboarding_twice_never_joins_another_workspace(world):
     )
     assert again.status_code in {200, 201}, again.text
     assert again.json()["workspace_id"] == world["bob_ws"]
+
+
+def test_hosted_processing_never_reaches_another_accounts_songs(world):
+    """Bob, in his own workspace, names Alice's song and her job: every hosted route answers as
+    it does for made-up ids, queues nothing for her and touches none of her files."""
+    from selecta.work.schema import jobs
+
+    client, alice_song = world["client"], world["ids"]["asset_id"]
+    made_up = new_id()
+
+    def jobs_of(workspace_id):
+        with world["engine"].connect() as conn:
+            return conn.execute(
+                sa.select(jobs.c.id).where(jobs.c.workspace_id == workspace_id)
+            ).all()
+
+    ready = client.post("/api/hosted/songs/prepare", headers=_auth(ALICE), json={})
+    assert ready.status_code == 200, ready.text
+    assert [song["asset_id"] for song in ready.json()["songs"]] == [alice_song]
+    alice_jobs = jobs_of(world["alice_ws"])
+    assert alice_jobs, "Alice's own song is queued for analysis (the positive control)"
+    before = _rows_of(world["engine"], world["alice_ws"])
+    world["objects"].touched.clear()
+
+    listed = client.get("/api/hosted/songs", headers=_auth(BOB)).json()
+    assert (listed["songs"], listed["total"]) == ([], 0)
+    for path in ("/api/hosted/mixes/render", "/api/hosted/mixes/export"):
+        theirs = client.post(path, headers=_auth(BOB), json={"songs": [
+            {"asset_id": alice_song}, {"asset_id": alice_song}]})
+        missing = client.post(path, headers=_auth(BOB), json={"songs": [
+            {"asset_id": made_up}, {"asset_id": made_up}]})
+        assert (theirs.status_code, theirs.json()) == (missing.status_code, missing.json()), path
+    planned = client.post("/api/hosted/mixes/plan", headers=_auth(BOB), json={"count": 4})
+    assert planned.json() == {"songs": []}
+    theirs = client.get(f"/api/hosted/exports/{alice_jobs[0].id}", headers=_auth(BOB))
+    missing = client.get(f"/api/hosted/exports/{made_up}", headers=_auth(BOB))
+    assert theirs.status_code == 404
+    assert theirs.json() == missing.json()
+    assert jobs_of(world["bob_ws"]) == []
+    assert _rows_of(world["engine"], world["alice_ws"]) == before
+    assert not set(world["objects"].touched) & world["alice_keys"]

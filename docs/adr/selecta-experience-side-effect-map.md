@@ -264,6 +264,17 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `DELETE /api/assets/{asset_id}` | Deletes an uploaded asset |
 | `POST /api/assets/{asset_id}/playback-proxy` | Asks for a playback proxy to be made |
 
+### Hosted processing (`src/selecta/routes/hosted_render.py`) - `cloud.hosted_render`
+
+Each makes worker jobs only for the caller's own workspace; nothing is stored in the browser. Jobs are idempotent by input hash, so repeating a call never duplicates work.
+
+| Route | Side effect |
+|---|---|
+| `POST /api/hosted/songs/prepare` | Queues `analyse.song` for stored songs with no analysis (and, with `retry`, failed ones) |
+| `POST /api/hosted/mixes/plan` | None stored: reads analyses and returns the local planner's order and moves |
+| `POST /api/hosted/mixes/render` | Queues `play.proxy` and `seam.render` jobs the mix still needs, then returns its timeline with signed links |
+| `POST /api/hosted/mixes/export` | Queues one `export.render` job for the mix's songs |
+
 ### Local media catalogue (`src/selecta/local_media/api.py`) - Cloud library (ADR-0458)
 
 Metadata only: no audio leaves the member's devices. Dark in the build until `cloud.local_media` ships.

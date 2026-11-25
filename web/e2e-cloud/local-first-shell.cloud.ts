@@ -22,9 +22,14 @@ test('a local-first account sees the shared music destinations', async ({ page, 
     await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
   }
   await expect(page.getByRole('navigation', { name: 'Cloud workspace' })).toHaveCount(0);
-  // the catalogue songs the seed registered, in the shared Library, and Connect Music beside them
+  // the catalogue songs the seed registered, in the shared Library, and Connect music in its
+  // header (a menu: a folder or single songs, 02889fe5)
   await expect(page.getByRole('button', { name: /^Details for Local song 1 / })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Connect music' })).toBeVisible();
+  const connect = page.getByRole('main').getByRole('button', { name: 'Connect music', exact: true });
+  await connect.click();
+  await expect(page.getByRole('menuitem', { name: 'Choose a folder' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Choose songs' })).toBeVisible();
+  await page.keyboard.press('Escape');
   // nobody meets an upload surface they were not granted
   await expect(page.getByText(/upload tracks/i)).toHaveCount(0);
 });
@@ -33,7 +38,9 @@ test('a local-first account finds its account places in the side bar account men
   const user = listener('local-first-more');
   await seededWith(request, user, 1);
   await openLocalFirst(page, user, '/listen');
-  await expect(page.getByRole('heading', { name: 'Nothing is playing' })).toBeVisible();
+  // Listen with nothing playable here: its empty state sends the member to connect music
+  await expect(page.getByRole('heading', { name: 'Listen', level: 1 })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: 'Connect music' })).toBeVisible();
   // on a computer there is no More: the account's pages and Sign out sit in the account menu
   const main = page.getByRole('navigation', { name: 'Main' });
   await expect(main.getByRole('button', { name: 'More' })).toBeHidden();

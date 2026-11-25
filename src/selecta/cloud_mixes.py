@@ -88,9 +88,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         "no Cloud analysis worker writes those yet, so most Cloud seams are plain crossfades.",
     ),
     Capability(
-        "rendered_seams", "Rendered, beat-matched transitions", "available", "not_yet",
-        "src/selecta/seam_worker.py", None,
-        "Rendering transitions runs only in the local app today.",
+        "rendered_seams", "Rendered, beat-matched transitions", "available", "partial",
+        "src/selecta/seam_worker.py", "src/selecta/hosted_render.py",
+        "Hosted accounts (cloud.hosted_render): the server orders the mix with the local planner "
+        "and renders each transition the local app's way, without stem moves. Others: local only.",
     ),
     Capability(
         "seam_tools", "Editor, Seam Inspector and Studio lanes", "available", "not_yet",
@@ -98,9 +99,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         "The advanced creative tools stay in the local app.",
     ),
     Capability(
-        "mix_export", "Export a finished mix", "available", "not_yet",
-        "src/selecta/export_validation.py", None,
-        "Cloud account export exists, but Cloud mixes are not rendered to a file yet.",
+        "mix_export", "Export a finished mix", "available", "partial",
+        "src/selecta/export_validation.py", "src/selecta/hosted_render.py",
+        "Hosted accounts can export a server mix to one FLAC (export.render); its transitions are "
+        "chosen again by the export renderer, not the seams heard.",
     ),
     Capability(
         "no_account", "Works with no account", "available", "not_yet",
