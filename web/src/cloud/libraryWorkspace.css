@@ -149,6 +149,8 @@
 .library-browser .library-cards .lw-check { grid-column: 2; grid-row: 1; }
 .library-browser .library-cards .lw-state { grid-column: 1 / -1; grid-row: 2; align-self: start; }
 .library-browser .library-cards .lw-why { display: block; }
+/* I86: the one hint for a song whose devices are all closed is always shown */
+.lw-why[data-hint] { display: block; }
 .library-browser .library-cards .lw-length { grid-column: 1; grid-row: 3; }
 .library-browser .library-rows.library-cards .lw-row .lw-actions { grid-column: 2; grid-row: 3; }
 
