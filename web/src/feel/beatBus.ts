@@ -280,12 +280,22 @@ function evict(target: Target) {
   targets.delete(target.kind);
 }
 
-/** Let an element answer the beat. One element per kind (the newest wins) and four at once at
- * most (the oldest leaves). The element must be decorative: the bus only ever changes its
- * transform, its opacity and its --energy. Returns a way to let it go, which settles it to rest. */
+/** Elements a newer one of the same kind pushed aside, newest last. When the newer one lets go the
+ * one before it answers the beat again, so the mini player gets its ring back when Listen closes. */
+const waiting = new Map<BeatKind, HTMLElement[]>();
+
+/** Let an element answer the beat. One element per kind (the newest wins, and the one it replaced
+ * returns when the newest lets go) and four at once at most (the oldest leaves). The element must
+ * be decorative: the bus only ever changes its transform, its opacity and its --energy. Returns a
+ * way to let it go, which settles it to rest. */
 export function registerBeatTarget(element: HTMLElement, kind: BeatKind): () => void {
   const existing = targets.get(kind);
-  if (existing) evict(existing);
+  if (existing) {
+    const queue = waiting.get(kind) ?? [];
+    queue.push(existing.element);
+    waiting.set(kind, queue);
+    evict(existing);
+  }
   if (targets.size >= MAX_TARGETS) {
     const oldest = targets.values().next().value;
     if (oldest) evict(oldest);
@@ -294,8 +304,16 @@ export function registerBeatTarget(element: HTMLElement, kind: BeatKind): () => 
   targets.set(kind, target);
   beatBusSync();
   return () => {
-    if (targets.get(kind) !== target) return;
+    const queue = waiting.get(kind);
+    if (targets.get(kind) !== target) {
+      // pushed aside earlier and never brought back: just forget it
+      if (queue) waiting.set(kind, queue.filter((held) => held !== element));
+      return;
+    }
     evict(target);
+    let back = queue?.pop();
+    while (back && !back.isConnected) back = queue?.pop();
+    if (back) targets.set(kind, { element: back, kind, rest: null, running: [], energy: '' });
     beatBusSync();
   };
 }
