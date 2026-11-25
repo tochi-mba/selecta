@@ -1,6 +1,7 @@
 /* The big screen: readable from across a room, high contrast, and still. The only motion is a line
-   arriving when it is new (the next song, a new request) and a very slow drift of the whole picture,
-   a few pixels over minutes, so a TV left on all night never holds one bright shape in one place.
+   arriving when it is new (the next song, a new request), the playing song's colour easing in when
+   the song changes, and a very slow drift of the whole picture, a few pixels over minutes, so a TV
+   left on all night never holds one bright shape in one place.
    It loads without tokens.css (its own small entry, rooms.vite.ts), so it keeps a small token block.
    Every colour below is copied from the tokens.css token of the same name; change tokens.css first,
    then this block to match. Sizes are in em of a body size fitted to the screen, the big-screen
@@ -26,6 +27,8 @@
   --radius-sm: 8px;         /* tokens.css --radius-sm */
   --motion-slow: 240ms;     /* tokens.css --motion-slow */
   --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* tokens.css --motion-ease */
+  --ambient-hue: 125;       /* tokens.css --ambient-hue */
+  --ambient-tint: oklch(0.3 0.07 var(--ambient-hue) / 0.38); /* tokens.css --ambient-tint */
   /* the roles this page paints with, as tokens.css names them */
   --surface-base: var(--bg);
   --surface-raised: var(--panel);
@@ -125,9 +128,25 @@ p { margin: 0.4em 0; }
 .d-round-bar i { display: block; height: 100%; border-radius: inherit; background: var(--selected); transition: width var(--motion-slow) var(--motion-ease); }
 .d-rising { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .d-rise { position: absolute; bottom: 14vh; width: 5vmin; height: 5vmin; fill: var(--selected); opacity: 0; animation: d-rise calc(var(--motion-slow) * 8) var(--motion-ease) forwards; }
+/* ADR-0477: the playing song's colour across the whole screen (ambient.ts). It is the song's own
+   hue, worked out from its id like its cover tile, so it says which song is on and never moves to
+   the sound. A new song eases the colour across slowly; nothing playing fades it out, and a pause
+   dims it. The tint is worked out on the layer itself, because a tint written on :root is fixed to
+   the root's hue. */
+@property --ambient-hue { syntax: '<number>'; inherits: true; initial-value: 125; }
+.d-ambient { --ambient-tint: oklch(0.3 0.07 var(--ambient-hue) / 0.38); position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(130% 100% at 30% 35%, var(--ambient-tint), transparent 80%); opacity: 0; transition: opacity calc(var(--motion-slow) * 8) var(--motion-ease), --ambient-hue calc(var(--motion-slow) * 8) var(--motion-ease); }
+.d-ambient[data-on] { opacity: 1; }
+.d-ambient[data-on][data-paused] { opacity: 0.5; }
+/* A request that reached the room since the screen started pops in, slowly enough to read from a
+   sofa, and the name of who asked stands out in ink for a few looks before it quietens again. */
+.d-list li.d-new { animation: d-pop calc(var(--motion-slow) * 3) var(--motion-ease) backwards; }
+.d-asker { transition: color calc(var(--motion-slow) * 4) var(--motion-ease); }
+.d-new .d-asker { color: var(--ink); font-weight: var(--weight-strong); }
+@media (forced-colors: active) { .d-ambient { display: none; } }
 /* a tall or narrow screen (a portrait TV, a tablet on a stand): the room on top, the code under it */
 @media (max-width: 900px), (orientation: portrait) { .d-room { grid-template-columns: 1fr; gap: 5vmin; } .d-qr { width: min(38vmin, 100%); } body { overflow: auto; } }
 @keyframes d-arrive { from { opacity: 0; transform: translateY(0.4em); } }
+@keyframes d-pop { from { opacity: 0; transform: scale(0.94); } 60% { opacity: 1; transform: scale(1.015); } }
 @keyframes d-drift { from { transform: translate(-0.8vmin, -0.6vmin); } to { transform: translate(0.8vmin, 0.6vmin); } }
 @keyframes d-turn { to { transform: rotate(360deg); } }
 @keyframes d-rise { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-46vh) scale(1.15); } }

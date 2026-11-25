@@ -13,6 +13,7 @@ import { ApiError, call, h, patch, replace, Song } from '../rooms/dom';
 import { qrSvg } from '../rooms/qr';
 import type { Pulse } from '../guest/social/social';
 import * as social from './social';
+import { paintAmbient } from './ambient';
 import './display.css';
 
 type Item = { request_id: string; song: Song | null; votes: number; nickname: string | null };
@@ -109,10 +110,32 @@ function drawPairing(): void {
       h('p', { className: 'd-muted' }, 'The code works once and lasts ten minutes.')));
 }
 
-/** A song on the big screen: its place, its title, then its artist (and who asked) more quietly. */
-function line(song: Song | null, key: string, by: string | null = null): HTMLElement {
-  return h('li', { 'data-key': key },
-    h('span', { className: 'd-song' }, h('strong', {}, song?.title ?? 'A song'), h('span', { className: 'd-muted' }, [song?.artist, by ? `asked by ${by}` : ''].filter(Boolean).join(' · '))));
+/** A song on the big screen: its place, its title, then its artist (and who asked) more quietly.
+ * `fresh` marks a request that reached the room since the screen started: it pops in and its
+ * asker's name stands out for a few looks, so the room sees who just asked. */
+function line(song: Song | null, key: string, by: string | null = null, fresh = false): HTMLElement {
+  return h('li', { 'data-key': key, className: fresh ? 'd-new' : undefined },
+    h('span', { className: 'd-song' }, h('strong', {}, song?.title ?? 'A song'),
+      h('span', { className: 'd-muted' }, song?.artist ?? '', song?.artist && by ? ' · ' : '', by ? h('span', { className: 'd-asker' }, `asked by ${by}`) : null)));
+}
+
+// Requests already on screen, by id, with when each was first seen. The first look of a room only
+// learns them; a request seen later is new news, and stays marked for NEW_FOR_MS.
+const NEW_FOR_MS = 9000;
+let seenAsks: Map<string, number> | null = null;
+let seenRoom = '';
+function freshAsks(code: string | null, items: Item[]): Set<string> {
+  const now = Date.now();
+  const learning = seenAsks === null || seenRoom !== (code ?? '');
+  if (learning) { seenAsks = new Map(); seenRoom = code ?? ''; }
+  const known = seenAsks as Map<string, number>;
+  const fresh = new Set<string>();
+  for (const item of items) {
+    if (!known.has(item.request_id)) known.set(item.request_id, learning ? 0 : now);
+    const since = known.get(item.request_id) ?? 0;
+    if (since && now - since < NEW_FOR_MS) fresh.add(item.request_id);
+  }
+  return fresh;
 }
 
 function drawRoom(view: View): void {
@@ -145,6 +168,9 @@ function drawRoom(view: View): void {
   const next = view.up_next.slice(0, 3);
   // ADR-0488: while the room votes for the next song, the vote takes the place of the lists
   const voting = social.roundPanel(view.pulse);
+  const fresh = freshAsks(view.code, view.upcoming);
+  // ADR-0477: the whole screen takes the playing song's colour
+  paintAmbient(now, view.music_paused);
   patch(document.getElementById('d-info') as HTMLElement,
     h('header', { className: 'd-top', 'data-key': 'top' }, brand(), h('h1', {}, view.room_name ?? 'Room'), view.branding?.welcome ? h('p', { className: 'd-muted' }, view.branding.welcome) : null),
     h('div', { className: 'd-playing', 'data-key': 'playing', 'data-on': playing },
@@ -159,7 +185,7 @@ function drawRoom(view: View): void {
       h('div', { 'data-key': 'asked-col' },
         h('h2', { 'data-key': 'asked-title' }, 'Requests coming up'),
         view.upcoming.length
-          ? h('ol', { className: 'd-list', id: 'd-upcoming' }, ...view.upcoming.slice(0, next.length ? 3 : 5).map((item) => line(item.song, item.request_id, item.nickname)))
+          ? h('ol', { className: 'd-list', id: 'd-upcoming' }, ...view.upcoming.slice(0, next.length ? 3 : 5).map((item) => line(item.song, item.request_id, item.nickname, fresh.has(item.request_id))))
           : h('p', { className: 'd-muted d-none', id: 'd-upcoming' }, 'No requests yet. Scan the code and ask for a song.'))));
   // ADR-0488: a heart rises for each love since the last look
   social.rise(now ? view.pulse : undefined);
@@ -170,6 +196,8 @@ async function tick(): Promise<void> {
     const view = await call<View>('/api/display/view');
     failures = 0;
     reconnecting(false);
+    // the colour belongs to a room's playing song; pairing, ended and recap screens have none
+    if (view.state !== 'paired') paintAmbient(null, false);
     if (view.state === 'unpaired') { shownCode = ''; await pair(); }
     else if (view.state === 'paired') { endedAt = 0; drawRoom(view); }
     else if (view.state === 'expired' || (view.state === 'waiting' && !pairingCode)) await pair();

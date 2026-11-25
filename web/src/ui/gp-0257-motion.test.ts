@@ -53,6 +53,16 @@ const INVENTORY: Record<string, Severity> = {
   'g-no-b': 'answers-you',
   // the Room display (display.css), continued
   'd-turn': 'waiting', // the ring while the display connects
+  'd-pop': 'arrives', // a request that just reached the room, with who asked (ADR-0477)
+  'd-rise': 'arrives', // a heart rising for a love a guest just sent (ADR-0488)
+  // the guest page's Sent (guest.css, ADR-0477): the tick's short arc in from Send
+  'g-arc': 'answers-you',
+  // the kiosk (kiosk.css, ADR-0477): a new screen from the side the player's day moves in, and the
+  // staff panel sliding in from the corner it was opened from
+  'k-enter-forward': 'arrives',
+  'k-enter-back': 'arrives',
+  'k-scrim-in': 'answers-you',
+  'k-panel-in': 'answers-you',
   // the host's request list (rooms.css)
   'ask-in': 'arrives', // a guest's request arriving in the list
   // Cloud pages (cloud-ui.css)
@@ -118,6 +128,7 @@ const INVENTORY: Record<string, Severity> = {
   // Rooms and devices (styles/feel-rooms.css)
   'feel-qr-wave': 'arrives', // the room's QR code, opacity only, so it scans as drawn
   'feel-beacon': 'arrives', // this device's edge lights once
+  'feel-speaker-pulse': 'arrives', // one pulse from the old speaker to the new, when the sound really moved
   // the local app (styles/feel-local.css)
   'feel-word-light': 'arrives', // a word the first scan found
   // Lucy (styles/lucy.css)

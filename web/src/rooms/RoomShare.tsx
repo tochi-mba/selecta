@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Action, Workspace } from '../ui/controls';
 import { Icon } from '../ui/Icon';
-import { useFeelPart } from './feelHooks';
+import { growFrom, useFeelPart } from './feelHooks';
 import { qrSvg } from './qr';
 
 // How guests get in: the QR code, the room code in large type, and the link with Copy. The same
@@ -45,7 +45,9 @@ function RoomCode({ code, arriving, testId }: { code: string | null; arriving: b
 }
 
 export function RoomShare({ name, code, link, copied, copy, onFullScreen, arriving = false }: {
-  name: string; code: string | null; link: string; copied: boolean; copy: () => Promise<unknown>; onFullScreen: () => void;
+  name: string; code: string | null; link: string; copied: boolean; copy: () => Promise<unknown>;
+  /** `from` is where the small code was, so the large one can grow out of it */
+  onFullScreen: (from?: DOMRect) => void;
   /** the room was just opened on this page: the code and the QR arrive as a moment (ADR-0477) */
   arriving?: boolean;
 }) {
@@ -58,7 +60,7 @@ export function RoomShare({ name, code, link, copied, copy, onFullScreen, arrivi
       </header>
       {link && (
         <div className="room-share-body">
-          <button type="button" className="room-qr-button" onClick={onFullScreen} aria-label="Show QR code full screen" title="Show full screen">
+          <button type="button" className="room-qr-button" onClick={(event) => onFullScreen(event.currentTarget.querySelector('.room-qr')?.getBoundingClientRect())} aria-label="Show QR code full screen" title="Show full screen">
             <span className="room-qr" data-testid="room-qr" data-link={link} data-qr-wave={wave || undefined} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${name}`, wave) }} />
           </button>
           <div className="room-share-words">
@@ -79,11 +81,25 @@ export function RoomShare({ name, code, link, copied, copy, onFullScreen, arrivi
 }
 
 /** The QR code and room code as large as the screen allows, for everyone in the room to scan. */
-export function RoomQrScreen({ name, code, link, onClose }: { name: string; code: string | null; link: string; onClose: () => void }) {
+export function RoomQrScreen({ name, code, link, onClose, from }: {
+  name: string; code: string | null; link: string; onClose: () => void;
+  /** where the small code was on the page when this was opened from it; it grows from there */
+  from?: DOMRect | null;
+}) {
   const stage = useRef<HTMLDivElement>(null);
+  const large = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
   // shown to a room full of guests on purpose: the code comes in as a moment each time it is opened
   const wave = useFeelPart('moments');
+  // ADR-0477: opened from the card, the code enlarges out of the small one. Measured on the next
+  // frame, once the view is laid out, and before that frame is painted.
+  const grownFrom = useRef(from);
+  useEffect(() => {
+    const start = grownFrom.current;
+    if (!start) return undefined;
+    const frame = window.requestAnimationFrame(() => { if (large.current) growFrom(large.current, start); });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
   useEffect(() => {
     const changed = () => setFull(document.fullscreenElement === stage.current);
     document.addEventListener('fullscreenchange', changed);
@@ -101,7 +117,7 @@ export function RoomQrScreen({ name, code, link, onClose }: { name: string; code
   return (
     <Workspace title={`Join ${name}`} onClose={onClose}>
       <div className="room-qr-screen" ref={stage} data-testid="room-qr-screen">
-        <div className="room-qr room-qr-large" data-qr-wave={wave || undefined} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${name}`, wave) }} />
+        <div ref={large} className="room-qr room-qr-large" data-qr-wave={wave || undefined} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${name}`, wave) }} />
         <div className="room-qr-words">
           <p className="room-eyebrow">Scan to ask for songs</p>
           <p className="room-qr-name">{name}</p>
