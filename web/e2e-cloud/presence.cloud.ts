@@ -15,16 +15,20 @@ test('a guest leaving and a screen disconnecting update the host panel by themse
   const guest = await phone.newPage();
   await guest.goto(joinPath);
   await guest.getByRole('button', { name: 'Join the room' }).click();
-  const nickname = ((await guest.locator('#g-head .g-muted').textContent()) ?? '').replace(/^You're (.+?)\. .*$/, '$1');
+  // the guest's nickname is the button that changes it ("You're Fox. Change nickname")
+  const nickname = ((await guest.getByRole('button', { name: /^You're / }).locator('.g-name-text').textContent()) ?? '').trim();
+  expect(nickname).not.toBe('');
   const row = host.getByTestId('room-guest').filter({ hasText: nickname });
   await expect(row).toContainText('Here now', { timeout: 5_000 });
   await expect(host.getByTestId('room-guests-heading')).toHaveText('Guests (1 here)');
 
   // The phone loses the server for a moment: a calm note, then back by itself.
   await phone.setOffline(true);
-  await expect(guest.locator('#g-notice')).toHaveText('Reconnecting...', { timeout: 15_000 });
+  // said in the connection banner at the top, which no screen change removes
+  const net = guest.locator('#g-net-text');
+  await expect(net).toHaveText("You're offline. Reconnecting...", { timeout: 15_000 });
   await phone.setOffline(false);
-  await expect(guest.locator('#g-notice')).toHaveText('Back in the room.', { timeout: 20_000 });
+  await expect(net).toHaveText('Back in the room', { timeout: 20_000 });
 
   const tv = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const screen = await tv.newPage();

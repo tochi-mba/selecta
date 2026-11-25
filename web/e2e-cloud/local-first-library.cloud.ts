@@ -11,6 +11,10 @@ import { asLocalFirst, mediaDbName, openLocalFirst, seeded } from './localFirst'
 // (localFirstAvailability.test.ts) with a handle that asks again.
 
 const row = (page: Page, title: string) => page.locator('li.song-row', { hasText: title });
+/** A browser row's one status chip (02889fe5): whether it plays here, or the step that makes it.
+ * Where it plays from rides in the chip's title. */
+const chip = (page: Page, title: string) => row(page, title).locator('.lw-state .status');
+const HOSTED = 'Plays from your hosted copy in SelectaDJ Cloud.';
 
 test('a grandfathered account sees hosted copies, songs on its other devices and songs on none', async ({ page, request }) => {
   const user = listener('lf-library-hosted');
@@ -18,14 +22,16 @@ test('a grandfathered account sees hosted copies, songs on its other devices and
   await seeded(request, user, { songs: 1, local_songs: 3, local_titles: ['Song 1', 'Away song', 'Lost song'], local_absent: 1 });
   await openLocalFirst(page, user, '/library', { hosted: true });
 
-  await expect(row(page, 'Song 1').getByText('Hosted copy')).toBeVisible();
-  await expect(row(page, 'Away song').getByText('Not on this device')).toBeVisible();
-  await expect(row(page, 'Away song').getByText('It is on another of your devices. Connect it here to play it here.')).toBeVisible();
-  await expect(row(page, 'Lost song').getByText('Missing on every device')).toBeVisible();
+  await expect(chip(page, 'Song 1')).toHaveText('Ready');
+  await expect(chip(page, 'Song 1')).toHaveAttribute('title', HOSTED);
+  await expect(chip(page, 'Away song')).toHaveText('Not in this browser yet');
+  await expect(chip(page, 'Away song')).toHaveAttribute('title', 'Choose your music folder in this browser to play it here.');
+  await expect(chip(page, 'Lost song')).toHaveText('Missing');
+  await expect(chip(page, 'Lost song')).toHaveAttribute('title', 'It is not on any of your devices right now. Connect it again to play it.');
 
-  // the details panel's Play line gives the same answer as the row
+  // the details panel's Play line gives the same answer as the row: not playable here
   await page.getByRole('button', { name: /^Details for Away song / }).click();
-  await expect(page.getByText('Not on this device').last()).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Away song' })).toContainText('Not on this device');
 });
 
 test('a new local-first member sees the songs connected on this device as available here', async ({ page, request }) => {
@@ -37,15 +43,20 @@ test('a new local-first member sees the songs connected on this device as availa
   await page.goto('/api/status');
   await page.evaluate(async ({ hereId, movedId, dbName }) => {
     const root = await navigator.storage.getDirectory();
-    const fileFor = async (name: string) => {
+    const fileFor = async (name: string, bytes: Uint8Array) => {
       const handle = await root.getFileHandle(name, { create: true });
       const writing = await handle.createWritable();
-      await writing.write(new Uint8Array([1, 2, 3, 4]));
+      await writing.write(bytes);
       await writing.close();
       return handle;
     };
-    const here = await fileFor('here-song.wav');
-    const moved = await fileFor('moved-song.wav');
+    // a connected file's fingerprint is its bytes' own: a file whose bytes differ is a changed
+    // file, and SelectaDJ stops counting it as this song (media/resolve.ts)
+    const sha256 = async (bytes: Uint8Array) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    const hereBytes = new Uint8Array([1, 2, 3, 4]);
+    const here = await fileFor('here-song.wav', hereBytes);
+    const moved = await fileFor('moved-song.wav', new Uint8Array([5, 6, 7, 8]));
+    const hereSha = await sha256(hereBytes);
     // the file behind this handle goes away, as a moved or deleted file does
     await root.removeEntry('moved-song.wav');
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -57,7 +68,7 @@ test('a new local-first member sees the songs connected on this device as availa
     await new Promise<void>((resolve, reject) => {
       const writing = db.transaction('songs', 'readwrite');
       const songs = writing.objectStore('songs');
-      songs.put({ songId: hereId, identity: { content_sha256: 'a'.repeat(64), title: 'Here song', artist: 'E2E Local' }, ref: { kind: 'handle', handle: here }, importedAt: Date.now() });
+      songs.put({ songId: hereId, identity: { content_sha256: hereSha, title: 'Here song', artist: 'E2E Local' }, ref: { kind: 'handle', handle: here }, importedAt: Date.now() });
       songs.put({ songId: movedId, identity: { content_sha256: 'b'.repeat(64), title: 'Moved song', artist: 'E2E Local' }, ref: { kind: 'handle', handle: moved }, importedAt: Date.now() });
       writing.oncomplete = () => resolve();
       writing.onerror = () => reject(writing.error);
@@ -66,10 +77,14 @@ test('a new local-first member sees the songs connected on this device as availa
   }, { hereId, movedId, dbName: mediaDbName(made.workspace_id) });
 
   await page.goto('/library');
-  await expect(row(page, 'Here song').getByText('On this device')).toBeVisible();
+  await expect(chip(page, 'Here song')).toHaveText('Ready');
+  await expect(chip(page, 'Here song')).toHaveAttribute('title', 'The file is connected here and can play.');
   // its file no longer opens here, and the seeding device still reports it
-  await expect(row(page, 'Moved song').getByText('Not on this device')).toBeVisible();
-  await expect(row(page, 'Other song').getByText('Not on this device')).toBeVisible();
+  await expect(chip(page, 'Moved song')).toHaveText('Not in this browser yet');
+  await expect(chip(page, 'Other song')).toHaveText('Not in this browser yet');
   // a new member has no hosted copies, so nothing claims one
-  await expect(page.getByText('Hosted copy')).toHaveCount(0);
+  await expect(page.locator(`[title="${HOSTED}"]`)).toHaveCount(0);
+  // and the row's answer holds once the files have been checked against their fingerprints
+  await page.waitForTimeout(20_000);
+  await expect(chip(page, 'Here song')).toHaveText('Ready');
 });
