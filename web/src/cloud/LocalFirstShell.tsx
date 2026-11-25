@@ -612,9 +612,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     }
     if (!pressed && !soundAllowedHere()) { setAskedToPlay(ask); return 'needs_gesture'; }
     // another device became the speaker meanwhile (its own Play here instead): stand down
-    if ((await playback.refreshSession())?.speaker === 'elsewhere') return 'declined';
+    // (I85: a move asks for exactly that, so it takes the music over)
+    if (!ask.move && (await playback.refreshSession())?.speaker === 'elsewhere') return 'declined';
     setMixData(mix);
-    player.startFreeOnce = true;
+    player.startFreeOnce = !ask.move;
+    player.startMovingOnce = !!ask.move;
     hereOnPurpose.current = true;
     void shellPlayer.playFrom(0);
     return 'starting';
@@ -681,7 +683,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     recipes, request, refreshMix, setMixData,
     audibleHere: playback.view?.speaker === 'here' && now.phase !== 'idle',
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
-    askToPlay: (device, mixId) => void playOn.ask(device, mixId),
+    askToPlay: (device, mixId, move) => void playOn.ask(device, mixId, move),
+    devices: () => holdings.devices ?? [],
   });
   // ADR-0475: with nobody playing elsewhere, the one rule decides where Play makes the sound
   const where = useWhereToPlay({

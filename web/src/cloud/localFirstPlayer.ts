@@ -232,6 +232,9 @@ export class LocalFirstPlayer implements PlayerLike {
   /** Asked by another device to play: the next start happens only while no other device is
    * the speaker, so a "Play here instead" pressed there meanwhile is never overturned. */
   startFreeOnce = false;
+  /** ADR-0475 I85: asked to take the music over ("Move and play"): the next start moves it here
+   * from the device that is playing, as Play here instead does, from the asked position. */
+  startMovingOnce = false;
 
   async playHereInstead(): Promise<void> {
     if (!this.facts.mix.length) return this.publish(NOTHING_TO_PLAY);
@@ -245,8 +248,10 @@ export class LocalFirstPlayer implements PlayerLike {
       // A new speaker starts where this press asked (the first play of a visit used to carry on
       // from wherever the last mix was left); its heartbeat then tells the session (ADR-0415).
       const free = this.startFreeOnce;
+      const moving = this.startMovingOnce;
       this.startFreeOnce = false;
-      const problem = await this.actions.playHere({ song_index: position, offset_ms: Math.max(0, Math.round(offset * 1000)) }, free ? 'free' : undefined);
+      this.startMovingOnce = false;
+      const problem = await this.actions.playHere({ song_index: position, offset_ms: Math.max(0, Math.round(offset * 1000)) }, moving ? true : free ? 'free' : undefined);
       return this.publish(problem);
     }
     await this.seekTo(position, offset);

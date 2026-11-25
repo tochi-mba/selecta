@@ -10,7 +10,8 @@ import { houseTab } from './audioTab';
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 /** The ask as the workspace event stream delivers it (`playback.start_ask`). */
-export type StartAsk = { ask_id: string; target_device_id: string; target_name: string; asker_device_id: string; asker_name: string; mix_id: string | null; expires_at: number };
+/** `move`: ADR-0475 I85, take the music over from the device playing, not only start when free. */
+export type StartAsk = { ask_id: string; target_device_id: string; target_name: string; asker_device_id: string; asker_name: string; mix_id: string | null; move?: boolean; expires_at: number };
 /** What the asked device said (`playback.start_answer`). */
 export type StartResult = 'starting' | 'needs_music' | 'needs_gesture' | 'no_mix' | 'declined';
 export type StartAnswer = { ask_id: string; asker_device_id: string; target_device_id: string; target_name: string; result: StartResult };
@@ -77,7 +78,7 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
   }, [cloud, deviceId]);
 
   /** Ask `target` to start. `mixId`: the saved mix to play, or null for the one it already has. */
-  const ask = useCallback(async (target: { device_id: string; name: string }, mixId: string | null) => {
+  const ask = useCallback(async (target: { device_id: string; name: string }, mixId: string | null, move = false) => {
     if (!deviceId || !enabled) return;
     stopWaiting();
     const told = (phase: AskPhase) => setState({ phase, device: target.name, deviceId: target.device_id });
@@ -85,7 +86,7 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
     try {
       const made = await cloud<StartAsk>('/playback/start-asks', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ device_id: deviceId, target_device_id: target.device_id, ...(mixId ? { mix_id: mixId } : {}) }),
+        body: JSON.stringify({ device_id: deviceId, target_device_id: target.device_id, ...(mixId ? { mix_id: mixId } : {}), ...(move ? { move: true } : {}) }),
       });
       waiting.current = { askId: made.ask_id, timer: window.setTimeout(() => { waiting.current = { askId: null, timer: 0 }; told('no_answer'); }, START_ASK_WAIT_MS) };
     } catch (problem) {
