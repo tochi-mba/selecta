@@ -135,6 +135,18 @@ describe('Workspace overview in the browser', () => {
 });
 
 describe('Workspace sources in the browser', () => {
+  // today's surface, as it stays with cloud.music_folders off
+  beforeEach(() => { setFlags({ 'cloud.music_folders': false }); });
+
+  it('shows Your music folders in place of the one remembered folder with cloud.music_folders on', async () => {
+    setFlags({ 'cloud.music_folders': true });
+    show('sources');
+    expect(screen.getByRole('region', { name: 'Your music folders' })).toBeVisible();
+    expect(screen.getByRole('button', { name: /Add a folder/ })).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Connected in this browser' })).toBeNull();
+    expect(screen.getByText('9 of 12 songs open here')).toBeVisible();
+  });
+
   it('shows Connect music and says no folder is remembered', async () => {
     show('sources');
     expect(screen.getByRole('region', { name: 'Connect music' })).toBeVisible();
