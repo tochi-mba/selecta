@@ -115,6 +115,7 @@
       "routes": [
         "GET /api/hosted/songs",
         "POST /api/hosted/songs/prepare",
+        "POST /api/hosted/songs/{asset_id}/retry",
         "POST /api/hosted/mixes/plan",
         "POST /api/hosted/mixes/render",
         "POST /api/hosted/mixes/export",

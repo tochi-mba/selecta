@@ -270,7 +270,8 @@ Each makes worker jobs only for the caller's own workspace; nothing is stored in
 
 | Route | Side effect |
 |---|---|
-| `POST /api/hosted/songs/prepare` | Queues `analyse.song` for stored songs with no analysis (and, with `retry`, failed ones) |
+| `POST /api/hosted/songs/prepare` | Queues `analyse.song` for stored songs with no analysis, replaces a job that can never finish (no declared output, cancelled, evicted, or failed on our side up to 3 times) by cancelling it and queueing a fresh one in one transaction, and, with `retry`, renews failed ones |
+| `POST /api/hosted/songs/{asset_id}/retry` | For one of the caller's own songs: cancels its failed or stuck `analyse.song` job and queues a fresh one (never two live jobs) |
 | `POST /api/hosted/mixes/plan` | None stored: reads analyses and returns the local planner's order and moves |
 | `POST /api/hosted/mixes/render` | Queues `play.proxy` and `seam.render` jobs the mix still needs, then returns its timeline with signed links |
 | `POST /api/hosted/mixes/export` | Queues one `export.render` job for the mix's songs |

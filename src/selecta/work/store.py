@@ -209,6 +209,32 @@ class JobStore:
         with self._tx(workspace_id, heads_first=True) as (connection, now):
             return lifecycle.cancel(connection, workspace_id, job_id, now)
 
+    def replace(self, workspace_id: str, job_id: str, spec: JobSpec,
+                still_broken: Callable[[Job], bool]) -> Enqueued | None:
+        """Swap a job that can never succeed for a fresh one, in one transaction.
+
+        The old job is locked first and `still_broken(job)` asked again under the lock, so two
+        tabs, or a replacement racing maintenance (a retry falling due) or a claim, end with one
+        live job: the second caller finds the old job already cancelled and `enqueue` returns
+        the first caller's new one (the live idempotency index backs this up). A job a worker
+        holds right now is only asked to stop; the next call replaces it once it has. Returns
+        the live job, or None while waiting for a worker to let go.
+        """
+        from selecta.work.model import ACTIVE, TERMINAL
+        from selecta.work.state import lock_job
+
+        with self._tx(workspace_id, heads_first=True) as (connection, now):
+            old = lock_job(connection, job_id)
+            if old.workspace_id != workspace_id or old.state == JobState.CANCEL_REQUESTED:
+                return None
+            if old.state not in TERMINAL:
+                if not still_broken(old):
+                    return Enqueued(old, False)
+                old = lifecycle.cancel(connection, workspace_id, job_id, now)
+                if old.state in ACTIVE:
+                    return None
+            return enqueue.enqueue(connection, spec, now)
+
     def retry(self, workspace_id: str, job_id: str) -> Job:
         with self._tx(workspace_id, heads_first=True) as (connection, now):
             return retrying.retry(connection, workspace_id, job_id, now)
