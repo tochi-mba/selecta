@@ -53,15 +53,17 @@ layer bits `(b1 >> 1) & 3 != 0`, bitrate index `b2 >> 4 != 15`, sample rate inde
 `(b2 >> 2) & 3 != 3`. With no ID3v2 tag the header must be at offset 0. No header before the end
 (as computed below): no id.
 
-**End.** Start with `end` = the file size, then strip trailing tags:
+**End.** Let `start` be where the leading ID3v2 tags end (0 when there are none). Start with
+`end` = the file size, then strip trailing tags; each check below applies only when its whole
+block lies at or after `start`, and a block that would reach before `start` is no id:
 
-1. ID3v1, once: when `end >= 128` and the 128 bytes before `end` start with `TAG`, `end -= 128`.
-   Then when `end >= 227` and the 227 bytes before `end` start with `TAG+`, `end -= 227`.
+1. ID3v1, once: when the 128 bytes before `end` start with `TAG`, `end -= 128`; and only then,
+   when the 227 bytes before `end` start with `TAG+`, `end -= 227`.
 2. Then repeat until none applies:
-   - APEv2: the 32-byte footer before `end` starts with `APETAGEX`; version (LE u32 at 8) is 1000
-     or 2000; tag size `s` (LE u32 at 12) counts the items and the footer; flags (LE u32 at 20)
-     bit 31 says a 32-byte header precedes the items. `end -= s + (32 if bit 31 else 0)`. A size
-     below 32 or past the start of the audio: no id.
+   - APEv2: the 32-byte footer before `end` starts with `APETAGEX`. Version (LE u32 at 8) must
+     be 1000 or 2000 and tag size `s` (LE u32 at 12, counting the items and the footer) at
+     least 32, or no id. Flags (LE u32 at 20) bit 31 says a 32-byte header precedes the items.
+     `end -= s + (32 if bit 31 else 0)`.
    - Lyrics3v2: the 9 bytes before `end` are `LYRICS200`, the 6 before those are ASCII digits
      giving `n`; the block is `n + 15` bytes and starts with `LYRICSBEGIN`. `end -= n + 15`.
      Digits that are not digits, or a block not starting `LYRICSBEGIN`: no id.
@@ -77,8 +79,9 @@ is kept: it is part of the audio stream and taggers do not rewrite it.
 After any ID3v2 tags, `fLaC`, then metadata blocks: one header byte (bit 7: last block, bits 0
 to 6: type) and a 24-bit big-endian length, then that many bytes. The first block must be
 STREAMINFO (type 0, length 34); type 127 is invalid. Walk until a block with the last flag. The
-next two bytes must be a frame sync: `0xFF` then `0xF8` or `0xF9`. **Hash** from that frame to the
-end, minus a trailing ID3v1 tag (the last 128 bytes, if they start `TAG`). Anything past the end,
+next two bytes must be a frame sync: `0xFF` then `0xF8` or `0xF9`. **Hash** from that frame (at
+`f`) to the end, minus a trailing ID3v1 tag: the last 128 bytes, when `size - 128 >= f` and they
+start `TAG`. Anything past the end,
 or a missing sync: no id. Tag edits rewrite VORBIS_COMMENT, PICTURE and PADDING blocks, which this
 skips.
 
