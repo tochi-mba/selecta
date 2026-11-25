@@ -1,5 +1,6 @@
 import { accountFlagOn, type FlagId } from '../flags';
 import { userLocale } from '../ui/format';
+import type { LucyWindows } from './lucyUsage';
 // What the Cloud site knows about the API: the shapes it answers with, how a refusal is read,
 // and the few formatting helpers every Cloud page shares.
 
@@ -10,6 +11,9 @@ export type Usage = {
   analysis_today: Allowance;
   exports_month: Allowance & { retention_days: number; blocked: boolean };
   lucy_turns_month: LucyTurns;
+  /** ADR-0484: Lucy's usage as a share left of the session and the week. Absent from a server
+   * that still counts turns; the meters then stay as they were. */
+  lucy_windows?: LucyWindows | null;
   /** Songs in the library against the plan's soft cap: mentioned calmly, never a refusal. */
   library?: { songs: number; soft_cap: number };
 };

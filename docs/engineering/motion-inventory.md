@@ -41,6 +41,7 @@ every token to 0ms.
 | Request pill | a request is working | `request-pulse` | 1.8s loop, exception | none |
 | Pending line | a render is in line | `pending-flow` | 2.4s loop, exception | none |
 | Lucy progress | Lucy is working | `lucy-slide` when the length is unknown; width when known | 1.6s loop exception; `--motion-reveal` | none |
+| Lucy usage ladders (`views/LucyUsageLevels.tsx`, `.lucy-ladder-seg`) | a segment goes out as usage is counted, or comes back when a window resets | the segment's background colour changes once; no keyframes and no loop | `--motion-reveal` with `--motion-ease` | none: `transition: none` under Still and reduced motion; the label's words carry the figures |
 | Meter (`ui/Meter`) | the value changes; no value known | fill width follows the value; indeterminate fill runs `lucy-slide` | `--motion-reveal`; `--motion-loop-slide` 1.6s loop | none; the words still say the value |
 | Drag in the editor | dragging a song | drop line follows the pointer, no transition | pointer | unchanged (it is the pointer) |
 | Spectrum visualizer | playing on Listen | canvas redrawn from the analyser | at most 15fps, stops when hidden or off screen | one still frame |

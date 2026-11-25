@@ -83,6 +83,12 @@ export type Message = {
   created_at: When;
 };
 
+/** Why Lucy could not answer in full (ADR-0483 rule 3), carried on the reply's `meta.limit`, with
+ * the time it ends already in words and the next steps that apply to this account. */
+export type LimitCause = 'session_lighter' | 'session' | 'week' | 'lucy_off' | 'backstop' | 'platform' | 'no_model';
+export type LimitNext = 'wait' | 'plans' | 'extra';
+export type LimitNotice = { cause: LimitCause; back_words: string | null; resets_at: number | null; next: LimitNext[] };
+
 export type RunState =
   | 'interpreting' | 'running_tools' | 'evaluating' | 'preparing' | 'streaming' | 'awaiting_user'
   | 'awaiting_permission' | 'interrupted' | 'failed' | 'completed' | 'cancelled' | 'superseded';

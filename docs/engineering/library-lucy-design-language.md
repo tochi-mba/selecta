@@ -15,7 +15,7 @@ where each is allowed. `web/src/styles/lx-design-language.test.tsx` keeps it tru
 | Ink and depth | `--text`, `--text-soft`, `--marker`, `--primary-ink`, `--primary-fill`, `--primary-edge`, `--shadow-raised`, `--shadow-overlay` | Body text and quieter hints; list markers; the one filled "Playing" pill; raised cards and overlays only. |
 | Edges | `--border`, `--border-strong`, `--edge-interactive`, `--edge-overlay`, `--radius-hair`, `--radius-sm`, `--radius`, `--radius-pill` | Cards and messages use `--border` and `--radius`; chips use `--radius-pill`. |
 | Focus and selection | `--focus`, `--selected` | Focus rings come from the shared `:focus-visible` rule; Lucy's tabs and selected rows mark selection with `--selected` plus `aria-selected`/`aria-pressed`. |
-| Status | `--status-ready`, `--status-working`, `--status-warning`, `--status-failed`, `--status-request`, `--status-action` | Only through the `Status` component and the lifecycle pill, which always carry words (see below). |
+| Status | `--status-ready`, `--status-working`, `--status-warning`, `--status-failed`, `--status-request`, `--status-action` | Only through the `Status` component and the lifecycle pill, which always carry words (see below), and Lucy's usage (ADR-0484): the full meter's near and spent lines and the twin level meter's ladders use `--status-warning` and `--status-failed`, always with a mark, an outline or words as well, because the two tokens are one colour. The next-step block at a limit (ADR-0483) carries `--status-action` down its start edge. |
 | Layout | `--header-block`, `--bottom-chrome`, `--keyboard-inset`, `--control-height`, `--layer-sticky` | Sticky panes stop above the mini-player and nav (`--bottom-chrome`) and the phone keyboard (`--keyboard-inset`). |
 
 Scope boundaries: Lucy's selectors all start with `.lucy` or sit under `.page.lucy`; Library's start
@@ -38,6 +38,8 @@ song row is also known by its occurrence id, so the same recording twice is two 
 | Proposed | "Proposed - not built" | dashed outline |
 | Saved | "Saved draft" | solid outline |
 | Playing | "Playing" | filled pill |
+| Lucy usage, nearly used up | "Nearly used up", with "N% left" | warning mark on the full meter; a marker above that ladder on the twin level meter |
+| Lucy usage, used up | "Used up", with "0% left" | minus mark on the full meter; that ladder drawn empty inside a dashed outline |
 
 ## Motion (LX-0364-06)
 
