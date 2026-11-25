@@ -179,8 +179,10 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await expect.poll(() => held.batches()).toBe(2);
     await page.reload();
     held.release();
-    const offer = page.getByRole('note').filter({ hasText: 'Your import stopped part way' });
-    await expect(offer).toContainText('choose the same files again');
+    // the offer's words since 4ad97ad4: what stopped, with its count, and the one step
+    const offer = page.getByRole('note').filter({ hasText: 'stopped part way' });
+    await expect(offer).toContainText(/\d+ of 10 checked/);
+    await expect(offer).toContainText('Choose the same songs again');
     await expect(offer).toContainText('SelectaDJ carries on from there');
     await page.locator('.connect-music input[accept="audio/*"]').setInputFiles(music);
     await expect(songCount(page, 10)).toBeVisible({ timeout: 60_000 });
