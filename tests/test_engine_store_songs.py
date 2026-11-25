@@ -256,7 +256,7 @@ def test_the_migration_meets_an_existing_column_and_runs_once(home):
     after = _rows(home.db_path)
     assert {row["workspace_id"] for table in FACTS for row in after[table]} == {"local"}
     assert _hashes(home.db_path) == {1: "kept", 2: None, 3: None}
-    assert _rows(home.db_path, ("workspace_id", "content_hash")) == before
+    assert _rows(home.db_path, ("workspace_id", "content_hash", "audio_id")) == before
     schema, rows = _schema(home.db_path), _rows(home.db_path)
     db._CHECKED.clear()  # the full check again, as a new process would
     _start(home.db_path)
@@ -272,7 +272,8 @@ def test_the_hash_job_fills_only_missing_hashes_and_resumes(home):
     store = library.store_for(home.db_path)
     # song 3's file changed after the scan, so its row no longer describes it
     (home.home / "music" / "3.flac").write_bytes(b"changed" * 500)
-    before = _rows(home.db_path, ("content_hash",))
+    # library.audio_identity is on by default, so the job fills audio_id too ("" for these files)
+    before = _rows(home.db_path, ("content_hash", "audio_id"))
     assert song_hashes.fill_missing(store, 0, limit=1) == (1, 1)
     assert _hashes(home.db_path)[2] is None
     filled, last = song_hashes.fill_missing(store, 1, limit=5)
@@ -280,7 +281,7 @@ def test_the_hash_job_fills_only_missing_hashes_and_resumes(home):
     assert song_hashes.fill_missing(store, last) == (0, None)
     hashes = _hashes(home.db_path)
     assert hashes[1] and hashes[2] and hashes[3] is None
-    assert _rows(home.db_path, ("content_hash",)) == before
+    assert _rows(home.db_path, ("content_hash", "audio_id")) == before
     assert song_hashes.fill_all(store) == 0
     assert _hashes(home.db_path) == hashes
 
