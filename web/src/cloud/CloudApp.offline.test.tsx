@@ -33,6 +33,10 @@ const { CloudApp, SIGN_IN_TIMING } = await import('./CloudApp');
 const { configureConnection, reportOffline } = await import('./connection');
 const { rememberAccount, rememberedAccount } = await import('./offlineCache');
 const { importMarkerKey } = await import('./importSession');
+// The local-first shell is its own chunk and has grown with the feel system (ADR-0477): load it once
+// here so transforming it is not counted against the offline open below, which still waits on the
+// shell's own lazy import through CloudApp.
+await import('./LocalFirstShell');
 
 const localFirst = (): Account => ({
   ...cloudAccount(),

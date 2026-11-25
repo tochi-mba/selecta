@@ -54,8 +54,12 @@ beforeEach(() => {
   });
 });
 
-/** The figure in an overview tile, found by the tile's label. */
-const tile = (label: string) => screen.getByText(label).closest('a')?.querySelector('strong')?.textContent;
+/** The figure in an overview tile, found by the tile's label: the words a screen reader hears, which
+ * under motion are the rolled figure's own visually hidden copy (ADR-0477 NumberRoll). */
+const tile = (label: string) => {
+  const figure = screen.getByText(label).closest('a')?.querySelector('strong');
+  return (figure?.querySelector('.number-roll > .visually-hidden') ?? figure)?.textContent;
+};
 
 describe('the tabs of the browser Workspace', () => {
   it('offers Overview, Sources, Storage and Diagnostics, each at its own address', () => {

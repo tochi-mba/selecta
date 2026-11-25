@@ -6,6 +6,7 @@ import { CloudError } from './api';
 import { Billing, LUCY_LEVEL_WORDS, yearlyComparison } from './Billing';
 import { checkoutAvailable, checkoutBody, checkoutProblem, consentVersionFor, NO_CONSENT, useCheckoutReturn } from './checkout';
 import { Meters } from './Meters';
+import { feelOff } from '../test/feel';
 
 afterEach(() => { window.history.replaceState({}, '', '/'); vi.useRealTimers(); });
 
@@ -28,6 +29,8 @@ describe('the meters', () => {
   });
 
   it('say fair use instead of drawing a bar with no limit', () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     const account = cloudAccount({ plan: 'premium' });
     account.usage!.exports_month = { ...account.usage!.exports_month, limit: null };
     render(<Meters account={account} />);
@@ -244,6 +247,8 @@ describe('Plan & billing for a local-first account (BF-0464-03)', () => {
     ({ ...cloudAccount(), experience: { local_first: true, hosted: false }, features, feature_locks: locks });
 
   it('sells Rooms, Lucy, devices and discovery with no storage headline, at the same prices', async () => {
+    // pins the prices as sentences with the feel off; with motion on each price rolls (ADR-0477)
+    feelOff();
     render(<Billing account={localFirst()} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
     const standard = planCard('Standard');
     const premium = planCard('Premium');

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { MixData } from '../api';
@@ -71,6 +71,7 @@ describe('saved browser mixes, laid out like local drafts', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete mix' }));
     expect(recipes.remove).toHaveBeenCalledWith('mix-1');
     expect(recipes.current()).toBeNull();
-    expect(notify).toHaveBeenCalledWith('Deleted Friday.');
+    // under motion the row folds away first, then the list is read again and it says so (ADR-0477)
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Deleted Friday.'));
   });
 });
