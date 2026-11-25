@@ -13,6 +13,7 @@ import type { LimitBounds } from './RoomLimits';
 import { RoomRequests, type RoomRequestsMix } from './RoomRequests';
 import { RoomSettings, SettingsSection, type RoomSettingsValue, type SettingsGroup } from './RoomSettings';
 import { CopyWords, RoomQrScreen, RoomShare, useCopyLink } from './RoomShare';
+import { RoomRecap } from './RoomRecap';
 import { RoomSocial, type SocialSettings } from './RoomSocial';
 import { flagOn } from '../flags';
 import { RoomStart } from './RoomStart';
@@ -77,6 +78,9 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const [loadError, setLoadError] = useState('');
   const [pairing, setPairing] = useState('');
   const [saved, setSaved] = useState<SettingsGroup | null>(null);
+  // the room this page last showed, so its recap can be read once it has ended
+  const lastRoom = useRef('');
+  if (panel) lastRoom.current = panel.room.id;
   const [qrOpen, setQrOpen] = useState(false);
   // ADR-0477: the room was opened from this page, so its code arrives as a moment and its status pings once
   const [justOpened, setJustOpened] = useState(false);
@@ -176,7 +180,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
 
   if (!panel) {
     if (loadError) return <section className="room-panel" aria-labelledby="room-title"><h2 id="room-title" className="visually-hidden">Room</h2><Problem retry={load}>Couldn’t load your room. {loadError}</Problem></section>;
-    return <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`).then((ok) => { if (ok) setJustOpened(true); return ok; })} />;
+    const start = <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`).then((ok) => { if (ok) setJustOpened(true); return ok; })} />;
+    // ADR-0488: the room that just ended leaves its totals above the form for the next one
+    if (!lastRoom.current || !flagOn('rooms.recap')) return start;
+    return <><RoomRecap api={api} workspaceId={workspaceId} roomId={lastRoom.current} tell={(words, problem) => (problem ? showProblem(words) : showToast(words))} />{start}</>;
   }
 
   const room = panel.room;

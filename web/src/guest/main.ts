@@ -279,6 +279,7 @@ function closed(v: View | null): void {
     v?.my_requests.length ? myRequests(v) : null,
     // ADR-0488: the songs this guest kept are on their phone, so they outlive the room
     social.keptAfter(roomId ?? code, v?.room_name ?? ''));
+  if (roomId) void social.showRecap(base(), () => root.querySelector('.g-card'));
 }
 
 function voteButton(item: Item): HTMLElement | null {

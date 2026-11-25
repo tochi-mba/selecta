@@ -364,6 +364,27 @@ export function round(view: RoomView): HTMLElement | null {
     open && screenOn(view) ? h('p', { className: 'g-small', 'data-key': 'round-screen' }, 'The tally is on the big screen too.') : null);
 }
 
+// --- Tonight in numbers -------------------------------------------------------------------
+
+/** The room's totals as a card: the first line is its title, the rest are the numbers. */
+export function recapCard(lines: readonly string[]): HTMLElement | null {
+  if (lines.length < 2) return null;
+  return h('section', { className: 'g-section g-recap', 'aria-label': 'Tonight in numbers', 'data-key': 'recap' },
+    h('h2', {}, 'Tonight in numbers'),
+    h('ul', { className: 'g-list g-recap-list' }, ...lines.slice(1).map((line, index) => h('li', { 'data-key': `recap-${index}` }, line))));
+}
+
+/** After the room has ended: ask for its recap and put it at the top of what `into` holds.
+ * A room with none (the host had it off, nobody joined) adds nothing. */
+export async function showRecap(base: string, into: () => Element | null): Promise<void> {
+  try {
+    const answer = await call<{ lines: string[] }>(`${base}/recap`);
+    const card = recapCard(answer.lines ?? []);
+    const target = into();
+    if (card && target && !target.querySelector('.g-recap')) target.append(card);
+  } catch { /* the room is over either way; the screen stays as it is */ }
+}
+
 // --- Dedications --------------------------------------------------------------------------
 
 // the request whose list of lines is open, and the one being saved

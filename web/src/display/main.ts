@@ -24,6 +24,8 @@ type View = {
   music?: 'ready' | 'choosing' | 'reconnecting' | 'none' | null;
   /** ADR-0488: the room's pulse, the same one the phones read. Absent from an older server. */
   pulse?: Pulse;
+  /** Tonight in numbers, in words, for ten minutes after the room ends; first line is its title. */
+  recap_lines?: string[];
 };
 /** The second screen says what guests are told while the room has no device playing. */
 const MUSIC_WORDS: Record<string, { title: string; more: string }> = {
@@ -170,7 +172,11 @@ async function tick(): Promise<void> {
     else if (view.state === 'paired') { endedAt = 0; drawRoom(view); }
     else if (view.state === 'expired' || (view.state === 'waiting' && !pairingCode)) await pair();
     else if (view.state === 'waiting' && !document.getElementById('d-pairing')) drawPairing();
-    else if (view.state === 'ended') {
+    else if (view.state === 'ended' && (view.recap_lines?.length ?? 0) > 1) {
+      // ADR-0488: tonight in numbers stays up for as long as the server sends it (ten minutes)
+      endedAt = Date.now();
+      if (!document.getElementById('d-recap')) replace(root, social.recap(view.room_name, view.recap_lines ?? [], brand()));
+    } else if (view.state === 'ended') {
       if (!endedAt) {
         endedAt = Date.now();
         replace(root, notice(view.room_name ? `${view.room_name} has ended` : 'The room has ended', 'Thanks for coming.'));

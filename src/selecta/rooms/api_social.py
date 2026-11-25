@@ -28,8 +28,8 @@ from sqlalchemy.engine import Engine
 from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
-from selecta.persistence import transaction
-from selecta.rooms import dedications, limits, reactions, rounds
+from selecta.persistence import db_now, transaction
+from selecta.rooms import dedications, limits, reactions, recap, rounds
 from selecta.rooms import pulse as pulses
 from selecta.rooms.api_common import check_origin, refusal, song_json
 from selecta.rooms.display import DisplayState, DisplayView
@@ -42,6 +42,7 @@ from selecta.rooms.store import GuestRef, GuestStatus, load_room
 from selecta.rooms.views import GuestView
 from selecta.roomsocial import dedications as dedication_lines
 from selecta.roomsocial import reactions as tap_rules
+from selecta.roomsocial import recap as recap_rules
 from selecta.roomsocial import rounds as round_rules
 
 STANDING_SECONDS = 5.0  # how long a guest's standing is remembered between pulse reads
@@ -250,6 +251,22 @@ def install_guest_routes(
     def guest_undedicate(room_id: str, request_id: str, request: Request) -> dict[str, Any]:
         return dedicate(room_id, request_id, request, None)
 
+    # Tonight in numbers (rooms.recap): the room's totals, once it has ended.
+    social.screen_parts.append(lambda shown: _screen_recap(social, shown))
+
+    @app.get("/api/guest/rooms/{room_id}/recap")
+    def guest_recap(room_id: str, request: Request) -> dict[str, Any]:
+        _token, ref = guest(request, room_id)
+        hit("guest-read", ref.guest_id, limits.GUEST_READ_PER_GUEST)
+        social.active(ref)
+        if not social.features.on(ref.workspace_id, SOCIAL["recap"]):
+            return {"recap": None, "lines": []}
+        try:
+            built = recap.recap_of(social.rooms(), ref.workspace_id, ref.room_id)
+        except RoomError as error:
+            raise refusal(error) from error
+        return {"recap": built, "lines": recap_rules.lines(built) if built else []}
+
     # Reactions (rooms.reactions): a love for the playing song, or for the blend into it.
     social.extras.append(_reactions_extra)
 
@@ -284,6 +301,25 @@ def install_guest_routes(
     def guest_unreact(room_id: str, body: TapBody, request: Request) -> dict[str, Any]:
         token, ref = tap(request, room_id)
         return tapped(token, ref, body, on=False)
+
+
+def _screen_recap(social: Social, shown: DisplayView) -> Mapping[str, Any]:
+    """The recap for a paired screen, for ten minutes after its room ended, while the host's
+    account has the recap on and the host left it on for the screen."""
+    if shown.state is not DisplayState.ENDED or shown.ended_at is None:
+        return {}
+    if shown.room_id is None or shown.workspace_id is None:
+        return {}
+    if not social.features.on(shown.workspace_id, SOCIAL["recap"]):
+        return {}
+    service = social.rooms()
+    with transaction(service.engine, shown.workspace_id) as conn:
+        room = load_room(conn, shown.workspace_id, shown.room_id)
+        fresh = db_now(conn) - shown.ended_at <= recap_rules.SCREEN_SECONDS
+    if not fresh or not room.settings.screen_recap:
+        return {}
+    built = recap.recap_of(service, shown.workspace_id, shown.room_id)
+    return {"recap": built, "recap_lines": recap_rules.lines(built) if built else []}
 
 
 def _dedication_extra(conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str, Any]:
@@ -459,6 +495,19 @@ def install_host_routes(
         except RoomError as error:
             raise refusal(error) from error
         return {"pulse": pulse(workspace_id, room_id)}
+
+    @app.get("/api/rooms/{room_id}/recap")
+    def room_recap(
+        room_id: str, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
+    ) -> dict[str, Any]:
+        """Tonight in numbers for a room that has ended: `recap` is null while it is open, when
+        the host had it off, or when nobody joined. `lines` is the same in words, for copying."""
+        workspace_id = workspace(request, claims)
+        try:
+            built = recap.recap_of(social.rooms(), workspace_id, room_id)
+        except RoomError as error:
+            raise refusal(error) from error
+        return {"recap": built, "lines": recap_rules.lines(built) if built else []}
 
     @app.delete("/api/rooms/{room_id}/requests/{request_id}/dedication")
     def clear_dedication(

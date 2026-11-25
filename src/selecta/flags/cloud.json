@@ -679,6 +679,10 @@
     "rooms.recap": {
       "label": "Tonight in numbers",
       "about": "When a room ends, the host, its guests and a paired screen see the room's totals.",
+      "routes": [
+        "GET /api/rooms/{room_id}/recap",
+        "GET /api/guest/rooms/{room_id}/recap"
+      ],
       "requires": ["rooms"],
       "surfaces": ["cloud.listen"],
       "words": ["Tonight in numbers"],

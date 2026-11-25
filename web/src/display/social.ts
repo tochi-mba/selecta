@@ -46,6 +46,15 @@ export function line(pulse: Pulse | undefined): HTMLElement | null {
     loved ? h('span', { className: 'd-loved', 'data-key': `loved-${play.play_id}` }, 'The room loved that blend') : null);
 }
 
+/** Tonight in numbers, for the whole screen once the room has ended. */
+export function recap(roomName: string | null, lines: readonly string[], brand: HTMLElement): HTMLElement {
+  return h('section', { className: 'd-pair d-recap', id: 'd-recap' },
+    brand,
+    h('h1', {}, 'Tonight in numbers'),
+    h('p', { className: 'd-lede' }, roomName ? `${roomName} has ended. Thanks for coming.` : 'Thanks for coming.'),
+    h('ul', { className: 'd-recap-list' }, ...lines.slice(1).map((one) => h('li', {}, one))));
+}
+
 // --- Pick the next song -------------------------------------------------------------------
 
 let ticking = 0;

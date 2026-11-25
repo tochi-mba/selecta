@@ -399,6 +399,9 @@ button.g-round-opt:active { background: var(--surface-selected); }
 .g-round-bar i { display: block; height: 100%; border-radius: inherit; background: var(--primary-fill); transition: width var(--motion-slow) var(--motion-ease); }
 .g-round-result { margin: 0 0 var(--space-2); font-weight: var(--weight-label); animation: g-settle var(--motion-reveal) var(--motion-ease) backwards; }
 @media (hover: hover) { button.g-round-opt:hover:not([aria-disabled="true"]) { border-color: var(--ink); } }
+/* Tonight in numbers, on the ended screen */
+.g-recap { text-align: left; margin-top: var(--space-4); }
+.g-recap-list > li { padding: var(--space-snug) 0; font-weight: var(--weight-label); }
 /* Dedications: the line under the playing song, and the list a guest picks one from */
 .g-dedication { flex-basis: 100%; margin: 0; font-weight: var(--weight-label); animation: g-settle var(--motion-reveal) var(--motion-ease) backwards; }
 .g-dedicate { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
