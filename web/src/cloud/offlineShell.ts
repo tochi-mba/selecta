@@ -19,6 +19,7 @@ type ContainerLike = {
   register(url: string, options?: { scope?: string }): Promise<RegistrationLike>;
   getRegistrations(): Promise<readonly RegistrationLike[]>;
   ready: Promise<RegistrationLike>;
+  controller?: { scriptURL: string } | null;
 };
 
 function container(): ContainerLike | undefined {
@@ -47,6 +48,16 @@ export function loadedShellFiles(): string[] {
       });
   } catch {
     return [];
+  }
+}
+
+/** Whether Cloud's app-shell worker opened this page: then the page is Cloud, and with no
+ * connection it opens from this device instead of saying SelectaDJ can't be reached (RuntimeApp). */
+export function cloudShellOpened(worker: Pick<ContainerLike, 'controller'> | undefined = container()): boolean {
+  try {
+    return !!worker?.controller?.scriptURL.endsWith(CLOUD_SW_URL);
+  } catch {
+    return false;
   }
 }
 

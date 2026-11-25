@@ -6,6 +6,7 @@ import { setCopyMode } from './copy';
 import { setFlags } from './flags';
 import { handOnStartupStatus } from './startupStatus';
 import { BrandMark } from './ui/BrandMark';
+import { cloudShellOpened } from './cloud/offlineShell';
 import { prefetchLibrary } from './views/libraryPrefetch';
 
 const CloudRoot = lazy(() => import('./cloud/CloudRoot').then((module) => ({ default: module.CloudRoot })));
@@ -56,7 +57,13 @@ export function RuntimeApp() {
         }
         setMode(next);
       })
-      .catch(() => { if (current) setMode('unavailable'); });
+      .catch(() => {
+        if (!current) return;
+        // cloud.offline_shell: a page Cloud's app-shell worker opened is Cloud, so with no
+        // connection it opens from this device (CloudApp says so) instead of this message
+        if (cloudBuild && cloudShellOpened()) { setCopyMode('cloud'); setMode('cloud'); return; }
+        setMode('unavailable');
+      });
     return () => { current = false; };
   }, [attempt]);
 
