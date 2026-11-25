@@ -68,6 +68,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.debug.fingerprint` | local | set by a developer; read by `web/src/media/fingerprintLog.ts` | `1` prints each fingerprint log line to the console too | This device (developers) |
 | `selecta.debug.tabs` | local | set by a developer; read by `web/src/devices/audioTab.ts` | Any value logs each step of an audio-tab hand-over to the console | This device (developers) |
 | `selecta.derived.migrated.tonal.<workspace>` | local | `web/src/cloud/tonalProfiles.ts` | That this workspace's tonal profiles were copied into the device-wide derived store (ADR-0469) | This device |
+| `selecta.availability.reported` | local | `web/src/media/availability.ts` | A short fingerprint of the last holdings report and when it was sent, so another tab of this browser skips an identical report within a minute (ADR-0475 F42); no song ids or names | This device |
+| `selecta.once.<offer>` | local | `web/src/devices/useWhereToPlay.tsx` | `1` once a one-time offer or note (for example "Make {device} your usual speaker?") has been shown on this device, so it is never shown again (ADR-0475 B16) | This device |
 | `selecta.fingerprint.bytesPerMs` | local | `web/src/media/fingerprintLog.ts` | This browser's hashing speed from its last import that read files, a number only, for the time-saved estimate | This device |
 | `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
 
