@@ -51,41 +51,37 @@
     },
     "app.feel_motion": {
       "label": "Expressive feel",
-      "about": "Springy presses and releases, things arriving from where they were asked, and Expressive as the starting motion level (ADR-0477). Off: today's quiet feedback, with Subtle as the starting level. Off by default while it is being built.",
-      "default": false,
+      "about": "Springy presses and releases, things arriving from where they were asked, and Expressive as the starting motion level (ADR-0477). Off: today's quiet feedback, with Subtle as the starting level.",
       "requires": ["app.motion_choice"]
     },
     "app.feel_depth": {
       "label": "Depth and light",
-      "about": "Lift shadows, lit edges and a glow on the main action, on the same colours as before (ADR-0477). Off: flat surfaces as before. Off by default while it is being built.",
+      "about": "Lift shadows, lit edges and a glow on the main action, on the same colours as before (ADR-0477). Off: flat surfaces as before.",
       "default": false
     },
     "app.feel_pointer_light": {
       "label": "Pointer light",
-      "about": "Cards and tiles show a soft light where the mouse is. Mouse only, and never the only sign of anything. Off by default while it is being built.",
-      "default": false,
+      "about": "Cards and tiles show a soft light where the mouse is. Mouse only, and never the only sign of anything.",
       "requires": ["app.feel_depth"]
     },
     "app.feel_music": {
       "label": "Moves with the music",
-      "about": "While a mix plays, the Play control, the player bar and the playing row answer the measured beat of the real audio, and rest when it is paused (ADR-0477). Off: they stay still. Off by default while it is being built.",
-      "default": false,
+      "about": "While a mix plays, the Play control, the player bar and the playing row answer the measured beat of the real audio, and rest when it is paused (ADR-0477). Off: they stay still.",
       "requires": ["app.motion_choice"]
     },
     "app.feel_ambient": {
       "label": "Ambient colour",
-      "about": "A soft tint taken from the playing song, which travels to the next song's colour during a blend. Off: no tint. Off by default while it is being built.",
+      "about": "A soft tint taken from the playing song, which travels to the next song's colour during a blend. Off: no tint.",
       "default": false
     },
     "app.feel_moments": {
       "label": "Big moments",
-      "about": "A short celebration at rare moments: setup finished, a mix built, the first blend heard, a room opened, a plan upgraded, an export ready. Off: the plain words only. Off by default while it is being built.",
-      "default": false,
+      "about": "A short celebration at rare moments: setup finished, a mix built, the first blend heard, a room opened, a plan upgraded, an export ready. Off: the plain words only.",
       "requires": ["app.feel_motion"]
     },
     "app.feel_haptics": {
       "label": "Phone taps",
-      "about": "A light tap from the phone on key presses, on phones that can do it. Off: no taps. Off by default while it is being built.",
+      "about": "A light tap from the phone on key presses, on phones that can do it. Off: no taps.",
       "default": false
     },
     "app.install": {
