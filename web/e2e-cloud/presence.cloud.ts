@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { endRooms, hostWithRoom } from './helpers';
+import { endRooms, hostWithRoom, said } from './helpers';
 
 // ADR-0416 presence fix: the host's panel shows who is really here. A guest who leaves and a
 // screen that disconnects drop off the panel on its next 3 s poll with no refresh; a screen the
@@ -51,7 +51,7 @@ test('a guest leaving and a screen disconnecting update the host panel by themse
   await host.getByRole('button', { name: 'Pair screen' }).click();
   await expect(screen.locator('#d-qr')).toBeVisible({ timeout: 15_000 });
   await host.getByRole('button', { name: 'Disconnect Screen 1' }).click();
-  await expect(host.locator('.room-said')).toHaveText('Screen 1 disconnected.');
+  await expect(said(host, 'Screen 1 disconnected.')).toBeVisible();
   await expect(screen.getByRole('heading', { name: 'Pair this screen' })).toBeVisible({ timeout: 4_000 });
   await expect(screen.locator('#d-pairing')).not.toHaveText(again);
 
