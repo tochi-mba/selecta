@@ -1,7 +1,8 @@
 import { assertNoPath, fileSha256, normalise } from './identity';
 import { readFileTags } from './tags';
+import { captureArt } from './art';
 import { isQuotaError, MediaStore } from './store';
-import type { DirectoryHandleLike, FileHandleLike, FileRef } from './store';
+import { withSource, type DirectoryHandleLike, type FileHandleLike, type FileRef, type SongSource } from './store';
 import type { ImportJournal } from './importJournal';
 import { runJournalled } from './journalledImport';
 import type { ImportFingerprints, ImportReuse } from './fingerprints';
@@ -79,7 +80,11 @@ export type ImportWait = { why: 'offline' | 'server' | 'signin'; retryAt: number
  * a refusal that would only repeat, or with an AbortError when `signal` fires. */
 export type RetryPolicy = <T>(work: () => Promise<T>, options: { signal?: AbortSignal; onWait?: (wait: ImportWait | null) => void }) => Promise<T>;
 
-export type ImportSource = FileList | File[] | FileHandleLike[] | DirectoryHandleLike;
+/** A watched folder's files already walked (`cloud.music_folders`): only the new and changed
+ * ones, each at its place inside the folder, so a check reads nothing it already knows. */
+export type WalkedFolder = { kind: 'walked'; name: string; files: { handle: FileHandleLike; path: string }[] };
+
+export type ImportSource = FileList | File[] | FileHandleLike[] | DirectoryHandleLike | WalkedFolder;
 
 export type ImportOptions = {
   source: ImportSource;
@@ -106,7 +111,31 @@ export type ImportOptions = {
    * store, so files hashed here before (by any account) are recognised without being read in
    * full. Without it every file is hashed, as before. */
   fingerprints?: ImportFingerprints | null;
+  /** `cloud.music_folders`: the watched folder this import reads. Each song saved records it
+   * (with the file's place inside it) in this browser's index only; never sent anywhere. */
+  folderId?: string;
 };
+
+/** Where a file sits in the watched folder being imported, for the song's index row. */
+export function sourceOf(folderId: string | undefined, path: string, file: File): SongSource | undefined {
+  return folderId ? { folderId, path, size: file.size, modified: file.lastModified } : undefined;
+}
+
+/** The `sources` a saved row keeps: what the index already knew of the song, plus this file's
+ * place. Empty (no field at all) for an import with no folder of a song with none, so the row is
+ * exactly what it always was. */
+export async function keptSources(store: MediaStore, songId: number, source: SongSource | undefined): Promise<{ sources?: SongSource[] }> {
+  const prior = (await store.get(songId))?.sources;
+  if (source) return { sources: withSource(prior, source) };
+  return prior?.length ? { sources: prior } : {};
+}
+
+/** Record that an already-saved song was also found at `source`. */
+export async function noteSource(store: MediaStore, songId: number, source: SongSource | undefined): Promise<void> {
+  const row = await store.get(songId);
+  if (!row || !source || row.sources?.some((one) => one.folderId === source.folderId && one.path === source.path && one.size === source.size && one.modified === source.modified)) return;
+  await store.put({ ...row, sources: withSource(row.sources, source) });
+}
 
 /** Metadata-only JSON mutation through the injected client. FastAPI must see JSON; relying on
  * the browser's text/plain default would turn an otherwise valid import into a 422. */
@@ -230,6 +259,10 @@ function isDirectorySource(source: ImportSource): source is DirectoryHandleLike 
   return (source as { kind?: string }).kind === 'directory';
 }
 
+function isWalkedSource(source: ImportSource): source is WalkedFolder {
+  return (source as { kind?: string }).kind === 'walked';
+}
+
 async function walk(dir: DirectoryHandleLike, add: (handle: FileHandleLike, path: string) => void, cancelled: () => boolean, prefix = ''): Promise<void> {
   for await (const entry of dir.values()) {
     if (cancelled()) return;
@@ -249,7 +282,7 @@ export async function collect(source: ImportSource, signal?: AbortSignal): Promi
     const path = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
     candidates.push({ name: file.name, path, place: path, ref: { kind: 'repick', name: file.name, size: file.size }, open: async () => file, sessionFile: file });
   };
-  const root = isDirectorySource(source) ? `${source.name}/` : '';
+  const root = isDirectorySource(source) || isWalkedSource(source) ? `${source.name}/` : '';
   const addHandle = (handle: FileHandleLike, path = handle.name) => {
     if (!isAudioName(handle.name)) {
       skipped += 1;
@@ -259,6 +292,8 @@ export async function collect(source: ImportSource, signal?: AbortSignal): Promi
   };
   if (isDirectorySource(source)) {
     await walk(source, addHandle, () => signal?.aborted ?? false);
+  } else if (isWalkedSource(source)) {
+    for (const entry of source.files) addHandle(entry.handle, entry.path);
   } else {
     const items = Array.isArray(source) ? source : Array.from(source);
     for (const item of items as (File | FileHandleLike)[]) {
@@ -284,6 +319,9 @@ export async function registrationOf(
     ? await fingerprints.identify(file, reuse.candidate.place, name, reuse.candidate.open, signal)
     : null;
   const content_sha256 = found ? found.sha : await fileSha256(file, { signal });
+  // `library.art_embedded`: the file's own picture becomes its cover later, at idle, on this
+  // device only. Queued, never awaited, and it can never fail or slow this import.
+  captureArt(file, content_sha256);
   // A duration measured here before for these bytes saves probing the file again; tags are
   // always the account's own, read from its own file (titles never travel by fingerprint).
   const knownDuration = fingerprints ? await fingerprints.knownDuration(content_sha256) : undefined;
@@ -340,7 +378,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
   emit({ kind: 'collected', total: candidates.length, skipped });
   let flushedOnce = false;
 
-  let batch: { name: string; ref: FileRef; entry: SongRegistration; sessionFile?: File }[] = [];
+  let batch: { name: string; ref: FileRef; entry: SongRegistration; sessionFile?: File; source?: SongSource }[] = [];
 
   const flush = async () => {
     if (!batch.length) return;
@@ -377,6 +415,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
           ref: item.ref,
           importedAt: Date.now(),
           ...(fingerprints?.isRemembered(item.entry.content_sha256) ? { fingerprint: 'remembered' as const } : {}),
+          ...(await keptSources(store, song.song_id, item.source)),
         });
         // Plain inputs and webkitdirectory return File objects, not durable handles. Keep that
         // object reachable for this visit only: it is never written to IndexedDB or sent to Cloud.
@@ -411,8 +450,10 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
       }
       emit({ kind: 'file', name: candidate.name, stage: 'hashing' });
       let entry: SongRegistration;
+      let source: SongSource | undefined;
       try {
         const file = await candidate.open();
+        source = sourceOf(options.folderId, candidate.path, file);
         entry = await registrationOf(file, candidate.name, readTags, signal, fingerprints ? { fingerprints, candidate } : undefined);
       } catch (error) {
         if (isAbort(error)) {
@@ -423,7 +464,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
         emit({ kind: 'file', name: candidate.name, stage: 'failed', reason: 'SelectaDJ could not read this file. It stays where it is; nothing was changed.' });
         continue;
       }
-      batch.push({ name: candidate.name, ref: candidate.ref, entry, ...(candidate.sessionFile ? { sessionFile: candidate.sessionFile } : {}) });
+      batch.push({ name: candidate.name, ref: candidate.ref, entry, ...(candidate.sessionFile ? { sessionFile: candidate.sessionFile } : {}), ...(source ? { source } : {}) });
       if (batch.length >= (flushedOnce ? batchSize : Math.min(FIRST_BATCH, batchSize))) await flush();
     }
     if (!summary.cancelled) await flush();

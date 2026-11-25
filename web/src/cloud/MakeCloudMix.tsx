@@ -6,6 +6,9 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { countOf, Truncate } from '../ui/format';
 import { CloudError, type Account, type Api, type Asset } from './api';
 import { EmptyState } from './LocalFirstEmpty';
+import { NumberRoll } from '../feel/numberRoll';
+import { CoverArt } from '../views/CoverArt';
+import { useFeelAlive } from './CloudRailFeel';
 import './makeCloudMix.css';
 
 // Make and edit a mix from Cloud Library songs (ADR-0418, flag `cloud.mix_create`). Each save is
@@ -153,6 +156,9 @@ function MixMaker({ api, workspaceId, stored, uploads }: { api: Api; workspaceId
   const nameOf = (id: string) => library.find((song) => song.id === id)?.name ?? open?.mix.songs.find((song) => song.id === id)?.title ?? 'Unknown song';
   const toggle = (id: string) => setPicked((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]));
   const draftIds = draft.map((song) => song.id);
+  // with the feel on, picker rows show covers and answer the pointer, and a bar under the list
+  // counts the picked songs as they change; with it off the picker is as it was
+  const alive = useFeelAlive();
   const sameSongs = open !== null && draftIds.join() === open.mix.songs.map((song) => song.id).join();
   const changed = open !== null && (draftName.trim() !== open.mix.name || !sameSongs);
   // Opening another mix or an earlier version over unsaved edits asks first.
@@ -172,12 +178,15 @@ function MixMaker({ api, workspaceId, stored, uploads }: { api: Api; workspaceId
         <label>Mix name <input value={name} maxLength={60} onChange={(event) => setName(event.target.value)} placeholder="Cloud mix" /></label>
         <ul className="cloud-mix-pick" aria-label="Songs to include">
           {library.map((song) => (
-            <li key={song.id}>
-              <label><input type="checkbox" checked={picked.includes(song.id)} onChange={() => toggle(song.id)} /> <span dir="auto">{song.name}</span>{picked.includes(song.id) ? ` (${picked.indexOf(song.id) + 1})` : ''}</label>
+            <li key={song.id} data-lift={alive ? 'row' : undefined}>
+              <label><input type="checkbox" checked={picked.includes(song.id)} onChange={() => toggle(song.id)} /> {alive && <CoverArt seed={song.id} songKey={song.sha256 ?? undefined} size="small" />}<span dir="auto">{song.name}</span>{picked.includes(song.id) ? ` (${picked.indexOf(song.id) + 1})` : ''}</label>
             </li>
           ))}
         </ul>
         {library.length === 0 && mixes !== null && <EmptyState title="Mixes start with your music">{uploads ? 'Upload songs to your Cloud Library, then pick them here in the order you want.' : 'Songs in your Cloud Library can be made into a mix.'}</EmptyState>}
+        {alive && picked.length > 0 && (
+          <p className="cloud-mix-pickbar" data-arrive=""><NumberRoll value={picked.length} format={(count) => countOf(count, 'song')} /> picked, in the order you chose</p>
+        )}
         <button className="primary" type="submit" disabled={busy || picked.length < 2}>Make mix</button>
       </form>
 

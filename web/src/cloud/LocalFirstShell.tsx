@@ -3,6 +3,7 @@ import { lazyPage as lazy } from '../ui/staleBuild';
 import type { MixData, Request, Status } from '../api';
 import { accountFlagOn, setFlags, useFlags } from '../flags';
 import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
+import { useArtIndex } from './artIndex';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -88,7 +89,6 @@ import { HostedMix } from './hosted/HostedMix';
  * (localFirstPlayer.ts). CloudApp mounts this only when the account has the local-first experience
  * and `cloud.local_first` is on; otherwise the hosted pages render exactly as before.
  */
-
 /** Shell features served by this computer's own server and not by the browser runtime yet. The
  * shell reads them through the one flag read, so their buttons are gone rather than dead. The
  * command palette and the keyboard shortcuts stay: this shell offers their server-free subset
@@ -118,7 +118,6 @@ export const NOT_IN_THE_BROWSER = {
   'mixes.shaping.energy_arc': false,
   'mixes.shaping.stem_moves': false,
 } as const;
-
 /** What this shell turns off, with Harmonic matches off too unless the browser's own version
  * (cloud.browser_harmonic) is on for the account. */
 function browserFlags(browserHarmonic: boolean, lucyHere = false): Record<string, boolean> {
@@ -143,6 +142,7 @@ const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 const LUCY_POLL_MS = 500;
 // Lucy loads only when someone opens her, as in local mode, so she costs the shell nothing.
 const Lucy = lazy(() => import('../views/Lucy'));
+const ListeningRoom = lazy(() => import('../listening-room/ListeningRoom')); // tools.listening_room
 
 export function LocalFirstShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
   api: Api;
@@ -168,6 +168,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     if (store.current?.workspaceId !== workspaceId) store.current = { workspaceId, opened: MediaStore.open(workspaceId) };
     return store.current.opened;
   }, [workspaceId]);
+  useArtIndex(openStore);
   const resolving = useRef<Promise<MediaResolver> | null>(null);
   // Device first, hosted fallback (ADR-0465): only a grandfathered account with stored media
   // readable gets the hosted path; every answer lands in the source book the queue shows.
@@ -815,7 +816,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
-    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false, waveformOf,
+    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: true, waveformOf,
     startedAMix: (savedMixes ?? 0) > 0,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
     playOn: playsOn,
@@ -841,7 +842,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const spineDeps = useMemo(() => ({
     importMusic: importRunnerFor({ request: media, openStore, workspaceId }),
   }), [media, openStore, workspaceId]);
-  useImportCarryOn({ request: media, openStore, workspaceId });
+  useImportCarryOn({ request: media, openStore, workspaceId, watch: { onAvailabilityChanged: () => sweepLapsed(true), playing: () => playingNow.current() } });
   const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {
@@ -852,6 +853,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       const item = moreItems.find((place) => place.id === route.id);
       if (!item) return <NotOnThisAccount />;
       if (item.id === 'workspace') return <ThisDevice openStore={openStore}>{connect}<StemsCard enabled={stems.enabled} store={stems.store} /></ThisDevice>;
+      if (item.id === 'listening_room') return <Suspense fallback={<Skeleton lines={4} label="Opening the Listening Room" />}><ListeningRoom workspaceId={workspaceId} mix={data.mix} mixName={data.name} mixId={recipes.current() ?? null} loading={data === EMPTY_MIX && !mixProblem} resolve={deviceTrack} shellPlaying={now.phase === 'playing' && (playback.view?.speaker === 'here' || !on('devices.remote_control'))} pauseShell={() => shellPlayer.togglePause()} /></Suspense>;
       return <main className="page" id="main" data-place={item.id}><h1 className="display small">{item.label}</h1><div className="stack">{more(item.id)}</div></main>;
     }
     if (!shared) {
@@ -958,7 +960,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         showPlayer={route.page !== 'listen' && (remote ? remote.now.phase !== 'idle' : !!song && now.phase !== 'idle')}
         hasMix={data.mix.length > 0}
         hasNext={remote ? remote.hasNext : data.mix.length > now.position + 1}
-        stage={false}
+        stage={false} next={remote ? undefined : data.mix[now.position + 1]}
         waitingRequests={on('requests') ? waitingCount(roomShown, songRequests.requests) : 0}
         onRequests={() => setRequesting(true)}
         onHelp={controls.onHelp}

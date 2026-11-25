@@ -12,6 +12,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Skeleton } from '../../ui/controls';
 import { useMediaQuery } from '../../ui/useMediaQuery';
 import { useVisiblePoll } from '../../ui/useVisiblePoll';
+import { RollingCount } from '../../views/feelPieces';
 import { NeedsAttentionList, PilotBadge, SilentZoneAlert, StateBanners } from '../components/Notices';
 import { CONSOLE_COPY } from '../copy/console';
 import { MANAGER_COPY, StateContext } from '../copy/states';
@@ -113,7 +114,7 @@ export function HqConsole({ wall: wallProp = false }: { wall?: boolean }) {
   const attentionList = <NeedsAttentionList items={attention} ctx={ctx} loading={loading} actions={actions} />;
   const chip = <div className="hq-attention-chip">
     <button type="button" aria-expanded={attentionOpen} aria-controls="hq-attention-panel" onClick={() => setAttentionOpen(!attentionOpen)}>
-      {loading ? CONSOLE_COPY.checkingVenues : CONSOLE_COPY.needsAttentionChip(attention.length)}
+      {loading ? CONSOLE_COPY.checkingVenues : <RollingCount value={attention.length} format={CONSOLE_COPY.needsAttentionChip} />}
     </button>
     <div id="hq-attention-panel" hidden={!attentionOpen}>{attentionOpen && attentionList}</div>
   </div>;

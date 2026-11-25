@@ -18,10 +18,13 @@ describe('truthful imagery', () => {
     expect(pages.length).toBeGreaterThan(20);
     for (const name of pages) {
       const text = fs.readFileSync(SOURCE + name, 'utf8');
-      expect(text, name).not.toMatch(/<img\b|new Image\(|background-image:\s*url\(/);
-      // One exemption, by name: the CoverArt component (views/CoverArt.tsx) draws a generated
-      // colour tile from the song's id; no image is requested or claimed. Any other mention of
-      // cover or album art still fails, in that file and in every file that uses the component.
+      // ADR-0478: art is real or clearly generated. Only the CoverArt component (views/CoverArt.tsx)
+      // may load an image, and only the song's own file art or catalogue art; every other file
+      // still may not, and none may set a background image.
+      const loadsImages = name === 'views/CoverArt.tsx' ? /background-image:\s*url\(/ : /<img\b|new Image\(|background-image:\s*url\(/;
+      expect(text, name).not.toMatch(loadsImages);
+      // One exemption, by name: the CoverArt component. Any other mention of cover or album art
+      // still fails, in that file and in every file that uses the component.
       const words = text.replace(/\bCoverArt\b/g, 'GeneratedTile');
       expect(words, name).not.toMatch(/\b(cover_?art|album_?art|artwork_?url|cover_?url)\b/i);
     }

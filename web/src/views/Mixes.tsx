@@ -19,6 +19,7 @@ import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedA
 import { ViewProps } from './shared';
 import { words } from '../copy';
 import { QuickMix } from '../cloud/QuickMix';
+import { announceBuilt } from './BuildMoment';
 
 const GROUPS = ['The moment', 'The mood', 'The sound', 'The journey'];
 
@@ -110,6 +111,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         if (open) {
           setView('Edit');
         } else {
+          // the real plan, handed to Listen's build moment; it draws over Listen and waits for nothing
+          announceBuilt(data.mix);
           setView('Now');
           void player.playFrom(0);
         }
@@ -118,6 +121,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       if (hereNow.current) setProblem((error as Error).message);
+      return false; // said here, so the button draws no tick
     } finally {
       buildingNow.current = false;
       setBuilding('');
@@ -143,6 +147,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
       if (hereNow.current) setProblem((error as Error).message);
+      return false; // said here, so the button draws no tick
     } finally {
       buildingNow.current = false;
       setBuilding('');
@@ -346,7 +351,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
               <h3 className="eyebrow">{group}</h3>
               <div className="cards">
                 {inGroup.map((card) => (
-                  <article className="card vibe-card" key={card.key} data-vibe={card.key}>
+                  <article className="card vibe-card" key={card.key} data-vibe={card.key} data-lift="" data-glow="">
                     <VibeMotif idea={card.key} group={card.group} />
                     <div className="vibe-card-head">
                       <h3>{card.name}</h3>

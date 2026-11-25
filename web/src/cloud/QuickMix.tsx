@@ -5,6 +5,9 @@ import { PageLink } from '../shell/PageLink';
 import { Action } from '../ui/controls';
 import { countOf } from '../ui/format';
 import { Icon } from '../ui/Icon';
+import { tick } from '../feel/haptics';
+import { NumberRoll } from '../feel/numberRoll';
+import { useFeelPart } from '../views/feelBits';
 import './cloudMusic.css';
 
 /** Make a Mix in a browser, as three short steps and one Play: the music this device can open,
@@ -33,11 +36,15 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
   const where = playOn?.now && !playOn.ask ? playOn.name : 'this device';
   const available = hero?.songs ?? playable;
   const short = available < songs;
+  // ADR-0477: the line beside the steps fills through each step that is settled (feel-listen.css);
+  // the attribute draws nothing with the feel off
+  const lengthSet = SET_LENGTHS.some((option) => option.songs === songs);
+  const rolling = useFeelPart('motion');
   return (
     <section className="quick-mix" aria-labelledby="quick-mix-title">
       <h2 id="quick-mix-title" className="visually-hidden">Make a new mix</h2>
       <ol className="quick-steps">
-        <li className="quick-step" data-done="true">
+        <li className="quick-step" data-done="true" data-settled="">
           <span className="quick-step-mark" aria-hidden="true"><Icon name="check" size="compact" /></span>
           <div className="quick-step-body">
             <h3>Your music</h3>
@@ -45,14 +52,16 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
           </div>
           <PageLink to="/library" className="button small quiet">{playable < total ? 'Connect more' : 'Library'}</PageLink>
         </li>
-        <li className="quick-step">
+        <li className="quick-step" data-settled={lengthSet && shape ? '' : undefined}>
           <span className="quick-step-mark" aria-hidden="true">2</span>
           <div className="quick-step-body">
             <h3 id="quick-length">How long?</h3>
             <div className="choice-cards" role="group" aria-labelledby="quick-length">
               {SET_LENGTHS.map((option) => (
-                <button key={option.songs} type="button" className="choice-card" aria-pressed={songs === option.songs} onClick={() => onSongs(option.songs)}>
-                  <span className="choice-card-check" aria-hidden="true"><Icon name="check" size="compact" /></span>
+                <button key={option.songs} type="button" className="choice-card" data-lift="" data-glow="" aria-pressed={songs === option.songs}
+                  onClick={() => { tick(); onSongs(option.songs); }}>
+                  {/* keyed on the choice, so choosing a card draws its tick in anew (feel-pop) */}
+                  <span key={String(songs === option.songs)} className={`choice-card-check${songs === option.songs ? ' feel-pop' : ''}`} aria-hidden="true"><Icon name="check" size="compact" /></span>
                   <b>About {option.label}</b>
                   <span>Up to {option.songs} songs</span>
                 </button>
@@ -78,7 +87,9 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
             <>
               <b>{hero?.name ?? 'SelectaDJ’s pick'}</b>
               <span>
-                {hero && hero.songs > 0 ? `${countOf(Math.min(songs, hero.songs), 'song')}. ` : ''}
+                {hero && hero.songs > 0 ? (rolling
+                  ? <><NumberRoll value={Math.min(songs, hero.songs)} format={(count) => countOf(count, 'song')} />. </>
+                  : `${countOf(Math.min(songs, hero.songs), 'song')}. `) : ''}
                 {replacing ?? 'Each transition is worked out as it plays.'}
               </span>
             </>

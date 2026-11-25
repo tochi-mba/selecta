@@ -75,10 +75,13 @@ export function fakeIndexedDb(): FakeIndexedDb {
           db = { version, stores: new Map(), connections: new Set() };
           databases.set(name, db);
         }
+        // a newer version upgrades in place, keeping the stores it already has
+        const upgrade = fresh || version > db.version;
+        db.version = Math.max(db.version, version);
         const connection = new FakeConnection(name, db);
         db.connections.add(connection);
         made.result = connection;
-        if (fresh) made.onupgradeneeded?.();
+        if (upgrade) made.onupgradeneeded?.();
         made.onsuccess?.();
       });
       return made;

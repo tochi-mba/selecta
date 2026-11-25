@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
+import { feelOn, onFeelChange } from '../feel/root';
 import { promptInstall, useInstallState, type InstallState } from './install';
 
 /** What each install state says. Exported for the tests; `none` says nothing at all. */
@@ -16,8 +17,21 @@ export function InstallOffer({ state: given }: { state?: InstallState }) {
   const state = given ?? live;
   const [asking, setAsking] = useState(false);
   const [said, setSaid] = useState('');
+  // With the feel system's motion on (ADR-0477), an install that happens while this offer is on
+  // screen is confirmed with a drawn tick; an app that was already installed shows only the words.
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  const offered = useRef(false);
+  if (state === 'prompt') offered.current = true;
   if (state === 'none') return said ? <p className="cloud-hint" role="status">{said}</p> : null;
-  if (state !== 'prompt') return <p className="cloud-install" data-install={state} role={state === 'installed' ? 'status' : undefined}>{INSTALL_COPY[state]}</p>;
+  if (state !== 'prompt') {
+    const confirmed = moving && state === 'installed' && offered.current;
+    return (
+      <p className="cloud-install" data-install={state} role={state === 'installed' ? 'status' : undefined}>
+        {confirmed && <svg className="cloud-install-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path className="feel-tick" pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
+        {INSTALL_COPY[state]}
+      </p>
+    );
+  }
   const install = () => {
     setAsking(true);
     void promptInstall().then((outcome) => {

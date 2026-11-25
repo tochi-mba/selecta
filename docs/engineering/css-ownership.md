@@ -24,7 +24,19 @@ Later sheets win ties of equal specificity. A sheet only refines what an earlier
 | 14 | `styles/palette.css` | Search and command palette result groups. |
 | 15 | `styles/icons.css` | Icon slots, badge baselines and icon-only control geometry (ADR-0277). |
 | 16 | `styles/depth.css` | Surface depth, borders, shadows and accent hierarchy beyond a token (ADR-0276). |
-| 17 | `styles/typography.css` | Type roles applied where an earlier rule left a gap; loaded last so it owns type (ADR-0275). |
+| 17 | `styles/feel.css` | The feel system's core (ADR-0477), scoped to `<html data-feel>`: press and release, hover lift and light, moving skins for cards and rows, pointer light and arrivals. Off, nothing in it matches. |
+| 18 | `styles/feel-scene.css` | Page and shared-element transitions (`::view-transition-*`), and the frame that stays still while a page moves (ADR-0477). |
+| 19 | `styles/feel-music.css` | The beat ring, live bars, the playing row and the ambient layer the beat bus acts on; forced colours hide them (ADR-0477). |
+| 20 | `styles/feel-parts.css` | The small engines' looks: the sliding indicator, number roll, the tick on a finished Action, the celebration and the first-paint splash (ADR-0477). |
+| 21 | `styles/feel-components.css` | The feel applied to the shared components: fields, checks, switches, menus, tooltips, tabs, dialogs, sheets, toasts, skeletons, meters, lists and empty states (ADR-0477). |
+| 22 | `styles/feel-shell.css` | The feel applied to the Shell: rail, phone tab bar, context bar, mini player, command palette and banners (ADR-0477). |
+| 23 | `styles/feel-entry.css` | The feel applied to boot, Welcome, the sign-in screens and onboarding (ADR-0477). |
+| 24 | `styles/feel-listen.css` | The feel applied to Make a Mix and Listen: the build moment, hero, transport, strip, live blend, queue and Stage (ADR-0477). |
+| 25 | `styles/feel-library.css` | The feel applied to My Mixes, Library, import, song details, the editor and the Studio (ADR-0477). |
+| 26 | `styles/feel-rooms.css` | The feel applied to hosting a room, requests, the devices list and the remote (ADR-0477). |
+| 27 | `styles/feel-account.css` | The feel applied to Workspace, Account, Plan and billing, Discover and the hosted pages (ADR-0477). |
+| 28 | `styles/feel-local.css` | The feel applied to the local app only: first scan, export, Workspace jobs, errors and the not-found page (ADR-0477). |
+| 29 | `styles/typography.css` | Type roles applied where an earlier rule left a gap; loaded last so it owns type (ADR-0275). |
 
 `styles/lucy.css` is not loaded by `main.tsx`: `views/Lucy.tsx` and `views/LucyCloudSettings.tsx` import it, so it only exists once Lucy is on screen. It owns the Lucy page and uses only meanings from `tokens.css`.
 
@@ -83,6 +95,7 @@ A drift guard that compares the guest and display blocks with `tokens.css` is AD
 | `styles/creation.css` | 2 | Inspector scope and state lines keep their 4px top margin against the generic heading-to-content rhythm. |
 | `styles/shell.css` | 1 | The desktop More menu is removed on phones, where the tab bar has its own. |
 | `styles/music-objects.css` | 1 | Forced colours: motifs use the system text colour so they stay visible. |
+| `styles/feel-music.css` | 1 | Forced colours: the beat ring, live bars and ambient layer are decoration that a forced palette would turn into solid blocks, so they are removed whatever a component set. |
 | `styles/lucy.css` | 1 | The `hidden` attribute always hides, even on a Lucy element that sets its own `display`. |
 
 ## Scope collisions
@@ -105,10 +118,16 @@ rises above the ceiling below, so consolidation can only move one way. Lower the
 
 | Measure | Baseline 2026-11-11 | Ceiling |
 | --- | --- | --- |
-| Selectors styled in more than one sheet | 170 | 180 |
+| Selectors styled in more than one sheet | 163 | 165 |
 | `!important` declarations outside motion, `hidden` and forced colours | 3 | 3 |
 
-Sheets taking part in those overlaps at the baseline: `style.css` 95, `polish.css` 85, `shell.css` 68,
+Recounted 2026-11-25 (ADR-0477): a selector list is now split only at its top-level commas, so
+`:is(button, a.button)` is one selector and not two fragments that falsely match other sheets. The old
+count of 170 (180 just before the feel sheets) fell to 163 on the same sheets, and the twelve feel sheets
+add no real restatement; the ceiling moved down with it. `!important` rules inside
+`@media (forced-colors: active)` count as forced colours.
+
+Sheets taking part in those overlaps at the first baseline: `style.css` 95, `polish.css` 85, `shell.css` 68,
 `listening.css` 30, `creation.css` 23, `typography.css` 14, `depth.css` 12, `operations.css` 11, the rest under 7.
 
 Steps, each small enough to land on its own with the visual and cascade tests green:

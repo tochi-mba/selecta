@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { feelOn, onFeelChange } from '../feel/root';
+import { usePresence } from '../ui/exitMotion';
 import { probeNow, useConnection } from './connection';
 import { checkedAt } from './offlineCache';
 import './connection.css';
@@ -61,13 +63,30 @@ export function ConnectionBanner({ plays = false, cachedAt, signedOutOffline = f
     words = 'Back online. Catching up...';
   }
 
+  // ADR-0477: the banner slides open and, when it has nothing more to say, slides shut on the exit
+  // protocol (ui/exitMotion.ts), still showing its last words so it never closes empty. "Back online"
+  // draws a tick. Without motion it appears and goes at once, as before.
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  const shown = usePresence<HTMLDivElement>(!!(words || kept), '--motion-exit-drawer');
+  const lastWords = useRef(words);
+  if (words) lastWords.current = words;
+  const said = words ?? (shown.closing ? lastWords.current : null);
+  // this region is hidden, never removed, so the closing mark must go once it has closed
+  const region = shown.ref;
+  useLayoutEffect(() => {
+    if (!shown.closing) region.current?.removeAttribute('data-closing');
+  }, [shown.closing, shown.present, region]);
+
   // the status region stays mounted, so a screen reader hears each change once
   return (
-    <div className="connection-banner" role="status" aria-live="polite" data-state={words ? state.status : 'quiet'} hidden={!words && !kept}>
-      {(words || kept) && (
+    <div ref={shown.ref} className="connection-banner" role="status" aria-live="polite" data-state={words ? state.status : 'quiet'} hidden={!shown.present}>
+      {(said || kept) && (
         <p className="connection-banner-words">
-          {words}
-          {words && kept ? ' ' : ''}
+          {moving && showingBack && words && (
+            <svg className="connection-banner-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path className="feel-tick" pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+          )}
+          {said}
+          {said && kept ? ' ' : ''}
           {kept && <span className="connection-banner-kept">{kept}</span>}
         </p>
       )}

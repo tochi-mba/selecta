@@ -302,11 +302,24 @@ export function encodeQr(text: string): QrCode {
 }
 
 /** The code as an SVG path, one unit per module, with a four-module quiet zone. */
-export function qrSvg(text: string, label: string): string {
+/** How many diagonal bands a waved code is drawn in; few, so the wave stays short. */
+export const QR_WAVE_BANDS = 10;
+
+/** `wave`: the modules are drawn as diagonal bands, top-left first, each a path carrying its
+ * place in `--i`, so the host's Rooms page can bring the code in as a wave (styles/feel-rooms.css).
+ * The finished picture is the same code module for module, so it scans exactly as the plain one. */
+export function qrSvg(text: string, label: string, wave = false): string {
   const code = encodeQr(text);
   const full = code.size + 8;
-  let path = '';
-  code.modules.forEach((row, y) => row.forEach((dark, x) => { if (dark) path += `M${x + 4},${y + 4}h1v1h-1z`; }));
+  const bands = wave ? QR_WAVE_BANDS : 1;
+  const paths: string[] = Array.from({ length: bands }, () => '');
+  const span = Math.max(1, (code.size * 2 - 1) / bands);
+  code.modules.forEach((row, y) => row.forEach((dark, x) => {
+    if (dark) paths[Math.min(bands - 1, Math.floor((x + y) / span))] += `M${x + 4},${y + 4}h1v1h-1z`;
+  }));
   const safe = label.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${full} ${full}" role="img" aria-label="${safe}" shape-rendering="crispEdges"><rect width="${full}" height="${full}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
+  const drawn = wave
+    ? paths.map((path, index) => (path ? `<path d="${path}" fill="#000" style="--i:${index}"/>` : '')).join('')
+    : `<path d="${paths[0]}" fill="#000"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${full} ${full}" role="img" aria-label="${safe}" shape-rendering="crispEdges"><rect width="${full}" height="${full}" fill="#fff"/>${drawn}</svg>`;
 }

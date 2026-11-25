@@ -1,5 +1,8 @@
-import { ChangeEvent, useEffect, useId, useState } from 'react';
+import { ChangeEvent, useEffect, useId, useState, useSyncExternalStore } from 'react';
 import { playbackStatusText } from '../../copy';
+import { success } from '../../feel/haptics';
+import { NumberRoll } from '../../feel/numberRoll';
+import { feelOn, onFeelChange } from '../../feel/root';
 import type { ImportSource } from '../../media';
 import { Icon } from '../../ui/Icon';
 import { Meter } from '../../ui/Meter';
@@ -93,6 +96,7 @@ export type VerifyProps = StepProps & {
 /** Never blocking: while the import runs, the member sees honest counts and may carry on. */
 export function VerifyStep({ state, onChange, live, earlyContinue, onStop, onContinueEarly }: VerifyProps) {
   const resilient = useFlag('cloud.resilient_import');
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
   if (live.phase === 'running' && resilient) {
     const known = typeof live.total === 'number';
     const checked = checkedOf(live);
@@ -143,10 +147,13 @@ export function VerifyStep({ state, onChange, live, earlyContinue, onStop, onCon
           max={known ? Math.max(live.total ?? 0, 1) : undefined}
           valueText={known ? `${live.registered} of ${live.total} songs` : undefined}
         />
+        {/* with motion on (ADR-0477) the real count rolls to each new value; off, the same words */}
         <p>
-          {known
-            ? `${live.registered} of ${live.total} checked so far. You can keep going; checking continues in the background.`
-            : `${live.registered} checked so far. SelectaDJ is still counting the files in that folder.`}
+          {moving
+            ? <><NumberRoll value={live.registered} />{known ? ` of ${live.total} checked so far. You can keep going; checking continues in the background.` : ' checked so far. SelectaDJ is still counting the files in that folder.'}</>
+            : known
+              ? `${live.registered} of ${live.total} checked so far. You can keep going; checking continues in the background.`
+              : `${live.registered} checked so far. SelectaDJ is still counting the files in that folder.`}
         </p>
         {live.current && <p className="cloud-hint" dir="auto">Now: {live.current}</p>}
         <div className="cloud-actions">
@@ -341,6 +348,8 @@ export function SoundcheckStep({ state, onChange, deps, session, openSession }: 
   };
   const heard = () => {
     const at = deps.now();
+    // a person heard it: the phone answers with the success tap (a no-op where it cannot buzz)
+    success();
     session()?.confirmHeard(at);
     onChange(settle(state, 'soundcheck', 'done', { heardAt: at }));
   };

@@ -12,6 +12,7 @@ import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { MenuItem } from '../ui/primitives';
 import { MixSignature } from '../ui/MusicObjects';
 import { ViewProps } from './shared';
+import { foldAway } from './feelPieces';
 
 type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'> & {
   /** SF-0204-02: My Mixes has one primary action, and the drafts own it (the first draft's Edit, or
@@ -117,7 +118,7 @@ const DraftRow = memo(function DraftRow({ draft, twin, failure, renaming, editor
   const who = twin ? `${draft.name} (draft ${draft.id})` : draft.name;
   const signature = useMemo(() => (draft.song_ids ?? []).map((song_id) => ({ song_id })), [draft.song_ids]);
   return (
-    <li className={draft.place ? 'draft in-line' : 'draft'}>
+    <li className={draft.place ? 'draft in-line' : 'draft'} data-lift="row">
       <div className="draft-name">
         {renaming ? (
           <RenameDraft id={draft.id} name={draft.name} onDone={actions.renamed} />
@@ -294,6 +295,9 @@ export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
       ?.querySelector<HTMLElement>('[id^="draft-"]') ?? heading.current;
     const scrollBefore = window.scrollY;
     await write(() => del(`/drafts/${draft.id}`));
+    // the feel (ADR-0477): the deleted row folds away first; at once when motion is off
+    const folding = foldAway(removedRow);
+    if (folding) await folding;
     setList((before) => before ? { ...before, drafts: before.drafts.filter((item) => item.id !== draft.id) } : before);
     // Removing one card from a long, sorted or filtered list must not throw a
     // keyboard user back to the top or move the viewport. Stable IDs let the

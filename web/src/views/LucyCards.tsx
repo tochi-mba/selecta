@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { CSSProperties, useId, useRef, useState } from 'react';
 import { isSettled, PlanGroup } from '../lucy/reducer';
 import type { Card, Permission, Progress } from '../lucy/types';
 import { CARD_WORDS, durationWords, humanize, plural, valueWords } from '../lucy/words';
@@ -42,14 +42,18 @@ function statusLabel(card: Card): string {
   return card.status === 'retrying' || (card.attempt > 1 && !isSettled(card.status)) ? `${words} (attempt ${card.attempt})` : words;
 }
 
-export function ActivityCard({ card, still }: { card: Card; still: boolean }) {
+export function ActivityCard({ card, still, index = 0 }: { card: Card; still: boolean; index?: number }) {
   const kind = CARD_WORDS[card.status]?.kind ?? 'planned';
   const settled = isSettled(card.status);
+  // a step seen running here that has now really finished draws its result in once; one that was
+  // already finished when the card appeared is simply shown
+  const sawRunning = useRef(!settled);
+  const justDone = sawRunning.current && card.status === 'completed';
   const counted = countWords(card);
   const notices = Array.isArray(card.notices) ? card.notices : [];
   const hasDetails = notices.length > 0 || !!card.error || !!card.skipped_because || card.attempt > 1 || typeof card.duration_ms === 'number' || !!card.note || !!card.op;
   return (
-    <article className={`lucy-card is-${card.status}`} aria-label={`${titleOf(card)}: ${statusLabel(card)}`}>
+    <article className={`lucy-card is-${card.status}`} aria-label={`${titleOf(card)}: ${statusLabel(card)}`} style={{ '--i': index } as CSSProperties}>
       <header className="lucy-card-head">
         <h4 dir="auto">{titleOf(card)}</h4>
         <Status kind={kind}>{statusLabel(card)}</Status>
@@ -59,7 +63,7 @@ export function ActivityCard({ card, still }: { card: Card; still: boolean }) {
       {counted && <p className="lucy-card-count">{counted}</p>}
       {card.status === 'failed' && card.error && <p className="warn">{card.error}</p>}
       {card.status === 'skipped' && card.skipped_because && <p className="hint">Skipped because {card.skipped_because}</p>}
-      <CardVisual card={card} />
+      <CardVisual card={card} drawn={justDone} />
       {hasDetails && (
         <details className="lucy-card-details">
           <summary>Details</summary>
@@ -113,7 +117,8 @@ export function PlanGroupView({ group, cards, still }: { group: PlanGroup; cards
       </div>
       <div id={regionId}>
         {open
-          ? <div className="lucy-cards">{cards.map((card) => <ActivityCard key={`${card.plan}/${card.step}`} card={card} still={still} />)}</div>
+          // opening the plan lays its cards out one after another (feel.css data-stagger, capped)
+          ? <div className="lucy-cards" data-stagger>{cards.map((card, index) => <ActivityCard key={`${card.plan}/${card.step}`} card={card} still={still} index={index} />)}</div>
           : (
             <ol className="lucy-milestones">
               {short.map((card) => (
@@ -143,7 +148,7 @@ export function PermissionCard({ permission, onDecide }: { permission: Permissio
   const args = Object.entries(permission.arguments ?? {}).filter(([, value]) => value !== undefined);
   const headingId = useId();
   return (
-    <article className={`lucy-permission is-${permission.status}`} aria-labelledby={headingId}>
+    <article className={`lucy-permission is-${permission.status}`} aria-labelledby={headingId} data-arrive>
       <h4 id={headingId}>{TIER_WORDS[permission.tier] ?? 'Lucy is asking first'}</h4>
       <p dir="auto">{permission.text || `${humanize(permission.operation)}?`}</p>
       {args.length > 0 && (

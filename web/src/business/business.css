@@ -41,6 +41,16 @@
 
 .biz-pilot-badge { display: inline-flex; padding: var(--space-1) var(--space-2); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius-pill); font: var(--type-meta); }
 
+/* The feel on the work tools (ADR-0477 plan 3.14). A zone's mark pings once when its state changes
+   (components/ZoneStatus.tsx): the wrapper takes no box of its own, and only the mark moves. */
+.biz-beacon { display: contents; }
+/* The tick a form draws beside its "Saved" words (DrawnTick, views/feelPieces.tsx). */
+.biz-saved-tick { margin-inline-end: var(--space-1); vertical-align: text-bottom; }
+:where(:root[data-feel~='motion']) .biz-beacon > .status > .ui-icon { animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both; }
+
+/* These two resets fire only under reduced motion and Still. There data-feel carries no 'motion'
+   (feel/root.ts treats both as calm) and the motion tokens are zero, so the feel never asks for
+   anything they would cut; they stay as the belt and braces they always were. */
 @media (prefers-reduced-motion: reduce) { .biz * { animation: none !important; transition: none !important; } }
 :root[data-motion='still'] .biz * { animation: none !important; transition: none !important; }
 @media (forced-colors: active) {
@@ -54,3 +64,7 @@
 .biz-pricing-interval { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .biz-pricing-quote { display: grid; grid-template-columns: 1fr auto; gap: 0.25rem 1rem; margin: 1rem 0 0; }
 .biz-pricing-quote dd { margin: 0; text-align: end; }
+
+/* The pricing page's interval choice (ADR-0477): a fill slides behind the chosen interval. The
+   labels gain a little room only while the fill is drawn, so with motion off the row is as before. */
+:root[data-feel~='motion'] .biz-pricing-interval > label { padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }

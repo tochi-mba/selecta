@@ -25,6 +25,7 @@ from typing import Any
 
 from selecta.admin.state import DbWorkControls
 from selecta.business.weight import business_policy
+from selecta.catalog.service import handlers as catalog_handlers
 from selecta.devstack import guard
 from selecta.devstack.cloud_app import use_disk_storage
 from selecta.devstack.settings import DevSettings
@@ -99,7 +100,7 @@ class LocalCloudStore(JobStore):
 
 
 def handlers(ffmpeg: str) -> dict:
-    return {**audio_handlers(ffmpeg=ffmpeg), **engine_handlers(ffmpeg=ffmpeg)}
+    return {**audio_handlers(ffmpeg=ffmpeg), **engine_handlers(ffmpeg=ffmpeg), **catalog_handlers()}
 
 
 def main() -> None:

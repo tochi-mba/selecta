@@ -3,6 +3,7 @@ import { Action, Dialog, Drawer, Menu, Problem, Sheet, Skeleton, Status, Tooltip
 import { Icon } from './Icon';
 import { Field, Tabs } from './primitives';
 import { GalleryFeedback } from './gallery/GalleryFeedback';
+import { GalleryMotion } from './gallery/GalleryMotion';
 import { GalleryMusic } from './gallery/GalleryMusic';
 import { GalleryParts } from './gallery/GalleryParts';
 import { GALLERY_KINDS, GALLERY_SKELETONS } from './gallery/specimens';
@@ -56,6 +57,7 @@ export function ControlGallery() {
       <GalleryFeedback />
       <GalleryParts />
       <GalleryMusic />
+      <GalleryMotion />
       <section className="stack"><h3>Loading geometry</h3>{GALLERY_SKELETONS.map((variant) => <div key={variant}><h4>{variant}</h4><Skeleton variant={variant} lines={2} label={`${variant} loading example`} /></div>)}</section>
       {overlay === 'dialog' && <Dialog title="Example dialog" onClose={() => setOverlay(null)}>{contents}</Dialog>}
       {overlay === 'drawer' && <Drawer title="Example drawer" onClose={() => setOverlay(null)}>{contents}</Drawer>}

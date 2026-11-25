@@ -42,7 +42,7 @@ export function BlocklistEditor({ items, songs, onChange, disabled }: {
       onPick={(value) => { void add(value); }} />
     {disabled && <p className="biz-quiet">{disabled}</p>}
     {!items.length ? <p className="biz-quiet">{VENUE_COPY.blocklistNone}</p> : <ul className="venue-list">
-      {items.map((item) => <li key={`${item.kind}:${item.id}`} className="biz-row">
+      {items.map((item) => <li key={`${item.kind}:${item.id}`} className="biz-row" data-lift="row">
         <span className="biz-clamp" title={item.label}>{item.kind === 'artist' ? VENUE_COPY.blocklistArtist : VENUE_COPY.blocklistSong}: {item.label}</span>
         <Action disabled={off} run={() => onChange(items.filter((other) => other !== item))}>{VENUE_COPY.blocklistRemove(item.label)}</Action>
       </li>)}

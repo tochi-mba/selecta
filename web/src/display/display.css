@@ -70,13 +70,15 @@ p { margin: 0.4em 0; }
 .d-by { display: block; font-family: var(--body); font-weight: var(--weight-strong); font-size: 0.42em; line-height: 1.3; letter-spacing: 0; color: var(--soft); margin-top: 0.5em; }
 .d-now.d-muted .d-by { font-size: 0.5em; font-weight: 400; }
 .d-playing[data-on] h2 { color: var(--ink); }
-/* three bars that rise and fall while music plays; still when it is paused or nothing is on */
+/* three bars that say music is playing; low and soft when it is paused or nothing is on */
 .d-eq { display: inline-flex; align-items: flex-end; gap: 0.18em; height: 1em; }
 .d-eq i { width: 0.24em; height: 100%; border-radius: var(--radius-sm); background: var(--selected); transform-origin: bottom; transform: scaleY(0.4); }
 .d-playing:not([data-on]) .d-eq i { background: var(--soft); }
-.d-playing[data-on] .d-eq i { animation: d-eq var(--motion-loop-working) ease-in-out infinite alternate; }
-.d-playing[data-on] .d-eq i:nth-child(2) { animation-delay: calc(var(--motion-loop-working) / -3); }
-.d-playing[data-on] .d-eq i:nth-child(3) { animation-delay: calc(var(--motion-loop-working) / -1.5); }
+/* While music plays the bars stand at three heights and stay still: the display's feed carries no
+   tempo or beat, and nothing musical may move on a timer (ADR-0477 rule 4). */
+.d-playing[data-on] .d-eq i:nth-child(1) { transform: scaleY(0.6); }
+.d-playing[data-on] .d-eq i:nth-child(2) { transform: scaleY(1); }
+.d-playing[data-on] .d-eq i:nth-child(3) { transform: scaleY(0.8); }
 .d-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(12em, 1fr)); gap: 1.6em 2.4em; margin-top: 1.3em; padding-top: 1.1em; border-top: 1px solid var(--line); align-items: start; }
 .d-list { list-style: none; counter-reset: place; margin: 0; padding: 0; font-size: 1.05em; }
 .d-list li { counter-increment: place; display: flex; align-items: baseline; gap: 0.7em; margin: 0 0 0.55em; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
@@ -105,5 +107,4 @@ p { margin: 0.4em 0; }
 @keyframes d-arrive { from { opacity: 0; transform: translateY(0.4em); } }
 @keyframes d-drift { from { transform: translate(-0.8vmin, -0.6vmin); } to { transform: translate(0.8vmin, 0.6vmin); } }
 @keyframes d-turn { to { transform: rotate(360deg); } }
-@keyframes d-eq { to { transform: scaleY(1); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
