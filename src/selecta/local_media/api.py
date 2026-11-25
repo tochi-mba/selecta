@@ -45,6 +45,31 @@ class SongRegistration(BaseModel):
     duration_s: float | None = Field(default=None, gt=0)
     codec: str | None = Field(default=None, max_length=32)
     sample_rate: int | None = Field(default=None, gt=0)
+    # `library.audio_identity`: a hash of the audio alone, like the file hash a hash and never
+    # audio. Its form is checked only with the flag on (`_audio_ids`); off, it is dropped unread.
+    audio_id: str | None = Field(default=None, max_length=67)
+
+
+AUDIO_FLAG = "library.audio_identity"
+
+
+def _audio_ids(songs: list[SongRegistration]) -> bool:
+    """Whether this request's audio ids count. With the flag on each must be "a1:" and 64
+    lower-case hex digits, or the request is refused whole; off, every one is dropped."""
+    from selecta import flags
+    from selecta.library.audio_identity import PATTERN
+
+    if not flags.on(AUDIO_FLAG):
+        for song in songs:
+            song.audio_id = None
+        return False
+    for index, song in enumerate(songs):
+        if song.audio_id is not None and not PATTERN.fullmatch(song.audio_id):
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_audio_id", "index": index},
+            )
+    return True
 
 
 class RegisterSongsRequest(BaseModel):
@@ -117,9 +142,13 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
         workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_WRITE)
+        audio_ids = _audio_ids(body.songs)
         with transaction(engine, workspace_id) as conn:
             answers = store.register_songs(
-                conn, workspace_id, [song.model_dump() for song in body.songs]
+                conn,
+                workspace_id,
+                [song.model_dump() for song in body.songs],
+                audio_ids=audio_ids,
             )
             # a re-registered file may carry new tags, which can change its song
             versions.regroup_versions(conn, workspace_id)
