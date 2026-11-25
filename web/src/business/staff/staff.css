@@ -70,3 +70,30 @@
 
 .biz-zone-switch { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: var(--space-3); }
 .biz-zone-menu > button { min-height: var(--control-height-big); padding: 0 var(--space-4); border: 1px solid var(--edge-interactive); border-radius: var(--radius); background: var(--surface-control); color: var(--text); font: inherit; font-weight: var(--weight-strong); }
+
+/* The feel on the venue tablet (ADR-0477 plan 3.14), a calm work tool. Buttons already press and
+   lift by themselves (styles/feel.css); these rules only add what a keypad and a queue need. Each is
+   scoped to <html data-feel>, so with the flags off nothing here applies. The two resets above stay
+   as they are: they fire only under reduced motion and Still, where data-feel carries no 'motion'
+   and every token they would cut is zero already, so they never fight the feel. */
+
+/* A pressed PIN key fills as it sinks, so a press is seen under a thumb as well as felt. */
+:root[data-feel~='depth'] .biz-pin-pad button:active:not(:disabled) { background: var(--surface-selected); }
+
+/* A refused PIN: its dots show once in the danger colour and fade; nothing moves or shakes
+   (ADR-0182). The words "Wrong PIN" carry the meaning. */
+:root[data-feel~='motion'] .biz-pin-refused {
+  color: var(--danger);
+  animation: feel-pin-refused calc(var(--motion-slow) * 3) var(--motion-ease) forwards;
+}
+@keyframes feel-pin-refused {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* The zone switcher's fill slides behind the chosen zone; the chosen button lets it show through.
+   aria-pressed and the forced-colours outline still mark the choice. */
+:root[data-feel~='motion'] .biz-zone-switch[data-indicator] > .biz-big-action[aria-pressed='true'] { background-color: transparent; }
+
+/* The tick beside an approved request, before the row folds away. */
+.biz-request-tick { margin-inline-end: var(--space-1); vertical-align: text-bottom; }

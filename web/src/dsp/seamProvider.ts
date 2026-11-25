@@ -36,6 +36,9 @@ export const ANALYSE_SECONDS = 60;
  * support drops under MIN_GRID_SUPPORT on real music (measured on pop at 126 BPM: 0.85 at 60 s,
  * 0.50 at 15 s, 0.40 at 10 s), and a short slice would be blamed on the song's beat. */
 export const MIN_ANALYSE_SECONDS = 20;
+/** With `patient`, a block may take this many times its calibrated time, and at least this long. */
+export const PATIENT_FACTOR = 6;
+export const PATIENT_MIN_MS = 8000;
 /** An onset within this distance of a grid line votes for that phase. */
 const PHASE_TOLERANCE_SECONDS = 0.03;
 const PHASE_STEPS = 64;
@@ -288,6 +291,10 @@ export type WorkerSeamProviderOptions = SeamProviderOptions & {
   now?: () => number;
   /** Receives the live scheduling state so the engine roster can stop claiming Tier 2 after misses. */
   onBudgetState?(state: { supported: boolean; reason?: string; deadlineMisses: number; horizonS?: number }): void;
+  /** cloud.seam_lead: seams are planned minutes ahead, so a slow analysis block is waited for
+   * (up to PATIENT_FACTOR times its calibrated time) and counted, and never shrinks the horizon:
+   * one busy moment no longer ends beatmatching for the rest of the visit. */
+  patient?: () => boolean;
 };
 
 /** Production seam provider. It performs onset and tempo analysis in a module worker and only
@@ -347,22 +354,28 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
         const { pcm, offset } = sliceMono(buffer, part, workSeconds);
         const facts = sliceFacts(pcm, buffer.sampleRate);
         const began = now();
+        const patient = options.patient?.() === true;
         let response: AnalysisResponse;
         try {
           response = await analyseInWorker(getWorker(), pcm, buffer.sampleRate, ['onsets', 'tempo'], {
             owned: true,
-            timeoutMs: Math.max(1, Math.ceil(budget.msPerBlock)),
+            timeoutMs: patient
+              ? Math.max(PATIENT_MIN_MS, Math.ceil(budget.msPerBlock * PATIENT_FACTOR))
+              : Math.max(1, Math.ceil(budget.msPerBlock)),
           });
         } catch (error) {
           const elapsed = Math.max(0, now() - began);
-          if (budget.recordBlock(elapsed)) budget.shrinkHorizon();
+          if (budget.recordBlock(elapsed) && !patient) budget.shrinkHorizon();
           budgetState(elapsed > budget.msPerBlock
             ? `worker missed its calibrated deadline (${Math.round(elapsed)} ms over ${Math.round(budget.msPerBlock)} ms)`
             : undefined);
           throw error;
         }
         const elapsed = Math.max(0, now() - began);
-        if (budget.recordBlock(elapsed)) {
+        if (budget.recordBlock(elapsed) && patient) {
+          // slow but finished, with time in hand: keep the result, and say the miss was counted
+          budgetState();
+        } else if (elapsed > budget.msPerBlock) {
           budget.shrinkHorizon();
           budgetState(`worker missed its calibrated deadline (${Math.round(elapsed)} ms over ${Math.round(budget.msPerBlock)} ms)`);
           throw new Error('worker missed its calibrated deadline');

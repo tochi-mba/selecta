@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixItem } from '../api';
 import * as provider from '../dsp/seamProvider';
 import { LOAD_NEXT_WITHIN } from '../engine/scheduler';
+import { createLevels, type Levels } from '../engine/level';
 import { browserMovesAllowed, browserMovesOn, browserStemMovesAllowed } from './browserMoves';
 import { flagOn } from '../flags';
 import { isOnline } from './connection';
@@ -31,8 +32,8 @@ import { tabLog } from '../devices/audioTab';
  *   is and its lease is fresh. A lapsed lease (`state_confidence` uncertain) is never 'playing'.
  * - `notice` carries the one status vocabulary (copy.ts); a passing probe or a running graph never
  *   claims audible sound, only a person's sound-check confirmation does.
- * - What the engine cannot do yet is an honest no-op with a reason, never a silent success:
- *   the spectrum (no analyser is exposed).
+ * - The spectrum and the visualizer taps come from the engine's analyser as a read-only side
+ *   branch (ADR-0477), and only while this device makes the sound; otherwise they are null.
  * - Planned transitions (BF-0459-04): the speaker gets a seam provider (dsp/seamProvider.ts) that
  *   scripts each seam from the mix's seam settings and this device's capability record; the
  *   state's `nextReady`/`seamAt`/`inSeam` come from the schedule actually handed to the
@@ -353,12 +354,14 @@ export class LocalFirstPlayer implements PlayerLike {
     this.publish('');
   }
 
+  /** The engine's own analyser, read only (ADR-0477), and only while the music is made on this
+   * device. Playing on another device there is nothing here to measure, so this stays null. */
   getSpectrum(): Uint8Array | null {
-    return null;
+    return this.speaking ? this.actions.speaker?.spectrum() ?? null : null;
   }
 
   getVisualTaps(): { left: AnalyserNode; right: AnalyserNode } | null {
-    return null;
+    return this.speaking ? this.actions.speaker?.spectrumTaps() ?? null : null;
   }
 }
 
@@ -406,6 +409,7 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
       ...seams,
       calibration: seams.workerCalibration,
       deviceId: seams.deviceId,
+      patient: seamLeadOn,
       abilities: () => provider.abilitiesFrom((feature) => roster.get(feature)),
       sourceSafe: (source) => provider.abilityOf((feature) => roster.get(feature), `seam_source_${source}`),
       onBudgetState: (state) => {
@@ -420,7 +424,13 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
       },
     }) : undefined;
     // queueLength lets an unavailable track skip with a notice instead of ending the set (ADR-0458)
-    const speaker = engine.createSpeaker({ audio: opened, probe, resolve, queueLength, seam });
+    // cloud.seam_lead (ADR-0479 phase 1): plan each transition as its song starts, and play every
+    // song at one level; both read the flag as they run, so a change needs no new speaker
+    const speaker = engine.createSpeaker({
+      audio: opened, probe, resolve, queueLength, seam,
+      planAhead: seamLeadOn,
+      level: (buffer) => (seamLeadOn() ? songLevels().of(buffer) : Promise.resolve(1)),
+    });
     return { speaker, refusal: probe.ok ? null : probe.reason };
   } catch (problem) {
     engine.dispose();
@@ -434,6 +444,12 @@ export const SEAMS_KEPT = 128;
 export const JUMP_LEAD_SECONDS = 4;
 
 const offlinePlaybackOn = () => flagOn('cloud.offline_playback');
+/** ADR-0479 phase 1: early seam planning, song levels and patient analysis. */
+export const SEAM_LEAD_FLAG = 'cloud.seam_lead';
+const seamLeadOn = () => flagOn(SEAM_LEAD_FLAG);
+// one measuring worker for the page, made the first time a song needs its level
+let levels: Levels | null = null;
+const songLevels = (): Levels => (levels ??= createLevels());
 
 /** The hook the local-first shell uses: one stable LocalFirstPlayer over the device session. */
 /** Worker calibration is device evidence (ADR-0457): measured on this device, at most 30 days
@@ -442,7 +458,7 @@ const offlinePlaybackOn = () => flagOn('cloud.offline_playback');
  * whole visit of style-less fades. A device that cannot be measured keeps the labelled fade. */
 const CALIBRATION_KEY = (deviceId: string) => `selecta.dsp.calibration.${deviceId}`;
 
-function recallCalibration(deviceId: string): WorkerCalibration | null {
+export function recallCalibration(deviceId: string): WorkerCalibration | null {
   try {
     const raw = localStorage.getItem(CALIBRATION_KEY(deviceId));
     if (!raw) return null;
@@ -453,7 +469,7 @@ function recallCalibration(deviceId: string): WorkerCalibration | null {
   }
 }
 
-function rememberCalibration(made: WorkerCalibration): void {
+export function rememberCalibration(made: WorkerCalibration): void {
   try {
     localStorage.setItem(CALIBRATION_KEY(made.deviceId), JSON.stringify(made));
   } catch {

@@ -8,6 +8,9 @@ import { Action, Status as StatusMark } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { words } from '../copy';
 import { ScanReveals } from './ScanReveals';
+import { Meter } from '../ui/Meter';
+import { RollingCount, useFeelOn } from './feelPieces';
+import { MomentLayer, plainCount, useReachedMoment } from './feelLocal';
 
 /** Getting from nothing to a first mix takes three steps. Which one you're on comes from what the
  * server says is true, so it can't claim more than has happened. */
@@ -63,6 +66,13 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
   const ready = counts.ready ?? 0;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const reading = scan.status === 'running';
+  // ADR-0477: with the feel on, each stage also gets a bar from the same real counts (none where no
+  // total is known), and the library turning ready while this is open is celebrated once
+  const feel = useFeelOn();
+  const music = counts.music ?? 0;
+  const analysed = counts.analysed ?? 0;
+  const [celebrating, celebrated] = useReachedMoment(ready >= READY_NEEDED);
+  const roll = (value: number | undefined) => (value === undefined ? value : <RollingCount value={value} format={plainCount} />);
   return (
     <main className="page setup" id="main">
       <SetupSteps stage="prepare" />
@@ -71,10 +81,20 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
           counters down; the sentence that does carry them sits under the counters */}
       <p className="lede">Songs found, analysed and ready for mixes are counted separately. You can use your PC as normal while this happens.</p>
       <ol className="readiness-steps" aria-label="Library preparation">
-        <li><span>Music found</span><strong>{counts.music}</strong></li>
-        <li><span>Audio analysed</span><strong>{counts.analysed}</strong></li>
-        {flagOn('lyrics.lookup') && counts.lyrics !== undefined && <li><span>With timed lyrics</span><strong>{counts.lyrics}</strong></li>}
-        <li><span>Ready for mixes</span><strong>{ready} / {READY_NEEDED} needed</strong></li>
+        <li>
+          <span>Music found</span><strong>{roll(counts.music)}</strong>
+          {/* still reading: how many files are left is not known, so the bar says only that it is going */}
+          {feel && reading && <Meter className="readiness-meter" label="Music found" showLabel={false} valueText="Still reading your folder" />}
+        </li>
+        <li>
+          <span>Audio analysed</span><strong>{roll(counts.analysed)}</strong>
+          {feel && music > 0 && <Meter className="readiness-meter" label="Audio analysed" showLabel={false} value={analysed} max={music} valueText={`${analysed} of ${music} songs`} />}
+        </li>
+        {flagOn('lyrics.lookup') && counts.lyrics !== undefined && <li><span>With timed lyrics</span><strong>{roll(counts.lyrics)}</strong></li>}
+        <li>
+          <span>Ready for mixes</span><strong>{roll(ready)} / {READY_NEEDED} needed</strong>
+          {feel && <Meter className="readiness-meter" label="Ready for mixes" showLabel={false} value={Math.min(ready, READY_NEEDED)} max={READY_NEEDED} valueText={`${Math.min(ready, READY_NEEDED)} of ${READY_NEEDED} needed`} />}
+        </li>
       </ol>
       <p className="hint">
         {ready} of {counts.music} songs have the vocal or instrumental cues needed for mixes. Audio analysis is complete for {counts.analysed};
@@ -96,7 +116,9 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
         </dl>
       </details>
       {flagOn('lucy') && <p className="hint">You can discuss an idea with Lucy while your library is being prepared. It won’t bypass song-readiness checks, send a request on its own, or start playback.</p>}
-      <div className="row wrap">
+      {/* data-handoff: once the library is ready, Make my first mix is the one glowing action here */}
+      <div className="row wrap" data-handoff={feel && ready >= READY_NEEDED ? '' : undefined}>
+        {celebrating && <MomentLayer kind="equalizer" onDone={celebrated} />}
         {ready >= READY_NEEDED && <PageLink to="/mixes" className="button primary">Make my first mix</PageLink>}
         <PageLink to="/library" className="button">Open Library</PageLink>
         <LinkIfThere to="/mixes/lucy" className="button">Plan with Lucy (optional)</LinkIfThere>

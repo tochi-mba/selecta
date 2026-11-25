@@ -158,7 +158,7 @@ export function HoursTab({ venue, disabled }: { venue: Venue; disabled: string |
     <section className="biz-card" aria-labelledby={`exceptions-${venue.id}`}>
       <h3 id={`exceptions-${venue.id}`}>{COPY.exceptionsHeading}</h3>
       {!exceptions.length ? <p className="biz-quiet">{COPY.exceptionsEmpty}</p> : <ul className="bzf-plain">
-        {exceptions.map((item) => <li key={item.id} className="biz-row">
+        {exceptions.map((item) => <li key={item.id} className="biz-row" data-lift="row">
           <span>{exceptionWords(item)}</span>
           <Action disabled={disabled != null} run={async () => { await client.removeException(venue.id, item.id); await reload(); }}>{COPY.remove(isoDayWords(item.date))}</Action>
         </li>)}

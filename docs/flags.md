@@ -165,6 +165,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `lyrics.word_timing` | **Word timing.** When each sung word lands, for moves that hand over on a word. | `lyrics.lookup` |
 | `analysis.time_estimates` | **Time estimates.** How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds. |  |
 | `library.scan_resume` | **Scans carry on after a stop.** A library scan saves its progress as it goes, so a scan interrupted by closing SelectaDJ or the computer carries on where it stopped. An interrupted export or lyric lookup is offered again. |  |
+| `library.art_embedded` | **Covers from your own files.** Shows the cover picture stored inside a song's own file. In Cloud it is read on your device and never uploaded (ADR-0478). Off: the generated colour tile, as before. Off by default while it is being built. |  |
+| `library.art_lookup` | **Covers and song details from the web.** For a song whose file has no cover, looks up the release on MusicBrainz and its cover on the Cover Art Archive, and keeps the result in SelectaDJ's own catalogue. Only the artist, title, album and length are sent (ADR-0478). Off by default: the sources' terms are the owner's to clear first. | `library.art_embedded` |
 
 ## Learning
 
@@ -199,7 +201,14 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `app.motion_choice` | **Motion choice.** Still, subtle or expressive movement. The computer's reduced-motion setting always wins. |  |
 | `app.auto_low_motion` | **Lower motion on a struggling device.** When frames keep arriving late, decorative movement switches to Still for this visit. Nothing is hidden, and Workspace can bring full motion back. |  |
 | `app.classic_nav` | **Classic navigation.** The older navigation labels over the same pages, with ?ui=classic as a way back. |  |
-| `app.scene_transitions` | **Page cross-fades.** With Expressive motion, pages cross-fade where the browser supports it; otherwise they change at once. | `app.motion_choice` |
+| `app.scene_transitions` | **Page transitions.** With Expressive motion, pages move in the direction you went and shared things travel between them, where the browser supports it; otherwise they change at once. | `app.motion_choice` |
+| `app.feel_motion` | **Expressive feel.** Springy presses and releases, things arriving from where they were asked, and Expressive as the starting motion level (ADR-0477). Off: today's quiet feedback, with Subtle as the starting level. Off by default while it is being built. | `app.motion_choice` |
+| `app.feel_depth` | **Depth and light.** Lift shadows, lit edges and a glow on the main action, on the same colours as before (ADR-0477). Off: flat surfaces as before. Off by default while it is being built. |  |
+| `app.feel_pointer_light` | **Pointer light.** Cards and tiles show a soft light where the mouse is. Mouse only, and never the only sign of anything. Off by default while it is being built. | `app.feel_depth` |
+| `app.feel_music` | **Moves with the music.** While a mix plays, the Play control, the player bar and the playing row answer the measured beat of the real audio, and rest when it is paused (ADR-0477). Off: they stay still. Off by default while it is being built. | `app.motion_choice` |
+| `app.feel_ambient` | **Ambient colour.** A soft tint taken from the playing song, which travels to the next song's colour during a blend. Off: no tint. Off by default while it is being built. |  |
+| `app.feel_moments` | **Big moments.** A short celebration at rare moments: setup finished, a mix built, the first blend heard, a room opened, a plan upgraded, an export ready. Off: the plain words only. Off by default while it is being built. | `app.feel_motion` |
+| `app.feel_haptics` | **Phone taps.** A light tap from the phone on key presses, on phones that can do it. Off: no taps. Off by default while it is being built. |  |
 | `app.install` | **Install as an app.** Chrome and Edge can install Selecta as its own window. |  |
 | `app.attention_announce` | **Say when Workspace needs attention.** When storage fills, analysis pauses with songs left, or a song or transition fails, a screen reader hears it once on whatever page is open. The header mark stays either way. |  |
 
@@ -211,6 +220,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `tools.key_benchmark` | **Key method benchmark.** Score a replacement key method against S-KEY's stored keys on this library, read-only, for choosing S-KEY's Cloud replacement. |  |
 | `tools.set_mix` | **Whole-set render.** Render a planned set straight to one file from the command line. |  |
 | `tools.stem_preview` | **Stem preview.** Hear two songs' stems side by side from the command line. | `stems` |
+| `tools.listening_room` | **Listening Room.** A Cloud page for judging transitions by ear: each transition in the current mix is played two ways on this device, blind, as A and B, and the answers are kept in this browser until the reveal says which was which. Version 1 compares the browser player before and after early planning, one level for every song and patient analysis (cloud.seam_lead). | `cloud.browser_dsp`, `cloud.local_first` |
 | `tools.old_planner` | **Rolling set planner.** The original rolling set plan, before mix ideas. |  |
 
 ## Cloud services
@@ -231,6 +241,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.local_first` | **Browser-first personal Cloud.** Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455). |  |
 | `cloud.workspace` | **Browser Workspace.** Workspace in browser-first Cloud: an overview of the library and what this browser is doing in the background, the interface choices, connecting music, this browser's storage and a browser diagnostics panel. Analysis and learning stay on a computer running SelectaDJ. When off, the device cards stay in More as This device. | `cloud.local_first` |
 | `cloud.resilient_import` | **Import that survives interruptions.** A durable import journal in this browser: it retries, waits for the connection, and carries on after a reload or sign-in without re-reading finished files. | `cloud.local_media` |
+| `cloud.music_folders` | **Your music folders, watched.** The member can connect several music folders on this device. Each is listed with its song count, when it was last checked and whether the browser still allows it; folders the browser still allows are checked for new, changed and missing songs when SelectaDJ opens and when the tab comes back. Folder names and handles stay in this browser; nothing about a folder goes to the server. Off, one folder is remembered only to carry on an interrupted import, as before. | `cloud.local_media` |
 | `cloud.offline_shell` | **Cloud opens offline.** The app opens without a connection and the library shows what this device already knows. | `cloud.local_first` |
 | `cloud.offline_playback` | **Playback through a dropped connection.** A playing device keeps playing its own files while the connection is down and settles the playback lease when it returns. | `devices.browser_player` |
 | `cloud.mix_outbox` | **Mix changes wait for the connection.** Mixes made or edited offline are kept in this browser and sent when the connection returns. | `cloud.local_first` |
@@ -262,6 +273,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |
 | `devices.browser_player` | **Browser player.** The in-browser audio engine registered as a playback device (ADR-0457). | `devices` |
 | `cloud.browser_dsp` | **Browser DSP.** The browser player's mixing DSP tiers, labelled honestly where they differ musically (ADR-0459). | `devices.browser_player` |
+| `cloud.seam_lead` | **Browser transitions planned early.** In a browser mix, each transition is worked out as its song starts instead of 45 seconds before it ends, every song plays at one level (-14 LUFS, as local mode), and a slow analysis moment is waited for instead of turning beatmatching off for the visit (ADR-0479 phase 1). Off: transitions are planned late and songs play at their own level, as before. | `cloud.browser_dsp` |
 | `cloud.browser_moves` | **Browser transition moves.** Local mode's moves in a browser mix: SelectaDJ picks a bass swap, filter sweep, cut, echo out or reverb wash for each transition from the audio as it plays, the member can choose one, and each transition says what really played (ADR-0459). | `cloud.browser_dsp` |
 | `cloud.browser_harmonic` | **Browser harmonic matches.** Make a Mix's Harmonic matches in a browser library: each song this device can play gets a whole-song key profile measured here in spare time, songs whose profiles and keys line up are offered as pairs to hear, and the audition plays the end of one into the start of the other from the files on this device. It is not local mode's bar-by-bar chord search. | `cloud.browser_dsp`, `discover.harmonic` |
 | `cloud.browser_stems` | **Browser stem moves.** Splitting songs into voice, drums, bass and melody on this device, only around each transition, for vocal ride, strip and land and intertwined stems in browser mixes (ADR-0459 Tier 3). Each device reports unsupported until the stem model's licence review and that device's evidence record pass. | `cloud.browser_moves`, `stems` |

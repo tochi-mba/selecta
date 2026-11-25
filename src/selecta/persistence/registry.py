@@ -40,6 +40,7 @@ TABLE_MODULES: tuple[str, ...] = (
     "selecta.business.people.schema",
     "selecta.business.people.setup_schema",
     "selecta.replay.schema",
+    "selecta.catalog.schema",
 )
 
 

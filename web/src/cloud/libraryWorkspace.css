@@ -21,7 +21,7 @@
 /* ---- Library: what needs the member, straight under the header ---- */
 .lw-lead, .lw-connect-status { display: grid; gap: var(--space-3); min-width: 0; }
 .lw-lead { margin-bottom: var(--space-4); }
-.lw-lead:not(:has(.banner, .lw-import, .lw-disclosure, .lw-welcome, .lw-remote-line)), .lw-connect-status:not(:has(> :not(input))) { display: none; }
+.lw-lead:not(:has(.banner, .lw-import, .lw-disclosure, .lw-welcome, .lw-remote-line, .mf-folders)), .lw-connect-status:not(:has(> :not(input))) { display: none; }
 .lw-lead .banner b { font-weight: var(--weight-label); }
 /* ADR-0475 R6: another device has the music; one quiet line where the large card used to be */
 .lw-remote-line { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0; color: var(--text-soft); font: var(--type-meta); }
@@ -298,7 +298,7 @@
   .library-browser .page-header[data-remote] .lw-connect-menu,
   .library-browser .page-header[data-remote] .lw-connect-menu > button { width: auto; min-height: var(--control-height); }
   .library-browser .lw-lead .lw-remote-line[data-remote-only] { display: none; }
-  .library-browser .lw-lead:not(:has(.banner, .lw-import, .lw-disclosure, .lw-welcome, .lw-remote-line:not([data-remote-only]))) { display: none; }
+  .library-browser .lw-lead:not(:has(.banner, .lw-import, .lw-disclosure, .lw-welcome, .mf-folders, .lw-remote-line:not([data-remote-only]))) { display: none; }
   .library-browser:has(.page-header[data-remote]) { padding-top: var(--space-3); }
   .library-browser .page-header[data-remote] { margin-bottom: 0; }
   .library-browser .lw-toolbar { margin-bottom: var(--space-1); }
@@ -320,7 +320,47 @@
   .lw-workspace .interface-choices .choice { width: 100%; }
   .lw-workspace .interface-choices .choice input { flex: none; }
 }
+/* Your music folders (cloud.music_folders): folded into the Library's lead, in full on Sources */
+.mf-folders { min-width: 0; }
+details.mf-folders { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); }
+details.mf-folders > summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-height: var(--control-height); padding: var(--space-2) var(--space-4); font-weight: var(--weight-label); cursor: pointer; }
+.mf-summary { color: var(--text-soft); font-size: var(--text-sm); font-weight: var(--weight-body); }
+details.mf-folders > .mf-body { padding: 0 var(--space-4) var(--space-4); }
+.mf-body { display: grid; gap: var(--space-3); min-width: 0; }
+.mf-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.mf-actions > * { min-height: var(--control-height); }
+.mf-list > li.mf-row { align-items: flex-start; }
+.mf-row-text { flex: 1 1 240px; display: grid; gap: var(--space-hair); min-width: 0; }
+.mf-row-text > b { overflow-wrap: anywhere; }
+.mf-row-words { color: var(--text-soft); font-size: var(--text-sm); line-height: 1.45; }
+.mf-row-refused { color: var(--danger); font-size: var(--text-sm); }
+/* the bar's room is kept whether or not a check runs, so the list never moves */
+.mf-row-meter { min-height: var(--space-3); }
+.mf-row-actions { align-items: center; }
+.mf-row-actions button, .mf-row-actions .menu > button { min-height: var(--control-height); min-width: var(--control-height); }
+.mf-row[data-state='permission'] .lw-source-mark { color: var(--status-action); }
+.mf-row[data-state='missing'] .lw-source-mark { color: var(--status-warning); }
+.mf-row[data-state='checking'] .lw-source-mark { color: var(--status-working); }
+.mf-choices { display: grid; gap: var(--space-2); margin: var(--space-3) 0 0; padding: 0; border: 0; }
+.mf-choices label { display: flex; align-items: flex-start; gap: var(--space-3); min-height: var(--control-height); padding: var(--space-2) var(--space-3); border: 1px solid var(--edge-interactive); border-radius: var(--radius-sm); cursor: pointer; }
+.mf-choices label:has(input:checked) { border-color: var(--edge-selected); background: var(--surface-selected); }
+.mf-choices label:has(input:disabled) { cursor: default; opacity: 0.6; }
+.mf-choices label:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mf-choices label > span { display: grid; gap: var(--space-hair); }
+.mf-choices label > span > span { color: var(--text-soft); font-size: var(--text-sm); }
+.mf-choices input { margin-top: var(--space-1); }
+.mf-drop { position: fixed; inset: var(--space-4); z-index: var(--layer-sheet); display: grid; place-content: center; justify-items: center; gap: var(--space-2); border: 2px dashed var(--edge-selected); border-radius: var(--radius); background: var(--surface-scrim); color: var(--text); font: var(--type-section); pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .mf-drop { animation: mf-drop-in var(--motion-reveal) var(--motion-ease); }
+}
+@keyframes mf-drop-in { from { opacity: 0; } }
+@media (max-width: 640px) {
+  .mf-actions > * { flex: 1 1 auto; justify-content: center; }
+  .mf-row-actions { flex: 1 1 100%; }
+  .mf-row-actions > :first-child { flex: 1 1 auto; justify-content: center; }
+}
 @media (forced-colors: active) {
+  .mf-choices label:has(input:checked) { border-color: Highlight; }
   .lw-segment button[aria-pressed='true'], .lw-meta[data-selecting], .library-browser .lw-row.selected { border-color: Highlight; }
 }
 /* I84: what the row's tap did, said in the row for a moment; empty, it takes no room */

@@ -2,10 +2,11 @@ import { MouseEvent, ReactNode } from 'react';
 import { useFlags } from '../flags';
 import { navigate, parseRoute } from '../router';
 import { routeOn } from './manifest';
+import type { SharedElement } from './sceneTransition';
 
 /** An ordinary link that doesn't reload the page, so the music keeps going. A link to a page this
  * build doesn't have isn't drawn, and says so in the console: whatever drew it should have asked. */
-export function PageLink({ to, children, ...rest }: { to: string; children: ReactNode } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
+export function PageLink({ to, children, ...rest }: LinkProps) {
   useFlags();
   if (!routeOn(parseRoute(to.split('?')[0]))) {
     console.error(`A link to ${to} was drawn, but that page is turned off in this build.`);
@@ -21,12 +22,16 @@ export function LinkIfThere({ to, children, ...rest }: { to: string; children: R
   return routeOn(parseRoute(to.split('?')[0])) ? <Link to={to} {...rest}>{children}</Link> : null;
 }
 
-function Link({ to, children, ...rest }: { to: string; children: ReactNode } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
+type LinkProps = { to: string; children: ReactNode; share?: () => readonly SharedElement[] } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>;
+
+function Link({ to, children, share, ...rest }: LinkProps) {
   const follow = (event: MouseEvent<HTMLAnchorElement>) => {
     rest.onClick?.(event);
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    navigate(to);
+    // ADR-0477: what this link names on the way out travels to the page it opens
+    if (share) navigate(to, { share: share() });
+    else navigate(to);
   };
   return <a {...rest} href={to} onClick={follow}>{children}</a>;
 }

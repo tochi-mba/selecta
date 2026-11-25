@@ -1,4 +1,4 @@
-import { ReactNode, RefObject, useContext, useId, useLayoutEffect, useRef, useState } from 'react';
+import { ReactNode, RefObject, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError, type MixItem } from '../api';
 import { flagOn } from '../flags';
 import { length } from '../lib';
@@ -13,6 +13,8 @@ import { MixMap } from './MixMap';
 import { HEAR_LEAD, LiveTransitionPanel, SongPanel } from './PhonePanels';
 import { PhoneSheet } from './PhoneSheet';
 import { PhoneStory, takeFocus } from './PhoneStory';
+import { feelOn } from '../feel/root';
+import { DrawnTick } from './feelPieces';
 import './phoneEditor.css';
 
 export type PhoneEditorProps = {
@@ -117,6 +119,14 @@ export function PhoneEditor(props: PhoneEditorProps) {
     else void player.playFrom(mix[index]?.position ?? index, offset);
   };
   const notSaved = !!failed?.retry;
+  // the feel (ADR-0477): when a change has finished saving, a tick draws itself beside Saved
+  const savingNow = sending > 0 || !!movingKey;
+  const wasSaving = useRef(false);
+  const [saves, setSaves] = useState(0);
+  useEffect(() => {
+    if (wasSaving.current && !savingNow && !notSaved && feelOn('motion')) setSaves((count) => count + 1);
+    wasSaving.current = savingNow;
+  }, [savingNow, notSaved]);
   const saveWords = sending > 0 || movingKey ? 'Saving…' : notSaved ? 'Not saved' : inDraft ? 'Saved' : 'Saved, and playing as it is';
   const ready = !readiness.seams ? null : live ? null : readiness.allReady ? 'All transitions ready' : `${readiness.ready} of ${readiness.seams} transitions ready`;
 
@@ -171,7 +181,7 @@ export function PhoneEditor(props: PhoneEditorProps) {
           <span>{mix.length} {mix.length === 1 ? 'song' : 'songs'}</span>
           <span>{length(totalSeconds)}</span>
           {ready && <span>{ready}</span>}
-          <span className={`pe-save ${notSaved ? 'is-failed' : sending || movingKey ? 'is-saving' : ''}`} role="status">{saveWords}</span>
+          <span className={`pe-save ${notSaved ? 'is-failed' : sending || movingKey ? 'is-saving' : ''}`} role="status">{saveWords}{saves > 0 && !savingNow && !notSaved && <DrawnTick key={saves} size="compact" className="pe-save-tick" />}</span>
         </p>
         {(failed || problem) && (
           <div className="pe-not-saved" role="alert">

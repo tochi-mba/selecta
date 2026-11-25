@@ -1,5 +1,6 @@
-import { KeyboardEvent, ReactNode, useId, useState } from 'react';
-import { Field } from './primitives';
+import { KeyboardEvent, ReactNode, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Field, useListHighlight } from './primitives';
+import { INDICATOR_CLASS } from '../feel/indicator';
 
 /**
  * T0030: the shared text input, select and combobox. Each is built on `Field`, so its label, help and
@@ -10,11 +11,13 @@ import { Field } from './primitives';
 type Common = { label: ReactNode; help?: ReactNode; error?: string; disabled?: boolean; className?: string };
 
 /** A labelled one-line text box. */
-export function TextField({ label, help, error, disabled, className, value, onChange, placeholder, required, type = 'text' }: Common & {
+export function TextField({ label, help, error, valid, disabled, className, value, onChange, placeholder, required, type = 'text' }: Common & {
   value: string; onChange: (value: string) => void; placeholder?: string; required?: boolean; type?: 'text' | 'email' | 'url' | 'number';
+  /** the value is right: a small tick beside the label (Field) */
+  valid?: boolean;
 }) {
   return (
-    <Field label={label} help={help} error={error} className={className}>
+    <Field label={label} help={help} error={error} valid={valid} className={className}>
       {(props) => (
         <input {...props} type={type} value={value} placeholder={placeholder} required={required} aria-required={required || undefined} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
       )}
@@ -51,6 +54,13 @@ export function Combobox<T extends string>({ label, help, error, disabled, class
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const shown = options.filter((option) => !option.disabled);
+  // The feel (ADR-0477): one highlight slides to the option under the mouse and jumps to the one the
+  // arrow keys reach. It only draws; the active option is still `active`, as before.
+  const list = useRef<HTMLUListElement>(null);
+  const highlight = useListHighlight(list, '[role="option"]');
+  useLayoutEffect(() => {
+    highlight.current(open && active >= 0 ? list.current?.querySelector(`[id="${optionId(active)}"]`) ?? null : null, true);
+  }, [open, active]);
   const pick = (option: Choice<T>) => {
     onPick(option.value);
     onChange(option.label);
@@ -93,7 +103,7 @@ export function Combobox<T extends string>({ label, help, error, disabled, class
             onKeyDown={keys}
             onBlur={() => setOpen(false)}
           />
-          <ul id={listId} role="listbox" hidden={!open}>
+          <ul ref={list} id={listId} role="listbox" hidden={!open} data-indicator-shape="fill">
             {shown.map((option, index) => (
               <li
                 key={option.value}
@@ -106,6 +116,7 @@ export function Combobox<T extends string>({ label, help, error, disabled, class
               </li>
             ))}
             {!shown.length && <li role="presentation">{empty}</li>}
+            <li className={INDICATOR_CLASS} role="presentation" aria-hidden="true" />
           </ul>
         </>
       )}

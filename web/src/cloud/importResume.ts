@@ -13,6 +13,8 @@ import { getConnection } from './connection';
 import { importingElsewhere } from './importTabs';
 import { canHeal, withRetry } from './resilientRequest';
 import { ImportFingerprints } from '../media/fingerprints';
+import type { ImportSummary } from '../media';
+import { useFolderWatch } from './folderWatch';
 
 // Carrying an interrupted import on (flag `cloud.resilient_import`).
 //
@@ -115,23 +117,28 @@ export async function fingerprintOption(workspaceId: string): Promise<{ fingerpr
 
 type RunnerParts = { request: Request; openStore: () => Promise<MediaStore>; workspaceId: string; importer?: typeof runImport };
 
+/** What the shell hands the folder watch besides the runner parts (`cloud.music_folders`): how to
+ * tell the shell that availability changed, and whether music is playing here. Read when used,
+ * never as an effect dependency, so a new function each render costs nothing. */
+export type WatchExtras = { onAvailabilityChanged?: () => void | Promise<void>; playing?: () => boolean };
+
 /** The import runner every surface uses. With `cloud.resilient_import` on, the run writes the
  * journal before any network call, skips what an earlier run did, retries patiently, and only
  * reports availability for a registered device; the journal is cleared once the import really
  * finished, and kept when it paused, failed or was put aside for a sign-in. Off, it is the
  * import as it always was. */
-export function importRunnerFor({ request, openStore, workspaceId, importer = runImport }: RunnerParts, importId?: string): ImportRunner {
+export function importRunnerFor({ request, openStore, workspaceId, importer = runImport }: RunnerParts, importId?: string, folderId?: string): ImportRunner {
   return async (source, onProgress, signal) => {
     const store = await openStore();
     const reuse = await fingerprintOption(workspaceId);
     if (!flagOn('cloud.resilient_import')) {
-      return importer({ source, request, store, deviceId: mediaDeviceId(workspaceId), onProgress, signal, ...reuse });
+      return importer({ source, request, store, deviceId: mediaDeviceId(workspaceId), onProgress, signal, ...reuse, ...(folderId ? { folderId } : {}) });
     }
     const journal = await ImportJournal.open(workspaceId);
     try {
       const summary = await importer({
         source, request, store, deviceId: mediaDeviceId(workspaceId), onProgress, signal,
-        journal, retry: importRetry, reportDevice: () => registeredDeviceId(workspaceId), importId, ...reuse,
+        journal, retry: importRetry, reportDevice: () => registeredDeviceId(workspaceId), importId, ...reuse, ...(folderId ? { folderId } : {}),
       });
       const putAside = signal.aborted && signal.reason === IMPORT_SUSPENDED;
       if (!summary.paused && !putAside) await journal.clear();
@@ -144,12 +151,12 @@ export function importRunnerFor({ request, openStore, workspaceId, importer = ru
 
 /** Starts an import of `source` the way every surface should: through the shared runner, and as
  * the carrying on of `resume` where one is given. */
-export function startImport(parts: RunnerParts, source: ImportSource, options: { folder?: string | null; kind: 'folder' | 'files'; resume?: ImportMarker | null }): void {
+export function startImport(parts: RunnerParts, source: ImportSource, options: { folder?: string | null; kind: 'folder' | 'files'; resume?: ImportMarker | null; folderId?: string }): Promise<ImportSummary> {
   setOffer(null, null);
   const resume = options.resume ?? null;
-  void startImportSession({
-    source, run: importRunnerFor(parts, resume?.importId), workspaceId: parts.workspaceId,
-    folder: options.folder ?? null, kind: options.kind, resume,
+  return startImportSession({
+    source, run: importRunnerFor(parts, resume?.importId, options.folderId), workspaceId: parts.workspaceId,
+    folder: options.folder ?? null, kind: options.kind, resume, ...(options.folderId ? { folderId: options.folderId } : {}),
   });
 }
 
@@ -176,6 +183,9 @@ export async function checkForInterruptedImport(parts: RunnerParts): Promise<voi
   const checked = Math.max(kept.checked ?? kept.registered ?? 0, journal?.size ?? 0);
   journal?.close();
   const marker = { ...kept, checked };
+  // a watched folder's import is carried on by that folder's own check, which reads only what
+  // is still new and skips what the journal already holds (cloud.music_folders)
+  if (marker.folderId && flagOn('cloud.music_folders')) { if (offerWorkspace === parts.workspaceId) setOffer(null, null); return; }
   if (marker.kind !== 'folder') {
     setOffer(parts.workspaceId, { kind: 'repick', folder: marker.folder, marker });
     return;
@@ -218,8 +228,10 @@ export function carryOnNow(): void {
 /** The shell's hook: registers how this workspace imports, checks for an interrupted import on
  * mount, and checks again on reconnect, on the page becoming visible and when another tab that
  * was importing lets go. */
-export function useImportCarryOn(parts: RunnerParts): void {
+export function useImportCarryOn(parts: RunnerParts & { watch?: WatchExtras }): void {
   const { request, openStore, workspaceId, importer } = parts;
+  // cloud.music_folders: the shell's one hook also starts watching this workspace's folders
+  useFolderWatch({ request, openStore, workspaceId, importer }, parts.watch);
   useEffect(() => {
     if (!flagOn('cloud.resilient_import')) return undefined;
     const mine: RunnerParts = { request, openStore, workspaceId, importer };

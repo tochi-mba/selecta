@@ -1,4 +1,4 @@
-import { memo, useContext, useState } from 'react';
+import { memo, ReactNode, useContext, useState } from 'react';
 import { HolderContext, openToPlay, type MusicHolder } from '../devices/controller';
 import { relativeTime } from '../ui/format';
 import { LibrarySong } from '../api';
@@ -8,6 +8,8 @@ import { trackReadiness } from '../state/readiness';
 import { Action, Menu, Status, type StatusKind } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SongMotif } from '../ui/MusicObjects';
+import { CoverArt } from './CoverArt';
+import { useReadyPop } from './feelPieces';
 
 /** What a Library row asks its page to do. The page passes one stable object, so a poll that leaves a
  * song's own facts alone does not re-render its row (MI-0162-04). */
@@ -55,7 +57,17 @@ export type LibraryRowProps = {
   measured?: boolean;
   /** browser-first Cloud's row: one line, one status chip that says whether it plays here */
   browser?: boolean;
+  /** library.art_embedded: the song's cover (its own picture, else its generated tile) in place of
+   * the motif alone */
+  art?: boolean;
 };
+
+/** A status chip that pops once (.feel-pop) when it has just turned ready; drawn plainly otherwise. */
+function Chip({ kind, words, title }: { kind: StatusKind; words: ReactNode; title?: string }) {
+  const pop = useReadyPop(kind);
+  const chip = <Status kind={kind} title={title}>{words}</Status>;
+  return pop ? <span key={pop} className="feel-pop feel-chip-pop">{chip}</span> : chip;
+}
 
 /** The one chip a browser row shows: whether the song plays here, or the step that makes it. */
 const HERE: Record<string, { kind: StatusKind; words: string }> = {
@@ -92,8 +104,9 @@ const lineWords = (place: number) => place < 0 ? 'Analyse now' : place === 0 ? '
 
 export const LibraryRow = memo(function LibraryRow({
   song, page, actions, selectable, selected, selectionFull, searching, failed, building, duplicate, sharedTitle,
-  inMix, searched, playing, current = false, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true, browser = false,
+  inMix, searched, playing, current = false, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true, browser = false, art = false,
 }: LibraryRowProps) {
+  const face = art ? <CoverArt seed={song.id} songId={song.id} size="small" /> : <SongMotif songId={song.id} />;
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
   const holder = useContext(HolderContext);
@@ -114,7 +127,7 @@ export const LibraryRow = memo(function LibraryRow({
         ? deviceChip(song.id, song.availability, holder) ?? { ...HERE[song.availability], why: song.availability === 'elsewhere' ? 'Choose your music folder in this browser to play it here.' : where?.reason ?? '' }
         : { kind: facts.kind, words: facts.words, why: facts.reason };
     return (
-      <li data-library-page={page} className={`song-row lw-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`}>
+      <li data-library-page={page} className={`song-row lw-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`} data-lift="row">
         {selectable && <label className="library-batch-check lw-check">
           <input type="checkbox" aria-label={`Select ${name} by ${artist}`}
             checked={selected} disabled={searching || selectionFull && !selected}
@@ -122,7 +135,7 @@ export const LibraryRow = memo(function LibraryRow({
             onChange={(event) => { if (!failed) actions.toggle(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
         </label>}
         <button className="link song-open lw-open" onClick={() => actions.open(song.id)} aria-label={`Details for ${name} ${artist}${searched && song.match ? ` · ${song.match}` : ''}`} data-focus-key={`song-details-${song.id}`}>
-          <SongMotif songId={song.id} />
+          {face}
           <span className="lw-song">
             {/* the name holds every word the row shows (WCAG 2.5.3), so title and artist are two words apart */}
             <b dir="auto" title={title}>{title}</b>{' '}
@@ -131,7 +144,7 @@ export const LibraryRow = memo(function LibraryRow({
         </button>
         <span className="lw-length">{clock(song.duration)}</span>
         <span className="lw-state">
-          <Status kind={chip.kind} title={chip.why || undefined}>{chip.words}</Status>
+          <Chip kind={chip.kind} title={chip.why || undefined} words={chip.words} />
           {chip.why && chip.kind !== 'ready' && <small className="lw-why" data-hint={'hint' in chip && chip.hint ? '' : undefined}>{chip.why}</small>}
           {/* I84: what the row's tap did, said in the row itself for a moment */}
           {remoteNext && <span className={added || (current && holder?.speaking) ? 'lw-added' : 'lw-added lw-in-mix'} role="status">{added ? `Added to ${holder?.name}’s mix` : current && holder?.speaking ? `Playing now on ${holder.name}` : inMix ? 'In the mix' : ''}</span>}
@@ -159,7 +172,7 @@ export const LibraryRow = memo(function LibraryRow({
     );
   }
   return (
-    <li data-library-page={page} className={`song-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`}>
+    <li data-library-page={page} className={`song-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`} data-lift="row">
       <div className="song-name">
         {selectable && <label className="library-batch-check">
           <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
@@ -169,7 +182,7 @@ export const LibraryRow = memo(function LibraryRow({
             onChange={(event) => { if (!failed) actions.toggle(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
         </label>}
         <button className="link song-open" onClick={() => actions.open(song.id)} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
-          <SongMotif songId={song.id} /><b dir="auto" title={title}>{title}</b>
+          {face}<b dir="auto" title={title}>{title}</b>
         </button>
         <span dir="auto" title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
         {duplicate && <small className="library-recording-id">Recording {song.id}</small>}
@@ -189,7 +202,7 @@ export const LibraryRow = memo(function LibraryRow({
         {where && <Status kind={where.kind}>{where.words}</Status>}
         {where && !where.canPlay && <small className="hint song-why">{where.reason}</small>}
         {/* a song that can't play here is explained by where it is; its readiness would only repeat it */}
-        {!(where && !where.canPlay) && <Status kind={facts.kind}>{facts.words}</Status>}
+        {!(where && !where.canPlay) && <Chip kind={facts.kind} words={facts.words} />}
         {!(where && !where.canPlay) && facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}
       </div>
       <div className="song-actions">

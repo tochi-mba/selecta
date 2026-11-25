@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { NumberRoll } from '../feel/numberRoll';
+import { feelOn, onFeelChange } from '../feel/root';
 import { useFlag } from '../flags';
 import { Icon } from '../ui/Icon';
 import { Meter } from '../ui/Meter';
@@ -6,7 +8,7 @@ import { IconButton } from '../ui/primitives';
 import { useImportAnnouncer } from './importAnnouncer';
 import { allowAndCarryOn, carryOnNow, retryImportNow, useResumeOffer } from './importResume';
 import { useImportSession } from './importSession';
-import { checkedOf, checkedWords, offerWords, progressWords } from './ImportStatus';
+import { checkedOf, checkedWords, formatCount, offerWords, progressWords } from './ImportStatus';
 import './libraryWorkspace.css';
 
 /** The import chip in the local-first shell's banner (ADR-0463 BF-0463-02, flag
@@ -23,6 +25,7 @@ export function ImportChip({ onView, workspaceId }: { onView: () => void; worksp
   useImportAnnouncer();
   const resilient = useFlag('cloud.resilient_import');
   const offer = useResumeOffer(workspaceId ?? '');
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
   const [hiddenIn, setHiddenIn] = useState<string | null>(null);
   const [refused, setRefused] = useState(false);
   const waitKey = resilient ? `${live.phase}:${live.waiting?.why ?? ''}:${offer?.kind ?? ''}` : live.phase;
@@ -80,7 +83,10 @@ export function ImportChip({ onView, workspaceId }: { onView: () => void; worksp
         : (
           <div className="lw-chip-progress">
             {/* an import that resumed after a reload or a closed tab says so (plan "Nothing is lost") */}
-            <p><b>{resilient && (live.resumed ?? 0) > 0 ? 'Carrying on your import' : 'Adding your music'}</b> <span>{checkedWords(live)}</span></p>
+            <p><b>{resilient && (live.resumed ?? 0) > 0 ? 'Carrying on your import' : 'Adding your music'}</b> {moving
+              // ADR-0477: the count rolls up as files are checked; the words read the same
+              ? <span><NumberRoll value={checked} format={formatCount} />{typeof live.total === 'number' ? ` of ${formatCount(live.total)} checked` : ' checked'}</span>
+              : <span>{checkedWords(live)}</span>}</p>
             <Meter label="Files checked" showLabel={false} value={typeof live.total === 'number' ? checked : undefined} max={Math.max(live.total ?? 1, 1)} valueText={checkedWords(live)} />
           </div>
         )}

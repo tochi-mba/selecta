@@ -36,12 +36,15 @@ export function analyseInWorker(
   pcm: Float32Array,
   sampleRate: number,
   tasks?: AnalysisTask[],
-  options: { owned?: boolean; timeoutMs?: number } = {},
+  options: { owned?: boolean; timeoutMs?: number; channels?: Float32Array[] } = {},
 ): Promise<AnalysisResponse> {
   const id = nextRequestId;
   nextRequestId += 1;
   const sending = transferable(pcm, options.owned === true);
-  const request: AnalysisRequest = { id, sampleRate, pcm: sending.pcm, tasks };
+  // `channels` are always copies made for this call (levelOf), so they are moved too
+  const channels = options.channels;
+  const request: AnalysisRequest = { id, sampleRate, pcm: sending.pcm, tasks, ...(channels ? { channels } : {}) };
+  const moved = [...sending.transfer, ...(channels ?? []).map((channel) => channel.buffer as ArrayBuffer)];
   return new Promise((resolve, reject) => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const done = () => {
@@ -76,7 +79,7 @@ export function analyseInWorker(
       }, timeoutMs);
     }
     try {
-      worker.postMessage(request, sending.transfer);
+      worker.postMessage(request, moved);
     } catch (error) {
       done();
       reject(error instanceof Error ? error : new Error('The analysis request could not be sent.'));

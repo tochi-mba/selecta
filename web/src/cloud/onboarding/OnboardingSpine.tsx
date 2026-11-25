@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { clockTime, playbackStatusText } from '../../copy';
+import { Moment } from '../../feel/moment';
+import { feelOn, onFeelChange } from '../../feel/root';
 import { flagOn, useFlag } from '../../flags';
 import { rememberFolder, type DirectoryHandleLike, type ImportSource } from '../../media';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
@@ -46,6 +48,11 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   const firstRender = useRef(true);
   const [restarting, setRestarting] = useState(false);
   const resilient = useFlag('cloud.resilient_import');
+  // The feel system (ADR-0477): each step card arrives from the side the person is travelling
+  // toward, and finishing is marked once. Both are inert with app.feel_motion off.
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  const direction = useRef<'forward' | 'back'>('forward');
+  const [celebrating, setCelebrating] = useState(false);
   // load the fingerprinting code before any import, so going offline never fails every file
   useEffect(() => { if (flagOn('cloud.resilient_import')) preloadImportCode(); }, []);
 
@@ -60,6 +67,11 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   // Each step change is saved, and focus moves to the new step's title so keyboard and screen
   // reader users land on what changed (not on the first paint).
   const change = (next: SpineState) => {
+    const from = STEPS.indexOf(state.step);
+    const to = STEPS.indexOf(next.step);
+    if (to !== from) direction.current = to > from ? 'forward' : 'back';
+    // only the press that really finishes the spine is celebrated, never a reload of a finished one
+    if (next.finished && !state.finished && feelOn('moments')) setCelebrating(true);
     setState(next);
     saveState(deps.storage, workspaceId, next);
   };
@@ -122,13 +134,16 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
       : state.capability?.ok === false
         ? 'This device is set up as a controller.'
         : playbackStatusText({ state: 'output_unverified' });
+    // With motion on, the finish card's lines come in one after another (data-stagger), under the
+    // one celebration of the blend; Open SelectaDJ is the one glowing action (styles/feel-entry.css).
+    const line = (index: number) => (moving ? ({ '--i': index }) as CSSProperties : undefined);
     return (
-      <section className="cloud-spine" aria-labelledby={`spine-${workspaceId}-title`}>
-        <p className="cloud-eyebrow">Getting started</p>
-        <h2 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>You’re set up</h2>
-        <StepList state={state} />
-        <p role="status">{status}</p>
-        <div className="cloud-actions">
+      <section className="cloud-spine" aria-labelledby={`spine-${workspaceId}-title`} data-spine="finished" data-stagger={moving ? '' : undefined}>
+        <p className="cloud-eyebrow" style={line(0)}>Getting started</p>
+        <h2 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1} style={line(1)}>You’re set up</h2>
+        <StepList state={state} drawn={moving} style={line(2)} />
+        <p role="status" style={line(3)}>{status}</p>
+        <div className="cloud-actions" style={line(4)}>
           <button type="button" className="primary" onClick={onDone}>Open SelectaDJ</button>
           <button type="button" onClick={() => setRestarting(true)}>Go through it again</button>
         </div>
@@ -142,6 +157,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
             onClose={() => setRestarting(false)}
           />
         )}
+        {celebrating && <span className="cloud-spine-moment" aria-hidden="true"><Moment kind="blend" onDone={() => setCelebrating(false)} /></span>}
       </section>
     );
   }
@@ -151,8 +167,9 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
     <section className="cloud-spine" aria-labelledby={`spine-${workspaceId}-title`}>
       <p className="cloud-eyebrow">Getting started · Step {STEPS.indexOf(step) + 1} of {STEPS.length}</p>
       <h2 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>{STEP_TITLES[step]}</h2>
-      <StepList state={state} />
-      <div className="cloud-card cloud-spine-step" data-step={step}>
+      <StepList state={state} drawn={moving} />
+      {/* keyed by step with motion on, so each new step's card arrives again, from its direction */}
+      <div className="cloud-card cloud-spine-step" data-step={step} key={moving ? step : undefined} data-arrive={moving ? '' : undefined} data-dir={moving ? direction.current : undefined}>
         {step === 'connect' && !(resilient && live.phase === 'running') && <ConnectStep {...props} onPick={startImport} workspaceId={workspaceId} />}
         {(step === 'verify' || (step === 'connect' && resilient && live.phase === 'running')) && <VerifyStep {...props} live={live} earlyContinue={progressive} onStop={cancelImportSession} onContinueEarly={continueEarly} />}
         {step === 'capability' && <CapabilityStep {...props} />}
@@ -170,16 +187,21 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   );
 }
 
-function StepList({ state }: { state: SpineState }) {
+/** The step rail. With `drawn` (the feel system's motion), a finished step's mark is a tick that
+ * draws itself the moment the step is done, and the phone's bars fill on a spring
+ * (styles/feel-entry.css); without it, the marks are the icons as before. */
+function StepList({ state, drawn = false, style }: { state: SpineState; drawn?: boolean; style?: CSSProperties }) {
   return (
-    <ol className="cloud-spine-steps" aria-label="Steps">
+    <ol className="cloud-spine-steps" aria-label="Steps" style={style}>
       {STEPS.map((id: StepId) => {
         const outcome = state.outcomes[id];
         const current = !state.finished && state.step === id;
         const mark = MARKS[current ? 'current' : outcome ?? 'ahead'];
         return (
           <li key={id} aria-current={current ? 'step' : undefined} data-outcome={outcome ?? (current ? 'current' : 'ahead')}>
-            <Icon name={mark.icon} size="compact" />
+            {drawn && !current && outcome === 'done'
+              ? <svg className="cloud-spine-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path className="feel-tick" pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              : <Icon name={mark.icon} size="compact" />}
             <span>{STEP_TITLES[id]}</span>
             <span className="visually-hidden">, {mark.words}</span>
           </li>

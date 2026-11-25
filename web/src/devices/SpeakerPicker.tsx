@@ -1,6 +1,8 @@
 import { useId, useRef, useState } from 'react';
 import { Dialog } from '../ui/controls';
 import { countOf } from '../ui/format';
+import { success, tick } from '../feel/haptics';
+import { useFeelPart } from '../rooms/feelHooks';
 import { defaultAwayWords, telling, type Candidate, type PickerOption } from './whereToPlay';
 import './devices.css';
 
@@ -36,6 +38,10 @@ export function SpeakerPicker({ options, suggested, defaultAway, total, thisDevi
   for (const option of options) if (!known.has(option.device.device_id)) order.current.push(option.device.device_id);
   const shown = order.current.map((id) => options.find((option) => option.device.device_id === id)).filter((option): option is PickerOption => !!option);
   const [picked, setPicked] = useState(suggested);
+  // ADR-0477: the device just chosen here shows a drawn tick; the first, suggested choice does not
+  const [changedTo, setChangedTo] = useState<string | null>(null);
+  const moving = useFeelPart('motion');
+  const pick = (id: string) => { tick(); setPicked(id); setChangedTo(id); };
   const [makeDefault, setMakeDefault] = useState(false);
   const chosen = shown.find((option) => option.device.device_id === picked);
   // choices are the open devices; the rest are named under one collapsed row, and a device not
@@ -54,7 +60,7 @@ export function SpeakerPicker({ options, suggested, defaultAway, total, thisDevi
     <Dialog title="Where should the music play?" onClose={onCancel} className="speaker-picker" footer={(
       <>
         <button type="button" onClick={onCancel}>Cancel</button>
-        <button type="button" className="primary" disabled={!chosen?.usable} onClick={() => chosen && onChoose(chosen.device, makeDefault)}>
+        <button type="button" className="primary" disabled={!chosen?.usable} onClick={() => { if (!chosen) return; success(); onChoose(chosen.device, makeDefault); }}>
           {chosen ? `Play on ${chosen.device.device_id === thisDeviceId ? 'this device' : chosen.device.name}` : 'Play'}
         </button>
       </>
@@ -65,12 +71,15 @@ export function SpeakerPicker({ options, suggested, defaultAway, total, thisDevi
         {open.map((option) => (
           <label key={option.device.device_id} className="speaker-picker-row" data-usable={option.usable || undefined}>
             <input type="radio" name={name} value={option.device.device_id} checked={picked === option.device.device_id} disabled={!option.usable}
-              onChange={() => setPicked(option.device.device_id)} aria-label={`${option.device.name}: ${words(option)}`} />
+              onChange={() => pick(option.device.device_id)} aria-label={`${option.device.name}: ${words(option)}`} />
             <span className="speaker-picker-words">
               <b dir="auto" title={option.device.name}>{option.device.name}</b>
               <span>{words(option)}</span>
             </span>
             {option.device.device_id === suggested && option.usable && <span className="badge" data-tone="accent">Suggested</span>}
+            {moving && changedTo === option.device.device_id && picked === changedTo && (
+              <svg key={changedTo} className="speaker-picker-tick" viewBox="0 0 24 24" aria-hidden="true"><path className="feel-tick" pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            )}
           </label>
         ))}
       </div>

@@ -1,4 +1,6 @@
-import { KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
+import { feelOn, onFeelChange } from '../feel/root';
 import { navigate } from '../router';
 import { Command, matchCommands } from '../shell/commands';
 import { Dialog } from './controls';
@@ -60,6 +62,41 @@ export function CommandPalette({ commands, onClose, searchSongs = true }: {
     list.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' });
   }, [activeIndex, shown.length]);
 
+  // ADR-0477: one highlight that glides after the mouse and jumps with the keyboard (a key held
+  // down must never trail behind), and keycaps in the hint that press down while their key is held
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  useSlidingIndicator(list, '[aria-selected="true"]');
+  const movedBy = (how: 'keys' | 'mouse') => { if (list.current) list.current.dataset.movedBy = how; };
+  const [held, setHeld] = useState<string | null>(null);
+  useEffect(() => {
+    if (!moving) return undefined;
+    const capOf = (key: string) => (key === 'ArrowUp' || key === 'ArrowDown' ? 'arrows' : key === 'Enter' || key === 'Escape' ? key : null);
+    const down = (event: globalThis.KeyboardEvent) => setHeld(capOf(event.key));
+    const up = () => setHeld(null);
+    window.addEventListener('keydown', down, true);
+    window.addEventListener('keyup', up, true);
+    window.addEventListener('blur', up);
+    return () => {
+      window.removeEventListener('keydown', down, true);
+      window.removeEventListener('keyup', up, true);
+      window.removeEventListener('blur', up);
+    };
+  }, [moving]);
+
+  // The panel grows out of the Search button that opened it, in about 160ms: its transform origin
+  // is that button's middle, and the sheet plays feel-palette-grow from there. Opened by the
+  // keyboard, or with the button hidden (a phone), it simply appears as before.
+  useLayoutEffect(() => {
+    if (!feelOn('motion')) return;
+    const panel = list.current?.closest<HTMLElement>('.overlay-panel');
+    const from = document.querySelector<HTMLElement>('.palette-button');
+    if (!panel || !from?.offsetWidth || !from.matches(':focus, :hover')) return;
+    const a = panel.getBoundingClientRect();
+    const b = from.getBoundingClientRect();
+    panel.style.transformOrigin = `${Math.round(b.left + b.width / 2 - a.left)}px ${Math.round(b.top + b.height / 2 - a.top)}px`;
+    panel.dataset.grow = 'palette';
+  }, []);
+
   const moveTo = (index: number) => setHighlight({ id: shown[index]?.id ?? null, index });
 
   const run = (command: Command | undefined) => {
@@ -74,6 +111,7 @@ export function CommandPalette({ commands, onClose, searchSongs = true }: {
 
   const keys = (event: KeyboardEvent<HTMLInputElement>) => {
     const last = shown.length - 1;
+    movedBy('keys');
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       if (shown.length) moveTo(event.key === 'ArrowDown' ? (activeIndex >= last ? 0 : activeIndex + 1) : activeIndex <= 0 ? last : activeIndex - 1);
@@ -106,7 +144,7 @@ export function CommandPalette({ commands, onClose, searchSongs = true }: {
       aria-selected={index === activeIndex}
       aria-disabled={command.unavailable ? true : undefined}
       className={`palette-item ${index === activeIndex ? 'on' : ''} ${command.unavailable ? 'off' : ''}`}
-      onMouseEnter={() => moveTo(index)}
+      onMouseEnter={() => { movedBy('mouse'); moveTo(index); }}
       onClick={() => run(command)}
     >
       <bdi>{command.label}</bdi>
@@ -133,7 +171,7 @@ export function CommandPalette({ commands, onClose, searchSongs = true }: {
         {refused && <p className="warn" role="status">{refused}</p>}
         {songs.failed && <p className="hint">Songs couldn’t be searched just now. Pages and commands still work.</p>}
         {!shown.length && <p className="hint">Nothing matches that.</p>}
-        <div ref={list} id={`${base}-list`} role="listbox" aria-label="Results" className="palette-list">
+        <div ref={list} id={`${base}-list`} role="listbox" aria-label="Results" className="palette-list" data-indicator-shape="fill">
           {sections.map(({ group, items }) => (group === null ? (
             <ul key="everywhere" role="none" className="palette-group">{items.map(option)}</ul>
           ) : (
@@ -142,8 +180,11 @@ export function CommandPalette({ commands, onClose, searchSongs = true }: {
               {items.map(option)}
             </ul>
           )))}
+          <span className={INDICATOR_CLASS} aria-hidden="true" />
         </div>
-        <p className="hint"><span className="palette-keys">Arrow keys choose, Enter goes, Escape closes. </span>This never deletes anything or replaces what’s playing.{searchSongs ? ' A song opens its details; it doesn’t play.' : ''}</p>
+        <p className="hint"><span className="palette-keys">{moving
+          ? <><kbd data-held={held === 'arrows' || undefined}>Arrow keys</kbd> choose, <kbd data-held={held === 'Enter' || undefined}>Enter</kbd> goes, <kbd data-held={held === 'Escape' || undefined}>Escape</kbd> closes. </>
+          : 'Arrow keys choose, Enter goes, Escape closes. '}</span>This never deletes anything or replaces what’s playing.{searchSongs ? ' A song opens its details; it doesn’t play.' : ''}</p>
       </div>
     </Dialog>
   );

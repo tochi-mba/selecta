@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setFlags } from '../flags';
 import { prefs, reloadPrefs, setPrefs } from '../state/prefs';
-import { keepFullMotion, lowPowerActive, resetLowPower, REST_MS, SLOW_FRAME_MS, struggling, watchLowPower, WINDOW_FRAMES } from './lowPower';
+import { keepFullMotion, lowPowerActive, lowPowerLevel, resetLowPower, REST_MS, SLOW_FRAME_MS, struggling, watchLowPower, WINDOW_FRAMES } from './lowPower';
 import { useReducedMotion } from './useReducedMotion';
 
 /** A hand-cranked frame clock: each `run(n, gap)` delivers n frames `gap` ms apart. */
@@ -50,6 +50,10 @@ function fakeClock() {
   };
 }
 
+/** These tests pin the behaviour with the feel flags off (one step, straight to Still); the two
+ * steps the feel system adds (ADR-0477) have their own test below. */
+const FEEL_OFF = { 'app.feel_motion': false, 'app.feel_depth': false, 'app.feel_pointer_light': false, 'app.feel_music': false, 'app.feel_ambient': false, 'app.feel_moments': false };
+
 function Probe() {
   return <span>{useReducedMotion() ? 'Still' : 'Animated'}</span>;
 }
@@ -59,7 +63,7 @@ beforeEach(() => {
   sessionStorage.clear();
   reloadPrefs();
   resetLowPower();
-  setFlags(null);
+  setFlags(FEEL_OFF);
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
 });
 afterEach(() => {
@@ -121,7 +125,7 @@ describe('SF-0235-08 automatic low-power motion', () => {
 
     resetLowPower();
     setPrefs({ motion: 'subtle' });
-    setFlags({ 'app.auto_low_motion': false });
+    setFlags({ ...FEEL_OFF, 'app.auto_low_motion': false });
     const off = fakeClock();
     watchLowPower(off.clock);
     off.run(WINDOW_FRAMES * 3, 80);
@@ -129,12 +133,12 @@ describe('SF-0235-08 automatic low-power motion', () => {
   });
 
   it('asks for no frames while its flag is off or Still is chosen, and starts again when needed', () => {
-    setFlags({ 'app.auto_low_motion': false });
+    setFlags({ ...FEEL_OFF, 'app.auto_low_motion': false });
     const fake = fakeClock();
     watchLowPower(fake.clock);
     fake.run(1, 16);
     expect(fake.waiting()).toBe(false);
-    act(() => setFlags({}));
+    act(() => setFlags(FEEL_OFF));
     expect(fake.waiting()).toBe(true);
 
     act(() => setPrefs({ motion: 'still' }));
@@ -159,5 +163,23 @@ describe('SF-0235-08 automatic low-power motion', () => {
     watchLowPower(again.clock);
     again.run(WINDOW_FRAMES * 3, 80);
     expect(lowPowerActive()).toBe(false);
+  });
+
+  it('with the feel on, lowers in two steps: costly effects first, then Still (ADR-0477)', () => {
+    setFlags({});
+    const fake = fakeClock();
+    render(<Probe />);
+    watchLowPower(fake.clock);
+    fake.run(WINDOW_FRAMES * 2 + 1, 80);
+    expect(lowPowerLevel()).toBe('lite');
+    expect(lowPowerActive()).toBe(false);
+    expect(document.documentElement.dataset.lowPower).toBe('lite');
+    expect(screen.getByText('Animated')).toBeInTheDocument();
+    expect(fake.waiting()).toBe(true);
+    fake.run(WINDOW_FRAMES * 2, 80);
+    expect(lowPowerLevel()).toBe('auto');
+    expect(lowPowerActive()).toBe(true);
+    expect(screen.getByText('Still')).toBeInTheDocument();
+    expect(fake.waiting()).toBe(false);
   });
 });

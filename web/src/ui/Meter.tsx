@@ -1,4 +1,4 @@
-import { ReactNode, useId } from 'react';
+import { ReactNode, useId, useRef } from 'react';
 
 /** One bar for every "how far along" and "how full": an import's progress, storage used, turns
  * left this month. It says its words aloud as well as drawing them, and its colour comes from the
@@ -44,8 +44,14 @@ export function Meter({ label, value, max = 100, valueText, kind = 'progress', w
   const status = tone ?? (known ? meterTone(fraction, warnAt, dangerAt) : 'neutral');
   const percent = Math.round(fraction * 100);
   const words = valueText ?? (known ? `${percent} percent` : undefined);
+  // Work that reaches done while it is on screen says so once: data-complete, which the feel's depth
+  // turns into a single bloom (styles/feel-components.css). A bar drawn already full, or a meter of
+  // a quantity (storage that is full is not an achievement), never carries it.
+  const wasShort = useRef(false);
+  if (known && fraction < 1) wasShort.current = true;
+  const complete = kind === 'progress' && known && fraction >= 1 && wasShort.current;
   return (
-    <div className={`meter ${className}`.trim()} data-status={status} data-indeterminate={known ? undefined : 'true'}>
+    <div className={`meter ${className}`.trim()} data-status={status} data-indeterminate={known ? undefined : 'true'} data-complete={complete ? '' : undefined}>
       <div className={`meter-label${showLabel ? '' : ' visually-hidden'}`}>
         <span id={labelId}>{label}</span>
         {words && <span className="meter-value" aria-hidden="true">{words}</span>}

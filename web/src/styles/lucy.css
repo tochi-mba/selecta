@@ -491,3 +491,78 @@
 @media (forced-colors: active) {
   .lucy-readiness-warning { border-inline-start-color: Highlight; border-block-color: CanvasText; }
 }
+
+/* ---------- The feel (ADR-0477, plan 3.9) ----------
+   Inert until <html data-feel> holds its word (feel/root.ts writes it from the app.feel_* flags and
+   the motion choice), so with the flags off, Still, reduced motion or low power Lucy is exactly as
+   above. Each animation runs once, ends at the element's own resting look and follows real work:
+   a message that arrived, a step the server named, a chunk of text that streamed in, a step that
+   finished, a song a revision added, a save that went through. Shared asks (data-arrive,
+   data-stagger, data-lift, data-glow, .feel-pop, .feel-tick, .feel-flash, .feel-collapse-out) are
+   drawn by feel.css; only what is Lucy's own is here. */
+
+/* your words rise from the box below them; Lucy's fade in where they will stay */
+:where(:root[data-feel~='motion']) .lucy-msg.is-rise article {
+  animation: feel-lucy-rise var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+:where(:root[data-feel~='motion']) .lucy-msg.is-fade {
+  animation: feel-lucy-fade var(--motion-slow) var(--motion-ease) both;
+}
+/* only the newest streamed chunk is wrapped, so earlier words never fade again */
+:where(:root[data-feel~='motion']) .lucy-chunk {
+  animation: feel-lucy-fade var(--motion-slow) var(--motion-ease) both;
+}
+/* the name of the step Lucy is running: one pass of light across the words, again only when the
+   server names a new step; it ends in the words' own quiet colour */
+:where(:root[data-feel~='motion']) .lucy-thinking-words {
+  background: linear-gradient(90deg, var(--text-soft) 40%, var(--text) 50%, var(--text-soft) 60%) 100% 0 / 300% 100% no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: feel-lucy-shimmer calc(var(--motion-slow) * 4) var(--motion-ease) both;
+}
+/* the box lights while it is being written in */
+:where(:root[data-feel~='depth']) .lucy-composer {
+  transition: box-shadow var(--motion-fast) var(--motion-ease);
+}
+:where(:root[data-feel~='depth']) .lucy-composer:focus-within {
+  box-shadow: var(--shadow-lift), var(--edge-light);
+}
+/* a step seen running that really finished draws its result in once */
+:where(:root[data-feel~='motion']) .lucy-visual.is-drawn > * {
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+/* a song the new revision added glows once, with a lit edge at its start */
+:where(:root[data-feel~='motion']) .lucy-song.feel-flash {
+  animation: feel-flash calc(var(--motion-slow) * 4) var(--motion-ease) both, feel-lucy-edge calc(var(--motion-slow) * 4) var(--motion-ease) both;
+}
+/* a save confirmed here, that really went through, draws its tick (.feel-tick); the words beside it
+   say the same, so it is never shown without the motion */
+.lucy-saved-tick { display: none; }
+:where(:root[data-feel~='motion']) .lucy-saved-tick {
+  display: block;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  fill: none;
+  stroke: var(--status-ready);
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@media (forced-colors: active) {
+  .lucy-thinking-words { background: none; color: inherit; }
+  .lucy-saved-tick { stroke: CanvasText; }
+}
+
+@keyframes feel-lucy-rise {
+  from { opacity: 0; translate: 0 var(--space-5); }
+}
+@keyframes feel-lucy-fade {
+  from { opacity: 0; }
+}
+@keyframes feel-lucy-shimmer {
+  to { background-position: 0 0; }
+}
+@keyframes feel-lucy-edge {
+  from { box-shadow: inset var(--marker) 0 0 var(--selected); }
+}

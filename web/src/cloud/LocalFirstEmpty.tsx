@@ -79,7 +79,7 @@ function MusicEmpty({ page, title, lead, at, heading, children, actions, current
         </div>
       </header>
       {current}
-      <section className="empty-state boxed music-empty" aria-labelledby={id}>
+      <section className="empty-state boxed music-empty" aria-labelledby={id} data-glow="" data-arrive="">
         <span className="empty-state-icon" aria-hidden="true"><Icon name="music" /></span>
         <h2 id={id}>{heading}</h2>
         <p>{children}</p>
@@ -158,7 +158,7 @@ export function CannotPlayHere({ reason }: { reason: string }) {
 function Lost({ eyebrow, title, path, actions, children }: { eyebrow: string; title: string; path?: string; actions: ReactNode; children: ReactNode }) {
   return (
     <main className="page lost-page" id="main">
-      <div className="lost-words">
+      <div className="lost-words" data-arrive="">
         <p className="page-eyebrow">{eyebrow}</p>
         <h1 className="display small">{title}</h1>
         {children}

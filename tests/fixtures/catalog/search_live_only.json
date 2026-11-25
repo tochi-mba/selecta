@@ -1,0 +1,17 @@
+{
+  "count": 1,
+  "offset": 0,
+  "recordings": [
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000003",
+      "score": 96,
+      "title": "Lanterns Over the Water (Live)",
+      "length": 241000,
+      "artist-credit": [{"name": "Night Harbour", "joinphrase": "", "artist": {"id": "eeeeeeee-0000-4000-8000-000000000001", "name": "Night Harbour"}}],
+      "releases": [
+        {"id": "bbbbbbbb-0000-4000-8000-000000000005", "title": "Live at the Pier", "status": "Official", "date": "2025-02-14", "country": "GB",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000005", "primary-type": "Album", "secondary-types": ["Live"]}}
+      ]
+    }
+  ]
+}
