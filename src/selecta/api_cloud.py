@@ -35,9 +35,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from selecta import flags, ratelimit
 from selecta.admin import guard as admin_guard
-from selecta.admin import routes as admin_routes
-from selecta.admin import routes_controls as admin_control_routes
-from selecta.admin import routes_economics as admin_economics_routes
+from selecta.admin import wiring as admin_wiring
 from selecta.admin.state import EmergencyCache
 from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
@@ -957,30 +955,14 @@ def create_cloud_app(
     business_licensing_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
-    admin_routes.install_routes(
-        app,
-        engine=engine,
-        current_claims=current_claims,
-        emergency=emergency_cache,
-    )
-    admin_control_routes.install_routes(
-        app,
-        engine=engine,
-        current_claims=current_claims,
-        emergency_cache=emergency_cache,
-        rule_cache=rule_cache,
-    )
+    # The staff console, its controls, unit economics and the work queue read (admin.wiring).
+    admin_wiring.install(app, engine=engine, current_claims=current_claims,
+                         emergency_cache=emergency_cache, rule_cache=rule_cache)
     # Business pricing behind business.signups, and the release-gate readout (BZ-0441, BZ-0454).
     business_rollout_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         rules=rule_cache,
     )
-    # Unit economics and step-4 readiness for Browser-first Cloud (BF-0464-04/05, BF-0467-04).
-    admin_economics_routes.install_routes(app, engine=engine, current_claims=current_claims)
-    # Whether queued work is being picked up, per worker pool, for staff (work.queue_health).
-    from selecta.routes import work_queue as work_queue_routes
-
-    work_queue_routes.install_routes(app, engine=engine, current_claims=current_claims)
     # The Labs opening for browser-first Cloud (BF-0467-05).
     local_first_labs_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,

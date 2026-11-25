@@ -101,6 +101,11 @@ def install_routes(
     from selecta.admin import routes_console
 
     routes_console.install_routes(app, engine=engine, current_claims=current_claims)
+    # The Workers page (hosted processing), behind its own flag, admin.workers.
+    from selecta.admin import routes_workers
+
+    routes_workers.install_routes(app, engine=engine, current_claims=current_claims,
+                                  emergency=emergency)
 
     def staff(request: Request, claims: Claims) -> Actor:
         return http.staff_actor(engine, request, claims)

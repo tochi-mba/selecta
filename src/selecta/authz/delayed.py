@@ -66,6 +66,7 @@ class ActionKind(StrEnum):
     CONTENT_ACCESS_GRANT = "support.content_access.grant"
     FLAG_BROAD_RULE = "flags.rules.broad"
     ACCOUNT_DELETE = "accounts.delete"
+    JOBS_EXPIRE_QUEUED = "jobs.expire_queued"
 
 
 class ActionStatus(StrEnum):
@@ -111,6 +112,10 @@ RULES: Mapping[ActionKind, ActionRule] = {
     ActionKind.ACCOUNT_DELETE: ActionRule(
         "accounts.suspend", "accounts.suspend",
         "Delete a customer's account through the account deletion workflow.",
+    ),
+    ActionKind.JOBS_EXPIRE_QUEUED: ActionRule(
+        "jobs.cancel", "jobs.cancel",
+        "Cancel every job that has waited in line longer than a set time (at most 500).",
     ),
     ActionKind.CONTENT_ACCESS_GRANT: ActionRule(
         "support.content_access.request",

@@ -98,7 +98,8 @@ def test_an_output_without_a_sha256_checksum_is_refused(checksum):
 def test_the_playback_producer_and_the_rule_agree():
     made, _ = proxies.identity(SHA, 44_100)
     provenance.check("playback", made)
-    assert made["inputs"] == {"source": SHA} and made["versions"] == {"proxy": 1}
+    assert made["inputs"] == {"source": SHA}
+    assert made["versions"] == {"proxy": proxies.PROXY_VERSION}
 
 
 # --- The schema ------------------------------------------------------------------------------
@@ -185,7 +186,8 @@ def test_the_migration_rewrites_old_playback_rows_and_rolls_back_and_forward(clo
             return dict(connection.execute(sa.select(artifacts.c.id, artifacts.c.provenance)).all())
 
     rewritten = stored()
-    assert rewritten["art-1"] == proxies.identity(SHA, 48_000)[0]
+    # the old row was a version 1 file: rewritten to the current shape, keeping its version
+    assert rewritten["art-1"] == {**proxies.identity(SHA, 48_000)[0], "versions": {"proxy": 1}}
     assert rewritten["art-2"] == made_provenance("seam")
     provenance.check("playback", rewritten["art-1"])
     assert migrate.pending_changes(cloud_engine) == []

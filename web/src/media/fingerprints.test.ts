@@ -118,6 +118,7 @@ describe('what the import says', () => {
 describe('names from an Artist - Title file', () => {
   it('splits the file name when the artist tag is missing or says nobody', () => {
     expect(displayNames({}, 'Adekunle Gold - Call on Me.mp3')).toEqual({ title: 'Call on Me', artist: 'Adekunle Gold' });
+    expect(displayNames({}, '001. Morgan Wallen - Last Night.mp3')).toEqual({ title: 'Last Night', artist: 'Morgan Wallen' });
     expect(displayNames({ title: 'Adekunle Gold - Call on Me', artist: 'Unknown Artist' }, 'track.mp3')).toEqual({ title: 'Call on Me', artist: 'Adekunle Gold' });
     expect(displayNames({ title: 'Call on Me', artist: '<unknown>' }, 'Adekunle Gold - Call on Me.mp3')).toEqual({ title: 'Call on Me', artist: 'Adekunle Gold' });
   });

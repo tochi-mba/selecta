@@ -102,4 +102,12 @@ STAFF_ONLY = {
     ("PUT", "/api/admin/customers/{user_id}/flags/{flag_id}"),
     ("PUT", "/api/admin/customers/{user_id}/storage-mode"),
     ("PUT", "/api/admin/me/preferences/{key}"),
+    # The Workers page (admin/routes_workers.py): platform-wide counts and controls through the
+    # privileged staff session; it names pools and job types, never a customer's workspace
+    ("GET", "/api/admin/hosted/status"),
+    ("GET", "/api/admin/hosted/preview"),
+    ("POST", "/api/admin/hosted/jobs/retry-failed"),
+    ("POST", "/api/admin/hosted/jobs/expire-queued"),
+    ("POST", "/api/admin/hosted/pools/{pool}/{command}"),
+    ("PUT", "/api/admin/hosted/budget"),
 }
