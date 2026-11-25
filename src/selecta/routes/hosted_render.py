@@ -83,6 +83,23 @@ def install_routes(
                                            created_by=found.user.id)
         return {"made": made, **hosted_render.songs_status(engine, found.workspace.id)}
 
+    @app.post("/api/hosted/songs/{asset_id}/retry")
+    def hosted_retry_song(asset_id: str, request: Request,
+                          claims: Claims = Depends(current_claims)):  # noqa: B008
+        """Try again for one song: a fresh analysis job in place of a failed or stuck one (never
+        a second live job). Only the caller's own workspace's songs: another account's song id
+        answers exactly as a made-up one does. Answers `{"made", "song"}`, the song in the
+        `GET /api/hosted/songs` entry shape."""
+        if not _ID.fullmatch(asset_id):
+            raise HTTPException(404, detail={"code": "song_not_found"})
+        found = principal(request, claims, WorkspaceAction.MIXES_EDIT)
+        if hosted_render.song_status(engine, found.workspace.id, asset_id) is None:
+            raise HTTPException(404, detail={"code": "song_not_found"})
+        made = hosted_render.prepare_songs(engine, work, found.workspace.id, [asset_id],
+                                           retry=True, created_by=found.user.id)
+        return {"made": made,
+                "song": hosted_render.song_status(engine, found.workspace.id, asset_id)}
+
     @app.post("/api/hosted/mixes/plan")
     def hosted_plan(request: Request, body: dict = Body(default={}),  # noqa: B008
                     claims: Claims = Depends(current_claims)):  # noqa: B008

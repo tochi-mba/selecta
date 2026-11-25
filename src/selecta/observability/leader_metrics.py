@@ -2,6 +2,8 @@
 
 - `queue_metrics` (15 s): the age of the oldest queued job in each lane
   (`selecta_oldest_queued_seconds`), 0 when a lane is empty so the series never goes absent.
+- `queue_watch` (1 min): `work.queue_health.watch`, a `work.queue_stuck` alert for a pool whose
+  oldest queued job has waited over 15 minutes.
 - `lost_jobs` (10 min): `audit.invariants.lost_jobs` over the job tables; each violation not seen
   before counts once on `selecta_invariant_violations_total{invariant="accepted_job_lost"}`.
 - `backup_freshness` (10 min): when the nightly dump script last wrote `LATEST` in the backup
@@ -21,6 +23,7 @@ from sqlalchemy.engine import Engine
 from selecta import persistence
 from selecta.observability import metrics
 from selecta.scheduling.policy import LANES
+from selecta.work import queue_health
 from selecta.work.model import JobState
 from selecta.work.schema import jobs
 
@@ -91,6 +94,9 @@ def tasks(engine: Engine, env: Mapping[str, str]) -> tuple[list, dict[str, str]]
     made = [
         Task("queue_metrics", 15.0, lambda _fence: oldest_queued(engine)),
         Task("lost_jobs", 600.0, LostJobs(engine)),
+        # queued work nobody picks up raises an operator alert (work.queue_health)
+        Task("queue_watch", queue_health.WATCH_EVERY_S,
+             lambda _fence: queue_health.watch(engine)),
     ]
     if not all(env.get(name, "").strip() for name in BACKUP_ENV):
         return made, {"backup_freshness": "set " + ", ".join(BACKUP_ENV)}
