@@ -2,7 +2,7 @@
 id: T-20261125-bcae
 title: Content hash is of the whole file, so re-tagging a song makes it a new song in Cloud
 area: library
-status: open
+status: doing
 priority: high
 who: either
 created: 2026-11-25
