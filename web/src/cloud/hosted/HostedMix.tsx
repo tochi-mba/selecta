@@ -277,7 +277,7 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
             return (
               <li key={`${planned.asset_id}-${at}`} aria-current={at === nowSong ? 'true' : undefined}>
                 <button type="button" className="queue-row hosted-mix-track" data-lift="row" disabled={!mix?.complete || startPart === undefined} aria-label={`Play from ${names.title}`} onClick={() => playFrom(startPart)}>
-                  <span className="queue-place" aria-hidden="true">{at === nowSong ? <Icon name="volume" size="compact" /> : at + 1}</span>
+                  <span className="queue-place" aria-hidden="true">{at === nowSong ? <Icon name="volume" size="toolbar" /> : at + 1}</span>
                   <span className="queue-words"><b dir="auto">{names.title}</b><span dir="auto">{names.artist}</span></span>
                   <Icon name="play" size="compact" className="queue-play" />
                 </button>
