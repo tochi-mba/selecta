@@ -155,6 +155,16 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.music_folders": {
+      "label": "Your music folders, watched",
+      "about": "The member can connect several music folders on this device. Each is listed with its song count, when it was last checked and whether the browser still allows it; folders the browser still allows are checked for new, changed and missing songs when SelectaDJ opens and when the tab comes back. Folder names and handles stay in this browser; nothing about a folder goes to the server. Off, one folder is remembered only to carry on an interrupted import, as before.",
+      "requires": ["cloud.local_media"],
+      "surfaces": ["cloud.library", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.offline_shell": {
       "label": "Cloud opens offline",
       "about": "The app opens without a connection and the library shows what this device already knows.",
