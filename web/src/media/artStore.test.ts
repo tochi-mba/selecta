@@ -111,7 +111,7 @@ describe('FL-0478-01 from a song id to its content hash', () => {
 
   it('turns an id into a hash through the bound index, and stops when unbound', async () => {
     const heard: (string | null)[] = [];
-    subscribeArt((sha) => heard.push(sha));
+    const stop = subscribeArt((sha) => heard.push(sha));
     const lookup = vi.fn(async (id: number) => (id === 5 ? SHA : null));
     const unbind = bindArtIndex(lookup);
     expect(heard).toEqual([null]);
@@ -123,7 +123,9 @@ describe('FL-0478-01 from a song id to its content hash', () => {
     await songKeyFor(6);
     expect(lookup).toHaveBeenCalledTimes(3);
     unbind();
+    expect(heard).toEqual([null, null]);
     expect(await songKeyFor(5)).toBeNull();
+    stop();
   });
 
   it('refuses an index answer that is not a content hash, or one that fails', async () => {
