@@ -270,6 +270,8 @@ def want_round(
 ) -> None:
     """Tell the speaker's browser the room wants a vote. It answers by opening one with the
     songs it can blend into, or not at all when the song has too little left."""
+    with transaction(ctx.engine, workspace_id) as conn:
+        load_room(conn, workspace_id, room_id)  # another workspace's room is no room at all
     if not ctx.speakers.speaker_online(workspace_id):
         raise RoomError(Refusal.NO_SPEAKER)
     with transaction(ctx.engine, workspace_id) as conn:

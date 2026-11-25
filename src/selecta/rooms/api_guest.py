@@ -177,8 +177,9 @@ def install_routes(
 
     def host_allows(ref: GuestRef, flag_id: str) -> bool:
         """Whether the host's account has `flag_id` on now, as the host's own site decides it
-        (`host_features`: every guest-facing flag decided together, remembered for 5 s)."""
-        return features.on(ref.workspace_id, flag_id)
+        (`host_features`: every guest-facing flag decided together). Decided again on each
+        call: a host who loses a feature loses it for their guests at once."""
+        return features.on(ref.workspace_id, flag_id, fresh=True)
 
     def voting(ref: GuestRef) -> None:
         if not host_allows(ref, "rooms.votes"):

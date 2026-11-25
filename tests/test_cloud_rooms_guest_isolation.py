@@ -40,6 +40,14 @@ GUEST: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/guest/rooms/{room_id}/nicknames"): None,
     ("PUT", "/api/guest/rooms/{room_id}/nickname"): {"nickname": "Blue Fox"},
     ("POST", "/api/guest/rooms/{room_id}/leave"): None,
+    # ADR-0488: what a room does together, behind the same room cookie
+    ("GET", "/api/guest/rooms/{room_id}/pulse"): None,
+    ("GET", "/api/guest/rooms/{room_id}/recap"): None,
+    ("POST", "/api/guest/rooms/{room_id}/reactions"): {"kind": "love", "play_id": "p1"},
+    ("DELETE", "/api/guest/rooms/{room_id}/reactions"): {"kind": "love", "play_id": "p1"},
+    ("POST", "/api/guest/rooms/{room_id}/rounds/{round_id}/vote"): {"position": 0},
+    ("PUT", "/api/guest/rooms/{room_id}/requests/{request_id}/dedication"): {"line": "cheers"},
+    ("DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}/dedication"): None,
 }
 # Reached with no cookie at all (joining) or with the display's own cookie.
 ANONYMOUS = {("POST", "/api/guest/join")}
@@ -113,7 +121,7 @@ def test_a_guest_token_is_nobody_in_another_room(two_rooms, route):
     before = _room_rows(party.engine, bob_room)
 
     def call(room_id: str, request_id: str):
-        url = path.format(room_id=room_id, request_id=request_id)
+        url = path.format(room_id=room_id, request_id=request_id, round_id=request_id)
         return guest.request(method, url, json=GUEST[route])
 
     theirs = call(bob_room, two_rooms["bob_request"])
