@@ -1,4 +1,8 @@
-import { ReactNode, useId, useRef } from 'react';
+import { ReactNode, useId, useRef, useSyncExternalStore } from 'react';
+import { NumberRoll } from '../feel/numberRoll';
+import { feelOn, onFeelChange } from '../feel/root';
+
+const percentWords = (value: number) => `${value} percent`;
 
 /** One bar for every "how far along" and "how full": an import's progress, storage used, turns
  * left this month. It says its words aloud as well as drawing them, and its colour comes from the
@@ -50,11 +54,14 @@ export function Meter({ label, value, max = 100, valueText, kind = 'progress', w
   const wasShort = useRef(false);
   if (known && fraction < 1) wasShort.current = true;
   const complete = kind === 'progress' && known && fraction >= 1 && wasShort.current;
+  // with the feel's motion on, a plain percentage rolls to its new value (feel/numberRoll); words
+  // given by the page stay exactly as given
+  const rolls = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false) && known && valueText === undefined;
   return (
     <div className={`meter ${className}`.trim()} data-status={status} data-indeterminate={known ? undefined : 'true'} data-complete={complete ? '' : undefined}>
       <div className={`meter-label${showLabel ? '' : ' visually-hidden'}`}>
         <span id={labelId}>{label}</span>
-        {words && <span className="meter-value" aria-hidden="true">{words}</span>}
+        {words && <span className="meter-value" aria-hidden="true">{rolls ? <NumberRoll value={percent} format={percentWords} /> : words}</span>}
       </div>
       <div
         className="meter-track"

@@ -10,7 +10,7 @@ export type AdminRoute = { page: AdminPage; rest: string[]; query: URLSearchPara
 
 const ALIASES: Record<string, AdminPage> = { accounts: 'customers', staff: 'security' };
 
-export const PAGE_IDS: AdminPage[] = ['overview', 'customers', 'billing', 'jobs', 'workers', 'ai', 'flags', 'content', 'emergency', 'security', 'communications', 'system', 'pilots'];
+export const PAGE_IDS: AdminPage[] = ['overview', 'customers', 'billing', 'jobs', 'workers', 'ai', 'flags', 'content', 'covers', 'emergency', 'security', 'communications', 'system', 'pilots'];
 
 export function parseAdmin(pathname: string, search = ''): AdminRoute {
   const parts = pathname.replace(/^\/admin\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);

@@ -82,7 +82,11 @@ def add_routes(app, ctx) -> None:
             conn = connect()
             try:
                 report = scan_folder(
-                    conn, folder, should_stop=background.scan_stop.is_set, checkpoint=checkpoint
+                    conn,
+                    folder,
+                    should_stop=background.scan_stop.is_set,
+                    checkpoint=checkpoint,
+                    progress=moved,
                 )
                 remember_folder(conn, folder)
                 background.scan = {
@@ -101,6 +105,15 @@ def add_routes(app, ctx) -> None:
                 background.scan = {"status": "failed", "error": str(problem)}
             finally:
                 conn.close()
+
+        def moved(done: int, found: int) -> None:
+            """How many files of the folder have been looked at, for the first-scan page's
+            counters and rings (ADR-0477). Written only into the running scan's own record, so
+            a scan that has finished or been replaced is never given stale numbers."""
+            state = background.scan
+            if state.get("status") == "running" and state.get("folder") == str(folder):
+                state["found"] = found
+                state["done"] = done
 
         def warm_covers(paths: list[str]) -> None:
             """ADR-0478 FL-0478-02: the covers of the files just read, after the scan has said it
@@ -428,7 +441,7 @@ def add_routes(app, ctx) -> None:
                 raise
 
     @app.get("/api/songs")
-    def songs(q: str = "", state: str = "all", limit: int = 100) -> list[dict]:
+    def songs(q: str = "", state: str = "all", limit: int = 100, order: str = "name") -> list[dict]:
         with connect() as conn:
             sql = (
                 "SELECT s.id,s.artist,s.title,s.genre,s.duration,s.is_music,"
@@ -451,8 +464,10 @@ def add_routes(app, ctx) -> None:
                 sql += " AND s.is_music=1 AND s.processing_priority=100"
             else:
                 sql += " AND s.is_music=1"
+            # newest first lets the first-scan page show the covers of the songs just found
+            by = "s.id DESC" if order == "recent" else "s.artist,s.title"
             rows = conn.execute(
-                sql + " ORDER BY s.artist,s.title LIMIT ?", (*params, min(limit, 500))
+                sql + f" ORDER BY {by} LIMIT ?", (*params, min(limit, 500))
             ).fetchall()
             never = never_played(conn)
             return [

@@ -91,6 +91,26 @@
   min-inline-size: 0;
 }
 
+/* The first time the frame is drawn in a visit (after sign-in or set-up), its places come in one
+   after another (Shell RailList sets data-feel-first and --i once). The mark is not a place. */
+:where(:root[data-feel~='motion']) .shell .nav ul[data-feel-first] > li:not(.feel-indicator) {
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * var(--motion-stagger));
+}
+
+/* More's three dots hop one after another as its sheet opens (ui/Icon.tsx draws them apart). */
+:where(:root[data-feel~='motion']) .nav-more-mobile[aria-expanded='true'] > .ui-icon[data-icon='more'] > path {
+  transform-box: fill-box;
+  animation: feel-hop var(--motion-spring-snappy) var(--spring-bouncy) both;
+}
+:where(:root[data-feel~='motion']) .nav-more-mobile[aria-expanded='true'] > .ui-icon[data-icon='more'] > path:nth-child(2) { animation-delay: var(--motion-stagger); }
+:where(:root[data-feel~='motion']) .nav-more-mobile[aria-expanded='true'] > .ui-icon[data-icon='more'] > path:nth-child(3) { animation-delay: calc(var(--motion-stagger) * 2); }
+
+/* The account menu's caret turns over as the menu opens, rather than flipping. */
+:where(:root[data-feel~='motion']) .shell .account-caret {
+  transition: transform var(--motion-spring-snappy) var(--spring-snappy);
+}
+
 /* The account menu grows out of its button (it opens upward, or to the right when collapsed). */
 :root[data-feel~='motion'] .shell .nav-account-menu[data-motion='pop'] {
   transform-origin: bottom left;
@@ -107,6 +127,29 @@
 :where(:root[data-feel~='motion']) .context-bar .ui-icon.feel-ring {
   transform-origin: 50% 10%;
   animation: feel-ring var(--motion-spring-release) var(--motion-ease) both;
+}
+/* A count that just rose pops in and sends out a ring, three times and no more: real news, said
+   once, never a light left blinking. */
+:where(:root[data-feel~='motion'][data-feel~='depth']) .context-bar .context-counted .count.feel-pop {
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both, feel-ping calc(var(--motion-slow) * 3) var(--motion-ease) 3;
+}
+
+/* Once the page scrolls under the bar (Shell useBarScroll), the bar casts a shadow on it. The bar
+   itself stays solid, so no line of the page ever shows through its words (cloud-shell.css). When
+   the page's own title has gone up under the bar, the bar's last crumb, which names the same page,
+   takes the title's weight, so the page's name never leaves the screen. */
+:where(:root[data-feel~='depth']) .context-bar {
+  transition: box-shadow var(--motion-fast) var(--motion-ease);
+}
+:where(:root[data-feel~='depth']) .context-bar[data-scrolled] {
+  box-shadow: var(--shadow-rest);
+}
+:where(:root[data-feel~='motion']) .context-bar .crumbs li:last-child {
+  transition: color var(--motion-reveal) var(--motion-ease);
+}
+:where(:root[data-feel~='motion']) .context-bar[data-condensed] .crumbs li:last-child {
+  color: var(--text);
+  font-weight: var(--weight-heading);
 }
 
 /* ---- mini player ---- */
@@ -262,11 +305,24 @@
   }
 }
 
+/* ---- phone sheets: the title bar is a handle (ui/sheetDrag.ts) ---- */
+
+/* A drag down the title bar closes a drawer or sheet; the editor's own sheet has its grabber and
+   keeps its own handling. Vertical moves on the bar belong to the drag, not to scrolling. */
+@media (max-width: 760px) {
+  :where(:root[data-feel~='motion']) :is(.overlay-drawer, .overlay-sheet):not(.pe-sheet) > .overlay-panel > .overlay-head {
+    touch-action: none;
+    cursor: grab;
+  }
+  :where(:root[data-feel~='motion']) :is(.overlay-drawer, .overlay-sheet) > .overlay-panel[data-sheet-drag] > .overlay-head { cursor: grabbing; }
+}
+
 /* ---- forced colours: borders and outlines carry every state ---- */
 
 @media (forced-colors: active) {
   :where(.mini-head, .connection-banner-tick) { display: none; }
   :root[data-feel] .shell[data-mode='cloud'] .mini { backdrop-filter: none; }
+  :where(:root[data-feel]) :is(.context-bar, .context-bar .count) { box-shadow: none; }
 }
 
 @keyframes feel-rail-label {
@@ -284,6 +340,13 @@
   50% { rotate: -10deg; }
   75% { rotate: 5deg; }
   100% { rotate: 0deg; }
+}
+@keyframes feel-ping {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--selected) 60%, transparent); }
+  to { box-shadow: 0 0 0 var(--space-2) transparent; }
+}
+@keyframes feel-hop {
+  40% { translate: 0 calc(-1 * var(--space-1)); }
 }
 @keyframes feel-dock-rise {
   from { opacity: 0; translate: 0 100%; }

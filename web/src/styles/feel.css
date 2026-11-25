@@ -261,13 +261,50 @@
   to { opacity: 0; block-size: 0; padding-block: 0; margin-block: 0; }
 }
 
+/* ---- drag anywhere (plan 3.0 "Drag anywhere") ----
+
+   The shared look of a drag, for any list a screen lets people drag in. The screen's own pointer
+   code moves the dragged thing and sets these; they only paint.
+     data-feel-drag="held"       the thing being dragged: lifted on the float shadow, tilted a hair
+     data-feel-drag="returning"  let go somewhere it cannot land: it springs back to its place
+                                 (the screen clears its own translate; this times the trip)
+     data-feel-drop="over"       a place it can land, while it is over it: the edge lights
+     data-feel-part="before" / "after"   the neighbours either side of the landing spot step apart
+   A landed thing can take .feel-pop to settle. With the feel off none of these paint anything. */
+:where(:root[data-feel~='motion'] [data-feel-drag='held']) {
+  rotate: -0.6deg;
+  cursor: grabbing;
+}
+:where(:root[data-feel~='depth'] [data-feel-drag='held']) {
+  box-shadow: var(--shadow-float);
+}
+:where(:root[data-feel~='motion'] [data-feel-drag='returning']) {
+  transition: translate var(--motion-spring-release) var(--spring-bouncy), rotate var(--motion-spring-release) var(--spring-bouncy);
+}
+:where(:root[data-feel~='depth'] [data-feel-drop='over']) {
+  box-shadow: var(--edge-light), var(--glow-accent);
+}
+:where(:root[data-feel~='motion'] [data-feel-part]) {
+  transition: translate var(--motion-spring-snappy) var(--spring-snappy);
+}
+:where(:root[data-feel~='motion'] [data-feel-part='before']) {
+  translate: 0 calc(-1 * var(--space-1));
+}
+:where(:root[data-feel~='motion'] [data-feel-part='after']) {
+  translate: 0 var(--space-1);
+}
+
 /* ---- forced colours ---- */
 
 /* The system draws every state with borders and outlines here; shadows, glows, the sheen and the
    pointer light would only be noise, and the skin stays flat on its element. */
 @media (forced-colors: active) {
-  :where(:root[data-feel] :is(button, a.button, [data-lift])) {
+  :where(:root[data-feel] :is(button, a.button, [data-lift], [data-feel-drag], [data-feel-drop])) {
     box-shadow: none;
+  }
+  /* a landing place still has to be seen, so the system's own outline marks it */
+  :where(:root[data-feel] [data-feel-drop='over']) {
+    outline: var(--marker) solid Highlight;
   }
   :where(:root[data-feel] [data-lift])::before {
     box-shadow: none;

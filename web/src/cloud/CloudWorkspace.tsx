@@ -5,7 +5,7 @@ import { forgetFolder, recallFolder, storageSpace, type ImportSummary, type Medi
 import type { WorkshopTab } from '../router';
 import { PageLink } from '../shell/PageLink';
 import { Action, Skeleton, Status } from '../ui/controls';
-import { Icon, type IconName } from '../ui/Icon';
+import { Icon, ICON_SLOTS, ICON_STROKES, type IconName } from '../ui/Icon';
 import { LinkTabs } from '../ui/primitives';
 import { InterfaceChoices } from '../views/InterfaceChoices';
 import { BrowserDiagnostics, type PlaybackFacts } from './BrowserDiagnostics';
@@ -157,6 +157,15 @@ function useFixedNeeds(needs: Need[]) {
   return { fixed: fixed.filter((need) => !needs.some((now) => now.key === need.key)), gone };
 }
 
+/** The needs that came up after the page was first drawn, so each can glow once (.feel-flash)
+ * as it arrives. Those already there when the page opened are simply shown. */
+function useFreshNeeds(needs: Need[]) {
+  const first = useRef<Set<string> | null>(null);
+  if (first.current === null) first.current = new Set(needs.map((need) => need.key));
+  const known = first.current;
+  return new Set(feelOn('motion') ? needs.map((need) => need.key).filter((key) => !known.has(key)) : []);
+}
+
 function Overview({ status, workspaceId, connect, degraded, savedMixes, fileCheck, stemsShown, measuringKeys }: {
   status: AppStatus;
   workspaceId: string;
@@ -207,20 +216,23 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
   }
 
   const { fixed, gone } = useFixedNeeds(needs);
+  const fresh = useFreshNeeds(needs);
 
-  const activity: ReactNode[] = [];
+  // Each line is keyed by what it says is happening, so a line whose state really changed (an import
+  // that finished, a check that started) is a new line and arrives (data-arrive) while the rest stay.
+  const activity: { key: string; line: ReactNode }[] = [];
   if ((importing.phase === 'finished' || importing.phase === 'paused') && importing.summary) {
-    activity.push(<Status key="import" kind={importing.phase === 'paused' ? 'paused' : 'ready'}>{`Last added: ${summaryWords(importing.summary)}`}</Status>);
+    activity.push({ key: `import-${importing.phase}`, line: <Status kind={importing.phase === 'paused' ? 'paused' : 'ready'}>{`Last added: ${summaryWords(importing.summary)}`}</Status> });
   }
-  if (running) activity.push(<Status key="running" kind="working">{`Adding your music: ${checkedWords(importing)}.`}</Status>);
+  if (running) activity.push({ key: 'running', line: <Status kind="working">{`Adding your music: ${checkedWords(importing)}.`}</Status> });
   activity.push(fileCheck.running
-    ? <Status key="check" kind="working">Checking which songs can play here.</Status>
+    ? { key: 'check-running', line: <Status kind="working">Checking which songs can play here.</Status> }
     : fileCheck.at
-      ? <Status key="check" kind="ready">{`Songs checked at ${clock(fileCheck.at)}.`}</Status>
-      : <Status key="check" kind="queued">Songs are checked in the background while SelectaDJ is open.</Status>);
+      ? { key: `check-${fileCheck.at}`, line: <Status kind="ready">{`Songs checked at ${clock(fileCheck.at)}.`}</Status> }
+      : { key: 'check-waiting', line: <Status kind="queued">Songs are checked in the background while SelectaDJ is open.</Status> });
   // what the profiler is really doing in this tab: nothing is said once every song is measured
   const keysWords = measuringKeys ? tonalActivityWords(keysNow) : null;
-  if (keysWords) activity.push(<Status key="keys" kind={keysNow === 'measuring' ? 'working' : 'paused'}>{keysWords}</Status>);
+  if (keysWords) activity.push({ key: `keys-${keysNow}`, line: <Status kind={keysNow === 'measuring' ? 'working' : 'paused'}>{keysWords}</Status> });
 
   return (
     <div className="lw-stack">
@@ -241,7 +253,8 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
           ) : (
             <ul className="lw-needs" data-stagger="">
               {needs.map((need, index) => (
-                <li key={need.key} style={{ '--i': index } as CSSProperties}>
+                // a need that came up while the page was open glows once, after it arrives
+                <li key={need.key} className={fresh.has(need.key) ? 'feel-flash' : undefined} style={{ '--i': index } as CSSProperties}>
                   <span className="lw-need-mark" aria-hidden="true"><Icon name={need.icon} size="toolbar" /></span>
                   <div><b>{need.title}</b><span>{need.words}</span></div>
                   {need.action}
@@ -249,7 +262,12 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
               ))}
               {fixed.map((need) => (
                 <li key={need.key} className="feel-collapse-out" aria-hidden="true" inert onAnimationEnd={(event) => { if (event.target === event.currentTarget) gone(need.key); }}>
-                  <span className="lw-need-mark" aria-hidden="true"><Icon name="check" size="toolbar" /></span>
+                  {/* fixed: the mark becomes a tick that draws itself as the row folds away */}
+                  <span className="lw-need-mark" aria-hidden="true">
+                    <svg className="ui-icon" data-icon="check" data-size="toolbar" viewBox="0 0 24 24" width={ICON_SLOTS.toolbar} height={ICON_SLOTS.toolbar} fill="none" stroke="currentColor" strokeWidth={ICON_STROKES.toolbar} strokeLinecap="round" strokeLinejoin="round" focusable="false">
+                      <path className="feel-tick" pathLength={1} d="m5 12 4 4L19 6" />
+                    </svg>
+                  </span>
                   <div><b>{need.title}</b><span>{need.words}</span></div>
                 </li>
               ))}
@@ -259,7 +277,7 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
         <section className="ui-card" aria-labelledby="cloud-background-title">
           <h2 className="section-title" id="cloud-background-title">Activity</h2>
           <ul className="lw-activity diagnostic-facts">
-            {activity.map((line, index) => <li key={index}>{line}</li>)}
+            {activity.map(({ key, line }) => <li key={key} data-arrive="">{line}</li>)}
           </ul>
           {stemsShown && <p className="hint">Stem splitting is under <PageLink to="/workshop/storage">Storage</PageLink>.</p>}
         </section>

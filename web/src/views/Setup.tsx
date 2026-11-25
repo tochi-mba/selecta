@@ -8,9 +8,8 @@ import { Action, Status as StatusMark } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { words } from '../copy';
 import { ScanReveals } from './ScanReveals';
-import { Meter } from '../ui/Meter';
 import { RollingCount, useFeelOn } from './feelPieces';
-import { MomentLayer, plainCount, useReachedMoment } from './feelLocal';
+import { FoundCovers, MomentLayer, plainCount, StageRing, useReachedMoment } from './feelLocal';
 
 /** Getting from nothing to a first mix takes three steps. Which one you're on comes from what the
  * server says is true, so it can't claim more than has happened. */
@@ -72,6 +71,7 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
   const music = counts.music ?? 0;
   const analysed = counts.analysed ?? 0;
   const [celebrating, celebrated] = useReachedMoment(ready >= READY_NEEDED);
+  const filesKnown = typeof scan.found === 'number' && scan.found > 0;
   const roll = (value: number | undefined) => (value === undefined ? value : <RollingCount value={value} format={plainCount} />);
   return (
     <main className="page setup" id="main">
@@ -83,19 +83,26 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
       <ol className="readiness-steps" aria-label="Library preparation">
         <li>
           <span>Music found</span><strong>{roll(counts.music)}</strong>
-          {/* still reading: how many files are left is not known, so the bar says only that it is going */}
-          {feel && reading && <Meter className="readiness-meter" label="Music found" showLabel={false} valueText="Still reading your folder" />}
+          {/* the files of the folder looked at so far, once the folder has been listed; before that
+              how many there are is not known, so no ring is drawn */}
+          {feel && reading && filesKnown && <StageRing label="Music found" value={scan.done ?? 0} max={scan.found ?? 0} valueText={`${scan.done ?? 0} of ${scan.found} files looked at`} />}
         </li>
         <li>
           <span>Audio analysed</span><strong>{roll(counts.analysed)}</strong>
-          {feel && music > 0 && <Meter className="readiness-meter" label="Audio analysed" showLabel={false} value={analysed} max={music} valueText={`${analysed} of ${music} songs`} />}
+          {feel && music > 0 && <StageRing label="Audio analysed" value={analysed} max={music} valueText={`${analysed} of ${music} songs`} />}
         </li>
-        {flagOn('lyrics.lookup') && counts.lyrics !== undefined && <li><span>With timed lyrics</span><strong>{roll(counts.lyrics)}</strong></li>}
+        {flagOn('lyrics.lookup') && counts.lyrics !== undefined && (
+          <li>
+            <span>With timed lyrics</span><strong>{roll(counts.lyrics)}</strong>
+            {feel && music > 0 && <StageRing label="With timed lyrics" value={counts.lyrics} max={music} valueText={`${counts.lyrics} of ${music} songs`} />}
+          </li>
+        )}
         <li>
           <span>Ready for mixes</span><strong>{roll(ready)} / {READY_NEEDED} needed</strong>
-          {feel && <Meter className="readiness-meter" label="Ready for mixes" showLabel={false} value={Math.min(ready, READY_NEEDED)} max={READY_NEEDED} valueText={`${Math.min(ready, READY_NEEDED)} of ${READY_NEEDED} needed`} />}
+          {feel && <StageRing label="Ready for mixes" value={Math.min(ready, READY_NEEDED)} max={READY_NEEDED} valueText={`${Math.min(ready, READY_NEEDED)} of ${READY_NEEDED} needed`} />}
         </li>
       </ol>
+      <FoundCovers found={music} />
       <p className="hint">
         {ready} of {counts.music} songs have the vocal or instrumental cues needed for mixes. Audio analysis is complete for {counts.analysed};
         {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'}
@@ -119,6 +126,8 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
       {/* data-handoff: once the library is ready, Make my first mix is the one glowing action here */}
       <div className="row wrap" data-handoff={feel && ready >= READY_NEEDED ? '' : undefined}>
         {celebrating && <MomentLayer kind="equalizer" onDone={celebrated} />}
+        {/* the hand-off: said in words beside the one glowing action, so nothing rests on the glow */}
+        {feel && ready >= READY_NEEDED && <p className="setup-ready" role="status">Your library is ready.</p>}
         {ready >= READY_NEEDED && <PageLink to="/mixes" className="button primary">Make my first mix</PageLink>}
         <PageLink to="/library" className="button">Open Library</PageLink>
         <LinkIfThere to="/mixes/lucy" className="button">Plan with Lucy (optional)</LinkIfThere>

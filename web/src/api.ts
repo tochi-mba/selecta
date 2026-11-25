@@ -110,7 +110,9 @@ export type Status = {
     jobs: Record<string, number>;
     accuracy?: { jobs: number; typical_miss: number | null };
   };
-  scan: { status: string; folder?: string; music?: number; set_aside?: number; error?: string };
+  /** `found` and `done` (files in the folder, files looked at) arrive while a scan runs, once the
+   * folder has been listed; older servers never send them. */
+  scan: { status: string; folder?: string; music?: number; set_aside?: number; error?: string; found?: number; done?: number };
   /** Each feature flag and whether it's on in this build. An older server doesn't say. */
   flags?: Record<string, boolean>;
 };
@@ -470,6 +472,8 @@ export type ExportJob = {
   created_at: number;
   can_cancel: boolean;
   quiet_seconds: number;
+  /** The finished file's peak level, 0 to 1, in even slices, measured while it was verified. */
+  shape?: number[] | null;
 };
 
 /** What Selecta can say about a folder before reading it, from GET /api/folders/check. */

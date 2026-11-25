@@ -625,9 +625,72 @@ def art_bytes(objects, bucket: str, key: str) -> bytes:
         return target.read_bytes()
 
 
+STAFF_SEARCH_LIMIT = 50
+# How many matching recordings feed one staff search: a common word must not pull the whole
+# catalogue into memory, and staff narrow the words when the image they want is not listed.
+STAFF_RECORDING_LIMIT = 200
+
+
+def staff_art_search(conn: Connection, text: str, *,
+                     limit: int = STAFF_SEARCH_LIMIT) -> list[dict[str, Any]]:
+    """Catalogue images for the staff cover tool, newest first.
+
+    `text` matches an art id or release id exactly, or a song (recording) or release title or
+    artist anywhere in it; empty lists the newest images. Hidden images are listed too, since
+    staff must find them to unhide them, but carry no preview: the image route refuses them.
+    """
+    words = text.strip()
+    query = sa.select(
+        catalog_art,
+        catalog_releases.c.title.label("release_title"),
+        catalog_releases.c.artist.label("release_artist"),
+        catalog_releases.c.year.label("release_year"),
+    ).select_from(catalog_art.outerjoin(
+        catalog_releases, catalog_releases.c.id == catalog_art.c.release_id))
+    if words:
+        # A recording lists its releases in JSON, which the databases search differently, so the
+        # release ids are gathered here and matched as a plain list.
+        found: set[str] = set()
+        recordings = conn.execute(sa.select(catalog_recordings.c.release_ids).where(sa.or_(
+            catalog_recordings.c.title.icontains(words, autoescape=True),
+            catalog_recordings.c.artist.icontains(words, autoescape=True),
+        )).limit(STAFF_RECORDING_LIMIT))
+        for row in recordings:
+            found.update(str(release) for release in (row.release_ids or []))
+        query = query.where(sa.or_(
+            catalog_art.c.id == words,
+            catalog_art.c.release_id == words,
+            catalog_releases.c.title.icontains(words, autoescape=True),
+            catalog_releases.c.artist.icontains(words, autoescape=True),
+            catalog_art.c.release_id.in_(sorted(found)),
+        ))
+    rows = conn.execute(query.order_by(catalog_art.c.fetched_at.desc(), catalog_art.c.id)
+                        .limit(max(1, min(limit, STAFF_SEARCH_LIMIT))))
+    answer = []
+    for row in rows:
+        sizes = sorted((row.sizes or {}), key=lambda size: int(size) if size.isdigit() else 0)
+        answer.append({
+            "id": row.id,
+            "release_id": row.release_id,
+            "title": row.release_title,
+            "artist": row.release_artist,
+            "year": row.release_year,
+            "source": row.source,
+            "sizes": sizes,
+            "preview": None if row.hidden or not sizes else art_url(row.id, sizes[0]),
+            "fetched_at": row.fetched_at,
+            "hidden": bool(row.hidden),
+            "hidden_reason": row.hidden_reason,
+            "hidden_at": row.hidden_at,
+            "hidden_by": row.hidden_by,
+        })
+    return answer
+
+
 __all__ = [
     "FLAG",
     "JOB_TYPE",
+    "STAFF_SEARCH_LIMIT",
     "allowed",
     "art_bytes",
     "art_for_songs",
@@ -639,6 +702,7 @@ __all__ = [
     "handlers",
     "palette_hue",
     "read_art",
+    "staff_art_search",
     "run_lookup",
     "set_allowed",
     "set_choice",

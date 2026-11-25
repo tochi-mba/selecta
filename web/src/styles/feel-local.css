@@ -3,14 +3,103 @@
  * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md. */
 
 /* ---------- First scan (views/Setup.tsx, Start.tsx, ScanReveals.tsx) ----------
-   Each readiness row is a label and a count; its bar (drawn only with the feel on, from the real
-   counts) runs under both. Reading a folder has no known total, so its bar is the Meter's own
-   indeterminate one. */
-:where(:root[data-feel]) .readiness-steps > li > .readiness-meter {
-  grid-column: 1 / -1;
+   Each readiness row is a label and a count; with the feel on, a ring (views/feelLocal.tsx
+   StageRing) stands before the label, filled to the real count of the real total. A stage whose
+   total is not known (a folder still being listed) has no ring, so nothing moves on a guess. */
+:where(:root[data-feel]) .readiness-steps > li:has(> .stage-ring) {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
 }
-:where(:root[data-feel]) .setup-scan > .setup-scan-meter {
-  inline-size: min(100%, 24rem);
+:where(:root[data-feel]) .readiness-steps > li > .stage-ring {
+  order: -1;
+}
+:where(:root[data-feel]) .stage-ring {
+  flex: none;
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
+  /* the fill starts at twelve o'clock; a fixed turn of the drawing, never animated */
+  transform: rotate(-90deg);
+}
+:where(:root[data-feel]) .stage-ring > circle {
+  fill: none;
+  stroke-width: var(--space-1);
+}
+:where(:root[data-feel]) .stage-ring > .stage-ring-track {
+  stroke: var(--border);
+}
+:where(:root[data-feel]) .stage-ring > .stage-ring-fill {
+  stroke: var(--selected);
+  stroke-dasharray: 1 1;
+}
+:where(:root[data-feel]) .stage-ring[data-complete] > .stage-ring-fill {
+  stroke: var(--status-ready);
+}
+/* the fill moves only when a new real count arrives, easing to it */
+:where(:root[data-feel~='motion']) .stage-ring > .stage-ring-fill {
+  transition: stroke-dashoffset var(--motion-slow) var(--motion-ease), stroke var(--motion-fast) var(--motion-ease);
+}
+:where(:root[data-feel]) .setup-scan > .setup-scan-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The covers of the songs saved so far (views/feelLocal.tsx FoundCovers), newest first; each new
+   one arrives once (data-arrive). The local app draws no cover tile elsewhere (listening.css), so
+   the tile is drawn here, as Cloud's sheet draws it. */
+:where(:root[data-feel]) .scan-covers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+:where(:root[data-feel]) :is(.scan-covers > li, .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity) > .cover-art {
+  display: grid;
+  place-items: center;
+  inline-size: var(--space-7);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: linear-gradient(var(--art-turn, 135deg), color-mix(in srgb, var(--motif) 45%, var(--surface-control)), var(--surface-control));
+}
+@supports (color: oklch(from red l c h)) {
+  :where(:root[data-feel]) :is(.scan-covers > li, .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity) > .cover-art {
+    color: oklch(from var(--motif) 0.97 0.03 calc(h + var(--art-hue, 0)));
+    background: linear-gradient(var(--art-turn, 135deg), oklch(from var(--motif) 0.6 0.15 calc(h + var(--art-hue, 0))), oklch(from var(--motif) 0.3 0.1 calc(h + var(--art-hue, 0) + 55)));
+  }
+}
+:where(:root[data-feel]) :is(.scan-covers > li, .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity) > .cover-art > * {
+  grid-area: 1 / 1;
+}
+:where(:root[data-feel]) :is(.scan-covers > li, .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity) > .cover-art :is(.song-motif, .ui-icon) {
+  inline-size: 62%;
+  block-size: 62%;
+  margin: 0;
+  color: inherit;
+}
+:where(:root[data-feel]) :is(.scan-covers > li, .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity) > .cover-art .cover-art-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: 0;
+}
+:where(:root[data-feel]) :is(.scan-covers > li, .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity) > .cover-art .cover-art-image[data-ready] {
+  opacity: 1;
+}
+:where(:root[data-feel~='motion']) :is(.scan-covers > li, .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity) > .cover-art .cover-art-image {
+  transition: opacity var(--motion-reveal) var(--motion-ease);
+}
+
+/* Once the library is ready, the words say so beside the hand-off. */
+:where(:root[data-feel]) [data-handoff] > .setup-ready {
+  margin: 0;
+  align-self: center;
+  font-weight: 600;
 }
 
 /* The phrase two songs share is lit like the current lyric word (foundation.css .current-word),
@@ -80,6 +169,50 @@
   vertical-align: middle;
   color: var(--status-ready);
 }
+/* The written file's own waveform (views/feelLocal.tsx ExportShape), drawn across once with motion
+   (feel-line-across, feel-entry.css), from the start as the file was written. */
+:where(:root[data-feel]) [data-export-ready] > .export-shape {
+  display: block;
+  inline-size: 100%;
+  block-size: var(--space-7);
+  margin-block-start: var(--space-3);
+}
+:where(:root[data-feel]) [data-export-ready] > .export-shape > path {
+  fill: color-mix(in srgb, var(--selected) 70%, transparent);
+}
+:where(:root[data-feel~='motion']) [data-export-ready] > .export-shape {
+  transform-origin: 0 50%;
+  animation: feel-line-across var(--motion-reveal) var(--motion-ease) backwards;
+}
+
+/* ---------- Listen's cover in the local app (views/ListenHero.tsx) ----------
+   The local sheet draws no cover tile (listening.css), so with the feel on the hero shows the
+   playing song's cover (the file's own picture, else the generated tile) at its start, as Cloud's
+   hero does; it is also where a mix's face lands when Play carries it to Listen (player-art). */
+:where(:root[data-feel]) .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity:has(> .cover-art) {
+  --local-art: calc(var(--space-7) * 2.5);
+  min-block-size: calc(var(--local-art) + var(--space-5) * 2);
+  padding-inline-start: calc(var(--local-art) + var(--space-5) * 2);
+}
+:where(:root[data-feel]) .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity > .cover-art {
+  position: absolute;
+  inset-block-start: var(--space-5);
+  inset-inline-start: var(--space-5);
+  inline-size: var(--local-art);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-raised);
+}
+@media (max-width: 760px) {
+  :where(:root[data-feel]) .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity:has(> .cover-art) {
+    --local-art: calc(var(--space-7) * 1.75);
+    min-block-size: calc(var(--local-art) + var(--space-4) * 2);
+    padding-inline-start: calc(var(--local-art) + var(--space-4) * 2);
+  }
+  :where(:root[data-feel]) .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity > .cover-art {
+    inset-block-start: var(--space-4);
+    inset-inline-start: var(--space-4);
+  }
+}
 
 /* ---------- Workspace jobs (views/WorkshopPanels.tsx) ----------
    A row is a label and a status at .job-list's two tracks (shell.css); its bar sits under the
@@ -119,6 +252,24 @@
   }
   :where(:root[data-feel]) [data-handoff] > a.button.primary,
   :where(:root[data-feel]) [data-export-ready] > .export-download {
+    box-shadow: none;
+  }
+  :where(:root[data-feel]) .stage-ring > .stage-ring-track {
+    stroke: GrayText;
+  }
+  :where(:root[data-feel]) .stage-ring > .stage-ring-fill {
+    stroke: Highlight;
+  }
+  :where(:root[data-feel]) [data-export-ready] > .export-shape > path {
+    fill: CanvasText;
+  }
+  :where(:root[data-feel]) [data-export-ready] > .export-shape {
+    animation: none;
+  }
+  :where(:root[data-feel]) :is(.scan-covers > li, .shell:not([data-mode='cloud']) .now:not(.stage) .listen-identity) > .cover-art {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
     box-shadow: none;
   }
 }

@@ -122,7 +122,9 @@ def scan(folder: Path) -> None:
 
     _, conn = _open()
     started = time.perf_counter()
-    report = scan_folder(conn, folder)
+    # the bar waits without a length while the folder is listed, then moves file by file
+    with progress_bar(console, "Reading files", 0) as moved:
+        report = scan_folder(conn, folder, progress=moved)
     seconds = time.perf_counter() - started
 
     aside = sum(report.set_aside.values())

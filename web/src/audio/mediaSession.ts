@@ -2,39 +2,45 @@ import type { MixItem } from '../api';
 import type { NowState, SetPlayer } from '../player';
 import { audioOwner } from './focus';
 import { flagOn } from '../flags';
-import { getArtImage, peekArtUrl, songKeyFor, type ArtImage } from '../media/artStore';
+import { peekArtUrl } from '../media/artStore';
+import { coverForSong, type LadderCover } from '../media/coverLadder';
 
-/** The playing song's own cover for the system controls and the lock screen (ADR-0478,
- * `library.art_embedded`): a local `blob:` URL from this device, never a third party's. The
- * metadata is set at once without it; when the cover is found, the metadata is set again, only
- * if the same song is still the one described. */
-let artFor: { songId: number; sha: string | null; image: ArtImage | null } | null = null;
+/** The playing song's cover for the system controls and the lock screen (ADR-0478 FL-0478-05),
+ * through the same ladder as every cover on the page (media/coverLadder.ts): the file's own picture
+ * kept on this device, the one the local app's server reads from the file, then SelectaDJ's own
+ * catalogue. Only ever a local `blob:` URL or our own origin's, never a third party's. The metadata
+ * is set at once without it; when the cover is found, the metadata is set again, only if the same
+ * song is still the one described. */
+let artFor: { songId: number; cover: LadderCover | null } | null = null;
 let artLooking: number | null = null;
 
+function imagesOf(cover: LadderCover): MediaImage[] {
+  // a picture kept on this device is made at 512 pixels; any other is the size its source chose
+  return [{ src: cover.src, ...(cover.sha ? { sizes: '512x512' } : {}), ...(cover.type ? { type: cover.type } : {}) }];
+}
+
 function artworkFor(session: MediaSession, songId: number, init: MediaMetadataInit): MediaImage[] | undefined {
-  if (!flagOn('library.art_embedded')) return undefined;
+  if (!flagOn('library.art_embedded') && !flagOn('library.art_lookup')) return undefined;
   if (artFor?.songId === songId) {
-    const { sha, image } = artFor;
-    // a URL the page's small cache has since revoked is looked up again, never handed out stale
-    if (!image || !sha) return undefined;
-    if (peekArtUrl(sha, 'large') === image.src) return [{ src: image.src, sizes: '512x512', type: image.type }];
+    const { cover } = artFor;
+    if (!cover) return undefined;
+    // a device URL the page's small cache has since revoked is looked up again, never handed out stale
+    if (!cover.sha || peekArtUrl(cover.sha, 'large') === cover.src) return imagesOf(cover);
     artFor = null;
   }
   if (artLooking !== songId) {
     artLooking = songId;
-    let found: string | null = null;
-    void songKeyFor(songId)
-      .then((sha) => { found = sha; return sha ? getArtImage(sha, 'large') : null; })
+    void coverForSong(songId)
       .catch(() => null)
-      .then((image) => {
+      .then((cover) => {
         if (artLooking !== songId) return;
         artLooking = null;
-        artFor = { songId, sha: found, image };
+        artFor = { songId, cover };
         const described = session.metadata;
-        if (!image || !described || typeof MediaMetadata === 'undefined') return;
+        if (!cover || !described || typeof MediaMetadata === 'undefined') return;
         if (described.title !== init.title || described.artist !== init.artist) return;
         try {
-          session.metadata = new MediaMetadata({ ...init, artwork: [{ src: image.src, sizes: '512x512', type: image.type }] });
+          session.metadata = new MediaMetadata({ ...init, artwork: imagesOf(cover) });
         } catch {
           // artwork is optional and never stops playback
         }

@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useId, useState, useSyncExternalStore } from 'react';
 import { words } from '../copy';
 import { flagOn } from '../flags';
 import { listed } from '../shell/manifest';
-import { changedPrefs, DEFAULT_PREFS, type Prefs, resetPrefs, setPrefs, usePrefs } from '../state/prefs';
+import { changedPrefs, DEFAULT_PREFS, type Prefs, resetPrefs, setPrefs, type Theme, usePrefs } from '../state/prefs';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { keepFullMotion, useLowPowerLevel } from '../ui/lowPower';
-import { ThemeChoices } from '../ui/ThemeChoice';
+import { THEMES, ThemeChoices } from '../ui/ThemeChoice';
+import { feelParts, onFeelChange } from '../feel/root';
 
 /** How this looks and behaves in this browser. Nothing here touches music, mixes or the server, so
  * any of it can be switched back, including the older navigation if the new one ever gets in the way.
@@ -31,27 +32,98 @@ function canVibrate(): boolean {
     && typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
 }
 
+const MOTION_NAMES = { still: 'Still', subtle: 'Subtle', expressive: 'Expressive' } as const;
+const MOTION_ABOUT = {
+  still: 'Nothing moves by itself.',
+  subtle: 'Short, gentle movement.',
+  expressive: 'Springs, lifts and the odd small celebration.',
+} as const;
+
+/** The palettes a theme card draws. System shows both halves, because it follows the computer. */
+const PANES: Record<Theme, ('light' | 'dark')[]> = { system: ['light', 'dark'], light: ['light'], dark: ['dark'] };
+
+/** A small drawing of a page in one theme: a header, two rows and the main button, in that theme's
+ * own colours (feel-account.css), so the choice can be seen before it is made. Decoration only: the
+ * card's name says which theme it is. */
+function ThemePreview({ theme }: { theme: Theme }) {
+  return (
+    <span className="ic-preview" aria-hidden="true">
+      {PANES[theme].map((pane) => (
+        <span key={pane} className="ic-pane" data-pane={pane}>
+          <i className="ic-pane-bar" />
+          <i className="ic-pane-row" />
+          <i className="ic-pane-row" />
+          <i className="ic-pane-button" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** With the feel on, theme and motion are chosen from cards: each theme card shows a small page in
+ * its colours, and each motion card, when pointed at or focused, moves a dot the way that level moves
+ * (Still never moves it). The radios and their names are the same as the plain chips'. */
+function ChoiceCards({ kind }: { kind: 'theme' | 'motion' }) {
+  const preferences = usePrefs();
+  const id = useId();
+  if (kind === 'theme') {
+    return (
+      <div className="ic-cards" role="radiogroup" aria-label="Theme">
+        {THEMES.map((option) => (
+          <label className="ic-card" key={option.id} data-lift="">
+            <ThemePreview theme={option.id} />
+            <span className="ic-card-name">
+              <input type="radio" name="selecta-theme" checked={preferences.theme === option.id} onChange={() => setPrefs({ theme: option.id })} />
+              {option.label}
+            </span>
+          </label>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="ic-cards" role="radiogroup" aria-label="Motion">
+      {(['still', 'subtle', 'expressive'] as const).map((motion) => (
+        <label className="ic-card" key={motion} data-lift="">
+          <span className="ic-motion-demo" data-level={motion} aria-hidden="true"><i /></span>
+          <span className="ic-card-name">
+            <input type="radio" name="selecta-motion" aria-label={MOTION_NAMES[motion]} aria-describedby={`${id}-${motion}`} checked={preferences.motion === motion} onChange={() => setPrefs({ motion })} />
+            {MOTION_NAMES[motion]}
+          </span>
+          <span className="ic-card-about" id={`${id}-${motion}`}>{MOTION_ABOUT[motion]}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export function InterfaceChoices({ classicNav = true }: { classicNav?: boolean } = {}) {
   const preferences = usePrefs();
   const lowPower = useLowPowerLevel();
   const [resetting, setResetting] = useState(false);
   const changed = changedPrefs();
+  // any part of the feel on: the choices become cards; with every app.feel_* flag off, the chips
+  const alive = useSyncExternalStore(onFeelChange, () => feelParts().length > 0, () => false);
   return (
     <section className="panel stack interface-choices">
       <h2>Interface</h2>
       <p className="hint">These are kept in this browser. None of them change your music or your mixes.</p>
-      {flagOn('app.theme_choice') && <ThemeChoices />}
+      {flagOn('app.theme_choice') && (alive
+        ? <fieldset className="theme-choices"><legend>Theme</legend><ChoiceCards kind="theme" /></fieldset>
+        : <ThemeChoices />)}
       {flagOn('app.motion_choice') && (
       <fieldset className="theme-choices">
         <legend>Motion</legend>
-        <div className="chips" role="radiogroup" aria-label="Motion">
-          {(['still', 'subtle', 'expressive'] as const).map((motion) => (
-            <label className="choice" key={motion}>
-              <input type="radio" name="selecta-motion" checked={preferences.motion === motion} onChange={() => setPrefs({ motion })} />
-              {motion === 'still' ? 'Still' : motion === 'subtle' ? 'Subtle' : 'Expressive'}
-            </label>
-          ))}
-        </div>
+        {alive ? <ChoiceCards kind="motion" /> : (
+          <div className="chips" role="radiogroup" aria-label="Motion">
+            {(['still', 'subtle', 'expressive'] as const).map((motion) => (
+              <label className="choice" key={motion}>
+                <input type="radio" name="selecta-motion" checked={preferences.motion === motion} onChange={() => setPrefs({ motion })} />
+                {MOTION_NAMES[motion]}
+              </label>
+            ))}
+          </div>
+        )}
         <p className="hint">Still stops decorative movement. Your computer’s reduced-motion setting always takes priority.</p>
         {lowPower === 'auto' && (
           <p className="hint" role="status">

@@ -329,3 +329,9 @@
 .admin-disclosure-body { display: grid; gap: var(--space-2); padding-bottom: var(--space-2); }
 .admin-cost-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .admin-cost-list li { display: flex; justify-content: space-between; gap: var(--space-2); padding-bottom: var(--space-1); border-bottom: var(--separator) solid var(--edge-decorative); font-variant-numeric: tabular-nums; }
+/* Catalogue covers: the image at a size staff can judge, square like every cover, and a plain
+   result line after a change (a takedown tool: no motion, no colour beyond the text). */
+.admin-cover { display: block; width: var(--space-7); height: var(--space-7); object-fit: cover; border-radius: var(--radius-sm); border: var(--separator) solid var(--edge-decorative); background: var(--surface-panel); }
+.admin-cover-none { display: grid; place-items: center; font-size: var(--text-xs); text-align: center; overflow: hidden; }
+.admin-covers-what { display: grid; gap: var(--space-hair); }
+.admin-covers-done { margin: 0; padding: var(--space-2) 0; border-block: var(--separator) solid var(--edge-decorative); }

@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { feelOn } from '../feel/root';
+import { motionMs } from '../ui/exitMotion';
 import { clock } from '../lib';
 import type { EditOp, Ledger, LedgerSeam, ProposalSnapshot, PSeam, PSong, Selection } from '../lucy/types';
 import { bpmWords, energyWords, isReadyStatus, keyDistanceWords, keyWords, seamWords, tempoGapWords } from '../lucy/words';
@@ -81,6 +83,9 @@ function SeamRow({ seam, entry, readyOnly, number, into, onAsk, selected }: {
     </div>
   );
 }
+
+/** A song the newest revision took out, and where it stood before. */
+type Gone = { song: PSong; at: number };
 
 export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, onAsk }: {
   snapshot: ProposalSnapshot;
@@ -169,7 +174,8 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
         const nextSong = songs[index + 1];
         const songSelected = selection?.occurrence === song.occurrence;
         const name = song.title || 'Untitled';
-        return (
+        return [
+          ...goneBefore(index).map(ghost),
           <li key={song.occurrence} className="lucy-song-slot">
             {previous && !live && (
               <SeamRow
@@ -219,9 +225,10 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
                 </button>
               </div>
             </div>
-          </li>
-        );
+          </li>,
+        ];
       })}
+      {goneBefore(songs.length).map(ghost)}
     </ol>
   );
 }

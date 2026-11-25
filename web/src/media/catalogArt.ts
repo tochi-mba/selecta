@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { clientFor, request as localRequest, type Request } from '../api';
-import { useFlag } from '../flags';
+import { flagOn, useFlag } from '../flags';
 import { useRequest } from '../requestContext';
 import { hasArt, songKeyFor } from './artStore';
 
@@ -150,9 +150,51 @@ export function useCatalogSong(songId: number | null | undefined): CatalogSong |
   const read = () => (book && id !== null ? book.songs.get(id) ?? null : null);
   const song = useSyncExternalStore(subscribe, read, read);
   useEffect(() => {
-    if (book && id !== null) void ask(book, id);
+    if (book && id !== null) {
+      lastBook = book;
+      void ask(book, id);
+    }
   }, [book, id]);
   return song;
+}
+
+/** The book the page's covers last asked through, so the lock screen and the ambient colour (which
+ * live outside React) read the same answers and add no request of their own beyond one song. */
+let lastBook: Book | null = null;
+
+const matchedCover = (song: CatalogSong | undefined): { url: string; hue: number | null } | null => {
+  const url = song?.state === 'matched' ? catalogImageUrl(song.art?.url) : null;
+  return url ? { url, hue: song?.art?.hue ?? null } : null;
+};
+
+/** The catalogue's cover for a song outside React, by the same rule as useCatalogArt. It resolves
+ * once the answer is known, or with what is known after `waitMs`; null while the flag is off, in
+ * the local app (whose pages never ask the catalogue, so no book exists) and for a song whose file
+ * has its own picture. */
+export function catalogCoverFor(songId: number, waitMs = 8000): Promise<{ url: string; hue: number | null } | null> {
+  const book = lastBook;
+  if (!book || !flagOn('library.art_lookup') || !Number.isInteger(songId) || songId < 1) return Promise.resolve(null);
+  const known = book.songs.get(songId);
+  if (known && known.state !== 'pending') return Promise.resolve(matchedCover(known));
+  return new Promise((resolve) => {
+    const set = book.listeners.get(songId) ?? new Set<() => void>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      set.delete(listener);
+      if (!set.size) book.listeners.delete(songId);
+      if (timer !== undefined) clearTimeout(timer);
+      resolve(matchedCover(book.songs.get(songId)));
+    };
+    const listener = () => {
+      const song = book.songs.get(songId);
+      if (song && song.state !== 'pending') finish();
+    };
+    set.add(listener);
+    book.listeners.set(songId, set);
+    // a bound on the wait, not a display: nothing on screen follows this timer
+    timer = setTimeout(finish, waitMs);
+    void ask(book, songId);
+  });
 }
 
 /** The catalogue's cover for a song, for the cover ladder: only a confident match with a stored,
@@ -193,5 +235,6 @@ export async function chooseCover(request: Request, songId: number, choice: Cove
 export function forgetCatalogArt(request: Request): void {
   const book = books.get(request);
   if (book?.timer !== undefined) clearTimeout(book.timer);
+  if (lastBook === book) lastBook = null;
   books.delete(request);
 }

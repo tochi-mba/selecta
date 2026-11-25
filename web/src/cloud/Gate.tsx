@@ -1,4 +1,6 @@
-import { createContext, FormEvent, ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, FormEvent, ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { feelCalm, feelOn } from '../feel/root';
+import { motionMs } from '../ui/exitMotion';
 import { BrandMark } from '../ui/BrandMark';
 import { Icon, IconName } from '../ui/Icon';
 import { keptImportWaiting } from './importSession';
@@ -227,6 +229,49 @@ export function AccountProblemPage({ kind, onRetry, onSignOut, retrying, email }
   );
 }
 
+/** Folds a gate card that is leaving into the app that replaced it: a copy of the card, drawn where
+ * the card was, shrinks toward the side bar's mark (or the top corner, where there is no side bar)
+ * and fades. The copy is inert and hidden from assistive technology, and it goes when it is done,
+ * with a timer in case the animation never ends. Only with the feel's motion on and nothing asking
+ * for calm. Transform and opacity only. */
+export function collapseIntoApp(card: HTMLElement | null) {
+  if (!card?.isConnected || !feelOn('motion') || feelCalm() || typeof card.animate !== 'function') return;
+  const from = card.getBoundingClientRect();
+  if (!from.width || !from.height) return;
+  const ghost = card.cloneNode(true) as HTMLElement;
+  ghost.removeAttribute('data-arrive');
+  ghost.removeAttribute('role');
+  ghost.setAttribute('inert', '');
+  ghost.setAttribute('aria-hidden', 'true');
+  for (const named of ghost.querySelectorAll('[id]')) named.removeAttribute('id');
+  Object.assign(ghost.style, {
+    position: 'fixed', left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`,
+    margin: '0', boxSizing: 'border-box', pointerEvents: 'none', zIndex: 'var(--layer-toast)', animation: 'none',
+  });
+  document.body.appendChild(ghost);
+  const duration = motionMs('--motion-spring-glide', 360);
+  let gone = false;
+  const remove = () => { if (!gone) { gone = true; ghost.remove(); } };
+  window.setTimeout(remove, duration + 200);
+  // the app draws its frame in the same commit; its mark is looked for on the next frame
+  window.requestAnimationFrame(() => {
+    const mark = document.querySelector('.shell .nav .brand')?.getBoundingClientRect();
+    const toX = mark && mark.width ? mark.left + mark.width / 2 : 24;
+    const toY = mark && mark.height ? mark.top + mark.height / 2 : 24;
+    const dx = toX - (from.left + from.width / 2);
+    const dy = toY - (from.top + from.height / 2);
+    const curve = getComputedStyle(document.documentElement).getPropertyValue('--spring-gentle').trim() || 'ease-out';
+    const frames = [{ transform: 'none', opacity: 1 }, { transform: `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(0.08)`, opacity: 0 }];
+    let motion: Animation;
+    try {
+      motion = ghost.animate(frames, { duration, easing: curve, fill: 'forwards' });
+    } catch {
+      motion = ghost.animate(frames, { duration, easing: 'ease-out', fill: 'forwards' });
+    }
+    motion.onfinish = remove;
+  });
+}
+
 /** The one question before a workspace exists: the age check, then Create workspace. */
 export function WorkspaceCheck({ email, confirmed, onConfirmed, busy, error, onSubmit, onSignOut }: {
   email: string;
@@ -237,10 +282,20 @@ export function WorkspaceCheck({ email, confirmed, onConfirmed, busy, error, onS
   onSubmit: (event: FormEvent) => void;
   onSignOut: () => unknown;
 }) {
+  // ADR-0477: when the workspace has been made, this screen gives way to the app; with the feel's
+  // motion on its card folds away toward the app's own mark instead of vanishing. A screen left for
+  // any other reason (signing out) just goes.
+  const form = useRef<HTMLFormElement>(null);
+  const created = useRef(false);
+  if (busy) created.current = true;
+  if (error) created.current = false;
+  useLayoutEffect(() => () => {
+    if (created.current) collapseIntoApp(form.current?.closest<HTMLElement>('.gate-card') ?? null);
+  }, []);
   return (
     <GateScreen kind="workspace-check" eyebrow="One quick check" title="Set up your SelectaDJ workspace" account={{ email, onSignOut }}>
       <p>Your music stays on your own devices. SelectaDJ plans the mixes and plays them here.</p>
-      <form className="gate-form" onSubmit={onSubmit}>
+      <form ref={form} className="gate-form" onSubmit={onSubmit}>
         <label className="gate-check">
           <input type="checkbox" checked={confirmed} onChange={(event) => onConfirmed(event.target.checked)} />
           <span>I confirm that I’m at least 13 years old.</span>
