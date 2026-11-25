@@ -482,6 +482,8 @@ SCOPED: dict[tuple[str, str], dict | None] = {
         "device_id": "missing",
         "result": "applied",
     },
+    # ADR-0475 G3: the sender reads whether the speaker carried out its press
+    ("GET", "/api/playback/commands/{command_id}"): None,
     # One device asks another of the same person's devices to start (ADR-0475 R2), held to the
     # same principal as a press (playback/start_asks.py)
     ("POST", "/api/playback/start-asks"): {

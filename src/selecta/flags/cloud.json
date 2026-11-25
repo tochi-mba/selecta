@@ -429,7 +429,8 @@
         "POST /api/playback/start-asks",
         "PUT /api/devices/default-speaker",
         "POST /api/playback/start-asks/{ask_id}/answer",
-        "POST /api/playback/commands/{command_id}/ack"
+        "POST /api/playback/commands/{command_id}/ack",
+        "GET /api/playback/commands/{command_id}"
       ],
       "requires": ["devices"],
       "surfaces": ["cloud.listen"],

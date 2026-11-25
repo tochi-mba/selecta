@@ -167,7 +167,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
               {duration !== null && <span data-testid="remote-total">{clock(duration)}</span>}
             </p>
           </div>
-          <div className="remote-transport" role="group" aria-label="Playback controls">
+          <div className="remote-transport" role="group" aria-label="Playback controls" aria-busy={remote.pending ? true : undefined} data-pending={remote.pending ?? undefined}>
             <button type="button" className="remote-step" onClick={() => void remote.previous()} aria-label="Previous" title="Previous"><Icon name="previous" /></button>
             <button type="button" className="remote-play primary" onClick={() => void remote.toggle()} aria-label={playLabel} title={playLabel}><Icon name={remote.playing ? 'pause' : 'play'} size="hero" /></button>
             <button type="button" className="remote-step" onClick={() => void remote.next()} disabled={!remote.hasNext} aria-label="Next song" title="Next song"><Icon name="next" /></button>

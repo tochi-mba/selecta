@@ -145,6 +145,7 @@
 .remote-transport button { display: grid; place-items: center; flex: none; padding: 0; border-radius: var(--radius-pill); }
 .remote-transport .remote-step { inline-size: 56px; block-size: 56px; min-height: 56px; }
 .remote-transport .remote-play { inline-size: 72px; block-size: 72px; min-height: 72px; }
+.remote-transport[aria-busy='true'] button { opacity: 0.6; }
 .remote-transport button:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
 .remote-volume { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-3); color: var(--text-soft); }
 .remote-side { display: grid; gap: var(--space-4); min-width: 0; }

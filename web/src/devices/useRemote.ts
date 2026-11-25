@@ -5,6 +5,7 @@ import type { PlayerLike } from '../playerContract';
 import { OPTIMISTIC_MS } from './PlayingBar';
 import { bookOf, entryAt, hasNext, previousTarget, remotePosition, remoteSession, sameProgramme, whereWords, type RemoteEntry, type RemoteSession, type SongBook, type SongDetails } from './remoteNow';
 import { levelOf, type SessionView } from './usePlaybackDevice';
+import { asConfirmed, type Unconfirmed } from './pressConfirm';
 
 // The remote session as the shell and the Listen page use it (flag `devices.remote_control`).
 //
@@ -23,6 +24,9 @@ export type RemoteDevice = {
   /** The session state the last press made (its seq); 0 when unknown. */
   sentSeq?: () => number;
   serverNow: () => number;
+  /** G3 (68): a press waiting on the speaker, and one it did not carry out in time. */
+  pending?: string | null;
+  unconfirmed?: Unconfirmed | null;
 };
 
 export type Remote = {
@@ -46,6 +50,8 @@ export type Remote = {
   now: NowState;
   song: MixItem;
   hasNext: boolean;
+  /** G3: the press waiting on the speaker to carry it out, if any. */
+  pending: string | null;
 };
 
 /** How long an unknown song waits before the library is read again for it. */
@@ -62,7 +68,9 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
   loadSongs: () => Promise<readonly ({ id: number } & SongDetails)[]>;
 }): Remote | null {
   const view = device.view;
-  const found = remoteSession(view, remoteControl);
+  const seen = remoteSession(view, remoteControl);
+  // G3 (68): a press the speaker did not carry out is not shown as if it had been
+  const found = useMemo(() => (seen ? asConfirmed(seen, device.unconfirmed ?? null) : null), [seen, device.unconfirmed]);
   const session = found && !sameProgramme(found.programme, mixSongIds) ? found : null;
   const active = session !== null;
 
@@ -202,7 +210,7 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
     locked: false,
     seam: null,
   };
-  return { view, session, book, current, playing, positionMs, toggle, next, previous, seekTo, skipTo, setVolume, player, now, song, hasNext: hasNext(session), sentSeq: () => latest.current.device.sentSeq?.() ?? 0 };
+  return { view, session, book, current, playing, positionMs, toggle, next, previous, seekTo, skipTo, setVolume, player, now, song, hasNext: hasNext(session), pending: device.pending ?? null, sentSeq: () => latest.current.device.sentSeq?.() ?? 0 };
 }
 
 const IDLE_NOW: NowState = { phase: 'idle', position: 0, songTime: 0, duration: 0, inSeam: false, seamAt: null, notice: '', nextReady: false, lastSeamKey: null, volume: 1, muted: false };

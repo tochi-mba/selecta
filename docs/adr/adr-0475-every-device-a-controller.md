@@ -179,7 +179,7 @@ A remote is any signed-in device of the same person that is not making the sound
 | --- | --- | --- |
 | Play, pause, next, previous, seek, skip to a song in Up next | Yes | Signed playback commands (ADR-0461), applied by the speaker once, in order |
 | Volume and mute | Yes (G1, 2026-11-24) | `set_volume` on the session (every session carries `volume` now), last write wins; the speaker applies the session's level as it follows and sends its own only when its own slider moves; a new speaker rises from quiet over a second; unset plays at 80; at 100 "For more volume, turn up {speaker} itself." |
-| The speaker's screen says what changed elsewhere | Yes (G70) | "Volume changed from Phone.", "Paused from Phone.", "Skipped from Phone." for four seconds on the speaker, never for a seek |
+| The speaker's screen says what changed elsewhere | Yes (G70) | "Volume changed from Phone.", "Paused from Phone.", "Skipped from Phone.", "Went back", "Muted", "Up next changed" for four seconds on the speaker, never for a seek within the song |
 | Add next, add a request | Yes (R4) | `set_programme` with the song after the playing one, `keep_position` |
 | Reorder, remove, clear Up next | Not yet | Same path as Add next (`set_programme`); not built |
 | Start a mix, a saved mix, Make a Mix | Yes (R8) | The account's current mix, played through the one rule (Play on {device}) |
@@ -192,6 +192,14 @@ A remote is any signed-in device of the same person that is not making the sound
 | Sleep timer | Not built; considered | |
 | Maximum volume on the speaker | Not built; considered | |
 | Media keys and lock screen on the remote | Not possible without the remote making sound; not faked | |
+
+### R11, rules for every remote control (G3, items 67 to 71)
+
+- **One command path (67).** Every press from a remote is `POST /api/playback/commands` with the session `seq` it was based on, the fence it saw and one idempotency key per press (`web/src/devices/usePlaybackDevice.ts`, `send`). A press that got no answer though the network is up is sent once more with the same key, so it is applied once. The server applies each press once, in order, under the session lock; a press based on an older `seq` is refused `stale_command` (volume excepted: a level, last one wins). Two remotes pressing Next from the same state make one skip: the second is stale, and its remote says nothing because the music already moved on from where its press saw it.
+- **Confirmed by the speaker (68).** The session takes a press at once, but the session is not the sound. A remote that sent play, pause, skip, seek or stop reads `GET /api/playback/commands/{command_id}` (its own presses only; anyone else's is 404) until the speaker acks it or has reported where it is at that press's state (`followed`), for up to 7 seconds (`pressConfirm.ts`, `CONFIRM_MS`). Meanwhile the transport is marked busy (`aria-busy`). Unanswered, the remote says "{Speaker} didn't answer. Nothing changed there." and shows the session as it was before the press (state, song and place) until something newer happens or the speaker carries it out late (watched for the rest of the press's 60-second life). A press that never reached SelectaDJ says "You're offline, so that press wasn't sent." only when the network is gone, else "Couldn't reach SelectaDJ, so that press wasn't sent. Try again."
+- **Who may control (69).** Only the person whose device is the speaker, from their own signed-in devices. A workspace's personal session can be another member's (a shared organisation workspace): a press from a device of someone else is refused 403 `not_your_music`, "That music is playing on someone else's device." No existing permission grants more; venue zones keep their own model (ADR-0443). A signed-out device is refused at once (403 `device_signed_out`), and so is a device id that is not the caller's own (404).
+- **The speaker says what changed (70).** On the speaker's own screen, for four seconds: "Paused", "Playing again", "Skipped", "Went back", "Volume changed", "Muted", "Up next changed" or "Stopped", each "from {device}." Never for a seek within the playing song (`ChangedFromLine.tsx`, `changeWords`).
+- **Flag off (71).** With `devices.remote_control` off the command and outcome routes are refused by the flag guard, the speaker applies nothing from another device, no remote page or line is drawn, and the shell's layout is as before.
 
 ## Edge cases and what happens
 

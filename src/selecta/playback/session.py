@@ -34,6 +34,7 @@ from selecta.playback.model import (
     Device,
     IdempotencyConflict,
     InvalidCommand,
+    NotYourMusic,
     OwnershipChanged,
     PlayState,
     Position,
@@ -368,10 +369,12 @@ def submit_command(
     key = _clean_key(idempotency_key)
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        require_signed_in(conn, workspace_id, device_id)
+        caller = require_signed_in(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
         # Locking the session first means two presses with one key can't both get past here.
         session = lock_session(conn, workspace_id, now, zone_id)
+        if zone_id is None:
+            _require_own_music(conn, session, caller)
         return submit_command_in(
             conn,
             session,
@@ -387,6 +390,18 @@ def submit_command(
             mix=mix,
             volume_cap=volume_cap,
         )
+
+
+def _require_own_music(conn: Connection, session: Session, caller: Device) -> None:
+    """ADR-0475 G3 (69): a press steers only music playing on the caller's own devices. In a
+    workspace with several members the personal session may be another member's; their speaker
+    is theirs to steer. A zone has its own permission model (zone_session)."""
+    speaker_id = session.active_device_id
+    if speaker_id is None or speaker_id == caller.id:
+        return
+    speaker = load_device(conn, session.workspace_id, speaker_id)
+    if speaker is not None and speaker.user_id != caller.user_id:
+        raise NotYourMusic("That music is playing on someone else's device")
 
 
 def _clean_key(idempotency_key: str) -> str:
