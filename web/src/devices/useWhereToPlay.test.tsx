@@ -64,3 +64,28 @@ describe('A5 and E34', () => {
     online.mockRestore();
   });
 });
+
+describe('D30', () => {
+  it('closing the room while the picker is open closes the picker', async () => {
+    const { noteRoom } = await import('../rooms/useRoomSession');
+    noteRoom({ room: { id: 'r1', name: 'Party' }, code: null, inbox: [], coming_up: [] });
+    const two = situation({ devices: [device('laptop'), device('tablet'), device('phone', { songs: 0 })] });
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: two, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn() }));
+    act(() => { hook.result.current.decide(); });
+    expect(hook.result.current.picker).toBeTruthy();
+    act(() => { noteRoom(null); });
+    expect(hook.result.current.picker).toBeFalsy();
+  });
+});
+
+describe('B16', () => {
+  it('says "because the default isn\'t open" once, not on every press', () => {
+    localStorage.clear();
+    const away = situation({ devices: [device('desk', { online: false }), device('laptop'), device('phone', { songs: 0 })], defaultId: 'desk' });
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: away, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn() }));
+    act(() => { hook.result.current.decide(); });
+    expect(hook.result.current.notice?.text).toMatch(/because desk isn’t open/);
+    act(() => { hook.result.current.clearNotice(); hook.result.current.decide(); });
+    expect(hook.result.current.notice?.text).toBe('Starting on laptop.');
+  });
+});

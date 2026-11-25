@@ -41,12 +41,30 @@ export async function deviceAvailabilitySnapshot(
  * request is injected by the Cloud shell; this path never reads, serializes or uploads audio,
  * tags, filenames or file handles.
  */
+const REPORTED_KEY = 'selecta.availability.reported';
+const REPORT_AGAIN_MS = 60_000;
+/** A short fingerprint of a report, so tabs compare without storing the ids twice. */
+const fingerprint = (text: string) => { let hash = 0; for (let at = 0; at < text.length; at += 1) hash = (hash * 31 + text.charCodeAt(at)) | 0; return `${text.length}:${hash}`; };
+function recentlyReported(report: string): boolean {
+  try {
+    const last = JSON.parse(localStorage.getItem(REPORTED_KEY) ?? 'null') as { print: string; at: number } | null;
+    return !!last && last.print === fingerprint(report) && Date.now() - last.at < REPORT_AGAIN_MS;
+  } catch { return false; }
+}
+function noteReported(report: string) {
+  try { localStorage.setItem(REPORTED_KEY, JSON.stringify({ print: fingerprint(report), at: Date.now() })); } catch { /* a report is sent again next time */ }
+}
+
 export async function reportDeviceAvailability(
   request: Request,
   deviceId: string,
   snapshot: DeviceAvailabilitySnapshot,
   replace = false,
 ): Promise<void> {
+  // ADR-0475 F42: two tabs of one browser are one device; the same full report sent by another
+  // tab of it within the last minute is not sent again
+  const said = replace ? `${deviceId}:${[...snapshot.present].sort((a, b) => a - b).join(',')}|${[...snapshot.absent].sort((a, b) => a - b).join(',')}` : null;
+  if (said !== null && recentlyReported(said)) return;
   if (replace) {
     if (snapshot.present.length + snapshot.absent.length > AVAILABILITY_SNAPSHOT_MAX_IDS) {
       throw new Error(`Availability snapshot exceeds ${AVAILABILITY_SNAPSHOT_MAX_IDS} songs`);
@@ -65,6 +83,7 @@ export async function reportDeviceAvailability(
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (said !== null) noteReported(said);
     return;
   }
 

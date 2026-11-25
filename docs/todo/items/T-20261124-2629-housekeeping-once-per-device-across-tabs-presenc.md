@@ -11,3 +11,5 @@ commit:
 ---
 
 Open item from the ADR-0475 edge-case table; see the ADR's R1 to R12 and sections A to I for what good looks like.
+
+2026-11-25: F42 in part (duplicate holdings reports across tabs skipped); F43 and F44 open

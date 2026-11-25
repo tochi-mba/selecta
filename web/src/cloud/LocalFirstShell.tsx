@@ -622,7 +622,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     player.startMovingOnce = !!ask.move;
     hereOnPurpose.current = true;
     // G2 (58): moving the programme that plays carries on from where it is
-    const from = ask.move ? movedFrom(playback.view?.session, mix.mix, playback.serverNow()) : null;
+    // (B7: from a speaker that went away, its last known place, not time run on since)
+    const lastSeen = playback.view?.speaker === 'offline' ? playback.view.session?.anchor_at ?? undefined : undefined;
+    const from = ask.move ? movedFrom(playback.view?.session, mix.mix, lastSeen ?? playback.serverNow()) : null;
     void shellPlayer.playFrom(from?.song_index ?? 0, from ? from.offset_ms / 1000 : 0);
     return 'starting';
   }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources]);
@@ -666,7 +668,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const playWays = remote && holdings.devices ? {
     devices: holdings.devices.filter((device) => device.device_id !== speakerId && device.device_id !== playback.device?.id),
     asking: playOn.state,
-    onPlayOn: (device: { device_id: string; name: string }) => void playOn.ask(device, recipes.current() ?? null),
+    // B7: the speaker went away: the programme carries on from its last place on the device chosen
+    onPlayOn: (device: { device_id: string; name: string }) => {
+      if (remote.view.speaker !== 'offline') return void playOn.ask(device, recipes.current() ?? null);
+      where.say(device.device_id, `Carrying on from ${remote.view.speaker_name ?? 'the other device'} on ${device.name}.`);
+      void playOn.ask(device, null, true);
+    },
     // G2 (58): the programme that plays moves, not a saved mix: the asked device plays it from here
     onMove: (device: { device_id: string; name: string }) => void playOn.ask(device, null, true),
     hereSongs,
