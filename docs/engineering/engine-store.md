@@ -7,8 +7,9 @@ says what that layer is, the rules it keeps, and how a slice of state moves onto
 
 ## What it is
 
-`EngineStore(engine, workspace_id)` is the only door to an engine table. A slice (ratings first)
-is a module such as `engine_store/ratings.py` whose functions take a store and nothing else.
+`EngineStore(engine, workspace_id)` is the only door to an engine table. A slice (ratings, then
+song facts) is a module such as `engine_store/ratings.py` whose functions take a store and
+nothing else.
 
 - Tables are SQLAlchemy Core, declared in `engine_store/schema.py` on the shared `metadata`, each
   with a non-null `workspace_id`.
@@ -38,7 +39,7 @@ security. On PostgreSQL the policy below is the second guard.
 ## Fail-closed policy
 
 Engine tables get the `workspace_isolation` policy with no empty-scope branch
-(`es0479rate01`):
+(`es0479rate01`, `es0479song01`; each pins and creates only its own tables):
 
 ```
 workspace_id = current_setting('app.workspace_id', true)
@@ -108,10 +109,54 @@ reads its process flags as before.
 6. Tests: flag off leaves the file byte-identical; flag on keeps every old row; running twice
    changes nothing; backup and restore round-trip; PostgreSQL isolation for the new table.
 
+## The song read side
+
+`engine_store/songs.py`: `load_song(store, artifacts, song_id, legacy=...)` and
+`load_features(...)` return the same `SongInfo` and arrays as `analysis.song.load_song` and
+`analysis.pipeline.load_features`, which delegate to them with the flag on (both build the
+`SongInfo` with `analysis.song.build_song`).
+
+Tables (`lib0003songs` on Desktop, `es0479song01` in Cloud):
+
+| Table | Desktop | Cloud |
+|---|---|---|
+| `analysis`, `song_overrides` | hand-made, adopted in place | created, fail closed, keyed to `local_songs` |
+| `songs` | hand-made, adopted, plus nullable `content_hash` | not created: the catalogue's `local_songs` |
+| `lyrics` | hand-made, adopted | not created: `local_song_lyrics` |
+
+`songs` and `lyrics` are declared on `schema.library_metadata`, so no Cloud check sees them.
+`store.library` (set by `library.store_for`) says which identity a store reads. A Cloud song is
+its catalogue row, keyed by (workspace, content hash); its id is the facts' `song_id`. It has no
+path: a Cloud `SongInfo.path` is empty, and no path, folder or file handle reaches the server.
+
+Features are reached through the `ArtifactStore` port by
+`features_key(workspace, content_hash, analysis.version)`: a derived key of kind `features`,
+one slot (`current`), file `features.npz`. On Desktop the store is `library.artifacts_for` (the
+home's `artifacts/` folder). A Desktop song without a hash or artifact is read from
+`features/{song_id}.npz`, which is never deleted.
+
+The content hash is the SHA-256 of the file's bytes, as Cloud's catalogue keys a song. With the
+flag on, analysis hashes the file before decoding it, publishes the features under that key as
+well as the old file, and records the hash with the analysis. `engine_store.song_hashes` fills
+the hash for songs analysed before: one gentle pass on a daemon thread from `api.create_app`
+(flag on, Desktop app only), a few songs per batch, each hash its own write, and only where the
+row still has the file's size and time and no hash. It never analyses and never touches another
+column. `db.upsert_song` clears a hash when its file's size or time changes, whenever the column
+exists, so a hash never outlives its bytes.
+
+Reads and writes on the old connection: the store reads the last commit through its own
+connection. `analysis.song.load_song` reads through the caller's own connection when that
+connection has writes pending (`conn.in_transaction`), exactly as before, so a caller that writes
+then reads in one transaction still sees its writes.
+
+These writers still use the raw library connection (to-do item "Song facts writers on Desktop
+still use the raw library connection"): `db.save_analysis`, `db.save_lyrics`, `db.upsert_song`,
+the correction route and the scan. Safe: same file, and each commits before a store read can see
+it. Cloud has no writer of song facts yet (to-do item "Nothing writes Cloud song facts").
+
 ## Not moved yet
 
-- Every other hand-made table: `songs`, `analysis`, `lyrics`, `song_overrides`, `preferences`,
-  `seam_book`, `drafts`, `queue`.
+- The other hand-made tables: `preferences`, `seam_book`, `drafts`, `queue`.
 - A seam's Good and Bad (`POST /api/seams/{key}/rate`, `GET /api/memory/ratings`). They live in
   the seam's record files, not in `ratings`, and move with the seams slice; Cloud has no keyed
   seam records to rate yet, so neither route is mounted in Cloud.
