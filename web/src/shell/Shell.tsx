@@ -753,7 +753,7 @@ export type ShellAccount = { email: string; plan: string; onSignOut: () => void;
 
 const ACCOUNT_PLACES: ReadonlySet<string> = new Set(['account', 'billing']);
 const MORE_ICONS: Record<MoreDestination['id'], IconName> = {
-  account: 'user', billing: 'card', devices: 'system', rooms: 'users', workspace: 'settings', uploads: 'plus',
+  account: 'user', billing: 'card', devices: 'system', rooms: 'users', workspace: 'settings', uploads: 'plus', listening_room: 'volume',
 };
 
 /** One line each for the phone's More sheet: short enough to stay on one line at 375 px. */
@@ -764,6 +764,7 @@ const MORE_LINES: Record<MoreDestination['id'], string> = {
   rooms: 'Let guests ask for songs',
   workspace: 'Connected music and storage here',
   uploads: 'Upload tracks to your library',
+  listening_room: 'Judge transitions by ear',
 };
 
 /** A place in the phone's More sheet: its icon, its name and one line about it. The link is named by
