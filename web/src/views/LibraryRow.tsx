@@ -98,6 +98,8 @@ export const LibraryRow = memo(function LibraryRow({
   if (browser) {
     const artist = song.artist ?? 'Unknown artist';
     const remoteNext = !!holder && playing && facts.canAdd && song.availability !== 'here' && song.availability !== 'hosted';
+    // I85: the speaker lacks it and another open device has it: the tap offers to move there
+    const movesTo = remoteNext && holder?.ids && !holder.ids.has(song.id) ? holder.places?.(song.id).online.find((name) => name !== holder.name) ?? null : null;
     const chip = facts.setAside || song.never
       ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
       : song.availability && HERE[song.availability]
@@ -130,7 +132,9 @@ export const LibraryRow = memo(function LibraryRow({
           {/* I84: on a remote while another device plays, the row's one tap puts the song next
               there, says so for a screen reader, and confirms in the row */}
           {remoteNext
-            ? !inMix && <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={searching} run={async () => { if (await actions.add(song, true) === false) return; setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
+            ? movesTo
+              ? <Action className="lw-start small" title={`Play on ${movesTo}`} aria-label={`Play ${spoken} on ${movesTo}`} disabled={searching} run={() => actions.add(song, true)}><Icon name="play" size="compact" /><span>Play on {movesTo}</span></Action>
+              : !inMix && <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={searching} run={async () => { if (await actions.add(song, true) === false) return; setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
             : facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
           {((!facts.setAside && neverFlag) || facts.canAdd) && (
             <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>

@@ -2,7 +2,7 @@ import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability,
 import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { linksFamily } from './localFirstLinks';
 import { mixFamily, type PlayableSong, type SongPlace } from './localFirstMixes';
-import { MOVE_OFFER_EVENT, notOnSpeaker, playsOn, speakerHolds, TO_CURRENT_MIX, type MoveOffer } from '../devices/controller';
+import { MOVE_OFFER_EVENT, notOnSpeaker, playsOn, speakerHolds, type MoveOffer } from '../devices/controller';
 import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscoveries';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 import { requestsFamily } from './localFirstRequests';
@@ -364,7 +364,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     // ADR-0475 I84: another device is playing, so a song added from the Library joins its
     // programme (next, or at the end), the same signed press a request uses
     const link = sources.controller?.() ?? null;
-    if (link && method === 'POST' && route === '/mix/songs' && !new Headers(init?.headers).has(TO_CURRENT_MIX)) {
+    if (link && method === 'POST' && route === '/mix/songs') {
       const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number; position?: number };
       const songId = Number(body.song_id);
       if (!speakerHolds(link, songId)) {
@@ -372,7 +372,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
         const device = holdersNow()?.(songId).online.find((name) => name !== link.speakerName);
         if (!device) throw new ApiError(notOnSpeaker(link.speakerName), 409, 'not_on_speaker');
         const title = (await songs()).find((one) => one.id === songId)?.title ?? 'This song';
-        window.dispatchEvent(new CustomEvent<MoveOffer>(MOVE_OFFER_EVENT, { detail: { songId, title, device, speaker: link.speakerName } }));
+        window.dispatchEvent(new CustomEvent<MoveOffer>(MOVE_OFFER_EVENT, { detail: { songId, title, device, speaker: link.speakerName, programme: link.programme.slice(Math.max(0, link.songIndex)) } }));
         throw new ApiError(`${title} is on ${device}.`, 409, 'move_offered');
       }
       const next = Number.isInteger(body.position) && Number(body.position) <= link.songIndex + 1;

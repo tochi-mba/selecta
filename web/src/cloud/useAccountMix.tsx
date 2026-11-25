@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { MixData, Request } from '../api';
-import { MOVE_OFFER_EVENT, moveWords, TO_CURRENT_MIX, type MoveOffer } from '../devices/controller';
+import { MOVE_OFFER_EVENT, moveWords, type MoveOffer } from '../devices/controller';
 import { showToast } from '../ui/toasts';
 import { onReconnect } from './connection';
 import { conflictWords, CURRENT_MIX_CONFLICT, CURRENT_MIX_EVENT, type AccountCurrent } from './currentMix';
@@ -46,17 +46,28 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
   }, []);
   const moveOn = useCallback(async (offer: MoveOffer, play: boolean) => {
     setMove(null);
-    const added = await request<MixData>('/mix/songs', {
-      method: 'POST', headers: { 'content-type': 'application/json', [TO_CURRENT_MIX]: '1' },
-      body: JSON.stringify({ song_id: offer.songId, position: play ? 0 : undefined }),
-    }).catch(() => null);
-    if (!added) { showToast(`${offer.title} couldn’t be added. Try again.`, { tone: 'problem' }); return; }
-    setMixData(added);
-    if (!play) { showToast(`${offer.title} is in your mix for when the music is on ${offer.device}.`); return; }
-    const device = devices?.().find((one) => one.name === offer.device);
-    if (device) askToPlay(device, recipes.current(), true);
-    else showToast(`${offer.device} isn’t open right now. Open SelectaDJ on it.`, { tone: 'problem' });
-  }, [askToPlay, devices, recipes, request, setMixData]);
+    try {
+      if (play) {
+        // the song first, then the speaker's song and what followed it, as a mix of its own
+        const songs = [offer.songId, ...offer.programme.filter((id) => id !== offer.songId)];
+        const made = await recipes.create(`Moved to ${offer.device}`, songs);
+        const device = devices?.().find((one) => one.name === offer.device);
+        if (!device) { showToast(`${offer.device} isn’t open right now. Open SelectaDJ on it.`, { tone: 'problem' }); return; }
+        recipes.setCurrent(made.mix_id);
+        askToPlay(device, made.mix_id, true);
+        return;
+      }
+      // at the end of the current mix, for when the music is on that device
+      const current = recipes.current();
+      const read = current ? await recipes.read(current) : null;
+      if (read) await recipes.edit(read.mix_id, read.revision, { songIds: [...read.songs.map((one) => one.song_id), offer.songId] });
+      else recipes.setCurrent((await recipes.create(`For ${offer.device}`, [offer.songId])).mix_id);
+      refresh.current();
+      showToast(`${offer.title} is in your mix for when the music is on ${offer.device}.`);
+    } catch {
+      showToast(`${offer.title} couldn’t be added. Try again.`, { tone: 'problem' });
+    }
+  }, [askToPlay, devices, recipes]);
   const audible = useRef(audibleHere);
   audible.current = audibleHere;
   const refresh = useRef(refreshMix);

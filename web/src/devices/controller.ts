@@ -80,10 +80,9 @@ export const notOnSpeaker = (speakerName: string) => `${speakerName} can’t pla
  * refuse: it asks whether to move the music to that device (`MOVE_OFFER_EVENT` on window, with
  * a `MoveOffer`), and the add answers `move_offered` so the row stays quiet. */
 export const MOVE_OFFER_EVENT = 'selecta-move-offer';
-export type MoveOffer = { songId: number; title: string; device: string; speaker: string };
+/** `programme`: the speaker's song now and what follows, which the moved music carries on with. */
+export type MoveOffer = { songId: number; title: string; device: string; speaker: string; programme: number[] };
 export const moveWords = (offer: Pick<MoveOffer, 'title' | 'device'>) => `${offer.title} is on ${offer.device}. Move the music there?`;
-/** Sent with a Library add that goes to the account's current mix, not to the speaker. */
-export const TO_CURRENT_MIX = 'x-selecta-current-mix';
 /** R4: kept for a speaker that is away. */
 export const addedOnReturn = (speakerName: string) => `Will be added when ${speakerName} is back.`;
 
