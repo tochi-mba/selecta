@@ -56,8 +56,7 @@
     },
     "app.feel_depth": {
       "label": "Depth and light",
-      "about": "Lift shadows, lit edges and a glow on the main action, on the same colours as before (ADR-0477). Off: flat surfaces as before.",
-      "default": false
+      "about": "Lift shadows, lit edges and a glow on the main action, on the same colours as before (ADR-0477). Off: flat surfaces as before."
     },
     "app.feel_pointer_light": {
       "label": "Pointer light",
@@ -71,8 +70,7 @@
     },
     "app.feel_ambient": {
       "label": "Ambient colour",
-      "about": "A soft tint taken from the playing song, which travels to the next song's colour during a blend. Off: no tint.",
-      "default": false
+      "about": "A soft tint taken from the playing song, which travels to the next song's colour during a blend. Off: no tint."
     },
     "app.feel_moments": {
       "label": "Big moments",
@@ -81,8 +79,7 @@
     },
     "app.feel_haptics": {
       "label": "Phone taps",
-      "about": "A light tap from the phone on key presses, on phones that can do it. Off: no taps.",
-      "default": false
+      "about": "A light tap from the phone on key presses, on phones that can do it. Off: no taps."
     },
     "app.install": {
       "label": "Install as an app",
