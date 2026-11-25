@@ -199,3 +199,14 @@ describe('the Lucy usage report', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Your role does not allow this.');
   });
 });
+
+describe('allowanceWords', () => {
+  it('says what the account has now', async () => {
+    const { allowanceWords } = await import('./LucyUsage');
+    const now = Date.UTC(2026, 10, 25) / 1000;
+    expect(allowanceWords({ factor_milli: null, cutover_at: null, enforced_since: null }, now)).toBe('The plan’s own allowance. No switch is planned.');
+    expect(allowanceWords({ factor_milli: 0, cutover_at: null, enforced_since: null }, now)).toContain('switched off');
+    expect(allowanceWords({ factor_milli: 1500, cutover_at: now + 86400 * 10, enforced_since: null }, now)).toMatch(/^Factor 1\.5\. Switches over on \d+ December 2026\.$/);
+    expect(allowanceWords({ factor_milli: 1000, cutover_at: now - 86400, enforced_since: now - 86400 }, now)).toMatch(/Switched over on \d+ November 2026\./);
+  });
+});

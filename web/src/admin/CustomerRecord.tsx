@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { bytes, when } from './adminApi';
 import { planBadge, statusBadge } from './CustomersPage';
-import { LucyAllowance } from './LucyUsage';
+import { LucyAllowance, type LucyAllowanceState } from './LucyUsage';
 import { useLoad } from './parts';
 import { adminPath, go } from './route';
 import { ActionButton, careful, REASONS, useConsole, write } from './safety';
@@ -22,7 +22,7 @@ type Customer = {
   stripe_events?: { event_id: string; type: string; status: string; received_at: number }[];
   devices?: { id: string; name: string | null; kind: string | null; last_seen_at: number | null; signed_out_at: number | null }[];
   rooms?: { open: number; total: number };
-  lucy?: { turns_30d: number };
+  lucy?: { turns_30d: number; allowance?: LucyAllowanceState };
   jobs?: { id: string; type: string; state: string; error_class: string | null; created_at: number; waiting_reason?: string | null }[];
   activity: { id: string; created_at: number; actor_email: string | null; actor_id: string; action: string; result: string; reason: string | null }[];
   notes: { id: string; author: string; body: string; created_at: number }[];
@@ -78,7 +78,7 @@ export function CustomerRecord({ userId, tab }: { userId: string; tab: string })
       <div className="admin-record-body">
         <div className="admin-record-main">
           {tab === 'overview' && <><Overview r={r} userId={userId} onChange={reload} /><Jobs r={r} /></>}
-          {tab === 'configuration' && <><StorageMode api={ctx.api} userId={userId} canChange={ctx.can('accounts.configure') && ctx.changesUntil !== null} /><LucyAllowance workspaceId={r.workspace_id} email={email} /></>}
+          {tab === 'configuration' && <><StorageMode api={ctx.api} userId={userId} canChange={ctx.can('accounts.configure') && ctx.changesUntil !== null} /><LucyAllowance workspaceId={r.workspace_id} email={email} state={r.lucy?.allowance} /></>}
           {tab === 'billing' && <><StripeLive userId={userId} email={email} /><Billing r={r} /></>}
           {tab === 'devices' && <Devices r={r} />}
           {tab === 'sign-ins' && <SignInsPanel userId={userId} />}

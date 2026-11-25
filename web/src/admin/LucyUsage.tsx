@@ -27,7 +27,19 @@ type Step = Pick<DangerRequest, 'title' | 'button' | 'consequences' | 'reasons'>
 
 /** The Lucy allowance actions for one account's workspace. The admin API does not send the
  * current factor or switch state yet, so this shows what was done here and points at the log. */
-export function LucyAllowance({ workspaceId, email }: { workspaceId: string | null; email: string }) {
+export type LucyAllowanceState = { factor_milli: number | null; cutover_at: number | null; enforced_since: number | null };
+
+const dayWords = (at: number) => new Date(at * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/** What the account has now, in words: its own factor, and where it is with the switch. */
+export function allowanceWords(state: LucyAllowanceState, now = Date.now() / 1000): string {
+  const factor = state.factor_milli === null ? 'The plan’s own allowance.' : state.factor_milli === 0 ? 'Lucy’s AI is switched off for this account.' : `Factor ${state.factor_milli / 1000}.`;
+  const at = state.cutover_at;
+  const change = at === null ? 'No switch is planned.' : at <= now ? `Switched over on ${dayWords(at)}.` : `Switches over on ${dayWords(at)}.`;
+  return `${factor} ${change}`;
+}
+
+export function LucyAllowance({ workspaceId, email, state }: { workspaceId: string | null; email: string; state?: LucyAllowanceState }) {
   const ctx = useConsole();
   const [factor, setFactor] = useState('');
   const [invalid, setInvalid] = useState(false);
@@ -78,7 +90,8 @@ export function LucyAllowance({ workspaceId, email }: { workspaceId: string | nu
   return (
     <section className="admin-config" aria-label="Lucy allowance">
       <h3>Lucy allowance</h3>
-      <p className="admin-note">Lucy’s session and week allowance for this account. This page can’t show the current factor or switch yet; each change is in Staff activity with its reason. Not for your own workspace.</p>
+      <p className="admin-note">Lucy’s session and week allowance for this account. Each change is in Staff activity with its reason. Not for your own workspace.</p>
+      {state && <p className="admin-note">Now: {allowanceWords(state)} A switch applies only while the account has the lucy.usage_windows flag. Reload to see a change.</p>}
       <div className="admin-inline-form">
         <label>Factor (0 to 100; 1 is the plan’s own allowance)
           <input value={factor} inputMode="decimal" autoComplete="off" aria-invalid={invalid || undefined} onChange={(event) => { setFactor(event.target.value); setInvalid(false); }} />
