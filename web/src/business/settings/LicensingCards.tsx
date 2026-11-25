@@ -2,6 +2,7 @@
 // terms acceptance, and the owner's one-off licence grace extension. Behind `business.licensing`.
 
 import { FormEvent, ReactNode, useState } from 'react';
+import { DrawnTick, useMotionOn } from '../../views/feelPieces';
 import { EXPORT_COPY as COPY } from '../copy/console';
 import { businessOn, useBusiness } from '../context';
 import { dayWords } from '../time';
@@ -14,12 +15,16 @@ export function RetentionCard() {
   const kept = useLoad(() => (on ? client.playLogRetention() : Promise.resolve(null)), [client, on]);
   const [days, setDays] = useState<string | null>(null);
   const [status, setStatus] = useState('');
+  // A save that lands draws a tick beside its words (ADR-0477); null after a refusal, so a failure
+  // never wears a tick.
+  const [saved, setSaved] = useState<number | null>(null);
+  const moving = useMotionOn();
   if (!on || !kept.data) return null;
   const owner = org.role === 'owner';
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    try { setStatus(COPY.retentionSaved((await client.setPlayLogRetention(Number(days ?? kept.data!.days))).days)); await kept.reload(); }
-    catch (problem) { setStatus((problem as Error).message); }
+    try { setStatus(COPY.retentionSaved((await client.setPlayLogRetention(Number(days ?? kept.data!.days))).days)); setSaved((count) => (count ?? 0) + 1); await kept.reload(); }
+    catch (problem) { setStatus((problem as Error).message); setSaved(null); }
   };
   return <form className="biz-card" onSubmit={save}>
     <label className="biz-field">{COPY.retentionLabel}
@@ -27,7 +32,7 @@ export function RetentionCard() {
     </label>
     <p className="biz-quiet">{COPY.retentionNote(Math.round(kept.data.default_days / 365))}</p>
     {owner && <div className="biz-row"><button type="submit">{COPY.retentionSave}</button></div>}
-    <p role="status" aria-live="polite">{status}</p>
+    <p role="status" aria-live="polite">{moving && saved !== null && <DrawnTick key={saved} className="biz-saved-tick" />}{status}</p>
   </form>;
 }
 

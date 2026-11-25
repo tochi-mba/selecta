@@ -235,3 +235,15 @@
 .admin-headline { font-size: var(--text-lg); }
 .admin-nav { height: calc(100vh - var(--space-5)); max-height: none; }
 @media (max-width: 768px) { .admin-nav { height: auto; } }
+
+/* The feel on the console (ADR-0477 plan 3.14), a calm work tool. Buttons, tables and dialogs take
+   the shared feel by themselves; rows carry data-lift="row" (a lit edge, no travel). Nothing here
+   applies while <html data-feel> is unset. */
+
+/* The tick a flag change draws beside "Saved as version N" (DrawnTick, views/feelPieces.tsx). */
+.admin-saved-tick { margin-inline-end: var(--space-1); vertical-align: text-bottom; }
+
+/* Emergency and destructive commands stay plain and immediate: they never squash or carry the press
+   pad, so they answer exactly as they did before the feel. Their pressed ring (polish.css) stays. */
+:root[data-feel] :is(.admin-danger, .admin-controls button, .admin-control-target button) { scale: none; }
+:root[data-feel] :is(.admin-danger, .admin-controls button, .admin-control-target button)::after { content: none; }

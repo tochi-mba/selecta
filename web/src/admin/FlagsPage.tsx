@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { DataTable } from '../ui/DataTable';
+import { DrawnTick, useMotionOn } from '../views/feelPieces';
 import { AdminFetch, post, when } from './adminApi';
 import { Command, Failure, Panel, useLoad } from './parts';
 
@@ -92,10 +93,15 @@ function FlagDetail({ api, flag, can, onChanged }: { api: AdminFetch; flag: Flag
   const [impact, setImpact] = useState<Impact | null>(null);
   const [outcome, setOutcome] = useState('');
   const [error, setError] = useState('');
+  // A change the server saved is confirmed with a drawn tick beside its words (ADR-0477); a change
+  // that waits, or a preview, is not saved yet, so it gets none. Keyed by this count to draw again.
+  const [saved, setSaved] = useState(0);
+  const [savedNow, setSavedNow] = useState(false);
+  const moving = useMotionOn();
   const history = useLoad(() => api<{ versions: Version[] }>(`/admin/flags/history?flag_id=${encodeURIComponent(flag.id)}`), [api, flag.id]);
   const body = (reason = '') => ({ action, reason, params: paramsFor(action, form) });
   const preview = async (event: FormEvent) => {
-    event.preventDefault(); setError(''); setOutcome('');
+    event.preventDefault(); setError(''); setOutcome(''); setSavedNow(false);
     try { setImpact(await api<Impact>(`/admin/flags/${flag.id}/impact`, post(body()))); }
     catch (problem) { setError((problem as Error).message); setImpact(null); }
   };
@@ -103,14 +109,16 @@ function FlagDetail({ api, flag, can, onChanged }: { api: AdminFetch; flag: Flag
     const done = await api<Outcome>(`/admin/flags/${flag.id}/change`, post(body(reason)));
     setOutcome(done.applied ? `Saved as version ${done.version}.${done.warnings.length ? ` ${done.warnings.join(' ')}` : ''}`
       : `This is a broad change, so it waits: it runs after ${when(done.execute_after)} unless cancelled (action ${done.action_id?.slice(0, 8)}).`);
+    setSavedNow(done.applied); if (done.applied) setSaved((count) => count + 1);
     setImpact(null); await history.reload(); onChanged();
   };
   const rollback = async (version: number, reason: string, before = false) => {
     const done = await api<Outcome>('/admin/flags/rollback', post({ version, reason, before }));
     setOutcome(done.applied ? `${before ? 'Undone' : 'Restored'} as version ${done.version}.` : `The rollback is broad, so it waits until ${when(done.execute_after)}.`);
+    setSavedNow(done.applied); if (done.applied) setSaved((count) => count + 1);
     await history.reload(); onChanged();
   };
-  const previewSelf = async (on: boolean, reason: string) => { await api(`/admin/flags/${flag.id}/preview`, post({ on, reason })); setOutcome(on ? 'On for your account only.' : 'Your preview is off.'); };
+  const previewSelf = async (on: boolean, reason: string) => { await api(`/admin/flags/${flag.id}/preview`, post({ on, reason })); setOutcome(on ? 'On for your account only.' : 'Your preview is off.'); setSavedNow(false); };
   const counts = impact?.flags[flag.id];
   return (
     <Panel title={`${flag.label} (${flag.id})`}>
@@ -142,7 +150,7 @@ function FlagDetail({ api, flag, can, onChanged }: { api: AdminFetch; flag: Flag
           <Command label="End my preview" run={(r) => previewSelf(false, r)} />
         </div>}
       </>}
-      {outcome && <p role="status">{outcome}</p>}
+      {outcome && <p role="status">{moving && savedNow && <DrawnTick key={saved} className="admin-saved-tick" />}{outcome}</p>}
       <h3>History</h3>
       <Failure error={history.error} />
       <DataTable stacked="auto" caption="Rule versions" rows={history.data?.versions ?? []} rowKey={(v) => String(v.version)} empty="No changes yet."
