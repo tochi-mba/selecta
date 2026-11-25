@@ -13,7 +13,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from selecta import local_upgrade
+from selecta import flags, local_upgrade
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS songs (
@@ -216,7 +216,7 @@ def _already_checked(conn: sqlite3.Connection, identity: tuple[str, int, int] | 
     return (
         cookie is not None
         and cookie == _schema_cookie(conn)
-        and local_upgrade.schema_version(conn) >= local_upgrade.LOCAL_SCHEMA_VERSION
+        and not local_upgrade.upgrade_needed(conn)
     )
 
 
@@ -279,6 +279,11 @@ def connect(path: Path) -> sqlite3.Connection:
     _saved_mixes_become_drafts(conn)
     _legacy_kinds_renamed(conn)
     local_upgrade.mark_migrated(conn)
+    if flags.on("core.engine_store"):
+        # the engine tables' own migrations, stamped and run only now, after the backup above
+        from selecta.engine_store import library
+
+        library.bring_forward(path)
     identity = identity or _identity(path)  # a new file exists only once it has been opened
     if identity is not None:
         with _checked_lock:

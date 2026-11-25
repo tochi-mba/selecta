@@ -32,6 +32,9 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.sql import Select
 
 LOCAL_WORKSPACE = "local"
+# An execution option: `engine.execution_options(selecta_deferred_read=True)` makes SQLite begin
+# that engine's transactions deferred instead of immediate. Only `EngineStore.read()` sets it.
+DEFERRED_READ = "selecta_deferred_read"
 
 # Stable constraint names, so Alembic can find and change them on both databases.
 NAMING = {
@@ -78,7 +81,12 @@ def make_engine(url: str, **options) -> Engine:
 
         @sa.event.listens_for(engine, "begin")
         def _sqlite_begin(connection) -> None:
-            connection.exec_driver_sql("BEGIN IMMEDIATE")
+            # A read that asked for it starts deferred, so it never queues for the write lock;
+            # in WAL it reads the last commit while a writer works.
+            if connection.get_execution_options().get(DEFERRED_READ):
+                connection.exec_driver_sql("BEGIN")
+            else:
+                connection.exec_driver_sql("BEGIN IMMEDIATE")
 
         return engine
     options.setdefault("pool_pre_ping", True)

@@ -72,6 +72,24 @@ class CloudJobFlags:
 
     def is_on_in(self, conn, workspace_id: str, flag_id: str) -> bool:
         """`is_on` through the caller's connection (see `CloudJobEntitlements.standing_in`)."""
+        decided = self._inputs(conn, workspace_id)
+        if decided is None:
+            return False
+        context, inputs = decided
+        return targeting.decide(flag_id, context, **inputs).on
+
+    def answers(self, workspace_id: str) -> dict[str, bool] | None:
+        """Every flag as the workspace's owner gets it, for `flags.bound` to hold while one of
+        its jobs runs; None when the workspace has no live owner."""
+        self.rules.refresh_if_stale()
+        with transaction(self.engine, workspace_id) as conn:
+            decided = self._inputs(conn, workspace_id)
+            if decided is None:
+                return None
+            context, inputs = decided
+            return targeting.decide_all(context, **inputs).snapshot()
+
+    def _inputs(self, conn, workspace_id: str):
         self.rules.refresh_if_stale(conn)
         owner = conn.execute(
             sa.select(users.c.id, users.c.created_at, users.c.deleted_at)
@@ -79,7 +97,7 @@ class CloudJobFlags:
             .where(workspaces.c.id == workspace_id)
         ).first()
         if owner is None or owner.deleted_at is not None:
-            return False
+            return None
         now = db_now(conn)
         entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
         plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
@@ -92,17 +110,14 @@ class CloudJobFlags:
             plan_version=plan.version,
             account_age_days=max(0.0, (now - owner.created_at) / 86_400),
         )
-        decision = targeting.decide(
-            flag_id,
-            context,
-            build_states=flags.effective(),
-            rules=self.rules.snapshot_for(conn),
-            entitled=plan.flags,
-            plan_gated=plans.plan_gated_flags(),
-            user_prefs=user_preferences(conn, owner.id),
-            now=now,
-        )
-        return decision.on
+        return context, {
+            "build_states": flags.effective(),
+            "rules": self.rules.snapshot_for(conn),
+            "entitled": plan.flags,
+            "plan_gated": plans.plan_gated_flags(),
+            "user_prefs": user_preferences(conn, owner.id),
+            "now": now,
+        }
 
 
 class R2OutputVerifier(OutputVerifier):
