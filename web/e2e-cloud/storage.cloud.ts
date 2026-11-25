@@ -35,7 +35,7 @@ test('over quota: the banner names the overage, uploads wait, listening and down
   await nav(page).getByRole('button', { name: 'Plan & billing' }).click();
   await expect(page.getByRole('region', { name: 'Exports this month' })).toContainText('Paused while you are over your storage limit');
   await banner.getByRole('button', { name: 'Upgrade' }).click();
-  await expect(page.getByRole('button', { name: 'Choose Premium' })).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Plan' }).getByRole('radio', { name: /^Premium/ })).toBeVisible();
 });
 
 test('Download my data saves a ZIP with originals, settings.json and mixes.json', async ({ page, request }) => {
