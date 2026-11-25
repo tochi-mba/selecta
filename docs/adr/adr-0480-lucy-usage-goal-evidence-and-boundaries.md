@@ -1,12 +1,13 @@
-# ADR-0477 - Lucy Usage: goal, evidence and boundaries
+# ADR-0480 - Lucy Usage: goal, evidence and boundaries
 
 - **Decision:** Proposed (Claude for the owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM), building on ADR-0402, ADR-0404, ADR-0464 and ADR-0476 rather than replacing them.
 - **Implementation:** Not started. This is a docs-only set; no code changed with it.
 - **Baseline:** `main` at `f5b6a4a`.
 - **Source touchpoints:** `src/selecta/ai/allowance.py`, `src/selecta/ai/spend.py`, `src/selecta/ai/gateway.py`, `src/selecta/billing/plans.py`, `src/selecta/usage/meters.py`, `src/selecta/lucy/cloud_agent.py`, `web/src/views/LucyCloudSettings.tsx`, `web/src/cloud/Meters.tsx`.
-- **Sibling LM ADRs:** [ADR-0478](adr-0478-one-cost-weighted-lucy-allowance.md) to [ADR-0484](adr-0484-lucy-usage-measurement-migration-and-rollout.md).
+- **Sibling LM ADRs:** [ADR-0481](adr-0481-one-cost-weighted-lucy-allowance.md) to [ADR-0487](adr-0487-lucy-usage-measurement-migration-and-rollout.md).
 - **Research:** [docs/research/ai-chat-usage-limits.md](../research/ai-chat-usage-limits.md).
+- **Numbering:** this set was first written as ADR-0477 to ADR-0484. It was renumbered to ADR-0480 to ADR-0487 on 2026-11-25, before any decision on it, because 0477 to 0479 were taken on `main` by the Feel system, real artwork and one-brain ADRs merged the same day. Commit messages from before the change name the old numbers.
 
 ## Context
 
@@ -27,16 +28,16 @@ During 2026 the large chat products moved away from message counts to a single a
 1. The goal of this programme is that **the limit a person sees is the limit that is enforced**, in one unit, with one meter, and with words that are true for every cause.
 2. The 40% rule stays: a member who uses their whole Lucy allowance costs at most about 40% of the plan's net price in AI. Prices stay as held by ADR-0464. This programme changes how the allowance is measured and shown, not how much money a plan may spend.
 3. One model per plan (owner, 2026-11-24) is recorded here as the routing this set assumes: Free answers on Haiku, Standard on Sonnet, Premium on Opus, each stepping down the chain Opus, Sonnet, Haiku, built-in planner. ADR-0404's text is not edited; this rule is the later statement.
-4. Every number in this set (window length, session share, weekly size, multipliers, credit price) is a **starting hypothesis**. Beta cost measurement under ADR-0484 and BF-0464-04 sets the real figures, and the owner approves them.
+4. Every number in this set (window length, session share, weekly size, multipliers, credit price) is a **starting hypothesis**. Beta cost measurement under ADR-0487 and BF-0464-04 sets the real figures, and the owner approves them.
 5. Nothing in this set weakens a spend guard. The per-turn caps, run leases, provider breakers, platform day and month caps and the emergency controls of ADR-0404 and ADR-0410 stay exactly as they are and stay authoritative.
 6. The whole programme sits behind one flag, `lucy.usage_windows`, off by default. With the flag off Lucy behaves as at the baseline.
 7. Local mode with the person's own key (ADR-0330, ADR-0333) is outside this set.
 
 ## Consequences
 
-- "Turns" stop being the unit a customer is sold. Plan cards, Lucy's prompt and the settings page all change wording (ADR-0481, ADR-0482).
+- "Turns" stop being the unit a customer is sold. Plan cards, Lucy's prompt and the settings page all change wording (ADR-0484, ADR-0485).
 - ADR-0402's rule that customers never see token or CPU meters is kept: the meter shows a share used and a reset time, never tokens or dollars.
-- The request classifier stops deciding what a person is charged. It may still pick effort or a prompt, but a wrong guess no longer changes the allowance (ADR-0478).
+- The request classifier stops deciding what a person is charged. It may still pick effort or a prompt, but a wrong guess no longer changes the allowance (ADR-0481).
 - Existing tests that assert turn counts (`tests/test_cloud_ai_gateway.py`, `tests/test_lucy_cloud.py`) keep passing with the flag off and gain flag-on twins.
 
 ## Rejected alternatives
@@ -47,4 +48,4 @@ During 2026 the large chat products moved away from message counts to a single a
 
 ## Acceptance
 
-The [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md) LM-0477 items define implementation and verification.
+The [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md) LM-0480 items define implementation and verification.

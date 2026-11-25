@@ -6,7 +6,7 @@ status: open
 priority: later
 who: claude
 created: 2026-11-25
-source: ADR-0477 rule 3; LM-0477-04
+source: ADR-0480 rule 3; LM-0480-04
 commit:
 ---
 

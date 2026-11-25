@@ -1,4 +1,4 @@
-# ADR-0481 - One truthful Lucy usage meter
+# ADR-0484 - One truthful Lucy usage meter
 
 - **Decision:** Proposed (Claude for the owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
@@ -7,16 +7,16 @@
 
 ## Context
 
-The meter and the limit are fed from different tables (ADR-0477 fault 1). Where the meter does have numbers it adds the classes together ("120 of 440"), hides the dollar ceiling and gives no sign that a lighter model answered. `ai.allowance.remaining()` reads the enforced table and is never called. ADR-0402 requires plain meters and rejects showing tokens or CPU seconds.
+The meter and the limit are fed from different tables (ADR-0480 fault 1). Where the meter does have numbers it adds the classes together ("120 of 440"), hides the dollar ceiling and gives no sign that a lighter model answered. `ai.allowance.remaining()` reads the enforced table and is never called. ADR-0402 requires plain meters and rejects showing tokens or CPU seconds.
 
 ## Decision
 
-1. There is **one read model** for Lucy usage, computed from the allowance ledger of ADR-0478 by the same module that admits turns. Every surface uses it: Lucy's settings, Plan and billing, the workspace stream, Lucy's own prompt and the admin account view. No surface computes usage for itself.
+1. There is **one read model** for Lucy usage, computed from the allowance ledger of ADR-0481 by the same module that admits turns. Every surface uses it: Lucy's settings, Plan and billing, the workspace stream, Lucy's own prompt and the admin account view. No surface computes usage for itself.
 2. The read model returns, for the session and for the week: the share used as a whole percentage, the reset time, and a state (`ok`, `near` from 80%, `spent`). It also returns whether a lighter Lucy is answering now.
 3. **What a person sees: what is left.** Every surface states the share **left**, not the share used ("5-hour: 100% left", "Weekly: 90% left"), because that is the question a person is asking. Lucy's settings and Plan and billing show two lines, "This session" and "This week", each a bar with the percentage left and a reset time in plain words ("back at 16:40", "back Thursday 09:00"). When no session is open the session line reads as full. Free, Standard and Premium see the same layout.
 4. **What a person never sees.** Tokens, dollars, usage units, model names or a turn count. This keeps ADR-0402's rule; a share of an allowance is a plain meter, not a token meter.
 5. **Rounding is honest.** The percentage left is rounded so it never flatters: 100% left only when nothing has been used, 0% left only when the state is `spent`, and otherwise between 1% and 99%.
-6. **The meter can move after a reply.** A turn is reserved at admission and charged at settlement (ADR-0478), so the bar may drop back a little when a reply finishes. The reserved part is drawn as used; no separate "pending" figure is shown.
+6. **The meter can move after a reply.** A turn is reserved at admission and charged at settlement (ADR-0481), so the bar may drop back a little when a reply finishes. The reserved part is drawn as used; no separate "pending" figure is shown.
 7. **Live on every device.** The read model is sent on the workspace stream as `lucy.usage` whenever a turn is admitted, settles or a window resets, replacing `lucy.turns`. This closes the "not built" note in ADR-0476 edge case 31.
 8. **An estimate is allowed, labelled.** The settings page may add "about N more messages like your recent ones", worked out from the person's own median settled cost over their last 20 turns, always with "about" and never in Lucy's words. It is hidden until 5 turns have settled.
 9. **Lucy tells the truth about herself.** Her prompt is given the read model's state and reset times, not allowance numbers, so she can answer "how much have I got left?" in the same words as the page.
@@ -31,8 +31,8 @@ The meter and the limit are fed from different tables (ADR-0477 fault 1). Where 
 
 ## Consequences
 
-- The disconnected `lucy_turn.*` counters and the unused `ai.allowance.remaining()` are removed once the flag is fully on (ADR-0484).
-- A customer can no longer be told "400 turns". Marketing and plan cards describe plans by relative size (ADR-0482).
+- The disconnected `lucy_turn.*` counters and the unused `ai.allowance.remaining()` are removed once the flag is fully on (ADR-0487).
+- A customer can no longer be told "400 turns". Marketing and plan cards describe plans by relative size (ADR-0485).
 - Support needs the units behind a percentage; the admin account view shows them.
 
 ## Rejected alternatives
@@ -44,4 +44,4 @@ The meter and the limit are fed from different tables (ADR-0477 fault 1). Where 
 
 ## Acceptance
 
-The [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md) LM-0481 items define implementation and verification.
+The [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md) LM-0484 items define implementation and verification.

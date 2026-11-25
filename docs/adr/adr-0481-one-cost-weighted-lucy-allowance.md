@@ -1,4 +1,4 @@
-# ADR-0478 - One cost-weighted Lucy allowance
+# ADR-0481 - One cost-weighted Lucy allowance
 
 - **Decision:** Proposed (Claude for the owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
@@ -7,7 +7,7 @@
 
 ## Context
 
-Today a turn costs one count from a class bucket whatever it did. A two-word question and a long planning turn with eight tool calls weigh the same, and which bucket pays depends on a regular expression over the person's words. The money is tracked separately and only the money protects the margin (ADR-0477). Claude and Gemini both measure usage by work done for this reason.
+Today a turn costs one count from a class bucket whatever it did. A two-word question and a long planning turn with eight tool calls weigh the same, and which bucket pays depends on a regular expression over the person's words. The money is tracked separately and only the money protects the margin (ADR-0480). Claude and Gemini both measure usage by work done for this reason.
 
 ## Decision
 
@@ -21,15 +21,15 @@ Today a turn costs one count from a class bucket whatever it did. A two-word que
    - A turn that fails through no fault of the person (provider error, timeout, platform cap, a deployment switched off) is charged nothing to their allowance. Its dollars are still booked to platform spend, as now.
    - A retry down the model chain inside one turn is charged once, at the cost of the attempt that answered.
 6. Tool calls, earlier conversation sent as context and cache writes all count, because they all cost money. The per-plan limit on earlier conversation (12k, 40k and 80k characters) stays as a bound on how heavy one turn can be.
-7. The allowance ledger is the single record. The meter (ADR-0481), the admission check, the admin economics view and Download my data all read it; no second counter is kept for display.
+7. The allowance ledger is the single record. The meter (ADR-0484), the admission check, the admin economics view and Download my data all read it; no second counter is kept for display.
 8. Units are never shown to customers and never appear in Lucy's words. Support and admin screens may show them, labelled as units.
 
 ## Consequences
 
 - A person who asks short questions gets many more of them than a person who asks for whole sets, which matches what each costs.
-- The hidden monthly ceiling and the visible limit become one number (ADR-0479 turns it into windows).
-- Because the charge is known only at settlement, the meter can move after a reply has finished. ADR-0481 handles the wording.
-- A model price change in the registry changes how far an allowance goes. ADR-0484 makes a price change a reviewed event with a re-measurement.
+- The hidden monthly ceiling and the visible limit become one number (ADR-0482 turns it into windows).
+- Because the charge is known only at settlement, the meter can move after a reply has finished. ADR-0484 handles the wording.
+- A model price change in the registry changes how far an allowance goes. ADR-0487 makes a price change a reviewed event with a re-measurement.
 
 ## Rejected alternatives
 
@@ -39,4 +39,4 @@ Today a turn costs one count from a class bucket whatever it did. A two-word que
 
 ## Acceptance
 
-The [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md) LM-0478 items define implementation and verification.
+The [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md) LM-0481 items define implementation and verification.

@@ -76,19 +76,19 @@ Built in PRs #133 and #134. The local Lucy page is reused in the browser-first C
 - **Not in Cloud yet.** Memory facts and listening history; a real-phone keyboard check; song titles in the playing position.
 - **Evaluation.** `tests/lucy_eval/` (72 cases) and `tools/lucy_eval.py`; run within the owner's spending limit.
 
-### 9.8 Proposed: one usage allowance on a session and a week (ADR-0477 to ADR-0484, flag `lucy.usage_windows`)
+### 9.8 Proposed: one usage allowance on a session and a week (ADR-0480 to ADR-0487, flag `lucy.usage_windows`)
 
 Proposed on 2026-11-25 and not built. Today Lucy is limited twice: by turns per class per calendar month, which the customer is sold, and by a monthly dollar ceiling per account (§9.3), which the customer never sees and which is the limit that really holds since each plan moved to one model. The [Lucy Usage ADR set](../adr/README.md#selecta-lucy-usage-adr-set-2026-11-25) proposes to make them one thing.
 
-- **One allowance, weighted by cost.** A turn is charged what it cost, reserved at admission and settled with the real tokens. The request class stops deciding what a person is charged ([ADR-0478](../adr/adr-0478-one-cost-weighted-lucy-allowance.md)).
-- **Two windows.** A five-hour session that opens at the first message and a weekly limit with a fixed reset per account, in place of the calendar month. Venue pools get the weekly limit only ([ADR-0479](../adr/adr-0479-rolling-session-window-and-weekly-limit.md)).
-- **At the limit.** Session spent: a lighter Lucy answers and says so once. Week spent: the built-in planner. Each cause has its own true words and the real time it ends ([ADR-0480](../adr/adr-0480-behaviour-at-the-limit-and-truthful-words.md)).
-- **One meter.** Session and week as percentages with reset times, read from the ledger the gateway enforces; never tokens, dollars or model names ([ADR-0481](../adr/adr-0481-one-truthful-lucy-usage-meter.md)).
-- **Plans as multipliers** of one base allowance, written once in the plan catalogue ([ADR-0482](../adr/adr-0482-plan-multipliers-and-one-allowance-catalogue.md)).
-- **Extra usage** in prepaid packs, deferred until the owner decides ([ADR-0483](../adr/adr-0483-extra-usage-credits.md)).
-- **Measured before it is sized.** Shadow metering on beta accounts sets every number; the 40% rule and the prices do not change ([ADR-0484](../adr/adr-0484-lucy-usage-measurement-migration-and-rollout.md)).
+- **One allowance, weighted by cost.** A turn is charged what it cost, reserved at admission and settled with the real tokens. The request class stops deciding what a person is charged ([ADR-0481](../adr/adr-0481-one-cost-weighted-lucy-allowance.md)).
+- **Two windows.** A five-hour session that opens at the first message and a weekly limit with a fixed reset per account, in place of the calendar month. Venue pools get the weekly limit only ([ADR-0482](../adr/adr-0482-rolling-session-window-and-weekly-limit.md)).
+- **At the limit.** Session spent: a lighter Lucy answers and says so once. Week spent: the built-in planner. Each cause has its own true words and the real time it ends ([ADR-0483](../adr/adr-0483-behaviour-at-the-limit-and-truthful-words.md)).
+- **One meter.** Session and week as percentages with reset times, read from the ledger the gateway enforces; never tokens, dollars or model names ([ADR-0484](../adr/adr-0484-one-truthful-lucy-usage-meter.md)).
+- **Plans as multipliers** of one base allowance, written once in the plan catalogue ([ADR-0485](../adr/adr-0485-plan-multipliers-and-one-allowance-catalogue.md)).
+- **Extra usage** in prepaid packs, deferred until the owner decides ([ADR-0486](../adr/adr-0486-extra-usage-credits.md)).
+- **Measured before it is sized.** Shadow metering on beta accounts sets every number; the 40% rule and the prices do not change ([ADR-0487](../adr/adr-0487-lucy-usage-measurement-migration-and-rollout.md)).
 
-Faults found in the present model while writing the set are listed in [ADR-0477](../adr/adr-0477-lucy-usage-goal-evidence-and-boundaries.md) and filed in `docs/todo/items/`. The market research behind the design is in [docs/research/ai-chat-usage-limits.md](../research/ai-chat-usage-limits.md).
+Faults found in the present model while writing the set are listed in [ADR-0480](../adr/adr-0480-lucy-usage-goal-evidence-and-boundaries.md) and filed in `docs/todo/items/`. The market research behind the design is in [docs/research/ai-chat-usage-limits.md](../research/ai-chat-usage-limits.md).
 
 ---
 

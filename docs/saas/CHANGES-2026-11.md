@@ -32,7 +32,7 @@ ends with everything that needs you.*
   back. Each plan now answers with its own model: Free on Haiku, Standard on Sonnet, Premium on Opus.
 - Not yet: Lucy's memory of you and your listening history in Cloud. Chapter: [09 §9.7](09-lucy-ai-gateway.md).
 
-## Lucy's limits: a proposal (ADR-0477 to ADR-0484)
+## Lucy's limits: a proposal (ADR-0480 to ADR-0487)
 
 - Proposed on 2026-11-25, nothing built: one Lucy allowance weighted by what each turn costs, on a
   five-hour session under a weekly limit, with one meter that shows what is really enforced. It
@@ -40,7 +40,7 @@ ends with everything that needs you.*
 - Reading the code for it found faults in today's limits: the turns meter reads counters nothing
   writes, two of the four turn classes can never happen, and the "out of turns" words are also
   shown when the hidden dollar ceiling was the cause. Each is filed in `docs/todo/items/`.
-- Needs you: accept, amend or reject the set (LM-0477-02). Chapter: [09 §9.8](09-lucy-ai-gateway.md).
+- Needs you: accept, amend or reject the set (LM-0480-02). Chapter: [09 §9.8](09-lucy-ai-gateway.md).
 
 ## Billing and plans
 

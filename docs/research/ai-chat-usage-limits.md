@@ -1,7 +1,7 @@
 # How AI chat products price and limit usage - research notes
 
 - **Reviewed:** 2026-11-25
-- **Purpose:** support the Lucy Usage ADR set, [ADR-0477](../adr/adr-0477-lucy-usage-goal-evidence-and-boundaries.md) to [ADR-0484](../adr/adr-0484-lucy-usage-measurement-migration-and-rollout.md). It is not a pricing decision and does not change any plan.
+- **Purpose:** support the Lucy Usage ADR set, [ADR-0480](../adr/adr-0480-lucy-usage-goal-evidence-and-boundaries.md) to [ADR-0487](../adr/adr-0487-lucy-usage-measurement-migration-and-rollout.md). It is not a pricing decision and does not change any plan.
 - **Baseline inspected:** `main` at `f5b6a4a`.
 
 ## Evidence boundary
@@ -57,15 +57,15 @@ Selecta-specific design judgements, argued in the ADRs rather than proved here.
 
 | Market pattern | Lucy at `f5b6a4a` | Proposed in |
 |---|---|---|
-| Compute meter | Turns per class per calendar month, with a separate hidden monthly dollar ceiling that does the real work | [ADR-0478](../adr/adr-0478-one-cost-weighted-lucy-allowance.md) |
-| Rolling session plus weekly cap | Calendar month only | [ADR-0479](../adr/adr-0479-rolling-session-window-and-weekly-limit.md) |
-| Smaller model, wait or credits at the limit | Silent step-down, then the built-in planner; one message for every cause | [ADR-0480](../adr/adr-0480-behaviour-at-the-limit-and-truthful-words.md) |
-| One honest meter | The meter reads counters the gateway does not write | [ADR-0481](../adr/adr-0481-one-truthful-lucy-usage-meter.md) |
-| Tier multipliers | Three hand-written allowance tables | [ADR-0482](../adr/adr-0482-plan-multipliers-and-one-allowance-catalogue.md) |
-| Paid credits past the limit | None | [ADR-0483](../adr/adr-0483-extra-usage-credits.md) |
+| Compute meter | Turns per class per calendar month, with a separate hidden monthly dollar ceiling that does the real work | [ADR-0481](../adr/adr-0481-one-cost-weighted-lucy-allowance.md) |
+| Rolling session plus weekly cap | Calendar month only | [ADR-0482](../adr/adr-0482-rolling-session-window-and-weekly-limit.md) |
+| Smaller model, wait or credits at the limit | Silent step-down, then the built-in planner; one message for every cause | [ADR-0483](../adr/adr-0483-behaviour-at-the-limit-and-truthful-words.md) |
+| One honest meter | The meter reads counters the gateway does not write | [ADR-0484](../adr/adr-0484-one-truthful-lucy-usage-meter.md) |
+| Tier multipliers | Three hand-written allowance tables | [ADR-0485](../adr/adr-0485-plan-multipliers-and-one-allowance-catalogue.md) |
+| Paid credits past the limit | None | [ADR-0486](../adr/adr-0486-extra-usage-credits.md) |
 
 ## Not established
 
-- Whether SelectaDJ's customers, who mostly ask Lucy for a mix now and then, behave like chat-assistant subscribers at all. Beta data decides this ([ADR-0484](../adr/adr-0484-lucy-usage-measurement-migration-and-rollout.md)).
+- Whether SelectaDJ's customers, who mostly ask Lucy for a mix now and then, behave like chat-assistant subscribers at all. Beta data decides this ([ADR-0487](../adr/adr-0487-lucy-usage-measurement-migration-and-rollout.md)).
 - Any provider's exact allowance. None publishes one.
 - Whether a five-hour window is the right length for a music product. It is the market's convention, not a measured optimum.

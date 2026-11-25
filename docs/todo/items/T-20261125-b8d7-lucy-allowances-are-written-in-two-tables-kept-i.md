@@ -6,7 +6,7 @@ status: open
 priority: normal
 who: claude
 created: 2026-11-25
-source: ADR-0477 fault 4; ADR-0482; LM-0482-01
+source: ADR-0480 fault 4; ADR-0485; LM-0485-01
 commit:
 ---
 
