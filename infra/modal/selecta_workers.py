@@ -37,7 +37,10 @@ image = (
     .run_commands(
         "cd /src && uv export --frozen --no-dev --extra observability --no-emit-project"
         " -o /tmp/requirements.txt",
-        "uv pip install --system -r /tmp/requirements.txt",
+        # The lock pins torch to PyTorch's CPU builds, which live on PyTorch's own index
+        # (pyproject's pytorch-cpu), as infra/docker/service.Dockerfile does.
+        "uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu"
+        " --index-strategy unsafe-best-match -r /tmp/requirements.txt",
         "uv pip install --system --no-deps /src",
     )
     .env({"SELECTA_MODE": "cloud", "SELECTA_ENVIRONMENT": ENVIRONMENT})
