@@ -28,7 +28,7 @@ const DERIVATIONS = 'derivations';
 const MEMO = 'memo';
 
 /** The kinds this store holds. Each is a pure function of the bytes. */
-export type DerivedKind = 'tonal' | 'waveform' | 'facts';
+export type DerivedKind = 'tonal' | 'waveform' | 'facts' | 'audio';
 
 /** The fingerprint memo's own version: bumped if what the identity key covers ever changes. */
 export const MEMO_VERSION = 'fp-v1';
