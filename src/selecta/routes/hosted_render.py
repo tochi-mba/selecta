@@ -16,6 +16,7 @@ from typing import Any
 from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from sqlalchemy.engine import Engine
 
+from selecta import hosted_export as exports
 from selecta import hosted_render
 from selecta.admin.state import DbWorkControls
 from selecta.authz.roles import WorkspaceAction
@@ -131,10 +132,19 @@ def install_routes(
     @app.post("/api/hosted/mixes/export", status_code=202)
     def hosted_export(request: Request, body: dict = Body(...),  # noqa: B008
                       claims: Claims = Depends(current_claims)):  # noqa: B008
+        """One export of the mix exactly as it plays (`hosted_export`): the same order and
+        moves as `/api/hosted/mixes/render`."""
         found = principal(request, claims, WorkspaceAction.MIXES_EDIT)
-        ids = [item["asset_id"] for item in _order(body)]
-        return hosted_render.request_export(engine, work, found.workspace.id, ids,
-                                            created_by=found.user.id)
+        order = _order(body)
+        client = object_client_factory()
+        try:
+            return exports.request_export(
+                engine, work, found.workspace.id, order, client=client, buckets=buckets,
+                created_by=found.user.id, read_object=read_object)
+        except R2Error as error:
+            raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
+        finally:
+            getattr(client, "close", lambda: None)()
 
     @app.get("/api/hosted/exports/{job_id}")
     def hosted_export_status(job_id: str, request: Request,
@@ -144,8 +154,8 @@ def install_routes(
         found = principal(request, claims, WorkspaceAction.MIXES_READ)
         client = object_client_factory()
         try:
-            state = hosted_render.export_status(engine, found.workspace.id, job_id,
-                                                client=client, buckets=buckets)
+            state = exports.export_status(engine, found.workspace.id, job_id,
+                                          client=client, buckets=buckets)
         finally:
             getattr(client, "close", lambda: None)()
         if state is None:

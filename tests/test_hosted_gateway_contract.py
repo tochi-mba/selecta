@@ -4,7 +4,8 @@ On staging a remote worker analysed a song and then had its upload refused with
 `invalid_output_slots`: the job declared no output namespace. No local run caught it, because the
 dev worker publishes straight to disk and never asks the gateway. Here the real pieces meet:
 
-- jobs made by the real producers (`hosted_render.prepare_songs`, `mix_state`, `request_export`);
+- jobs made by the real producers (`hosted_render.prepare_songs`, `mix_state`,
+  `hosted_export.request_export`);
 - the real gateway app (`gateway_cloud.create_gateway_app`: `work.gateway_api` with
   `work.cloud_ports` signing inputs and output slots and re-hashing every output);
 - the real remote worker client (`workers.remote.RemoteWorkerClient`) under the real runner.
@@ -13,7 +14,10 @@ Only object storage is fake, at its HTTP edge: signed URLs point at `objects.tes
 an in-memory store that the gateway's verifier reads too. The handlers' audio work is stubbed
 (no engine run here, by the owner's rule): each stub fetches its inputs through the job context,
 checks them against their SHA-256 and publishes under the hash the real handler uses
-(`tests/test_hosted_render_outputs.py` pins those hashes to the worker's).
+(`tests/test_hosted_render_outputs.py` pins those hashes to the worker's). The playback and
+transition stubs write tiny real FLAC files, so `export.render` is the real handler
+(`workers.export_join`): it fetches every part of the timeline through its signed link, checks
+it, joins it and uploads the result through the gateway's slot.
 """
 
 from __future__ import annotations
@@ -23,12 +27,14 @@ import json
 from types import SimpleNamespace
 
 import httpx
+import numpy as np
 import pytest
+import soundfile as sf
 import sqlalchemy as sa
 from cloud_helpers import grant_hosted_media
 from fastapi.testclient import TestClient
 
-from selecta import hosted_render
+from selecta import hosted_export, hosted_render
 from selecta.admin.state import DbWorkControls
 from selecta.business.weight import business_policy
 from selecta.config import ANALYSIS_VERSION
@@ -49,7 +55,7 @@ from selecta.work.store import JobStore
 from selecta.workers import engine_handlers, remote
 from selecta.workers.audio_handlers import PROXY_VERSION
 from selecta.workers.context import InputInvalid
-from selecta.workers.engine_handlers import EXPORT_VERSION
+from selecta.workers.export_join import render_export
 from selecta.workers.remote import RemoteWorkerClient
 from selecta.workers.runner import WorkerRunner
 
@@ -183,6 +189,15 @@ def _write(ctx, name: str, payload: dict):
     return path
 
 
+def _flac(ctx, name: str, payload: dict, seconds: float = 0.5):
+    """A tiny real 24-bit FLAC whose samples follow from the payload (distinct per input)."""
+    seed = int(hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:8], 16)
+    steps = np.random.default_rng(seed).integers(-(1 << 20), 1 << 20, (int(44_100 * seconds), 2))
+    path = ctx.scratch / name
+    sf.write(str(path), steps.astype(np.int32) << 8, 44_100, subtype="PCM_24", format="FLAC")
+    return path
+
+
 def analyse(job, ctx):
     sha = _checked(ctx, job.input_ref, "source")
     input_hash = engine_handlers._hash({"source_sha256": sha, "analysis": ANALYSIS_VERSION})
@@ -204,7 +219,7 @@ def seam(job, ctx):
         {**hashes, "style": ref.get("style"), "analysis": ANALYSIS_VERSION,
          "render": RENDER_VERSION})
     cues = {"a_source_start": 150.0, "b_source_end": 20.0, "seconds": 16.0}
-    made = ctx.publish("seam", input_hash, _write(ctx, "seam.flac", hashes), "seam.flac",
+    made = ctx.publish("seam", input_hash, _flac(ctx, "seam.flac", hashes), "seam.flac",
                        provenance=build_provenance(
                            inputs=hashes,
                            versions={"analysis": ANALYSIS_VERSION, "render": RENDER_VERSION},
@@ -221,7 +236,7 @@ def proxy(job, ctx):
     hashed = {"source_sha256": ref["source_sha256"], "sample_rate": ref["sample_rate"],
               "proxy_version": PROXY_VERSION, "codec": "flac", "bits": 24}
     input_hash = hashlib.sha256(json.dumps(hashed, sort_keys=True).encode()).hexdigest()
-    made = ctx.publish_artifact("playback", input_hash, _write(ctx, "playback.flac", hashed),
+    made = ctx.publish_artifact("playback", input_hash, _flac(ctx, "playback.flac", hashed),
                                 "playback.flac", provenance=build_provenance(
                                     inputs={"source": ref["source_sha256"]},
                                     versions={"proxy": PROXY_VERSION},
@@ -231,24 +246,8 @@ def proxy(job, ctx):
             "size_bytes": made.size_bytes, "checksum": made.checksum}
 
 
-def export(job, ctx):
-    sides = job.input_ref["songs"]
-    hashes = []
-    for number, side in enumerate(sides):
-        hashes.append(_checked(ctx, side, f"song{number}"))
-        engine_handlers._fetch(ctx, side["analysis_key"], f"song{number}_analysis",
-                               f"song{number}.npz")
-    versions = {"analysis": ANALYSIS_VERSION, "render": RENDER_VERSION, "export": EXPORT_VERSION}
-    input_hash = engine_handlers._hash({"songs": hashes, **versions})
-    made = ctx.publish("export", input_hash, _write(ctx, "mix.flac", {"songs": hashes}),
-                       "mix.flac", provenance=build_provenance(inputs={"songs": hashes},
-                                                               versions=versions))
-    return {"input_hash": input_hash, "keys": made.keys, "songs": len(sides),
-            "size_bytes": made.size_bytes, "checksum": made.checksum}
-
-
 HANDLERS = {"analyse.song": analyse, "seam.render": seam, "play.proxy": proxy,
-            "export.render": export}
+            "export.render": render_export}
 POOL_TYPES = {"cpu-heavy": {"analyse.song", "seam.render"}, "cpu-light": {"play.proxy"},
               "export": {"export.render"}}
 
@@ -301,12 +300,34 @@ def test_every_hosted_job_type_completes_through_the_real_gateway_and_worker_cli
     assert mix["complete"] is True
     assert [part["kind"] for part in mix["parts"]] == ["song", "seam", "song"]
 
-    asked = hosted_render.request_export(world.engine, world.work, world.workspace, ids)
-    assert asked["state"] == "queued"
+    asked = hosted_export.request_export(world.engine, world.work, world.workspace, order,
+                                         client=world.storage, buckets=Buckets())
+    assert asked["state"] == "queued" and asked["parts_total"] == 4
+    # the export names the timeline the player plays: its files, cuts and levels
+    with world.engine.connect() as conn:
+        job = conn.execute(sa.select(jobs).where(jobs.c.type == "export.render")).mappings().one()
+    timeline = job["input_ref"]["timeline"]
+    played = [part for part in mix["parts"] if part["seconds"] > 0]
+    assert [(p["kind"], p["from_s"], p["seconds"]) for p in timeline] == [
+        (p["kind"], p["from_s"], p["seconds"]) for p in played]
+    assert [p["gain_db"] for p in timeline if p["kind"] == "song"] == [
+        p["gain_db"] for p in played if p["kind"] == "song"]
+    assert job["input_ref"]["objects"] == [p["key"] for p in timeline]
+    assert job["idempotency_key"] == f"hosted-export:{job['input_ref']['output']['input_hash']}"
+    again = hosted_export.request_export(world.engine, world.work, world.workspace, order,
+                                         client=world.storage, buckets=Buckets())
+    assert again["job_id"] == asked["job_id"]  # asking twice makes one job
     assert len(drain(world, "export")) == 1
-    done = hosted_render.export_status(world.engine, world.workspace, asked["job_id"],
+    done = hosted_export.export_status(world.engine, world.workspace, asked["job_id"],
                                        client=world.storage, buckets=Buckets())
     assert done["state"] == "ready" and done["url"].startswith(f"https://{STORAGE}/")
+    with world.engine.connect() as conn:
+        result = conn.execute(sa.select(jobs.c.result).where(jobs.c.id == asked["job_id"])).one()
+    assert result.result["parts"] == 3 and result.result["songs"] == 2
+    # asked again once made: the stored file is handed over, nothing is rendered again
+    once_more = hosted_export.request_export(world.engine, world.work, world.workspace, order,
+                                             client=world.storage, buckets=Buckets())
+    assert once_more["state"] == "ready" and once_more["job_id"] == asked["job_id"]
 
     with world.engine.connect() as conn:
         kinds = sorted(conn.execute(sa.select(artifacts.c.kind)).scalars())
