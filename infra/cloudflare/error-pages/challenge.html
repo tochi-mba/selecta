@@ -16,9 +16,15 @@ p{margin:0 0 16px}
 .soft{color:var(--soft);font-size:14px}
 button{min-height:44px;padding:10px 18px;border:1px solid #16140e;border-radius:8px;
 background:var(--lime);color:var(--lime-ink);font:600 16px/1 inherit;cursor:pointer}
+button[aria-busy=true]{cursor:progress;opacity:.8}
 a{color:inherit}
 code{user-select:all}
-</style></head><body><main><p class="brand"><svg width="40" height="40" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="96" fill="#100f0c"/><circle cx="256" cy="256" r="192" fill="#e8ff3a"/><circle cx="256" cy="256" r="51" fill="#100f0c"/></svg>SelectaDJ</p><h1>One moment</h1><p>SelectaDJ is checking this browser before it carries on.</p>::CF_WIDGET_BOX::<p class="soft">Reference to quote: <code id="ref"></code></p><p class="soft"><a id="mail" href="mailto:support@selectadj.app">Contact support</a> at support@selectadj.app</p></main><script>
+.mark .disc,.mark .hole{transform-box:fill-box;transform-origin:center}
+@media (prefers-reduced-motion:no-preference){
+.mark .disc{animation:feel-mark-settle .56s cubic-bezier(.2,.9,.3,1.16) both}
+.mark .hole{animation:feel-mark-settle .4s .2s cubic-bezier(.2,.9,.3,1.16) both}}
+@keyframes feel-mark-settle{from{opacity:0;transform:scale(.4)}}
+</style></head><body><main><p class="brand"><svg class="mark" width="40" height="40" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="96" fill="#100f0c"/><circle class="disc" cx="256" cy="256" r="192" fill="#e8ff3a"/><circle class="hole" cx="256" cy="256" r="51" fill="#100f0c"/></svg>SelectaDJ</p><h1>One moment</h1><p>SelectaDJ is checking this browser before it carries on.</p>::CF_WIDGET_BOX::<p class="soft">Reference to quote: <code id="ref"></code></p><p class="soft"><a id="mail" href="mailto:support@selectadj.app">Contact support</a> at support@selectadj.app</p></main><script>
 (function(){var l='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=new Uint8Array(8),c='';
 if(window.crypto&&crypto.getRandomValues)crypto.getRandomValues(r);
 for(var i=0;i<8;i++)c+=l[r[i]%l.length];var ref='R-'+c.slice(0,4)+'-'+c.slice(4),

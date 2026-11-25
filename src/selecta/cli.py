@@ -15,6 +15,7 @@ from rich.table import Table
 
 from selecta import db
 from selecta.admin.cli import admin_app as _admin_app
+from selecta.cli_progress import progress_bar
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, load_settings
 from selecta.persistence import make_engine
 
@@ -195,23 +196,27 @@ def analyse(
     console.print(f"Models loaded in {time.perf_counter() - started:.1f} s. {len(songs)} to go.")
 
     failures = 0
-    for number, item in enumerate(songs, 1):
-        if from_app and not song:
-            wait_while_mix_renders(settings.home)
-        if db.is_analysed(conn, item["id"], ANALYSIS_VERSION) and not refresh:
-            continue  # someone asked for it by name while this was working through the list
-        result = analyse_song(conn, settings, item, analysers)
-        name = f"{item['artist'] or '?'} - {item['title']}"
-        if result is None:
-            failures += 1
-            console.print(f"{number}/{len(songs)} [red]failed[/] {name}", highlight=False)
-            continue
-        grid = result.grid
-        console.print(
-            f"{number}/{len(songs)} {result.timings['total']:5.1f}s "
-            f"{grid.bpm:6.1f} BPM {result.key.camelot:>3} conf {grid.confidence:.2f} {name}",
-            highlight=False,
-        )
+    with progress_bar(console, "Analysing", len(songs)) as moved:
+        for number, item in enumerate(songs, 1):
+            if from_app and not song:
+                wait_while_mix_renders(settings.home)
+            if db.is_analysed(conn, item["id"], ANALYSIS_VERSION) and not refresh:
+                # someone asked for it by name while this was working through the list
+                moved(number, len(songs))
+                continue
+            result = analyse_song(conn, settings, item, analysers)
+            moved(number, len(songs))
+            name = f"{item['artist'] or '?'} - {item['title']}"
+            if result is None:
+                failures += 1
+                console.print(f"{number}/{len(songs)} [red]failed[/] {name}", highlight=False)
+                continue
+            grid = result.grid
+            console.print(
+                f"{number}/{len(songs)} {result.timings['total']:5.1f}s "
+                f"{grid.bpm:6.1f} BPM {result.key.camelot:>3} conf {grid.confidence:.2f} {name}",
+                highlight=False,
+            )
     elapsed = time.perf_counter() - started
     console.print(f"Done in {elapsed / 60:.1f} min. {failures} failed.")
 
@@ -291,11 +296,14 @@ def lyrics(limit: int = typer.Option(0, help="Stop after this many songs. 0 mean
 
     _, conn = _open()
 
-    def progress(number: int, total: int, status: str, name: str) -> None:
-        if number % 25 == 0 or number == total:
-            console.print(f"{number}/{total} {status:12s} {name}", highlight=False)
+    with progress_bar(console, "Looking up lyrics", 0) as moved:
 
-    counts = fetch_all(conn, limit, progress)
+        def progress(number: int, total: int, status: str, name: str) -> None:
+            moved(number, total)
+            if number % 25 == 0 or number == total:
+                console.print(f"{number}/{total} {status:12s} {name}", highlight=False)
+
+        counts = fetch_all(conn, limit, progress)
     console.print(counts)
     rows = conn.execute("SELECT status, COUNT(*) AS n FROM lyrics GROUP BY status").fetchall()
     console.print({row["status"]: row["n"] for row in rows})

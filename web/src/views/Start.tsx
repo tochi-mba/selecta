@@ -8,6 +8,8 @@ import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { SetupSteps } from './Setup';
 import { useKeyboardInset } from '../shell/Shell';
 import { words } from '../copy';
+import { Meter } from '../ui/Meter';
+import { useFeelOn } from './feelPieces';
 
 /** What to try next, for each reason a folder can't be read. */
 const WHAT_TO_TRY: Record<FolderCheck['kind'], string> = {
@@ -130,6 +132,7 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
   };
 
   const busy = scanning || submitting;
+  const feel = useFeelOn();
   return (
     <main className="page start setup" id="main">
       <SetupSteps stage="connect" />
@@ -165,6 +168,9 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
         {scanning && (
           <div className="setup-scan">
             <p role="status">Finding music in your folder{scan.folder ? `, ${scan.folder}` : ''}. You can keep using your PC.</p>
+            {/* ADR-0477: how many files are left is not known while the folder is read, so the bar
+                only says that it is going, never how far */}
+            {feel && <Meter className="setup-scan-meter" label="Finding music" showLabel={false} valueText="Reading your folder" />}
             {cannotStop
               ? <p className="hint">This version of SelectaDJ can’t stop partway. It’s safe to leave it running.</p>
               : <Action working="Stopping…" run={stop}>Stop reading this folder</Action>}

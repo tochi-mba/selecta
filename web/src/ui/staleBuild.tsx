@@ -119,11 +119,12 @@ export function useStale(): boolean {
   return now;
 }
 
-/** What shows where a page could not be fetched. */
+/** What shows where a page could not be fetched. It arrives once (data-arrive, ADR-0477), which only
+ * moves while the feel's motion is on. Reload has no busy state: the page is replaced at once. */
 export function StaleBuildPanel() {
   const again = reloadedBefore();
   return (
-    <main className="page stale-build" id="main">
+    <main className="page stale-build" id="main" data-arrive="">
       <h1 className="display small">{again ? 'This page still will not open.' : 'SelectaDJ has been updated.'}</h1>
       <p className="lede" role="alert">{again
         ? 'Check your connection, then reload. If it keeps happening, contact support.'
