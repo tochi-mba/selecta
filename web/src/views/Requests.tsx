@@ -18,7 +18,6 @@ import { BrowserRequests, useRoomLive, waitingCount as countWaiting } from './Br
 export type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
   | 'waiting' | 'searching' | 'approve' | 'preparing' | 'ready';
-
 type Transition = { from: string; to: string; key: string; status: string; label?: string };
 
 export type RequestRow = {
