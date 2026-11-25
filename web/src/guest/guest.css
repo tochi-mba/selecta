@@ -186,12 +186,14 @@ h1:focus { outline: none; }
 .g-now-by { margin: var(--space-hair) 0 0; color: var(--soft); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .g-next { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--hair); }
 .g-next h2 { margin-bottom: 0; }
-/* three bars that rise and fall while music plays; still when it is paused or nothing is on */
+/* three bars that say music is playing; low and soft when it is paused or nothing is on */
 .g-eq { display: inline-flex; align-items: flex-end; gap: var(--space-hair); height: 0.9em; }
 .g-eq i { width: 3px; height: 100%; border-radius: var(--radius-hair); background: currentColor; transform-origin: bottom; transform: scaleY(0.45); }
-.g-eq[data-on] i { animation: g-eq var(--motion-loop-working) ease-in-out infinite alternate; }
-.g-eq[data-on] i:nth-child(2) { animation-delay: calc(var(--motion-loop-working) / -3); }
-.g-eq[data-on] i:nth-child(3) { animation-delay: calc(var(--motion-loop-working) / -1.5); }
+/* While music plays the bars stand at three heights and stay still: the room feed carries no tempo
+   or beat, and nothing musical may move on a timer (ADR-0477 rule 4). */
+.g-eq[data-on] i:nth-child(1) { transform: scaleY(0.6); }
+.g-eq[data-on] i:nth-child(2) { transform: scaleY(1); }
+.g-eq[data-on] i:nth-child(3) { transform: scaleY(0.8); }
 
 /* Lists: a tile, two lines, then one control */
 .g-list { list-style: none; margin: 0; padding: 0; }
@@ -386,7 +388,6 @@ button[aria-busy="true"]::after { content: ''; position: absolute; inset: auto 0
 @keyframes g-breathe { 50% { opacity: 0.45; } }
 @keyframes g-working { 0% { transform: translateX(-100%) scaleX(0.4); } 100% { transform: translateX(100%) scaleX(0.4); } }
 @keyframes g-turn { to { transform: rotate(360deg); } }
-@keyframes g-eq { to { transform: scaleY(1); } }
 /* Reduced motion: nothing moves. Every keyframe above only animates from a start state, so the
    resting state (a drawn check, a settled row) is what shows. */
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

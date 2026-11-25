@@ -1,4 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../../feel/indicator';
+import { DrawnTick, useMotionOn } from '../../views/feelPieces';
 import { timeZones } from '../forms/VenueForm';
 import { businessOn, PATHS } from '../context';
 import { VENUE_TABS, type VenueTab } from '../copy/venue';
@@ -28,6 +30,12 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
   const [error, setError] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsMessage, setDetailsMessage] = useState('');
+  // A save that lands draws a tick beside "Venue details saved." (ADR-0477); keyed to draw again.
+  const [detailsSaved, setDetailsSaved] = useState(0);
+  const moving = useMotionOn();
+  // The section strip's line slides to the chosen section; aria-current still carries the choice.
+  const sections = useRef<HTMLElement>(null);
+  useSlidingIndicator(sections, '[aria-current="page"]');
   // kiosk pairing and health ride on business.kiosk (ADR-0445); off, the tab shows tablets only
   const kioskOn = businessOn(ctx.org.features, 'business.kiosk');
   if (!venue) return <section className="biz biz-stack"><h1>Venue unavailable</h1><p>This venue does not exist or is outside your access.</p></section>;
@@ -50,6 +58,7 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
           await ctx.bizApi.updateVenue(venue.id, { name, timezone: String(fields.get('timezone')) });
           await ctx.refresh();
           setDetailsMessage('Venue details saved.');
+          setDetailsSaved((count) => count + 1);
         } catch {
           setDetailsMessage("Venue details couldn't be saved. Try again.");
         } finally {
@@ -63,12 +72,13 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
           </select></label>
           <button type="submit">Save venue details</button>
         </fieldset>
-        <p role="status">{detailsMessage}</p>
+        <p role="status">{moving && detailsSaved > 0 && detailsMessage === 'Venue details saved.' && <DrawnTick key={detailsSaved} className="biz-saved-tick" />}{detailsMessage}</p>
       </form>
     </details>}
     {kioskOn && <PlayerAlerts venueId={venue.id} />}
-    <nav className="biz-row" aria-label="Venue sections">
+    <nav ref={sections} className="biz-row" aria-label="Venue sections">
       {(Object.keys(VENUE_TABS) as VenueTab[]).filter((key) => key !== 'requests' || businessOn(ctx.org.features, 'business.rooms')).filter((key) => key !== 'rules' || businessOn(ctx.org.features, 'business.content_controls')).filter((key) => schedulesOn || !SCHEDULE_TABS.includes(key)).filter((key) => key !== 'music' || (entitlementsOn && ctx.api != null)).map((key) => <button key={key} type="button" aria-current={key === chosen ? 'page' : undefined} onClick={() => ctx.go(PATHS.venue(ctx.org.id, venue.id, key))}>{VENUE_TABS[key]}</button>)}
+      <span className={INDICATOR_CLASS} aria-hidden="true" />
     </nav>
     {chosen === 'now' && <NowTab venue={venue} disabled={disabled} />}
     {chosen === 'today' && <TodayTab venue={venue} />}

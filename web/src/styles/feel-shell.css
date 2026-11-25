@@ -1,0 +1,305 @@
+/* The feel system (ADR-0477): the feel system applied to the Shell: rail, phone tab bar, context bar, mini player, command palette, banners.
+ * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
+ * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md.
+ * Where a rule must replace an existing look (the static selected fill, an existing animation) it
+ * carries the specificity it needs, and is still scoped, so with the flags off nothing changes. */
+
+/* ---- always: wrappers that take no room until their feel is on ---- */
+
+/* Play's wrapper holds the beat ring. Without music it is not a box at all, so the bar is laid out
+   exactly as it was. */
+:where(.mini-play) { display: contents; }
+
+/* ---- rail and phone tab bar: one mark that slides (feel/indicator.ts, Shell RailList) ---- */
+
+/* The mark is the list's last item, absolutely placed, under the places (the list is its own layer,
+   so z-index -1 sits above the bar's background and below the words). It copies the current
+   place's own look: the tinted pill, and in Cloud the lime marker at its start. The radius is
+   divided by the scale, so the corners stay round however far it stretches. */
+:where(:root[data-feel~='motion']) .shell .nav ul[data-indicator] { isolation: isolate; }
+:root[data-feel~='motion'] .shell .nav ul[data-indicator] > li.feel-indicator {
+  position: absolute;
+  z-index: -1;
+  flex: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--radius-sm) / var(--ind-w)) / calc(var(--radius-sm) / var(--ind-h));
+  background: var(--surface-control);
+}
+@media (min-width: 761px) {
+  :root[data-feel~='motion'] .shell[data-mode='cloud'] .nav ul[data-indicator] > li.feel-indicator {
+    background:
+      linear-gradient(var(--selected), var(--selected)) 0 50% / calc(var(--marker) / var(--ind-w)) calc(100% - var(--space-2) * 2 / var(--ind-h)) no-repeat,
+      var(--surface-control);
+  }
+}
+/* the phone's Cloud tab bar marks the current tab with a short line along its top, and no fill */
+@media (max-width: 760px) {
+  :root[data-feel~='motion'] .shell[data-mode='cloud'] .nav ul[data-indicator] > li.feel-indicator {
+    border-radius: 0;
+    background: linear-gradient(var(--selected), var(--selected)) 50% 0 / calc(var(--space-6) / var(--ind-w)) calc(var(--marker) / var(--ind-h)) no-repeat;
+  }
+}
+/* while the mark is drawn it carries the choice's fill and marker, so the place's own are dropped;
+   in forced colours the mark is not drawn and the place keeps its own */
+@media (forced-colors: none) {
+  :root[data-feel~='motion'] .shell .nav ul[data-indicator] li :is(a, button)[aria-current='page'] { background: none; }
+  :root[data-feel~='motion'] .shell .nav ul[data-indicator] li :is(a, button)[aria-current='page']::before { content: none; }
+}
+
+/* The current place's icon pops as it becomes current (the phone's tabs "fill"). */
+:where(:root[data-feel~='motion']) .shell .nav li :is(a, button)[aria-current='page'] > .ui-icon {
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both;
+}
+
+/* Icons nudge toward their words on hover and keyboard focus; the row itself never moves. */
+:where(:root[data-feel~='motion']) .shell .nav li :is(a, button) > .ui-icon {
+  transition: translate var(--motion-spring-snappy) var(--spring-bouncy);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='motion']) .shell .nav li :is(a, button):hover > .ui-icon { translate: var(--space-hair) 0; }
+}
+:where(:root[data-feel~='motion']) .shell .nav li :is(a, button):focus-visible > .ui-icon { translate: var(--space-hair) 0; }
+
+/* Collapse and expand: the rail's width springs (the rail is fixed, so only its own rows are laid
+   out again; the page takes its new margin at once). Words fade in as it opens. */
+@media (min-width: 761px) {
+  :root[data-feel~='motion'] .shell .nav[data-rail-move] {
+    overflow-x: hidden;
+    transition: width var(--motion-spring-snappy) var(--spring-gentle);
+  }
+  :root[data-feel~='motion'] .shell .nav[data-rail-move='opening'] :is(.nav-label, .brand-word) {
+    animation: feel-rail-label var(--motion-spring-snappy) var(--motion-ease) both;
+  }
+}
+
+/* Listen's playing bars stand in the icon's place while a song plays (music only). */
+:where(:root[data-feel~='music']) .shell .nav :is(a, button):has(> .nav-bars) > .ui-icon { display: none; }
+:where(:root[data-feel~='music']) .shell .nav .nav-bars {
+  flex: none;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  justify-content: center;
+}
+
+/* The account menu grows out of its button (it opens upward, or to the right when collapsed). */
+:root[data-feel~='motion'] .shell .nav-account-menu[data-motion='pop'] {
+  transform-origin: bottom left;
+  animation: feel-menu-grow var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+
+/* ---- context bar ---- */
+
+/* The page's name slides in when the page changes (the crumb is keyed by its words). */
+:where(:root[data-feel~='motion']) .context-bar .crumbs li:last-child {
+  animation: feel-crumb-in var(--motion-spring-snappy) var(--spring-gentle) both;
+}
+/* The bell rings once when new activity arrives (Shell re-keys it on each rise). */
+:where(:root[data-feel~='motion']) .context-bar .ui-icon.feel-ring {
+  transform-origin: 50% 10%;
+  animation: feel-ring var(--motion-spring-release) var(--motion-ease) both;
+}
+
+/* ---- mini player ---- */
+
+/* It rises on a spring when playback starts and sinks, faster, when it ends (ui/exitMotion.ts takes
+   it away when the sink ends). While sinking it is inert, so nothing under a press is lost. */
+:root[data-feel~='motion'] .shell .mini {
+  animation: feel-dock-rise var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+:root[data-feel~='motion'] .shell .mini[data-closing] {
+  pointer-events: none;
+  animation: feel-dock-sink var(--motion-exit-drawer) var(--motion-ease) both;
+}
+/* Play and Pause turn into each other (the glyph is keyed by the state). */
+:where(:root[data-feel~='motion']) .shell .mini .round > .ui-icon {
+  animation: feel-glyph-swap var(--motion-spring-snappy) var(--spring-bouncy) both;
+}
+/* A new song's title slides up into place. */
+:where(:root[data-feel~='motion']) .shell .mini-song > b {
+  animation: feel-title-in var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+
+/* With music on, Play's wrapper becomes the box the beat ring is drawn round. */
+:where(:root[data-feel~='music']) .mini-play {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: var(--radius-pill);
+}
+
+/* The cover beside the title (Cloud), in the song link, so pressing it opens Listen too. */
+.shell .mini-song:has(> .mini-art) {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+.shell .mini-song:has(> .mini-art) > :not(.mini-art) { grid-column: 2; }
+/* the Cloud link sets its gap to 0, so the cover keeps its own distance from the words */
+.shell .mini-song > .mini-art {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  display: inline-flex;
+  margin-inline-end: var(--space-2);
+}
+
+/* The progress line's glowing head (depth): a dot riding the line's end, moved by transform only.
+   The rider spans the line and is clipped sideways, so it never widens the page. */
+:where(:root[data-feel~='depth']) .mini-head {
+  position: absolute;
+  inset-inline: 0;
+  top: -1px;
+  height: var(--marker);
+  overflow-x: clip;
+  overflow-y: visible;
+  pointer-events: none;
+}
+:where(:root[data-feel~='depth']) .mini-head > i {
+  position: absolute;
+  inset: 0;
+}
+:where(:root[data-feel~='depth']) .mini-head > i::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  translate: -50% -50%;
+  border-radius: var(--radius-pill);
+  background: var(--playing);
+  box-shadow: var(--glow-accent);
+}
+:where(:root[data-feel~='depth'][data-low-power]) .mini-head > i::after { box-shadow: none; }
+
+/* Glass: the Cloud bar lets a little of the page show through, blurred, under depth. Not in low
+   power (no blur there), nor when the computer asks for less transparency. */
+@supports (backdrop-filter: blur(var(--blur-glass))) {
+  @media (prefers-reduced-transparency: no-preference) {
+    :root[data-feel~='depth']:not([data-low-power]) .shell[data-mode='cloud'] .mini {
+      background: color-mix(in oklch, var(--surface-panel) 92%, transparent);
+      backdrop-filter: blur(var(--blur-glass));
+    }
+  }
+}
+
+/* ---- command palette ---- */
+
+/* It grows from the Search button (CommandPalette sets the origin and data-grow) in 160ms. Its exit
+   copy keeps the attribute, so only an open panel grows. */
+:root[data-feel~='motion'] .overlay:not([data-closing]) > .overlay-panel[data-grow='palette'] {
+  animation: feel-palette-grow var(--motion-reveal) var(--spring-gentle) both;
+}
+/* One highlight: the list is its own layer and the mark sits under the rows, in the chosen row's
+   own look (its fill and the marker at its start). It glides after the mouse and jumps with keys. */
+:where(:root[data-feel~='motion']) .palette-list[data-indicator] { isolation: isolate; }
+:root[data-feel~='motion'] .palette-list[data-indicator] > .feel-indicator {
+  z-index: -1;
+  border-radius: calc(var(--radius-sm) / var(--ind-w)) / calc(var(--radius-sm) / var(--ind-h));
+  background:
+    linear-gradient(var(--selected), var(--selected)) 0 0 / calc(var(--marker) / var(--ind-w)) 100% no-repeat,
+    var(--surface-selected);
+}
+:root[data-feel~='motion'] .palette-list[data-indicator][data-moved-by='keys'] > .feel-indicator { transition: none; }
+@media (forced-colors: none) {
+  :root[data-feel~='motion'] .palette-list[data-indicator] .palette-item.on { background: none; box-shadow: none; }
+}
+/* The hint's keycaps press down while their key is held. */
+:where(:root[data-feel~='motion']) .palette-keys kbd {
+  display: inline-block;
+  transition: translate var(--motion-feedback) var(--motion-ease), background-color var(--motion-feedback) var(--motion-ease);
+}
+:where(:root[data-feel~='motion']) .palette-keys kbd[data-held] {
+  translate: 0 var(--space-hair);
+  background-color: var(--surface-control);
+}
+
+/* ---- banners ---- */
+
+/* The connection banner and the import chip slide down from under the context bar; the banner
+   slides back up when it has nothing more to say (ConnectionBanner, the exit protocol). */
+:root[data-feel~='motion'] :is(.connection-banner:not([hidden]), .cloud-import-chip) {
+  animation: feel-banner-in var(--motion-spring-snappy) var(--spring-gentle) both;
+}
+:root[data-feel~='motion'] .connection-banner[data-closing] {
+  pointer-events: none;
+  animation: feel-banner-out var(--motion-exit-drawer) var(--motion-ease) both;
+}
+/* "Back online": the banner's edge turns the ready colour and a tick draws itself. */
+:where(:root[data-feel~='motion']) .connection-banner[data-state='online'] {
+  border-color: var(--status-ready);
+  transition: border-color var(--motion-reveal) var(--motion-ease);
+}
+:where(:root[data-feel~='motion']) .connection-banner-tick {
+  display: inline-block;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  margin-inline-end: var(--space-1);
+  vertical-align: middle;
+  fill: none;
+  stroke: var(--status-ready);
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- theme change: a circle of the new look spreads from the theme button ---- */
+
+/* Shell's useThemeReveal sets data-theme-reveal and the origin only for this one transition, so page
+   transitions (data-nav, feel-scene.css) are untouched. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-theme-reveal]::view-transition-old(root) { animation: none; }
+  :root[data-theme-reveal]::view-transition-new(root) {
+    animation: feel-theme-reveal var(--motion-spring-glide) var(--spring-gentle) both;
+  }
+}
+
+/* ---- forced colours: borders and outlines carry every state ---- */
+
+@media (forced-colors: active) {
+  :where(.mini-head, .connection-banner-tick) { display: none; }
+  :root[data-feel] .shell[data-mode='cloud'] .mini { backdrop-filter: none; }
+}
+
+@keyframes feel-rail-label {
+  from { opacity: 0; }
+}
+@keyframes feel-menu-grow {
+  from { opacity: 0; scale: 0.92; }
+}
+@keyframes feel-crumb-in {
+  from { opacity: 0; translate: var(--space-2) 0; }
+}
+@keyframes feel-ring {
+  0% { rotate: 0deg; }
+  25% { rotate: 14deg; }
+  50% { rotate: -10deg; }
+  75% { rotate: 5deg; }
+  100% { rotate: 0deg; }
+}
+@keyframes feel-dock-rise {
+  from { opacity: 0; translate: 0 100%; }
+}
+@keyframes feel-dock-sink {
+  to { opacity: 0; translate: 0 100%; }
+}
+@keyframes feel-glyph-swap {
+  from { opacity: 0; scale: 0.6; rotate: -90deg; }
+}
+@keyframes feel-title-in {
+  from { opacity: 0; translate: 0 40%; }
+}
+@keyframes feel-palette-grow {
+  from { opacity: 0; scale: 0.6; }
+}
+@keyframes feel-banner-in {
+  from { opacity: 0; translate: 0 calc(-1 * var(--space-3)); }
+}
+@keyframes feel-banner-out {
+  to { opacity: 0; translate: 0 calc(-1 * var(--space-3)); }
+}
+@keyframes feel-theme-reveal {
+  from { clip-path: circle(0% at var(--feel-reveal-x, 50%) var(--feel-reveal-y, 0%)); }
+  to { clip-path: circle(150% at var(--feel-reveal-x, 50%) var(--feel-reveal-y, 0%)); }
+}

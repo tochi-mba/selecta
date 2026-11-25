@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ExportJob, ExportJobState } from '../api';
 import { length } from '../lib';
 import { LinkIfThere } from '../shell/PageLink';
@@ -7,6 +7,9 @@ import { cancelExport, isExportActive, refreshExports, useExports } from './expo
 import { words } from '../copy';
 import { flagOn } from '../flags';
 import { clientForRequest, useRequest } from '../requestContext';
+import { Meter } from '../ui/Meter';
+import { RollingCount, useFeelOn } from './feelPieces';
+import { plainCount, useFlashOn, useFlashOnArrival } from './feelLocal';
 
 /** An interrupted export, started again from exactly what it froze. */
 async function startAgain(id: string, request: ReturnType<typeof useRequest>): Promise<void> {
@@ -41,21 +44,29 @@ function snapshotWords(job: ExportJob): string {
   return `${scope}${identity}, ${job.songs.length} songs${first && last ? `, ${first} to ${last}` : ''}${job.revision ? `, revision ${job.revision}` : ''}. Started ${when}.`;
 }
 
-function Row({ job, request }: { job: ExportJob; request: ReturnType<typeof useRequest> }) {
+function Row({ job, request, fresh = false }: { job: ExportJob; request: ReturnType<typeof useRequest>; fresh?: boolean }) {
   const stage = exportStage(job);
+  // ADR-0477: a job started since the list was drawn, or one that has just become ready, glows once
+  const row = useRef<HTMLLIElement>(null);
+  const feel = useFeelOn();
+  useFlashOnArrival(row, fresh);
+  useFlashOn(row, job.state === 'ready');
   const editor = job.scope === 'draft' && job.draft !== null ? `/mixes/drafts/${job.draft}/edit` : '/mix/current/edit';
   const again = job.state === 'interrupted' && (job as ExportJob & { can_start_again?: boolean }).can_start_again === true && flagOn('library.scan_resume');
   const needsAnother = !again && ['failed', 'interrupted', 'expired', 'cancelled'].includes(job.state);
   return (
-    <li className="export-job" data-state={job.state}>
+    <li ref={row} className="export-job" data-state={job.state} data-lift="row">
       <div className="export-job-name">
         <b>{job.mix_name}</b>
         <small className="soft">{snapshotWords(job)}</small>
       </div>
       <Status kind={stage.kind}>
         {stage.words}
-        {job.state === 'preparing' ? `, ${job.seams_ready} of ${job.seams_total} ready` : ''}
+        {job.state === 'preparing' ? <>, <RollingCount value={job.seams_ready} format={plainCount} /> of {job.seams_total} ready</> : ''}
       </Status>
+      {feel && job.state === 'preparing' && job.seams_total > 0 && (
+        <Meter className="export-job-meter" label={`Transitions prepared for ${job.mix_name}`} showLabel={false} value={job.seams_ready} max={job.seams_total} valueText={`${job.seams_ready} of ${job.seams_total} ready`} />
+      )}
       {job.state === 'preparing' && job.quiet_seconds > 600 && <p><Status kind="blocked">Nothing has finished for a while. Rendering may be waiting on your current mix or on storage room.</Status></p>}
       {job.error && !again && <p className="warn">{job.error}</p>}
       {/* library.scan_resume: the same frozen songs and transitions, started again in one press */}
@@ -101,6 +112,11 @@ export function ExportJobs({ always = false }: { always?: boolean }) {
   const request = useRequest();
   const { jobs, stale, unsupported } = useExports(request);
   const [shown, setShown] = useState(12);
+  // the exports this list has already drawn, so one that turns up later can be told apart
+  const known = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (jobs) known.current = new Set(jobs.map((job) => job.id));
+  }, [jobs]);
   if (unsupported) {
     return always ? <section className="panel stack"><h2>Exports</h2><p className="hint">{words().exportsNeedRestart}</p></section> : null;
   }
@@ -117,7 +133,7 @@ export function ExportJobs({ always = false }: { always?: boolean }) {
       {stale && <p className="warn" role="status">Can’t check on these right now, so what’s shown may be out of date.</p>}
       {!jobs.length && <p className="hint">Nothing yet. Choose Download audio while editing a mix to save it as a FLAC file.</p>}
       {going > 0 && <p className="hint">These keep going if you close this or reload. Your mix always renders first.</p>}
-      {!!jobs.length && <ul className="export-jobs">{jobs.slice(0, shown).map((job) => <Row key={job.id} job={job} request={request} />)}</ul>}
+      {!!jobs.length && <ul className="export-jobs">{jobs.slice(0, shown).map((job) => <Row key={job.id} job={job} request={request} fresh={!!known.current && !known.current.has(job.id)} />)}</ul>}
       {jobs.length > shown && (
         <button onClick={() => setShown((count) => count + 12)}>
           Show older exports ({jobs.length - shown} more)

@@ -17,6 +17,11 @@ body { margin: 0; background: var(--surface-base); color: var(--ink); font: clam
 .k-qr svg { display: block; width: 100%; height: auto; }
 /* tap to start */
 .k-tap-button { font: inherit; font-size: 1.8em; font-weight: 800; padding: 1em 1.6em; border-radius: var(--radius-pill); border: 3px solid var(--selected); background: transparent; color: var(--ink); cursor: pointer; }
+/* Press depth on the big touch targets: a short squash while held and a spring back on release.
+   The press is fast and the release takes the spring; the hit area is the resting box, because
+   scale paints without moving layout. */
+.k-tap-button, .k-plain { transition: scale var(--motion-spring-release) var(--spring-bouncy); }
+.k-tap-button:active, .k-plain:active { scale: var(--press-scale); transition-duration: var(--motion-feedback); transition-timing-function: var(--motion-ease); }
 .k-tap-button:focus-visible, .k-plain:focus-visible, .k-corner:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
 .k-guide { display: block; margin-top: 1.5em; color: var(--soft); }
 .k-progress { height: 4px; width: 40%; margin: 1em auto; background: var(--surface-overlay); overflow: hidden; border-radius: var(--radius-hair); }
@@ -24,11 +29,13 @@ body { margin: 0; background: var(--surface-base); color: var(--ink); font: clam
 @keyframes k-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 .k-code-small { color: var(--soft); font-size: 0.8em; }
 .k-message[data-sleep="allowed"] { opacity: 0.6; }
-/* the playing motif and the saved-music mark */
+/* the playing mark and the saved-music mark. The kiosk's state carries no tempo or beat, so the
+   mark stays still (ADR-0477 rule 4: nothing musical moves on a timer); it says "playing" by being
+   there, three dots stepping up in strength. */
 .k-motif { display: flex; gap: 0.4em; justify-content: center; margin-top: 1.2em; }
 .k-motif span { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--selected); opacity: 0.5; }
-.k-motif span:nth-child(2) { animation-delay: 1s; }
-.k-motif span:nth-child(3) { animation-delay: 2s; }
+.k-motif span:nth-child(2) { opacity: 0.75; }
+.k-motif span:nth-child(3) { opacity: 1; }
 
 .k-saved { position: fixed; right: 3vmin; bottom: 3vmin; width: 1.4em; height: 1.4em; color: var(--soft); }
 /* the hidden staff corner and panel */
@@ -50,6 +57,8 @@ body { margin: 0; background: var(--surface-base); color: var(--ink); font: clam
 }
 @media (prefers-reduced-motion: reduce) {
   .k-screen { transition: none; }
-  .k-progress span, .k-motif span { animation: none; }
+  .k-progress span { animation: none; }
+  .k-tap-button, .k-plain { transition: none; }
+  .k-tap-button:active, .k-plain:active { scale: none; }
 }
 .k-room-code { margin-top: 1.2em; font-size: 1.2em; font-weight: 700; letter-spacing: 0.06em; }

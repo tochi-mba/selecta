@@ -13,6 +13,8 @@ import { levelOf, NO_SPEAKER_WORDS } from './usePlaybackDevice';
 import { countOf } from '../ui/format';
 import { PlayNoticeLine } from './PlayNoticeLine';
 import type { PlayNotice } from './useWhereToPlay';
+import { CoverArt } from '../views/CoverArt';
+import { useFeelPart } from '../rooms/feelHooks';
 import './devices.css';
 
 // Listen on a device that is not the speaker (flag `devices.remote_control`): what is playing on
@@ -72,6 +74,10 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
 }) {
   const { view, session, current } = remote;
   const moving = advancing(view, session);
+  // ADR-0477: cover and the play and pause morph with the feel on; no beat effects, because this
+  // device makes no sound and has nothing to measure
+  const covers = useFeelPart('depth');
+  const morph = useFeelPart('motion');
   // the position moves from the session's anchor; no request is made for it
   const [, tick] = useState(0);
   useEffect(() => {
@@ -134,6 +140,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
           {/* a notice about the speaker itself is the one message about it: no second line above */}
           {!(notice && notice.deviceId === view.speaker_device_id) && <p className="remote-where" data-testid="remote-where"><Icon name={view.speaker === 'offline' ? 'warning' : 'music'} size="compact" />{whereWords(view)}</p>}
           <div className="remote-song">
+            {covers && <CoverArt seed={current.songId} songId={current.songId} size="row" />}
             <h2 dir="auto" data-testid="remote-title">{current.title}</h2>
             {current.artist && <p dir="auto" data-testid="remote-artist">{current.artist}</p>}
             {current.known && <p className="remote-place">Song {session.song_index + 1} of {session.programme.length}</p>}
@@ -171,7 +178,12 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
           </div>
           <div className="remote-transport" role="group" aria-label="Playback controls" aria-busy={remote.pending ? true : undefined} data-pending={remote.pending ?? undefined}>
             <button type="button" className="remote-step" onClick={() => void remote.previous()} aria-label="Previous" title="Previous"><Icon name="previous" /></button>
-            <button type="button" className="remote-play primary" onClick={() => void remote.toggle()} aria-label={playLabel} title={playLabel}><Icon name={remote.playing ? 'pause' : 'play'} size="hero" /></button>
+            <button type="button" className="remote-play primary" onClick={() => void remote.toggle()} aria-label={playLabel} title={playLabel}>{morph ? (
+              <span className="play-morph" data-state={remote.playing ? 'pause' : 'play'} aria-hidden="true">
+                <Icon name="play" size="hero" className="play-morph-play" />
+                <Icon name="pause" size="hero" className="play-morph-pause" />
+              </span>
+            ) : <Icon name={remote.playing ? 'pause' : 'play'} size="hero" />}</button>
             <button type="button" className="remote-step" onClick={() => void remote.next()} disabled={!remote.hasNext} aria-label="Next song" title="Next song"><Icon name="next" /></button>
           </div>
           {/* G2 (57): Stop is not Pause: it ends the music and frees the speaker */}

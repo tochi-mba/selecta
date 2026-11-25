@@ -12,6 +12,8 @@ import { SongMotif } from '../ui/MusicObjects';
 import { SongRelated } from './SongRelated';
 import { SongVersions } from './SongVersions';
 import { ViewProps } from './shared';
+import { CoverArt } from './CoverArt';
+import type { CSSProperties } from 'react';
 
 const LOWEST_TEMPO = 40;
 const HIGHEST_TEMPO = 240;
@@ -57,6 +59,9 @@ export function nextStep(status: string | undefined): string {
     default: return '';
   }
 }
+
+/** Each fact's place in the arrival (feel.css data-stagger reads --i). */
+const fact = (index: number) => ({ '--i': index }) as CSSProperties;
 
 const lyricWords = (status: string | null) => (status === 'synced' ? 'Timed' : status === 'instrumental' ? 'Instrumental' : status ? 'Not timed' : 'Not looked up yet');
 
@@ -143,7 +148,11 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
   return (
     <Sheet title={song.title ?? 'Untitled'} onClose={onClose}>
       <div className="song-details-identity">
-        <SongMotif songId={song.id} />
+        {/* library.art_embedded: the song's cover, named song-art so a page that opens this song
+            can carry its own cover here; the motif alone otherwise */}
+        {flagOn('library.art_embedded')
+          ? <span className="song-details-art" data-vt="song-art"><CoverArt seed={song.id} songId={song.id} size="hero" /></span>
+          : <SongMotif songId={song.id} />}
         <div>
           <p className="song-detail-artist" dir="auto">{song.artist ?? 'Unknown artist'}</p>
           <p className="song-details-id">Recording ID {song.id}</p>
@@ -160,17 +169,17 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           ))}
         </dl>
       )}
-      <dl className="song-facts song-facts-table">
-        <div><dt>Length</dt><dd>{clock(song.duration)}</dd></div>
+      <dl className="song-facts song-facts-table" data-stagger="">
+        <div style={fact(0)}><dt>Length</dt><dd>{clock(song.duration)}</dd></div>
         {measured && (
           <>
-            <div><dt>Tempo in use</dt><dd>{song.bpm ? `${Math.round(song.bpm)} BPM` : 'Not measured yet'}{song.override_bpm ? ' (your correction)' : ''}</dd></div>
-            <div><dt>Tempo measured</dt><dd>{detectedTempo ? `${detectedTempo} BPM` : 'Not measured yet'}</dd></div>
-            <div><dt>Key in use</dt><dd>{song.camelot ?? 'Not measured yet'}{song.override_camelot ? ' (your correction)' : ''}</dd></div>
-            <div><dt>Key measured</dt><dd>{song.detected_camelot ?? 'Not measured yet'}</dd></div>
+            <div style={fact(1)}><dt>Tempo in use</dt><dd>{song.bpm ? `${Math.round(song.bpm)} BPM` : 'Not measured yet'}{song.override_bpm ? ' (your correction)' : ''}</dd></div>
+            <div style={fact(2)}><dt>Tempo measured</dt><dd>{detectedTempo ? `${detectedTempo} BPM` : 'Not measured yet'}</dd></div>
+            <div style={fact(3)}><dt>Key in use</dt><dd>{song.camelot ?? 'Not measured yet'}{song.override_camelot ? ' (your correction)' : ''}</dd></div>
+            <div style={fact(4)}><dt>Key measured</dt><dd>{song.detected_camelot ?? 'Not measured yet'}</dd></div>
           </>
         )}
-        {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>}
+        {flagOn('lyrics.lookup') && <div style={fact(5)}><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>}
       </dl>
       <SongVersions song={song} onChanged={onChanged} notify={notify} />
       {flagOn('library.related_links') && <SongRelated song={song} />}

@@ -14,7 +14,8 @@
   border-color: var(--border);
   font-weight: var(--weight-label);
   line-height: 1.25;
-  transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) var(--motion-ease);
+  /* scale is the feel's press and springy release (feel.css); nothing sets it with the feel off */
+  transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) var(--motion-ease), scale var(--press-dur, var(--motion-feedback)) var(--press-ease, var(--motion-ease));
 }
 :where(:root[data-cloud='on']) a.button { font-weight: var(--weight-label); }
 /* hover: the edge firms up and the fill lifts a step; a control with its own fill keeps it */
@@ -22,9 +23,10 @@
 :where(:root[data-cloud='on']) a.button:hover { border-color: var(--edge-interactive); }
 :where(:root[data-cloud='on']) button:where(:hover:not(:disabled)),
 :where(:root[data-cloud='on']) a.button:where(:hover) { background: var(--surface-control); }
-/* pressed: a tint over whatever the button's own colour is, inside its edge, so nothing moves */
+/* pressed: a tint over whatever the button's own colour is, inside its edge, so nothing moves; with
+   the feel's depth on, --press-depth (feel.css) keeps the resting shadow under it */
 :where(:root[data-cloud='on']) button:not(:disabled):not([aria-disabled='true']):active,
-:where(:root[data-cloud='on']) a.button:active { box-shadow: inset 0 0 0 999px color-mix(in srgb, currentColor 12%, transparent); }
+:where(:root[data-cloud='on']) a.button:active { box-shadow: inset 0 0 0 999px color-mix(in srgb, currentColor 12%, transparent), var(--press-depth, 0 0 transparent); }
 :where(:root[data-cloud='on']) button:disabled { opacity: 0.45; }
 
 /* primary: the one accent action of a view */

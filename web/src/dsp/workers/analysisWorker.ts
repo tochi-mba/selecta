@@ -12,10 +12,12 @@
 import { detectOnsets } from '../analysis/onsets';
 import { estimateKey, type KeyEstimate } from '../analysis/key';
 import { estimateTempo, type TempoEstimate } from '../analysis/tempo';
+import { integratedLoudness, samplePeakDb } from '../loudness';
 import { tonalProfile, type TonalProfile } from '../analysis/tonalProfile';
 
 /** `profile` (whole-song tonal profile, cloud.browser_harmonic) is only run when asked for. */
-export type AnalysisTask = 'onsets' | 'tempo' | 'key' | 'profile';
+/** `loudness` (the whole song's level, cloud.seam_lead) reads `channels`, not `pcm`. */
+export type AnalysisTask = 'onsets' | 'tempo' | 'key' | 'profile' | 'loudness';
 
 export interface AnalysisRequest {
   id: number;
@@ -24,6 +26,8 @@ export interface AnalysisRequest {
   pcm: Float32Array;
   /** Which estimates to run; onsets, tempo and key when omitted. */
   tasks?: AnalysisTask[];
+  /** Every channel of the song, for `loudness`; transferred, not copied. */
+  channels?: Float32Array[];
 }
 
 export interface AnalysisResponse {
@@ -32,6 +36,9 @@ export interface AnalysisResponse {
   key?: KeyEstimate;
   onsetTimes?: number[];
   profile?: TonalProfile;
+  /** Integrated loudness (BS.1770) and sample peak of `channels`. */
+  lufs?: number;
+  peakDb?: number;
   error?: string;
 }
 
@@ -51,6 +58,10 @@ export function analyse(request: AnalysisRequest): AnalysisResponse {
     }
     if (tasks.has('key')) {
       response.key = estimateKey(request.pcm, request.sampleRate);
+    }
+    if (tasks.has('loudness') && request.channels?.length) {
+      response.lufs = integratedLoudness(request.channels, request.sampleRate);
+      response.peakDb = samplePeakDb(request.channels);
     }
     if (tasks.has('profile')) {
       response.profile = tonalProfile(request.pcm, request.sampleRate);

@@ -25,6 +25,12 @@ import { PlayedTransitions, playedKey, StemSurfacesContext } from './liveTransit
 import { FirstHandoff } from './FirstHandoff';
 import { Strip, StripPlaceholder } from './NowStrip';
 import { CoverArt } from './CoverArt';
+import { setBeatGrid } from '../feel/beatBus';
+import { handoverProgress } from '../feel/hue';
+import { tick } from '../feel/haptics';
+import { ListenHero } from './ListenHero';
+import { LiveBlend, nearSeam } from './LiveBlend';
+import { BeatSpot, PlayMorph } from './feelBits';
 
 /** Fit the complete music title to its actual column, not the viewport.
  * Keep it in the accessibility tree and allow more lines at extreme zoom. */
@@ -194,7 +200,7 @@ function TransitionCountdown({
     return <section className="handoff pending"><span className="eyebrow">Next transition</span><b>Preparing the hand-off</b><span>{nextTitle}</span><i className="pending-line" /></section>;
   }
   if (inSeam) {
-    const progress = Math.max(0, Math.min(1, (time - seamAt) / Math.max(switchAt ?? 0, 0.01)));
+    const progress = handoverProgress(time, seamAt, switchAt);
     return (
       <section className="handoff active" aria-label={`Transition into ${nextTitle} is playing`}>
         <div className="handoff-title"><span className="eyebrow">Transition in progress</span><b>{nextTitle}</b></div>
@@ -714,6 +720,7 @@ export function Now(props: ViewProps) {
           ? `Paused · ${mixName}`
           : mixName;
   const shown = detail && detail.id === item?.song_id ? detail : null;
+  useEffect(() => { setBeatGrid(gridOf(shown)); return () => setBeatGrid(null); }, [shown]);
   const waiting = waitingRequestCount(requests?.requests);
 
   const showChanged = changed && changed.id === next?.song_id ? changed : null;
@@ -742,23 +749,24 @@ export function Now(props: ViewProps) {
     <main ref={page} tabIndex={-1} className={`page now ${now.inSeam ? 'in-seam' : ''} ${stage ? 'stage' : ''} ${lyricFocus && !stage ? 'lyric-focus' : ''}`} id="main">
       <div className="listen-layout">
         <div className="listen-main">
-          <header className="listen-identity">
-            {item && !stage && <CoverArt seed={item.song_id} songId={item.song_id} size="hero" />}
+          <ListenHero item={item} stage={stage}>
             <p className="eyebrow">{eyebrow}</p>
             <TrackTitle title={songTitle(item)} songId={item?.song_id} stage={stage} />
             {item && <RequestTag item={item} />}
             <p className="artist" dir="auto">{songArtist(item)}</p>
-          </header>
+          </ListenHero>
 
           {!stage && (
             <>
               {/* SF-0209-02: Previous, Play/Pause and Next are one named group; Play/Pause is its one primary */}
               <div className="transport" role="group" aria-label="Song controls">
-                {withKey('Previous song (P)', <button aria-label="Previous song" title={keys ? undefined : 'Previous song'} disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>)}
+                {withKey('Previous song (P)', <button aria-label="Previous song" title={keys ? undefined : 'Previous song'} disabled={idle} data-nudge="back" onClick={() => void player.previous()}><Icon name="previous" /></button>)}
                 <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
+                  <PlayMorph playing={now.phase === 'playing'} />
                   {resumable ? `Resume from ${transportClock(now.songTime)}` : playLabel(now.phase)}
+                  <BeatSpot kind="ring" />
                 </button>
-                {withKey('Go straight to the next song (Shift+N)', <button aria-label="Next song" title={keys ? undefined : 'Next song'} aria-keyshortcuts={keys ? 'Shift+N' : undefined} disabled={idle || !next} onClick={() => void player.next()}><Icon name="next" /></button>)}
+                {withKey('Go straight to the next song (Shift+N)', <button aria-label="Next song" title={keys ? undefined : 'Next song'} aria-keyshortcuts={keys ? 'Shift+N' : undefined} disabled={idle || !next} data-nudge="forward" onClick={() => void player.next()}><Icon name="next" /></button>)}
               </div>
               <div className="transport-more">
                 {withKey('Shortcut: N', (
@@ -796,9 +804,11 @@ export function Now(props: ViewProps) {
               phrase={on('listen.handoff_phrase') && !tail ? provenPhrase : undefined}
             />
           )}
+          <LiveBlend now={now} leaving={leaving} entering={entering} detail={shown}
+            peaksOf={analysisAvailable === false ? waveformOf : (id) => get<SongDetail>(`/songs/${id}`).then((data) => data.peaks)} />
 
           {!stage && (next ? (
-            <section className="next-up">
+            <section className="next-up" data-blend-near={nearSeam(now) || undefined}>
               <p className="eyebrow">Up Next</p>
               {editing ? (
                 <button className="next-song" onClick={() => setView('Edit')}>
@@ -899,10 +909,10 @@ export function Now(props: ViewProps) {
               </fieldset>
               )}
               {thumbs && (
-                <div className="thumbs" role="group" aria-label="Rate that transition">
+                <div className="thumbs feel-pop" role="group" aria-label="Rate that transition">
                   <span>How was that transition?</span>
-                  <Action waiting={rateBusy} run={() => rate('good')}>Good</Action>
-                  <Action waiting={rateBusy} run={() => rate('bad')}>Bad</Action>
+                  <Action waiting={rateBusy} run={() => { tick(); return rate('good'); }}>Good</Action>
+                  <Action waiting={rateBusy} run={() => { tick(); return rate('bad'); }}>Bad</Action>
                 </div>
               )}
               {steering && (

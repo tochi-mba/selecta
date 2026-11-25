@@ -17,7 +17,9 @@
 .room-plan { font: var(--type-label); border: var(--separator) solid currentColor; border-radius: var(--radius-pill); padding: var(--space-hair) var(--space-2); margin-left: var(--space-dense); }
 .room-note { color: var(--text-soft); font-size: var(--text-sm); }
 .room-panel button { display: inline-flex; gap: var(--space-2); align-items: center; justify-content: center; white-space: nowrap; transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-feedback) var(--motion-ease); }
-.room-panel button:active:not(:disabled), .asks button:active:not(:disabled) { transform: scale(0.97); }
+/* With the feel's press on (feel.css squashes every button to --press-scale), this one stands down,
+   so a button never squashes twice; :where keeps the selector's weight as it was. */
+:where(:root:not([data-feel~='motion'])) .room-panel button:active:not(:disabled), :where(:root:not([data-feel~='motion'])) .asks button:active:not(:disabled) { transform: scale(0.97); }
 .room-panel button, .room-panel select, .room-panel input:not([type="checkbox"]) { min-height: var(--control-height); }
 .room-panel select { max-width: 100%; width: 100%; }
 .room-panel button.quiet, .asks button.quiet, .ask-list button.quiet { background: none; border-color: transparent; color: var(--text-soft); }

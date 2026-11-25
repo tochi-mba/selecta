@@ -118,7 +118,7 @@ export function AdminTable<T>({ caption, rows, cols, rowKey, onOpen, openLabel, 
       <div className="admin-table" role="region" aria-label={caption}>
         {chooser}
         {sorted.length === 0 ? empty : <ul className="admin-cards">{sorted.map((row) => (
-          <li key={rowKey(row)}><dl>{shown.map((col, i) => <div key={col.key}><dt>{col.label}</dt><dd>{cell(row, col, i)}</dd></div>)}</dl></li>
+          <li key={rowKey(row)} data-lift="row"><dl>{shown.map((col, i) => <div key={col.key}><dt>{col.label}</dt><dd>{cell(row, col, i)}</dd></div>)}</dl></li>
         ))}</ul>}
       </div>
     );
@@ -139,7 +139,7 @@ export function AdminTable<T>({ caption, rows, cols, rowKey, onOpen, openLabel, 
         })}</tr></thead>
         <tbody>
           {sorted.length === 0 && <tr><td colSpan={shown.length}>{empty}</td></tr>}
-          {sorted.map((row) => <tr key={rowKey(row)}>{shown.map((col, i) => <td key={col.key} className={col.numeric ? 'numeric' : undefined}>{cell(row, col, i)}</td>)}</tr>)}
+          {sorted.map((row) => <tr key={rowKey(row)} data-lift="row">{shown.map((col, i) => <td key={col.key} className={col.numeric ? 'numeric' : undefined}>{cell(row, col, i)}</td>)}</tr>)}
         </tbody>
       </table>
     </div>

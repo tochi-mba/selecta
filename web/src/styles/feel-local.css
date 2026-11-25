@@ -1,0 +1,117 @@
+/* The feel system (ADR-0477): the feel system applied to the local app only: first scan, export, Workspace jobs, errors and the not-found page.
+ * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
+ * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md. */
+
+/* ---------- First scan (views/Setup.tsx, Start.tsx, ScanReveals.tsx) ----------
+   Each readiness row is a label and a count; its bar (drawn only with the feel on, from the real
+   counts) runs under both. Reading a folder has no known total, so its bar is the Meter's own
+   indeterminate one. */
+:where(:root[data-feel]) .readiness-steps > li > .readiness-meter {
+  grid-column: 1 / -1;
+}
+:where(:root[data-feel]) .setup-scan > .setup-scan-meter {
+  inline-size: min(100%, 24rem);
+}
+
+/* The phrase two songs share is lit like the current lyric word (foundation.css .current-word),
+   and with motion it lights up a moment after its row has arrived. */
+:where(:root[data-feel~='depth']) .scan-reveals .scan-reveal-word {
+  padding-inline: 0.06em;
+  border-radius: var(--radius-hair);
+  background: var(--word-fill);
+  color: var(--word-ink);
+  text-shadow: 0 0 var(--space-5) var(--word-glow);
+}
+:where(:root[data-feel~='depth'][data-feel~='motion']) .scan-reveals .scan-reveal-word {
+  animation: feel-word-light var(--motion-slow) var(--motion-ease) both;
+  animation-delay: calc(var(--motion-spring-snappy) + min(var(--i, 0), 8) * var(--motion-stagger));
+}
+@keyframes feel-word-light {
+  from { background-color: transparent; color: inherit; text-shadow: none; }
+}
+
+/* Once the library is ready, Make my first mix is the one lime peak of the actions (rule 7). */
+:where(:root[data-feel~='depth']) [data-handoff] > a.button.primary:not(:hover, :active, :focus-visible) {
+  box-shadow: var(--glow-accent);
+}
+
+/* ---------- The celebration's holder (views/feelLocal.tsx MomentLayer) ----------
+   The row or notice that holds it is positioned only while it is there. */
+:where(:root[data-feel]) :where(.row, .notice):has(> .feel-local-moment) {
+  position: relative;
+}
+:where(:root[data-feel]) .feel-local-moment {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ---------- Export (views/ExportPanel.tsx, ExportJobs.tsx) ----------
+   The stage list as a stepper: every stage keeps a start edge, lit on the stage the job is at;
+   stages it has passed carry a drawn tick (feel-draw through .feel-tick, feel.css). */
+:where(:root[data-feel]) .export-stages[data-stepper] > li {
+  border-inline-start: var(--marker) solid transparent;
+}
+:where(:root[data-feel]) .export-stages[data-stepper] > li[aria-current='step'] {
+  border-inline-start-color: var(--selected);
+}
+:where(:root[data-feel~='motion']) .export-stages[data-stepper] > li {
+  transition: border-color var(--motion-fast) var(--motion-ease);
+}
+:where(:root[data-feel]) .export-stages .export-stage-tick {
+  margin-inline-end: var(--space-1);
+  vertical-align: middle;
+  color: var(--status-ready);
+}
+:where(:root[data-feel]) .export-stages .export-stage-meter,
+:where(:root[data-feel]) .export-job > .export-job-meter {
+  margin-block-start: var(--space-1);
+}
+
+/* The finished file: the download is the one glowing action, and the press is answered by a tick. */
+:where(:root[data-feel]) [data-export-ready] > .export-download {
+  margin-inline-start: var(--space-1);
+}
+:where(:root[data-feel~='depth']) [data-export-ready] > .export-download:not(:hover, :active, :focus-visible) {
+  box-shadow: var(--glow-accent);
+}
+:where(:root[data-feel]) [data-export-ready] > .export-download-tick {
+  margin-inline-start: var(--space-1);
+  vertical-align: middle;
+  color: var(--status-ready);
+}
+
+/* ---------- Workspace jobs (views/WorkshopPanels.tsx) ----------
+   A row is a label and a status at .job-list's two tracks (shell.css); its bar sits under the
+   status, on the status track, and takes the whole row where the tracks stack on a phone. */
+:where(:root[data-feel]) .job-list > li > .job-meter {
+  grid-column: 2;
+}
+@media (max-width: 560px) {
+  :where(:root[data-feel]) .job-list > li > .job-meter {
+    grid-column: 1;
+  }
+}
+
+/* ---------- Not found (App.tsx) ----------
+   The blend drawing's "missing" variant under the way back, as on Cloud's not-found page. */
+:where(:root[data-feel]) .feel-local-missing {
+  max-inline-size: 30rem;
+  margin-block-start: var(--space-6);
+}
+:where(:root[data-feel]) .feel-local-missing > .welcome-art {
+  inline-size: 100%;
+}
+
+/* ---------- Forced colours ----------
+   Borders and outlines carry every state; the lit word and the glows would only be noise. */
+@media (forced-colors: active) {
+  :where(:root[data-feel]) .scan-reveals .scan-reveal-word {
+    text-shadow: none;
+    animation: none;
+  }
+  :where(:root[data-feel]) [data-handoff] > a.button.primary,
+  :where(:root[data-feel]) [data-export-ready] > .export-download {
+    box-shadow: none;
+  }
+}
