@@ -414,7 +414,11 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     const everyVersion = async (entries: { id: number; expected: boolean }[]) => {
       const grouping = await grouped();
       const rawNever = new Map(grouping.files.map((file) => [file.id, file.never === true]));
-      return entries.flatMap((entry) => grouping.versionsOf(entry.id).map((id) => ({ id, expected: rawNever.get(id) === true })));
+      return entries.flatMap((entry) => {
+        const ids = grouping.versionsOf(entry.id);
+        // one file: what the page showed; several: each file's own mark (the row shows the song's)
+        return ids.length === 1 ? [entry] : ids.map((id) => ({ id, expected: rawNever.get(id) === true }));
+      });
     };
     const toggle = route.match(/^\/songs\/(\d+)\/never$/);
     if (toggle) {
