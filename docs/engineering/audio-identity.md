@@ -191,9 +191,9 @@ An upload (`storage/catalogue_link.py`) still finds its song by the row's own ha
 item "An upload of a re-tagged copy becomes its own catalogue song"). The browser computes the audio id in the same read as the file hash where the file is hashed
 whole (up to 64 MB), and in a second streamed pass otherwise (`audioIdentity.fileIdentity`). It
 keeps the id beside the file hash (derived kind `audio`, version `a1`, keyed by the file hash), so
-a file already seen is not read again. A file the import memo recognises without reading is read
-once for its audio id, and the id is kept and sent only if the bytes still hash to the remembered
-hash. Older catalogue rows fill in when a device next imports or rescans the file.
+a file already seen is not read again. A file the import memo recognises without reading is never
+read for it: it sends a kept id or none. Older catalogue rows fill in when a device next really
+hashes the file (a new browser, a changed file, a folder picked afresh) and registers it.
 
 With the flag off the columns exist (migrations are not feature switches) but stay empty and are
 never read or matched, and the server drops any `audio_id` it is sent.

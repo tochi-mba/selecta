@@ -108,7 +108,7 @@ export class ImportFingerprints {
         this.remembered.set(hit.sha, list);
         this.recognisedCount += 1;
         const found = { sha: hit.sha, how: 'memo' as const, ms: Math.round(now() - started), bytesRead: 0 };
-        return audio ? { ...found, ...(await this.rememberedAudio(file, hit.sha, signal)) } : found;
+        return audio ? { ...found, ...(await this.keptAudio(hit.sha)) } : found;
       }
       if (audio) {
         // one read gives both, where the file fits in memory (audioIdentity.fileIdentity)
@@ -128,17 +128,12 @@ export class ImportFingerprints {
     });
   }
 
-  /** The audio id of a remembered file: kept beside its hash if this browser read it before;
-   * else read now, once, and kept only when the file's bytes still hash to the remembered sha
-   * (the memo rule: nothing is kept under a hash these bytes were not just hashed to). */
-  private async rememberedAudio(file: File, sha: string, signal?: AbortSignal): Promise<{ audioId?: string | null; bytesRead?: number }> {
+  /** The audio id of a remembered file, when this browser kept one beside its hash. A remembered
+   * file is never read for it (the memo's whole point); one without a kept id goes without, and
+   * gets it the next time its bytes are really hashed. */
+  private async keptAudio(sha: string): Promise<{ audioId?: string | null }> {
     const kept = await this.derived.get<AudioRecord>('audio', AUDIO_ID_VERSION, sha);
-    if (kept) return { audioId: kept.audio_id };
-    const both = await fileIdentity(file, { signal });
-    if (both.sha !== sha) return { bytesRead: file.size };
-    this.computed.add(sha);
-    await this.derived.put('audio', AUDIO_ID_VERSION, sha, { audio_id: both.audioId } satisfies AudioRecord);
-    return { audioId: both.audioId, bytesRead: file.size };
+    return kept ? { audioId: kept.audio_id } : {};
   }
 
   /** True when this run only has the memo's word for `sha` (no file with these bytes was read). */
