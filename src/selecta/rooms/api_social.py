@@ -77,9 +77,18 @@ class Social:
         self.features = features
         self.pulses = pulses.PulseCache()
         # Each feature adds its own part: to the pulse, to a guest's own view, to the screen.
-        self.extras: list[pulses.Extra] = []
-        self.guest_parts: list[Callable[[GuestView, Mapping[str, bool]], Mapping[str, Any]]] = []
-        self.screen_parts: list[Callable[[DisplayView], Mapping[str, Any]]] = []
+        self.extras: list[pulses.Extra] = [
+            lambda conn, room, pulse: _round_extra(self, conn, room, pulse),
+            _dedication_extra,
+            _reactions_extra,
+        ]
+        self.guest_parts: list[Callable[[GuestView, Mapping[str, bool]], Mapping[str, Any]]] = [
+            lambda seen, on: _mine(self, seen, on),
+            _lines_offered,
+        ]
+        self.screen_parts: list[Callable[[DisplayView], Mapping[str, Any]]] = [
+            lambda shown: _screen_recap(self, shown),
+        ]
         self._lock = threading.Lock()
         self._standing: dict[str, tuple[float, str]] = {}
 
@@ -204,10 +213,7 @@ def install_guest_routes(
         social.active(ref)
         return social.pulse(ref.workspace_id, ref.room_id)
 
-    social.guest_parts.append(lambda seen, on: _mine(social, seen, on))
-
     # Pick the next song (rooms.rounds): one vote each between the songs the room was offered.
-    social.extras.append(lambda conn, room, pulse: _round_extra(social, conn, room, pulse))
 
     @app.post("/api/guest/rooms/{room_id}/rounds/{round_id}/vote")
     def guest_round_vote(
@@ -228,8 +234,6 @@ def install_guest_routes(
         }
 
     # Dedications (rooms.dedications): one listed line on the guest's own waiting request.
-    social.extras.append(_dedication_extra)
-    social.guest_parts.append(_lines_offered)
 
     def dedicate(room_id: str, request_id: str, request: Request, line: str | None) -> dict:
         token, ref = tap(request, room_id)
@@ -252,7 +256,6 @@ def install_guest_routes(
         return dedicate(room_id, request_id, request, None)
 
     # Tonight in numbers (rooms.recap): the room's totals, once it has ended.
-    social.screen_parts.append(lambda shown: _screen_recap(social, shown))
 
     @app.get("/api/guest/rooms/{room_id}/recap")
     def guest_recap(room_id: str, request: Request) -> dict[str, Any]:
@@ -268,7 +271,6 @@ def install_guest_routes(
         return {"recap": built, "lines": recap_rules.lines(built) if built else []}
 
     # Reactions (rooms.reactions): a love for the playing song, or for the blend into it.
-    social.extras.append(_reactions_extra)
 
     def tapped(token: str, ref: GuestRef, body: TapBody, *, on: bool) -> dict[str, Any]:
         social.offered(ref, "reactions")
