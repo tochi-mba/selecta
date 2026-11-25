@@ -26,12 +26,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
-from selecta.ai import gateway, registry
+from selecta.ai import gateway, registry, usage_units, usage_windows
 from selecta.ai.allowance import month_resets_at
 from selecta.ai.registry import Provider, RequestClass, Tier
 from selecta.ai.runs import Outcome
+from selecta.ai.schema import ai_runs
+from selecta.ai.usage_mode import Rules
 from selecta.billing import plans, stripe_sync
 from selecta.lucy import cloud_health, cloud_prompt, cloud_store, cloud_tools, cloud_world
 from selecta.lucy.providers import (
@@ -142,7 +145,7 @@ def _seed_once(conn) -> None:
 
 def admit(
     conn, workspace_id: str, conversation_id: str, text: str, *, timezone: str | None,
-    tier: Tier | None = None,
+    tier: Tier | None = None, rules: Rules | None = None,
 ) -> gateway.TurnPlan:
     """Plan the turn inside the caller's workspace transaction. Raises `gateway.TurnRefused`."""
     _seed_once(conn)
@@ -150,7 +153,7 @@ def admit(
         conn, workspace_id=workspace_id, tier=tier or tier_of(conn, workspace_id),
         request_class=request_class(text), prompt_version=cloud_prompt.PROMPT_VERSION,
         tool_schema_version=cloud_tools.TOOL_SCHEMA_VERSION, conversation_id=conversation_id,
-        timezone=timezone or "UTC",
+        timezone=timezone or "UTC", rules=rules,
     )
 
 
@@ -341,6 +344,36 @@ def _resets_words(job: Job) -> str:
     return f"{when.day} {when:%B}"
 
 
+def _reset_words(meter: dict | None, window: str) -> str | None:
+    line = meter.get(window) if meter else None
+    words = line.get("back_words") if line else None
+    return f"at {words}" if words and words[0].isdigit() else words
+
+
+def _lighter_notice(job: Job) -> str | None:
+    with transaction(job.engine, job.workspace_id) as conn:
+        now = db_now(conn)
+        meter = usage_units.read_model(conn, job.workspace_id, now=now)
+        reset = _reset_words(meter, "session")
+        if not reset:
+            return None
+        ends_at = meter["session"]["resets_at"]
+        first = conn.scalar(
+            sa.select(ai_runs.c.id)
+            .where(
+                ai_runs.c.workspace_id == job.workspace_id,
+                ai_runs.c.limited == "lighter",
+                ai_runs.c.started_at >= ends_at - usage_windows.SESSION_SECONDS,
+                ai_runs.c.started_at < ends_at,
+            )
+            .order_by(ai_runs.c.started_at, ai_runs.c.id)
+            .limit(1)
+        )
+    if first == job.plan.run_id:
+        return f"A lighter Lucy is answering until this session ends {reset}."
+    return None
+
+
 def builtin_words(job: Job, ctx: cloud_tools.CloudCtx) -> str:
     """What Lucy says when no model answers this turn: why, and what still works."""
     limited = job.plan.limited
@@ -353,6 +386,13 @@ def builtin_words(job: Job, ctx: cloud_tools.CloudCtx) -> str:
         why = (f"You've reached your plan's monthly limit on Lucy's AI, which is separate from "
                f"your turns, so I can't think this one through. It comes back on "
                f"{_resets_words(job)}.")
+    elif limited in {"session", "week"}:
+        with transaction(job.engine, job.workspace_id) as conn:
+            meter = usage_units.read_model(conn, job.workspace_id, now=db_now(conn))
+        reset = _reset_words(meter, limited)
+        why = f"You've used all of Lucy's allowance for this {limited}."
+        if reset:
+            why += f" It comes back {reset}."
     elif limited == "platform":
         why = "Lucy's AI is very busy right now, so I can't think this one through."
     else:
@@ -379,6 +419,8 @@ async def run_turn(job: Job) -> None:
     changed = _plan_change(job)
     if changed:
         events.emit("run.limit", {"limit": "plan", "text": changed})
+    if plan.limited == "lighter" and (notice := _lighter_notice(job)):
+        events.emit("run.limit", {"limit": "lighter", "text": notice})
     ctx = cloud_tools.CloudCtx(job.engine, job.workspace_id, job.user_id, job.conversation_id,
                                job.turn_id, proposals_on=job.proposals_on)
 

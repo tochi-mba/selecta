@@ -29,6 +29,7 @@ from urllib.parse import urlsplit
 from sqlalchemy.engine import Connection
 
 from selecta.admin import state as emergency_state
+from selecta.ai import usage_mode, usage_units, usage_windows
 from selecta.ai.allowance import (
     bucket_for,
     classes_from,
@@ -36,6 +37,7 @@ from selecta.ai.allowance import (
     month_key,
     record_usage,
     refund_turn,
+    start_turn_unchecked,
     try_start_turn,
 )
 from selecta.ai.registry import (
@@ -65,6 +67,8 @@ from selecta.ai.spend import (
     reserve,
     turn_limits,
 )
+from selecta.ai.usage_events import emit_usage_for_enforced_run
+from selecta.billing.stripe_sync import effective_entitlement
 from selecta.persistence import db_now, new_id
 
 SecretLookup = Callable[[str], str | None]
@@ -118,7 +122,7 @@ class TurnPlan:
     lease_id: str
     fallback_used: bool
     limited: str | None
-    """Why this turn got less than asked: "allowance", "spend", "platform", "no_model" or None."""
+    """Why Lucy stepped down, reached a limit, or fell back to the built-in planner."""
     alerts: tuple[SpendAlert, ...] = ()
     skipped: tuple[tuple[str, str], ...] = ()
 
@@ -140,7 +144,7 @@ class ProviderSettings:
 
     def lucy_config(self, user_config: Mapping[str, Any]) -> dict[str, Any]:
         """The person's Lucy settings (phases, privacy) with provider and budgets from server
-        policy in place of theirs, the way cloud mode hides them (�9.5)."""
+        policy in place of theirs, the way cloud mode hides them (§9.5)."""
         config = copy.deepcopy(dict(user_config))
         config["provider"] = dict(self.provider)
         config["budgets"] = dict(self.budgets)
@@ -221,11 +225,65 @@ def _cheaper_route(
     return None
 
 
+def _enforced_route(
+    conn: Connection, *, workspace_id: str, run_id: str, tier: Tier, plan_id: str,
+    routing: RoutingVersion, deployments: Mapping[str, Deployment], health: HealthPort,
+    needs: frozenset[str], policy: PlatformPolicy, now: float, room_usd: float,
+    alerts: list[SpendAlert],
+) -> tuple[RoutedDeployment | None, float, str | None, str | None]:
+    # Under the unit model, the request classifier cannot affect routing, admission or price.
+    route_class = RequestClass.EVERYDAY
+    primary = choose_route(deployments, routing, tier, route_class, workspace_id, health, needs)
+    route = primary
+    lighter = False
+    limited = None
+    while not route.deployment.is_builtin:
+        cap = turn_limits(route.deployment, tier).max_cost_usd
+        if cap > room_usd:
+            limited = "spend"
+            cheaper = _cheaper_route(
+                deployments, routing, tier, route_class, workspace_id, health, needs, route, room_usd,
+            )
+            if cheaper is None:
+                return None, 0.0, None, limited
+            route = cheaper
+            cap = turn_limits(route.deployment, tier).max_cost_usd
+        reservation = reserve(conn, cap, policy, now)
+        alerts.extend(reservation.alerts)
+        if not reservation.admitted:
+            from selecta.observability import metrics
+
+            metrics.add("selecta_spend_ceiling_hits_total", ceiling="ai_platform")
+            return None, 0.0, None, "platform"
+        cause = usage_units.reserve_enforced(
+            conn, workspace_id=workspace_id, run_id=run_id, plan_id=plan_id, tier=tier.value,
+            now=now, allow_lighter=lighter, reserved_units=usage_windows.to_units(cap),
+        )
+        if cause not in {"week", "session"}:
+            return route, reservation.amount_usd, reservation.day, cause or limited
+        alerts.extend(reconcile(conn, reservation.day, reservation.amount_usd, 0.0, policy))
+        if cause == "week" or tier is Tier.FREE or lighter:
+            return None, 0.0, None, cause
+
+        first = deployments.get(primary.first_choice or "")
+        fallback = first.fallback_id if first is not None else None
+        if not fallback or fallback == BUILTIN_ID:
+            return None, 0.0, None, "session"
+        lighter = True
+        lighter_routing = RoutingVersion(routing.version, {tier.value: {route_class.value: [fallback]}})
+        route = replace(
+            choose_route(deployments, lighter_routing, tier, route_class, workspace_id, health, needs),
+            first_choice=primary.first_choice, fallback_used=True,
+        )
+    return None, 0.0, None, "no_model"
+
+
 def plan_turn(
     conn: Connection, *, workspace_id: str, tier: Tier | str, request_class: RequestClass | str,
     prompt_version: str, tool_schema_version: str, conversation_id: str | None = None,
     health: HealthPort | None = None, policy: PlatformPolicy | None = None,
     needs: Iterable[str] = DEFAULT_NEEDS, timezone: str | None = "UTC",
+    rules: usage_mode.Rules | None = None,
 ) -> TurnPlan:
     """Admit and pin one turn. Call inside `persistence.transaction(engine, workspace_id)`;
     any error rolls every step back, so a refused turn never leaves a count or a lease."""
@@ -255,12 +313,30 @@ def plan_turn(
         )
     routing = active_routing(conn)
     spent = month_cost(conn, workspace_id, month)
+    mode = usage_mode.mode_for(conn, workspace_id, rules, now)
+    enforced = mode == usage_mode.ENFORCED
     chosen: RoutedDeployment | None = None
     bucket: RequestClass | None = None
     reserved, spend_day, limited = 0.0, None, None
     alerts: list[SpendAlert] = []
     used_up: set[RequestClass] = set()
-    for candidate in classes_from(requested):
+    if enforced:
+        entitlement = effective_entitlement(conn, workspace_id, now)
+        # Keep the rollback counters live without using them to decide admission. Acquire
+        # their lock before the platform reservation, in the same order as settlement.
+        bucket = start_turn_unchecked(conn, workspace_id, tier, requested, month)
+        chosen, reserved, spend_day, limited = _enforced_route(
+            conn, workspace_id=workspace_id, run_id=run_id, tier=tier, plan_id=entitlement.plan_id,
+            routing=routing, deployments=deployments, health=health, needs=needs, policy=policy,
+            now=now, room_usd=tier_limits.monthly_cost_ceiling_usd + CAP_TOLERANCE_USD - spent,
+            alerts=alerts,
+        )
+        if chosen is None:
+            refund_turn(conn, workspace_id, month, bucket)
+            bucket = None
+        else:
+            chosen = replace(chosen, request_class=requested)
+    for candidate in (() if enforced else classes_from(requested)):
         route = choose_route(deployments, routing, tier, candidate, workspace_id, health, needs)
         if route.deployment.is_builtin:
             chosen, limited = route, limited or "no_model"
@@ -314,15 +390,14 @@ def plan_turn(
         allowance_class=bucket, fallback_used=chosen.fallback_used, limited=limited,
         lease_id=lease_id, spend_day=spend_day, reserved_usd=reserved,
     )
-    from selecta.ai import usage_mode, usage_units
-    from selecta.billing.stripe_sync import effective_entitlement
-
-    if usage_mode.mode_for(conn, workspace_id, None, now) == usage_mode.SHADOW:
+    if mode == usage_mode.SHADOW:
         entitlement = effective_entitlement(conn, workspace_id, now)
         usage_units.record_shadow(
             conn, workspace_id=workspace_id, run_id=run_id,
             plan_id=entitlement.plan_id, tier=tier.value, now=now,
         )
+    elif enforced and not chosen.deployment.is_builtin:
+        emit_usage_for_enforced_run(conn, workspace_id, run_id, now=now)
     return TurnPlan(
         run_id=run_id, workspace_id=workspace_id, conversation_id=conversation_id, tier=tier,
         request_class=chosen.request_class, requested_class=requested, allowance_class=bucket,
@@ -418,13 +493,13 @@ def _close(
         alerts = reconcile(conn, run.spend_day, run.reserved_usd, platform_cost, policy)
     if run.lease_id is not None:
         release_lease(conn, run.lease_id)
-    from selecta.ai import usage_units
-
-    usage_units.settle(
+    now = db_now(conn)
+    if usage_units.settle(
         conn, run_id=run.id, outcome=outcome.value,
         charged_units=usage_units.charge_for(outcome.value, account_cost),
-        answered_deployment_id=answered_id, now=db_now(conn),
-    )
+        answered_deployment_id=answered_id, now=now,
+    ):
+        emit_usage_for_enforced_run(conn, run.workspace_id, run.id, now=now)
     return TurnSummary(run.id, outcome, platform_cost, alerts, False, account_cost, answered_id)
 
 

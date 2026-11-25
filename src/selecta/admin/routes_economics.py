@@ -28,7 +28,7 @@ from selecta.flags import flip_guard
 from selecta.flags.matching import Rule, RuleKind
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now
-from selecta.usage import lucy_ceiling, unit_economics
+from selecta.usage import lucy_ceiling, lucy_usage_report, unit_economics
 
 MAX_DAYS = 120
 
@@ -69,6 +69,18 @@ def install_routes(
             authorize(conn, actor, "platform.dashboard.read")
             until = db_now(conn)
             return lucy_ceiling.measure(conn, until - days * 86_400, until)
+
+        return {"report": run(request, claims, read)}
+
+    @app.get("/api/admin/economics/lucy-usage")
+    def admin_lucy_usage(request: Request, claims: SignedIn, days: int = 28):
+        if not 1 <= days <= MAX_DAYS:
+            raise HTTPException(400, detail={"code": "bad_days", "message": f"1 to {MAX_DAYS}."})
+
+        def read(conn: Connection, actor: Actor) -> dict[str, Any]:
+            authorize(conn, actor, "platform.dashboard.read")
+            until = db_now(conn)
+            return lucy_usage_report.measure(conn, until - days * lucy_usage_report.SECONDS_PER_DAY, until)
 
         return {"report": run(request, claims, read)}
 

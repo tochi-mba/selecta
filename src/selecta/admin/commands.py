@@ -279,6 +279,47 @@ def grant_override(
             "expires_at": expires_at}
 
 
+def set_lucy_multiplier(
+    conn: Connection, actor: Actor, *, workspace_id: str, reason: str,
+    multiplier_milli: int | None,
+) -> dict[str, Any]:
+    """Change a workspace's allowance factor without discarding its usage."""
+    from selecta.ai import usage_units
+    from selecta.ai.usage_schema import lucy_usage_state
+
+    reason = _need_reason(reason)
+    resource = ResourceRef("workspace", workspace_id, workspace_id)
+    permission = "billing.overrides.create"
+    authorize(conn, actor, permission, resource)
+    ensure_not_own_workspace(conn, actor, permission, [workspace_id])
+    if multiplier_milli is not None and not 0 <= multiplier_milli <= 100_000:
+        raise ValueError("The Lucy multiplier must be between 0 and 100,000 thousandths.")
+    if conn.scalar(sa.select(workspaces.c.id).where(workspaces.c.id == workspace_id)) is None:
+        raise LookupError(f"There's no workspace {workspace_id!r}.")
+
+    now = db_now(conn)
+    plan_id = stripe_sync.effective_entitlement(conn, workspace_id, now).plan_id
+    usage_units.ensure_state(conn, workspace_id, plan_id=plan_id, now=now)
+    usage_units.roll(conn, workspace_id, plan_id=plan_id, now=now)
+    scope = lucy_usage_state.c.workspace_id == workspace_id
+    row = conn.execute(sa.select(lucy_usage_state).where(scope).with_for_update()).one()
+    target = usage_units.targets(
+        row.plan_id, catalogue_version=row.catalogue_version,
+        override_multiplier_milli=multiplier_milli,
+    )
+    conn.execute(lucy_usage_state.update().where(scope).values(
+        override_multiplier_milli=multiplier_milli,
+        week_limit=target.week_limit,
+        session_limit=target.session_limit if row.session_limit is not None else None,
+        updated_at=now,
+    ))
+    _audit(
+        conn, actor, "admin.lucy.multiplier", resource, reason,
+        before_multiplier_milli=row.override_multiplier_milli, multiplier_milli=multiplier_milli,
+    )
+    return {"workspace_id": workspace_id, "multiplier_milli": multiplier_milli}
+
+
 def revoke_override(conn: Connection, actor: Actor, override_id: str, *, reason: str,
                     intent: safety.Intent = NO_INTENT) -> dict:
     reason = _need_reason(reason)
