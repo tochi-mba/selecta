@@ -10,7 +10,6 @@ import { handOnStartupStatus } from './startupStatus';
 import { BrandMark } from './ui/BrandMark';
 import { cloudShellOpened } from './cloud/offlineShell';
 import { prefetchLibrary } from './views/libraryPrefetch';
-import { changeScene } from './shell/sceneTransition';
 import { useFeelOn } from './views/feelPieces';
 
 const CloudRoot = lazy(() => import('./cloud/CloudRoot').then((module) => ({ default: module.CloudRoot })));
@@ -68,13 +67,9 @@ export function RuntimeApp() {
           }
         }
         setTrying(false);
-        // ADR-0477: the waiting screen hands over to the app as a scene change, so the brand mark
-        // can travel; changeScene changes at once, exactly as before, whenever it cannot animate
-        const mark = document.querySelector('main.cloud-runtime-message > .brand-mark-badge');
-        changeScene(() => setMode(next), document, window, {
-          share: mark ? [[mark, 'brand-mark']] : [],
-          ready: () => (next === 'cloud' && !CloudRoot.loaded() ? CloudRoot.preload() : null),
-        });
+        // The app arrives at once. A view transition here froze the screen for seconds on a slow
+        // computer, because the browser holds the old picture until the whole app has rendered.
+        setMode(next);
       })
       .catch(() => {
         if (!current) return;

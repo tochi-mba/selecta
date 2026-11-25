@@ -5,6 +5,7 @@ import { SetPlayer } from '../player';
 import { fakeBackend, status } from '../test/backend';
 import { Library } from './Library';
 import type { Undo } from './shared';
+import { feelOff } from '../test/feel';
 
 /** GP-0258: exact-scope batch Library actions. Range selection, exact IDs, and an Undo only for
  * what the batch really changed. */
@@ -29,6 +30,8 @@ const box = (title: string) => screen.getByRole('checkbox', { name: new RegExp(`
 
 describe('GP-0258 exact-scope batch actions', () => {
   it('GP-0258-03 Shift selects the range of loaded recordings between two checkboxes, in the order shown', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     fakeBackend({ 'GET /library': page(...['A', 'B', 'C', 'D', 'E'].map((title, index) => row(index + 1, title))) });
     show();
     await screen.findByText('E');

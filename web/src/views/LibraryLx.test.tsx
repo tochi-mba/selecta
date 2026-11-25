@@ -8,6 +8,7 @@ import { setPrefs } from '../state/prefs';
 import { fakeBackend, Reply, songs, status } from '../test/backend';
 import { Library } from './Library';
 import { nextStep } from './SongDetails';
+import { feelOff } from '../test/feel';
 
 type Row = ReturnType<typeof row>;
 const row = (id: number, title: string, more: Record<string, unknown> = {}) => ({
@@ -229,6 +230,8 @@ describe('LX-0342-05 a slow old answer never replaces the newest search or takes
 
 describe('LX-0347-02, LX-0347-03 selection says exactly what it covers', () => {
   it('0, 1 and 200 selected: the rail appears only for a real selection and names loaded, not all results', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     const many = Array.from({ length: 201 }, (_, index) => row(index + 1, `Song ${index + 1}`));
     fakeBackend({ 'GET /library': { songs: many, total: 20000, next: 'after-201' } });
     show();

@@ -51,6 +51,7 @@ const NOT_SHOWN: Record<string, string> = {
   usePaletteSongs: 'the palette\'s song search, off in the specimen (no server reads)',
   // ui/primitives.tsx
   moveInGrid: 'arrow-key arithmetic for grids', VISUALLY_HIDDEN: 'the class name VisuallyHidden applies',
+  growFrom: 'the arrival origin behind every menu and popover shown here (ADR-0477)', staggerIn: 'the first-open arrival behind every menu shown here (ADR-0477)', useListHighlight: 'the sliding highlight behind every menu and listbox shown here (ADR-0477)',
   // ui/seam.ts
   seamLayers: 'seam data for the inspector', seamFacts: 'seam data for the inspector',
   // ui/Skeleton.tsx

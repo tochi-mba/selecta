@@ -6,6 +6,7 @@ import { SetPlayer } from '../player';
 import { setPrefs } from '../state/prefs';
 import { fakeBackend, songs, status } from '../test/backend';
 import { Library } from './Library';
+import { feelOff } from '../test/feel';
 
 const row = (id: number, title: string) => ({
   id,
@@ -425,6 +426,8 @@ describe('correcting a song', () => {
 
 describe('contextual selection controls', () => {
   it('shows bulk actions only for a real selection and returns focus to the compact entry when cleared', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     fakeBackend({ 'GET /library': page(row(1, 'First'), row(2, 'Second')) });
     show();
     await screen.findByText('First');
@@ -442,6 +445,8 @@ describe('contextual selection controls', () => {
   });
 
   it('selects at most 200 loaded IDs, not the whole filtered library', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     const many = Array.from({ length: 201 }, (_, index) => row(index + 1, `Song ${index + 1}`));
     fakeBackend({ 'GET /library': { songs: many, total: 20000, next: 'after-201' } });
     show();

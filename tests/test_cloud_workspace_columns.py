@@ -48,6 +48,10 @@ GLOBAL_TABLES: dict[str, str] = {
     "rate_buckets": "platform-wide limits on outside services, shared by every workspace",
     "business_pilots": "platform staff pilot grants created before a tenant is activated",
     "shared_derivations": "machine derivations of file bytes shared by fingerprint (ADR-0469)",
+    "catalog_lookups": "one lookup per normalised song, shared by every account (ADR-0478)",
+    "catalog_recordings": "public MusicBrainz recording facts (CC0), naming no account",
+    "catalog_releases": "public MusicBrainz release facts (CC0), naming no account",
+    "catalog_art": "covers fetched once for a release and shared by every account (ADR-0478)",
 }
 
 # Tables with a `workspace_id` that may be empty, because some rows belong to no workspace yet.

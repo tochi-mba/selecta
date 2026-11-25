@@ -94,4 +94,34 @@ describe('FL-0477-06 the sliding indicator', () => {
     expect(screen.getByRole('tablist').style.getPropertyValue('--ind-w')).toBe('');
     BOXES.One = { ...BOXES.One, width: 80 };
   });
+
+  it('picks up a strip that is drawn after the first render, and follows a ref that moves', () => {
+    function Late() {
+      const strip = useRef<HTMLDivElement>(null);
+      const [shown, setShown] = useState(0);
+      useSlidingIndicator(strip, '[aria-selected="true"]');
+      return (
+        <>
+          <button onClick={() => setShown((n) => n + 1)}>Show</button>
+          {shown > 0 && (
+            <div key={shown} ref={strip} role="tablist" data-box="strip">
+              <button role="tab" data-box={shown === 1 ? 'One' : 'Two'} aria-selected="true">Tab</button>
+              <span className={INDICATOR_CLASS} aria-hidden="true" />
+            </div>
+          )}
+        </>
+      );
+    }
+    render(<Late />);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show' }));
+    const first = screen.getByRole('tablist');
+    expect(first.style.getPropertyValue('--ind-w')).toBe('80.0');
+    // a new strip element (re-keyed) is followed, and the old one is left clean
+    fireEvent.click(screen.getByRole('button', { name: 'Show' }));
+    const second = screen.getByRole('tablist');
+    expect(second).not.toBe(first);
+    expect(second.style.getPropertyValue('--ind-w')).toBe('120.0');
+    expect(second.style.getPropertyValue('--ind-x')).toBe('80.0px');
+  });
 });

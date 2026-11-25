@@ -47,7 +47,10 @@ test.beforeEach(async ({ request }) => {
   await resetMix(request);
 });
 
-test('MP-0296-03 hovered and pressed controls never move out from under the pointer', async ({ page }) => {
+test('MP-0296-03 hovering never moves a control, and a press never shrinks its hit area', async ({ page }) => {
+  // ADR-0477 rule 3 (superseding ADR-0296's pressed half): a hovered control's box never changes; a
+  // pressed control may squash to --press-scale, but every point of its resting box still lands on it
+  // while pressed, and its box is back within half a pixel after release.
   await page.setViewportSize({ width: 1440, height: 900 });
   let measured = 0;
   for (const route of ['/mixes', '/library', '/mix/current/edit', '/workshop']) {
@@ -58,6 +61,9 @@ test('MP-0296-03 hovered and pressed controls never move out from under the poin
     for (let index = 0; index < count; index += 1) {
       const button = page.locator('main button:visible').nth(index);
       if (!(await button.isEnabled())) continue;
+      // feel.css gives these no hit pad on purpose (their ::after already draws something), so the
+      // resting-box half is checked only where the code promises it
+      const padless = await button.evaluate((node) => node.matches("[aria-busy='true'], [data-working], [data-glow], .studio-cell, .inspector-resize, .nav *"));
       const before = await button.boundingBox();
       if (!before || before.y < 0 || before.y + before.height > 900) continue;
       const centre = { x: before.x + before.width / 2, y: before.y + before.height / 2 };
@@ -66,19 +72,30 @@ test('MP-0296-03 hovered and pressed controls never move out from under the poin
       const hovered = await button.boundingBox();
       await page.mouse.down();
       await page.waitForTimeout(150);
-      const pressed = await button.boundingBox();
-      const under = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.outerHTML.slice(0, 60) ?? null, centre);
+      // nine points of the resting box, each 2px inside: centre, four edge midpoints and four corners
+      const inset = 2;
+      const xs = [before.x + inset, centre.x, before.x + before.width - inset];
+      const ys = [before.y + inset, centre.y, before.y + before.height - inset];
+      const points = xs.flatMap((x) => ys.map((y) => ({ x, y })));
+      const missed = padless ? [] : await button.evaluate((node, probes) => probes
+        .filter(({ x, y }) => {
+          const hit = document.elementFromPoint(x, y);
+          return !hit || !(hit === node || node.contains(hit));
+        })
+        .map(({ x, y }) => `${Math.round(x)},${Math.round(y)}`), points);
       // let go somewhere inert, so nothing is actually pressed
       await page.mouse.move(2, 899);
       await page.mouse.up();
+      await page.waitForTimeout(700);
+      const released = await button.boundingBox();
       const name = `${route} button ${index}`;
-      for (const [state, box] of [['hovered', hovered], ['pressed', pressed]] as const) {
+      for (const [state, box] of [['hovered', hovered], ['released', released]] as const) {
         expect(Math.abs(box!.x - before.x), `${name} ${state} moved sideways`).toBeLessThanOrEqual(0.5);
         expect(Math.abs(box!.y - before.y), `${name} ${state} moved down`).toBeLessThanOrEqual(0.5);
         expect(Math.abs(box!.width - before.width), `${name} ${state} changed width`).toBeLessThanOrEqual(0.5);
         expect(Math.abs(box!.height - before.height), `${name} ${state} changed height`).toBeLessThanOrEqual(0.5);
       }
-      expect(under, `${name}: the pointer left the control`).not.toBeNull();
+      expect(missed, `${name}: points of the resting box left the control while it was pressed`).toEqual([]);
       measured += 1;
       await page.keyboard.press('Escape');
     }
