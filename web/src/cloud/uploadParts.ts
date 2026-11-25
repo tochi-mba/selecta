@@ -38,6 +38,12 @@ export function resumableFor(sessions: UploadSession[], file: { size: number; sh
   return sessions.find((session) => session.size === file.size && session.sha256 === file.sha256) ?? null;
 }
 
+/** How long one part may take to send: two minutes, or the time at about 25 KB a second for a big
+ * part, whichever is longer. */
+export function partLimitMs(bytes: number): number {
+  return Math.max(120_000, Math.ceil(bytes / 25_000) * 1000);
+}
+
 /** Send the parts the server doesn't have yet, then ask it to finish. `onPart` hears each part
  * as it lands, with how many are done of how many. */
 export async function sendParts(
@@ -57,7 +63,21 @@ export async function sendParts(
     if (finished.has(number)) continue;
     const urls = await api<{ part_urls: Record<string, string> }>(`/uploads/${session.id}/parts`, { method: 'POST', body: JSON.stringify({ part_numbers: [number] }) }, workspaceId);
     const start = (number - 1) * session.part_size;
-    const response = await fetchImpl(urls.part_urls[String(number)], { method: 'PUT', body: file.slice(start, Math.min(start + session.part_size, file.size)) });
+    const body = file.slice(start, Math.min(start + session.part_size, file.size));
+    // A connection that goes silent mid-part (no reset, just nothing) left "Uploading" on screen
+    // for ever. Past a limit generous for a slow line the part counts as not sent; the parts
+    // already sent stay sent, so choosing the file again carries on from here.
+    const controller = typeof AbortController === 'undefined' ? null : new AbortController();
+    const limit = controller ? setTimeout(() => controller.abort(), partLimitMs(body.size)) : undefined;
+    let response: Response;
+    try {
+      response = await fetchImpl(urls.part_urls[String(number)], { method: 'PUT', body, ...(controller ? { signal: controller.signal } : {}) });
+    } catch (problem) {
+      if (controller?.signal.aborted) throw new Error(`Part ${number} didn’t upload. Choose the file again to carry on.`);
+      throw problem;
+    } finally {
+      if (limit !== undefined) clearTimeout(limit);
+    }
     if (!response.ok) throw new Error(`Part ${number} didn’t upload. Choose the file again to carry on.`);
     done += 1;
     onPart(done, session.part_count, resumedFrom);

@@ -6,6 +6,7 @@ import {
   type FileHandleLike, type FolderState, type ImportSummary, type MediaStore, type StoredFolderHandle, type StoredSong, type WatchedFolder,
 } from '../media';
 import type { Request } from '../media/importer';
+import { askReadAccess } from '../media/withTimeout';
 import { showToast } from '../ui/toasts';
 import { countOf } from '../ui/format';
 import { registeredDeviceId } from './ConnectMusic';
@@ -307,7 +308,14 @@ function runQueue(): Promise<void> {
   const work = async () => {
     if (!manager || !workspaceId) { await drain(); return; }
     await manager.request(`selecta-folder-check:${workspaceId}`, { ifAvailable: true }, async (lock) => {
-      if (!lock) { queue = []; publish({ waiting: 'tab' }); return; }
+      if (!lock) {
+        queue = [];
+        publish({ waiting: 'tab' });
+        // "Another tab is checking" stayed up after that tab finished; it goes once the lock is free
+        void manager.request(`selecta-folder-check:${workspaceId}`, {}, () => undefined)
+          .then(() => { if (state.waiting === 'tab' && parts?.workspaceId === workspaceId) publish({ waiting: null }); }, () => undefined);
+        return;
+      }
       publish({ waiting: null });
       await drain();
     });
@@ -522,27 +530,16 @@ export function importLooseHandles(handles: FileHandleLike[]): void {
   void startImport(own, handles, { kind: 'files', resume: marker && !marker.folderId ? marker : null });
 }
 
-/** How long an Allow press waits for the browser's own prompt to be answered. */
-const ALLOW_WAIT_MS = 30_000;
-
 /** Allow, from the member's press: one prompt restores every song in the folder at once, then
  * the availability report tells Rooms and the member's other devices, and the folder is checked. */
 export async function allowFolder(id: string): Promise<boolean> {
   const row = state.rows?.find((one) => one.id === id);
   if (!row?.handle) return false;
-  let answer = 'granted';
   // A browser can swallow the prompt (the press did not count as the person's own, or the prompt
   // was dismissed without an answer) and then never settles the request. Without a limit the button
   // said "Asking" for ever with no way to ask again, so an unanswered request counts as not allowed
   // and the row offers Allow again.
-  try {
-    if (row.handle.requestPermission) {
-      answer = await Promise.race([
-        row.handle.requestPermission({ mode: 'read' }),
-        new Promise<string>((resolve) => { setTimeout(() => resolve('unanswered'), ALLOW_WAIT_MS); }),
-      ]);
-    }
-  } catch { answer = 'denied'; }
+  const answer = await askReadAccess(row.handle);
   if (answer !== 'granted') return false;
   const next = setRow(id, { state: row.checkedAt ? 'watching' : 'unchecked' });
   if (next) await persist(next);

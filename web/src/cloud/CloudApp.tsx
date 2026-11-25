@@ -661,6 +661,9 @@ export function CloudApp() {
 
   // No account could be read at all: say why, instead of an empty workspace (AV-0420-03).
   if (exact && !account && problem) return <AccountProblemPage kind={problem.kind} retrying={retrying} email={user.email} onRetry={() => void retryAccount()} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
+  // Until the account and its features are known, which frame and plan apply is not known either:
+  // hold the loading screen rather than draw the legacy rail with a guessed "Free plan".
+  if (!account && !problem) return <GateLoading label="Opening SelectaDJ…" />;
 
   if ((exact ? route.kind === 'admin' : inAdmin) && showsAdmin(account)) {
     const leave = () => { setInAdmin(false); window.history.pushState({}, '', '/'); setPage('home'); setPath('/'); };

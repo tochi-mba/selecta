@@ -54,6 +54,8 @@ let probeFailures = 0;
 let probing: Promise<boolean> | null = null;
 let probe: () => Promise<boolean> = defaultProbe;
 let started = false;
+/** SelectaDJ answered while `navigator.onLine` said there was no network (it can be wrong). */
+let answeredDespiteBrowser = false;
 
 async function defaultProbe(): Promise<boolean> {
   if (typeof fetch === 'undefined') return true;
@@ -84,8 +86,14 @@ function clearProbe() {
 function scheduleProbe() {
   clearProbe();
   if (state.status === 'online') return;
-  // with no network at all there is nothing to probe: the browser's `online` event wakes us
-  if (!browserOnline()) { set({ nextTryAt: null }); return; }
+  // With no network the browser's `online` event wakes us. A slow probe still runs, so a missed
+  // `online` event (or a browser that keeps saying offline after a wake) cannot leave the tab
+  // saying "offline" for ever while SelectaDJ answers. Offline, that probe fails at once.
+  if (!browserOnline()) {
+    set({ nextTryAt: null });
+    probeTimer = setTimeout(() => { void probeNow(); }, MAX_PROBE_MS);
+    return;
+  }
   const wait = Math.min(MAX_PROBE_MS, FIRST_PROBE_MS * 2 ** probeFailures);
   set({ nextTryAt: Date.now() + wait });
   probeTimer = setTimeout(() => { void probeNow(); }, wait);
@@ -99,10 +107,21 @@ function lost(status: Exclude<ConnectionStatus, 'online'>) {
   if (probeTimer === undefined || !browserOnline()) scheduleProbe();
 }
 
+/** While the connection is lost, make sure a probe is coming: one already running, or one on a
+ * timer. Nothing else brings the tab back once requests fail at once, so a lost state with no
+ * probe would never clear (the page opened offline and the `online` event came before anyone
+ * listened, say). */
+function keepLooking() {
+  if (state.status === 'online' || probing || probeTimer !== undefined) return;
+  scheduleProbe();
+}
+
 /** Something reached SelectaDJ and got an answer: the connection is fine. */
 export function reportOk(): void {
   clearProbe();
   probeFailures = 0;
+  // an answer heard while the browser says it has no network: the answer wins
+  if (!browserOnline()) answeredDespiteBrowser = true;
   if (state.status === 'online' && !state.signedOut) return;
   const coming = state.status !== 'online';
   set({ status: 'online', since: null, nextTryAt: null, reconnecting: false, signedOut: false, backAt: coming ? Date.now() : state.backAt });
@@ -115,6 +134,7 @@ export function reportUnreachable(): void {
 
 /** The browser has no network. */
 export function reportOffline(): void {
+  answeredDespiteBrowser = false;
   lost('offline');
 }
 
@@ -168,7 +188,7 @@ export function getConnection(): ConnectionState {
 
 /** Whether SelectaDJ is believed reachable right now. */
 export function isOnline(): boolean {
-  return state.status === 'online' && browserOnline();
+  return state.status === 'online' && (browserOnline() || answeredDespiteBrowser);
 }
 
 /** Resolves once the connection is back (at once when it already is). Rejects with an
@@ -187,6 +207,7 @@ export function waitForOnline(signal?: AbortSignal): Promise<void> {
     signal?.addEventListener('abort', aborted);
     // make sure someone is looking: a store that only heard "offline" probes by itself
     if (state.status === 'online') reportUnreachable();
+    else keepLooking();
   });
 }
 
@@ -216,6 +237,8 @@ function start() {
   started = true;
   window.addEventListener('offline', () => reportOffline());
   window.addEventListener('online', () => { probeFailures = 0; void probeNow(); });
+  // a tab that opened offline has no probe yet: the `online` event may have come before this
+  keepLooking();
   // a laptop waking from sleep: look again rather than wait for the timer that slept with it
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
@@ -244,6 +267,7 @@ export function configureConnection(options: { probe?: () => Promise<boolean>; r
     probeFailures = 0;
     probing = null;
     asking = null;
+    answeredDespiteBrowser = false;
     probe = options.probe ?? defaultProbe;
     state = { status: browserOnline() ? 'online' : 'offline', since: browserOnline() ? null : Date.now(), reconnecting: false, nextTryAt: null, backAt: null, signedOut: false };
     for (const listener of [...listeners]) listener();
