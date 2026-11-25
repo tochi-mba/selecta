@@ -136,6 +136,11 @@
       "label": "Extra Lucy usage in prepaid packs",
       "about": "Buy a prepaid pack of extra Lucy usage, spent only once the weekly limit is reached (ADR-0486). The build ships on so a rule can grant it, and with no matching rule it is off.",
       "requires": ["lucy.usage_windows"],
+      "routes": [
+        "GET /api/billing/lucy-packs",
+        "POST /api/billing/lucy-packs/checkout",
+        "POST /api/billing/lucy-packs/confirm"
+      ],
       "modes": ["cloud"],
       "scope": "workspace",
       "default": true,

@@ -74,6 +74,11 @@ class DisplayView:
     # ADR-0475 D29: the speaker's state as the guest page says it (ready, choosing, reconnecting,
     # none), when the room's catalogue can tell; None where it can't
     music: str | None = None
+    # ADR-0488: which room this is, so the route can add the room's pulse and, once it has
+    # ended, its recap. Set while paired and after the room ends; never sent to the screen.
+    room_id: str | None = None
+    workspace_id: str | None = None
+    ended_at: float | None = None
 
 
 def start_pairing(ctx: RoomContext, *, now: float | None = None) -> PairingStart:
@@ -254,7 +259,14 @@ def display_view(ctx: RoomContext, display_token: str, *, now: float | None = No
             return DisplayView(DisplayState.ENDED)
         room = load_room(conn, workspace_id, row.room_id)
         if not room.live or room.ends_at <= now:
-            return DisplayView(DisplayState.ENDED, room_name=room.name)
+            return DisplayView(
+                DisplayState.ENDED,
+                room_name=room.name,
+                room_id=room.id,
+                workspace_id=workspace_id,
+                # A room past its time that the sweep has not closed yet ended at that time.
+                ended_at=room.ended_at if room.ended_at is not None else room.ends_at,
+            )
         if row.expires_at <= now:
             # The room is still on, so the host disconnected this screen.
             return DisplayView(DisplayState.UNPAIRED)
@@ -280,8 +292,11 @@ def display_view(ctx: RoomContext, display_token: str, *, now: float | None = No
         now_playing=playing.current,
         up_next=playing.up_next,
         upcoming=as_items(coming_up, songs, names, show_names=room.settings.names_shown),
-        music_paused=not ctx.speakers.speaker_online(workspace_id),
+        # A loaded song the host paused is named and said to be paused, never "nothing".
+        music_paused=not ctx.speakers.speaker_online(workspace_id) or playing.paused,
         music=_music_state(ctx, workspace_id),
+        room_id=room.id,
+        workspace_id=workspace_id,
     )
 
 

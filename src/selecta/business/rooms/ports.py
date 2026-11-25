@@ -191,8 +191,14 @@ class SessionPlayback:
                     ).where(local_songs.c.id == programme[session.song_index].song_id,
                             local_songs.c.workspace_id == session.workspace_id)).first()
                     if song is not None:
+                        # ADR-0488: `play_key` tells this play from any other (the mix, the
+                        # place in it and the song), for hearts and dedications to attach to
+                        ref = programme[session.song_index]
                         playing = {"title": song.title, "artist": song.artist,
-                                   "length_s": song.duration_s}
+                                   "length_s": song.duration_s,
+                                   "play_key": f"{session.mix_revision_id or ''}:"
+                                               f"{session.song_index}:{ref.song_id}",
+                                   "offset_s": max(0, session.offset_ms) / 1000.0}
                 return Playback(paused=session.state is not PlayState.PLAYING,
                                 now_playing=playing)
         except sa.exc.SQLAlchemyError:

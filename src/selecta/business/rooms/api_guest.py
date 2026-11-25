@@ -127,5 +127,11 @@ def install_guest_routes(app: FastAPI, *, service: Callable[[], Any],
         hit("bz-guest-write", mine, limits.GUEST_WRITE_PER_GUEST)
         return run(lambda: service().vote(mine, request_id, room_key=code))
 
+    # ADR-0488: what the room does together, with the same cookie and the same gates
+    from selecta.business.rooms import api_social
+
+    api_social.install_guest_routes(app, service=service, flag_on=flag_on, token=token,
+                                    hit=hit, run=run, allowed_origins=allowed_origins)
+
 
 __all__ = ["COOKIE_PATH", "GUEST_COOKIE", "VISITOR_COOKIE", "install_guest_routes"]

@@ -50,7 +50,7 @@ import { ControllerListen } from '../devices/ControllerListen';
 import { tabLog } from '../devices/audioTab';
 import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
-import { addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
+import { useRoomRounds, addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
 import { SoundCheck } from './SoundCheck';
@@ -79,7 +79,7 @@ import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
 import { ChangedFromLine } from '../devices/ChangedFromLine';
 import { PlayNoticeLine } from '../devices/PlayNoticeLine';
-import { HostedMix } from './hosted/HostedMix';
+import { HostedMakeAMix, footerWords } from './hosted/HostedMakeAMix';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -804,6 +804,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     }, requestsOn ? { label: 'Open requests', run: () => setRequesting(true) } : openRoom] });
   }, [api, workspaceId, request, setMixData, roomsPlace, requestsOn]);
   const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
+  useRoomRounds({ api, workspaceId, roomId: room?.id, enabled: roomsOn && account.features?.['rooms.rounds'] !== false, isSpeaker: () => playback.isSpeaker(), playing: roomPlayback, request });
   const roomWaiting = room ? room.toApprove : 0;
   // R12: what a sign-out in any tab of this browser would stop, answered from here
   setTabBusy({ playing: playback.isSpeaker() && now.phase === 'playing', room: !!room, importing: importLive.phase === 'running' });
@@ -893,16 +894,16 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         return <CloudLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} cloudStorage={coexisting} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
       case 'mixes':
         if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
-        // R8: a device with little or no music makes mixes from the songs the device R1 chooses holds
-        // (a hosted account also gets the server-rendered mix after it, below the page heading: cloud.hosted_render)
-        return <>{mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
+        // R8: a device with little music mixes the songs R1's device holds; hosted: HostedMakeAMix.tsx
+        { const mixer = mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
           <MixesEmpty
             current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
             connected={connected}
             onSetUp={onboardingFinished(workspaceId) ? undefined : () => { setSpineAsked(true); setSpine(true); }}
             checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
           />
-        )}{coexisting && on('cloud.hosted_render') && <div className="page"><HostedMix api={api} workspaceId={workspaceId} /></div>}{localExport}</>;
+        );
+        return <>{coexisting && on('cloud.hosted_render') ? <HostedMakeAMix api={api} workspaceId={workspaceId} browserMixer={mixer} othersPlaying={now.phase === 'playing'} stopOthers={() => { if (now.phase === 'playing') void shellPlayer.togglePause(); }} /> : mixer}{localExport}</>; }
       case 'listen':
         // something is playing on another device and this one does not hold that mix: the remote
         if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} speakerSongs={holdings.speakerSongs} notice={where.notice} onDismissNotice={where.clearNotice} />;
@@ -982,7 +983,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section></HolderContext.Provider>
-        <footer className="cloud-footer">SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.</footer>
+        <footer className="cloud-footer">{footerWords(coexisting)}</footer>
       </Shell>
       {requesting && on('requests') && (
         <Drawer title="Requests" onClose={() => setRequesting(false)}>

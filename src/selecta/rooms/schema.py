@@ -20,6 +20,7 @@ LIVE_ROOM_STATUSES = ("open", "locked")
 GUEST_STATUSES = ("active", "pending", "removed", "banned")
 REQUEST_STATUSES = ("sent", "accepted", "passed", "unfit", "played", "withdrawn")
 WAITING_REQUEST_STATUSES = ("sent", "accepted", "unfit")  # still one per song
+REQUEST_SOURCES = ("guest", "round")
 
 Hash = sa.String(64)
 
@@ -80,11 +81,12 @@ room_requests = sa.Table(
         "room_id", Id, sa.ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False, index=True
     ),
     sa.Column("workspace_id", Id, nullable=False, index=True),
+    # Empty for a song the room voted in (ADR-0488): nobody asked for it, the room chose it.
     sa.Column(
         "guest_id",
         Id,
         sa.ForeignKey("room_guests.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     ),
     sa.Column("song_id", sa.BigInteger, nullable=False),
@@ -96,7 +98,16 @@ room_requests = sa.Table(
     sa.Column("approved_at", Epoch, nullable=True),
     sa.Column("submitted_at", Epoch, nullable=True),  # handed to the planner; counts as a render
     sa.Column("resolved_at", Epoch, nullable=True),
+    # Who put it here: a guest's request, or the winner of a vote for the next song.
+    sa.Column(
+        "source", sa.String(8), nullable=False, default="guest", server_default="guest"
+    ),
+    # A line from the fixed dedication list, by its id (never typed words), and the play it
+    # was shown on, so it shows once.
+    sa.Column("dedication", sa.String(24), nullable=True),
+    sa.Column("dedication_play_id", Id, nullable=True),
     sa.CheckConstraint(_one_of("status", REQUEST_STATUSES), name="status"),
+    sa.CheckConstraint(_one_of("source", REQUEST_SOURCES), name="source"),
     sa.Index("ix_room_requests_workspace_id_song_request_id", "workspace_id", "song_request_id"),
 )
 

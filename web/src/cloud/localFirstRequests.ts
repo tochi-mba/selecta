@@ -32,7 +32,12 @@ export const NOTHING_TO_HEAR = 'A request’s transitions are worked out in your
 export const NO_MIX_YET = 'There is no mix playing to add it to. Start a mix on Make a Mix first.';
 
 /** A room request waiting for this workspace's browser mix, as `/api/room-requests` answers it. */
-export type RoomRequest = { id: string; room_id: string; room_name: string; song_id: number; votes: number; handed_at: number | null };
+export type RoomRequest = {
+  id: string; room_id: string; room_name: string; song_id: number; votes: number; handed_at: number | null;
+  /** ADR-0488: the room voted this song in; `add_now` when the host left "play the winner
+   * automatically" on, so it joins the mix without a tap. */
+  room_pick?: boolean; add_now?: boolean;
+};
 type LocalRequest = { id: number; song_id: number; at: number };
 type Saved = { next: number; local: LocalRequest[]; room: Record<string, number> };
 
@@ -178,7 +183,10 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
         ...(missing && places ? { connect_here: missing.connectHere } : {}),
         ...(link ? { plays_on: link.speakerName, ...(there ? { where_note: link.online ? playsOn(link.speakerName) : addedOnReturn(link.speakerName) } : {}) } : {}),
         // a room request says who asked and in which room; the member's own says neither
-        ...(from ? { room_name: from.room_name, asked_by: askerOf(from.id), room_request_id: from.id } : {}),
+        ...(from ? { room_name: from.room_name, asked_by: from.room_pick ? 'The room' : askerOf(from.id), room_request_id: from.id } : {}),
+        // ADR-0488: the room's pick joins by itself, through the same loop that joins a request
+        // the local planner found a place for (`ready` with an `offer`), where the song can play
+        ...(from?.add_now && (link ? there : song?.playable) ? { ready: true, offer: `request-${id}`, joined_words: `The room picked ${song?.title ?? 'a song'}. It plays next.` } : {}),
       };
     };
     // on its way to the speaker: not offered again here while that device takes it in

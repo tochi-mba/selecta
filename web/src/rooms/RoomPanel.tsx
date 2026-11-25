@@ -13,6 +13,9 @@ import type { LimitBounds } from './RoomLimits';
 import { RoomRequests, type RoomRequestsMix } from './RoomRequests';
 import { RoomSettings, SettingsSection, type RoomSettingsValue, type SettingsGroup } from './RoomSettings';
 import { CopyWords, RoomQrScreen, RoomShare, useCopyLink } from './RoomShare';
+import { RoomRecap } from './RoomRecap';
+import { RoomSocial, type SocialSettings } from './RoomSocial';
+import { flagOn } from '../flags';
 import { RoomStart } from './RoomStart';
 import { noteRoom, ROOM_EVENT, useRoomLive, type RoomAsk, type RoomControl } from './useRoomSession';
 import './rooms.css';
@@ -44,6 +47,11 @@ type Guest = { id: string; nickname: string; status: string; joined_at?: number;
 type Screen = { id: string; label: string; paired_at: number | null; last_seen_at: number | null; online: boolean };
 type Confirm = { title: string; body: string; confirmLabel: string; run: () => Promise<unknown> };
 type Settings = RoomSettingsValue;
+// what a room opened by an older server reads as, until it sends these settings itself
+const SOCIAL_DEFAULTS: SocialSettings = {
+  keeps: true, reactions: true, rounds: true, round_seconds: 45, round_every_songs: 0, round_auto_add: true, dedications: true, recap: true,
+  screen_rounds: true, screen_reactions: true, screen_dedications: true, screen_recap: true,
+};
 type Panel = {
   room: { id: string; name: string; status: string; settings: Settings; ends_at: number };
   code: string | null; join_path: string | null; guests: Guest[]; inbox: Item[]; coming_up: Item[]; unfit: Item[];
@@ -70,6 +78,9 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const [loadError, setLoadError] = useState('');
   const [pairing, setPairing] = useState('');
   const [saved, setSaved] = useState<SettingsGroup | null>(null);
+  // the room this page last showed, so its recap can be read once it has ended
+  const lastRoom = useRef('');
+  if (panel) lastRoom.current = panel.room.id;
   const [qrOpen, setQrOpen] = useState(false);
   // ADR-0477: the room was opened from this page, so its code arrives as a moment and its status pings once
   const [justOpened, setJustOpened] = useState(false);
@@ -169,7 +180,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
 
   if (!panel) {
     if (loadError) return <section className="room-panel" aria-labelledby="room-title"><h2 id="room-title" className="visually-hidden">Room</h2><Problem retry={load}>Couldn’t load your room. {loadError}</Problem></section>;
-    return <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`).then((ok) => { if (ok) setJustOpened(true); return ok; })} />;
+    const start = <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`).then((ok) => { if (ok) setJustOpened(true); return ok; })} />;
+    // ADR-0488: the room that just ended leaves its totals above the form for the next one
+    if (!lastRoom.current || !flagOn('rooms.recap')) return start;
+    return <><RoomRecap api={api} workspaceId={workspaceId} roomId={lastRoom.current} tell={(words, problem) => (problem ? showProblem(words) : showToast(words))} />{start}</>;
   }
 
   const room = panel.room;
@@ -357,6 +371,13 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
               </form>
             </SettingsSection>
           )}
+          {/* ADR-0488: what the room does together; each group is absent while its feature is off */}
+          <RoomSocial
+            api={api} workspaceId={workspaceId} base={base} settings={{ ...SOCIAL_DEFAULTS, ...settings }} screens={displayOn ? panel.displays : 0}
+            on={{ keeps: flagOn('rooms.keeps'), reactions: flagOn('rooms.reactions'), rounds: flagOn('rooms.rounds'), dedications: flagOn('rooms.dedications'), recap: flagOn('rooms.recap') }}
+            saved={saved === 'together' || saved === 'rounds' || saved === 'screen' ? saved : null} save={save}
+            tell={(words, problem) => (problem ? showProblem(words) : showToast(words))}
+          />
         </RoomSettings>
       </section>
       </div>

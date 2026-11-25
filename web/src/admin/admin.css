@@ -247,3 +247,36 @@
    pad, so they answer exactly as they did before the feel. Their pressed ring (polish.css) stays. */
 :root[data-feel] :is(.admin-danger, .admin-controls button, .admin-control-target button) { scale: none; }
 :root[data-feel] :is(.admin-danger, .admin-controls button, .admin-control-target button)::after { content: none; }
+
+/* The Workers page (doc 07b §7B.4, Workers): one card per pool, a hairline on top as every section,
+   coloured only by its verdict's edge. Cards wrap to one column on a phone without a breakpoint. */
+.admin-asof { margin: calc(var(--space-3) * -1) 0 0; font-size: var(--text-sm); }
+.admin-pause-banner { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border-left: var(--radius-hair) solid var(--status-warning); background: var(--surface-panel); }
+.admin-pools, .admin-pieces { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.admin-pools { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.admin-kpi .admin-badge, .admin-pieces .admin-badge { justify-self: start; }
+.admin-actions-why { flex-basis: 100%; }
+.admin-pool { display: grid; gap: var(--space-2); align-content: start; min-width: 0; padding: var(--space-3); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); border-top-width: var(--radius-hair); }
+.admin-pool.waiting, .admin-pool.failing { border-top-color: var(--danger); }
+.admin-pool.paused { border-top-color: var(--status-warning); }
+.admin-pool.working { border-top-color: var(--ok); }
+.admin-pool p, .admin-pieces p { margin: 0; }
+.admin-pool-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.admin-pool-head h3 { margin: 0; font: var(--type-label); display: inline-flex; gap: var(--space-2); align-items: baseline; }
+.admin-pool .admin-numbers { grid-template-columns: repeat(auto-fit, minmax(min(100%, 104px), 1fr)); }
+.admin-pieces li { display: grid; gap: var(--space-1); padding-bottom: var(--space-3); border-bottom: var(--separator) solid var(--edge-decorative); min-width: 0; overflow-wrap: anywhere; }
+.admin-pieces .admin-health li { border-bottom: 0; padding-bottom: 0; display: flex; }
+.admin-bulks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: var(--space-5); }
+.admin-bulk { display: grid; gap: var(--space-2); align-content: start; min-width: 0; }
+.admin-bulk h3, .admin-bulk p { margin: 0; }
+.admin-explainer summary { cursor: pointer; color: var(--link); }
+.admin-explainer[open] { display: grid; gap: var(--space-3); }
+.admin-explainer p { margin: 0; max-width: var(--content-reading); }
+/* Phone width (Workers): a pool, a piece of Around the workers, or the cost detail is one row that
+   opens; the button carries aria-expanded and names what it opens. */
+.admin-disclosure { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: baseline; width: 100%; min-height: 44px; padding: var(--space-dense) 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+.admin-disclosure::before { content: '+'; color: var(--text-soft); }
+.admin-disclosure[aria-expanded='true']::before { content: '\2212'; }
+.admin-disclosure-body { display: grid; gap: var(--space-2); padding-bottom: var(--space-2); }
+.admin-cost-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.admin-cost-list li { display: flex; justify-content: space-between; gap: var(--space-2); padding-bottom: var(--space-1); border-bottom: var(--separator) solid var(--edge-decorative); font-variant-numeric: tabular-nums; }

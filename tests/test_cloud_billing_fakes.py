@@ -21,6 +21,12 @@ PRICES_JSON = json.dumps({
     price_id: {"plan": plan.plan_id, "version": plan.plan_version, "interval": plan.interval}
     for price_id, plan in PRICE_MAP.items()
 })
+# Packs of extra Lucy usage (ADR-0486). The sizes are test figures, not prices on sale.
+PACK_CATALOGUE = {
+    "price_pack_small": {"units": 5_000_000, "label": "Small pack"},
+    "price_pack_large": {"units": 20_000_000, "label": "Large pack"},
+}
+PACKS_JSON = json.dumps(PACK_CATALOGUE)
 
 
 def subscription(
@@ -46,6 +52,33 @@ def subscription(
     }
     sub.update(extra)
     return sub
+
+
+def pack_session(
+    session_id: str = "cs_pack_1",
+    *,
+    payment: str | None = "pi_1",
+    price: str | None = "price_pack_small",
+    workspace: str | None = "w1",
+    customer: str = "cus_1",
+    payment_status: str = "paid",
+    kind: str | None = "lucy_pack",
+    mode: str = "payment",
+) -> dict[str, Any]:
+    """A Checkout session for a pack of extra Lucy usage, as `checkout.session.completed`
+    carries it."""
+    metadata = {"workspace_id": workspace, "kind": kind, "price_id": price}
+    return {
+        "id": session_id,
+        "object": "checkout.session",
+        "mode": mode,
+        "customer": customer,
+        "client_reference_id": workspace,
+        "payment_intent": payment,
+        "payment_status": payment_status,
+        "subscription": None,
+        "metadata": {key: value for key, value in metadata.items() if value},
+    }
 
 
 def event(

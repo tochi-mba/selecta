@@ -18,7 +18,7 @@ from selecta.work.model import Job
 from selecta.work.provenance import build as build_provenance
 from selecta.workers.context import Handler, InputInvalid, JobContext
 
-PROXY_VERSION = 1
+PROXY_VERSION = 2  # equals work/proxies.py; 2 is fixed 4096-sample frames (see there)
 
 
 def playback_proxy(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
@@ -47,7 +47,7 @@ def playback_proxy(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict
         "-format_whitelist", "wav,flac,mp3,mov,ogg,aac,aiff,ape,wv",
         "-i", str(source), "-map", "0:a:0", "-vn", "-sn", "-dn", "-map_metadata", "-1",
         "-ar", str(rate), "-c:a", "flac", "-sample_fmt", "s32", "-bits_per_raw_sample",
-        "24", "-threads", "1", str(output),
+        "24", "-frame_size", "4096", "-threads", "1", str(output),
     ]
     with subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as process:
         try:

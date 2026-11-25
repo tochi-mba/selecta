@@ -12,7 +12,7 @@ The choices are stored per user in the same table as their feature opt-outs, und
 start `lucy:`. No feature flag can start that way, so they never collide with a flag, and the
 data export already carries that table as the person's settings.
 
-`GET /api/account/lucy` also returns this month's turn meter, so the settings page can show it.
+`GET /api/account/lucy` also returns the meter for the workspace's current allowance model.
 """
 
 from __future__ import annotations
@@ -28,6 +28,8 @@ from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.engine import Connection, Engine
 
 from selecta import persistence
+from selecta.ai import usage_mode, usage_units
+from selecta.ai.usage_schema import lucy_usage_state
 from selecta.billing import plans, stripe_sync
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
@@ -124,13 +126,33 @@ def install_routes(
 
     def answer(conn: Connection, principal) -> dict[str, Any]:
         workspace_id = principal.workspace.id
-        entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
+        now = persistence.db_now(conn)
+        entitlement = stripe_sync.effective_entitlement(conn, workspace_id, now)
         plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
-        return {
+        result = {
             **choices(conn, principal.user.id),
             "tier": meters.lucy_tier(plan),
             "usage": meters.lucy_turns(conn, workspace_id, plan, principal.user.timezone),
         }
+        rules = getattr(app.state, "flag_rules", None)
+        mode = usage_mode.mode_for(conn, workspace_id, rules, now)
+        if mode == usage_mode.ENFORCED:
+            result["usage_windows"] = usage_units.read_model(
+                conn, workspace_id, now=now, estimate_for_user_id=principal.user.id
+            )
+        elif mode == usage_mode.SHADOW:
+            # The note before a switch, for Free and paid alike (ADR-0487 rule 11). Paid owners
+            # are also told by email (`notify.lucy_usage_mail`).
+            cutover = conn.execute(
+                sa.select(lucy_usage_state.c.cutover_at, lucy_usage_state.c.time_zone).where(
+                    lucy_usage_state.c.workspace_id == workspace_id,
+                    lucy_usage_state.c.cutover_at > now
+                )
+            ).first()
+            if cutover is not None and usage_mode.granted(conn, workspace_id, rules, now):
+                result["usage_cutover"] = {"at": float(cutover.cutover_at),
+                                           "time_zone": cutover.time_zone}
+        return result
 
     @app.get("/api/account/lucy")
     def get_lucy(request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008

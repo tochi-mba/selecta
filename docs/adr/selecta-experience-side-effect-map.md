@@ -64,6 +64,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta-mix-outbox-notices:<workspace>` | local | `web/src/cloud/outbox.ts` | The last few plain notices about queued mix changes the server turned down, shown once and then removed (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
 | `selecta.account.message` | local | `web/src/cloud/accountTabs.ts` | The last sign-in or sign-out message for this browser's other tabs, only where BroadcastChannel is missing (the storage event carries it) | Account |
+| `selecta.listeningRoom` | local | `web/src/listening-room/session.ts` | The prefix of the Listening Room's keys: `selecta.listeningRoom.<workspace>.session.<id>` holds one blind comparison session as it was left (its trials, the seeded A/B deal, the answers so far and the position), and `selecta.listeningRoom.<workspace>.current` names the session this browser was last in, so a reload carries on where the listener stopped; the current pointer is removed when the listener starts afresh, while that session's answers stay under their own key (`tools.listening_room`) | Listening Room |
+| `selecta.listeningRoom.volume` | local | `web/src/listening-room/ListeningRoom.tsx` | The Listening Room's playback volume on this device, so the next session starts at the same level (`tools.listening_room`) | Listening Room |
 | `selecta.admin.prodNotice` | session | `web/src/admin/AdminArea.tsx` | That the staff member dismissed the production notice for this tab | Staff console |
 | `selecta.debug.fingerprint` | local | set by a developer; read by `web/src/media/fingerprintLog.ts` | `1` prints each fingerprint log line to the console too | This device (developers) |
 | `selecta.debug.tabs` | local | set by a developer; read by `web/src/devices/audioTab.ts` | Any value logs each step of an audio-tab hand-over to the console | This device (developers) |
@@ -283,7 +285,6 @@ Song links are per workspace (`song_catalog_links`); the lookups, releases and c
 | Route | Side effect |
 |---|---|
 | `POST /api/catalog/art` | When the person allows lookups: links the caller's own songs to a shared lookup key, copies a finished lookup to the link, and queues `catalog.lookup` jobs for keys never asked or due again |
-| `GET /api/catalog/art/{art_id}/{size}` | None: serves a stored, visible cover image (browser-private cache, a week) |
 | `PUT /api/catalog/songs/{song_id}/choice` | Keeps the person's "Wrong cover?" choice on the caller's own song link; queues a `catalog.lookup` job to fetch a picked release's cover when it isn't stored |
 | `PUT /api/catalog/settings` | Saves the person's own "Look up covers and details on the web" choice (`user_flag_preferences`, `catalog:lookups`) |
 | `POST /api/admin/catalog/art/{art_id}/{command}` | Staff hide or unhide a shared cover image with a reason; audited (`legal.catalog_art.hidden` / `unhidden`) |
@@ -340,6 +341,10 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 |---|---|
 | `POST /api/admin/jobs/{job_id}/{command}` | Retries, cancels or otherwise acts on a job |
 | `POST /api/admin/workers/{worker_id}/{command}` | Drains or acts on a worker |
+| `POST /api/admin/hosted/jobs/retry-failed` | Retries every failed job of one type from the last 7 days, at most 500, after the console counted them (Careful, audited) |
+| `POST /api/admin/hosted/jobs/expire-queued` | Proposes cancelling jobs queued longer than N hours as a delayed action (15 minutes, cancellable); when it runs it cancels at most 500 |
+| `POST /api/admin/hosted/pools/{pool}/{command}` | Pauses or resumes a worker pool (its `workers.drained` control), or records a staff request the autoscaler carries out (one worker for an hour, none, or hand back) |
+| `PUT /api/admin/hosted/budget` | Sets the monthly hosted processing budget the Workers page measures against (audited) |
 | `POST /api/admin/accounts/{user_id}/{command}` | Suspends or acts on an account |
 | `POST /api/admin/overrides` | Grants an override |
 | `POST /api/admin/overrides/mass` | Grants overrides in bulk |
