@@ -1,4 +1,4 @@
-import { Fragment, KeyboardEvent, PointerEvent as ReactPointerEvent, RefObject, useContext, useEffect, useRef, useState } from 'react';
+import { Fragment, KeyboardEvent, PointerEvent as ReactPointerEvent, RefObject, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { MixItem } from '../api';
 import { flagOn } from '../flags';
 import { clock } from '../lib';
@@ -8,6 +8,8 @@ import { SongMotif } from '../ui/MusicObjects';
 import { storySeamWords, TransitionsWorkedOutLive } from './editorMode';
 import { type PlayedSeam, PlayedTransitions, playedKey } from './liveTransitions';
 import { ComingSongs, RequestTag } from './Requests';
+import { tick } from '../feel/haptics';
+import { unfold, useRowGlide } from './feelPieces';
 
 /** A finger has to travel this far on the handle before it is a drag, so a tap is never a move. */
 const DRAG_FROM = 6;
@@ -62,6 +64,12 @@ export function PhoneStory(props: {
   const held = useRef<{ id: number; from: number; startY: number; lastY: number; moved: boolean; tops: number[]; frame: number } | null>(null);
   const dragNow = useRef(drag);
   dragNow.current = drag;
+  // the feel (ADR-0477): rows glide to a new order on the gentle spring, and a row that was folded
+  // away for a removal never stays folded on a node React handed to another song
+  useRowGlide(list, ':scope > li[data-song-key]', (row) => row.dataset.songKey, keys.join('|'));
+  useLayoutEffect(() => {
+    list.current?.querySelectorAll(':scope > li.feel-collapse-out').forEach(unfold);
+  }, [keys]);
 
   /** Where the carried song would land for a finger at this height on the page. */
   const landing = (from: number, pageY: number, tops: number[]) => {
@@ -112,7 +120,11 @@ export function PhoneStory(props: {
     const to = landing(now.from, pageY, now.tops);
     const offset = pageY - now.startY;
     setDrag((was) => {
-      if (was && was.to !== to) navigator.vibrate?.(8);
+      // each new landing place is a detent under the finger: the shared haptics when the feel has them
+      if (was && was.to !== to) {
+        if (flagOn('app.feel_haptics')) tick();
+        else navigator.vibrate?.(8);
+      }
       return { from: now.from, to, offset };
     });
     onCarry(keys[now.from], keys[to]);

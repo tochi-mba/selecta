@@ -19,6 +19,10 @@ import { hasEarlyLibrary, libraryUrl, takeEarlyLibrary } from './libraryPrefetch
 import { batchLines, batchWords } from './libraryBatchWords';
 import { ViewProps } from './shared';
 import { SongDetails } from './SongDetails';
+import { flushSync } from 'react-dom';
+import { flip } from '../feel/flip';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
+import { RollingCount, useArrivalFlash, visibleRows } from './feelPieces';
 
 /** `measures`: only where SelectaDJ analyses songs; a browser library is never analysed.
  * `browserOnly`: only in browser-first Cloud, where songs live on several devices (ADR-0475 R6). */
@@ -77,6 +81,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // background analysis, and deduplicating rows changes their index.
   const pageBySong = useRef(new Map<number, number>());
   const listRef = useRef<HTMLUListElement>(null);
+  // the feel (ADR-0477): the filter strip's sliding mark, and a page of Show more that must not glow
+  const filterStrip = useRef<HTMLDivElement>(null);
+  useSlidingIndicator(filterStrip, '[aria-pressed="true"]');
+  const appending = useRef(false);
   const selectionEntryRef = useRef<HTMLButtonElement>(null);
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
@@ -129,6 +137,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     songs: { id: number; title: string; artist: string; priority: boolean; never: boolean }[];
   } | null>(null);
   const visibleSelected = useMemo(() => (committedRows ?? []).filter((song) => selectedIdSet.has(song.id)), [committedRows, selectedIdSet]);
+  // songs that join the list while it is shown (an import checking them in) glow once, on screen only
+  const shownIds = useMemo(() => committedRows?.map((song) => song.id) ?? null, [committedRows]);
+  useArrivalFlash(listRef, shownIds, searchIdentity, appending);
   // GP-0258-03: Shift with a checkbox selects every loaded recording between the last one chosen and
   // this one, in the order shown, never past the 200 limit. The anchor is read outside the updater.
   const lastToggled = useRef<number | null>(null);
@@ -272,6 +283,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       for (const song of page.songs) {
         if (!pageBySong.current.has(song.id)) pageBySong.current.set(song.id, pageIndex);
       }
+      appending.current = true;
       setRows((before) => {
         const known = new Set(before?.map((song) => song.id));
         return [...(before ?? []), ...page.songs.filter((song) => !known.has(song.id))];
@@ -593,6 +605,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const cardLayout = preferences.libraryLayout === 'cards' && on('library.card_view');
   // batch actions need at least one thing they can do
   const batch = on('library.batch') && (on('library.priority') || on('library.never_play'));
+  // List and cards trade places by gliding the rows on screen; with motion off it just changes
+  const changeLayout = (layout: 'list' | 'cards') => void flip(visibleRows(listRef.current, ':scope > li'), () => flushSync(() => setPrefs({ libraryLayout: layout })));
 
   return (
     <main className={`page library density${browser ? ' library-browser' : ''}`} id="main">
@@ -625,7 +639,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           filter={filter} onFilter={(name) => setAddressQuery({ show: name === 'all' ? null : name, pages: null }, { push: true })}
           sorts={SORTS.filter((option) => analysisAvailable || option.name !== 'tempo')} sort={sort}
           onSort={(name) => setAddressQuery({ sort: name === 'title' ? null : name, pages: null }, { push: true })}
-          cards={cardLayout} onCards={(cards) => setPrefs({ libraryLayout: cards ? 'cards' : 'list' })} cardsOffered={on('library.card_view')} />
+          cards={cardLayout} onCards={(cards) => changeLayout(cards ? 'cards' : 'list')} cardsOffered={on('library.card_view')} />
       )}
       {!browser && <><div className="library-find">
         <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search titles, artists, remixes, credits or recording ID" />
@@ -641,18 +655,19 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </div>
         {on('library.card_view') && (
           <div className="row library-layout" role="group" aria-label="Library layout">
-            <button type="button" aria-pressed={!cardLayout} onClick={() => setPrefs({ libraryLayout: 'list' })}>List view</button>
-            <button type="button" aria-pressed={cardLayout} onClick={() => setPrefs({ libraryLayout: 'cards' })}>Card view</button>
+            <button type="button" aria-pressed={!cardLayout} onClick={() => changeLayout('list')}>List view</button>
+            <button type="button" aria-pressed={cardLayout} onClick={() => changeLayout('cards')}>Card view</button>
           </div>
         )}
       </div>
-      <div className="chips library-filters" role="group" aria-label="Filter Library recordings">
+      <div className="chips library-filters" role="group" aria-label="Filter Library recordings" ref={filterStrip}>
         {visible(FILTERS).filter((option) => (analysisAvailable || !option.measures) && !option.browserOnly).map((option) => (
           <button key={option.name} aria-pressed={filter === option.name} onClick={() => setAddressQuery({ show: option.name === 'all' ? null : option.name, pages: null }, { push: true })}>
             {option.label}
           </button>
         ))}
         {(filter !== 'all' || query) && <button type="button" className="quiet" onClick={() => { setTyped(''); setAddressQuery({ q: null, show: null, pages: null }, { push: true }); }}>Clear all filters</button>}
+        <span className={INDICATOR_CLASS} aria-hidden="true" />
       </div></>}
       {filter === 'not_yet' && left > 0 && (
         <div className="row wrap analyse-all">
@@ -703,8 +718,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually. Shift selects a range.</span>}
           </div>
           {visibleSelected.length > 0 && (
-            <div className="library-batch-actions" aria-label="Actions for selected loaded recordings">
-              <p className="hint" role="status">{visibleSelected.length} of {committedRows.length} loaded recordings selected (limit 200). Search, filter or sort changes clear selection; batch changes never move or delete audio.</p>
+            <div className="library-batch-actions" aria-label="Actions for selected loaded recordings" data-arrive="">
+              <p className="hint" role="status"><RollingCount value={visibleSelected.length} format={String} /> of {committedRows.length} loaded recordings selected (limit 200). Search, filter or sort changes clear selection; batch changes never move or delete audio.</p>
               <div className="row wrap">
                 <button onClick={() => {
                   setBatchSelection({ identity: selectionIdentity, ids: [] });
@@ -737,7 +752,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           onShowAll={() => setAddressQuery({ show: null, pages: null }, { push: true })} />
       )}
       {!browser && committedRows?.length === 0 && !failed && (
-        <section className="empty-state">
+        <section className="empty-state" data-glow="">
           <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
           <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while SelectaDJ scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once SelectaDJ has analysed it. Show all songs to see how far each one has got.' : !query && filter !== 'all' ? `No song is in ${FILTERS.find((option) => option.name === filter)?.label ?? filter} right now. Show all songs to see the rest of your library.` : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
           {/* WP3 pilot: set-aside songs never appear under Everything, so a search there can miss them */}
@@ -774,7 +789,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}
             current={now.phase !== 'idle' && mix[now.position]?.song_id === song.id}
             linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
-            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} browser={!!browser} />
+            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} browser={!!browser}
+            art={on('library.art_embedded')} />
         ))}
       </ul>
       {pageProblem && <p role="alert" className="warn">{pageProblem}</p>}

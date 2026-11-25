@@ -9,6 +9,7 @@ import type { ViewProps } from '../views/shared';
 import { ConnectMusic, summaryWords, type ConnectMusicHandle } from './ConnectMusic';
 import { formatCount } from './ImportStatus';
 import { useImportSession } from './importSession';
+import { foldAway } from '../views/feelPieces';
 import './libraryWorkspace.css';
 
 const KEEP_SAID = 'selecta.library.keep-said';
@@ -58,6 +59,13 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
   const session = useImportSession(connect.workspaceId);
   const importing = session.phase === 'running';
   const [dismissed, setDismissed] = useState(false);
+  // the feel (ADR-0477): the "can play here" banner folds shut when dismissed; at once without motion
+  const settleBanner = useRef<HTMLDivElement>(null);
+  const dismiss = () => {
+    const folding = foldAway(settleBanner.current);
+    if (folding) void folding.then(() => setDismissed(true));
+    else setDismissed(true);
+  };
   // the finished import's result stands in for the banner until it is put away
   const [resultSeen, setResultSeen] = useState<ImportSummary | null>(null);
   const playable = shared.status.counts.ready ?? 0;
@@ -134,11 +142,11 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
           </section>
         )}
         {needsFolder && !fresh && (
-          <div className="banner" data-tone="info" role="status">
+          <div className="banner" data-tone="info" role="status" ref={settleBanner}>
             <Icon name="folder" size="toolbar" />
             <p><b>{`${formatCount(playable)} of ${countOf(connected, 'song')} can play here.`}</b> {settleWords(playable, keptHere) ?? ''} Choose your music folder to open the rest.</p>
             <button type="button" onClick={() => handle.current?.chooseFolder()}>{choose}</button>
-            <button type="button" className="quiet" onClick={() => setDismissed(true)}>Dismiss</button>
+            <button type="button" className="quiet" onClick={dismiss}>Dismiss</button>
           </div>
         )}
         {!keepSaid && (playable > 0 || keptHere > 0) && !dirPicker().supported && (

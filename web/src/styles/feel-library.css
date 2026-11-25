@@ -1,3 +1,151 @@
 /* The feel system (ADR-0477): the feel system applied to My Mixes, Library, import, song details, the editor and Studio.
  * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
- * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md. */
+ * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md.
+ *
+ * Two groups below are not scoped to data-feel, because the elements they style only exist when a
+ * flag puts them there: the mix face wrapper (views/MixArt.tsx, drawn only with a feel part or
+ * library.art_embedded on) and the cover tiles the local app and the song sheet show (drawn only
+ * with library.art_embedded on). With those flags off the elements are not in the page.
+ *
+ * Where a rule has to outrank an existing one (the phone editor's own timings, the Cloud sheet's
+ * tile sizes) it carries :root[data-feel] or extra class weight instead of :where. No new keyframes:
+ * everything here reuses feel.css's feel-pop. */
+
+/* ---------- My Mixes: each mix's face (views/MixArt.tsx) ---------- */
+
+/* One square the size of the row's old tile; four covers share it as a two by two collage. The
+   wrapper keeps the corners, so each quarter is square-cornered inside it. */
+.mix-art {
+  display: grid;
+  flex: none;
+  inline-size: var(--space-7);
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  overflow: clip;
+}
+.mix-art[data-collage] {
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-hair);
+}
+/* outranks the Cloud sheet's tile sizes (cloudMusic.css), whichever loads first */
+.shell .mix-row > .mix-art > .cover-art[data-size] {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 0;
+}
+
+/* ---------- Covers outside the Cloud sheet (library.art_embedded) ---------- */
+
+/* listening.css hides every cover tile because only the Cloud sheet draws them. A Library row in the
+   local app, and the song sheet in either shell (it opens over the page, outside .shell), show the
+   song's cover here instead of its motif alone. The tile is the Cloud sheet's: a stable colour from
+   the song, the motif on it, and the file's own picture over it once decoded. */
+:is(.song-details-art, .library-rows .song-open:not(.lw-open)) > .cover-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--space-6);
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: linear-gradient(var(--art-turn, 135deg), color-mix(in srgb, var(--motif) 45%, var(--surface-control)), var(--surface-control));
+  overflow: hidden;
+}
+.song-details-art > .cover-art { inline-size: var(--space-7); }
+:root[data-density='compact'] .library-rows:not(.library-cards) .song-open:not(.lw-open) > .cover-art { inline-size: var(--space-5); }
+:is(.song-details-art, .library-rows .song-open:not(.lw-open)) > .cover-art .song-motif { width: 62%; height: 62%; margin: 0; color: inherit; }
+:is(.song-details-art, .library-rows .song-open:not(.lw-open)) > .cover-art[data-art] > * { grid-area: 1 / 1; }
+:is(.song-details-art, .library-rows .song-open:not(.lw-open)) > .cover-art .cover-art-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity var(--motion-reveal) var(--motion-ease);
+}
+:is(.song-details-art, .library-rows .song-open:not(.lw-open)) > .cover-art .cover-art-image[data-ready] { opacity: 1; }
+.song-details-art { display: inline-flex; flex: none; }
+/* a browser row's cover takes the motif's place and size (libraryWorkspace.css sizes the motif) */
+.shell .library-browser .library-rows .lw-open > .cover-art[data-size] { inline-size: var(--space-6); }
+@media (forced-colors: active) {
+  :is(.song-details-art, .library-rows .song-open:not(.lw-open)) > .cover-art { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
+}
+
+/* ---------- Library rows ---------- */
+
+/* A row's actions slide in when the row is hovered or holds focus. The group moves, never a button's
+   own box: a hovered button sits inside a hovered row, so it is already at rest. Only on a mouse;
+   a finger, a selected row and the card layout always show them. */
+:where(:root[data-feel~='motion']) .library-rows:not(.library-cards) > .song-row > .song-actions {
+  transition: opacity var(--motion-fast) var(--motion-ease), translate var(--motion-spring-snappy) var(--spring-snappy);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='motion']) .library-rows:not(.library-cards) > .song-row:not(:hover, :focus-within, .selected) > .song-actions {
+    opacity: 0;
+    translate: var(--space-2) 0;
+  }
+}
+/* the chip that just turned ready pops as one piece (feel.css .feel-pop needs a box to scale) */
+:where(:root[data-feel~='motion']) .feel-chip-pop { display: inline-flex; }
+
+/* ---------- Drafts: each transition segment fills as its seam really renders ---------- */
+
+:where(:root[data-feel~='motion']) .draft-seams > i {
+  transition: background-color var(--motion-slow) var(--motion-ease);
+}
+
+/* ---------- The editor ---------- */
+
+/* The song being carried floats over the timeline and tilts a little, so it reads as picked up. */
+:root[data-feel~='depth'] .timeline > li.song[data-dragging] {
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-float);
+}
+:root[data-feel~='motion'] .timeline > li.song[data-dragging] { rotate: -0.6deg; }
+
+/* A transition's small diagram grows to full size while its row is hovered, holds focus or is open. */
+:root[data-feel~='motion'] .timeline > .seam .music-seam-diagram {
+  transform-origin: 0 50%;
+  scale: 0.96;
+  opacity: 0.85;
+  transition: scale var(--motion-spring-snappy) var(--spring-snappy), opacity var(--motion-fast) var(--motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root[data-feel~='motion'] .timeline > .seam:hover .music-seam-diagram { scale: 1; opacity: 1; }
+}
+:root[data-feel~='motion'] .timeline > .seam:is(:focus-within, .open) .music-seam-diagram { scale: 1; opacity: 1; }
+
+/* The mix strip: a segment lights under the mouse, and the one the keyboard is choosing lights too. */
+@media (hover: hover) and (pointer: fine) {
+  :root[data-feel~='depth'] .pe-map-song:hover:not(.is-playing) { background: var(--edge-interactive); }
+}
+:root[data-feel~='depth'] .pe-map-strip:focus-visible .pe-map-song.is-aimed:not(.is-playing) { background: var(--edge-interactive); }
+
+/* The phone editor on the shared springs: a dropped song settles on the gentle spring (no overshoot),
+   the carried one floats and tilts, and a sheet snaps to its height the same way. */
+:root[data-feel~='motion'] .pe-story .pe-song {
+  transition: transform var(--motion-spring-glide) var(--spring-gentle), box-shadow var(--motion-reveal) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+}
+:root[data-feel~='motion'] .pe-story .pe-song.is-lifted { transition: none; rotate: -0.6deg; }
+:root[data-feel~='depth'] .pe-story .pe-song.is-lifted { box-shadow: var(--shadow-float); }
+:root[data-feel~='motion'] .overlay.pe-sheet .overlay-panel {
+  transition: height var(--motion-spring-glide) var(--spring-gentle), transform var(--motion-spring-glide) var(--spring-gentle);
+}
+:root[data-feel~='motion'] .overlay.pe-sheet .overlay-panel[data-dragging] { transition: none; }
+:where(:root[data-feel~='motion']) .pe-save-tick { margin-inline-start: var(--space-1); vertical-align: middle; }
+
+/* ---------- Studio: a square turned on pops its mark ---------- */
+
+/* The mark inside the square pops, not the square: the square is what a painting finger slides
+   across, so its box never shrinks under it. */
+:root[data-feel~='motion'] .studio-cell[aria-pressed='true']::after {
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both;
+}
+
+/* ---------- forced colours ---------- */
+
+@media (forced-colors: active) {
+  :root[data-feel] .timeline > li.song[data-dragging],
+  :root[data-feel] .pe-story .pe-song.is-lifted { box-shadow: none; rotate: none; }
+}

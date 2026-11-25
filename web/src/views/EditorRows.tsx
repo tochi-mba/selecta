@@ -1,4 +1,4 @@
-import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useContext, useEffect, useRef, useState } from 'react';
+import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
 import { useApi } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
@@ -11,6 +11,7 @@ import { TransitionsWorkedOutLive } from './editorMode';
 import { PlayedTransitions, playedKey, StemSurfacesContext } from './liveTransitions';
 import { useMixPath } from './mixScope';
 import { RequestTag, useRequestComing } from './Requests';
+import { unfold } from './feelPieces';
 
 /** What a row can ask the editor to do. The editor keeps this object in a ref, so its contents can
  * change every render without any row having to redraw. */
@@ -206,6 +207,10 @@ const SONG_DRAG_TYPE = 'application/x-selecta-song-position';
 export const SongLine = memo(function SongLine({ item, rowKey, total, playing, selected, over, moving = false, actions }: SongRowProps) {
   const holding = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
   const [grabbed, setGrabbed] = useState(false);
+  // a removed row folds away (feel.css .feel-collapse-out); rows are keyed by occurrence, so this node
+  // can be handed to the song that takes the removed one's place, which must not stay folded
+  const rowRef = useRef<HTMLLIElement>(null);
+  useLayoutEffect(() => unfold(rowRef.current), [item.song_id, item.position]);
   // MI-0138-08: a removal is marked on its row at once, and the row only goes when the server has removed it
   const [removing, setRemoving] = useState(false);
   const removeSong = async () => {
@@ -291,6 +296,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
   };
   return (
     <li
+      ref={rowRef}
+      data-dragging={dragging || undefined}
       className={`song ${over ? 'over' : ''} ${playing ? 'playing' : ''} ${selected ? 'selected' : ''} ${item.from_request ? 'requested' : ''} ${removing || moving ? 'pending' : ''}`}
       aria-busy={removing || moving || undefined}
       data-moving={moving || undefined}
@@ -306,6 +313,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         event.dataTransfer.setData(SONG_DRAG_TYPE, String(item.position));
         event.dataTransfer.setDragImage?.(event.currentTarget, 24, 24);
         actions.current.dragFrom(rowKey);
+        // the carried row floats and tilts while the mouse carries it (feel-library.css)
+        setDragging(true);
       }}
       onDragOver={(event) => {
         if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
@@ -314,7 +323,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         actions.current.dragOver(rowKey);
       }}
       onDragLeave={() => actions.current.dragOver(null)}
-      onDragEnd={() => { actions.current.dragOver(null); actions.current.dragFrom(null); }}
+      onDragEnd={() => { actions.current.dragOver(null); actions.current.dragFrom(null); setDragging(false); }}
       onDrop={(event) => {
         if (!event.dataTransfer.types.includes(SONG_DRAG_TYPE)) return;
         event.preventDefault();
@@ -440,7 +449,7 @@ export function SongInspector(props: {
   const identity = useRef<HTMLDivElement>(null);
   useStickyClearance(identity);
   return (
-    <div className="inspector">
+    <div className="inspector" data-arrive="">
       <div className="inspector-identity" ref={identity}>
         <p className="inspector-pair"><b>{item.title}</b></p>
         <p className="song-detail-artist">{item.artist}</p>

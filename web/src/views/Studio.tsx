@@ -13,6 +13,7 @@ import { moveInGrid } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
 import { useStickyClearance } from '../ui/useStickyClearance';
 import { useMixPath } from './mixScope';
+import { tick } from '../feel/haptics';
 
 type Session = {
   status: 'none' | 'queued' | 'rendering' | 'ready' | 'failed';
@@ -371,6 +372,8 @@ export function Studio(props: {
     if (!current || applying.current || missing.includes(`${side}_${lane}`)) return;
     const cells = current[side][lane].map((value, at) => (at === index ? (value ? 0 : 1) : value));
     change({ ...current, [side]: { ...current[side], [lane]: cells } });
+    // a square painted is a small step under the finger (a no-op without app.feel_haptics)
+    tick();
   };
   // Each pointer stroke paints a single on/off value. Revisiting a square
   // within the same stroke cannot undo it; every edit is immediately
@@ -393,6 +396,7 @@ export function Studio(props: {
     if (current[side][lane][column] === stroke.value) return;
     const updated = current[side][lane].map((value, index) => index === column ? stroke.value : value);
     change({ ...current, [side]: { ...current[side], [lane]: updated } });
+    tick();
   };
   const startPaint = (event: PointerEvent<HTMLDivElement>) => {
     if (!event.isPrimary || event.button !== 0 || saving || applying.current) return;
