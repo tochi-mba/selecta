@@ -53,7 +53,7 @@ from selecta.billing.schema import stripe_events
 from selecta.billing.webhooks import store_event
 from selecta.identity import accounts, privileged
 from selecta.identity.tokens import Claims
-from selecta.persistence import transaction
+from selecta.persistence import db_now, transaction
 from selecta.storage.deletion import read_ledger, replay_after_restore, tombstone
 from selecta.storage.keys import original_key
 from selecta.storage.maintenance import drain_physical_deletions
@@ -99,8 +99,8 @@ def _engage_together(world, control: str, target: str, now: float) -> list[int]:
     def press(who: str) -> None:
         barrier.wait()
         answer = world.post(
-            f"/api/admin/emergency/{control}/engage", who, reason="catastrophe drill", target=target,
-            confirm=control,
+            f"/api/admin/emergency/{control}/engage", who, reason="catastrophe drill",
+            target=target, confirm=control,
         )
         codes.append(answer.status_code)
 
@@ -113,6 +113,10 @@ def _engage_together(world, control: str, target: str, now: float) -> list[int]:
 
 
 def _release(world, control: str, target: str | None = None) -> None:
+    # Time passed in the drill: the operator signs in again and presses Make changes.
+    with world.engine.connect() as conn:
+        now = db_now(conn)
+    _fresh_staff_sessions(world, now)
     proposed = world.post(
         f"/api/admin/emergency/{control}/release", "operator", reason="recovered", target=target
     )
