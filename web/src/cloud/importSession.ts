@@ -404,6 +404,13 @@ function follow(workspaceId: string) {
   following = mine;
 }
 
+/** Follow another tab's import for this workspace (the shell's carry-on check found one
+ * running), unless this tab runs or already follows one. */
+export function followImportElsewhere(workspaceId: string): void {
+  if (session || following?.workspaceId === workspaceId) return;
+  follow(workspaceId);
+}
+
 /** A deliberate stop: aborts the run and clears the marker. What already registered stays in
  * the snapshot, and the run's own cancelled summary finishes it. In a tab that only follows
  * another tab's import, the importing tab is asked to cancel. */
