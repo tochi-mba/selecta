@@ -66,12 +66,16 @@ class HostFeatures:
         self._lock = threading.Lock()
         self._known: dict[str, tuple[float, Mapping[str, bool]]] = {}
 
-    def of(self, workspace_id: str) -> Mapping[str, bool]:
-        """Every guest-facing flag for this host: flag id to on or off."""
+    def of(self, workspace_id: str, *, fresh: bool = False) -> Mapping[str, bool]:
+        """Every guest-facing flag for this host: flag id to on or off.
+
+        `fresh` decides again now. A guest's own view and every write ask fresh, so a host who
+        loses a feature loses it for their guests at once, as before; only the pulse, read by
+        every phone every couple of seconds, uses what was decided in the last five."""
         now = self.clock()
         with self._lock:
             known = self._known.get(workspace_id)
-            if known is not None and known[0] > now:
+            if not fresh and known is not None and known[0] > now:
                 return known[1]
         decided = self._decide(workspace_id)
         with self._lock:
@@ -83,8 +87,8 @@ class HostFeatures:
             self._known[workspace_id] = (now + REMEMBER_SECONDS, decided)
         return decided
 
-    def on(self, workspace_id: str, flag_id: str) -> bool:
-        return bool(self.of(workspace_id).get(flag_id, False))
+    def on(self, workspace_id: str, flag_id: str, *, fresh: bool = False) -> bool:
+        return bool(self.of(workspace_id, fresh=fresh).get(flag_id, False))
 
     def forget(self, workspace_id: str | None = None) -> None:
         with self._lock:

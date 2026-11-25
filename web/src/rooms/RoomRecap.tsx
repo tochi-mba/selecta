@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Action } from '../ui/controls';
 
-// Tonight in numbers, for the host (ADR-0488, flag `rooms.recap`): the totals of the room that
-// just ended, above the form that opens the next one. Totals only: no guest is named.
+// Tonight in numbers, for the host (ADR-0488, flag `rooms.recap`): the totals of the rooms this
+// account has hosted, above the form that opens the next one. The newest is open; older ones
+// fold away under their names. Totals only: no guest is named.
 //
-// The server says the recap in words (`lines`, its title first), so the host's card, a guest's
+// The server says each recap in words (`lines`, its title first), so the host's card, a guest's
 // ended screen and a paired screen all read the same sentences. Copy puts them on the
 // clipboard; Save image draws them on a canvas in this browser, so nothing is uploaded.
 
 type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
+type Kept = { room_id: string; lines: string[] };
+type Tell = (words: string, problem?: boolean) => void;
 
 function drawImage(lines: readonly string[]): string {
   const width = 1080;
@@ -32,21 +35,9 @@ function drawImage(lines: readonly string[]): string {
   return canvas.toDataURL('image/png');
 }
 
-export function RoomRecap({ api, workspaceId, roomId, tell }: {
-  api: Api; workspaceId: string; roomId: string;
-  tell: (words: string, problem?: boolean) => void;
-}) {
-  const [lines, setLines] = useState<string[]>([]);
-  useEffect(() => {
-    let live = true;
-    api<{ lines: string[] }>(`/rooms/${encodeURIComponent(roomId)}/recap`, {}, workspaceId)
-      .then((answer) => { if (live) setLines(answer.lines ?? []); })
-      .catch(() => undefined);
-    return () => { live = false; };
-  }, [api, workspaceId, roomId]);
+const nameOf = (lines: readonly string[]) => (lines[0] ?? '').replace(/: tonight in numbers$/, '');
 
-  // a room with no recap (it was off, or nobody joined) shows nothing here
-  if (lines.length < 2) return null;
+function Numbers({ lines, tell }: { lines: string[]; tell: Tell }) {
   const copy = async () => {
     try { await navigator.clipboard.writeText(lines.join('\n')); tell('Copied.'); } catch { tell('Couldn’t copy here. Select the lines and copy them.', true); }
   };
@@ -59,14 +50,40 @@ export function RoomRecap({ api, workspaceId, roomId, tell }: {
     link.click();
   };
   return (
-    <section className="room-card room-recap" aria-labelledby="recap-title" data-testid="room-recap">
-      <h3 id="recap-title">Tonight in numbers</h3>
-      <p className="room-help">{lines[0].replace(/: tonight in numbers$/, '')} has ended. These are its totals; no guest is named.</p>
+    <>
       <ul className="room-list">{lines.slice(1).map((line) => <li key={line}>{line}</li>)}</ul>
       <div className="room-open-row">
         <Action type="button" run={copy}>Copy as text</Action>
         <Action type="button" className="quiet" run={saveImage}>Save image</Action>
       </div>
+    </>
+  );
+}
+
+export function RoomRecap({ api, workspaceId, tell }: { api: Api; workspaceId: string; tell: Tell }) {
+  const [kept, setKept] = useState<Kept[]>([]);
+  useEffect(() => {
+    let live = true;
+    api<{ recaps: Kept[] }>('/room-recaps', {}, workspaceId)
+      .then((answer) => { if (live) setKept((answer.recaps ?? []).filter((one) => one.lines.length > 1)); })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [api, workspaceId]);
+
+  // an account that has hosted no room with guests shows nothing here
+  if (!kept.length) return null;
+  const [newest, ...older] = kept;
+  return (
+    <section className="room-card room-recap" aria-labelledby="recap-title" data-testid="room-recap">
+      <h3 id="recap-title">Tonight in numbers</h3>
+      <p className="room-help">{nameOf(newest.lines)} has ended. These are its totals; no guest is named.</p>
+      <Numbers lines={newest.lines} tell={tell} />
+      {older.map((one) => (
+        <details key={one.room_id}>
+          <summary>{nameOf(one.lines)}</summary>
+          <Numbers lines={one.lines} tell={tell} />
+        </details>
+      ))}
     </section>
   );
 }

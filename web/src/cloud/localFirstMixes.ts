@@ -56,9 +56,16 @@ export function mixNameFor(songs: readonly PlayableSong[], ids: readonly number[
 }
 
 /** Which songs a browser mix plays, in order: `start` first, the chosen ending last. */
-export function chooseSongs(songs: readonly PlayableSong[], count: number, { start, end }: { start?: number | null; end?: number | null } = {}): number[] {
+export function chooseSongs(songs: readonly PlayableSong[], count: number, { start, end, loved }: {
+  start?: number | null; end?: number | null;
+  /** ADR-0488: how many rooms loved each song (crowd marks). A mix shorter than the library
+   * takes the songs rooms loved first; a song set to Never play is still left out, because the
+   * person's own choice always wins over a room's. */
+  loved?: ReadonlyMap<number, number>;
+} = {}): number[] {
   const playable = songs.filter((song) => song.playable);
-  const byTitle = [...playable].sort((one, other) => one.title.localeCompare(other.title) || one.id - other.id).map((song) => song.id);
+  const rooms = (id: number) => loved?.get(id) ?? 0;
+  const byTitle = [...playable].sort((one, other) => rooms(other.id) - rooms(one.id) || one.title.localeCompare(other.title) || one.id - other.id).map((song) => song.id);
   const chosen = (id: number | null | undefined) => id !== null && id !== undefined && byTitle.includes(id);
   const ending = chosen(end) && end !== start ? end! : null;
   const first = chosen(start) ? [start!] : [];
@@ -81,7 +88,8 @@ export type MixFamily = {
  * device, 2 is held nowhere right now) and the words for where it would play, when not here. */
 export type SongPlace = (songId: number, playableHere: boolean) => { rank: number; where: string | null };
 
-export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace): MixFamily {
+/** `lovedInRooms` (ADR-0488): song id to how many rooms loved it, from the account's crowd marks. */
+export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace, lovedInRooms?: () => Promise<Map<number, number>>): MixFamily {
   const current = async (): Promise<MixData | null> => {
     const id = store.current();
     if (!id) return null;
@@ -100,7 +108,9 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     const count = Math.max(BROWSER_MIX_NEEDS, Number(query.get('count') ?? 0) || 20);
     const start = query.get('start') ? Number(query.get('start')) : null;
     const target = store.steering().target;
-    const ids = chooseSongs(all, count, { start, end: target ? Number(target) : null });
+    // what rooms loved is a soft lean on which songs make the mix; with none known it changes nothing
+    const loved = lovedInRooms ? await lovedInRooms().catch(() => undefined) : undefined;
+    const ids = chooseSongs(all, count, { start, end: target ? Number(target) : null, loved });
     if (ids.length < BROWSER_MIX_NEEDS) {
       throw refuse(`A mix needs at least ${BROWSER_MIX_NEEDS} songs you can play on this device. Connect more music first.`, 'not_enough_songs');
     }

@@ -120,7 +120,9 @@ def observe(conn: Connection, room: Room, playing: NowPlaying, now: float) -> Pl
     )
     row = conn.execute(sa.select(room_plays).where(*where)).mappings().first()
     if row is None:
-        if playing.paused:
+        # Paused at the very start is a song that is loaded, not played. Paused part-way in has
+        # played, so it can be loved while the room waits.
+        if playing.paused and (playing.offset_s or 0.0) <= 0.0:
             return None
         before = latest_play(conn, room)
         passes_unique(

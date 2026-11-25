@@ -114,13 +114,6 @@ class GuestView:
     # ADR-0488: a paired big screen is showing now. The page works the same without one; this
     # only changes what it says about where else to look.
     screen: bool = False
-    # Who this is and when they joined, for the routes that add this guest's own taps and vote
-    # to the view. Never sent to the page.
-    guest_id: str = ""
-    room_id: str = ""
-    workspace_id: str = ""
-    joined_at: float = 0.0
-    settings: RoomSettings | None = None
 
 
 @dataclass(frozen=True)
@@ -295,11 +288,6 @@ def guest_view(ctx: RoomContext, guest_token: str, *, now: float | None = None) 
     settings = room.settings
     base = GuestView(
         screen=screen,
-        guest_id=guest.id,
-        room_id=room.id,
-        workspace_id=workspace_id,
-        joined_at=guest.joined_at,
-        settings=settings,
         room_name=room.name,
         room_status=room.status,
         nickname=guest.nickname,

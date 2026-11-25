@@ -270,6 +270,8 @@ def want_round(
 ) -> None:
     """Tell the speaker's browser the room wants a vote. It answers by opening one with the
     songs it can blend into, or not at all when the song has too little left."""
+    with transaction(ctx.engine, workspace_id) as conn:
+        load_room(conn, workspace_id, room_id)  # another workspace's room is no room at all
     if not ctx.speakers.speaker_online(workspace_id):
         raise RoomError(Refusal.NO_SPEAKER)
     with transaction(ctx.engine, workspace_id) as conn:
@@ -424,8 +426,7 @@ def settle_due(
         else:
             won = rules.winner(current.id, current.options, playable)
             if won is None:
-                reason = "no_votes" if current.total <= 0 else "no_song"
-                values = {"status": rules.VOID, "outcome": reason}
+                values = {"status": rules.VOID, "outcome": rules.void_reason(current.total)}
             else:
                 values = {
                     "status": rules.CLOSED,
@@ -462,10 +463,12 @@ def forget_vote(conn: Connection, room: Room, guest_id: str) -> None:
 
 def timer_due(conn: Connection, room: Room, now: float, guests_here: int) -> bool:
     """Should the room start a vote by itself on this look? Only when the host set "every N
-    songs", someone is here to vote, nothing is open, the last winner is not still waiting,
+    songs", two guests are here to vote, nothing is open, the last winner is not still waiting,
     this song has only just started, and it is the Nth since the last round."""
     every = room.settings.round_every_songs
-    if not room.live or not room.settings.rounds or every <= 0 or guests_here <= 0:
+    if not room.live or not room.settings.rounds or every <= 0:
+        return False
+    if guests_here < rules.MIN_VOTERS:
         return False
     last = (
         conn.execute(

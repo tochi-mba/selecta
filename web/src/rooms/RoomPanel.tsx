@@ -49,13 +49,15 @@ type Confirm = { title: string; body: string; confirmLabel: string; run: () => P
 type Settings = RoomSettingsValue;
 // what a room opened by an older server reads as, until it sends these settings itself
 const SOCIAL_DEFAULTS: SocialSettings = {
-  keeps: true, reactions: true, rounds: true, round_seconds: 45, round_every_songs: 0, round_auto_add: true, dedications: true, recap: true,
+  keeps: true, reactions: true, rounds: true, round_seconds: 45, round_every_songs: 0, round_auto_add: true, dedications: true, dedications_hidden: [], recap: true,
   screen_rounds: true, screen_reactions: true, screen_dedications: true, screen_recap: true,
 };
 type Panel = {
   room: { id: string; name: string; status: string; settings: Settings; ends_at: number };
   code: string | null; join_path: string | null; guests: Guest[]; inbox: Item[]; coming_up: Item[]; unfit: Item[];
   music_paused: boolean; displays: number; screens?: Screen[]; now?: number;
+  /** ADR-0488: every dedication line a guest could pick in this room */
+  dedication_lines?: { id: string; words: string }[];
   /** false when the host adds each accepted request to the mix in this browser */
   renders_apply?: boolean; bounds?: LimitBounds;
 };
@@ -183,9 +185,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   if (!panel) {
     if (loadError) return <section className="room-panel" aria-labelledby="room-title"><h2 id="room-title" className="visually-hidden">Room</h2><Problem retry={load}>Couldn’t load your room. {loadError}</Problem></section>;
     const start = <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`).then((ok) => { if (ok) setJustOpened(true); return ok; })} />;
-    // ADR-0488: the room that just ended leaves its totals above the form for the next one
-    if (!lastRoom.current || !flagOn('rooms.recap')) return start;
-    return <><RoomRecap api={api} workspaceId={workspaceId} roomId={lastRoom.current} tell={(words, problem) => (problem ? showProblem(words) : showToast(words))} />{start}</>;
+    // ADR-0488: the rooms this account has hosted leave their totals above the form for the next
+    // (read again when a room has just ended here)
+    if (!flagOn('rooms.recap')) return start;
+    return <><RoomRecap key={lastRoom.current} api={api} workspaceId={workspaceId} tell={(words, problem) => (problem ? showProblem(words) : showToast(words))} />{start}</>;
   }
 
   const room = panel.room;
@@ -380,6 +383,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
             on={{ keeps: flagOn('rooms.keeps'), reactions: flagOn('rooms.reactions'), rounds: flagOn('rooms.rounds'), dedications: flagOn('rooms.dedications'), recap: flagOn('rooms.recap') }}
             saved={saved === 'together' || saved === 'rounds' || saved === 'screen' ? saved : null} save={save}
             tell={(words, problem) => (problem ? showProblem(words) : showToast(words))}
+            lines={panel.dedication_lines ?? []} asks={[...panel.inbox, ...panel.coming_up]} onChanged={() => void load()}
           />
         </RoomSettings>
       </section>

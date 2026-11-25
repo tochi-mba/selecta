@@ -84,6 +84,11 @@ describe('the browser mix choice', () => {
     expect(chooseSongs(songs, 10, { start: 1 })).toEqual([1, 2, 3]);
     expect(chooseSongs(songs, 10, { start: 2, end: 3 })).toEqual([2, 1, 3]);
     expect(chooseSongs(songs, 2)).toEqual([2, 3]);
+    // ADR-0488: a mix shorter than the library takes the songs rooms loved first; with none
+    // loved the order is as it was, and a chosen start still comes first
+    expect(chooseSongs(songs, 2, { loved: new Map([[1, 3]]) })).toEqual([1, 2]);
+    expect(chooseSongs(songs, 10, { start: 3, loved: new Map([[1, 3]]) })).toEqual([3, 1, 2]);
+    expect(chooseSongs(songs, 2, { loved: new Map() })).toEqual([2, 3]);
     // a song that cannot play here is never chosen, even when asked for
     expect(chooseSongs(songs, 10, { start: 4 })).toEqual([2, 3, 1]);
   });

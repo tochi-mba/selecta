@@ -180,6 +180,12 @@ def test_a_vote_nobody_votes_in_has_no_winner_and_one_can_be_called_off(room):
     done = pulse(svc, guest, code)["round"]
     assert (done["state"], done["winner"], done["outcome"]) == ("void", None, "no_votes")
     with transaction(svc.engine) as conn:
+        alone = svc.start_round(conn, staff(), BAR)
+    svc.cast_round_vote(guest, alone["round_id"], 0, room_key=code)
+    svc.clock.advance(60)
+    lone = pulse(svc, guest, code)["round"]  # one tap is not the room's pick
+    assert (lone["state"], lone["winner"], lone["outcome"]) == ("void", None, "too_few")
+    with transaction(svc.engine) as conn:
         second = svc.start_round(conn, staff(), BAR)
         assert second["round_id"] != first["round_id"]
         assert svc.cancel_round(conn, staff(), BAR, second["round_id"])["state"] == "cancelled"
@@ -188,12 +194,14 @@ def test_a_vote_nobody_votes_in_has_no_winner_and_one_can_be_called_off(room):
 def test_a_vote_starts_by_itself_every_so_many_songs(room):
     svc, code, player = room
     guest = join(svc, code, 1)
+    other = join(svc, code, 2)  # a pick needs two voters, so a vote waits for two guests
     with transaction(svc.engine) as conn:
         svc.update_social(conn, manager(), BAR, {"round_every_songs": 2})
     assert pulse(svc, guest, code)["round"] is None  # one song so far
     player.index = 2
     svc.clock.advance(200)
-    svc.guest_state(guest, code)  # the guest's page is still open
+    for here in (guest, other):  # both pages are still open
+        svc.guest_state(here, code)
     assert pulse(svc, guest, code)["round"]["state"] == "open"
 
 
@@ -282,3 +290,32 @@ def test_a_banned_or_idle_guest_takes_their_taps_with_them(room, engine):
         assert conn.execute(sa.select(sa.func.count()).select_from(requests_t)).scalar_one() == 0
         assert conn.execute(sa.select(sa.func.count()).select_from(tables.reactions)
                             ).scalar_one() == 0
+
+def test_a_guest_staff_ban_loses_their_vote_and_taps_and_staff_see_dedications(room):
+    svc, code, _player = room
+    guests = []
+    for n in range(1, 4):  # a second apart, so "the first to join" means one guest
+        guests.append(join(svc, code, n))
+        svc.clock.advance(1)
+    play = pulse(svc, guests[0], code)["play"]["play_id"]
+    for guest in guests[:2]:
+        svc.react(guest, "love", play, True, room_key=code)
+    with transaction(svc.engine) as conn:
+        started = svc.start_round(conn, staff(), BAR)
+    svc.cast_round_vote(guests[0], started["round_id"], 0, room_key=code)
+    placed = svc.place(guests[2], "s2", room_key=code)["request_id"]
+    svc.set_dedication(guests[2], placed, "cheers", room_key=code)
+    with transaction(svc.engine) as conn:
+        queued = svc.queue(conn, staff(), BAR)
+        banned = conn.execute(sa.select(requests_t.c.guest_id).where(
+            requests_t.c.id == placed)).scalar()
+        assert [row.get("dedication") for row in queued] == ["Cheers, everyone"]
+        from selecta.business.rooms.schema import business_zone_room_guests as guests_t
+
+        voter = conn.execute(sa.select(guests_t.c.id).where(
+            guests_t.c.id != banned, guests_t.c.nickname != "The room").order_by(
+            guests_t.c.joined_at)).scalars().first()
+        svc.ban_guest(conn, staff(), BAR, voter, "day")
+    after = pulse(svc, guests[1], code)
+    assert after["play"]["loves"] == 1
+    assert [option["votes"] for option in after["round"]["options"]] == [0, 0, 0]

@@ -34,12 +34,11 @@ from selecta.rooms import pulse as pulses
 from selecta.rooms.api_common import check_origin, refusal, song_json
 from selecta.rooms.display import DisplayState, DisplayView
 from selecta.rooms.errors import Refusal, RoomError
-from selecta.rooms.host_features import SOCIAL, HostFeatures
+from selecta.rooms.host_features import SOCIAL, HostFeatures, offered
 from selecta.rooms.schema import room_guests
 from selecta.rooms.service import Rooms
 from selecta.rooms.social_schema import room_plays
 from selecta.rooms.store import GuestRef, GuestStatus, load_room
-from selecta.rooms.views import GuestView
 from selecta.roomsocial import dedications as dedication_lines
 from selecta.roomsocial import reactions as tap_rules
 from selecta.roomsocial import recap as recap_rules
@@ -82,10 +81,6 @@ class Social:
             _dedication_extra,
             _reactions_extra,
         ]
-        self.guest_parts: list[Callable[[GuestView, Mapping[str, bool]], Mapping[str, Any]]] = [
-            lambda seen, on: _mine(self, seen, on),
-            _lines_offered,
-        ]
         self.screen_parts: list[Callable[[DisplayView], Mapping[str, Any]]] = [
             lambda shown: _screen_recap(self, shown),
         ]
@@ -121,13 +116,12 @@ class Social:
         """A tap or a vote just landed: the next read makes a fresh pulse."""
         self.pulses.forget(room_id)
 
-    def mine(self, seen: GuestView, features: Mapping[str, bool]) -> dict[str, Any]:
-        """What only this guest sees: their own heart, blend tap, vote and dedications. The
-        pulse is the same for everyone, so these ride on the guest's own five-second view."""
-        added: dict[str, Any] = {}
-        for part in self.guest_parts:
-            added.update(part(seen, features))
-        return added
+    def mine(self, ref: GuestRef) -> dict[str, Any]:
+        """What the guest's own five-second view adds: which of the five the room offers, the
+        lines it lets them pick, and their own taps and vote. The pulse is the same for
+        everyone, so what is one guest's rides here. Read in one transaction; the guest view
+        itself never carries a guest or workspace id."""
+        return dict(_mine(self, ref))
 
     def for_screen(self, shown: DisplayView) -> dict[str, Any]:
         """What a big screen adds to its view: the room's pulse while it shows the room, and
@@ -331,20 +325,6 @@ def _dedication_extra(conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str,
     return {"dedication": dedications.showing(conn, room, pulse.play)}
 
 
-def _lines_offered(seen: GuestView, on: Mapping[str, bool]) -> Mapping[str, Any]:
-    """The lines this room lets a guest pick, without the ones the host hid."""
-    if not on.get("dedications", False) or seen.settings is None:
-        return {}
-    return {
-        "dedication_lines": [
-            {"id": line.id, "words": line.words}
-            for line in dedication_lines.lines_for(
-                dedications.KIND, seen.settings.dedications_hidden
-            )
-        ]
-    }
-
-
 def _reactions_extra(conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str, Any]:
     """What the pulse says about the room's taps beyond the counts: how many guests are here,
     and whether enough of them loved the blend for a big screen to say so."""
@@ -358,41 +338,43 @@ def _reactions_extra(conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str, 
     }
 
 
-def _mine(social: Social, seen: GuestView, on: Mapping[str, bool]) -> Mapping[str, Any]:
-    """What only this guest sees, read in one go: their taps on the song that is on and the one
-    before it (by play id), and their vote in the open round."""
-    taps_on = on.get("reactions", False)
-    rounds_on = on.get("rounds", False)
-    if not seen.guest_id or not (taps_on or rounds_on):
-        return {}
-    answer: dict[str, Any] = {}
-    with transaction(social.rooms().engine, seen.workspace_id) as conn:
-        if taps_on:
+def _mine(social: Social, ref: GuestRef) -> Mapping[str, Any]:
+    """Which features the room offers this guest, the dedication lines it lets them pick, their
+    taps on the song that is on and the one before it (by play id), and their vote."""
+    decided = social.features.of(ref.workspace_id)
+    with transaction(social.rooms().engine, ref.workspace_id) as conn:
+        room = load_room(conn, ref.workspace_id, ref.room_id)
+        on = offered(room.settings, decided) if room.live else {}
+        answer: dict[str, Any] = {"social": on}
+        if on.get("dedications"):
+            answer["dedication_lines"] = dedications.offered(room)
+        if on.get("reactions"):
             recent = list(
                 conn.execute(
                     sa.select(room_plays.c.id)
                     .where(
-                        room_plays.c.workspace_id == seen.workspace_id,
-                        room_plays.c.room_id == seen.room_id,
+                        room_plays.c.workspace_id == ref.workspace_id,
+                        room_plays.c.room_id == ref.room_id,
                     )
                     .order_by(room_plays.c.started_at.desc(), room_plays.c.id.desc())
                     .limit(2)
                 ).scalars()
             )
-            mine = reactions.mine(conn, seen.room_id, seen.guest_id, recent)
-            answer["my_taps"] = {play_id: sorted(kinds) for play_id, kinds in mine.items()}
-        if rounds_on:
-            room = load_room(conn, seen.workspace_id, seen.room_id)
+            taps = reactions.mine(conn, ref.room_id, ref.guest_id, recent)
+            answer["my_taps"] = {play_id: sorted(kinds) for play_id, kinds in taps.items()}
+        if on.get("rounds"):
             current = rounds.open_round_of(conn, room)
             if current is not None:
+                joined = conn.execute(
+                    sa.select(room_guests.c.joined_at).where(room_guests.c.id == ref.guest_id)
+                ).scalar()
                 answer["my_vote"] = {
                     "round_id": current.id,
-                    "position": rounds.my_vote(conn, current.id, seen.guest_id),
+                    "position": rounds.my_vote(conn, current.id, ref.guest_id),
                     # a guest who joined after it opened watches this one and votes in the next
-                    "can_vote": seen.joined_at <= current.opened_at,
+                    "can_vote": joined is not None and joined <= current.opened_at,
                 }
     return answer
-
 
 def round_json(found: rounds.Round) -> dict[str, Any]:
     """A round as the pulse carries it. Songs are named afterwards, outside the transaction."""
@@ -510,6 +492,16 @@ def install_host_routes(
         except RoomError as error:
             raise refusal(error) from error
         return {"recap": built, "lines": recap_rules.lines(built) if built else []}
+
+    @app.get("/api/room-recaps")
+    def room_recaps(
+        request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
+    ) -> dict[str, Any]:
+        """Tonight in numbers for the rooms this account has hosted, newest first."""
+        workspace_id = workspace(request, claims)
+        recap.build_missing(social.rooms(), workspace_id)
+        with transaction(engine, workspace_id) as conn:
+            return {"recaps": recap.recent(conn, workspace_id)}
 
     @app.delete("/api/rooms/{room_id}/requests/{request_id}/dedication")
     def clear_dedication(

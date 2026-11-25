@@ -169,6 +169,13 @@
 .room-check + .room-help { margin-top: calc(-1 * var(--space-3)); }
 .room-setting-row { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between; padding-top: var(--space-3); border-top: var(--separator) solid var(--edge-decorative); }
 .room-setting-row > span { display: grid; gap: var(--space-hair); flex: 1 1 9rem; min-width: 0; font-size: var(--text-sm); }
+.room-round { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.room-round > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); font-size: var(--text-sm); }
+.room-round > li > span:first-child { display: grid; gap: var(--space-hair); min-width: 0; }
+.room-round-count { font-variant-numeric: tabular-nums; }
+.room-round-bar { grid-column: 1 / -1; height: 4px; border-radius: var(--radius-pill); background: var(--surface-control); overflow: hidden; }
+.room-round-bar i { display: block; height: 100%; border-radius: inherit; background: var(--primary-fill); transition: width var(--motion-slow) var(--motion-ease); }
+@media (prefers-reduced-motion: reduce) { .room-round-bar i { transition: none; } }
 .room-limits { display: grid; gap: var(--space-3); }
 .room-limit { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem; gap: var(--space-hair) var(--space-3); align-items: start; }
 .room-limit label { grid-column: 1; align-self: center; min-height: var(--space-5); display: flex; align-items: center; }
