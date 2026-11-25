@@ -10,3 +10,101 @@
  *                         layer behind content and never under text
  *
  * No rule here may use `infinite`: a loop would be a timer, not the music. */
+
+/* Off, the beat targets and the ambient layer are not drawn at all, so a page that carries them
+   looks exactly as it did before the feel system. */
+:where([data-beat], [data-playing-bars], .ambient-layer) {
+  display: none;
+}
+
+/* ---- music: the resting shapes the beat bus pulses ------------------------------------------- */
+
+/* A beat target is a decorative child placed inside the thing it decorates. Its parent becomes the
+   positioning box and its own stacking context, so a wash can sit under the parent's text. A parent
+   with its own position keeps it: this rule has no specificity. */
+:where(:root[data-feel~='music']) :where(:has(> [data-beat])) {
+  position: relative;
+  isolation: isolate;
+}
+
+:where(:root[data-feel~='music']) :where([data-beat]) {
+  display: block;
+  position: absolute;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+}
+
+/* The ring round Play: drawn just outside the button and scaled by the bus, never the button. */
+:where(:root[data-feel~='music']) :where([data-beat='ring']) {
+  inset: calc(-1 * var(--space-1));
+  border: var(--space-hair) solid var(--primary-fill);
+  border-radius: var(--radius-pill);
+  transform-origin: center;
+}
+
+/* The player's lit top edge. */
+:where(:root[data-feel~='music']) :where([data-beat='edge']) {
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: var(--space-hair);
+  background: var(--primary-fill);
+  border-radius: 0;
+  opacity: 0.2;
+}
+
+/* The glow on the playing thing. */
+:where(:root[data-feel~='music']) :where([data-beat='glow']) {
+  inset: 0;
+  box-shadow: var(--glow-accent);
+}
+
+/* The playing row's wash, under the row's own text. */
+:where(:root[data-feel~='music']) :where([data-beat='row']) {
+  inset: 0;
+  z-index: -1;
+  background: var(--primary-fill);
+}
+
+/* Three playing bars, at rest a third of their height (feel/beatBus.ts BAR_REST). The bus scales
+   each one from a measured band on a beat; paused, they stand still at rest. */
+:where(:root[data-feel~='music']) :where([data-playing-bars]) {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--space-hair);
+  block-size: 1em;
+  pointer-events: none;
+}
+
+:where(:root[data-feel~='music']) :where([data-playing-bars] > *) {
+  display: block;
+  inline-size: var(--space-1);
+  block-size: 100%;
+  border-radius: var(--radius-hair);
+  background: var(--primary-fill);
+  transform: scaleY(0.3);
+  transform-origin: bottom;
+}
+
+/* ---- ambient: the room in the song's hue ------------------------------------------------------ */
+
+/* One fixed, empty layer behind all content (feel/hue.ts makes it). It inherits the published
+   --ambient-hue from <html>; during a hand-over a script sets the number on this layer alone. The
+   hue is a registered number, so a song change eases instead of jumping. */
+:where(:root[data-feel~='ambient']) :where(.ambient-layer) {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at top, var(--ambient-tint), transparent 70%);
+  transition: --ambient-hue var(--motion-slow) var(--motion-ease);
+}
+
+/* ---- forced colours: borders and outlines carry every state ----------------------------------- */
+
+@media (forced-colors: active) {
+  :where([data-beat], [data-playing-bars], .ambient-layer) {
+    display: none !important;
+  }
+}

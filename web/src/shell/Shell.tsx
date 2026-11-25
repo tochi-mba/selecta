@@ -16,6 +16,7 @@ import { Toaster } from '../ui/toasts';
 import { aboutOf, classicDestinations, describeRoute, destinationOf, destinationsFor, type MoreDestination, type ShellMode, type ShellRoute, workspaceTabs } from './manifest';
 import { PageLink } from './PageLink';
 import { supportHref } from '../support';
+import { useMusicFeel } from '../feel/useMusicFeel';
 
 export { PageLink };
 
@@ -330,6 +331,7 @@ export function Shell({
   const prefs = usePrefs();
   const on = useFlags();
   useKeyboardInset();
+  useMusicFeel({ player, now, song });
 
   // A new page starts at the top with focus on its heading, and says where you are. Back and Forward
   // return to where you were. The history entry itself says which: a page left by navigating away

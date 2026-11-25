@@ -25,6 +25,8 @@ import { PlayedTransitions, playedKey, StemSurfacesContext } from './liveTransit
 import { FirstHandoff } from './FirstHandoff';
 import { Strip, StripPlaceholder } from './NowStrip';
 import { CoverArt } from './CoverArt';
+import { setBeatGrid } from '../feel/beatBus';
+import { handoverProgress } from '../feel/hue';
 
 /** Fit the complete music title to its actual column, not the viewport.
  * Keep it in the accessibility tree and allow more lines at extreme zoom. */
@@ -194,7 +196,7 @@ function TransitionCountdown({
     return <section className="handoff pending"><span className="eyebrow">Next transition</span><b>Preparing the hand-off</b><span>{nextTitle}</span><i className="pending-line" /></section>;
   }
   if (inSeam) {
-    const progress = Math.max(0, Math.min(1, (time - seamAt) / Math.max(switchAt ?? 0, 0.01)));
+    const progress = handoverProgress(time, seamAt, switchAt);
     return (
       <section className="handoff active" aria-label={`Transition into ${nextTitle} is playing`}>
         <div className="handoff-title"><span className="eyebrow">Transition in progress</span><b>{nextTitle}</b></div>
@@ -714,6 +716,7 @@ export function Now(props: ViewProps) {
           ? `Paused · ${mixName}`
           : mixName;
   const shown = detail && detail.id === item?.song_id ? detail : null;
+  useEffect(() => { setBeatGrid(gridOf(shown)); return () => setBeatGrid(null); }, [shown]);
   const waiting = waitingRequestCount(requests?.requests);
 
   const showChanged = changed && changed.id === next?.song_id ? changed : null;

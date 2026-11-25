@@ -3,6 +3,7 @@ import { lazyPage as lazy } from '../ui/staleBuild';
 import type { MixData, Request, Status } from '../api';
 import { accountFlagOn, setFlags, useFlags } from '../flags';
 import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
+import { useArtIndex } from './artIndex';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -168,6 +169,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     if (store.current?.workspaceId !== workspaceId) store.current = { workspaceId, opened: MediaStore.open(workspaceId) };
     return store.current.opened;
   }, [workspaceId]);
+  useArtIndex(openStore);
   const resolving = useRef<Promise<MediaResolver> | null>(null);
   // Device first, hosted fallback (ADR-0465): only a grandfathered account with stored media
   // readable gets the hosted path; every answer lands in the source book the queue shows.
@@ -815,7 +817,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
-    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false, waveformOf,
+    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: true, waveformOf,
     startedAMix: (savedMixes ?? 0) > 0,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
     playOn: playsOn,
