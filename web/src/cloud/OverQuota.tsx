@@ -8,7 +8,7 @@ export function OverQuotaBanner({ account, go }: { account: Account | null; go: 
   if (!account || !isOverQuota(account)) return null;
   const limit = account.usage?.storage.limit_bytes ?? account.entitlement.storage_limit_bytes;
   return (
-    <section className="cloud-over-quota" role="status" aria-labelledby="cloud-over-quota-title">
+    <section className="cloud-over-quota" role="status" aria-labelledby="cloud-over-quota-title" data-arrive="">
       <div>
         <h2 id="cloud-over-quota-title">You’re {bytes(overBy(account))} over {planName(account)}’s {bytes(limit)}</h2>
         <p>Uploads and exports are paused until your library fits. You can still listen, download and remove songs. Nothing has been deleted.</p>

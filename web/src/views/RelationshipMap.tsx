@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
+import { feelParts, onFeelChange } from '../feel/root';
 import type { Link } from '../api';
 
 /** SF-0218-03: an optional map of the word connections the server actually returned. A song is a dot
@@ -58,11 +59,17 @@ export function relationshipGraph(links: Link[], size = 320, capacity = MAP_CAPA
 export function RelationshipMap({ links }: { links: Link[] }) {
   const { nodes, edges, songs, connections } = relationshipGraph(links);
   const [followed, setFollowed] = useState<number | null>(null);
+  // With the feel on, pointing at a song lights its connections and neighbours without following
+  // it (nothing is announced); the select stays the way to follow one, by keyboard or touch.
+  const alive = useSyncExternalStore(onFeelChange, () => feelParts().length > 0, () => false);
+  const [pointed, setPointed] = useState<number | null>(null);
   if (edges.length < 2) return null;
   const at = new Map(nodes.map((node) => [node.id, node]));
   const song = followed !== null ? at.get(followed) : undefined;
   const into = song ? edges.filter((edge) => edge.from === song.id) : [];
   const from = song ? edges.filter((edge) => edge.into === song.id) : [];
+  const lightFrom = song?.id ?? (alive ? pointed : null);
+  const near = new Set(lightFrom === null ? [] : edges.flatMap((edge) => (edge.from === lightFrom ? [edge.into] : edge.into === lightFrom ? [edge.from] : [])));
   const named = (edge: MapEdge, id: number) => `${at.get(id)!.title} on “${edge.phrase}”`;
   return (
     <details className="relationship-map">
@@ -88,20 +95,22 @@ export function RelationshipMap({ links }: { links: Link[] }) {
         </p>
       )}
       <svg viewBox="0 0 320 320" role="img" aria-label={`${nodes.length} songs joined by ${edges.length} word connections`} width={320} height={320} style={{ maxWidth: '100%', height: 'auto' }}>
-        <g stroke="currentColor" strokeOpacity={song ? 0.2 : 0.45} strokeWidth={1.5}>
+        <g stroke="currentColor" strokeOpacity={song || (alive && pointed !== null) ? 0.2 : 0.45} strokeWidth={1.5}>
           {edges.map((edge) => {
             const a = at.get(edge.from)!;
             const b = at.get(edge.into)!;
-            const lit = !!song && (edge.from === song.id || edge.into === song.id);
+            const lit = lightFrom !== null && (edge.from === lightFrom || edge.into === lightFrom);
             return (
-              <line key={edge.key} data-edge={edge.key} data-lit={lit ? '' : undefined} x1={a.x} y1={a.y} x2={b.x} y2={b.y} strokeOpacity={lit ? 1 : undefined} strokeWidth={lit ? 2.5 : undefined}>
+              // pathLength lets the line draw itself once when the map opens (feel-account.css)
+              <line key={edge.key} data-edge={edge.key} data-lit={lit ? '' : undefined} x1={a.x} y1={a.y} x2={b.x} y2={b.y} strokeOpacity={lit ? 1 : undefined} strokeWidth={lit ? 2.5 : undefined} pathLength={alive ? 1 : undefined}>
                 <title>{`${a.title} into ${b.title} on “${edge.phrase}”`}</title>
               </line>
             );
           })}
         </g>
         {nodes.map((node) => (
-          <g key={node.id} data-song={node.id}>
+          <g key={node.id} data-song={node.id} data-near={alive && near.has(node.id) ? '' : undefined}
+            onPointerEnter={alive ? () => setPointed(node.id) : undefined} onPointerLeave={alive ? () => setPointed((was) => (was === node.id ? null : was)) : undefined}>
             <circle cx={node.x} cy={node.y} r={node.id === song?.id ? 7 : 5} fill="currentColor" />
             <text x={node.x} y={node.y - 9} textAnchor="middle" fontSize={10} fill="currentColor">{node.title}</text>
           </g>

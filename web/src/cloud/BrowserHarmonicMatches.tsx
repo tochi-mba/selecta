@@ -9,6 +9,8 @@ import { Action, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import type { BrowserAudition, BrowserDiscovery, ProfileProgress } from './localFirstDiscoveries';
+import { CoverArt } from '../views/CoverArt';
+import { RestingPair, useFeelAlive } from '../views/Links';
 
 const OWNER = 'browser-harmonic-matches';
 
@@ -23,6 +25,8 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
   const { get, post } = useApi();
   const [items, setItems] = useState<BrowserDiscovery[]>([]);
   const [progress, setProgress] = useState<ProfileProgress | null>(null);
+  // with the feel on: the pair's covers, the two measured keys lit, and a resting drawing when empty
+  const alive = useFeelAlive();
   const [loaded, setLoaded] = useState(false);
   const loadedRef = useRef(false);
   loadedRef.current = loaded;
@@ -176,7 +180,8 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
   } else if (!loaded && error) {
     body = <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
   } else if (!items.length && !error) {
-    body = <p className="lede">No harmonic matches yet. They turn up as more of the songs on this device are measured.</p>;
+    const words = <p className="lede">No harmonic matches yet. They turn up as more of the songs on this device are measured.</p>;
+    body = alive ? <div className="links-empty" data-glow=""><RestingPair />{words}</div> : words;
   } else {
     body = (
       <>
@@ -199,12 +204,15 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
           onEnded={() => { if (step === 0) playPart(1); else stop(); }}
         />
         {item && (
-          <article className="discovery" data-pair={`${item.song_a}>${item.song_b}`}>
+          <article className="discovery" data-pair={`${item.song_a}>${item.song_b}`} data-glow={alive ? '' : undefined} data-arrive={alive ? '' : undefined}>
             <p className="link-kind">Key match, a suggestion to check by ear, not a verified match</p>
+            {alive && <span className="discovery-covers" aria-hidden="true"><CoverArt seed={item.song_a} songId={item.song_a} size="small" /><CoverArt seed={item.song_b} songId={item.song_b} size="small" /></span>}
             <h3>{item.title_a} <span className="soft">into</span> {item.title_b}</h3>
             <p className="hint">{item.artist_a} · {item.artist_b}</p>
             <p className="hint">
-              Measured here: {item.payload.key_a} ({item.payload.camelot_a}) and {item.payload.key_b} ({item.payload.camelot_b}).
+              {alive
+                ? <>Measured here: <b className="discovery-key">{item.payload.key_a} ({item.payload.camelot_a})</b> and <b className="discovery-key">{item.payload.key_b} ({item.payload.camelot_b})</b>.</>
+                : <>Measured here: {item.payload.key_a} ({item.payload.camelot_a}) and {item.payload.key_b} ({item.payload.camelot_b}).</>}
               {item.payload.transpose !== 0 && ` Their profiles line up most closely with one moved ${Math.abs(item.payload.transpose)} semitone${Math.abs(item.payload.transpose) === 1 ? '' : 's'}, but the keys already sit together, and the preview plays both as recorded.`}
             </p>
             <button className="primary" disabled={getting} onClick={() => (step !== null ? stop() : void hear(item))}>

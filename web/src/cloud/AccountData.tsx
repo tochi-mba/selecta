@@ -1,4 +1,5 @@
-import { useId, useState } from 'react';
+import { useId, useState, useSyncExternalStore } from 'react';
+import { feelOn, onFeelChange } from '../feel/root';
 import { Action, Dialog } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ELLIPSIS } from '../ui/format';
@@ -79,6 +80,7 @@ export function AccountData({ token, workspaceId, features, withAudio = true }: 
   const [problem, setProblem] = useState('');
   // cloud.offline_shell: the export is made by the server, so it waits for the connection
   const offline = useNeedsConnection();
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
   const start = async () => {
     if (busy) return;
     setBusy(true); setProblem(''); setDone(null); setProgress(null);
@@ -107,7 +109,10 @@ export function AccountData({ token, workspaceId, features, withAudio = true }: 
       </ul>
       {busy && <div className="acct-progress"><Meter label="Your export" value={progress?.total ? progress.received : undefined} max={progress?.total ?? 100} valueText={progressWords} /></div>}
       {offline && <p className="needs-connection">{offline}</p>}
-      {done !== null && !busy && <Notice tone="ok">{`Your export has downloaded (${bytes(done)}). Look for ${EXPORT_FILE} in your downloads.`}</Notice>}
+      {done !== null && !busy && (moving
+        // the file really arrived: the notice pops in once, as a "ready" answer to the download
+        ? <div className="feel-pop acct-export-ready"><Notice tone="ok">{`Your export has downloaded (${bytes(done)}). Look for ${EXPORT_FILE} in your downloads.`}</Notice></div>
+        : <Notice tone="ok">{`Your export has downloaded (${bytes(done)}). Look for ${EXPORT_FILE} in your downloads.`}</Notice>)}
       {problem && <Notice tone="danger" role="alert" action={<button type="button" className="small" onClick={() => void start()}>Try again</button>}><strong>The export did not download</strong><span>{problem}</span></Notice>}
     </SettingsCard>
   );

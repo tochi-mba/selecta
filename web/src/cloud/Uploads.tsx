@@ -1,4 +1,6 @@
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, CSSProperties, DragEvent, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { feelOn, feelParts, onFeelChange } from '../feel/root';
+import { Icon } from '../ui/Icon';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { countOf, Truncate } from '../ui/format';
 import type { Api } from './api';
@@ -58,6 +60,29 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
     resolve?.(yes);
   };
   const selected = useCallback((event: ChangeEvent<HTMLInputElement>) => setFiles(Array.from(event.target.files ?? [])), []);
+  // The drop zone answers a file dragged over it (lifted, with a lit edge) and takes the files that
+  // are dropped, while any part of the feel is on. With the feel off it stays the press-to-choose
+  // zone it always was.
+  const feeling = useSyncExternalStore(onFeelChange, () => feelParts().length > 0, () => false);
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  const [dragging, setDragging] = useState(false);
+  const carriesFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes('Files');
+  const dragOver = (event: DragEvent<HTMLLabelElement>) => {
+    if (!feeling || blocked || !carriesFiles(event)) return;
+    event.preventDefault();
+    if (!dragging) setDragging(true);
+  };
+  const dragLeave = (event: DragEvent<HTMLLabelElement>) => {
+    // leaving for a child of the zone is not leaving the zone
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setDragging(false);
+  };
+  const dropped = (event: DragEvent<HTMLLabelElement>) => {
+    setDragging(false);
+    if (!feeling || blocked || !carriesFiles(event)) return;
+    event.preventDefault();
+    setFiles(Array.from(event.dataTransfer.files ?? []));
+  };
 
   const loadUnfinished = useCallback(async () => {
     try { setUnfinished(await unfinishedUploads(api, workspaceId)); } catch { /* the list is a convenience */ }
@@ -174,9 +199,9 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
       <div className="cloud-upload-intro"><p className="cloud-eyebrow">Private library</p><h2>Add your tracks</h2><p>Files transfer directly to private object storage. SelectaDJ checks the actual audio format, file size and duration before accepting an upload.</p></div>
       {blocked && <p className="cloud-inline-error" role="status">{blocked}</p>}
       <UnfinishedUploads api={api} workspaceId={workspaceId} sessions={unfinished} onChanged={() => void loadUnfinished()} />
-      <label className={`cloud-drop${blocked ? ' disabled' : ''}`}>
+      <label className={`cloud-drop${blocked ? ' disabled' : ''}`} data-lift={feeling && !blocked ? '' : undefined} data-drag={dragging || undefined} onDragOver={dragOver} onDragLeave={dragLeave} onDrop={dropped}>
         <input type="file" multiple disabled={Boolean(blocked)} accept="audio/*,.aiff,.aif,.flac,.mp3,.m4a,.wav,.ogg,.opus" onChange={selected} />
-        <span className="cloud-drop-icon">＋</span>
+        <span className="cloud-drop-icon"><Icon name="plus" size="hero" /></span>
         <strong>{files.length ? `${countOf(files.length, 'file')} selected` : 'Choose music files'}</strong>
         <small>MP3, FLAC, WAV, AIFF, M4A, AAC and Ogg audio</small>
       </label>
@@ -184,7 +209,8 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
         <button className="primary" disabled={!files.length || uploading || Boolean(blocked)} onClick={() => void begin()}>{uploading ? 'Uploading…' : 'Start upload'}</button>
         {progress && <span role="status">{progress}</span>}
       </div>
-      {items.length > 0 && <ul className="cloud-upload-list" aria-label={perFile ? 'Each file’s result' : undefined}>{items.map((item, index) => <li key={`${item.name}-${index}`} data-outcome={perFile ? item.outcome : undefined}><Truncate text={item.name} /><b>{item.status}</b>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}
+      {/* each file's line arrives as its upload ends, and an accepted one ticks (feel motion only) */}
+      {items.length > 0 && <ul className="cloud-upload-list" aria-label={perFile ? 'Each file’s result' : undefined} data-stagger={moving || undefined}>{items.map((item, index) => <li key={`${item.name}-${index}`} data-outcome={perFile ? item.outcome : undefined} style={moving ? ({ '--i': index } as CSSProperties) : undefined}><Truncate text={item.name} /><b>{moving && item.outcome === 'added' && <UploadTick />}{item.status}</b>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}
       {rights !== null && (
         <ConfirmDialog
           title="Confirm the upload rights"
@@ -207,6 +233,11 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
       )}
     </section>
   );
+}
+
+/** The tick an accepted file's line draws once (.feel-tick). Decoration: the words say "accepted". */
+function UploadTick() {
+  return <svg className="cloud-upload-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path className="feel-tick" pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
 }
 
 /** The upload rights statement a business organisation asks for, from a refused plan. */
