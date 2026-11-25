@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ApiError, MixData, VibeCard } from '../api';
+import { answerWithin, ApiError, MixData, VibeCard } from '../api';
 import { useApi, useRequest } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
@@ -28,6 +28,8 @@ type Asked = { key: string; name: string; open: boolean; order?: string };
 // EX-0117-02: the chosen length is kept in this browser, like the other shaping choices,
 // so a new visit starts where the listener left it. Anything unexpected falls back to 30 min.
 const LENGTH_KEY = 'selecta.mixLength';
+/** How long Play waits for a mix to be built before it says so and can be pressed again. */
+const BUILD_LIMIT_MS = 90_000;
 function rememberedLength(): number {
   if (!flagOn('mixes.shaping.remember_length')) return SET_LENGTHS[0].songs;
   try {
@@ -89,10 +91,13 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     const operation = operations.current.get(signature) ?? operationId('build');
     operations.current.set(signature, operation);
     try {
-      const data = await post<MixData>(`/vibes/${key}/build?count=${songs}`, undefined, {
+      // A build that never answers frees Play after the limit; pressing again sends the same operation
+      // id, so the server answers with the mix it made rather than making a second. One that answers
+      // late only brings the current mix up to date: it never steals playback.
+      const data = await answerWithin(post<MixData>(`/vibes/${key}/build?count=${songs}`, undefined, {
         'x-mix-order': expected,
         'x-operation-id': operation,
-      });
+      }), BUILD_LIMIT_MS, setMixData);
       operations.current.delete(signature);
       // Reconcile the server's actual current mix even after navigating away.
       // A late request must not steal route or playback focus from a new task.
@@ -118,7 +123,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         }
       }
     } catch (error) {
-      if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
+      if (error instanceof ApiError && error.status < 500 && error.code !== 'answer_timeout') operations.current.delete(signature);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       if (hereNow.current) setProblem((error as Error).message);
       return false; // said here, so the button draws no tick
@@ -137,15 +142,15 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     const operation = operations.current.get(signature) ?? operationId('draft');
     operations.current.set(signature, operation);
     try {
-      const made = await post<{ id: number; name: string; count: number }>(
+      const made = await answerWithin(post<{ id: number; name: string; count: number }>(
         `/vibes/${key}/build?count=${songs}&as_draft=true`,
         undefined,
         { 'x-operation-id': operation },
-      );
+      ), BUILD_LIMIT_MS);
       operations.current.delete(signature);
       if (hereNow.current) notify(`Saved ${made.name} as a draft: ${made.count} of ${songs} requested songs. Your current playback was not changed.`);
     } catch (error) {
-      if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
+      if (error instanceof ApiError && error.status < 500 && error.code !== 'answer_timeout') operations.current.delete(signature);
       if (hereNow.current) setProblem((error as Error).message);
       return false; // said here, so the button draws no tick
     } finally {
@@ -253,6 +258,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             className="primary big"
             disabled={!hero?.ready || (!!building && !building.startsWith('pick'))}
             busy={building.startsWith('pick')}
+            limit={0}
             working="Building…"
             title={replacing ? (analysisAvailable ? `Replaces ${current}; you can undo that` : `Replaces ${current}, which stays in My Mixes`) : undefined}
             run={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
@@ -380,9 +386,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                     {/* MP-0274-04: the actions close the card, so Play and Shape first share one line across a row of
                         cards however a name, summary or this disclosure wraps */}
                     <div className="row card-actions" data-count={on('editor') ? 2 : 1}>
-                      <Action className="primary" disabled={!!building && building !== card.key} busy={building === card.key} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>{playOn?.now && !playOn.ask ? `Play on ${playOn.name}` : 'Play'}</Action>
-                      {on('editor') && <Action className="quiet" disabled={!!building && building !== `${card.key}:open`} busy={building === `${card.key}:open`} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
-                      {on('drafts') && <Action className="quiet save-draft" disabled={!!building && building !== `${card.key}:draft`} busy={building === `${card.key}:draft`} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
+                      <Action className="primary" limit={0} disabled={!!building && building !== card.key} busy={building === card.key} working="Building…" run={() => ask({ key: card.key, name: card.name, open: false })}>{playOn?.now && !playOn.ask ? `Play on ${playOn.name}` : 'Play'}</Action>
+                      {on('editor') && <Action className="quiet" limit={0} disabled={!!building && building !== `${card.key}:open`} busy={building === `${card.key}:open`} working="Building…" run={() => ask({ key: card.key, name: card.name, open: true })}>Shape first</Action>}
+                      {on('drafts') && <Action className="quiet save-draft" limit={0} disabled={!!building && building !== `${card.key}:draft`} busy={building === `${card.key}:draft`} working="Saving…" run={() => keepAsDraft(card.key)}>Save draft{" "}<span className="visually-hidden">for {card.name}</span></Action>}
                     </div>
                   </article>
                 ))}
@@ -428,8 +434,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           footer={(
             <>
               <button onClick={() => setConfirming(null)}>Cancel</button>
-              {on('drafts') && <Action working="Saving…" run={async () => { const { key } = confirming; setConfirming(null); await keepAsDraft(key); }}>Save as draft instead</Action>}
-              <Action className="primary" working="Building…" run={async () => { const asked = confirming; setConfirming(null); await start(asked); }}>
+              {on('drafts') && <Action limit={0} working="Saving…" run={async () => { const { key } = confirming; setConfirming(null); await keepAsDraft(key); }}>Save as draft instead</Action>}
+              <Action limit={0} className="primary" working="Building…" run={async () => { const asked = confirming; setConfirming(null); await start(asked); }}>
                 {confirming.open ? 'Replace and edit' : 'Replace and play'}
               </Action>
             </>

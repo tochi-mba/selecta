@@ -43,6 +43,9 @@ export function Command({ label, run, danger, note }: { label: string; run: (rea
   );
 }
 
+const READ_LIMIT_MS = 20_000;
+const READ_TOO_LONG = 'SelectaDJ is taking too long to respond. Try again.';
+
 /** Load something once and on demand, keeping a refusal's words for the page. */
 export function useLoad<T>(load: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
@@ -53,8 +56,12 @@ export function useLoad<T>(load: () => Promise<T>, deps: unknown[]) {
   const reload = useCallback(async () => {
     const mine = ++latest.current;
     setError('');
-    try { const next = await load(); if (mine === latest.current) setData(next); }
+    // A read that never answers must not leave a skeleton for ever: after the limit it says so and
+    // offers Try again. An answer that comes later still lands.
+    const slow = window.setTimeout(() => { if (mine === latest.current) setError(READ_TOO_LONG); }, READ_LIMIT_MS);
+    try { const next = await load(); if (mine === latest.current) { setData(next); setError(''); } }
     catch (problem) { if (mine === latest.current) setError(problem instanceof AdminError ? problem.message : (problem as Error).message); }
+    finally { window.clearTimeout(slow); }
   }, deps);
   useEffect(() => { void reload(); }, [reload]);
   return { data, error, reload };

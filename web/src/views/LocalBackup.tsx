@@ -108,7 +108,7 @@ export function LocalBackup() {
   return <section className="panel stack">
     <h2>Local data backup</h2>
     <p>Save your library records, drafts, feedback and preferences in a verified ZIP. Original music, audio caches and exports are not included; keep those files separately.</p>
-    <Action working="Preparing download…" disabled={working} run={download}>Download a backup</Action>
+    <Action working="Preparing download…" disabled={working} limit={0} run={download}>Download a backup</Action>
     {status?.pending_restart && <p className="warn" role="status">A validated restore is waiting for a restart. No running data has been replaced yet.</p>}
     {status?.rollback_available && <p className="hint">A pre-restore database rollback is preserved locally.</p>}
     {status?.problem && <p className="warn" role="alert">Restore was not applied: {status.problem}. Your current database has been kept.</p>}
@@ -119,13 +119,13 @@ export function LocalBackup() {
     </label>
     {/* MP-0293-06: `waiting`, not `disabled`, so the button keeps focus while it checks and the
         preview dialog can hand focus back to it on Cancel */}
-    {chosen && <Action waiting={working} working="Checking archive…" run={inspect}>Validate and preview restore</Action>}
+    {chosen && <Action waiting={working} working="Checking archive…" limit={0} run={inspect}>Validate and preview restore</Action>}
     {issue && <p className="warn" role="alert">{issue}</p>}
     {notice && <p role="status">{notice}</p>}
     {preview && <Dialog title="Replace local data on next restart?" onClose={() => setPreview(null)}
       footer={<>
         <button onClick={() => setPreview(null)}>Cancel - keep current data</button>
-        <Action className="primary" working="Preparing restore…" disabled={working} run={confirm}>Confirm staged restore</Action>
+        <Action className="primary" working="Preparing restore…" disabled={working} limit={0} run={confirm}>Confirm staged restore</Action>
       </>}>
       <p>Archive date: {preview.created_utc}</p>
       <p>This archive contains {preview.counts.songs} songs, {preview.counts.drafts} drafts, and {preview.counts.ratings} ratings.</p>

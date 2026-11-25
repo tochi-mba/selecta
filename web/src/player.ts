@@ -40,6 +40,8 @@ const SAVE_EVERY = 5;
 const RESTART_WITHIN = 4;
 const SOUND_KEY = 'selecta.sound';
 const WAKE_WAIT_MS = 3000;
+/** Play waits this long for a song's audio before it says so and lets Play ask again. */
+export const FIRST_SONG_WAIT_MS = 45_000;
 const SEAM_POLL_FIRST = 1000;
 const SEAM_POLL_MOST = 5000;
 const SEAM_POLL_NEAR_END = 30;
@@ -448,12 +450,23 @@ export class SetPlayer {
     }
     this.update({ phase: 'loading', position, songTime: offset, duration: item.duration, notice: '', inSeam: false });
     let buffer: AudioBuffer;
+    // A download that never answers must not leave "Loading" for ever: Play gives up waiting, drops
+    // the stuck download from the cache so the next press fetches afresh, and says so.
+    const loading = this.loadSong(item.song_id);
+    let slow: number | undefined;
     try {
-      buffer = await this.loadSong(item.song_id);
+      buffer = await Promise.race([loading, new Promise<never>((_done, fail) => {
+        slow = window.setTimeout(() => {
+          if (this.songs.get(item.song_id) === loading) this.songs.delete(item.song_id);
+          fail(new Error('That song is taking too long to load. Press play to try again.'));
+        }, FIRST_SONG_WAIT_MS);
+      })]);
     } catch (error) {
       if (generation !== this.playGeneration) return;
       this.update({ phase: 'idle', notice: (error as Error).message });
       return;
+    } finally {
+      window.clearTimeout(slow);
     }
     if (generation !== this.playGeneration) return;
     const playing = this.layer(buffer);

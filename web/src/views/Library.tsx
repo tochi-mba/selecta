@@ -3,7 +3,7 @@ import { ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useStat
 import { HolderContext } from '../devices/controller';
 import { RemoteSelection } from './RemoteSelection';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
+import { answerWithin, ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
 import { useApi } from '../requestContext';
 import { Gate, useFlags, visible } from '../flags';
 import { analysisWords, askedToAnalyse } from '../lib';
@@ -430,10 +430,12 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     const operation = buildOperations.current.get(signature) ?? operationId('build');
     buildOperations.current.set(signature, operation);
     try {
-      const data = await post<MixData>(`/vibes/pick/build?start=${song.id}`, undefined, {
+      // no answer frees the rows after the limit; a second press resends the same operation id, and
+      // a late answer only brings the current mix up to date, never playback (as in Mixes)
+      const data = await answerWithin(post<MixData>(`/vibes/pick/build?start=${song.id}`, undefined, {
         'x-mix-order': expectedOrder,
         'x-operation-id': operation,
-      });
+      }), 90_000, setMixData);
       buildOperations.current.delete(signature);
       setMixData(data);
       if (hereNow.current) {
@@ -442,7 +444,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         notify(`A mix starting from ${song.title}.`, true);
       }
     } catch (error) {
-      if (error instanceof ApiError && error.status < 500) buildOperations.current.delete(signature);
+      if (error instanceof ApiError && error.status < 500 && error.code !== 'answer_timeout') buildOperations.current.delete(signature);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       if (hereNow.current) notify((error as Error).message || 'Couldn’t build that mix. Try again.');
     } finally {
@@ -825,7 +827,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           footer={(
             <>
               <button onClick={() => setConfirmStart(null)}>Keep current mix</button>
-              <Action className="primary" working="Building…" run={async () => {
+              <Action className="primary" limit={0} working="Building…" run={async () => {
                 const selected = confirmStart;
                 setConfirmStart(null);
                 await startFrom(selected.song, selected.order);

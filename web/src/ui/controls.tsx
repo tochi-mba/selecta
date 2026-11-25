@@ -13,6 +13,10 @@ export { Skeleton } from './Skeleton';
 
 /** How long the drawn tick shows after an Action finishes, before its label comes back (ADR-0477). */
 const DONE_MS = 900;
+/** How long an Action waits before it stops looking busy and offers another go. Generous on
+ * purpose: it is for a promise that will never settle, not for slow work. */
+export const ACTION_LIMIT_MS = 60_000;
+export const TOO_LONG = 'That is taking too long to answer. Try again, or check back in a moment.';
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
  * until that exact thing has finished, can't be pressed twice meanwhile, and says if it went wrong.
@@ -32,6 +36,7 @@ export function Action({
   failed,
   waiting,
   busy: workingElsewhere,
+  limit = ACTION_LIMIT_MS,
   children,
   ...rest
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
@@ -41,6 +46,9 @@ export function Action({
   waiting?: boolean;
   /** Its work is going on somewhere else, such as a confirmation it opened (MI-0138-08). */
   busy?: boolean;
+  /** How long, in ms, before a press that has not finished frees the button and says it took too
+   * long. 0 (or Infinity) for work that is legitimately long, such as an export or an analysis. */
+  limit?: number;
 }) {
   const [pressed, setBusy] = useState(false);
   const [ending, setEnding] = useState<'done' | 'failed' | null>(null);
@@ -48,6 +56,7 @@ export function Action({
   const going = useRef(false);
   const mounted = useRef(true);
   const endTimer = useRef(0);
+  const attempts = useRef(0);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -66,9 +75,22 @@ export function Action({
   const press = async () => {
     if (going.current || waiting || workingElsewhere) return;
     going.current = true;
+    const attempt = ++attempts.current;
     window.clearTimeout(endTimer.current);
     setEnding(null);
     setBusy(true);
+    // A promise that never settles (a swallowed browser prompt, a request the network dropped)
+    // must not hold the button for ever: after the limit the button comes back and says so. The
+    // work itself is not cancelled, so a late result still lands wherever `run` puts it.
+    let gaveUp = false;
+    const giveUp = limit > 0 && Number.isFinite(limit) ? window.setTimeout(() => {
+      if (attempts.current !== attempt) return;
+      gaveUp = true;
+      going.current = false;
+      if (mounted.current) setBusy(false);
+      showProblem(TOO_LONG);
+      end('failed');
+    }, limit) : 0;
     let how: 'done' | 'failed' = 'done';
     try {
       if ((await run()) === false) how = 'failed';
@@ -76,10 +98,13 @@ export function Action({
       how = 'failed';
       showProblem(failed ?? ((error as Error).message || 'That didn’t work. Try again.'));
     } finally {
-      going.current = false;
-      if (mounted.current) setBusy(false);
+      window.clearTimeout(giveUp);
+      if (!gaveUp) {
+        going.current = false;
+        if (mounted.current) setBusy(false);
+      }
     }
-    end(how);
+    if (!gaveUp) end(how);
   };
   const done = ending === 'done' && !busy;
   const labels = working ? <span className="action-labels"><span aria-hidden={busy || undefined} style={{ visibility: busy ? 'hidden' : undefined }}>{children}</span><span aria-hidden={!busy || undefined} style={{ visibility: busy ? undefined : 'hidden' }}>{working}</span></span> : children;
