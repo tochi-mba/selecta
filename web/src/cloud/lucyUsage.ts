@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { announce } from '../ui/controls';
+import { dateWords } from '../ui/format';
 
 /** Lucy's usage as the server works it out (ADR-0484): one read model, drawn the same way by Lucy's
  * settings, Plan & billing and the twin level meter. The page only draws what it is given: the share
@@ -7,7 +8,10 @@ import { announce } from '../ui/controls';
  * never shows what is behind the share. */
 
 export type LucyWindow = { left: number; state: 'ok' | 'near' | 'spent'; resets_at: number | null; back_words: string | null; segments: number; open?: boolean };
-export type LucyWindows = { session: LucyWindow | null; week: LucyWindow; lighter?: boolean; extra?: { left: number } | null };
+export type LucyWindows = { session: LucyWindow | null; week: LucyWindow; lighter?: boolean; extra?: LucyExtra | null };
+/** Prepaid extra usage (ADR-0486 rule 7): the share of the last pack left, and when the soonest pack
+ * runs out (epoch seconds), if the server says. Present only while a balance exists. */
+export type LucyExtra = { left: number; expires_at?: number | null };
 export type LucyWindowKind = 'session' | 'week';
 export type LucyUsageLine = { kind: LucyWindowKind; name: string; window: LucyWindow };
 
@@ -73,6 +77,37 @@ function windowOf(value: unknown, kind: LucyWindowKind): LucyWindow | null {
   return notStarted(window, kind) ? { ...window, left: 100, state: 'ok', segments: LADDER_SEGMENTS, back_words: null } : window;
 }
 
+function extraOf(value: unknown): LucyExtra | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as { left?: unknown; expires_at?: unknown };
+  if (typeof raw.left !== 'number') return null;
+  const expires = typeof raw.expires_at === 'number' && Number.isFinite(raw.expires_at) ? raw.expires_at : null;
+  return { left: whole(raw.left, 100), ...(expires === null ? {} : { expires_at: expires }) };
+}
+
+const DAY_SECONDS = 86_400;
+/** Extra usage that runs out within this many days is said to expire soon. */
+export const EXPIRES_SOON_DAYS = 14;
+
+/** Whether the extra usage runs out soon enough to say so (false when the server gives no date). */
+export function expiresSoon(extra: LucyExtra, now = Date.now()): boolean {
+  return typeof extra.expires_at === 'number' && extra.expires_at - now / 1000 <= EXPIRES_SOON_DAYS * DAY_SECONDS;
+}
+
+/** "expires 4 March 2027", or "expires in 5 days", "expires tomorrow", "expires today" when it is
+ * soon. '' when the server gives no date. */
+export function expiryWords(extra: LucyExtra, now = Date.now(), options: { locale?: string; timeZone?: string } = {}): string {
+  if (typeof extra.expires_at !== 'number') return '';
+  if (!expiresSoon(extra, now)) return `expires ${dateWords(extra.expires_at, options)}`;
+  const days = Math.floor((extra.expires_at - now / 1000) / DAY_SECONDS);
+  return days <= 0 ? 'expires today' : days === 1 ? 'expires tomorrow' : `expires in ${days} days`;
+}
+
+/** "40% left, expires 4 March 2027": what the extra usage bar says aloud. */
+export function extraWords(extra: LucyExtra, now = Date.now(), options: { locale?: string; timeZone?: string } = {}): string {
+  return [`${whole(extra.left, 100)}% left`, expiryWords(extra, now, options)].filter(Boolean).join(', ');
+}
+
 /** The server's `usage_windows` (or `lucy_windows`) made safe to draw, or null when it is absent or
  * not in the shape this build knows: then the page keeps what it showed before the new meter. */
 export function windowsOf(value: unknown): LucyWindows | null {
@@ -80,8 +115,7 @@ export function windowsOf(value: unknown): LucyWindows | null {
   const raw = value as { session?: unknown; week?: unknown; lighter?: unknown; extra?: unknown };
   const week = windowOf(raw.week, 'week');
   if (!week) return null;
-  const extra = raw.extra && typeof raw.extra === 'object' && typeof (raw.extra as { left?: unknown }).left === 'number'
-    ? { left: whole((raw.extra as { left: number }).left, 100) } : null;
+  const extra = extraOf(raw.extra);
   return { session: windowOf(raw.session, 'session'), week, lighter: raw.lighter === true, extra };
 }
 
@@ -151,9 +185,13 @@ export function useLucyUsage(request?: Request): LucyWindows | null {
       return;
     }
     let live = true;
+    let latest = 0;
     read.current = () => {
+      const revision = ++latest;
       void asked.current?.<{ usage_windows?: unknown }>('/account/lucy')
-        .then((next) => { if (live) setWindows(windowsOf(next?.usage_windows)); })
+        .then((next) => {
+          if (live && revision === latest) setWindows(windowsOf(next?.usage_windows));
+        })
         // what was shown stays: a read that failed is not news about the allowance
         .catch(() => {});
     };
@@ -176,4 +214,24 @@ export function useLucyUsage(request?: Request): LucyWindows | null {
     return () => window.clearTimeout(timer);
   }, [next]);
   return windows;
+}
+
+/** What pressing "Use extra usage" came to: it is on for this week, or there was none left to use. */
+export type ExtraAnswer = 'on' | 'none';
+
+/** The member's yes to spending extra usage this week (ADR-0486 rule 3). It says yes, reads the
+ * meter again and tells every meter on the page to do the same. It throws when the yes did not
+ * land; 'none' means it landed but the balance had gone by then, so there is nothing to spend. */
+export async function confirmExtraUsage(request: Request): Promise<ExtraAnswer> {
+  await request('/billing/lucy-packs/confirm', { method: 'POST' });
+  let windows: LucyWindows | null = null;
+  try {
+    windows = windowsOf((await request<{ usage_windows?: unknown }>('/account/lucy'))?.usage_windows);
+  } catch {
+    // the yes landed; a read that failed is not news about the balance
+    return 'on';
+  } finally {
+    window.dispatchEvent(new Event(LUCY_USAGE_EVENT));
+  }
+  return windows && !windows.extra ? 'none' : 'on';
 }

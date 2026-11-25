@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LUCY_WINDOWS } from '../test/cloudAccount';
 import {
-  backWords, leftWords, lineWords, LUCY_USAGE_EVENT, nearestReset, newsWords, stateWords, usageLines, useLucyUsage, whenWords, windowsOf,
+  backWords, confirmExtraUsage, expiresSoon, expiryWords, extraWords, leftWords, lineWords, LUCY_USAGE_EVENT, nearestReset, newsWords, stateWords, usageLines, useLucyUsage, whenWords, windowsOf,
   type LucyWindow, type LucyWindows,
 } from './lucyUsage';
 
@@ -138,5 +138,63 @@ describe('useLucyUsage', () => {
     expect(vi.getTimerCount()).toBe(1);
     await act(async () => { await vi.advanceTimersByTimeAsync(3_600_000); });
     expect(request).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('extra usage (ADR-0486)', () => {
+  const now = Date.UTC(2026, 10, 25, 12);
+  const at = (days: number) => now / 1000 + days * 86_400;
+  const zone = { locale: 'en-GB', timeZone: 'UTC' };
+
+  it('is kept only while the server sends a balance, with its expiry when one is given', () => {
+    expect(windowsOf({ week: LUCY_WINDOWS.week })!.extra).toBeNull();
+    expect(windowsOf({ week: LUCY_WINDOWS.week, extra: null })!.extra).toBeNull();
+    expect(windowsOf({ week: LUCY_WINDOWS.week, extra: { left: '40' } })!.extra).toBeNull();
+    expect(windowsOf({ week: LUCY_WINDOWS.week, extra: { left: 40 } })!.extra).toEqual({ left: 40 });
+    expect(windowsOf({ week: LUCY_WINDOWS.week, extra: { left: 140, expires_at: 1_900_000_000, units: 9 } })!.extra).toEqual({ left: 100, expires_at: 1_900_000_000 });
+    expect(windowsOf({ week: LUCY_WINDOWS.week, extra: { left: 40, expires_at: 'soon' } })!.extra).toEqual({ left: 40 });
+  });
+
+  it('gives the date it runs out, and counts the days when that is soon', () => {
+    expect(expiryWords({ left: 40 }, now, zone)).toBe('');
+    expect(expiresSoon({ left: 40 }, now)).toBe(false);
+    expect(expiryWords({ left: 40, expires_at: at(100) }, now, zone)).toBe('expires 5 March 2027');
+    expect(expiresSoon({ left: 40, expires_at: at(100) }, now)).toBe(false);
+    expect(expiresSoon({ left: 40, expires_at: at(14) }, now)).toBe(true);
+    expect(expiryWords({ left: 40, expires_at: at(14) }, now, zone)).toBe('expires in 14 days');
+    expect(expiryWords({ left: 40, expires_at: at(1.5) }, now, zone)).toBe('expires tomorrow');
+    expect(expiryWords({ left: 40, expires_at: at(0.2) }, now, zone)).toBe('expires today');
+    expect(extraWords({ left: 40, expires_at: at(100) }, now, zone)).toBe('40% left, expires 5 March 2027');
+    expect(extraWords({ left: 40 }, now, zone)).toBe('40% left');
+  });
+
+  it('says yes, reads the meter again and tells every meter on the page to', async () => {
+    const heard = vi.fn();
+    window.addEventListener(LUCY_USAGE_EVENT, heard);
+    const request = vi.fn(async (path: string) => (path === '/account/lucy' ? { usage_windows: { ...LUCY_WINDOWS, extra: { left: 80 } } } : { confirmed: true }));
+    await expect(confirmExtraUsage(request as never)).resolves.toBe('on');
+    expect(request.mock.calls).toEqual([['/billing/lucy-packs/confirm', { method: 'POST' }], ['/account/lucy']]);
+    expect(heard).toHaveBeenCalledTimes(1);
+    window.removeEventListener(LUCY_USAGE_EVENT, heard);
+  });
+
+  it('answers "none" when the balance had gone, and keeps the yes when only the read fails', async () => {
+    const gone = vi.fn(async (path: string) => (path === '/account/lucy' ? { usage_windows: LUCY_WINDOWS } : { confirmed: true }));
+    await expect(confirmExtraUsage(gone as never)).resolves.toBe('none');
+    const unread = vi.fn(async (path: string) => {
+      if (path === '/account/lucy') throw new Error('offline');
+      return { confirmed: true };
+    });
+    await expect(confirmExtraUsage(unread as never)).resolves.toBe('on');
+  });
+
+  it('throws when the yes did not land, and reads nothing', async () => {
+    const heard = vi.fn();
+    window.addEventListener(LUCY_USAGE_EVENT, heard);
+    const request = vi.fn(async () => { throw new Error('The week changed. Try again.'); });
+    await expect(confirmExtraUsage(request as never)).rejects.toThrow('The week changed');
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(heard).not.toHaveBeenCalled();
+    window.removeEventListener(LUCY_USAGE_EVENT, heard);
   });
 });

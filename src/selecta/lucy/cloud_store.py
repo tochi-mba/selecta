@@ -423,7 +423,7 @@ def snapshot_messages(
             "id": row.id, "seq": int(row.seq), "role": row.role, "turn": row.turn_id,
             "run": row.run_id, "content": content, "status": row.status,
             "revision": row.revision,
-            "meta": {key: (row.meta or {})[key] for key in ("rating", "followups")
+            "meta": {key: (row.meta or {})[key] for key in ("rating", "followups", "limit")
                      if (row.meta or {}).get(key) is not None}
             if row.role == "assistant" else {},
             "created_at": iso(row.created_at),
