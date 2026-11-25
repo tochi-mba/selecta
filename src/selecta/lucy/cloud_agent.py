@@ -389,7 +389,7 @@ def builtin_words(job: Job, ctx: cloud_tools.CloudCtx) -> str:
     if limited == "allowance":
         why = (f"You've used this month's Lucy turns on your plan, so I can't think this one "
                f"through. They come back on {_resets_words(job)}.")
-    elif limited == "spend" and job.plan.enforced:
+    elif limited == "spend" and getattr(job.plan, "enforced", False):
         # The same monthly ceiling for an account on the session and week allowance, where it
         # is a backstop above the weekly limit (ADR-0482 rule 9) and turns mean nothing.
         why = (f"You've reached your plan's monthly safety limit on Lucy's AI, which sits above "

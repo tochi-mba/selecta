@@ -33,7 +33,7 @@ from selecta.persistence import db_now, transaction
 WORKSPACE, OWNER = "ws-race", "user-race"
 RULES = RuleSnapshot(1, {WINDOWS_FLAG: (Rule(RuleKind.WORKSPACES,
                                              {"ids": [WORKSPACE], "on": True}),)})
-SENDS, FITS = 24, 3
+SENDS, FITS = 24, 2
 
 
 @pytest.fixture
@@ -70,7 +70,8 @@ def leave_room(engine, reservations: int, cap: int) -> int:
     last of them starts one unit under the limit, the most a reservation may overshoot by."""
     limit = state(engine)["session_limit"]
     used = limit - (reservations - 1) * cap - 1
-    assert 0 <= used < limit and state(engine)["week_limit"] > limit + SENDS * cap
+    # the week (nothing used) has room for all that fit, so the session is what runs out
+    assert 0 <= used < limit and state(engine)["week_limit"] > reservations * cap
     with transaction(engine, WORKSPACE) as conn:
         now = db_now(conn)
         conn.execute(sa.update(lucy_usage_state)
