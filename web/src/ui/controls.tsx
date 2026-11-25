@@ -6,12 +6,21 @@ import { Icon, IconName } from './Icon';
 import { exitGhost, usePresence } from './exitMotion';
 import { newReference, reportProblem, supportHref } from '../support';
 import { isChunkLoadError, StaleBuildPanel } from './staleBuild';
+import { feelOn } from '../feel/root';
 export { Skeleton } from './Skeleton';
+
+/** How long the drawn tick shows after an Action finishes, before its label comes back (ADR-0477). */
+const DONE_MS = 900;
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
  * until that exact thing has finished, can't be pressed twice meanwhile, and says if it went wrong.
  * `waiting` is for when a neighbour's action has to finish first: unlike `disabled`, it leaves the
- * button in the tab order, so whoever pressed it isn't thrown back to the top of the page. */
+ * button in the tab order, so whoever pressed it isn't thrown back to the top of the page.
+ *
+ * With data-feel~='motion' (ADR-0477) the end is shown as well as the start: when the work really
+ * finished, a tick is drawn over the label for about 900ms (the label keeps its room, so nothing
+ * moves, and its words stay the button's name); when it failed, the edge turns the danger colour
+ * once, with no shake. Without it, exactly the behaviour above and nothing more. */
 export function Action({
   run,
   working,
@@ -29,29 +38,49 @@ export function Action({
   busy?: boolean;
 }) {
   const [pressed, setBusy] = useState(false);
+  const [ending, setEnding] = useState<'done' | 'failed' | null>(null);
   const busy = pressed || !!workingElsewhere;
   const going = useRef(false);
   const mounted = useRef(true);
+  const endTimer = useRef(0);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
+    return () => {
+      mounted.current = false;
+      window.clearTimeout(endTimer.current);
+    };
   }, []);
+  const end = (how: 'done' | 'failed') => {
+    if (!mounted.current || !feelOn('motion')) return;
+    window.clearTimeout(endTimer.current);
+    setEnding(how);
+    endTimer.current = window.setTimeout(() => {
+      if (mounted.current) setEnding(null);
+    }, DONE_MS);
+  };
   const press = async () => {
     if (going.current || waiting || workingElsewhere) return;
     going.current = true;
+    window.clearTimeout(endTimer.current);
+    setEnding(null);
     setBusy(true);
+    let how: 'done' | 'failed' = 'done';
     try {
       await run();
     } catch (error) {
+      how = 'failed';
       showProblem(failed ?? ((error as Error).message || 'That didn’t work. Try again.'));
     } finally {
       going.current = false;
       if (mounted.current) setBusy(false);
     }
+    end(how);
   };
+  const done = ending === 'done' && !busy;
+  const labels = working ? <span className="action-labels"><span aria-hidden={busy || undefined} style={{ visibility: busy ? 'hidden' : undefined }}>{children}</span><span aria-hidden={!busy || undefined} style={{ visibility: busy ? undefined : 'hidden' }}>{working}</span></span> : children;
   return (
-    <button {...rest} aria-disabled={busy || waiting || rest.disabled || undefined} aria-busy={busy || undefined} data-working={busy || undefined} onClick={() => void press()}>
-      {working ? <span className="action-labels"><span aria-hidden={busy || undefined} style={{ visibility: busy ? 'hidden' : undefined }}>{children}</span><span aria-hidden={!busy || undefined} style={{ visibility: busy ? undefined : 'hidden' }}>{working}</span></span> : children}
+    <button {...rest} aria-disabled={busy || waiting || rest.disabled || undefined} aria-busy={busy || undefined} data-working={busy || undefined} data-done={done || undefined} data-failed={(ending === 'failed' && !busy) || undefined} onClick={() => void press()}>
+      {done ? <span className="action-done"><span className="action-done-label">{labels}</span><svg className="action-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : labels}
     </button>
   );
 }

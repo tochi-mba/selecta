@@ -1,0 +1,162 @@
+/* The feel system's small parts (ADR-0477, FL-0477-06): the sliding indicator, the number roll, the
+ * end of an Action, the one-shot celebration, the motion gallery's frame and the first-paint splash.
+ *
+ * Each engine lives in web/src/feel/ and only draws these shapes when its part of <html data-feel>
+ * is on, so with the flags off, Still, reduced motion or low power the page is as it was. Colour and
+ * opacity use the six --motion-* tokens and --motion-ease; position and scale use the springs.
+ * Every colour, shadow and duration is a token from tokens.css. */
+
+/* ---------- The sliding indicator (feel/indicator.ts) ----------
+   One mark per container, placed from --ind-x, --ind-y, --ind-w and --ind-h, which the hook writes.
+   It travels by translate and is sized by scale from a 1px box, so a move never lays anything out.
+   A line under the choice by default; data-indicator-shape='fill' puts a block behind it instead,
+   square-cornered because a scaled corner would stretch. */
+.feel-indicator { display: none; }
+:where(:root[data-feel~='motion']) [data-indicator] { position: relative; }
+:where(:root[data-feel~='motion']) [data-indicator] > .feel-indicator {
+  display: block;
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 1px;
+  block-size: var(--marker);
+  background: var(--selected);
+  pointer-events: none;
+  transform-origin: 0 0;
+  transform: translate(var(--ind-x), calc(var(--ind-y) + var(--ind-h) * 1px - var(--marker))) scaleX(var(--ind-w));
+}
+:where(:root[data-feel~='motion']) [data-indicator][data-indicator-shape='fill'] > .feel-indicator {
+  block-size: 1px;
+  background: var(--surface-selected);
+  transform: translate(var(--ind-x), var(--ind-y)) scale(var(--ind-w), var(--ind-h));
+}
+/* the first placement is instant; only a later change of choice travels */
+:where(:root[data-feel~='motion']) [data-indicator='live'] > .feel-indicator {
+  transition: transform var(--motion-spring-glide) var(--spring-gentle);
+}
+/* a fill sits behind the words of the choice, never over them */
+:where(:root[data-feel~='motion']) [data-indicator-shape='fill'] > :not(.feel-indicator) { position: relative; }
+@media (forced-colors: active) {
+  /* the choice's own border and outline carry it; a painted block would hide in forced colours */
+  :where(:root[data-feel~='motion']) [data-indicator] > .feel-indicator { display: none; }
+}
+
+/* ---------- The number roll (feel/numberRoll.tsx) ----------
+   Each digit is a column one line tall showing a strip of 0 to 9; --digit picks the row. The strip
+   is 10 lines, so 10% of its own height is one line. */
+.number-roll { font-variant-numeric: tabular-nums; }
+.number-roll-digits { display: inline-block; line-height: 1.2; vertical-align: bottom; white-space: nowrap; }
+.number-roll-col,
+.number-roll-mark { display: inline-block; vertical-align: top; }
+.number-roll-col { block-size: 1.2em; overflow: hidden; }
+.number-roll-strip {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(calc(var(--digit) * -10%));
+}
+.number-roll-strip > span { block-size: 1.2em; }
+:where(:root[data-feel~='motion']) .number-roll-strip {
+  transition: transform var(--motion-spring-snappy) var(--spring-snappy);
+}
+
+/* ---------- The end of an Action (ui/controls.tsx) ----------
+   Done: a tick is drawn over the label, which keeps its room (opacity, never removed), so the
+   button's width does not change and its name is still its words. Failed: the edge turns the danger
+   colour once and settles back; nothing shakes (ADR-0182). */
+.action-done { display: inline-grid; }
+.action-done > * { grid-area: 1 / 1; }
+.action-done-label { opacity: 0; }
+.action-tick {
+  place-self: center;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: calc(var(--icon-stroke) * 1.2);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: feel-tick-draw var(--motion-slow) var(--motion-ease) both;
+}
+@keyframes feel-tick-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+:where(:root[data-feel~='motion']) button[data-failed] {
+  border-color: var(--edge-error);
+  transition: border-color var(--motion-fast) var(--motion-ease);
+}
+
+/* ---------- The celebration (feel/moment.tsx) ----------
+   A ring of bars bursts out from the middle of the box that holds it, once, and fades. The holder
+   is positioned by its screen; this layer never takes a press. */
+.feel-moment {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.feel-moment svg { inline-size: min(100%, 14rem); block-size: auto; aspect-ratio: 1; overflow: visible; }
+.feel-moment-ray {
+  fill: var(--motif);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: feel-moment-ray calc(var(--motion-spring-release) * 2) var(--spring-snappy) both;
+  animation-delay: calc(var(--i) * var(--motion-stagger));
+}
+.feel-moment-ray.other { fill: var(--status-request); }
+@keyframes feel-moment-ray {
+  0% { transform: scaleY(0); opacity: 0; }
+  35% { transform: scaleY(1); opacity: 1; }
+  100% { transform: translateY(-40%) scaleY(0.6); opacity: 0; }
+}
+@media (forced-colors: active) {
+  .feel-moment { display: none; }
+}
+
+/* ---------- The motion gallery (ui/gallery/GalleryMotion.tsx) ----------
+   The same specimens at three levels side by side; each column sets data-motion-preview, which
+   tokens.css reads. One column on a phone. */
+.gallery-motion-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-4);
+}
+.gallery-motion-level {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--edge-decorative);
+  border-radius: var(--radius);
+}
+.gallery-motion-level h4 { margin: 0; }
+.gallery-motion-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-block-size: 9rem;
+  border: 1px dashed var(--edge-decorative);
+  border-radius: var(--radius-sm);
+}
+.gallery-motion-tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.gallery-motion-arrive,
+.gallery-motion-flip { margin: 0; padding: 0; list-style: none; }
+/* arriving one after another: the existing rise-in (boot.css), timed by this column's spring and
+   stagger, so Still shows the rows already in place */
+.gallery-motion-arrive > li {
+  animation: rise-in var(--motion-spring-snappy) var(--spring-snappy) backwards;
+  animation-delay: calc(var(--i) * var(--motion-stagger) * 2);
+}
+.gallery-motion-figure { font: var(--weight-display) var(--text-xl) / 1.2 var(--display); }
+.gallery-motion-ring {
+  inline-size: 44px;
+  block-size: 44px;
+  border: var(--marker) solid var(--playing);
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+/* ---------- The first-paint splash (web/index.html) ----------
+   index.html draws the same waiting gate the Cloud runtime shows (boot.css .gate-loading) inside
+   #root, and React replaces it on its first render. With JavaScript off it would wait forever, so
+   it gives way to the <noscript> message, which only becomes elements when scripts cannot run. */
+body:has(noscript > p) .boot-splash { display: none; }

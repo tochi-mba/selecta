@@ -27,6 +27,7 @@ overlap or a new breakpoint fails the test until it is given an owner here.
 | `styles/feel.css` | the feel system (ADR-0477), scoped to `<html data-feel>`: press and release, hover lift and light, moving skins for cards and rows, pointer light, sliding indicators, arrivals | `main.tsx` |
 | `styles/feel-scene.css` | the feel system (ADR-0477): page and shared-element transitions, the frame that stays while a page moves | `main.tsx` |
 | `styles/feel-music.css` | the feel system (ADR-0477): the beat ring, live bars, the playing row and the ambient layer the beat bus acts on | `main.tsx` |
+| `styles/feel-parts.css` | the feel system (ADR-0477): the sliding indicator, number roll, the tick on a finished Action, the celebration and the first-paint splash | `main.tsx` |
 | `styles/typography.css` | type roles applied where an earlier rule left a gap, wrapping, tabular numbers (ADR-275) | `main.tsx`, last |
 | `styles/lucy.css` | Lucy conversation, proposals, approval and history | `views/Lucy.tsx` (loaded with the Lucy page) |
 
@@ -59,7 +60,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `views/phoneEditor.css` | the editor for every screen: its header, the mix strip, the list of songs and transitions, the side pane and its sheets | `views/PhoneEditor.tsx` |
 
 Load order (`web/src/main.tsx`): tokens, boot, style.css, shell, polish, foundation, cloud-ui, cloud-shell, listening, creation,
-operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier
+operations, music-objects, glossary, palette, icons, depth, feel, feel-scene, feel-music, feel-parts, typography. Later files refine earlier
 ones; feature files come after the legacy sheet so they win at equal specificity. New work goes into
 the file that owns the feature; `style.css` only shrinks.
 

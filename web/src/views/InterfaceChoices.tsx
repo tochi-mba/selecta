@@ -4,7 +4,7 @@ import { flagOn } from '../flags';
 import { listed } from '../shell/manifest';
 import { changedPrefs, DEFAULT_PREFS, type Prefs, resetPrefs, setPrefs, usePrefs } from '../state/prefs';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { keepFullMotion, useLowPower } from '../ui/lowPower';
+import { keepFullMotion, useLowPowerLevel } from '../ui/lowPower';
 import { ThemeChoices } from '../ui/ThemeChoice';
 
 /** How this looks and behaves in this browser. Nothing here touches music, mixes or the server, so
@@ -21,11 +21,19 @@ const SETTING_WORDS: Record<keyof Prefs, (value: Prefs[keyof Prefs]) => string> 
   singleKeys: (value) => `Single-key shortcuts: ${value ? 'on' : 'off'}`,
   classicNav: (value) => `Older navigation: ${value ? 'on' : 'off'}`,
   termHints: (value) => `Hints beside music terms: ${value ? 'on' : 'off'}`,
+  haptics: (value) => `Vibrate on press: ${value ? 'on' : 'off'}`,
 };
+
+/** The vibration switch only means something on a touch phone whose browser can buzz (in practice
+ * Android; ADR-0477), so nowhere else is it offered. */
+function canVibrate(): boolean {
+  return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
+    && typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+}
 
 export function InterfaceChoices({ classicNav = true }: { classicNav?: boolean } = {}) {
   const preferences = usePrefs();
-  const lowPower = useLowPower();
+  const lowPower = useLowPowerLevel();
   const [resetting, setResetting] = useState(false);
   const changed = changedPrefs();
   return (
@@ -45,9 +53,15 @@ export function InterfaceChoices({ classicNav = true }: { classicNav?: boolean }
           ))}
         </div>
         <p className="hint">Still stops decorative movement. Your computer’s reduced-motion setting always takes priority.</p>
-        {lowPower && (
+        {lowPower === 'auto' && (
           <p className="hint" role="status">
             Movement is resting because this device was struggling to keep up. Nothing is hidden.{' '}
+            <button type="button" className="quiet" onClick={keepFullMotion}>Use full motion here</button>
+          </p>
+        )}
+        {lowPower === 'lite' && (
+          <p className="hint" role="status">
+            Some effects are lighter because this device was working hard: no glow, blur or beat effects, and gentler movement. Nothing is hidden.{' '}
             <button type="button" className="quiet" onClick={keepFullMotion}>Use full motion here</button>
           </p>
         )}
@@ -57,6 +71,10 @@ export function InterfaceChoices({ classicNav = true }: { classicNav?: boolean }
         <input type="checkbox" checked={preferences.density === 'compact'} onChange={(event) => setPrefs({ density: event.target.checked ? 'compact' : 'comfortable' })} />
         Compact rows in the {listed(['Library', flagOn('editor') && 'the timeline', flagOn('drafts') && 'drafts'])}
       </label>
+      {flagOn('app.feel_haptics') && canVibrate() && <label className="choice">
+        <input type="checkbox" checked={preferences.haptics} onChange={(event) => setPrefs({ haptics: event.target.checked })} />
+        Vibrate gently when you press things
+      </label>}
       {flagOn('app.command_palette') && <label className="choice">
         <input type="checkbox" checked={preferences.palette} onChange={(event) => setPrefs({ palette: event.target.checked })} />
         Use Ctrl K for search and commands

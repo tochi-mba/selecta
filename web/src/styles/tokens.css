@@ -452,6 +452,21 @@ html {
 }
 :root[data-theme='light'] .ambient-layer { --ambient-tint: oklch(0.95 0.035 var(--ambient-hue) / 0.6); }
 
+/* The gallery's Expressive column, on a page set to another level: the base values again. */
+[data-motion-preview='expressive'] {
+  --motion-feedback: 80ms;
+  --motion-fast: 120ms;
+  --motion-reveal: 160ms;
+  --motion-handoff: 200ms;
+  --motion-overlay: 220ms;
+  --motion-slow: 240ms;
+  --motion-spring-snappy: 320ms;
+  --motion-spring-release: 420ms;
+  --motion-spring-glide: 360ms;
+  --motion-stagger: 30ms;
+  --press-scale: 0.96;
+}
+
 /* Subtle, and the first low-power step: every spring is the gentle one, and shorter. The gallery
    shows a level inside a page set to another with data-motion-preview. */
 :root[data-motion='subtle'],
