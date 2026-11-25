@@ -225,7 +225,7 @@ export function PhoneEditor(props: PhoneEditorProps) {
               <>
                 <div className="pe-pane-head">
                   <h2 dir="auto">{panelTitle}</h2>
-                  <button type="button" className="pe-icon-button" aria-label={`Close ${panelTitle}`} title="Close" onClick={close}><Icon name="close" /></button>
+                  <button type="button" className="pe-icon-button" aria-label="Close" title="Close" onClick={close}><Icon name="close" /></button>
                 </div>
                 {panel}
               </>

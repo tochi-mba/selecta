@@ -150,7 +150,7 @@ describe('requests', () => {
     fireEvent.click((await nav()).getByRole('button', { name: 'Requests: Request a song' }));
     const drawer = await screen.findByRole('dialog', { name: 'Requests' });
     expect(within(drawer).getByRole('combobox', { name: 'Request a song' })).toBeInTheDocument();
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Close Requests' }));
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Close', exact: true }));
     expect(screen.queryByRole('dialog', { name: 'Requests' })).toBeNull();
   });
 

@@ -185,7 +185,7 @@ describe('things on top of the page', () => {
     opener.focus();
     const { unmount } = render(<Dialog title="Hello" onClose={() => {}}><button>Only</button></Dialog>);
     expect(screen.getByRole('dialog')).toHaveFocus();
-    const close = screen.getByRole('button', { name: 'Close Hello' });
+    const close = screen.getByRole('button', { name: 'Close', exact: true });
     const only = screen.getByRole('button', { name: 'Only' });
     only.focus();
     fireEvent.keyDown(only, { key: 'Tab' });
@@ -328,7 +328,7 @@ describe('things on top of the page', () => {
       <button style={{ display: 'none' }}>CSS hidden action</button>
       <details><summary>Advanced options</summary><button>Collapsed action</button></details>
     </Dialog>);
-    const close = screen.getByRole('button', { name: 'Close Options' });
+    const close = screen.getByRole('button', { name: 'Close', exact: true });
     const summary = screen.getByText('Advanced options');
     summary.focus();
     fireEvent.keyDown(summary, { key: 'Tab' });

@@ -63,7 +63,7 @@ for (const how of ['the close button', 'Escape'] as const) {
     await details.getByRole('button', { name: 'Save correction' }).click();
     await expect(tempo).toHaveAttribute('aria-invalid', 'true');
     if (how === 'Escape') await page.keyboard.press('Escape');
-    else await details.getByRole('button', { name: /^Close / }).click();
+    else await details.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await expect(opener).toBeFocused();

@@ -141,7 +141,7 @@ export function PhoneSheet(props: {
       <button
         type="button"
         className="pe-grabber"
-        aria-label={tall ? `Close ${title}` : detent === 'half' ? 'Make the sheet taller' : 'Make the sheet shorter'}
+        aria-label={tall ? 'Close' : detent === 'half' ? 'Make the sheet taller' : 'Make the sheet shorter'}
         onClick={() => {
           if (swallowClick.current) return;
           if (tall) onClose();
