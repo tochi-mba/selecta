@@ -100,6 +100,7 @@ export class PartReader {
     const stream = this.stream!;
     let lo = { offset: stream.audioStart, sample: 0 };
     let hi: { offset: number; sample: number } | null = null;
+    let hiSample = stream.totalSamples; // the sample at `hi`, or the end of the file before any is found
     let guess = stream.audioStart + Math.floor(target * this.bytesPerSample) - PROBE_BYTES / 2;
     for (let tries = 0; tries < SEEK_TRIES; tries += 1) {
       if (hi && hi.offset - lo.offset <= 2 * PROBE_BYTES) guess = lo.offset;
@@ -110,8 +111,8 @@ export class PartReader {
       const all = next ? [...frames, next] : frames;
       if (!all.length) {
         if (at === stream.audioStart) throw new Error('This part of the mix could not be read.');
-        hi = { offset: at, sample: hi?.sample ?? stream.totalSamples };
-        guess = lo.offset + (at - lo.offset) / 2;
+        hi = { offset: at, sample: hiSample };
+        guess = lo.offset + Math.floor((at - lo.offset) / 2);
         continue;
       }
       const first = all[0];
@@ -121,6 +122,7 @@ export class PartReader {
       if (first.sample > target) {
         if (at <= stream.audioStart) { this.offset = at + first.offset; this.sample = first.sample; return; }
         hi = { offset: at + first.offset, sample: first.sample };
+        hiSample = first.sample;
       } else {
         if (atEnd) { this.offset = at + final.offset; this.sample = final.sample; return; } // past the end
         lo = { offset: at + final.offset, sample: final.sample };

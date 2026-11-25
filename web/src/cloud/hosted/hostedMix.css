@@ -32,7 +32,7 @@
   min-height: 52px;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  background: var(--panel-2);
+  background: var(--surface-control);
 }
 .hosted-mix-words { display: grid; min-width: 0; }
 .hosted-mix-words b { font-size: var(--text-sm); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -47,7 +47,7 @@
   padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--panel-2);
+  background: var(--surface-control);
 }
 .hosted-player-play {
   grid-area: play;
@@ -66,7 +66,7 @@
 .hosted-player[data-playing] { border-color: var(--edge-selected); }
 
 .hosted-mix-tracks { list-style: none; margin: 0 calc(var(--space-2) * -1); padding: 0; display: grid; }
-.hosted-mix-tracks li[aria-current='true'] .queue-row { background: var(--panel-2); }
+.hosted-mix-tracks li[aria-current='true'] .queue-row { background: var(--surface-selected); }
 .hosted-mix-tracks li[aria-current='true'] .queue-place { color: var(--playing); }
 .hosted-mix-track { grid-template-columns: 1.5em minmax(0, 1fr) auto; }
 .hosted-mix-seam {
