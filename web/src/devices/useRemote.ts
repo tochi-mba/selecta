@@ -25,7 +25,7 @@ export type RemoteDevice = {
   sentSeq?: () => number;
   serverNow: () => number;
   /** G3 (68): a press waiting on the speaker, and one it did not carry out in time. */
-  pending?: string | null;
+  pending?: Unconfirmed | null;
   unconfirmed?: Unconfirmed | null;
 };
 
@@ -70,7 +70,8 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
   const view = device.view;
   const seen = remoteSession(view, remoteControl);
   // G3 (68): a press the speaker did not carry out is not shown as if it had been
-  const found = useMemo(() => (seen ? asConfirmed(seen, device.unconfirmed ?? null) : null), [seen, device.unconfirmed]);
+  // ...nor, while it waits on the speaker, as done before the speaker has done it (G3, 55)
+  const found = useMemo(() => (seen ? asConfirmed(seen, device.unconfirmed ?? device.pending ?? null) : null), [seen, device.unconfirmed, device.pending]);
   const session = found && !sameProgramme(found.programme, mixSongIds) ? found : null;
   const active = session !== null;
 
@@ -123,8 +124,11 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
     const at = latest.current.session;
     if (!at) return;
     const play = !playingNow.current;
-    setWanted({ playing: play, seq: at.seq });
-    if (!(await send(play ? 'play' : 'pause'))) setWanted(null);
+    // with the speaker checking in, the press shows once it confirms (G3); a press held for an
+    // offline speaker shows at once and lapses as before
+    const held = latest.current.view?.speaker !== 'elsewhere';
+    if (held) setWanted({ playing: play, seq: at.seq });
+    if (!(await send(play ? 'play' : 'pause')) && held) setWanted(null);
   }, [send]);
   const next = useCallback(async () => {
     const at = latest.current.session;
@@ -179,6 +183,8 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
   }, [next, previous, seekTo, setVolume, toggle]);
 
   if (!view || !session) return null;
+  // every line about the speaker reads the same session the controls show
+  const shown: SessionView = session === seen ? view : { ...view, session };
   const current = entryAt(session, book, session.song_index) ?? { index: session.song_index, songId: -1, title: `Song ${session.song_index + 1} of ${session.programme.length}`, artist: '', durationMs: null, known: false };
   const level = Math.max(0, Math.min(100, levelOf(session)));
   const now: NowState = {
@@ -210,7 +216,7 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
     locked: false,
     seam: null,
   };
-  return { view, session, book, current, playing, positionMs, toggle, next, previous, seekTo, skipTo, setVolume, player, now, song, hasNext: hasNext(session), pending: device.pending ?? null, sentSeq: () => latest.current.device.sentSeq?.() ?? 0 };
+  return { view: shown, session, book, current, playing, positionMs, toggle, next, previous, seekTo, skipTo, setVolume, player, now, song, hasNext: hasNext(session), pending: device.pending?.command ?? null, sentSeq: () => latest.current.device.sentSeq?.() ?? 0 };
 }
 
 const IDLE_NOW: NowState = { phase: 'idle', position: 0, songTime: 0, duration: 0, inSeam: false, seamAt: null, notice: '', nextReady: false, lastSeamKey: null, volume: 1, muted: false };

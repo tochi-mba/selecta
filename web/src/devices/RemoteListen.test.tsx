@@ -71,8 +71,8 @@ describe('the remote on Listen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Play' }));
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith('play', undefined);
-    // the press shows at once, until the speaker answers
-    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+    // G3: the press shows as done only once the speaker has carried it out (the session says so)
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
   });
 
   it('takes a refused press back', async () => {

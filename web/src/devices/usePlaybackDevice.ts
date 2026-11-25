@@ -104,7 +104,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const sentSeq = useRef(0);
   // G3 (68): the newest press waiting on the speaker, and one the speaker did not carry out
   const pressCount = useRef(0);
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending, setPending] = useState<Unconfirmed | null>(null);
   const [unconfirmed, setUnconfirmed] = useState<Unconfirmed | null>(null);
 
   useEffect(() => {
@@ -652,6 +652,10 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       body: JSON.stringify({ device_id: deviceId, command: name, args, based_on_seq: before.seq, fence: before.fence, ttl_seconds: 60, idempotency_key: key }),
     }, workspaceId);
     const press = ++pressCount.current;
+    // G3 (55): on a remote the press is pending from the moment it is made; it shows as done only
+    // once the speaker has carried it out
+    const waits = view.speaker === 'elsewhere' && CONFIRMED_PRESSES.has(name);
+    setPending(waits ? { command: name, seq: -1, before, speakerName } : null);
     try {
       let answer;
       try {
@@ -663,6 +667,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       }
       // Play with nobody playing is answered, not refused: say so and let the page offer a device
       if (answer?.status === 'no_speaker') {
+        setPending(null);
         commandRefused.current = true;
         setError(NO_SPEAKER_WORDS);
         return false;
@@ -674,8 +679,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       if (typeof answer?.session?.seq === 'number') sentSeq.current = answer.session.seq;
       // G3 (68): on a remote, the change counts once the speaker has carried it out
       const seq = answer?.applied_seq;
-      if (answer?.status === 'applied' && answer.command_id && typeof seq === 'number' && view.speaker === 'elsewhere' && CONFIRMED_PRESSES.has(name)) {
-        setPending(name);
+      if (!(answer?.status === 'applied' && answer.command_id && typeof seq === 'number' && waits)) setPending(null);
+      else {
+        setPending({ command: name, seq, before, speakerName });
         // a newer state of the session (another press, a take-over) settles this one
         const current = () => pressCount.current === press && (viewSnapshot.current?.session?.seq ?? seq) <= seq;
         void awaitSpeaker(api, workspaceId, deviceId, answer.command_id, { stillWanted: current }).then((outcome) => {
@@ -695,11 +701,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       }
       return true;
     } catch (problem) {
+      if (pressCount.current === press) setPending(null);
       if (hereOffline() && neverReached(problem)) return actHere();
       const code = (problem as { code?: string }).code;
       // G3 (67): two remotes pressed Next together and the other one's skip moved the music on
       // from where this press saw it: that is the one skip both meant, so nothing to say
-      if (code === 'stale_command' && name === 'skip' && args?.song_index === undefined && (viewSnapshot.current?.session?.song_index ?? before.song_index) > before.song_index) return true;
+      const nowAt = (problem as { payload?: { detail?: { session?: { song_index?: number } } } }).payload?.detail?.session?.song_index;
+      if (code === 'stale_command' && name === 'skip' && args?.song_index === undefined && (nowAt ?? viewSnapshot.current?.session?.song_index ?? before.song_index) > before.song_index) return true;
       commandRefused.current = true;
       setError(code && RETRY_CODES.has(code) ? "Something changed just then. Here's where it is now; try again." : pressFailedWords(problem));
       return false;
