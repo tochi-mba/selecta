@@ -11,7 +11,7 @@ import { asLocalFirst, seeded } from './localFirst';
 //
 // Lucy's page lives in the local-first shell, so each person opens it through localFirst.ts.
 
-// wide enough for the conversation list to be a column, where the level meter sits beside New
+// a desktop: the conversation list is behind a button here, so the level meter sits in Lucy's header
 test.use({ viewport: { width: 1440, height: 900 } });
 
 const REPLY = 'Here is a short answer from the test Lucy.';
@@ -90,8 +90,6 @@ test('on the new allowance the twin level meter and the two-bar meter show what 
   const meter = levels(page);
   await expect(meter).toHaveAccessibleName('Lucy usage: 100% left this session, 100% left this week');
   await expect(meter).toHaveAttribute('aria-expanded', 'false');
-  // beside New, in the conversation list's own column
-  await expect(page.getByRole('navigation', { name: 'Conversations with Lucy' }).getByRole('button', { name: /^Lucy usage: / })).toBeVisible();
   await expect(ladder(page, 'session').locator('[data-lit]')).toHaveCount(5);
   await expect(ladder(page, 'week').locator('[data-lit]')).toHaveCount(5);
 
@@ -116,6 +114,21 @@ test('on the new allowance the twin level meter and the two-bar meter show what 
   await page.keyboard.press('Escape');
   await expect(label).toBeHidden();
   await expect(meter).toBeFocused();
+
+  // on a wide screen the conversation list is a column, and the pair sits beside New in it
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const beside = page.getByRole('navigation', { name: 'Conversations with Lucy' }).getByRole('button', { name: /^Lucy usage: / });
+  await expect(levels(page)).toHaveCount(1);
+  await beside.click();
+  await expect(label.getByText(/^This session: 100% left/)).toBeVisible();
+  const shown = (await label.boundingBox())!;
+  expect(shown.x).toBeGreaterThanOrEqual(0);
+  expect(shown.x + shown.width).toBeLessThanOrEqual(1920);
+  await page.keyboard.press('Escape');
+  await expect(label).toBeHidden();
+  await expect(beside).toBeFocused();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('.lucy-head').getByRole('button', { name: /^Lucy usage: / })).toBeVisible();
 
   // the label's link opens the full meter in Lucy's settings, never a plan page
   await page.keyboard.press('Enter');
