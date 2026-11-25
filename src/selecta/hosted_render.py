@@ -254,7 +254,16 @@ def plan_mix(engine: Engine, workspace_id: str, read_object: Callable[[str, Path
             path = _read_analysis(read_object, key, Path(folder))
             infos.append(song_from_analysis(path, Path(song["original_key"]), number, side))
             by_number[number] = song["id"]
-    planned = plan_set(infos, count=min(count, len(infos)), seed=None)
+    # A song with nowhere to leave or land (a short clip has no exit cue) can't join a mix: the
+    # planner would start there and stop at one song. Try the next start when a plan is short.
+    usable = [song for song in infos if song.exit_cues() and song.entry_cues()]
+    planned: list = []
+    for start in usable[:6]:
+        tried = plan_set(usable, start_id=start.id, count=min(count, len(usable)), seed=None)
+        if len(tried) > len(planned):
+            planned = tried
+        if len(planned) >= min(count, len(usable)):
+            break
     return [{"asset_id": by_number[item.song.id], "move": item.transition} for item in planned]
 
 
