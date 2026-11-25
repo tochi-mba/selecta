@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
+// ADR-0488: the speaker's part in the room's vote for the next song, mounted beside the session
+export { useRoomRounds } from './useRoomRounds';
+
 // The host's room session, held by the shell and not by the Rooms page (flag `rooms`).
 //
 // A room lives on the server, but everything the host's browser did for it used to live in the

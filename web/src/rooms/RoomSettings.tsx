@@ -3,6 +3,7 @@ import { Action } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { Field } from '../ui/primitives';
 import { NumberField, RoomLimits, type LimitBounds, type LimitSettings } from './RoomLimits';
+import type { SocialGroup, SocialSettings } from './RoomSocial';
 
 // The host's room settings, grouped under plain headings: Who can join, Requests, Limits. Each
 // change is saved the moment it is made; the group it belongs to says "Saved" beside its heading
@@ -12,8 +13,8 @@ import { NumberField, RoomLimits, type LimitBounds, type LimitSettings } from '.
 export type RoomSettingsValue = {
   join_mode: string; request_mode: string; votes: boolean; names_shown: boolean; display: boolean;
   replay_cooldown_minutes?: number;
-} & LimitSettings;
-export type SettingsGroup = 'join' | 'requests' | 'limits';
+} & LimitSettings & Partial<SocialSettings>;
+export type SettingsGroup = 'join' | 'requests' | 'limits' | SocialGroup;
 
 const JOIN_HELP: Record<string, string> = {
   anyone: 'Anyone who scans the QR code or opens the link is in straight away.',

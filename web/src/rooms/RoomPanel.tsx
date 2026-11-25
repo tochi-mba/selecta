@@ -13,6 +13,8 @@ import type { LimitBounds } from './RoomLimits';
 import { RoomRequests, type RoomRequestsMix } from './RoomRequests';
 import { RoomSettings, SettingsSection, type RoomSettingsValue, type SettingsGroup } from './RoomSettings';
 import { CopyWords, RoomQrScreen, RoomShare, useCopyLink } from './RoomShare';
+import { RoomSocial, type SocialSettings } from './RoomSocial';
+import { flagOn } from '../flags';
 import { RoomStart } from './RoomStart';
 import { noteRoom, ROOM_EVENT, useRoomLive, type RoomAsk, type RoomControl } from './useRoomSession';
 import './rooms.css';
@@ -44,6 +46,11 @@ type Guest = { id: string; nickname: string; status: string; joined_at?: number;
 type Screen = { id: string; label: string; paired_at: number | null; last_seen_at: number | null; online: boolean };
 type Confirm = { title: string; body: string; confirmLabel: string; run: () => Promise<unknown> };
 type Settings = RoomSettingsValue;
+// what a room opened by an older server reads as, until it sends these settings itself
+const SOCIAL_DEFAULTS: SocialSettings = {
+  keeps: true, reactions: true, rounds: true, round_seconds: 45, round_every_songs: 0, round_auto_add: true, dedications: true, recap: true,
+  screen_rounds: true, screen_reactions: true, screen_dedications: true, screen_recap: true,
+};
 type Panel = {
   room: { id: string; name: string; status: string; settings: Settings; ends_at: number };
   code: string | null; join_path: string | null; guests: Guest[]; inbox: Item[]; coming_up: Item[]; unfit: Item[];
@@ -357,6 +364,13 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
               </form>
             </SettingsSection>
           )}
+          {/* ADR-0488: what the room does together; each group is absent while its feature is off */}
+          <RoomSocial
+            api={api} workspaceId={workspaceId} base={base} settings={{ ...SOCIAL_DEFAULTS, ...settings }} screens={displayOn ? panel.displays : 0}
+            on={{ keeps: flagOn('rooms.keeps'), reactions: flagOn('rooms.reactions'), rounds: flagOn('rooms.rounds'), dedications: flagOn('rooms.dedications'), recap: flagOn('rooms.recap') }}
+            saved={saved === 'together' || saved === 'rounds' || saved === 'screen' ? saved : null} save={save}
+            tell={(words, problem) => (problem ? showProblem(words) : showToast(words))}
+          />
         </RoomSettings>
       </section>
       </div>

@@ -32,7 +32,7 @@ export type RequestRow = {
   /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */ browser_note?: string;
   plays_on?: string; where_note?: string; connect_here?: boolean; // ADR-0475: who plays it, the line saying so, and whether connecting here is the only way
   /** Cloud in the browser: the room a guest asked in, and the guest's nickname when it is known. */
-  room_name?: string; asked_by?: string | null; room_request_id?: string;
+  room_name?: string; asked_by?: string | null; room_request_id?: string; joined_words?: string; // ADR-0488: said when the room's pick joins
 };
 type RequestList = { requests: RequestRow[]; settled?: string[] };
 export type BridgeOption = {
@@ -289,7 +289,7 @@ export function useRequests(playback?: Playback, notify?: Notify, override?: Req
         const changed = await post<MixData>('/requests/insert', { ...fresh, offer: ready.offer }, { 'x-operation-id': `join-${ready.offer}` });
         if (!live) return;
         latest.current?.onMix(changed);
-        const words = `${ready.title ?? 'Your request'} joined your mix${ready.after ? ` after ${ready.after}` : ''}.`;
+        const words = ready.joined_words ?? `${ready.title ?? 'Your request'} joined your mix${ready.after ? ` after ${ready.after}` : ''}.`;
         setMessage(words);
         // only while the mix is as this left it, because Undo takes back whatever is newest
         const joined = orderOf(changed.mix);
