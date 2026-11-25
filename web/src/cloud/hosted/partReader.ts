@@ -110,8 +110,9 @@ export class PartReader {
       const all = next ? [...frames, next] : frames;
       if (!all.length) {
         if (at === stream.audioStart) throw new Error('This part of the mix could not be read.');
-        hi = { offset: at, sample: hi?.sample ?? stream.totalSamples };
-        guess = lo.offset + (at - lo.offset) / 2;
+        const before: { sample: number } | null = hi;
+        hi = { offset: at, sample: before ? before.sample : stream.totalSamples };
+        guess = lo.offset + Math.floor((at - lo.offset) / 2);
         continue;
       }
       const first = all[0];
