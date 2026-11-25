@@ -1,7 +1,8 @@
 """Cloud handlers for analysis, seam rendering and export rendering (ADR-0396, SC-0396-02).
 
 They wrap the same engine the local app runs (`analysis.pipeline.analyse_audio`,
-`planner.choose.choose_transition`, `render.setmix.render_set`) and read and write files only
+`planner.choose.choose_transition`); `export.render` joins the parts the player plays
+(`workers.export_join`) and runs no engine at all. They read and write files only
 through the job context: `ctx.open_input(key)` for a stored object, or the claim's signed URL
 (`ctx.download_input(name)`) behind the gateway, and `ctx.publish(...)` for outputs, which uses the
 worker's `ArtifactStore` when it has one and the gateway's signed upload slot when it doesn't.
@@ -10,7 +11,7 @@ Input references (no paths or URLs; every source names its SHA-256 and is checke
 
 - `analyse.song`: `{"source_sha256", "source_key"?}`; the source is input `source` (or slot 0).
 - `seam.render`: `{"a": side, "b": side, "style"?}`.
-- `export.render`: `{"songs": [side, ...]}`, two to `MAX_EXPORT_SONGS` songs.
+- `export.render`: `{"timeline": [part, ...]}` (`workers.export_join`).
 
 A side is `{"source_sha256", "source_key"?, "analysis_key"?, "title"?, "artist"?, "genre"?}`;
 without keys the worker downloads inputs named `{side}` and `{side}_analysis` (`a`, `a_analysis`,
@@ -41,9 +42,8 @@ from selecta.seam_kinds import RENDER_VERSION
 from selecta.work.model import Job
 from selecta.work.provenance import build as build_provenance
 from selecta.workers.context import Handler, InputInvalid, JobContext
+from selecta.workers.export_join import EXPORT_VERSION, render_export  # noqa: F401 - re-exported
 
-EXPORT_VERSION = 1
-MAX_EXPORT_SONGS = 40
 SHA256 = re.compile(r"[0-9a-f]{64}")
 SUMMARY_FIELDS = (
     "bpm",
@@ -228,7 +228,7 @@ def analyse(
     }
 
 
-# --- seam.render and export.render ---------------------------------------------------------------
+# --- seam.render ---------------------------------------------------------------------------------
 
 
 def song_from_analysis(
@@ -348,39 +348,6 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
     }
 
 
-def render_export(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
-    from selecta.render import setmix
-
-    ref = job.input_ref
-    sides = ref.get("songs") if isinstance(ref, Mapping) else None
-    if not isinstance(sides, list) or not 2 <= len(sides) <= MAX_EXPORT_SONGS:
-        raise InputInvalid(f"An export needs two to {MAX_EXPORT_SONGS} songs.")
-    songs = []
-    for number, side in enumerate(sides):
-        ctx.check_in()
-        songs.append(_song(ctx, side, f"song{number}", number + 1, ffmpeg))
-        ctx.progress(number + 1, len(sides) + 1)
-    output = ctx.scratch / "mix.flac"
-    try:
-        setmix.render_set(songs, output, log=lambda _message: None)
-    except (RuntimeError, ValueError) as error:
-        raise InputInvalid(f"These songs couldn't be joined into one mix: {error}") from error
-    ctx.check_in()
-    hashes = [side["source_sha256"] for side in sides]
-    versions = {**_versions(), "export": EXPORT_VERSION}
-    input_hash = _hash({"songs": hashes, **versions})
-    provenance = build_provenance(inputs={"songs": hashes}, versions=versions)
-    artifact = ctx.publish("export", input_hash, output, "mix.flac", provenance=provenance)
-    ctx.progress(len(sides) + 1, len(sides) + 1)
-    return {
-        "input_hash": input_hash,
-        "keys": artifact.keys,
-        "songs": len(sides),
-        "size_bytes": artifact.size_bytes,
-        "checksum": artifact.checksum,
-    }
-
-
 def handlers(
     *, ffmpeg: str = "ffmpeg", analysers: Callable[[], Analysers] | None = None
 ) -> dict[str, Handler]:
@@ -395,5 +362,6 @@ def handlers(
     return {
         "analyse.song": lambda job, ctx: analyse(job, ctx, analysers=once, ffmpeg=ffmpeg),
         "seam.render": lambda job, ctx: render_seam(job, ctx, ffmpeg=ffmpeg),
-        "export.render": lambda job, ctx: render_export(job, ctx, ffmpeg=ffmpeg),
+        # joins the parts the player plays (export_join): no engine, no ffmpeg
+        "export.render": lambda job, ctx: render_export(job, ctx),
     }

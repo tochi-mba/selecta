@@ -276,7 +276,7 @@ Each makes worker jobs only for the caller's own workspace; nothing is stored in
 | `POST /api/hosted/songs/{asset_id}/retry` | For one of the caller's own songs: cancels its failed or stuck `analyse.song` job and queues a fresh one (never two live jobs) |
 | `POST /api/hosted/mixes/plan` | None stored: reads analyses and returns the local planner's order and moves |
 | `POST /api/hosted/mixes/render` | Queues `play.proxy` and `seam.render` jobs the mix still needs, then returns its timeline with signed links |
-| `POST /api/hosted/mixes/export` | Queues one `export.render` job for the mix's songs |
+| `POST /api/hosted/mixes/export` | Does what `mixes/render` does for the same order (queues any `play.proxy` or `seam.render` still missing), then, once every part is ready or failed, queues one `export.render` job naming the exact timeline played (each part's file key and SHA-256, cut and level), keyed by that timeline's hash; an export of the same timeline already stored is handed back without a new job. Writes the export under `w/{workspace}/export/{timeline hash}/` in the derived bucket |
 
 ### Covers and details from the web (`src/selecta/catalog/routes.py`) - `library.art_lookup` (ADR-0478)
 
