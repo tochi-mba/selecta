@@ -11,7 +11,7 @@ How it was tested: a local Cloud stack (`dev.cmd cloud` with its own ports and d
 | Stage | What the docs promise | What happened | Evidence | Gap |
 |---|---|---|---|---|
 | Upload (multipart) | Signed multipart PUT straight to R2, resumable (doc 05) | Works: plan, 1 to 2 parts per song, complete. 14 songs (104 MB) in about 45 s locally | `d-upload-*.png`, network log in `walk/d*.log` | none |
-| Probe and validation | The sandbox sniffs the bytes, reads the header, decodes it all (doc 05, `storage/audio_check.py`) | **9 of 14 real MP3s refused** as "This file isn't a supported audio format, whatever its name says." Their ID3v2 tags (cover art) were 100 to 180 KiB and the sniff read only the first 64 KiB | `d-upload-10.png`; `ID3` sizes from the file headers | **Broken. Fixed** (`a0d1c5e8`-era commit "MP3s with cover art...") |
+| Probe and validation | The sandbox sniffs the bytes, reads the header, decodes it all (doc 05, `storage/audio_check.py`) | **9 of 14 real MP3s refused** as "This file isn't a supported audio format, whatever its name says." Their ID3v2 tags (cover art) were 100 to 180 KiB and the sniff read only the first 64 KiB | `d-upload-10.png`; `ID3` sizes from the file headers | **Broken. Fixed** (`e69e6bdd`) |
 | Resume | Choose the same file again to carry on | Works ("Unfinished uploads ... carries on from where it stopped") | `d3-upload-8.png` | The list keeps files later skipped as duplicates (to-do T-20261125-3d9f) |
 | Duplicates | Asks before keeping a second copy | Works: "Keep another copy of ...? / Skip this file" | `d2-upload-47.png` | none |
 | A bad file | Refused with a reason | Works: a text file "isn't a supported audio format", a cut MP3 "is cut short" | `m-bad-upload-5.png` | At 390 px the Add music card is wider than the screen (to-do T-20261125-3d9f) |
@@ -32,7 +32,15 @@ COMPARISON_TABLES
 
 ## 3. What was fixed (this branch)
 
-FIXES_LIST
+| Commit | What |
+|---|---|
+| `e69e6bdd` | Upload sniff reads past ID3v2 tags (`audio_check.read_head`); 9 of 14 real MP3s were refused |
+| `31019650` | `cloud.hosted_render`: analysis queued at upload, song status with measured estimates, server mix (local planner order and moves), seams rendered the local app's way (`workers/engine_seams.py`), lossless playback files, a cue-cut timeline played gaplessly in the browser (`web/src/cloud/hosted/`), export. The claim path stopped opening a second database connection |
+| `6d31b197`, `fc8250ee` | The rest of the dev-worker deadlock (rule snapshot, completion), the dev worker reaps dead leases, business horizon jobs name their stored inputs, to-do items |
+| `3f44ce0f` | Tenant matrix and a cross-tenant test for every hosted route (it found a 500 on another tenant's id, fixed), guard registrations, side-effect map, flags doc |
+| `2f1fb131` | The planner starts from songs that have an exit and an entry cue (a 24 s clip stopped every plan at one song) |
+
+What the customer now sees on Make a Mix > Your hosted mix: "Analysing on SelectaDJ's servers: 19 of 22 songs done, 3 to go, about 12 minutes left (working on 1 now)", failures listed with the worker's reason and a Try again; then "Rendering transitions: 1 of 11 ready, 4 of 12 lossless playback files ready, about 13 minutes left"; each hand-off says its move and whether it passed its checks; Play stays off until every part is ready. Screenshots `h4-*.png`.
 
 ## 4. Still worse than the local app, and why
 
@@ -74,4 +82,12 @@ Nothing here was set up: no deploy, no secret, no spend.
 
 ## 6. Decisions for the owner
 
-DECISIONS
+| Decision | Why it is yours | Numbers | To-do |
+|---|---|---|---|
+| May Demucs (htdemucs) run in hosted Cloud? | Licence register says "review"; legal advice needed. Without it, no stem moves on the server | See stems row in section 2 | T-20261125-c77c |
+| Which key detector for hosted? | S-KEY is non-commercial; chroma disagrees with it on these songs (section 2) | See key column | T-20261125-9e2e |
+| Lyrics for hosted processing? | Licence (doc 10 §10.5); word moves and vocal rides need synced lyrics | - | T-20261125-9d62 |
+| Run one worker on staging, and where | Spend and a secret | Section 5 | T-20261124-8d51 |
+| GPU for stems, if Demucs is allowed | Spend per song | Section 5 costs | with c77c |
+| Storage for stems per song, if made | Each 4-stem FLAC set of a 3.5 minute song is about 4 x 25 MB; the local app splits only 46 s windows (about 4 x 6 MB per hand-off) | Section 5 costs | with c77c |
+| Hosted export: reuse the heard seams | Engineering, no spend; listed so it isn't forgotten | - | T-20261125-4e63 |

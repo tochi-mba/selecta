@@ -12,12 +12,12 @@ type Analysis = { state: string; bpm?: number | null; camelot?: string | null; w
 type SongsStatus = {
   songs: { asset_id: string; name: string; analysis: Analysis }[];
   counts: Record<'ready' | 'running' | 'queued' | 'failed' | 'not_started', number>;
-  estimate_s: number; seconds_each: number; total: number;
+  estimate_s: number | null; worker_seen?: boolean; seconds_each: number; total: number;
 };
 type Planned = { asset_id: string; move: string | null };
 type Seam = { index: number; state: string; planned_move: string | null; move?: string | null; passed?: boolean | null; fell_back?: boolean | null; why?: string };
 type MixState = {
-  parts: TimelinePart[]; seams: Seam[]; complete: boolean; estimate_s: number;
+  parts: TimelinePart[]; seams: Seam[]; complete: boolean; estimate_s: number | null; worker_seen?: boolean;
   counts: { seams_ready: number; seams: number; songs_analysed: number; songs: number; files_ready: number };
 };
 type Export = { state: string; job_id?: string; url?: string | null; why?: string; estimate_s?: number };
@@ -34,6 +34,14 @@ export function minutes(seconds: number): string {
   return whole === 1 ? 'about 1 minute' : `about ${whole} minutes`;
 }
 
+/** How long is left, or, when no worker has checked in lately, that it is waiting for one:
+ * queued work has no time limit, so an estimate without a worker would never come true. */
+export function waitWords(estimate: number | null, running: number): string {
+  if (estimate === null) return 'Waiting for a SelectaDJ worker to start: none is running right now. Nothing is lost; it starts when one does.';
+  const left = minutes(estimate);
+  return `${left[0].toUpperCase()}${left.slice(1)} left${running ? ` (working on ${running} now)` : ''}.`;
+}
+
 const problem = (error: unknown, fallback: string) => (error instanceof CloudError || error instanceof Error ? error.message : fallback);
 
 export function analysisWords(status: SongsStatus): string {
@@ -41,7 +49,7 @@ export function analysisWords(status: SongsStatus): string {
   const left = running + queued;
   if (status.total === 0) return 'Upload songs and SelectaDJ’s servers analyse each one: tempo, key, beats and sections.';
   if (left === 0) return `All ${ready} of ${status.total} songs analysed on SelectaDJ’s servers${failed ? `; ${failed} could not be` : ''}.`;
-  return `Analysing on SelectaDJ’s servers: ${ready} of ${status.total} songs done, ${left} to go, ${minutes(status.estimate_s)} left (${running ? `working on ${running} now` : 'waiting for a worker'}).`;
+  return `Analysing on SelectaDJ’s servers: ${ready} of ${status.total} songs done, ${left} to go. ${waitWords(status.estimate_s, running)}`;
 }
 
 function seamWords(seam: Seam): string {
@@ -168,7 +176,7 @@ export function HostedMix({ api, workspaceId }: { api: Api; workspaceId: string 
         <p aria-live="polite">
           {mix.complete
             ? `Ready: ${mix.counts.songs} songs and ${mix.counts.seams_ready} rendered transitions, played as the server rendered them.`
-            : `Rendering transitions: ${mix.counts.seams_ready} of ${mix.counts.seams} ready, ${mix.counts.files_ready} of ${mix.counts.songs} lossless playback files ready, ${minutes(mix.estimate_s)} left.`}
+            : `Rendering transitions: ${mix.counts.seams_ready} of ${mix.counts.seams} ready, ${mix.counts.files_ready} of ${mix.counts.songs} lossless playback files ready. ${waitWords(mix.estimate_s, 0)}`}
         </p>
       )}
       {nowPart && <p className="hosted-mix-now" aria-live="polite">{nowPart.kind === 'seam' ? `Transition: ${MOVE_NAMES[nowPart.move ?? ''] ?? 'rendered'}` : `Playing ${nowPart.name ?? 'a song'}`}{playing?.waiting ? ' (loading the next part)' : ''}</p>}
