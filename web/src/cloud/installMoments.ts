@@ -1,4 +1,5 @@
 import { flagOn } from '../flags';
+import { feelNeutral } from '../feel/root';
 import { showToast } from '../ui/toasts';
 import { handoffsHeard, onHandoffHeard } from '../audio/handoffHeard';
 import { tabBusyHere } from './accountTabs';
@@ -108,16 +109,33 @@ export function parseMemory(raw: string | null, now: number): MomentMemory {
   return { firstSeen: now, shown: [], dismissed: [] };
 }
 
+/** Two copies of the memory as one: everything either has shown or had dismissed, and the earlier
+ * first visit. Every tab writes through this, so one tab's write can never erase another's Not now
+ * (and with it the two-dismissals rule). */
+export function mergeMemory(one: MomentMemory, other: MomentMemory): MomentMemory {
+  const either = (pick: (memory: MomentMemory) => InstallMoment[]) => MOMENTS.filter((moment) => pick(one).includes(moment) || pick(other).includes(moment));
+  return { firstSeen: Math.min(one.firstSeen, other.firstSeen), shown: either((memory) => memory.shown), dismissed: either((memory) => memory.dismissed) };
+}
+
+/** What this device remembers now. Read afresh each time, never cached for the visit, because
+ * another tab may have offered or been told Not now since. */
 function readMemory(now: number): MomentMemory {
   let raw: string | null = null;
   try { raw = localStorage.getItem(MEMORY_KEY); } catch { /* no storage */ }
   const memory = parseMemory(raw, now);
-  if (raw === null) writeMemory(memory);
+  if (raw === null) writeRaw(memory);
   return memory;
 }
 
-function writeMemory(memory: MomentMemory): void {
+function writeRaw(memory: MomentMemory): void {
   try { localStorage.setItem(MEMORY_KEY, JSON.stringify(memory)); } catch { /* no storage: it may offer again next visit */ }
+}
+
+/** Write this tab's change merged into what is stored now, and return the result. */
+function writeMemory(memory: MomentMemory): MomentMemory {
+  const merged = mergeMemory(readMemory(memory.firstSeen), memory);
+  writeRaw(merged);
+  return merged;
 }
 
 function dialogOpen(): boolean {
@@ -136,19 +154,20 @@ function typingNow(lastKey: number, now: number): boolean {
 export function watchInstallMoments(): () => void {
   if (typeof document === 'undefined' || typeof window === 'undefined') return () => undefined;
   let memory = readMemory(Date.now());
+  // what had been shown when this tab started: anything shown since was offered in another tab
+  // during this visit, and one offer a visit holds across tabs
+  const shownAtStart = memory.shown.length;
   let offered = false;
   let lastKey = 0;
   let importSince = 0;
 
   const dismiss = (moment: InstallMoment) => {
-    memory = { ...memory, dismissed: memory.dismissed.includes(moment) ? memory.dismissed : [...memory.dismissed, moment] };
-    writeMemory(memory);
+    memory = writeMemory({ ...memory, dismissed: memory.dismissed.includes(moment) ? memory.dismissed : [...memory.dismissed, moment] });
   };
 
   const offer = (moment: InstallMoment, how: 'prompt' | 'home_screen') => {
     offered = true;
-    memory = { ...memory, shown: [...memory.shown, moment] };
-    writeMemory(memory);
+    memory = writeMemory({ ...memory, shown: [...memory.shown, moment] });
     const notNow = { label: 'Not now', run: () => dismiss(moment) };
     // closing the offer is a no, like Not now; letting it time out unread is not
     const onDismiss = () => dismiss(moment);
@@ -176,7 +195,10 @@ export function watchInstallMoments(): () => void {
     if (!importHere) importSince = 0;
     else if (!importSince) importSince = now;
     const due = dueMoments({ importHere, importMs: importSince ? now - importSince : 0, importTotal: live.total, handoffHeard: handoffsHeard() > 0, roomOpen: busy.room });
-    if (!due.length || offered) return;
+    // nothing pops up over the blind listening study (ADR-0477 rule 11)
+    if (!due.length || offered || feelNeutral()) return;
+    memory = mergeMemory(readMemory(now), memory);
+    if (memory.shown.length > shownAtStart) offered = true;
     const install = installState();
     const facts: OfferFacts = {
       now, flag: flagOn('app.install'), install, visible: document.visibilityState === 'visible',
@@ -197,7 +219,13 @@ export function watchInstallMoments(): () => void {
   });
   const key = () => { lastKey = Date.now(); };
   const visible = () => { if (document.visibilityState === 'visible') look(); };
+  // another tab offered or was told Not now: that holds here at once, not only at the next look
+  const stored = (event: StorageEvent) => {
+    if (event.key !== MEMORY_KEY || event.newValue === null) return;
+    memory = mergeMemory(memory, parseMemory(event.newValue, memory.firstSeen));
+  };
   window.addEventListener('keydown', key, true);
+  window.addEventListener('storage', stored);
   document.addEventListener('visibilitychange', visible);
   const timer = window.setInterval(look, POLL_MS);
   // the first hand-off is looked at as it is heard, not up to a poll later
@@ -206,6 +234,7 @@ export function watchInstallMoments(): () => void {
     unhearHandoff();
     window.clearInterval(timer);
     window.removeEventListener('keydown', key, true);
+    window.removeEventListener('storage', stored);
     document.removeEventListener('visibilitychange', visible);
     unhearInstall();
   };

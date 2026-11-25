@@ -55,9 +55,37 @@ export function feelCalm(): boolean {
   return prefs().motion === 'still' || reducedMotion() || lowPower() === 'auto';
 }
 
+/** Parts a neutral page (the blind listening study, ADR-0477 rule 11) turns off while it is open:
+ * a listener judging two clips must not see the paused mix's colour or chrome reacting to music,
+ * and must not be interrupted by a celebration. Component feedback stays. */
+const NOT_NEUTRAL: readonly FeelPart[] = ['music', 'ambient', 'moments'];
+let neutralHolds = 0;
+
+/** True while a neutral page is open. Other offers (installing) ask this too, so nothing pops up
+ * over the study. */
+export function feelNeutral(): boolean {
+  return neutralHolds > 0;
+}
+
+/** Make the page neutral until the returned release is called. Counted, so two holders (or React's
+ * development double run) never end it early. Releasing writes the parts back, and every engine
+ * listening through onFeelChange (the beat bus, the ambient hue) comes back by itself. */
+export function holdNeutral(): () => void {
+  neutralHolds += 1;
+  write();
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    neutralHolds = Math.max(0, neutralHolds - 1);
+    write();
+  };
+}
+
 /** Whether one part of the feel is on right now. */
 export function feelOn(part: FeelPart): boolean {
   if (!flagOn(FLAG[part])) return false;
+  if (neutralHolds > 0 && NOT_NEUTRAL.includes(part)) return false;
   const { motion } = prefs();
   if (MOVING.includes(part) && feelCalm()) return false;
   if (EXPRESSIVE_ONLY.includes(part) && motion !== 'expressive') return false;
@@ -136,5 +164,6 @@ export function resetFeel() {
   stop = null;
   started = 0;
   written = '';
+  neutralHolds = 0;
   if (typeof document !== 'undefined') delete document.documentElement.dataset.feel;
 }

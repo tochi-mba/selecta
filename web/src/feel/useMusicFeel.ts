@@ -5,6 +5,7 @@ import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
 import { beatBusSync, startBeatBus } from './beatBus';
 import { artHue, endTravel, handoverProgress, publishAmbientHue, travelAmbient } from './hue';
+import { outputDelayMs, readOutputDelay, watchOutputDelay } from './outputDelay';
 import { feelOn, onFeelChange } from './root';
 
 /** Covers' own hues by song, as found; a song asked about once is not asked again this visit. A
@@ -35,13 +36,19 @@ export function useMusicFeel({ player, now, song, next }: {
   song?: MixItem | null;
   next?: MixItem | null;
 }) {
-  useEffect(() => startBeatBus(player), [player]);
+  useEffect(() => {
+    const stopBus = startBeatBus(player);
+    const stopDelay = watchOutputDelay(player);
+    return () => { stopBus(); stopDelay(); };
+  }, [player]);
 
-  // a pause stops the bus here as well as on its own next frame, so it settles at once
+  // a pause stops the bus here as well as on its own next frame, so it settles at once; playback
+  // starting reads the speakers' lag again (feel/outputDelay.ts), so pulses land when heard
   const phase = now.phase;
   useEffect(() => {
+    if (phase === 'playing') readOutputDelay(player);
     beatBusSync();
-  }, [phase]);
+  }, [phase, player]);
 
   const songId = song?.song_id ?? null;
   const nextId = next?.song_id ?? null;
@@ -77,7 +84,8 @@ export function useMusicFeel({ player, now, song, next }: {
   useEffect(() => {
     if (handing && songId !== null && next && now.seamAt !== null) {
       travelled.current = true;
-      travelAmbient(hueOf(songId), hueOf(next.song_id), handoverProgress(now.songTime, now.seamAt, switchAt));
+      // by the song as heard, not the context clock, which runs ahead by the speakers' lag
+      travelAmbient(hueOf(songId), hueOf(next.song_id), handoverProgress(now.songTime - outputDelayMs() / 1000, now.seamAt, switchAt));
     } else if (travelled.current) {
       travelled.current = false;
       endTravel();

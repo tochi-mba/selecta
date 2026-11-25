@@ -151,6 +151,20 @@ describe('install capture and standalone detection (W5b)', () => {
     expect(addsToHomeScreen(browserEnv(false, false))).toBe(false);
   });
 
+  it('T-20261125-f78f: a browser inside another app on iPhone gets no Add to Home Screen words', () => {
+    const iphone = (userAgent: string) => ({ matchMedia: () => ({ matches: false }), navigator: { standalone: false, userAgent } });
+    const webkit = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko)';
+    // Safari itself, and Chrome on iOS, keep the guidance
+    expect(addsToHomeScreen(iphone(`${webkit} Version/18.1 Mobile/15E148 Safari/604.1`))).toBe(true);
+    expect(addsToHomeScreen(iphone(`${webkit} CriOS/131.0 Mobile/15E148 Safari/604.1`))).toBe(true);
+    // Instagram, Facebook, TikTok and a web view with no Safari token do not
+    expect(addsToHomeScreen(iphone(`${webkit} Mobile/15E148 Instagram 357.0.0`))).toBe(false);
+    expect(addsToHomeScreen(iphone(`${webkit} Mobile/15E148 [FBAN/FBIOS;FBAV/490.0]`))).toBe(false);
+    expect(addsToHomeScreen(iphone(`${webkit} Mobile/15E148 musical_ly_37.0 BytedanceWebview/d8a21c6`))).toBe(false);
+    expect(addsToHomeScreen(iphone(`${webkit} Mobile/15E148`))).toBe(false);
+    expect(decideInstall({ standalone: false, installed: false, prompt: false, homeScreen: addsToHomeScreen(iphone(`${webkit} Mobile/15E148`)) })).toBe('none');
+  });
+
   it('decides the state in order: installed, prompt, home screen, none', () => {
     expect(decideInstall({ standalone: true, installed: false, prompt: true, homeScreen: true })).toBe('installed');
     expect(decideInstall({ standalone: false, installed: false, prompt: true, homeScreen: true })).toBe('prompt');

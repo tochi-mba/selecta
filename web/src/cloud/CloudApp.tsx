@@ -28,7 +28,7 @@ import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
-import { checkoutBody, checkoutProblem, Consent, consentVersionFor, useCheckoutReturn } from './checkout';
+import { checkoutBody, checkoutProblem, Consent, consentVersionFor, rememberPlanBeforeCheckout, useCheckoutReturn } from './checkout';
 import { CloudTransportDock, singleAudioOwner } from './CloudTransportDock';
 import { ACCOUNT_STATES_FLAG, BUSINESS_FLAG, BUSINESS_JOIN_PATH, isBusinessPath, resolveRoute } from './cloudRoutes';
 import { parseBusinessPath } from '../business/context';
@@ -530,6 +530,7 @@ export function CloudApp() {
           method: 'POST', headers: { 'Idempotency-Key': idempotencyKey() },
           body: JSON.stringify(checkoutBody(plan, interval, consent, consentVersion, checkout === 'cancelled')),
         }, account.workspace.id);
+        rememberPlanBeforeCheckout(account.entitlement.plan);
         window.location.assign(result.url);
       } catch (problem) {
         // said beside the button that was pressed (Billing's hint line), not in a banner far above

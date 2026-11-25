@@ -1,6 +1,7 @@
 import { RefObject, useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { registerBeatTarget } from '../feel/beatBus';
 import { feelCalm, feelOn, feelParts, onFeelChange } from '../feel/root';
+import { flashOnce } from '../feel/flashOnce';
 import { NumberRoll } from '../feel/numberRoll';
 import { ICON_SLOTS, ICON_STROKES, type IconSize } from '../ui/Icon';
 import { motionMs } from '../ui/exitMotion';
@@ -192,11 +193,7 @@ export function useArrivalFlash(listRef: RefObject<HTMLElement | null>, ids: rea
     for (const row of visibleRows(listRef.current, ':scope > li')) {
       const id = Number(row.querySelector<HTMLElement>('[data-focus-key]')?.dataset.focusKey?.replace('song-details-', ''));
       if (!fresh.has(id)) continue;
-      row.classList.remove('feel-flash');
-      // read layout once so the class added again starts its animation afresh
-      void row.offsetWidth;
-      row.classList.add('feel-flash');
-      row.addEventListener('animationend', () => row.classList.remove('feel-flash'), { once: true });
+      flashOnce(row);
     }
   }, [ids, identity]);
 }

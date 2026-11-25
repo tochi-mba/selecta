@@ -18,7 +18,9 @@ doing anything from script, and `feelCalm()` before any script animation.
 - Hover-only rules go inside `@media (hover: hover) and (pointer: fine)` (every selector there has
   `:hover`), with a `:focus-visible` or `:focus-within` twin outside.
 - Nothing may depend on motion or hover to be understood. Decorative elements are `aria-hidden`.
-- The blind listening study stays neutral: component feedback only.
+- The blind listening study stays neutral: component feedback only. A page that must be neutral
+  calls `useLayoutEffect(() => holdNeutral(), [])` (feel/root), which takes away the music, the
+  ambient tint, celebrations and install offers until it closes.
 
 ## Attributes and classes (styles/feel.css)
 
@@ -31,7 +33,7 @@ doing anything from script, and `feelCalm()` before any script animation.
 | `data-stagger` on a parent | Each direct child arrives one after another. Set `style={{ '--i': index }}` on each child. |
 | `.feel-pop` | Pops in on a spring. Re-key the element to replay. |
 | `.feel-tick` | On an SVG path with `pathLength="1"`: the tick draws itself. |
-| `.feel-flash` | A new or changed row glows once. |
+| `.feel-flash` | A new or changed row glows once. From script call `flashOnce(row)` (feel/flashOnce), which also clears the class if motion turns off mid-glow. |
 | `.feel-collapse-out` | A removed row fades and folds away. Add only when `feelOn('motion')`, remove the node on `animationend` with a timer fallback. |
 | `data-feel-drag="held"` / `"returning"` | Your drag code sets it on the thing being dragged: lifted and tilted while held; springs back when let go somewhere it cannot land (clear your own translate). |
 | `data-feel-drop="over"` | A place the dragged thing can land, while it is over it: the edge lights. |

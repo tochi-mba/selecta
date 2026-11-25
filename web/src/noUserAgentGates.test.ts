@@ -28,6 +28,7 @@ const LABEL_ONLY: Record<string, string> = {
   'devices/deviceInfo.ts': 'names the device in the device list and picks advisory words like "Best as a remote" (ADR-0415); it hides and refuses nothing',
   'devices/DeviceCheck.tsx': 'prints the description into the device-check report a person copies for the device lab',
   'kiosk/api.ts': 'names the browser in the kiosk status line',
+  'cloud/install.ts': 'keeps the Share, then Add to Home Screen words out of browsers built into other apps, which expose the same navigator.standalone as Safari and cannot follow them (T-20261125-f78f); it withholds advice only, never a feature',
 };
 
 /** Where decisions are made: none of these may import an identity reader. */
