@@ -687,7 +687,11 @@ def read_model(
             now,
         )
         session["open"] = view["session_ends_at"] is not None
-    result = {"session": session, "week": week, "time_zone": zone}
+    # A lighter Lucy answers when this session's share is spent but the week has room; Free has
+    # no lighter model, so there the built-in planner answers instead (ADR-0483 rule 1).
+    lighter = (session is not None and session["state"] == "spent" and week["state"] != "spent"
+               and view["plan_id"] != "free")
+    result = {"session": session, "week": week, "time_zone": zone, "lighter": lighter}
     if estimate_for_user_id is not None:
         remaining = view["week_limit"] - view["week_used"] - view["week_reserved"]
         if view["session_limit"] is not None:

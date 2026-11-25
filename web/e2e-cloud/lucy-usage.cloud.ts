@@ -190,6 +190,11 @@ test('with the week used up, Lucy answers in her own words with one next step', 
   await say(page, 'And one more');
   await expect(messages(page).getByText(WEEK_SPENT)).toHaveCount(2);
   await expect(step).toHaveCount(1);
+  // read again from the server, the step is still under the first of the two replies, once
+  await page.reload();
+  await expect(messages(page).getByText(WEEK_SPENT)).toHaveCount(2);
+  await expect(step).toHaveCount(1);
+  await expect(messages(page).getByRole('article').filter({ has: step })).toHaveCount(1);
   await accessible(page, 'Lucy at the limit');
 });
 

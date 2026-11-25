@@ -242,3 +242,21 @@ def test_an_account_with_lucy_switched_off_is_told_so_and_not_that_it_used_anyth
     assert "switched off for this account" in words and "used all" not in words
     assert limit_of(turn) == {"cause": "lucy_off", "resets_at": None, "back_words": None,
                               "next": []}
+
+
+def lighter(party, token: str) -> bool:
+    return party.client.get("/api/account/lucy", headers=auth(token)).json()["usage_windows"][
+        "lighter"]
+
+
+def test_the_meter_says_when_a_lighter_lucy_is_answering(windows):
+    assert lighter(windows, ALICE) is False
+    spend(windows, ALICE, session=True)
+    assert lighter(windows, ALICE) is True  # Premium: session spent, week has room
+    spend(windows, ALICE, week=True)
+    assert lighter(windows, ALICE) is False  # week spent: the planner answers, not a model
+
+
+def test_free_has_no_lighter_lucy_to_announce(windows):
+    spend(windows, CAROL, session=True)
+    assert lighter(windows, CAROL) is False

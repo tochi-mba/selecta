@@ -360,7 +360,10 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     },
     ("POST", "/api/billing/portal"): {"return_url": "https://app.test/account/billing"},
     ("GET", "/api/billing/lucy-packs"): None,
-    ("POST", "/api/billing/lucy-packs/checkout"): {"price_id": "price_x", "consent_version": "x"},
+    ("POST", "/api/billing/lucy-packs/checkout"): {
+        "price_id": "price_x", "consent_version": "x", "accepted_terms": True,
+        "acknowledged_expiry_and_refunds": True,
+    },
     ("POST", "/api/billing/lucy-packs/confirm"): None,
     ("POST", "/api/uploads/plan"): {"files": [{"name": "song.flac", "size": 10}]},
     ("GET", "/api/uploads"): None,

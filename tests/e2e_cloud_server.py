@@ -13,7 +13,8 @@ The cloud API runs exactly as in production, with these stand-ins and nothing el
   point back at this server's `/fake-r2/...`, so the browser really uploads parts and fetches
   audio over HTTP, and expired links really answer 403;
 - Stripe is `E2EStripe`: Checkout and the portal are small pages on this server, and paying
-  updates the entitlement snapshot after a delay, as a webhook would.
+  updates the entitlement snapshot after a delay, as a webhook would;
+- Lucy's model is a scripted one that answers a fixed sentence at once (`e2e_cloud_lucy.py`).
 
 The guest page (`/r/{code}`), the display (`/display`) and the test harness that mounts the room
 and device panels without AuthKit (`/harness?as=alice`) are served from the same build.
