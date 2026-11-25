@@ -30,7 +30,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 # Selecta Room Social ADR (2026-11-25)
 
-**Proposed; the owner approved the build plan on 2026-11-25:** [ADR-0488](adr-0488-room-social-features.md), programme prefix RS. Five things a room can do together, in party rooms and venue rooms: pick the next song, keep the songs you liked, reactions that teach the DJ, dedications from a fixed list, and tonight in numbers. Phones send only taps, votes and picks from a list (ADR-0416's no-free-text rule holds), and every feature works with phones alone; a paired screen only adds a shared view. 0 of 12 tasks implemented; 0 independently Verified. Baseline main `ae460274`.
+**Proposed; the owner approved the build plan on 2026-11-25:** [ADR-0488](adr-0488-room-social-features.md), programme prefix RS. Five things a room can do together, in party rooms and venue rooms: pick the next song, keep the songs you liked, reactions that teach the DJ, dedications from a fixed list, and tonight in numbers. Phones send only taps, votes and picks from a list (ADR-0416's no-free-text rule holds), and every feature works with phones alone; a paired screen only adds a shared view. 1 of 12 tasks implemented and 11 in progress (built and tested on the server, not yet walked in a browser); 0 independently Verified. Baseline main `ae460274`.
 
 ---
 
