@@ -31,6 +31,7 @@ import './styles/feel-listen.css';
 import './styles/feel-library.css';
 import './styles/feel-rooms.css';
 import './styles/feel-account.css';
+import './styles/feel-local.css';
 import './styles/typography.css';
 
 // The browser's install offer can arrive before any page has loaded, so it is kept from the start.

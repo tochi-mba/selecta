@@ -35,6 +35,7 @@ overlap or a new breakpoint fails the test until it is given an owner here.
 | `styles/feel-library.css` | the feel system applied to My Mixes, Library, import, song details, the editor and Studio (ADR-0477) | `main.tsx` |
 | `styles/feel-rooms.css` | the feel system applied to hosting a room, requests, the devices list and the remote (ADR-0477) | `main.tsx` |
 | `styles/feel-account.css` | the feel system applied to Workspace, Account, Plan and billing, Discover and the hosted pages (ADR-0477) | `main.tsx` |
+| `styles/feel-local.css` | the feel system applied to the local app only: first scan, export, Workspace jobs, errors and the not-found page (ADR-0477) | `main.tsx` |
 | `styles/typography.css` | type roles applied where an earlier rule left a gap, wrapping, tabular numbers (ADR-275) | `main.tsx`, last |
 | `styles/lucy.css` | Lucy conversation, proposals, approval and history | `views/Lucy.tsx` (loaded with the Lucy page) |
 
@@ -67,7 +68,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `views/phoneEditor.css` | the editor for every screen: its header, the mix strip, the list of songs and transitions, the side pane and its sheets | `views/PhoneEditor.tsx` |
 
 Load order (`web/src/main.tsx`): tokens, boot, style.css, shell, polish, foundation, cloud-ui, cloud-shell, listening, creation,
-operations, music-objects, glossary, palette, icons, depth, feel, feel-scene, feel-music, feel-parts, feel-components, feel-shell, feel-entry, feel-listen, feel-library, feel-rooms, feel-account, typography. Later files refine earlier
+operations, music-objects, glossary, palette, icons, depth, feel, feel-scene, feel-music, feel-parts, feel-components, feel-shell, feel-entry, feel-listen, feel-library, feel-rooms, feel-account, feel-local, typography. Later files refine earlier
 ones; feature files come after the legacy sheet so they win at equal specificity. New work goes into
 the file that owns the feature; `style.css` only shrinks.
 
