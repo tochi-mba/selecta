@@ -657,6 +657,7 @@
           "POST /api/admin/overrides/mass",
           "DELETE /api/admin/overrides/{override_id}",
           "GET /api/admin/ai",
+          "PUT /api/admin/ai/workspaces/{workspace_id}/multiplier",
           "GET /api/admin/security",
           "POST /api/admin/security/roles",
           "GET /api/admin/audit",

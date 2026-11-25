@@ -127,6 +127,7 @@ STAFF_ONLY = {
     ("POST", "/api/admin/overrides/mass"),
     ("DELETE", "/api/admin/overrides/{override_id}"),
     ("GET", "/api/admin/ai"),
+    ("PUT", "/api/admin/ai/workspaces/{workspace_id}/multiplier"),
     ("GET", "/api/admin/security"),
     ("POST", "/api/admin/security/roles"),
     ("GET", "/api/admin/audit"),
@@ -163,6 +164,7 @@ STAFF_ONLY = {
     ("GET", "/api/admin/flags/cloud.local_first/percentage-readiness"),
     ("GET", "/api/admin/economics/cost-per-mode"),
     ("GET", "/api/admin/economics/lucy-ceiling"),
+    ("GET", "/api/admin/economics/lucy-usage"),
     # The business release-gate readout reads repository records and flag rules only.
     ("GET", "/api/admin/business/rollout"),
     # The redesigned staff console (admin/routes_console.py): every route runs through the

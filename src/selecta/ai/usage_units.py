@@ -32,6 +32,7 @@ from selecta.persistence import new_id
 SHADOW = "shadow"
 ENFORCED = "enforced"
 PLAN_POOL = "plan"
+VENUE_POOL = "venue"
 # A turn that ended this way through no fault of the person is charged nothing (ADR-0481 rule 5).
 REFUNDED_OUTCOMES = frozenset({"failed", "incomplete", "abandoned"})
 
@@ -80,6 +81,37 @@ def charge_for(outcome: str, cost_usd: float) -> int:
 # --- the state row -----------------------------------------------------------------------------
 
 
+def _venue_organisation(conn: Connection, workspace_id: str):
+    from selecta.business import entitlement_gates
+
+    if entitlement_gates.enabled():
+        return entitlement_gates.org_for(conn, workspace_id)
+    return None
+
+
+def _targets_for_workspace(
+    conn: Connection, workspace_id: str, plan_id: str, *,
+    catalogue_version: int | None = None, override_multiplier_milli: int | None = None,
+) -> Targets:
+    result = targets(
+        plan_id, catalogue_version=catalogue_version,
+        override_multiplier_milli=override_multiplier_milli,
+    )
+    org = _venue_organisation(conn, workspace_id)
+    if org is None:
+        return result
+
+    from selecta.business import entitlements
+
+    count = len(entitlements.entitled_venues(conn, org))
+    entry = plans.lucy_usage(result.catalogue_version)
+    multiplier = 1000 if override_multiplier_milli is None else override_multiplier_milli
+    return Targets(
+        plan_id, result.catalogue_version, entry.venue_weekly_units * count * multiplier // 1000,
+        None, result.turn_cap,
+    )
+
+
 def _anchor(conn: Connection, workspace_id: str, now: float) -> windows.Anchor:
     """The weekday and local hour the workspace was created, in its owner's time zone
     (ADR-0482 rule 3). A workspace with no row or no owner is anchored at `now` in UTC."""
@@ -90,7 +122,8 @@ def _anchor(conn: Connection, workspace_id: str, now: float) -> windows.Anchor:
     ).first()
     if found is None:
         return windows.anchor_for(now, "UTC")
-    return windows.anchor_for(float(found.created_at), found.timezone)
+    org = _venue_organisation(conn, workspace_id)
+    return windows.anchor_for(float(found.created_at), org.time_zone if org is not None else found.timezone)
 
 
 def _row(conn: Connection, workspace_id: str) -> sa.Row | None:
@@ -103,7 +136,9 @@ def ensure_state(conn: Connection, workspace_id: str, *, plan_id: str, now: floa
         return
     anchor = _anchor(conn, workspace_id, now)
     start, end = windows.week_bounds(anchor, now)
-    target = targets(plan_id)
+    target = _targets_for_workspace(
+        conn, workspace_id, plan_id, catalogue_version=plans.effective_lucy_usage(now).version,
+    )
     insert_ignore(
         conn,
         _state,
@@ -141,10 +176,41 @@ def _changed(conn: Connection, statement: sa.Update) -> bool:
     return conn.execute(statement.returning(_state.c.id)).first() is not None
 
 
+def _week_targets(conn: Connection, row: sa.Row, plan_id: str, start: float) -> Targets:
+    """Adopt an effective catalogue at a reset, with advance notice of any reduction."""
+    def target_for(version: int) -> Targets:
+        return _targets_for_workspace(
+            conn, row.workspace_id, plan_id, catalogue_version=version,
+            override_multiplier_milli=row.override_multiplier_milli,
+        )
+
+    pinned = target_for(row.catalogue_version)
+    effective = plans.effective_lucy_usage(start)
+    if effective.version <= pinned.catalogue_version:
+        return pinned
+    candidate = target_for(effective.version)
+    old_plan = plans.lucy_usage(pinned.catalogue_version).plans
+    new_plan = effective.plans
+    old = old_plan.get(plan_id, old_plan["free"])
+    new = new_plan.get(plan_id, new_plan["free"])
+    reduces = (
+        candidate.week_limit < pinned.week_limit
+        or (candidate.session_limit or 0) < (pinned.session_limit or 0)
+        or candidate.turn_cap < pinned.turn_cap
+        or new.max_concurrent_turns < old.max_concurrent_turns
+        or new.max_turn_seconds < old.max_turn_seconds
+        or new.history_chars < old.history_chars
+    )
+    notice = effective.reduction_notified_at
+    if reduces and (notice is None or notice >= start):
+        return pinned
+    return candidate
+
+
 def _roll_week(conn: Connection, row: sa.Row, plan_id: str, now: float) -> bool:
     """Move to the week that holds `now`. The guard on `week_seq` lets one caller win."""
     start, end = windows.week_bounds(_stored_anchor(row), now)
-    target = targets(plan_id, override_multiplier_milli=row.override_multiplier_milli)
+    target = _week_targets(conn, row, plan_id, start)
     return _changed(
         conn,
         sa.update(_state)
@@ -187,8 +253,8 @@ def _close_session(conn: Connection, workspace_id: str, now: float) -> bool:
 
 def _raise_limits(conn: Connection, row: sa.Row, plan_id: str, now: float) -> bool:
     """Lift the limits to the current plan's at the pinned catalogue version; never lower."""
-    target = targets(
-        plan_id,
+    target = _targets_for_workspace(
+        conn, row.workspace_id, plan_id,
         catalogue_version=int(row.catalogue_version),
         override_multiplier_milli=row.override_multiplier_milli,
     )
@@ -199,6 +265,13 @@ def _raise_limits(conn: Connection, row: sa.Row, plan_id: str, now: float) -> bo
         "plan_id": sa.case((week_low, plan_id), else_=_state.c.plan_id),
         "updated_at": now,
     }
+    if target.session_limit is None and row.session_limit is not None:
+        # An existing personal shadow row can become an organisation's weekly pool.
+        low.append(_state.c.session_limit.is_not(None))
+        values.update(
+            week_limit=target.week_limit, session_limit=None, session_ends_at=None,
+            session_used=0, session_reserved=0,
+        )
     if target.session_limit is not None:
         # NULL (no session window) compares as unknown, so such a row keeps NULL.
         session_low = _state.c.session_limit < target.session_limit
@@ -218,7 +291,7 @@ def _raise_limits(conn: Connection, row: sa.Row, plan_id: str, now: float) -> bo
     )
 
 
-def roll(conn: Connection, workspace_id: str, *, plan_id: str, now: float) -> None:
+def roll(conn: Connection, workspace_id: str, *, plan_id: str, now: float) -> bool:
     """Bring the workspace's row up to `now`. Three guarded updates, each safe to run twice:
 
     1. a week that has ended becomes the week holding `now`, with nothing used, the current plan
@@ -229,14 +302,16 @@ def roll(conn: Connection, workspace_id: str, *, plan_id: str, now: float) -> No
     """
     row = _row(conn, workspace_id)
     if row is None:
-        return
+        return False
+    week_reset = False
     if float(row.week_ends_at) <= now:
-        _roll_week(conn, row, plan_id, now)
+        week_reset = _roll_week(conn, row, plan_id, now)
         # Read again whoever won: the upgrade step needs the catalogue version now pinned.
         row = _row(conn, workspace_id)
-    _close_session(conn, workspace_id, now)
+    session_reset = _close_session(conn, workspace_id, now)
     if row is not None:
         _raise_limits(conn, row, plan_id, now)
+    return week_reset or session_reset
 
 
 def open_session(conn: Connection, workspace_id: str, *, now: float) -> None:
@@ -283,7 +358,7 @@ def record_shadow(
             "workspace_id": workspace_id,
             "run_id": run_id,
             "mode": SHADOW,
-            "pool": PLAN_POOL,
+            "pool": VENUE_POOL if _venue_organisation(conn, workspace_id) is not None else PLAN_POOL,
             "tier": str(tier),
             "catalogue_version": row.catalogue_version,
             "week_seq": row.week_seq,
@@ -391,7 +466,7 @@ def reserve_enforced(
                     "workspace_id": workspace_id,
                     "run_id": run_id,
                     "mode": ENFORCED,
-                    "pool": PLAN_POOL,
+                    "pool": VENUE_POOL if _venue_organisation(conn, workspace_id) is not None else PLAN_POOL,
                     "tier": str(tier),
                     "catalogue_version": row.catalogue_version,
                     "week_seq": row.week_seq,
@@ -519,7 +594,7 @@ def units_view(conn: Connection, workspace_id: str, *, now: float) -> dict | Non
     }
     if view["week_ends_at"] <= now:
         start, end = windows.week_bounds(_stored_anchor(row), now)
-        target = targets(row.plan_id, override_multiplier_milli=row.override_multiplier_milli)
+        target = _week_targets(conn, row, row.plan_id, start)
         view.update(
             catalogue_version=target.catalogue_version,
             week_seq=view["week_seq"] + 1,

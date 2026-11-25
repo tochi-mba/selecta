@@ -24,6 +24,7 @@ export type CloudLucy = {
   usage: { used: number; limit: number | null; fair_use: boolean; resets_at: number | null };
   /** ADR-0484: the one usage read model. Absent from a server that still counts turns. */
   usage_windows?: (LucyWindows & { estimated_messages?: number | null }) | null;
+  usage_cutover?: { at: number; time_zone: string };
 };
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -110,7 +111,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
   useEffect(() => {
     const again = () => {
       void asked.current<CloudLucy>('/account/lucy')
-        .then((next) => { if (live.current) setStatus((was) => (was ? { ...was, usage: next.usage, usage_windows: next.usage_windows } : was)); })
+        .then((next) => { if (live.current) setStatus((was) => (was ? { ...was, usage: next.usage, usage_windows: next.usage_windows, usage_cutover: next.usage_cutover } : was)); })
         .catch(() => {});
     };
     window.addEventListener(LUCY_TURNS_EVENT, again);
@@ -162,6 +163,13 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       about="Your plan sets how much Lucy can do. You choose whether to use it and what it may share."
     >
       {windows ? <LucyUsageMeter windows={windows} /> : <LucyTurnsMeter usage={status.usage} />}
+      {status.usage_cutover && (
+        <Notice role="note">
+          Starting {new Date(status.usage_cutover.at * 1000).toLocaleDateString(userLocale(), {
+            dateStyle: 'long', timeZone: status.usage_cutover.time_zone,
+          })}, Lucy will use a session and weekly allowance in place of monthly turns. You’ll be able to see how much usage remains. Your plan price stays the same.
+        </Notice>
+      )}
       {showEstimate && (
         <p className="hint">About {estimate} more {estimate === 1 ? 'message' : 'messages'} like your recent ones.</p>
       )}

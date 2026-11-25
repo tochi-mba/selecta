@@ -29,6 +29,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta import persistence
 from selecta.ai import usage_mode, usage_units
+from selecta.ai.usage_schema import lucy_usage_state
 from selecta.billing import plans, stripe_sync
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
@@ -134,10 +135,19 @@ def install_routes(
             "usage": meters.lucy_turns(conn, workspace_id, plan, principal.user.timezone),
         }
         rules = getattr(app.state, "flag_rules", None)
-        if usage_mode.mode_for(conn, workspace_id, rules, now) == usage_mode.ENFORCED:
+        mode = usage_mode.mode_for(conn, workspace_id, rules, now)
+        if mode == usage_mode.ENFORCED:
             result["usage_windows"] = usage_units.read_model(
                 conn, workspace_id, now=now, estimate_for_user_id=principal.user.id
             )
+        elif mode == usage_mode.SHADOW and plan.id != plans.FREE_1.id:
+            cutover = conn.execute(
+                sa.select(lucy_usage_state.c.cutover_at, lucy_usage_state.c.time_zone).where(
+                    lucy_usage_state.c.workspace_id == workspace_id, lucy_usage_state.c.cutover_at > now
+                )
+            ).first()
+            if cutover is not None and usage_mode.granted(conn, workspace_id, rules, now):
+                result["usage_cutover"] = {"at": float(cutover.cutover_at), "time_zone": cutover.time_zone}
         return result
 
     @app.get("/api/account/lucy")
