@@ -886,15 +886,15 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       case 'mixes':
         if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
         // R8: a device with little or no music makes mixes from the songs the device R1 chooses holds
-        // (a hosted account also gets the server-rendered mix first: cloud.hosted_render)
-        return <>{coexisting && on('cloud.hosted_render') && <div className="page"><HostedMix api={api} workspaceId={workspaceId} /></div>}{mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
+        // (a hosted account also gets the server-rendered mix after it, below the page heading: cloud.hosted_render)
+        return <>{mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
           <MixesEmpty
             current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
             connected={connected}
             onSetUp={onboardingFinished(workspaceId) ? undefined : () => { setSpineAsked(true); setSpine(true); }}
             checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
           />
-        )}{localExport}</>;
+        )}{coexisting && on('cloud.hosted_render') && <div className="page"><HostedMix api={api} workspaceId={workspaceId} /></div>}{localExport}</>;
       case 'listen':
         // something is playing on another device and this one does not hold that mix: the remote
         if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} speakerSongs={holdings.speakerSongs} notice={where.notice} onDismissNotice={where.clearNotice} />;
