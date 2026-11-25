@@ -1,6 +1,6 @@
 # ADR-0487 - Lucy Usage: measurement, migration and rollout
 
-- **Decision:** Proposed (Claude for the owner, 2026-11-25).
+- **Decision:** Accepted (owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
 - **Implementation:** Not started. `src/selecta/usage/lucy_ceiling.py` can re-check allowances against real turn costs but has not been run on beta data (BF-0464-04 is In progress).
 - **Source touchpoints:** `src/selecta/usage/lucy_ceiling.py`, `src/selecta/admin/routes_economics.py`, `src/selecta/flags/lucy.json`, `src/selecta/ai/allowance.py`, `tools/lucy_eval.py`, `tests/test_cloud_ai_gateway.py`.

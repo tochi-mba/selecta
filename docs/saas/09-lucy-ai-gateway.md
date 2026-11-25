@@ -76,9 +76,9 @@ Built in PRs #133 and #134. The local Lucy page is reused in the browser-first C
 - **Not in Cloud yet.** Memory facts and listening history; a real-phone keyboard check; song titles in the playing position.
 - **Evaluation.** `tests/lucy_eval/` (72 cases) and `tools/lucy_eval.py`; run within the owner's spending limit.
 
-### 9.8 Proposed: one usage allowance on a session and a week (ADR-0480 to ADR-0487, flag `lucy.usage_windows`)
+### 9.8 One usage allowance on a session and a week (ADR-0480 to ADR-0487, flag `lucy.usage_windows`)
 
-Proposed on 2026-11-25 and not built. Today Lucy is limited twice: by turns per class per calendar month, which the customer is sold, and by a monthly dollar ceiling per account (§9.3), which the customer never sees and which is the limit that really holds since each plan moved to one model. The [Lucy Usage ADR set](../adr/README.md#selecta-lucy-usage-adr-set-2026-11-25) proposes to make them one thing.
+Accepted by the owner on 2026-11-25 and being built behind flags that are off for everyone, so what follows is not yet what members get. Today Lucy is limited twice: by turns per class per calendar month, which the customer is sold, and by a monthly dollar ceiling per account (§9.3), which the customer never sees and which is the limit that really holds since each plan moved to one model. The [Lucy Usage ADR set](../adr/README.md#selecta-lucy-usage-adr-set-2026-11-25) proposes to make them one thing.
 
 - **One allowance, weighted by cost.** A turn is charged what it cost, reserved at admission and settled with the real tokens. The request class stops deciding what a person is charged ([ADR-0481](../adr/adr-0481-one-cost-weighted-lucy-allowance.md)).
 - **Two windows.** A five-hour session that opens at the first message and a weekly limit with a fixed reset per account, in place of the calendar month. Venue pools get the weekly limit only ([ADR-0482](../adr/adr-0482-rolling-session-window-and-weekly-limit.md)).

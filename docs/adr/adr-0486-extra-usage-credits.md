@@ -1,6 +1,6 @@
 # ADR-0486 - Extra usage credits
 
-- **Decision:** Proposed (Claude for the owner, 2026-11-25). Deferred: nothing here is built or switched on until ADR-0487's measurement has run and the owner sets a price.
+- **Decision:** Accepted (owner, 2026-11-25). The mechanism is built behind `lucy.extra_usage`; it is not switched on until ADR-0487's measurement has run, the owner sets pack sizes and prices, and the refund and VAT wording is reviewed.
 - **Programme:** Lucy Usage (LM).
 - **Implementation:** Not started. There is no overage, top-up or credit path anywhere in the baseline.
 - **Source touchpoints:** `src/selecta/billing/`, `src/selecta/ai/allowance.py`, `src/selecta/ai/gateway.py`, `web/src/cloud/Billing.tsx`.

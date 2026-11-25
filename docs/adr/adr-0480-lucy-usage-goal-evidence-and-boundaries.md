@@ -1,8 +1,8 @@
 # ADR-0480 - Lucy Usage: goal, evidence and boundaries
 
-- **Decision:** Proposed (Claude for the owner, 2026-11-25).
+- **Decision:** Accepted (owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM), building on ADR-0402, ADR-0404, ADR-0464 and ADR-0476 rather than replacing them.
-- **Implementation:** Not started. This is a docs-only set; no code changed with it.
+- **Implementation:** In progress, behind flags that are off for everyone; the [checklist](selecta-lucy-usage-implementation-checklist.md) says what is built.
 - **Baseline:** `main` at `f5b6a4a`.
 - **Source touchpoints:** `src/selecta/ai/allowance.py`, `src/selecta/ai/spend.py`, `src/selecta/ai/gateway.py`, `src/selecta/billing/plans.py`, `src/selecta/usage/meters.py`, `src/selecta/lucy/cloud_agent.py`, `web/src/views/LucyCloudSettings.tsx`, `web/src/cloud/Meters.tsx`.
 - **Sibling LM ADRs:** [ADR-0481](adr-0481-one-cost-weighted-lucy-allowance.md) to [ADR-0487](adr-0487-lucy-usage-measurement-migration-and-rollout.md).

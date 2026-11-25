@@ -1,6 +1,6 @@
 # ADR-0481 - One cost-weighted Lucy allowance
 
-- **Decision:** Proposed (Claude for the owner, 2026-11-25).
+- **Decision:** Accepted (owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
 - **Implementation:** Not started. The gateway already records tokens and dollars per run (`ai_runs`) and per account (`ai_usage`), and already reserves a worst case and reconciles to real cost for the platform caps; none of that is used as the customer's allowance yet.
 - **Source touchpoints:** `src/selecta/ai/allowance.py`, `src/selecta/ai/gateway.py`, `src/selecta/ai/spend.py`, `src/selecta/ai/registry.py`, `src/selecta/lucy/cloud_agent.py`.

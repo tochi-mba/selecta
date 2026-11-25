@@ -1,6 +1,6 @@
 # ADR-0485 - Plan multipliers and one allowance catalogue
 
-- **Decision:** Proposed (Claude for the owner, 2026-11-25).
+- **Decision:** Accepted (owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
 - **Implementation:** Not started. Allowances are written twice, in `src/selecta/billing/plans.py` (catalogue v1 and v2) and in `src/selecta/ai/allowance.py`, with dollar ceilings a third time in `TIER_LIMITS` in `src/selecta/ai/spend.py`.
 - **Source touchpoints:** `src/selecta/billing/plans.py`, `src/selecta/ai/allowance.py`, `src/selecta/ai/spend.py`, `src/selecta/business/entitlements.py`, `src/selecta/lucy/cloud_prompt.py`, `web/src/cloud/Billing.tsx`.

@@ -1,6 +1,6 @@
 # ADR-0484 - One truthful Lucy usage meter
 
-- **Decision:** Proposed (Claude for the owner, 2026-11-25).
+- **Decision:** Accepted (owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
 - **Implementation:** Not started. Two meters exist (`LucyTurnsMeter` in `web/src/views/LucyCloudSettings.tsx` and the Lucy line in `web/src/cloud/Meters.tsx`); both read `lucy_turn.*` counters through `src/selecta/usage/meters.py`, which the gateway does not write.
 - **Source touchpoints:** `src/selecta/usage/meters.py`, `src/selecta/lucy/cloud_settings.py`, `src/selecta/ai/allowance.py`, `web/src/views/LucyCloudSettings.tsx`, `web/src/cloud/Meters.tsx`, `web/src/cloud/Billing.tsx`.
@@ -21,13 +21,14 @@ The meter and the limit are fed from different tables (ADR-0480 fault 1). Where 
 8. **An estimate is allowed, labelled.** The settings page may add "about N more messages like your recent ones", worked out from the person's own median settled cost over their last 20 turns, always with "about" and never in Lucy's words. It is hidden until 5 turns have settled.
 9. **Lucy tells the truth about herself.** Her prompt is given the read model's state and reset times, not allowance numbers, so she can answer "how much have I got left?" in the same words as the page.
 10. Venue pools (ADR-0448) use the same read model with the week line only.
-11. **A usage ring, always in reach (owner, 2026-11-25).** The owner asked for a compact indicator in the spirit of the small ring ChatGPT shows beside its chat list, whose hover reads "5-hour: 100% left" and "Weekly: 90% left". SelectaDJ takes the idea, not the artwork:
-    - A small ring sits in the Lucy page's side rail, near the new-conversation control, wherever Lucy is open. Its arc is the share left of whichever window is closer to running out, so the ring always shows the limit that will bite first.
-    - Hover, keyboard focus or a tap opens a small label with both lines, "5-hour: N% left" and "Weekly: N% left", each with its reset time. On a touch device a tap opens it and a second tap, or a tap elsewhere, closes it.
-    - Selecting the label's link opens the full meter in Lucy's settings. The ring itself never opens a purchase or a plan page.
-    - The ring is quiet at `ok`, takes the warning treatment at `near` and the spent treatment at `spent`, using the existing theme tokens and a shape or mark as well as colour. It does not animate except for one short change when a window resets or a state changes, and not at all under reduced motion.
-    - It is drawn with SelectaDJ's own tokens and icon set (ADR-0468); it is not a copy of another product's glyph.
-    - With the flag off, or on a plan with no Lucy model, the ring is not shown.
+11. **A twin level meter, always in reach (owner, 2026-11-25).** The owner asked for a compact indicator and then, the same day, that it should not look like the ring another chat product uses. It is two small ladders of five segments side by side, like the channel meters on a mixer: the left ladder is this session, the right is this week. This replaces the ring this rule first described.
+    - The pair sits on the Lucy page beside the new-conversation control, and in the Lucy header when the conversation list is not shown, so it is there wherever Lucy is open. Both limits are visible at once, so nobody has to open anything to learn which one is running out.
+    - Lit segments are the share left, rounded so they never flatter: five only when nothing has been used, none only when the window is spent, and at least one while anything is left.
+    - Hover, keyboard focus or a tap opens a small label with both lines, "This session: N% left" and "This week: N% left", each with its reset time. On a touch device a tap opens it and a second tap, or a tap elsewhere, closes it.
+    - Selecting the label's link opens the full meter in Lucy's settings. The pair itself never opens a purchase or a plan page.
+    - A ladder is quiet at `ok`. At `near` it carries a marker above it and at `spent` it is drawn empty with a dashed outline, so the two states differ by shape and by the words in the label, not by colour alone (the design system gives warning and failed one colour). It does not animate except for one short change when a segment goes out or a window resets, and not at all under reduced motion.
+    - It is drawn with SelectaDJ's own tokens (ADR-0468) and follows the house motif of segments counting down.
+    - It is shown only when the server sends the new figures; with the flag off, or on a plan with no Lucy model, it is absent.
 
 ## Consequences
 
@@ -39,7 +40,7 @@ The meter and the limit are fed from different tables (ADR-0480 fault 1). Where 
 
 - **Repair the turn meter only.** Fixes fault 1 and leaves the second, hidden limit unshown.
 - **Show remaining messages as the main figure.** Any count is a guess once cost varies by turn; a guess as the headline would be the new untruth.
-- **Copy another product's ring exactly.** The pattern is common and free to use; the drawing is theirs and SelectaDJ has its own design system.
+- **A ring.** First chosen, then dropped at the owner's request: it reads as another product's mark, and it can show only one of the two limits at a time.
 - **Show usage in pounds.** Clear, but it turns a music product into a bill and exposes model prices.
 
 ## Acceptance

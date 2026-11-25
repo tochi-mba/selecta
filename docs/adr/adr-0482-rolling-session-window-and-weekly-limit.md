@@ -1,6 +1,6 @@
 # ADR-0482 - Rolling session window and weekly limit
 
-- **Decision:** Proposed (Claude for the owner, 2026-11-25).
+- **Decision:** Accepted (owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
 - **Implementation:** Not started. `src/selecta/ai/allowance.py` has calendar-month keys only (`month_key`, `month_resets_at`); `src/selecta/usage/allowances.py` has day and month periods only.
 - **Source touchpoints:** `src/selecta/ai/allowance.py`, `src/selecta/ai/gateway.py`, `src/selecta/ai/spend.py`, `src/selecta/business/entitlements.py`, `src/selecta/usage/allowances.py`.

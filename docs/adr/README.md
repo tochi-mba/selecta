@@ -22,7 +22,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
 | [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 10 | 0 | 110 | 0 | 0 | 0 | 0 |
 | [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 23 | 1 | 155 | 0 | 0 | 0 | 0 |
-| [selecta-lucy-usage-implementation-checklist.md](selecta-lucy-usage-implementation-checklist.md) | 52 | 1 | 2 | 49 | 0 | 0 | 1 | 0 |
+| [selecta-lucy-usage-implementation-checklist.md](selecta-lucy-usage-implementation-checklist.md) | 52 | 2 | 2 | 48 | 0 | 0 | 2 | 0 |
 | [selecta-service-operations-implementation-checklist.md](selecta-service-operations-implementation-checklist.md) | 30 | 0 | 4 | 26 | 0 | 0 | 0 | 0 |
 <!-- checklist-summary:end -->
 
@@ -30,7 +30,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 # Selecta Lucy Usage ADR set (2026-11-25)
 
-**Proposed docs-only set, building on ADR-0402, ADR-0404, ADR-0464 and ADR-0476:** 8 ADRs, [ADR-0480](adr-0480-lucy-usage-goal-evidence-and-boundaries.md) to [ADR-0487](adr-0487-lucy-usage-measurement-migration-and-rollout.md), programme prefix LM, baseline `main` at `f5b6a4a`. They replace Lucy's turns per class per calendar month, and the hidden monthly dollar ceiling beneath them, with one cost-weighted allowance on a rolling five-hour session under a weekly limit, shown by one meter that reads what the gateway enforces. Prices and the 40% rule are unchanged, every size is a hypothesis until beta costs are measured, and nothing is built: 52 tasks in the [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md), research in [docs/research/ai-chat-usage-limits.md](../research/ai-chat-usage-limits.md).
+**Accepted by the owner on 2026-11-25, building on ADR-0402, ADR-0404, ADR-0464 and ADR-0476:** 8 ADRs, [ADR-0480](adr-0480-lucy-usage-goal-evidence-and-boundaries.md) to [ADR-0487](adr-0487-lucy-usage-measurement-migration-and-rollout.md), programme prefix LM, baseline `main` at `f5b6a4a`. They replace Lucy's turns per class per calendar month, and the hidden monthly dollar ceiling beneath them, with one cost-weighted allowance on a rolling five-hour session under a weekly limit, shown by one meter that reads what the gateway enforces. Prices and the 40% rule are unchanged, every size is a hypothesis until beta costs are measured, and it is being built behind flags that are off for everyone: 52 tasks in the [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md), research in [docs/research/ai-chat-usage-limits.md](../research/ai-chat-usage-limits.md).
 
 **Start here:** [goal and the five faults found (0480)](adr-0480-lucy-usage-goal-evidence-and-boundaries.md), [one cost-weighted allowance (0481)](adr-0481-one-cost-weighted-lucy-allowance.md), [session window and weekly limit (0482)](adr-0482-rolling-session-window-and-weekly-limit.md), [behaviour at the limit (0483)](adr-0483-behaviour-at-the-limit-and-truthful-words.md), [the meter (0484)](adr-0484-one-truthful-lucy-usage-meter.md), [plan multipliers (0485)](adr-0485-plan-multipliers-and-one-allowance-catalogue.md), [extra usage credits, deferred (0486)](adr-0486-extra-usage-credits.md), [measurement and rollout (0487)](adr-0487-lucy-usage-measurement-migration-and-rollout.md).
 

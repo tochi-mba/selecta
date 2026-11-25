@@ -1,6 +1,6 @@
 # ADR-0483 - Behaviour at the limit and truthful words
 
-- **Decision:** Proposed (Claude for the owner, 2026-11-25).
+- **Decision:** Accepted (owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
 - **Implementation:** Not started. The step-down chain and the built-in planner exist (`_cheaper_route` in `src/selecta/ai/gateway.py`, `builtin_words` in `src/selecta/lucy/cloud_agent.py`); the per-cause words and the session step do not.
 - **Source touchpoints:** `src/selecta/ai/gateway.py`, `src/selecta/lucy/cloud_agent.py`, `src/selecta/lucy/cloud_prompt.py`, `web/src/lucy/reducer.ts`, `web/src/cloud/Billing.tsx`.
