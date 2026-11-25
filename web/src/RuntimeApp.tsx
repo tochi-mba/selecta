@@ -3,6 +3,7 @@ import { lazyPage as lazy } from './ui/staleBuild';
 import { App } from './App';
 import type { MixData } from './api';
 import { setCopyMode } from './copy';
+import { startFeel } from './feel/root';
 import { setFlags } from './flags';
 import { handOnStartupStatus } from './startupStatus';
 import { BrandMark } from './ui/BrandMark';
@@ -24,6 +25,10 @@ export function RuntimeApp() {
   const [mode, setMode] = useState<Mode>('loading');
   const [attempt, setAttempt] = useState(0);
   const [startupMix, setStartupMix] = useState<MixData | null>(null);
+
+  // ADR-0477: keep <html data-feel> right from the very first screen, so the local app, Welcome,
+  // every sign-in screen and both Cloud frames get the feel sheets, not only pages inside the Shell
+  useEffect(() => startFeel(), []);
 
   useEffect(() => {
     let current = true;

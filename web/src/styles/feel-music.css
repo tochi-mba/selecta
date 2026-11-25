@@ -1,0 +1,12 @@
+/* The feel system (ADR-0477): chrome that answers the music.
+ *
+ * Nothing in this sheet moves by itself. feel/beatBus.ts plays a short script animation on a few
+ * registered elements for each measured kick or analysed beat, and stops when playback is paused,
+ * the tab is hidden, the choice is Still, the computer asks for reduced motion or low power is on.
+ * This sheet only draws the resting shapes those animations act on, and the ambient layer.
+ *
+ *   data-feel~='music'    the beat ring round Play, the player's edge, the playing row, live bars
+ *   data-feel~='ambient'  a soft tint in the playing song's hue (--ambient-hue), on its own fixed
+ *                         layer behind content and never under text
+ *
+ * No rule here may use `infinite`: a loop would be a timer, not the music. */

@@ -1,0 +1,10 @@
+/* The feel system (ADR-0477): moving between pages.
+ *
+ * shell/sceneTransition.ts starts a view transition when the browser has them, the motion choice is
+ * Expressive, app.scene_transitions is on and the device is not in low power. It sets
+ * <html data-nav="forward|back|up|down|jump"> for the length of the transition, and may name shared
+ * things so they travel between the two pages. In every other case the page changes at once and
+ * nothing here applies.
+ *
+ * The frame that stays (rail, header, player) is named so it never blinks; only the page moves.
+ * Durations are motion tokens; Still, reduced motion and low power take them to 0. */

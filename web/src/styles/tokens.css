@@ -42,6 +42,15 @@
   --light-primary-edge: #16140e;
   --light-shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
   --light-shadow-overlay: 0 1px 2px rgb(40 34 20 / 10%), 0 12px 32px rgb(40 34 20 / 16%);
+  /* Light's depth and light (ADR-0477): cream shows a shadow, so the lift is a shadow and the lit
+     edge is a bright line, where Dark uses a lighter surface and a faint one */
+  --light-shadow-rest: 0 1px 2px rgb(40 34 20 / 8%);
+  --light-shadow-lift: 0 1px 2px rgb(40 34 20 / 10%), 0 8px 20px rgb(40 34 20 / 12%);
+  --light-shadow-float: 0 2px 6px rgb(40 34 20 / 14%), 0 18px 40px rgb(40 34 20 / 18%);
+  --light-edge-light: inset 0 1px 0 rgb(255 255 255 / 70%);
+  --light-glow-accent: 0 0 0 1px var(--light-primary-edge), 0 6px 18px rgb(40 34 20 / 18%);
+  --light-ambient-tint: oklch(0.95 0.035 var(--ambient-hue) / 0.6);
+  --light-pointer-light: rgb(255 255 255 / 55%);
 
   /* what things mean */
   /* Surface roles (MP-0276-01), from the page up. A background says which one it is, never which
@@ -225,6 +234,24 @@
      and --edge-overlay rather than from a darker shadow nobody can see. */
   --shadow-raised: 0 6px 24px rgb(0 0 0 / 35%);
   --shadow-overlay: 0 1px 2px rgb(0 0 0 / 30%), 0 12px 32px rgb(0 0 0 / 40%);
+  /* Depth and light of the feel system (ADR-0477), used only by styles/feel*.css under
+     <html data-feel~='depth'>:
+       rest     a resting card's own small shadow
+       lift     a hovered control or card: the surface comes toward you, the box does not move
+       float    something being dragged
+       edge     the lit top edge of a raised surface
+       glow     the one lime peak of a region: the main action, or the playing thing
+       ambient  a soft tint in the playing song's hue (--ambient-hue is a number a script may set;
+                it is never a colour), on its own layer behind content, never under text
+       pointer  the soft light under the mouse on a card or tile */
+  --shadow-rest: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 30%), 0 10px 24px rgb(0 0 0 / 38%);
+  --shadow-float: 0 4px 10px rgb(0 0 0 / 36%), 0 22px 48px rgb(0 0 0 / 46%);
+  --edge-light: inset 0 1px 0 rgb(255 255 255 / 6%);
+  --glow-accent: 0 0 0 1px color-mix(in oklch, var(--primary-fill) 45%, transparent), 0 0 28px color-mix(in oklch, var(--primary-fill) 26%, transparent);
+  --ambient-hue: 125;
+  --ambient-tint: oklch(0.3 0.07 var(--ambient-hue) / 0.38);
+  --pointer-light: rgb(255 255 255 / 9%);
   --gutter: clamp(16px, 3vw, 40px);
   --page-gutter: var(--gutter);
   --content-reading: 880px;
@@ -261,6 +288,21 @@
   --motion-loop-flow: 2.4s;      /* the pending handoff line */
   --motion-loop-blend: 8s;       /* the playhead crossing the blend drawing (Welcome, page not found) */
   --motion-clock: 70ms;          /* the handoff bar follows the audio clock */
+  /* The spatial family (ADR-0477): position and scale move on springs; colour and opacity keep the
+     six tokens and --motion-ease above and never bounce.
+       gentle   no overshoot: pages, shared things travelling, timeline drops, anything in Subtle
+       snappy   about 4% over: things arriving, a lifted card settling
+       bouncy   about 16% over: a control springing back when let go, and celebrations
+     The curves are springs sampled into CSS linear() (web/scripts/spring-curve.mjs prints them); a
+     browser without linear() keeps the plain curves written here. */
+  --spring-gentle: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --spring-snappy: cubic-bezier(0.3, 1.25, 0.5, 1);
+  --spring-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-spring-snappy: 320ms;   /* an arrival or a lift settling */
+  --motion-spring-release: 420ms;  /* a pressed control springing back */
+  --motion-spring-glide: 360ms;    /* a shared thing travelling between pages */
+  --motion-stagger: 30ms;          /* the gap between neighbours arriving one after another */
+  --press-scale: 0.96;             /* how far a pressed control squashes; its hit area never shrinks */
 
   /* what sits on top of what */
   --layer-sticky: 5;
@@ -329,6 +371,13 @@
     --word-glow: transparent;
     --shadow-raised: var(--light-shadow-raised);
     --shadow-overlay: var(--light-shadow-overlay);
+    --shadow-rest: var(--light-shadow-rest);
+    --shadow-lift: var(--light-shadow-lift);
+    --shadow-float: var(--light-shadow-float);
+    --edge-light: var(--light-edge-light);
+    --glow-accent: var(--light-glow-accent);
+    --ambient-tint: var(--light-ambient-tint);
+    --pointer-light: var(--light-pointer-light);
     --surface-overlay: var(--panel);
   }
 }
@@ -355,6 +404,13 @@
   --word-glow: transparent;
   --shadow-raised: var(--light-shadow-raised);
   --shadow-overlay: var(--light-shadow-overlay);
+  --shadow-rest: var(--light-shadow-rest);
+  --shadow-lift: var(--light-shadow-lift);
+  --shadow-float: var(--light-shadow-float);
+  --edge-light: var(--light-edge-light);
+  --glow-accent: var(--light-glow-accent);
+  --ambient-tint: var(--light-ambient-tint);
+  --pointer-light: var(--light-pointer-light);
   --surface-overlay: var(--panel);
 }
 
@@ -370,7 +426,39 @@ html {
   scroll-padding-bottom: calc(var(--bottom-chrome) + var(--keyboard-inset) + var(--space-4));
 }
 
-:root[data-motion='subtle'] {
+/* The springs proper, where the browser can draw them (Chrome 113, Firefox 112, Safari 17.2). An
+   invalid easing would drop a whole transition, so the plain curves above stay as the fallback. */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring-gentle: linear(0, 0.194 10%, 0.48 20%, 0.696 30%, 0.832 40%, 0.911 50%, 0.954 60%, 0.977 70%, 0.988 80%, 0.994 90%, 1);
+    --spring-snappy: linear(0, 0.153 10%, 0.44 20%, 0.705 30%, 0.891 40%, 0.995 50%, 1.038 60%, 1.046 70%, 1.036 80%, 1.023 90%, 1);
+    --spring-bouncy: linear(0, 0.291 10%, 0.767 20%, 1.077 30%, 1.163 40%, 1.116 50%, 1.038 60%, 0.987 70%, 0.973 80%, 0.981 90%, 1);
+  }
+}
+
+/* The ambient hue is a registered number so the ambient layer can travel between two songs' hues
+   during a blend; a script sets the number, never a colour. */
+@property --ambient-hue {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 125;
+}
+
+/* Subtle, and the first low-power step: every spring is the gentle one, and shorter. The gallery
+   shows a level inside a page set to another with data-motion-preview. */
+:root[data-motion='subtle'],
+:root[data-low-power='lite'],
+[data-motion-preview='subtle'] {
+  --spring-snappy: var(--spring-gentle);
+  --spring-bouncy: var(--spring-gentle);
+  --motion-spring-snappy: 200ms;
+  --motion-spring-release: 240ms;
+  --motion-spring-glide: 220ms;
+  --motion-stagger: 20ms;
+  --press-scale: 0.98;
+}
+:root[data-motion='subtle'],
+[data-motion-preview='subtle'] {
   --motion-feedback: 60ms;
   --motion-fast: 90ms;
   --motion-reveal: 120ms;
@@ -379,13 +467,19 @@ html {
   --motion-slow: 180ms;
 }
 :root[data-motion='still'],
-:root[data-low-power='auto'] {
+:root[data-low-power='auto'],
+[data-motion-preview='still'] {
   --motion-feedback: 0ms;
   --motion-fast: 0ms;
   --motion-reveal: 0ms;
   --motion-handoff: 0ms;
   --motion-overlay: 0ms;
   --motion-slow: 0ms;
+  --motion-spring-snappy: 0ms;
+  --motion-spring-release: 0ms;
+  --motion-spring-glide: 0ms;
+  --motion-stagger: 0ms;
+  --press-scale: 1;
 }
 /* CSS animations not based on motion tokens also respect Still and the OS setting. */
 :root[data-motion='still'] *,
@@ -406,6 +500,11 @@ html {
     --motion-handoff: 0ms;
     --motion-overlay: 0ms;
     --motion-slow: 0ms;
+    --motion-spring-snappy: 0ms;
+    --motion-spring-release: 0ms;
+    --motion-spring-glide: 0ms;
+    --motion-stagger: 0ms;
+    --press-scale: 1;
   }
   *, *::before, *::after {
     animation: none !important;

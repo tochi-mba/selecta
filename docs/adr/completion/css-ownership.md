@@ -24,6 +24,9 @@ overlap or a new breakpoint fails the test until it is given an owner here.
 | `styles/palette.css` | command palette song results | `main.tsx` |
 | `styles/icons.css` | icon size slots, icon-to-label gaps, badge baselines (ADR-277) | `main.tsx` |
 | `styles/depth.css` | surface depth, separators and forced-colour state edges (ADR-276) | `main.tsx` |
+| `styles/feel.css` | the feel system (ADR-0477), scoped to `<html data-feel>`: press and release, hover lift and light, moving skins for cards and rows, pointer light, sliding indicators, arrivals | `main.tsx` |
+| `styles/feel-scene.css` | the feel system (ADR-0477): page and shared-element transitions, the frame that stays while a page moves | `main.tsx` |
+| `styles/feel-music.css` | the feel system (ADR-0477): the beat ring, live bars, the playing row and the ambient layer the beat bus acts on | `main.tsx` |
 | `styles/typography.css` | type roles applied where an earlier rule left a gap, wrapping, tabular numbers (ADR-275) | `main.tsx`, last |
 | `styles/lucy.css` | Lucy conversation, proposals, approval and history | `views/Lucy.tsx` (loaded with the Lucy page) |
 

@@ -98,6 +98,21 @@
       "default": true,
       "kind": "release",
       "owner": "library"
+    },
+    "library.art_embedded": {
+      "label": "Covers from your own files",
+      "about": "Shows the cover picture stored inside a song's own file. In Cloud it is read on your device and never uploaded (ADR-0478). Off: the generated colour tile, as before. Off by default while it is being built.",
+      "default": false,
+      "kind": "release",
+      "owner": "library"
+    },
+    "library.art_lookup": {
+      "label": "Covers and song details from the web",
+      "about": "For a song whose file has no cover, looks up the release on MusicBrainz and its cover on the Cover Art Archive, and keeps the result in SelectaDJ's own catalogue. Only the artist, title, album and length are sent (ADR-0478). Off by default: the sources' terms are the owner's to clear first.",
+      "default": false,
+      "kind": "release",
+      "owner": "legal",
+      "requires": ["library.art_embedded"]
     }
   }
 }

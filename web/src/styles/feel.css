@@ -1,0 +1,16 @@
+/* The feel system (ADR-0477): how controls, cards and rows answer a hand.
+ *
+ * Every rule here is scoped to a word in <html data-feel="...">, which feel/root.ts writes from the
+ * app.feel_* flags and the motion choice. No word, no rule: the page is exactly as it was.
+ *
+ *   data-feel~='motion'   presses, releases, arrivals, sliding indicators
+ *   data-feel~='depth'    lift shadows, lit edges, the glow on the main action
+ *   data-feel~='pointer'  the soft light under the mouse
+ *
+ * The rules of the house, which every block below keeps:
+ *   - Hovering never moves a control, and a press never shrinks its hit area.
+ *   - Colour and opacity use the six --motion-* tokens and --motion-ease. Position and scale use
+ *     the springs (--spring-*, --motion-spring-*).
+ *   - Selectors are new text and zero specificity (:where), so no existing rule is restated or
+ *     outranked, and every colour, shadow and duration is a token from tokens.css.
+ *   - Hover-only rules sit inside (hover: hover) and (pointer: fine), with a focus twin outside. */
