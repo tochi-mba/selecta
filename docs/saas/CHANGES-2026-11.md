@@ -32,7 +32,7 @@ ends with everything that needs you.*
   back. Each plan now answers with its own model: Free on Haiku, Standard on Sonnet, Premium on Opus.
 - Not yet: Lucy's memory of you and your listening history in Cloud. Chapter: [09 §9.7](09-lucy-ai-gateway.md).
 
-## Lucy's limits: a proposal (ADR-0477 to ADR-0484)
+## Lucy's limits: a proposal (ADR-0480 to ADR-0487)
 
 - Proposed on 2026-11-25, nothing built: one Lucy allowance weighted by what each turn costs, on a
   five-hour session under a weekly limit, with one meter that shows what is really enforced. It
@@ -43,7 +43,7 @@ ends with everything that needs you.*
 - Those three are fixed (2026-11-25): the meter reads what the gateway counts, messages count as
   quick turns and deep plans as the plans say, and at the dollar ceiling Lucy says it is the plan's
   monthly limit on her AI, not the turns. A test now fails if the two allowance tables disagree.
-- Needs you: accept, amend or reject the set (LM-0477-02). Chapter: [09 §9.8](09-lucy-ai-gateway.md).
+- Needs you: accept, amend or reject the set (LM-0480-02). Chapter: [09 §9.8](09-lucy-ai-gateway.md).
 
 ## Billing and plans
 

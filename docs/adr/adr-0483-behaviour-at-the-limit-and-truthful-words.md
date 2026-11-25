@@ -1,4 +1,4 @@
-# ADR-0480 - Behaviour at the limit and truthful words
+# ADR-0483 - Behaviour at the limit and truthful words
 
 - **Decision:** Proposed (Claude for the owner, 2026-11-25).
 - **Programme:** Lucy Usage (LM).
@@ -24,9 +24,9 @@ At the baseline a turn that cannot run on the plan's model steps down silently: 
    | Provider unreachable | Lucy's AI cannot be reached; this did not use any of their allowance. |
    | Per-turn cap | She stopped because one message can only do so much work; the reply so far stands. |
 
-4. **Times.** A time today is shown as a clock time ("16:40"); a later day as weekday and time ("Thursday 09:00"). Both come from the same function the meter uses (ADR-0481), so the two can never disagree.
+4. **Times.** A time today is shown as a clock time ("16:40"); a later day as weekday and time ("Thursday 09:00"). Both come from the same function the meter uses (ADR-0484), so the two can never disagree.
 5. **Level, not model.** Following ADR-0476 edge case 35, the words say "a lighter Lucy", never a model name. The run still records the deployment for support.
-6. **One next step, offered once.** At the session or weekly limit the page shows, under Lucy's words, the choices that apply: wait until the stated time; see plans, if a higher plan exists; use extra usage, if ADR-0483 is switched on and the person has opted in. It is shown once per limit event and never interrupts a reply that is still arriving.
+6. **One next step, offered once.** At the session or weekly limit the page shows, under Lucy's words, the choices that apply: wait until the stated time; see plans, if a higher plan exists; use extra usage, if ADR-0486 is switched on and the person has opted in. It is shown once per limit event and never interrupts a reply that is still arriving.
 7. **Nothing is lost.** The conversation stays readable and the person's unsent words stay in the box. A turn refused for a limit counts nothing.
 8. The silent mid-turn retry on a provider failure stays silent, as now. Only a step-down caused by the person's own limit is announced.
 9. Plan cards drop "a very heavy month moves to a lighter model" for wording that matches rule 1.
@@ -45,4 +45,4 @@ At the baseline a turn that cannot run on the plan's model steps down silently: 
 
 ## Acceptance
 
-The [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md) LM-0480 items define implementation and verification.
+The [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md) LM-0483 items define implementation and verification.

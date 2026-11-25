@@ -6,7 +6,7 @@ status: done
 priority: normal
 who: claude
 created: 2026-11-25
-source: ADR-0477 fault 3; ADR-0480 rule 3; LM-0480-03
+source: ADR-0480 fault 3; ADR-0483 rule 3; LM-0483-03
 commit: a45a3153
 ---
 

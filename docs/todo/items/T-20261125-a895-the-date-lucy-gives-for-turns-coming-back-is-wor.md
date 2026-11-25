@@ -6,7 +6,7 @@ status: dropped
 priority: normal
 who: claude
 created: 2026-11-25
-source: ADR-0477 fault 3; ADR-0480 rule 4
+source: ADR-0480 fault 3; ADR-0483 rule 4
 commit:
 ---
 
