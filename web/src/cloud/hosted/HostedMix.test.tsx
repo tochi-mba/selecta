@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Api } from '../api';
 import { EXPORT_FOLLOW_MS, HostedMix } from './HostedMix';
-import { analysedWords, downloadWords, exportWords, recordingsOf, renderDetail, type HostedSong } from './hostedWords';
+import { analysedWords, downloadWords, exportWords, poolWords, recordingsOf, renderDetail, type HostedSong } from './hostedWords';
 
 // The hosted Make a Mix card (cloud.hosted_render): one primary action per state, button names
 // that never carry busy words while idle, and words only for numbers the server really gave.
@@ -181,5 +181,14 @@ describe('following a hosted export (T-20261125-66f1)', () => {
     const asked = polls.count;
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
     expect(polls.count).toBe(asked);
+  });
+});
+
+describe('the planning pool (walkthrough section 10, case 12)', () => {
+  it('says plainly when a large library was sampled, and nothing otherwise', () => {
+    expect(poolWords({ considered: 60, analysed: 500 })).toBe('Planned from 60 of your 500 analysed songs, picked at random. Make another mix picks again.');
+    expect(poolWords({ considered: 12, analysed: 12 })).toBeNull();
+    expect(poolWords({})).toBeNull();
+    expect(poolWords(null)).toBeNull();
   });
 });

@@ -7,6 +7,7 @@ deletes is settled by the unique (workspace, kind, ref) row.
 
 from __future__ import annotations
 
+import hashlib
 import threading
 from types import SimpleNamespace
 
@@ -619,6 +620,81 @@ def test_a_faulty_listing_can_never_widen_an_account_purge(library):
     report = drain_physical_deletions(library, fake)
     assert (report.completed, report.failed) == (0, 1)
     assert ("sel-originals", original_key(OTHER, "song-9")) in fake.objects
+
+
+def _artifact(engine, workspace: str, kind: str, inputs: dict, attempt: str = "t1") -> str:
+    from selecta.work import provenance
+    from selecta.work.schema import artifacts
+
+    versions = {"playback": {"proxy": 2}, "seam": {"analysis": 1, "render": 1}}.get(
+        kind, {kind: 1})
+    digest = hashlib.sha256(f"{workspace}{kind}{inputs}".encode()).hexdigest()
+    key = derived_key(workspace, kind, digest, attempt, f"{kind}.flac")
+    with transaction(engine, workspace) as conn:
+        conn.execute(sa.insert(artifacts).values(
+            id=f"{kind}-{workspace}-{len(inputs)}", workspace_id=workspace, kind=kind,
+            input_hash=digest, keys=[key], checksum="c" * 64, size_bytes=1,
+            provenance=provenance.build(inputs, versions), created_at=T0,
+            last_used_at=T0))
+    return key
+
+
+def _artifact_kinds(engine, workspace: str) -> list[str]:
+    from selecta.work.schema import artifacts
+
+    with transaction(engine, workspace) as conn:
+        return sorted(conn.execute(sa.select(artifacts.c.kind).where(
+            artifacts.c.workspace_id == workspace)).scalars())
+
+
+def test_a_songs_purge_erases_what_was_derived_from_it_once_no_copy_is_left(library):
+    """Walkthrough §10 case 7: a playback file is a full copy of the music, so it goes with the
+    song; while another upload has the same bytes it stays; exports are the customer's own."""
+    fake = FakeS3()
+    sha = "a" * 64  # every song in the fixture has these bytes
+    keys = {kind: _artifact(library, WS, kind, inputs) for kind, inputs in (
+        ("analysis", {"source": sha}), ("playback", {"source": sha}),
+        ("seam", {"a": sha, "b": "b" * 64}), ("export", {"parts": [sha]}))}
+    other = _artifact(library, OTHER, "playback", {"source": sha})
+    for key in [*keys.values(), other]:
+        fake.put_size("sel-derived", key, 1)
+    delete(library, "song", "song-1")
+    _due_now(library)
+    assert drain_physical_deletions(library, fake).completed == 1
+    # song-2 has the same bytes and is still live: nothing derived goes yet
+    assert _artifact_kinds(library, WS) == ["analysis", "export", "playback", "seam"]
+    delete(library, "song", "song-2")
+    _due_now(library)
+    report = drain_physical_deletions(library, fake)
+    assert report.completed == 1 and report.objects_deleted == 1 + 3
+    assert _artifact_kinds(library, WS) == ["export"]
+    assert {key for (_, key) in fake.objects} == {keys["export"], other}
+    assert _artifact_kinds(library, OTHER) == ["playback"]
+
+
+def test_purging_an_account_erases_every_hosted_file_and_every_attempts_leftovers(library):
+    """Walkthrough §10 case 7: originals, analyses, playback files, transitions, exports and the
+    files a failed or superseded attempt left under `attempts/` all go with the account."""
+    fake = FakeS3()
+    digest = "f" * 64
+    mine = [original_key(WS, "song-1"), export_key(WS, "x1")] + [
+        derived_key(WS, kind, digest, attempt, name)
+        for kind, name in (("analysis", "analysis.npz"), ("playback", "playback.flac"),
+                           ("seam", "seam.flac"), ("export", "mix.flac"))
+        for attempt in ("won", "failed-attempt", "superseded")]
+    buckets = {"a": "sel-originals", "x": "sel-exports"}
+    for key in mine:
+        fake.put_size(buckets.get(key.split("/")[2], "sel-derived"), key, 1)
+    theirs = derived_key(OTHER, "playback", digest, "won", "playback.flac")
+    fake.put_size("sel-derived", theirs, 1)
+    delete(library, "account", WS)
+    _due_now(library)
+    report = drain_physical_deletions(library, fake)
+    assert report.completed == 1 and report.objects_deleted == len(mine)
+    assert [key for (_, key) in fake.objects] == [theirs]
+    with transaction(library) as conn:
+        row = read_ledger(conn)[0]
+    assert row.kind is DeletionKind.ACCOUNT and row.physical_done_at is not None
 
 
 @pytest.mark.parametrize("limit", [0, 1001])
