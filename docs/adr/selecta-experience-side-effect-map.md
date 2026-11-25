@@ -276,6 +276,18 @@ Each makes worker jobs only for the caller's own workspace; nothing is stored in
 | `POST /api/hosted/mixes/render` | Queues `play.proxy` and `seam.render` jobs the mix still needs, then returns its timeline with signed links |
 | `POST /api/hosted/mixes/export` | Queues one `export.render` job for the mix's songs |
 
+### Covers and details from the web (`src/selecta/catalog/routes.py`) - `library.art_lookup` (ADR-0478)
+
+Song links are per workspace (`song_catalog_links`); the lookups, releases and cover images they point at are shared reference data (`catalog_lookups`, `catalog_releases`, `catalog_recordings`, `catalog_art`). Dark in the build until the owner clears the sources' terms.
+
+| Route | Side effect |
+|---|---|
+| `POST /api/catalog/art` | When the person allows lookups: links the caller's own songs to a shared lookup key, copies a finished lookup to the link, and queues `catalog.lookup` jobs for keys never asked or due again |
+| `GET /api/catalog/art/{art_id}/{size}` | None: serves a stored, visible cover image (browser-private cache, a week) |
+| `PUT /api/catalog/songs/{song_id}/choice` | Keeps the person's "Wrong cover?" choice on the caller's own song link; queues a `catalog.lookup` job to fetch a picked release's cover when it isn't stored |
+| `PUT /api/catalog/settings` | Saves the person's own "Look up covers and details on the web" choice (`user_flag_preferences`, `catalog:lookups`) |
+| `POST /api/admin/catalog/art/{art_id}/{command}` | Staff hide or unhide a shared cover image with a reason; audited (`legal.catalog_art.hidden` / `unhidden`) |
+
 ### Local media catalogue (`src/selecta/local_media/api.py`) - Cloud library (ADR-0458)
 
 Metadata only: no audio leaves the member's devices. Dark in the build until `cloud.local_media` ships.

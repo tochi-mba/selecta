@@ -46,6 +46,11 @@ PUBLIC = {
     ("POST", "/api/webhooks/stripe"),
     ("POST", "/api/webhooks/workos"),
     ("POST", "/api/business/billing/stripe-webhook"),
+    # A catalogue cover's bytes (ADR-0478): an `<img>` sends no sign-in. The images are
+    # account-independent reference data (a release's front cover from the Cover Art Archive,
+    # stored once for every workspace in `catalog_art`, keyed by a random id); the route reads
+    # no workspace, user or song row, and a hidden or unknown image answers 404.
+    ("GET", "/api/catalog/art/{art_id}/{size}"),
 }
 # Anonymous routes are isolated by an unguessable guest/display capability cookie rather than a
 # signed-in workspace. Their own API suite proves a cookie for one room cannot address another.
@@ -110,6 +115,8 @@ STAFF_ONLY = {
     ("GET", "/api/admin/jobs/{job_id}"),
     ("POST", "/api/admin/jobs/{job_id}/{command}"),
     ("GET", "/api/admin/workers"),
+    # Staff hide or unhide a shared catalogue image (legal.takedowns.manage); no workspace data
+    ("POST", "/api/admin/catalog/art/{art_id}/{command}"),
     # queue health per worker pool (routes/work_queue.py): platform counts, no workspace data
     ("GET", "/api/admin/work/queue"),
     ("POST", "/api/admin/workers/{worker_id}/{command}"),
@@ -466,6 +473,14 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/hosted/songs"): None,
     ("POST", "/api/hosted/songs/prepare"): {},
     ("POST", "/api/hosted/songs/{asset_id}/retry"): None,
+    # Covers and details from the web (library.art_lookup, forced on in `world`): each names the
+    # caller's workspace first; `test_catalog_never_reaches_another_accounts_songs` checks the
+    # songs themselves. The settings are the caller's own, read through the same principal.
+    ("POST", "/api/catalog/art"): {"songs": [{"id": 1}]},
+    ("GET", "/api/catalog/songs/{song_id}/candidates"): None,
+    ("PUT", "/api/catalog/songs/{song_id}/choice"): {"choice": "generated"},
+    ("GET", "/api/catalog/settings"): None,
+    ("PUT", "/api/catalog/settings"): {"lookups": True},
     ("POST", "/api/hosted/mixes/plan"): {"count": 4},
     ("POST", "/api/hosted/mixes/render"): {"songs": [{"asset_id": "tenant-a"}]},
     ("POST", "/api/hosted/mixes/export"): {"songs": [{"asset_id": "tenant-a"}]},
@@ -645,7 +660,9 @@ def world(tmp_path, monkeypatch):
     # their workspace checks rather than the flag guard (the conftest resets flags after).
     from selecta import flags
 
-    flags.use("+business.orgs +business.zones")
+    # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`; on here for the same
+    # reason.
+    flags.use("+business.orgs +business.zones +library.art_embedded +library.art_lookup")
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)
@@ -944,3 +961,93 @@ def test_hosted_processing_never_reaches_another_accounts_songs(world):
     assert jobs_of(world["bob_ws"]) == []
     assert _rows_of(world["engine"], world["alice_ws"]) == before
     assert not set(world["objects"].touched) & world["alice_keys"]
+
+
+def _alice_catalogued_song(world) -> int:
+    """Alice's library song, matched to a release with a stored cover, lookups on."""
+    from selecta.catalog import match, service
+    from selecta.catalog.schema import (
+        catalog_art,
+        catalog_lookups,
+        catalog_recordings,
+        catalog_releases,
+        song_catalog_links,
+    )
+    from selecta.identity.schema import users
+    from selecta.local_media.schema import local_songs
+
+    release, recording = new_id(), new_id()
+    key = match.lookup_key(match.Query("Alice's Band", "Private Song", None, 200.0, None))
+    with transaction(world["engine"], world["alice_ws"]) as conn:
+        now = db_now(conn)
+        song_id = conn.execute(local_songs.insert().values(
+            workspace_id=world["alice_ws"], content_sha256="e" * 64, title="Private Song",
+            artist="Alice's Band", duration_s=200.0, created_at=now, updated_at=now,
+        )).inserted_primary_key[0]
+        conn.execute(catalog_lookups.insert().values(
+            key=key, query={}, outcome="matched", method="search", confidence=0.9,
+            recording_id=recording, release_id=release,
+            candidates=[{"release_id": release}], created_at=now, updated_at=now))
+        conn.execute(catalog_recordings.insert().values(
+            id=recording, title="Private Song", artist="Alice's Band", isrcs=[],
+            release_ids=[release], fetched_at=now))
+        conn.execute(catalog_releases.insert().values(
+            id=release, title="Alice's Album", secondary_types=[], fetched_at=now))
+        conn.execute(catalog_art.insert().values(
+            id=new_id(), release_id=release, source="caa",
+            sizes={"500": f"{service.ART_PREFIX}x.jpg"}, content_type="image/jpeg",
+            sha256="f" * 64, bytes=10, fetched_at=now))
+        conn.execute(song_catalog_links.insert().values(
+            workspace_id=world["alice_ws"], song_id=song_id, lookup_key=key,
+            recording_id=recording, release_id=release, method="search", confidence=0.9,
+            choice="auto", created_at=now, updated_at=now))
+        alice = conn.execute(sa.select(users.c.id).where(
+            users.c.auth_subject == "user_alice")).scalar()
+        service.set_allowed(conn, alice, True)
+    return int(song_id)
+
+
+def test_catalog_never_reaches_another_accounts_songs(world):
+    """Bob, in his own workspace, names Alice's catalogued song: covers, candidates and a
+    choice answer exactly as for a song that doesn't exist, and nothing of hers changes."""
+    from selecta.flags.rules import user_flag_preferences
+
+    client = world["client"]
+    song_id = _alice_catalogued_song(world)
+    made_up = song_id + 10_000
+
+    mine = client.post("/api/catalog/art", headers=_auth(ALICE),
+                       json={"songs": [{"id": song_id}]})
+    assert mine.status_code == 200, mine.text
+    assert mine.json()["songs"][0]["state"] == "matched"  # the positive control
+    assert client.get(f"/api/catalog/songs/{song_id}/candidates",
+                      headers=_auth(ALICE)).status_code == 200
+    before = _rows_of(world["engine"], world["alice_ws"])
+
+    covers = client.post("/api/catalog/art", headers=_auth(BOB),
+                         json={"songs": [{"id": song_id}, {"id": made_up}]})
+    assert covers.status_code == 200, covers.text
+    theirs, missing = covers.json()["songs"]
+    assert {**theirs, "song_id": None} == {**missing, "song_id": None}
+    assert theirs["state"] == "none" and "Alice" not in covers.text
+    for method, path, body in (
+        ("GET", "/api/catalog/songs/{}/candidates", None),
+        ("PUT", "/api/catalog/songs/{}/choice", {"choice": "generated"}),
+    ):
+        theirs = client.request(method, path.format(song_id), headers=_auth(BOB), json=body)
+        missing = client.request(method, path.format(made_up), headers=_auth(BOB), json=body)
+        assert theirs.status_code == 404, theirs.text
+        assert (theirs.status_code, theirs.json()) == (missing.status_code, missing.json())
+
+    # the lookups setting is each person's own
+    assert client.get("/api/catalog/settings", headers=_auth(BOB)).json() == {"lookups": False}
+    assert client.put("/api/catalog/settings", headers=_auth(BOB),
+                      json={"lookups": False}).status_code == 200
+    with world["engine"].connect() as conn:
+        alices = conn.execute(sa.select(user_flag_preferences.c.enabled).where(
+            user_flag_preferences.c.flag_id == "catalog:lookups",
+            user_flag_preferences.c.user_id != conn.execute(
+                sa.text("SELECT id FROM users WHERE auth_subject = 'user_bob'")).scalar(),
+        )).scalars().all()
+    assert alices == [True]
+    assert _rows_of(world["engine"], world["alice_ws"]) == before
