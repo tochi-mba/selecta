@@ -1,8 +1,8 @@
-import { ChangeEvent, useEffect, useId, useState, useSyncExternalStore } from 'react';
+import { ChangeEvent, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { playbackStatusText } from '../../copy';
 import { success } from '../../feel/haptics';
 import { NumberRoll } from '../../feel/numberRoll';
-import { feelOn, onFeelChange } from '../../feel/root';
+import { feelCalm, feelOn, onFeelChange } from '../../feel/root';
 import type { ImportSource } from '../../media';
 import { Icon } from '../../ui/Icon';
 import { Meter } from '../../ui/Meter';
@@ -330,6 +330,31 @@ export const ROUTE_CHECKS: Record<OutputRoute | 'any', string[]> = {
   system: ['Open the device’s sound settings and check which output it uses.'],
 };
 
+/** A ring beside "Playing the check tone" that swells with the tone's real level, measured from
+ * the tone on its way to the speakers (deps.ts toneLevel), and rests when it ends (ADR-0477 rule 4:
+ * only measured sound moves by itself). Decoration: the words say what is happening. Only with the
+ * feel's motion on and nothing asking for calm; it writes one transform a frame on itself alone. */
+function ToneRing({ session }: { session: () => AudioSession | null }) {
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  const ring = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const level = session()?.toneLevel;
+    const node = ring.current;
+    if (!moving || !level || !node || feelCalm()) return undefined;
+    let frame = 0;
+    const draw = () => {
+      const now = Math.min(1, Math.max(0, level()));
+      node.style.transform = `scale(${(0.6 + now * 0.5).toFixed(3)})`;
+      node.style.opacity = (0.35 + now * 0.65).toFixed(3);
+      frame = window.requestAnimationFrame(draw);
+    };
+    frame = window.requestAnimationFrame(draw);
+    return () => window.cancelAnimationFrame(frame);
+  }, [moving, session]);
+  if (!moving) return null;
+  return <span ref={ring} className="cloud-tone-ring" aria-hidden="true" />;
+}
+
 export function SoundcheckStep({ state, onChange, deps, session, openSession }: StepProps) {
   const [phase, setPhase] = useState<'ready' | 'playing' | 'asking' | 'heard_nothing'>('ready');
   const [problem, setProblem] = useState('');
@@ -363,7 +388,7 @@ export function SoundcheckStep({ state, onChange, deps, session, openSession }: 
       <p>Play a short, quiet tone, then say whether you heard it. Only a person can tell: SelectaDJ can’t hear the room, so it never marks this done by itself.</p>
       <p className="cloud-spine-status" role="status">{playbackStatusText({ state: 'output_unverified' })}</p>
       {phase === 'playing'
-        ? <p aria-busy="true">Playing the check tone…</p>
+        ? <p aria-busy="true" className="cloud-tone-playing"><ToneRing session={session} />Playing the check tone…</p>
         : <button type="button" className={phase === 'ready' ? 'primary' : ''} onClick={play}><Icon name="volume" size="toolbar" /> {phase === 'ready' ? 'Play the check tone' : 'Play the tone again'}</button>}
       {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
       {phase === 'asking' && (

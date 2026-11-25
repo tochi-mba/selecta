@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { CSSProperties, useEffect, useState, useSyncExternalStore } from 'react';
+import { feelParts, onFeelChange } from '../feel/root';
 import { useFlags } from '../flags';
 import { storageSpace, type StorageSpace } from '../media';
 import { Skeleton, Status } from '../ui/controls';
@@ -20,6 +21,19 @@ export const PERSIST_COPY: Record<PersistState, string> = {
 export const MUSIC_NEVER_STORED = 'Your music files are never in browser storage, so clearing it never touches them.';
 
 const megabytes = (bytes?: number) => (bytes === undefined ? '?' : bytes >= 1_000_000_000 ? `${(bytes / 1_000_000_000).toFixed(1)} GB` : `${(bytes / 1_000_000).toFixed(1)} MB`);
+
+/** The share used, drawn as a ring that fills on a spring when the card opens (feel-account.css).
+ * Decoration beside the meter, which says the same in words; only with the feel on. */
+function StorageRing({ used, quota }: { used: number; quota: number }) {
+  const share = quota > 0 ? Math.min(1, Math.max(0, used / quota)) : 0;
+  const level = share >= 0.95 ? 'danger' : share >= 0.8 ? 'warning' : undefined;
+  return (
+    <svg className="lw-storage-ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false" data-level={level}>
+      <circle className="lw-storage-ring-track" cx="18" cy="18" r="15" pathLength={1} />
+      <circle className="lw-storage-ring-fill" cx="18" cy="18" r="15" pathLength={1} style={{ '--share': share } as CSSProperties} />
+    </svg>
+  );
+}
 
 /** Browser storage: how much SelectaDJ uses of what the browser allows, drawn as a meter, whether
  * the browser has agreed to keep it, and the one thing to do about it. The keep-safe button and
@@ -45,6 +59,7 @@ export function StorageCard({ degraded }: { degraded: boolean }) {
   // Without the persistence answer, fall back to what the estimate said, never to a promise.
   const state: PersistState = persist ?? (space?.persisted ? 'granted' : 'unsupported');
   const canAsk = offers && (state === 'not_granted' || state === 'refused');
+  const alive = useSyncExternalStore(onFeelChange, () => feelParts().length > 0, () => false);
   return (
     <section className="ui-card lw-storage" aria-labelledby="this-device-storage">
       <div className="ui-card-head">
@@ -52,6 +67,7 @@ export function StorageCard({ degraded }: { degraded: boolean }) {
           <h2 className="section-title" id="this-device-storage">Browser storage</h2>
           <p className="section-lead">A few details, such as which of your files are which songs. {MUSIC_NEVER_STORED}</p>
         </div>
+        {alive && space?.supported && <StorageRing used={space.usage ?? 0} quota={space.quota ?? 0} />}
         {space?.supported && <Status kind={state === 'granted' ? 'ready' : 'warning'}>{state === 'granted' ? 'Kept safe on this device' : 'May be cleared'}</Status>}
       </div>
       {space === null && <Skeleton lines={1} label="Checking this browser’s storage" />}

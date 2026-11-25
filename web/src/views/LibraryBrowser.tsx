@@ -34,10 +34,11 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
         {/* I83: with another device holding music, the Library is the whole account's */}
         <p className="page-lead">{holder ? 'Your songs, and where each one plays.' : 'Your songs, and which of them can play on this device.'}</p>
         <p className="lw-stats">
-          {total !== null && <span className="lw-total"><b>{total}</b> {songs === 1 ? 'song' : 'songs'}</span>}
+          {/* the counts roll as an import adds songs (the same words without motion) */}
+          {total !== null && <span className="lw-total"><b><RollingCount value={songs as number} format={(count) => count.toLocaleString()} /></b> {songs === 1 ? 'song' : 'songs'}</span>}
           {holder && <span data-testid="library-holder">{songs !== undefined && holder.songs >= songs ? <>All on <b>{holder.name}</b></> : <><b>{holder.songs.toLocaleString()}</b> on {holder.name}</>}</span>}
           {/* a remote with none of the music says nothing about it here; the line below says it */}
-          {here !== null && (holder ? playable !== 0 && <span><b>{here}</b> on this device</span> : <span><b>{here}</b> ready to play here</span>)}
+          {here !== null && (holder ? playable !== 0 && <span><b>{here}</b> on this device</span> : <span><b><RollingCount value={playable as number} format={(count) => count.toLocaleString()} /></b> ready to play here</span>)}
           {!!setAside && Number.isFinite(setAside) && (
             <button type="button" className="link" onClick={onSetAside}><b>{setAside.toLocaleString()}</b> set aside</button>
           )}
@@ -94,7 +95,8 @@ export function BrowserLibraryToolbar({ typed, onTyped, filters, filter, onFilte
 /** The line under the toolbar: how many songs are shown, and the way into selecting. Once
  * something is selected it becomes the selection bar, with what can be done to the selection. */
 export function BrowserLibraryMeta({ countWords, updating, selected, canSelect, selectRef, onSelectAll, onClear, children }: {
-  countWords: string;
+  /** the count line: words, or a rolling count of them (an empty string while nothing is loaded) */
+  countWords: ReactNode;
   updating: boolean;
   selected: number;
   canSelect: boolean;

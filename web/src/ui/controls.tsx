@@ -9,6 +9,8 @@ import { isChunkLoadError, StaleBuildPanel } from './staleBuild';
 import { feelOn } from '../feel/root';
 import { INDICATOR_CLASS } from '../feel/indicator';
 import { growFrom, staggerIn, useListHighlight } from './primitives';
+import { dragToClose } from './sheetDrag';
+import { tick } from '../feel/haptics';
 export { Skeleton } from './Skeleton';
 
 /** How long the drawn tick shows after an Action finishes, before its label comes back (ADR-0477). */
@@ -203,6 +205,15 @@ function rememberPress(event: Event) {
 }
 if (typeof document !== 'undefined') document.addEventListener('click', rememberPress, true);
 
+/** A check, radio or switch taken by hand gives a phone's small tick (feel/haptics, which does
+ * nothing where it cannot buzz or the person turned it off). One listener for the whole page, on
+ * the change the person made, so a box set by the page itself never buzzes. */
+function tickOnChoice(event: Event) {
+  const input = event.target;
+  if (input instanceof HTMLInputElement && (input.type === 'checkbox' || input.type === 'radio')) tick();
+}
+if (typeof document !== 'undefined') document.addEventListener('change', tickOnChoice, true);
+
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary,[tabindex]:not([tabindex="-1"])';
 let openOverlays = 0;
 let previousOverflow = '';
@@ -290,6 +301,14 @@ function Overlay({
   const panel = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  // ADR-0477: on a phone a drawer or sheet can be dragged down by its title bar to close it. A sheet
+  // that brings its own grabber (the editor's PhoneSheet) handles its own drag, so it is left alone.
+  const closeNow = useRef(onClose);
+  closeNow.current = onClose;
+  useEffect(() => {
+    if ((kind !== 'sheet' && kind !== 'drawer') || grabber || !panel.current) return undefined;
+    return dragToClose(panel.current, () => closeNow.current());
+  }, [kind, !grabber]);
   // A layout effect, so its clean-up runs while the overlay is still in the page (EX-0131-02). With a
   // passive effect React removed the panel first: focus fell to the body for a moment while the app was
   // made reachable again, and NVDA read the side rail at the top of the page before the opener.

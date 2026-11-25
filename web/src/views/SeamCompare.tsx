@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
 import { AudioPreview } from '../ui/AudioPreview';
 import { BytesRequest, useBytes } from '../requestContext';
 
@@ -58,12 +59,27 @@ export function SeamCompare({ pair, now, title }: { pair: string; now: Render; t
   const chosen = side === 'a' ? before : now;
   return (
     <section className="seam-compare stack" aria-label="Compare with before">
-      <div className="chips" role="group" aria-label="Which version to hear">
-        <button type="button" aria-pressed={side === 'a'} onClick={() => setSide('a')}>A: before ({before.label})</button>
-        <button type="button" aria-pressed={side === 'b'} onClick={() => setSide('b')}>B: now ({now.label})</button>
-      </div>
+      <CompareChoice side={side} onSide={setSide} before={before.label} now={now.label} />
       <p className="hint">Both are real renders of this transition. Only B is in the mix.</p>
-      <AudioPreview key={chosen.key} src={`/api/seams/${chosen.key}/preview`} autoPlay={false} label={`${title}, ${side === 'a' ? 'before' : 'now'}`} />
+      {/* the feel (ADR-0477): the chosen version slides in from its own side, A from the left and B
+          from the right (feel-library.css); without motion it simply changes */}
+      <div key={chosen.key} className="seam-compare-clip" data-side={side}>
+        <AudioPreview src={`/api/seams/${chosen.key}/preview`} autoPlay={false} label={`${title}, ${side === 'a' ? 'before' : 'now'}`} />
+      </div>
     </section>
+  );
+}
+
+/** A or B, with one mark that slides to the chosen side when the feel's motion is on; without it the
+ * pressed chip says which, as before. */
+function CompareChoice({ side, onSide, before, now }: { side: 'a' | 'b'; onSide: (side: 'a' | 'b') => void; before: string; now: string }) {
+  const strip = useRef<HTMLDivElement>(null);
+  useSlidingIndicator(strip, '[aria-pressed="true"]');
+  return (
+    <div className="chips" role="group" aria-label="Which version to hear" ref={strip} data-indicator-shape="fill">
+      <button type="button" aria-pressed={side === 'a'} onClick={() => onSide('a')}>A: before ({before})</button>
+      <button type="button" aria-pressed={side === 'b'} onClick={() => onSide('b')}>B: now ({now})</button>
+      <span className={INDICATOR_CLASS} aria-hidden="true" />
+    </div>
   );
 }

@@ -2,12 +2,13 @@ import { ReactNode, useCallback, useEffect, useId, useRef, useState } from 'reac
 import { below } from '../styles/breakpoints';
 import { useMediaQuery } from '../ui/useMediaQuery';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { RollingCount } from '../views/feelPieces';
+import { Meter } from '../ui/Meter';
+import { RollingCount, useFeelOn } from '../views/feelPieces';
 import { AdminError, Reading } from './adminApi';
 import { Workers } from './JobsPage';
 import { adminPath, go } from './route';
 import { useConsole } from './safety';
-import { AdminTable, Badge, Empty, Problem, Section, Skeleton, Time, WhatsThis } from './ui';
+import { AdminTable, Badge, Empty, FlagSwitch, Problem, Section, Skeleton, Time, WhatsThis } from './ui';
 import { Autoscaler, BudgetForm, ExpireQueued, Fail, failed, Pool, PoolActions, poolName, RetryFailed, waited } from './WorkersActions';
 
 // The Workers page (doc 07b §7B.4, Workers): hosted processing at a glance. One read every 30
@@ -193,9 +194,9 @@ function PoolBody({ pool, autoscaler, onChange }: PoolProps) {
       <dl className="admin-numbers">
         <Fig label="Workers seen"><RollingCount value={pool.workers_seen} format={(n) => n.toLocaleString()} /></Fig>
         <Fig label="Last heartbeat"><Time at={pool.last_heartbeat} /></Fig>
-        <Fig label="Slots in use">{pool.slots_in_use} of {pool.slots}</Fig>
+        <Fig label="Slots in use">{pool.slots_in_use} of {pool.slots}<SlotsBar pool={pool} /></Fig>
         <Fig label="Queued"><RollingCount value={pool.queued} format={(n) => n.toLocaleString()} /></Fig>
-        <Fig label="Running">{pool.running.toLocaleString()}</Fig>
+        <Fig label="Running"><RollingCount value={pool.running} format={(n) => n.toLocaleString()} /></Fig>
         <Fig label="Failed, 24 h">
           <span className={pool.failed_24h ? 'admin-tone-bad' : undefined}>{pool.failed_24h.toLocaleString()}</span>
           {pool.failed_24h > 0 && <> <a href={adminPath('jobs')} onClick={(event) => { event.preventDefault(); go(adminPath('jobs')); }}>Open Jobs</a></>}
@@ -208,6 +209,16 @@ function PoolBody({ pool, autoscaler, onChange }: PoolProps) {
       <PoolActions pool={pool} autoscaler={autoscaler} onChange={onChange} />
     </>
   );
+}
+
+/** How full a pool's slots are, as a bar under its words, with the feel on (ADR-0477 plan 3.14).
+ * It is the same number from the same 30-second read, so it moves only when the work really
+ * changes; the shared Meter eases the fill. With the feel off nothing is drawn, as before. */
+function SlotsBar({ pool }: { pool: Pool }) {
+  const feel = useFeelOn();
+  if (!feel || pool.slots <= 0) return null;
+  return <Meter kind="meter" className="admin-slots-meter" label="Slots in use" showLabel={false} value={pool.slots_in_use} max={pool.slots}
+    valueText={`${pool.slots_in_use} of ${pool.slots}`} warnAt={0.9} />;
 }
 
 type Piece = { name: string; badge: ReactNode; means: ReactNode; todo: ReactNode; extra?: ReactNode };
@@ -289,7 +300,7 @@ function Pieces({ pieces, narrow }: { pieces: Status['pieces']; narrow: boolean 
 function Flags({ flags }: { flags: Flag[] }) {
   return <>
     <ul className="admin-health">{flags.map((f) => (
-      <li key={f.id}><code>{f.id}</code><Badge tone={f.on ? 'ok' : 'warn'}>{f.on ? 'On' : 'Off'}</Badge><span>{f.about}{f.note && `. ${f.note}`}.</span></li>
+      <li key={f.id}><code>{f.id}</code><FlagSwitch on={f.on} /><Badge tone={f.on ? 'ok' : 'warn'}>{f.on ? 'On' : 'Off'}</Badge><span>{f.about}{f.note && `. ${f.note}`}.</span></li>
     ))}</ul>
     <p><span className="admin-soft">What to do: </span>a flag that is off here is off in the build; change it in Flags, or grant hosted storage to an account from its customer page.</p>
   </>;

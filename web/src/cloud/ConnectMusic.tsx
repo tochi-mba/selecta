@@ -282,7 +282,8 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
     </div>
   );
   const progress = running && (
-    <section className="lw-import" aria-label="Adding your music">
+    // the feel (ADR-0477): the import card rises into place when the import starts
+    <section className="lw-import" aria-label="Adding your music" data-arrive="">
       <div className="lw-import-head">
         <span className="lw-import-mark" aria-hidden="true"><Icon name="music" /></span>
         <div>

@@ -25,6 +25,7 @@ import { draftShown, movedLocally, MoveQueue } from './optimisticMove';
 import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
 import { afterFold, useRowGlide } from './feelPieces';
+import { expandSeam } from './feelEditor';
 
 /** A transition is known by the two songs it's between, and a song by which time it appears in the mix,
  * so a selection stays with what was selected as the mix moves around. It remembers their names so it
@@ -284,7 +285,9 @@ function MixView(props: ViewProps) {
 
   const selectSeamAt = (index: number) => {
     setGone('');
-    setSelected({ kind: 'seam', a: keys[index - 1], b: keys[index], from: mix[index - 1].title, into: mix[index].title });
+    const pick = () => setSelected({ kind: 'seam', a: keys[index - 1], b: keys[index], from: mix[index - 1].title, into: mix[index].title });
+    // the feel: opened from nothing, the row's small diagram grows into the inspector's header
+    expandSeam(timeline.current?.querySelector(`[data-seam="${CSS.escape(seamKeyOf(keys[index - 1], keys[index]))}"]`) ?? null, selected?.kind !== 'seam', pick);
   };
 
   // Detail is the timeline with a transition open, so arriving there with nothing selected opens the
@@ -869,6 +872,7 @@ function MixView(props: ViewProps) {
         actions={actions}
         view={<ViewSwitch mode={mode} onChange={chooseMode} />}
         viewName={EDITOR_MODES.find((option) => option.id === mode)?.label}
+        saving={movingKey !== null}
       />
       {renameForm}
       {deleteConfirmation}

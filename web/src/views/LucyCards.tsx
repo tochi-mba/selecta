@@ -1,4 +1,5 @@
-import { CSSProperties, useId, useRef, useState } from 'react';
+import { CSSProperties, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { feelOn, onFeelChange } from '../feel/root';
 import { isSettled, PlanGroup } from '../lucy/reducer';
 import type { Card, Permission, Progress } from '../lucy/types';
 import { CARD_WORDS, durationWords, humanize, plural, valueWords } from '../lucy/words';
@@ -147,6 +148,39 @@ const TIER_WORDS: Record<Permission['tier'], string> = {
 export function PermissionCard({ permission, onDecide }: { permission: Permission; onDecide: (id: string, decision: 'allow' | 'deny') => Promise<void> }) {
   const args = Object.entries(permission.arguments ?? {}).filter(([, value]) => value !== undefined);
   const headingId = useId();
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  // asked while this page was open: only then does the answer draw its tick and settle in
+  const askedHere = useRef(permission.status === 'pending');
+  if (moving && permission.status !== 'pending') {
+    // With the feel's motion on, an answered request settles into a one-line receipt: what was
+    // asked and what you said, with what it would have acted on one press away. Nothing is lost;
+    // with the motion off the full card stays, as before.
+    const allowed = permission.status === 'allowed';
+    const here = askedHere.current;
+    return (
+      <article className={`lucy-permission is-${permission.status} is-receipt`} aria-labelledby={headingId} data-arrive={here || undefined}>
+        <p id={headingId} className="lucy-receipt">
+          {allowed ? (
+            <span className="lucy-receipt-said">
+              <svg className="lucy-receipt-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path className={here ? 'feel-tick' : undefined} pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" />
+              </svg>
+              You allowed this
+            </span>
+          ) : <Status kind="unavailable">You said not now</Status>}
+          <span className="lucy-receipt-what" dir="auto">{permission.text || `${humanize(permission.operation)}?`}</span>
+        </p>
+        {args.length > 0 && (
+          <details className="lucy-card-details">
+            <summary>What it was for</summary>
+            <dl className="lucy-facts">
+              {args.map(([name, value]) => <div key={name}><dt>{humanize(name)}</dt><dd dir="auto">{valueWords(value)}</dd></div>)}
+            </dl>
+          </details>
+        )}
+      </article>
+    );
+  }
   return (
     <article className={`lucy-permission is-${permission.status}`} aria-labelledby={headingId} data-arrive>
       <h4 id={headingId}>{TIER_WORDS[permission.tier] ?? 'Lucy is asking first'}</h4>

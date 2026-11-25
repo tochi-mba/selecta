@@ -1,7 +1,8 @@
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { navigate } from '../router';
-import { Icon, IconName } from '../ui/Icon';
+import { Icon, ICON_SLOTS, ICON_STROKES, IconName } from '../ui/Icon';
 import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
+import { feelOn, onFeelChange } from '../feel/root';
 import './account.css';
 
 // The settings area's frame: a list of sections down the left on a wide window (a scrolling row of
@@ -194,9 +195,17 @@ export function Badge({ tone, children }: { tone?: 'accent' | 'ok' | 'warn'; chi
 
 /** A notice inside a card: a mark, the words, and at most one action. */
 export function Notice({ tone = 'info', icon, children, action, role = 'status' }: { tone?: 'info' | 'ok' | 'warn' | 'danger'; icon?: IconName; children: ReactNode; action?: ReactNode; role?: 'status' | 'alert' | 'note' }) {
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  // Something saved or done says so with a tick that draws itself once as the notice appears, the
+  // same size and weight as the check it stands in for; with the motion off it is that check.
+  const drawn = moving && tone === 'ok' && !icon;
   return (
     <div className="banner acct-notice" data-tone={tone} role={role}>
-      <Icon name={icon ?? (tone === 'ok' ? 'check' : tone === 'info' ? 'help' : 'warning')} size="toolbar" />
+      {drawn ? (
+        <svg className="ui-icon" data-icon="check" data-size="toolbar" viewBox="0 0 24 24" width={ICON_SLOTS.toolbar} height={ICON_SLOTS.toolbar} fill="none" stroke="currentColor" strokeWidth={ICON_STROKES.toolbar} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+          <path className="feel-tick" pathLength={1} d="m5 12 4 4L19 6" />
+        </svg>
+      ) : <Icon name={icon ?? (tone === 'ok' ? 'check' : tone === 'info' ? 'help' : 'warning')} size="toolbar" />}
       <div className="acct-notice-text">{children}</div>
       {action}
     </div>

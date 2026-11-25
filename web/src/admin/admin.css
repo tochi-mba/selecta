@@ -247,6 +247,55 @@
    pad, so they answer exactly as they did before the feel. Their pressed ring (polish.css) stays. */
 :root[data-feel] :is(.admin-danger, .admin-controls button, .admin-control-target button) { scale: none; }
 :root[data-feel] :is(.admin-danger, .admin-controls button, .admin-control-target button)::after { content: none; }
+/* No sheen and no accent glow on them either: light and edge show where the pointer is, nothing
+   more, so an emergency button never looks like an invitation. */
+:root[data-feel] :is(.admin-danger, .admin-controls button, .admin-control-target button)::before { content: none; }
+@media (hover: hover) and (pointer: fine) {
+  :root[data-feel~='depth'] :is(.admin-danger, .admin-controls button, .admin-control-target button):hover:not(:active, :disabled) { box-shadow: var(--shadow-lift), var(--edge-light); }
+}
+:root[data-feel~='depth'] :is(.admin-danger, .admin-controls button, .admin-control-target button):focus-visible:not(:active, :disabled) { box-shadow: var(--shadow-lift), var(--edge-light); }
+
+/* The calm profile (business/feelBits.ts useWorkProfile): nothing on the console answers the music
+   or celebrates. Keyed on <html> because the ambient layer sits on <body>. */
+:root[data-feel-profile='work'] :is(.ambient-layer, [data-beat], [data-playing-bars], .feel-moment) { display: none; }
+
+/* A flag's state as a small drawn switch beside its words (FlagSwitch, ui.tsx). Only drawn with the
+   feel's depth on, so with the flags off the cell reads and reflows as before; the words On and Off
+   always carry the state. A flag that changes between reads slides its knob across. */
+.admin-flag-switch { display: none; }
+:root[data-feel~='depth'] .admin-flag-switch {
+  display: inline-block;
+  position: relative;
+  flex: none;
+  inline-size: var(--space-6);
+  block-size: var(--space-4);
+  margin-inline-end: var(--space-2);
+  vertical-align: middle;
+  border: var(--separator) solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-control);
+}
+:root[data-feel~='depth'] .admin-flag-switch::after {
+  content: '';
+  position: absolute;
+  inset-block: var(--space-hair);
+  inset-inline-start: var(--space-hair);
+  aspect-ratio: 1;
+  border-radius: var(--radius-pill);
+  background: var(--text-soft);
+}
+:root[data-feel~='depth'] .admin-flag-switch[data-on] { background: var(--ok); border-color: var(--ok); }
+:root[data-feel~='depth'] .admin-flag-switch[data-on]::after { translate: calc(var(--space-6) - var(--space-4)) 0; background: var(--surface-base); }
+:root[data-feel~='motion'] .admin-flag-switch,
+:root[data-feel~='motion'] .admin-flag-switch::after { transition: translate var(--motion-spring-snappy) var(--spring-snappy), background-color var(--motion-fast) var(--motion-ease); }
+@media (forced-colors: active) {
+  :root[data-feel~='depth'] .admin-flag-switch { border-color: CanvasText; }
+  :root[data-feel~='depth'] .admin-flag-switch::after { background: CanvasText; }
+  :root[data-feel~='depth'] .admin-flag-switch[data-on] { background: Highlight; }
+}
+
+/* A pool's slots in use as a bar under the words (WorkersPage), from the same 30-second read. */
+.admin-slots-meter { margin-block-start: var(--space-1); }
 
 /* The Workers page (doc 07b §7B.4, Workers): one card per pool, a hairline on top as every section,
    coloured only by its verdict's edge. Cards wrap to one column on a phone without a breakpoint. */
@@ -280,3 +329,9 @@
 .admin-disclosure-body { display: grid; gap: var(--space-2); padding-bottom: var(--space-2); }
 .admin-cost-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .admin-cost-list li { display: flex; justify-content: space-between; gap: var(--space-2); padding-bottom: var(--space-1); border-bottom: var(--separator) solid var(--edge-decorative); font-variant-numeric: tabular-nums; }
+/* Catalogue covers: the image at a size staff can judge, square like every cover, and a plain
+   result line after a change (a takedown tool: no motion, no colour beyond the text). */
+.admin-cover { display: block; width: var(--space-7); height: var(--space-7); object-fit: cover; border-radius: var(--radius-sm); border: var(--separator) solid var(--edge-decorative); background: var(--surface-panel); }
+.admin-cover-none { display: grid; place-items: center; font-size: var(--text-xs); text-align: center; overflow: hidden; }
+.admin-covers-what { display: grid; gap: var(--space-hair); }
+.admin-covers-done { margin: 0; padding: var(--space-2) 0; border-block: var(--separator) solid var(--edge-decorative); }

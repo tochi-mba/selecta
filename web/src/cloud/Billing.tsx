@@ -121,18 +121,22 @@ function AxisList({ axes, cols, draw }: { axes: Axis[]; cols?: boolean; draw?: b
   );
 }
 
-function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
+/** A local-first plan's one-line headline, naming only what this account can see. */
+function localHeadline(plan: Paid, account: Account) {
   const sells = LOCAL_FIRST_AXES[plan];
   const axes = shownAxes(plan, account);
   const rooms = axes.some((axis) => axis.name === 'Rooms');
   const lucy = axes.some((axis) => axis.name === 'Lucy');
-  const headline = plan === 'premium'
+  return plan === 'premium'
     ? (rooms && lucy ? sells.headline : rooms ? 'Rooms' : lucy ? 'Lucy Advanced' : 'Bigger discovery')
     : (lucy ? sells.headline : 'Scheduled discovery');
+}
+
+function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
   return (
     <>
-      <strong className="cloud-plan-headline">{headline}</strong>
-      <AxisList axes={axes} />
+      <strong className="cloud-plan-headline">{localHeadline(plan, account)}</strong>
+      <AxisList axes={shownAxes(plan, account)} />
     </>
   );
 }
@@ -190,6 +194,21 @@ export function yearlyComparison(month: string, year: string): string | null {
   const money = (amount: number) => `${yearly.before}${amount.toFixed(2)}`;
   const saved = Math.round((monthly.amount * 12 - yearly.amount) * 100) / 100;
   return `${money(yearly.amount / 12)} a month, billed yearly.${saved > 0 ? ` Save ${money(saved)}.` : ''}`;
+}
+
+/** The chosen plan, opened out into what Continue will start: the plan, its price and how it is
+ * billed. Only with the feel's motion on, where it grows out of the chosen card each time another
+ * plan is picked (feel-account.css); the line beside Continue says the same in words either way,
+ * and nothing here waits on the animation. */
+function CheckoutSummary({ plan, price, interval, headline }: { plan: (typeof PLANS)[number]; price: string; interval: Interval; headline: string }) {
+  return (
+    <div className="cloud-checkout-summary" data-from={plan.id === 'standard' ? 'start' : 'end'}>
+      <p className="cloud-checkout-summary-kind">You are choosing</p>
+      <p className="cloud-checkout-summary-plan"><b>{plan.name}</b> <span>{headline}</span></p>
+      <Price words={price} />
+      <p className="cloud-checkout-summary-note">{interval === 'month' ? 'Billed monthly' : 'Billed yearly'}. Payment is taken by Stripe on the next page, and you can change or cancel at any time.</p>
+    </div>
+  );
 }
 
 export function CheckoutStatus({ phase, account }: { phase: CheckoutPhase; account: Account }) {
@@ -265,6 +284,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   const intervalStrip = useRef<HTMLDivElement>(null);
   useSlidingIndicator(intervalStrip, '[aria-pressed="true"]');
   const upgraded = useUpgradeMoment(phase);
+  const moving = useFeelMotion();
   const opening = (from: 'change' | 'invoices') => busy && pressed === from;
   return (
     <div className="cloud-billing" data-stagger="auto">
@@ -336,6 +356,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           </div>
           {open ? (
             <>
+              {moving && <CheckoutSummary key={chosen} plan={choice} price={price(choice)} interval={interval} headline={local ? localHeadline(choice.id, account) : choice.storage} />}
               <ConsentForm consent={consent} onChange={setConsent} version={consentVersion} />
               <div className="acct-plans-head">
                 {/* why the last press did not open Checkout is said here, beside the button */}

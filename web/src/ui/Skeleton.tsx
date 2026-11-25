@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { feelCalm, feelOn } from '../feel/root';
+import { motionMs } from './exitMotion';
 
 /** P0035: Edit's timeline is song rows with a transition hanging between each pair, so its
  * placeholder is the same: a song row (grip, title, artist, facts), then a transition (name, region,
@@ -80,6 +82,50 @@ export function useRevealed() {
   return revealed;
 }
 
+/** How many of the arriving pieces rise one after another; the rest come with the last of them. */
+const ARRIVAL_STAGGER_LIMIT = 8;
+
+/** ADR-0477 (plan 3.0 "Skeletons"): when a placeholder that was really shown gives way to the
+ * content, that content fades in with a short rise, piece after piece, instead of swapping in hard.
+ * The placeholder remembers its neighbours at every commit; once it has gone, whatever now stands
+ * between them is what replaced it. Only with the feel's motion on and nothing asking for calm,
+ * and never for an answer quick enough that no placeholder was shown (it would only delay it).
+ * Script animations, opacity and translate only, cancelled by nothing because they are short. */
+function useArrivalAfter(revealed: boolean) {
+  const box = useRef<HTMLDivElement>(null);
+  const around = useRef<{ parent: Element | null; before: Element | null; after: Element | null; shown: boolean }>({ parent: null, before: null, after: null, shown: false });
+  useLayoutEffect(() => {
+    const node = box.current;
+    around.current = { parent: node?.parentElement ?? null, before: node?.previousElementSibling ?? null, after: node?.nextElementSibling ?? null, shown: revealed };
+  });
+  useLayoutEffect(() => () => {
+    const { parent, before, after, shown } = around.current;
+    const own = box.current;
+    if (!shown || !parent || !feelOn('motion') || feelCalm()) return;
+    queueMicrotask(() => {
+      if (!parent.isConnected || typeof Element.prototype.animate !== 'function') return;
+      const arrived: Element[] = [];
+      let at = before?.parentElement === parent ? before.nextElementSibling : parent.firstElementChild;
+      while (at && at !== after && arrived.length < 40) {
+        if (at !== own) arrived.push(at);
+        at = at.nextElementSibling;
+      }
+      const duration = motionMs('--motion-reveal', 160);
+      const gap = motionMs('--motion-stagger', 30);
+      if (!duration) return;
+      arrived.forEach((piece, index) => {
+        piece.animate([{ opacity: 0, translate: '0 4px' }, { opacity: 1, translate: '0 0' }], {
+          duration,
+          delay: Math.min(index, ARRIVAL_STAGGER_LIMIT) * gap,
+          easing: 'ease-out',
+          fill: 'backwards',
+        });
+      });
+    });
+  }, []);
+  return box;
+}
+
 /** Reserve real content geometry immediately, fading decorative placeholders in only if needed. */
 export function Skeleton({ lines = 3, label = 'Loading', variant = 'text', retry }: {
   lines?: number;
@@ -100,8 +146,9 @@ export function Skeleton({ lines = 3, label = 'Loading', variant = 'text', retry
     retry?.();
   };
   const count = variant === 'inspector' ? 1 : lines;
+  const box = useArrivalAfter(revealed);
   return (
-    <div className={`skeleton skeleton-${variant}`} role="status" aria-live="polite" aria-busy="true" aria-label={label} data-revealed={revealed}>
+    <div ref={box} className={`skeleton skeleton-${variant}`} role="status" aria-live="polite" aria-busy="true" aria-label={label} data-revealed={revealed}>
       <span className="visually-hidden">{label}</span>
       <div className="skeleton-content" aria-hidden="true">
         {variant === 'timeline' ? timelineUnits(lines) : variant === 'vibes' ? vibeUnits(lines) : variant === 'listen' ? lyricUnits() : variant === 'rows' ? rowUnits(lines) : Array.from({ length: count }, (_, index) => (

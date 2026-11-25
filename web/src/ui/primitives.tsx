@@ -1,4 +1,5 @@
 import { ButtonHTMLAttributes, InputHTMLAttributes, KeyboardEvent, ReactNode, RefObject, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { PageLink } from '../shell/PageLink';
 import { Icon, IconName } from './Icon';
 import { usePresence } from './exitMotion';
@@ -86,13 +87,32 @@ export function useListHighlight(listRef: RefObject<HTMLElement | null>, itemSel
   return mark;
 }
 
-/** A button that shows only an icon. Its name is required, so it can never be unlabelled. */
-export function IconButton({ icon, label, className = '', ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'aria-label'> & { icon: IconName; label: string }) {
+/** A button that shows only an icon. Its name is required, so it can never be unlabelled.
+ * With the feel's depth on, its hover fill blooms out from where the mouse came in
+ * (styles/feel-components.css): the entry point is written once per entry, never per move. */
+export function IconButton({ icon, label, className = '', onPointerEnter, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'aria-label'> & { icon: IconName; label: string }) {
   return (
-    <button {...rest} className={`icon-button ${className}`} aria-label={label} title={rest.title ?? label}>
+    <button
+      {...rest}
+      className={`icon-button ${className}`}
+      aria-label={label}
+      title={rest.title ?? label}
+      onPointerEnter={(event) => {
+        bloomFrom(event.currentTarget, event.clientX, event.clientY, event.pointerType);
+        onPointerEnter?.(event);
+      }}
+    >
       <Icon name={icon} />
     </button>
   );
+}
+
+/** Where a hover bloom starts: the point the mouse entered, in px from the button's top left. */
+function bloomFrom(button: HTMLElement, x: number, y: number, pointer: string) {
+  if (pointer !== 'mouse' || !feelOn('depth')) return;
+  const box = button.getBoundingClientRect();
+  button.style.setProperty('--bloom-x', `${Math.round(x - box.left)}px`);
+  button.style.setProperty('--bloom-y', `${Math.round(y - box.top)}px`);
 }
 
 /** Subpages with real addresses: links, not tabs, so Back, reload and sharing a link all work. */
@@ -239,10 +259,68 @@ export function SearchField({ label, value, onChange, placeholder, onEscape, ...
   );
 }
 
-/** A range with a spoken value, so it says "about 8 GB" rather than a bare number. */
-export function Slider({ label, valueText, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { label: string; valueText?: string }) {
-  // Each step the value moves is a small tick on a phone (feel/haptics, a no-op everywhere else).
-  return <input {...rest} type="range" aria-label={label} aria-valuetext={valueText} onChange={rest.onChange ? (event) => { stepTick(); rest.onChange?.(event); } : undefined} />;
+/** A range with a spoken value, so it says "about 8 GB" rather than a bare number.
+ * With the feel's motion on (ADR-0477), the slider swells while it is held and a bubble above the
+ * thumb shows the value as words while the pointer drags it. The bubble is drawn outside the page's
+ * layout (a fixed element in the body), so the slider's own markup and box are as they always were;
+ * it is decoration, because the value is already spoken through aria-valuetext. */
+export function Slider({ label, valueText, onPointerDown, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { label: string; valueText?: string }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [held, setHeld] = useState(false);
+  const [, redraw] = useState(0);
+  useEffect(() => {
+    if (!held) return undefined;
+    const release = () => setHeld(false);
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);
+    window.addEventListener('blur', release);
+    return () => {
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('pointercancel', release);
+      window.removeEventListener('blur', release);
+    };
+  }, [held]);
+  return (
+    <>
+      <input
+        {...rest}
+        ref={input}
+        type="range"
+        aria-label={label}
+        aria-valuetext={valueText}
+        // Each step the value moves is a small tick on a phone (feel/haptics, a no-op everywhere else).
+        onChange={rest.onChange ? (event) => { stepTick(); rest.onChange?.(event); } : undefined}
+        onInput={held ? (event) => { redraw((n) => n + 1); rest.onInput?.(event); } : rest.onInput}
+        onPointerDown={(event) => {
+          if (feelOn('motion') && !rest.disabled) setHeld(true);
+          onPointerDown?.(event);
+        }}
+      />
+      {held && <SliderBubble input={input} text={valueText ?? input.current?.value ?? ''} />}
+    </>
+  );
+}
+
+/** The value above a held slider's thumb, placed from the slider's box and its value. */
+function SliderBubble({ input, text }: { input: RefObject<HTMLInputElement | null>; text: string }) {
+  const bubble = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const range = input.current;
+    const mark = bubble.current;
+    if (!range || !mark) return;
+    const box = range.getBoundingClientRect();
+    const min = Number(range.min || 0);
+    const max = Number(range.max || 100);
+    const share = max > min ? Math.min(Math.max((range.valueAsNumber - min) / (max - min), 0), 1) : 0;
+    // the thumb travels the track less its own width; about one line of text is close enough
+    const thumb = Math.min(box.height, 20);
+    const rtl = getComputedStyle(range).direction === 'rtl';
+    const along = thumb / 2 + (box.width - thumb) * (rtl ? 1 - share : share);
+    mark.style.left = `${Math.round(box.left + along)}px`;
+    mark.style.top = `${Math.round(box.top)}px`;
+  });
+  if (typeof document === 'undefined') return null;
+  return createPortal(<span ref={bubble} className="slider-bubble feel-pop" aria-hidden="true">{text}</span>, document.body);
 }
 
 /** At most one haptic tick per 40ms, so dragging fast across many steps is a texture, not a buzz. */

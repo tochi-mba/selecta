@@ -170,7 +170,9 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
       {live && stems?.readiness(playedKey(previous.song_id, item.song_id))}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {affected && <p className="drop-affected-note">Changes if the song is dropped there</p>}
-      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} live={live} compact />
+      {/* keyed by what is planned and made, so when the real re-plan lands the diagram is drawn anew
+          and its lines draw themselves in (feel-library.css); unchanged, it stays as it is */}
+      <SeamDiagram key={`${seam.settings.move ?? 'auto'}:${state.style ?? ''}:${state.key ?? ''}:${state.status}`} seam={seam} from={previous.title} into={item.title} names={names} live={live} compact />
       {state.status === 'failed' && <p className="warn">Remembered failed attempt: {state.error}</p>}
     </li>
   );

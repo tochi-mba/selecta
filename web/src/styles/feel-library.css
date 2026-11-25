@@ -241,9 +241,142 @@
   animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both;
 }
 
+/* ---------- Library rows, second pass (plan 3.6) ---------- */
+
+/* The row under the mouse takes a faint tint and a marker on its leading edge; the one holding
+   focus gets the same, so the keyboard sees what the mouse sees. Only the hovered row changes, and
+   nothing moves. A selected row keeps its own colour. */
+:where(:root[data-feel~='depth']) .library-rows:not(.library-cards) > .song-row {
+  transition: background-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='depth']) .library-rows:not(.library-cards) > .song-row:hover:not(.selected) {
+    background-color: color-mix(in srgb, var(--surface-selected) 50%, transparent);
+    box-shadow: inset var(--space-hair) 0 0 var(--selected);
+  }
+}
+:where(:root[data-feel~='depth']) .library-rows:not(.library-cards) > .song-row:focus-within:not(.selected) {
+  background-color: color-mix(in srgb, var(--surface-selected) 50%, transparent);
+  box-shadow: inset var(--space-hair) 0 0 var(--selected);
+}
+
+/* What a search matched, marked in the title and artist (views/feelLibrary.tsx Matched: the mark
+   only exists while a feel part is on). */
+:where(:root[data-feel]) mark.feel-match {
+  padding: 0;
+  border-radius: var(--radius-hair);
+  background: var(--surface-selected);
+  color: inherit;
+  box-shadow: 0 var(--space-hair) 0 0 var(--selected);
+}
+
+/* A chip that just turned ready fades from the step before into its own colour while its tick
+   draws (views/LibraryRow.tsx Chip). */
+:where(:root[data-feel~='motion']) .feel-chip-pop > .status {
+  transition: background-color var(--motion-reveal) var(--motion-ease), color var(--motion-reveal) var(--motion-ease), border-color var(--motion-reveal) var(--motion-ease);
+}
+@starting-style {
+  :where(:root[data-feel~='motion']) .feel-chip-pop > .status {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--text-soft);
+  }
+}
+
+/* "Select all": the ticks on screen land one after another (views/feelLibrary.tsx cascadeTicks).
+   The wait is capped at twelve steps, so the last box is never left waiting. */
+:where(:root[data-feel~='motion']) .library-batch-check.feel-cascade input {
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both;
+  animation-delay: calc(min(var(--i, 0), 12) * var(--motion-stagger));
+}
+
+/* A song an import has just checked rises into the list as it glows once. Only rows on screen get
+   the class (feelPieces useArrivalFlash). */
+:where(:root[data-feel~='motion']) .library-rows > li.feel-flash {
+  animation:
+    feel-arrive var(--motion-spring-snappy) var(--spring-snappy) both,
+    feel-flash calc(var(--motion-slow) * 4) var(--motion-ease) both;
+}
+
+/* The playing song's cover carries three bars the beat bus moves on measured beats. They take no
+   room: they sit over the cover's corner. Without the music part they are not drawn. */
+.feel-row-bars { display: none; }
+:where(:root[data-feel~='music']) .song-open:has(> .feel-row-bars) { position: relative; }
+:where(:root[data-feel~='music']) .feel-row-bars {
+  display: block;
+  position: absolute;
+  inset-block-end: var(--space-hair);
+  inset-inline-start: var(--space-hair);
+  padding: var(--space-hair);
+  border-radius: var(--radius-hair);
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  font-size: var(--text-xs);
+  line-height: 0;
+  pointer-events: none;
+}
+
+/* A finger can carry a phone row sideways (views/feelLibrary.tsx useRowSwipe), so a row leaves only
+   vertical moves to the page. Past the detent the row says so with the selection wash. */
+@media (pointer: coarse) {
+  :where(:root[data-feel~='motion']) .library-rows > .song-row { touch-action: pan-y; }
+}
+:where(:root[data-feel~='motion']) .library-rows > .song-row[data-swipe] { background-color: var(--surface-selected); }
+
+/* ---------- The editor, second pass (plan 3.7) ---------- */
+
+/* While a song is carried, the row it would land on parts from the one above: its contents ease
+   down on the gentle spring (no overshoot on a timeline drop) and the drop line opens. The row's own
+   box stays put, so the drop target under the pointer never moves away from it. */
+:where(:root[data-feel~='motion']) .timeline:has(> li.song[data-dragging]) > li.song > * {
+  transition: translate var(--motion-spring-glide) var(--spring-gentle);
+}
+:where(:root[data-feel~='motion']) .timeline:has(> li.song[data-dragging]) > li.song.over:not([data-dragging]) > * {
+  translate: 0 var(--space-2);
+}
+
+/* A transition's lines draw themselves in when its diagram is drawn: when the editor opens (short
+   mixes only), when the real re-plan lands (the row keys the diagram by what is planned and made)
+   and in the inspector's header. The song going out draws first, the one coming in after it. */
+:where(:root[data-feel~='motion']) :is(.timeline:not(.long) > .seam, .inspector) .music-seam-lines > i {
+  transform-origin: 0 50%;
+  transition: scale var(--motion-spring-glide) var(--spring-gentle);
+}
+:where(:root[data-feel~='motion']) :is(.timeline:not(.long) > .seam, .inspector) .music-seam-lines > .incoming {
+  transition-delay: calc(var(--motion-stagger) * 3);
+}
+@starting-style {
+  :where(:root[data-feel~='motion']) :is(.timeline:not(.long) > .seam, .inspector) .music-seam-lines > i { scale: 0 1; }
+}
+
+/* Opening a transition: the row's small diagram travels into the inspector's header, and opening a
+   song's details carries its title into the sheet's heading (views/feelEditor.ts expandSeam,
+   views/feelLibrary.tsx openFromRow). Names exist only while a page transition runs, as in
+   feel-scene.css, so at rest nothing is named. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) .inspector > .music-seam-diagram { view-transition-name: seam-diagram; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) .overlay:has(.song-details-identity) .overlay-head h2 { view-transition-name: song-title; }
+}
+
+/* A and B: the version chosen slides in from its own side, A from the left and B from the right. */
+:where(:root[data-feel~='motion']) .seam-compare-clip {
+  transition: opacity var(--motion-reveal) var(--motion-ease), translate var(--motion-spring-snappy) var(--spring-snappy);
+}
+@starting-style {
+  :where(:root[data-feel~='motion']) .seam-compare-clip { opacity: 0; }
+  :where(:root[data-feel~='motion']) .seam-compare-clip[data-side='a'] { translate: calc(-1 * var(--space-3)) 0; }
+  :where(:root[data-feel~='motion']) .seam-compare-clip[data-side='b'] { translate: var(--space-3) 0; }
+}
+
+/* the drawn tick beside "saved as you edit" once a moved song has been saved (EditorHeader) */
+:where(:root[data-feel~='motion']) .editor-save-tick { margin-inline-start: var(--space-1); vertical-align: middle; }
+
 /* ---------- forced colours ---------- */
 
 @media (forced-colors: active) {
   :root[data-feel] .timeline > li.song[data-dragging],
   :root[data-feel] .pe-story .pe-song.is-lifted { box-shadow: none; rotate: none; }
+  :root[data-feel] .library-rows > .song-row { box-shadow: none; }
+  :root[data-feel] .library-rows > .song-row[data-swipe] { outline: 2px solid Highlight; outline-offset: -2px; }
+  mark.feel-match { background: Mark; color: MarkText; box-shadow: none; }
+  .feel-row-bars { display: none; }
 }

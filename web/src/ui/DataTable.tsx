@@ -1,4 +1,6 @@
-import { ReactNode, useRef } from 'react';
+import { ReactNode, RefObject, useLayoutEffect, useRef } from 'react';
+import { feelCalm, feelOn } from '../feel/root';
+import { motionMs } from './exitMotion';
 import { useMediaQuery } from './useMediaQuery';
 
 export type Column<T> = {
@@ -27,13 +29,16 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
   stacked?: boolean | 'auto';
 }) {
   const narrow = useMediaQuery('(max-width: 599px)');
-  const fresh = useFreshRows(rows.map(rowKey));
+  const keys = rows.map(rowKey);
+  const fresh = useFreshRows(keys);
+  const body = useRef<HTMLElement>(null);
+  useGlide(body, keys);
   if (stacked === true || (stacked === 'auto' && narrow)) {
     return (
       <div className="data-table-wrap data-table-stacked-wrap" role="region" aria-label={`${caption} table`}>
         <p className="data-table-stacked-caption">{caption}</p>
         {rows.length === 0 ? <p className="data-table-empty">{empty}</p> : (
-          <ul className="data-table-stacked">
+          <ul className="data-table-stacked" ref={body as RefObject<HTMLUListElement>}>
             {rows.map((row) => (
               <li key={rowKey(row)} className={fresh.has(rowKey(row)) ? 'data-table-card feel-flash' : 'data-table-card'} data-lift>
                 <dl>
@@ -58,7 +63,7 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
         <thead>
           <tr>{columns.map((column) => <th key={column.key} scope="col" className={column.numeric ? 'numeric' : undefined}>{column.label}</th>)}</tr>
         </thead>
-        <tbody>
+        <tbody ref={body as RefObject<HTMLTableSectionElement>}>
           {rows.length === 0 && <tr><td colSpan={columns.length} className="data-table-empty">{empty}</td></tr>}
           {rows.map((row) => (
             <tr key={rowKey(row)} data-lift="row" className={fresh.has(rowKey(row)) ? 'feel-flash' : undefined}>
@@ -73,6 +78,49 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
       </table>
     </div>
   );
+}
+
+/** At most this many rows glide at once; a longer reorder simply lands. */
+const GLIDE_LIMIT = 40;
+
+/** ADR-0477 (plan 3.0 "Lists and tables"): when the same rows come back in a new order (a sort, a
+ * row moved up), each one glides from where it was to where it now is instead of jumping. Where a
+ * row sat is remembered after every commit, as its distance from the top of the list, so scrolling
+ * in between does not matter. Rows are drawn in key order, so the n-th row is the n-th key. Only
+ * with the feel's motion on and nothing asking for calm; a row that is new or gone is left alone
+ * (new rows already glow, styles/feel.css .feel-flash). Transform only, on the snappy spring. */
+function useGlide(list: RefObject<HTMLElement | null>, keys: string[]) {
+  const was = useRef<{ order: string; tops: Map<string, number> } | null>(null);
+  useLayoutEffect(() => {
+    const node = list.current;
+    const order = keys.join('\u0000');
+    if (!node) {
+      was.current = null;
+      return;
+    }
+    const items = [...node.children].filter((item): item is HTMLElement => item instanceof HTMLElement && !item.querySelector('.data-table-empty'));
+    const tops = new Map<string, number>();
+    items.forEach((item, index) => { if (keys[index] !== undefined) tops.set(keys[index], item.offsetTop); });
+    const before = was.current;
+    was.current = { order, tops };
+    if (!before || before.order === order || !feelOn('motion') || feelCalm() || typeof Element.prototype.animate !== 'function') return;
+    const duration = motionMs('--motion-spring-snappy', 320);
+    if (!duration) return;
+    const curve = getComputedStyle(document.documentElement).getPropertyValue('--spring-snappy').trim() || 'ease-out';
+    let moved = 0;
+    items.forEach((item, index) => {
+      const from = before.tops.get(keys[index]);
+      const to = tops.get(keys[index]);
+      if (from === undefined || to === undefined || Math.abs(from - to) < 1 || moved >= GLIDE_LIMIT) return;
+      moved += 1;
+      const frames = [{ transform: `translateY(${from - to}px)` }, { transform: 'translateY(0)' }];
+      try {
+        item.animate(frames, { duration, easing: curve });
+      } catch {
+        item.animate(frames, { duration, easing: 'ease-out' });
+      }
+    });
+  });
 }
 
 /** How long a row that just appeared keeps .feel-flash: longer than the flash itself

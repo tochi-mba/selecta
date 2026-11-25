@@ -28,6 +28,9 @@ export type AudioSession = {
   wake(): Promise<boolean>;
   /** Play the short, quiet check tone through the engine's own output. */
   playTone(): Promise<void>;
+  /** How loud the check tone is at this moment, measured from the tone itself on its way out,
+   * from 0 (silent, or no tone playing) to 1 (its full level). For the level ring (ADR-0477). */
+  toneLevel?(): number;
   /** A person said they heard the tone: the one way output becomes verified. */
   confirmHeard(atSeconds: number): void;
   /** A person said they heard nothing: output stays (or becomes) unverified. */
@@ -67,8 +70,27 @@ const TONE_GAIN = 0.15;
 /** How long past the tone's own length its end is waited for. */
 const TONE_SLACK_SECONDS = 3;
 
+/** The level of a tone measured by `tap`, from 0 to 1 of the tone's full level: the root mean square
+ * of the samples, against a sine at TONE_GAIN. */
+export function toneLevelOf(samples: Float32Array): number {
+  if (!samples.length) return 0;
+  let sum = 0;
+  for (const sample of samples) sum += sample * sample;
+  const rms = Math.sqrt(sum / samples.length);
+  return Math.min(1, rms / (TONE_GAIN * Math.SQRT1_2));
+}
+
 function engineSession(engine: Engine, made: EngineContext): AudioSession {
+  // a dead-end side branch off the tone (it connects to nothing), so measuring never changes what
+  // is heard; it exists only while a tone plays
+  let toneTap: AnalyserNode | null = null;
+  let samples: Float32Array<ArrayBuffer> | null = null;
   return {
+    toneLevel: () => {
+      if (!toneTap || !samples) return 0;
+      toneTap.getFloatTimeDomainData(samples);
+      return toneLevelOf(samples);
+    },
     probe: async () => {
       const answer = await engine.probe(made.context);
       return answer.ok ? { ok: true } : { ok: false, reason: answer.reason };
@@ -96,13 +118,25 @@ function engineSession(engine: Engine, made: EngineContext): AudioSession {
       gain.gain.setValueAtTime(TONE_GAIN, start + TONE_SECONDS - 0.15);
       gain.gain.linearRampToValueAtTime(0, start + TONE_SECONDS);
       oscillator.connect(gain).connect(context.destination);
+      try {
+        const tap = context.createAnalyser();
+        tap.fftSize = 512;
+        gain.connect(tap);
+        toneTap = tap;
+        samples = new Float32Array(tap.fftSize);
+      } catch { /* no level ring; the tone itself is unaffected */ }
+      const untap = () => {
+        try { toneTap?.disconnect(); } catch { /* already gone */ }
+        toneTap = null;
+      };
       // A context the browser would not start never reaches the tone's end, so `onended` never
       // fires: without a limit the step said "Playing the check tone" for ever. Past the limit
       // the tone counts as not played and the caller offers it again.
       let limit: ReturnType<typeof setTimeout> | undefined;
       await new Promise<void>((done, fail) => {
-        oscillator.onended = () => { clearTimeout(limit); oscillator.disconnect(); gain.disconnect(); done(); };
+        oscillator.onended = () => { clearTimeout(limit); untap(); oscillator.disconnect(); gain.disconnect(); done(); };
         limit = setTimeout(() => {
+          untap();
           try { oscillator.disconnect(); gain.disconnect(); } catch { /* already gone */ }
           fail(new Error('The check tone did not play.'));
         }, (TONE_SECONDS + TONE_SLACK_SECONDS) * 1000);

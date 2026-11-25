@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useWorkProfile } from '../business/feelBits';
 import { AdminError, adminFetch, Me, startAdminSession, TokenSource, when } from './adminApi';
 import { AiPage } from './AiSecurityPages';
 import { BillingPage } from './BillingPage';
 import { CommsPage } from './CommsPage';
 import { ContentPage } from './ContentPage';
+import { CoversPage } from './CoversPage';
 import { CustomersPage } from './CustomersPage';
 import { EmergencyPage } from './EmergencyPage';
 import { FlagsPage } from './FlagsPage';
@@ -18,7 +20,7 @@ import { SystemPage } from './SystemPage';
 import { WorkersPage } from './WorkersPage';
 import './admin.css';
 
-export type AdminPage = 'overview' | 'customers' | 'billing' | 'jobs' | 'workers' | 'ai' | 'flags' | 'content' | 'emergency' | 'security' | 'communications' | 'system' | 'pilots';
+export type AdminPage = 'overview' | 'customers' | 'billing' | 'jobs' | 'workers' | 'ai' | 'flags' | 'content' | 'covers' | 'emergency' | 'security' | 'communications' | 'system' | 'pilots';
 
 /** The pages (doc 07b §7B.4), each shown only to roles that can read it and when its flag is on. */
 export const PAGES: { id: AdminPage; label: string; needs: string; flag?: string }[] = [
@@ -32,6 +34,9 @@ export const PAGES: { id: AdminPage; label: string; needs: string; flag?: string
   { id: 'ai', label: 'AI', needs: 'models.read' },
   { id: 'flags', label: 'Flags', needs: 'flags.read' },
   { id: 'content', label: 'Content', needs: 'legal.takedowns.read' },
+  // Finding a cover needs the same permission as hiding one (the server's read route checks it),
+  // and there is nothing to hide while web lookups are off, so the page follows their flag.
+  { id: 'covers', label: 'Catalogue covers', needs: 'legal.takedowns.manage', flag: 'library.art_lookup' },
   { id: 'emergency', label: 'Emergency', needs: 'platform.dashboard.read' },
   { id: 'security', label: 'Staff and security', needs: 'security.audit.read' },
   { id: 'communications', label: 'Communications', needs: 'platform.dashboard.read' },
@@ -54,6 +59,8 @@ export default function AdminArea({ token, onLeave, origin, email, features, onS
   token: TokenSource; onLeave: () => void; origin?: string; email?: string;
   features?: Readonly<Record<string, boolean>> | null; onSignInAgain?: () => void;
 }) {
+  // a work tool: the component feel stays, nothing here answers the music (ADR-0477 plan 3.14)
+  useWorkProfile();
   const [session, setSession] = useState<string | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [location, setLocation] = useState(() => parseAdmin(window.location.pathname, window.location.search));
@@ -186,6 +193,7 @@ export default function AdminArea({ token, onLeave, origin, email, features, onS
             {current?.id === 'ai' && <AiPage api={api} can={can} />}
             {current?.id === 'flags' && <FlagsPage api={api} can={can} />}
             {current?.id === 'content' && <ContentPage />}
+            {current?.id === 'covers' && <CoversPage route={location} />}
             {current?.id === 'emergency' && <EmergencyPage />}
             {current?.id === 'security' && <StaffPage route={location} />}
             {current?.id === 'communications' && <CommsPage />}

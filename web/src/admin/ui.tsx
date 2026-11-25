@@ -8,6 +8,13 @@ export function Badge({ children, tone = 'neutral', title }: { children: ReactNo
   return <span className={`admin-badge ${tone}`} title={title}>{children}</span>;
 }
 
+/** A flag's state drawn as a small switch, set beside the words that say it (admin.css). It is a
+ * picture, not a control: changing a flag stays a deliberate change with a reason, on the Flags
+ * page. Hidden unless the feel's depth is on, and from screen readers always. */
+export function FlagSwitch({ on }: { on: boolean }) {
+  return <span className="admin-flag-switch" data-on={on || undefined} aria-hidden="true" />;
+}
+
 /** Capitalised words for a raw value: "premium" becomes "Premium", "past_due" "Past due". */
 export function words(value: string | null | undefined) {
   if (!value) return '';

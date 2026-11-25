@@ -1,6 +1,7 @@
 import { CSSProperties, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { clockTime, playbackStatusText } from '../../copy';
 import { Moment } from '../../feel/moment';
+import { BlendArt } from '../BlendArt';
 import { feelOn, onFeelChange } from '../../feel/root';
 import { flagOn, useFlag } from '../../flags';
 import { rememberFolder, type DirectoryHandleLike, type ImportSource } from '../../media';
@@ -53,6 +54,18 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
   const direction = useRef<'forward' | 'back'>('forward');
   const [celebrating, setCelebrating] = useState(false);
+  // finished by a press in this visit, not opened already finished
+  const [finishedHere, setFinishedHere] = useState(false);
+  // The first two songs this import really took in, by their file names, for the finish: the blend
+  // drawing there names the person's own music instead of "Now playing" and "Up next", with the
+  // feel's motion on. Only names seen in this visit; after a reload the finish has no drawing.
+  const firstSongs = useRef<string[]>([]);
+  const counted = useRef(live.registered);
+  // a name is taken only as the count of songs taken in rises, so a file that failed is never named
+  if (live.registered > counted.current && live.current && firstSongs.current.length < 2 && !firstSongs.current.includes(live.current)) {
+    firstSongs.current = [...firstSongs.current, live.current];
+  }
+  counted.current = live.registered;
   // load the fingerprinting code before any import, so going offline never fails every file
   useEffect(() => { if (flagOn('cloud.resilient_import')) preloadImportCode(); }, []);
 
@@ -72,6 +85,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
     if (to !== from) direction.current = to > from ? 'forward' : 'back';
     // only the press that really finishes the spine is celebrated, never a reload of a finished one
     if (next.finished && !state.finished && feelOn('moments')) setCelebrating(true);
+    if (next.finished && !state.finished) setFinishedHere(true);
     setState(next);
     saveState(deps.storage, workspaceId, next);
   };
@@ -157,6 +171,11 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
             onClose={() => setRestarting(false)}
           />
         )}
+        {finishedHere && moving && firstSongs.current.length === 2 && (
+          <div className="cloud-spine-blend" aria-hidden="true">
+            <BlendArt from={songName(firstSongs.current[0])} to={songName(firstSongs.current[1])} />
+          </div>
+        )}
         {celebrating && <span className="cloud-spine-moment" aria-hidden="true"><Moment kind="blend" onDone={() => setCelebrating(false)} /></span>}
       </section>
     );
@@ -185,6 +204,13 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
       </div>
     </section>
   );
+}
+
+/** A song's file name as a short tag: no folder and no extension. */
+export function songName(file: string): string {
+  const base = file.split(/[\\/]/).pop() ?? file;
+  const bare = base.replace(/\.[a-z0-9]{2,5}$/i, '');
+  return bare.length > 28 ? `${bare.slice(0, 27)}…` : bare;
 }
 
 /** The step rail. With `drawn` (the feel system's motion), a finished step's mark is a tick that

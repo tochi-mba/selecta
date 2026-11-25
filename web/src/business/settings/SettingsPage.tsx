@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DrawnTick, useMotionOn } from '../../views/feelPieces';
 import { PATHS, useBusiness } from '../context';
 import { SETTINGS_COPY } from '../copy/shell';
 import { BusinessDetailsForm } from '../onboarding/BusinessDetailsForm';
@@ -22,6 +23,9 @@ export function SettingsPage() {
   const { org, venues, client, refresh, go, readOnly, offline, now } = useBusiness();
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  // Each save that lands draws a tick beside its words (ADR-0477); keyed by this count to draw again.
+  const [saves, setSaves] = useState(0);
+  const moving = useMotionOn();
   const canEdit = org.role === 'owner' || org.role === 'admin';
   const disabled = readOnly ? SETTINGS_COPY.readOnly : offline ? SETTINGS_COPY.offline : !canEdit ? SETTINGS_COPY.notAdmin : null;
   return <section className="biz biz-stack"><h1>{SETTINGS_COPY.title}</h1>
@@ -30,10 +34,10 @@ export function SettingsPage() {
       <BusinessDetailsForm initial={{ name: org.name, country: org.country }} disabled={disabled} submitLabel={SETTINGS_COPY.saveDetails}
         onSave={async (details) => {
           setError(''); setSaved(false);
-          try { await client.saveBusinessDetails(org.id, details); await refresh(); setSaved(true); }
+          try { await client.saveBusinessDetails(org.id, details); await refresh(); setSaved(true); setSaves((count) => count + 1); }
           catch { setError(SETTINGS_COPY.detailsFailed); }
         }} />
-      {saved && <p role="status">{SETTINGS_COPY.detailsSaved}</p>}
+      {saved && <p role="status">{moving && <DrawnTick key={saves} className="biz-saved-tick" />}{SETTINGS_COPY.detailsSaved}</p>}
       {error && <p role="alert">{error}</p>}
     </section>
     <section className="biz-card" aria-labelledby="biz-settings-licences"><h2 id="biz-settings-licences">{SETTINGS_COPY.licencesHeading}</h2>

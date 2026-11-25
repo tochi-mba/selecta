@@ -33,6 +33,14 @@ doing anything from script, and `feelCalm()` before any script animation.
 | `.feel-tick` | On an SVG path with `pathLength="1"`: the tick draws itself. |
 | `.feel-flash` | A new or changed row glows once. |
 | `.feel-collapse-out` | A removed row fades and folds away. Add only when `feelOn('motion')`, remove the node on `animationend` with a timer fallback. |
+| `data-feel-drag="held"` / `"returning"` | Your drag code sets it on the thing being dragged: lifted and tilted while held; springs back when let go somewhere it cannot land (clear your own translate). |
+| `data-feel-drop="over"` | A place the dragged thing can land, while it is over it: the edge lights. |
+| `data-feel-part="before"` / `"after"` | The neighbours either side of the landing spot step apart. |
+
+Shared components already do the rest by themselves: `Slider` shows a value bubble while dragged,
+`IconButton` blooms from the mouse's entry point, `Skeleton` fades its content in when it goes,
+`DataTable` glides reordered rows, `Meter` rolls its percentage, and every `Drawer` and `Sheet`
+(not the editor's `PhoneSheet`, which has its own) closes on a drag down its title bar on a phone.
 
 ## Engines (web/src/feel/)
 

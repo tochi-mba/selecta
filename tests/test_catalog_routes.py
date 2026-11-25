@@ -217,3 +217,37 @@ def test_hiding_needs_the_takedown_permission_and_a_known_image(world):
     denied = [r for r in audit_actions(world.engine, resource_type="catalog_art")
               if r["actor_id"] == world.users["auditor"]]
     assert [(r["action"], r["result"]) for r in denied] == [("legal.takedowns.manage", "deny")]
+
+
+def found(world, q: str = "", who: str = "owner"):
+    return world.http.get("/api/admin/catalog/art", params={"q": q}, headers=world.headers(who))
+
+
+def test_staff_find_an_image_by_song_release_artist_or_id_and_see_it_hidden(world):
+    _, art_id = looked_up(world)
+
+    for words in ["lanterns over", "LOW TIDE", "night harbour", art_id, ALBUM, ""]:
+        answer = found(world, words)
+        assert answer.status_code == 200, (words, answer.text)
+        assert [row["id"] for row in answer.json()["art"]] == [art_id], words
+    row = found(world, "low tide").json()["art"][0]
+    assert row["release_id"] == ALBUM and row["title"] == "Low Tide"
+    assert row["hidden"] is False and row["preview"] == f"/api/catalog/art/{art_id}/500"
+    # LIKE wildcards in the words are literal, so "%" finds nothing rather than everything
+    assert found(world, "%").json()["art"] == []
+    assert found(world, "no such song anywhere").json()["art"] == []
+
+    hidden = call(world, "POST", f"/api/admin/catalog/art/{art_id}/hide", "owner",
+                  reason="rights holder asked")
+    assert hidden.status_code == 200, hidden.text
+    row = found(world, art_id).json()["art"][0]
+    assert row["hidden"] is True and row["hidden_reason"] == "rights holder asked"
+    assert row["hidden_by"] == world.users["owner"] and row["preview"] is None
+
+
+def test_finding_images_needs_the_takedown_permission(world):
+    looked_up(world)
+
+    assert found(world, who="auditor").status_code == 403
+    assert found(world, who="customer").status_code in (401, 403)
+    assert found(world, "x" * 201).status_code == 422

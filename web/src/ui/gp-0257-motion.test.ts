@@ -102,6 +102,8 @@ const INVENTORY: Record<string, Severity> = {
   'feel-check': 'answers-you', // a check or radio just taken
   'feel-skeleton-sweep': 'waiting', // one band of light across a placeholder, three times at most
   'feel-bloom': 'arrives', // progress that reached done while on screen
+  'feel-bloom-in': 'answers-you', // an icon button's hover fill, from where the mouse came in
+  'feel-scroll-edge': 'answers-you', // a scroll box's edge fade, tied to its own scroll position, never a clock
   // the Shell (styles/feel-shell.css)
   'feel-rail-label': 'answers-you', // the rail's words as it opens
   'feel-menu-grow': 'answers-you', // a menu growing from its button
@@ -115,6 +117,8 @@ const INVENTORY: Record<string, Severity> = {
   'feel-banner-in': 'arrives', // the connection banner and import chip
   'feel-banner-out': 'answers-you', // the banner leaving
   'feel-theme-reveal': 'answers-you', // the new theme spreading from the theme button
+  'feel-ping': 'arrives', // a ring from a count that just rose, three times at most
+  'feel-hop': 'answers-you', // More's dots, one after another, as its sheet opens
   // boot, Welcome and onboarding (styles/feel-entry.css)
   'feel-sweep': 'arrives', // one pass of light over a lit welcome word
   'feel-line-down': 'arrives', // the line between two welcome steps, drawn as it scrolls in

@@ -3,6 +3,7 @@ import { DataTable } from '../ui/DataTable';
 import { DrawnTick, useMotionOn } from '../views/feelPieces';
 import { AdminFetch, post, when } from './adminApi';
 import { Command, Failure, Panel, useLoad } from './parts';
+import { FlagSwitch } from './ui';
 
 type Rule = { kind: string; params: Record<string, unknown>; enabled: boolean };
 type Flag = { id: string; area: string; label: string; about: string; core: boolean; targetable: boolean; build_on: boolean; kind: string; requires: string[]; rules: Rule[] };
@@ -79,7 +80,7 @@ export function FlagsPage({ api, can }: { api: AdminFetch; can: (permission: str
       {areas.map(([area, flags]) => (
         <Panel key={area} title={area}>
           <DataTable stacked="auto" caption={`${area} flags`} rows={flags} rowKey={(f) => f.id} onPick={(f) => setPicked(f.id)} pickLabel={(f) => `Open flag ${f.id}`}
-            columns={[{ key: 'id', label: 'Flag' }, { key: 'label', label: 'Feature' }, { key: 'build_on', label: 'Build default', render: (f) => f.core ? 'Core' : f.build_on ? 'On' : 'Off' },
+            columns={[{ key: 'id', label: 'Flag' }, { key: 'label', label: 'Feature' }, { key: 'build_on', label: 'Build default', render: (f) => f.core ? 'Core' : <><FlagSwitch on={f.build_on} />{f.build_on ? 'On' : 'Off'}</> },
               { key: 'rules', label: 'Rules', render: (f) => f.rules.length ? f.rules.map(describe).join('; ') : 'none' }]} />
         </Panel>
       ))}

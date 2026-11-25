@@ -171,3 +171,8 @@
 :root[data-feel] .staff-stop { scale: none; }
 :root[data-feel] .staff-stop::before,
 :root[data-feel] .staff-stop::after { content: none; }
+
+/* The calm profile (business/feelBits.ts useWorkProfile, held by VenueStaffRoot): this screen opens
+   outside the Shell, and nothing on it answers the music or celebrates. Keyed on <html> because the
+   ambient layer sits on <body>. */
+:root[data-feel-profile='work'] :is(.ambient-layer, [data-beat], [data-playing-bars], .feel-moment) { display: none; }

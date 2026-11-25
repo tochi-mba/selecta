@@ -34,6 +34,7 @@ import { Now } from './views/Now';
 import { RequestsContext, RequestsPanel, waitingRequestCount, useRequests } from './views/Requests';
 import { Start } from './views/Start';
 import { MissingArt } from './views/feelLocal';
+import { sceneTransitionsSupported, sceneTransitionsWanted } from './shell/sceneTransition';
 import { MixScope } from './views/mixScope';
 import { prefetchLibrary } from './views/libraryPrefetch';
 import { takeStartupStatus } from './startupStatus';
@@ -150,21 +151,28 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
   // the same in-flight read prevents an older, slow status reply from
   // overwriting a newer one and stops a disconnected server being hammered.
   const statusReading = useRef<Promise<void> | null>(null);
+  const statusFailed = useRef(false);
   const refreshStatus = useCallback(() => {
     if (statusReading.current) return statusReading.current;
     const work = get<Status>('/status')
       .then((next) => {
+        statusFailed.current = false;
         setFlags(next.flags);
         setStatus((before) => keepIfSame(before, next));
         setProblem('');
       })
-      .catch((error: Error) => setProblem(error.message))
+      .catch((error: Error) => { statusFailed.current = true; setProblem(error.message); })
       .finally(() => {
         if (statusReading.current === work) statusReading.current = null;
       });
     statusReading.current = work;
     return work;
   }, []);
+  // Try now: false when the server still did not answer, so the button says so instead of a tick
+  const tryNow = useCallback(async () => {
+    await refreshStatus();
+    return statusFailed.current ? false : undefined;
+  }, [refreshStatus]);
 
   // Which draft is open comes from the address, so it can't be confused with the current mix.
   const draftId = route.page === 'edit' ? route.draft : null;
@@ -277,6 +285,8 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
   }, [player, playsHere]);
   const [confirmDraft, setConfirmDraft] = useState<{ id: number; from: number; order: string; replacing: string } | null>(null);
   const activatingDraft = useRef(false);
+  // the pressed draft row's face (ADR-0477), kept while the replace question is open
+  const draftFace = useRef<Element | null>(null);
   const activateDraft = useCallback(async (id: number, from: number, expectedOrder: string) => {
     if (activatingDraft.current) return;
     activatingDraft.current = true;
@@ -285,7 +295,11 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
       // another tab since the listener chose which mix to replace.
       const next = await post<MixData>(`/drafts/${id}/play`, undefined, { 'x-mix-order': expectedOrder });
       setMixData(next);
-      navigate('/listen');
+      // the draft's face travels into Listen's cover when page transitions run
+      const face = draftFace.current;
+      draftFace.current = null;
+      if (face?.isConnected && sceneTransitionsSupported() && sceneTransitionsWanted()) navigate('/listen', { share: [[face, 'player-art']] });
+      else navigate('/listen');
       void player.playFrom(from);
       const order = orderOf(next.mix);
       showToast(`Now playing ${next.name}. What was playing is kept in your drafts.`, { scope: 'current', undo: () => undoIn(null, order) });
@@ -296,7 +310,8 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
       activatingDraft.current = false;
     }
   }, [player, refreshMix, setMixData, undoIn]);
-  const playDraft = useCallback((id: number, from = 0) => {
+  const playDraft = useCallback((id: number, from = 0, face?: Element | null) => {
+    draftFace.current = face ?? null;
     const order = orderOf(mixRef.current);
     if (mixRef.current.length && player.state.phase !== 'idle') {
       setConfirmDraft({ id, from, order, replacing: data.name });
@@ -615,7 +630,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
             {problem === OFFLINE_WORDS ? '' : `${problem}. `}It may have stopped running. Start it again, and this page will pick up by itself.
             {hasBeenSetUp() ? ' Your library, mixes and ratings are safe, and you won’t have to set anything up again.' : ''}
           </p>
-          <Action className="primary" run={refreshStatus} working="Trying…">Try now</Action>
+          <Action className="primary" run={tryNow} working="Trying…">Try now</Action>
         </main>
       </Frame>
     );
@@ -709,7 +724,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
         banner={problem ? (
           <div className="connection" role="alert">
             <span><b>Can’t reach SelectaDJ.</b> What’s on screen may be out of date, and anything already loaded keeps playing. Trying again every few seconds.</span>
-            <Action run={refreshStatus} working="Trying…">Try now</Action>
+            <Action run={tryNow} working="Trying…">Try now</Action>
           </div>
         ) : undefined}
       >

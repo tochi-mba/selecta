@@ -4,8 +4,8 @@
  *
  * The component sheets (account.css, cloud.css, libraryWorkspace.css) load after this one, with the
  * page that needs them, so a rule here that has to win over one of theirs is written with one more
- * class or attribute than theirs rather than relying on order. No keyframes of its own: arrivals use
- * feel-arrive and drawn lines feel-draw (styles/feel.css). */
+ * class or attribute than theirs rather than relying on order. No keyframes of its own: it plays the
+ * shared ones (feel-arrive, feel-draw, feel-line-down, feel-item-in, feel-menu-grow), each once. */
 
 /* ---------- Arrivals numbered by position ----------
    data-stagger='auto' is a list whose children are passed in from elsewhere (a settings group's
@@ -55,6 +55,27 @@
   box-shadow: inset 0 0 0 var(--separator) var(--edge-selected), var(--shadow-lift), var(--edge-light);
 }
 
+/* The chosen plan opened out into what Continue will start (Billing.tsx, motion only). It grows out
+   of the side its card is on each time another plan is picked; Continue never waits for it. */
+:where(:root[data-feel]) .cloud-checkout-summary {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: var(--separator) solid var(--edge-selected);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+:where(:root[data-feel]) .cloud-checkout-summary > p { margin: 0; }
+:where(:root[data-feel]) .cloud-checkout-summary-kind,
+:where(:root[data-feel]) .cloud-checkout-summary-note { color: var(--text-soft); font: var(--type-meta); }
+:where(:root[data-feel]) .cloud-checkout-summary-plan { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); }
+:where(:root[data-feel]) .cloud-checkout-summary-plan > span { color: var(--text-soft); }
+:where(:root[data-feel~='motion']) .cloud-checkout-summary {
+  transform-origin: 0 0;
+  animation: feel-menu-grow var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+:where(:root[data-feel~='motion']) .cloud-checkout-summary[data-from='end'] { transform-origin: 100% 0; }
+
 /* ---------- Account ---------- */
 
 /* The section list: a block slides behind the current section. feel-parts.css makes an indicator's
@@ -78,6 +99,130 @@
   animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) both;
   animation-delay: calc(min(var(--i, 0), 8) * var(--motion-stagger));
 }
+/* and the group's body drops open from its heading as it does (no layout per frame) */
+:where(:root[data-feel~='motion']) .lw-group[open] > :not(summary) {
+  animation: feel-item-in var(--motion-spring-snappy) var(--spring-gentle) both;
+}
+
+/* Storage: the share used, as a ring beside the meter that fills on a spring when the card opens
+   (StorageCard.tsx; decoration, the meter says the same in words) */
+:where(:root[data-feel]) .lw-storage-ring {
+  flex: none;
+  inline-size: var(--space-7);
+  block-size: var(--space-7);
+  rotate: -90deg;
+  fill: none;
+  stroke-width: var(--space-1);
+  stroke-linecap: round;
+}
+:where(:root[data-feel]) .lw-storage-ring-track { stroke: var(--surface-control); }
+:where(:root[data-feel]) .lw-storage-ring-fill {
+  stroke: var(--status-ready);
+  /* a dash as long as the ring, pulled back so only the share used shows */
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: calc(1 - var(--share, 0));
+}
+:where(:root[data-feel]) .lw-storage-ring[data-level='warning'] .lw-storage-ring-fill { stroke: var(--status-warning); }
+:where(:root[data-feel]) .lw-storage-ring[data-level='danger'] .lw-storage-ring-fill { stroke: var(--status-failed); }
+:where(:root[data-feel~='motion']) .lw-storage-ring-fill {
+  animation: feel-draw var(--motion-spring-release) var(--spring-snappy) both;
+}
+
+/* Interface choices with the feel on: theme and motion as cards (InterfaceChoices.tsx). */
+:where(:root[data-feel]) .ic-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-2);
+}
+:where(:root[data-feel]) .ic-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: var(--separator) solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+:where(:root[data-feel]) .ic-card:has(input:checked) {
+  border-color: var(--edge-selected);
+  box-shadow: inset 0 0 0 var(--separator) var(--edge-selected);
+}
+:where(:root[data-feel]) .ic-card:has(input:focus-visible) { outline: var(--space-hair) solid var(--focus); outline-offset: var(--space-hair); }
+:where(:root[data-feel]) .ic-card-name { display: flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-label); }
+:where(:root[data-feel]) .ic-card-name > input { margin: 0; }
+:where(:root[data-feel]) .ic-card-about { color: var(--text-soft); font: var(--type-meta); }
+/* A theme card's page, in that theme's own colours. Both palettes are drawn from Light's tokens,
+   because they are the only ones that keep their values whichever theme is showing: Dark is Light's
+   ink as the page and Light's page as the ink, which is how the two palettes are made. */
+:where(:root[data-feel]) .ic-preview {
+  display: flex;
+  block-size: var(--space-7);
+  overflow: hidden;
+  border: var(--separator) solid var(--border);
+  border-radius: var(--radius-sm);
+}
+:where(:root[data-feel]) .ic-pane {
+  --pane-page: var(--light-bg);
+  --pane-raised: var(--light-panel);
+  --pane-line: var(--light-line);
+  --pane-ink: var(--light-ink);
+  flex: 1 1 0;
+  display: grid;
+  grid-template-rows: var(--space-2) var(--space-1) var(--space-1) 1fr;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--pane-page);
+}
+:where(:root[data-feel]) .ic-pane[data-pane='dark'] {
+  --pane-page: var(--light-ink);
+  --pane-raised: color-mix(in srgb, var(--light-bg) 8%, var(--light-ink));
+  --pane-line: color-mix(in srgb, var(--light-bg) 20%, var(--light-ink));
+  --pane-ink: var(--light-bg);
+}
+:where(:root[data-feel]) .ic-pane > i { display: block; border-radius: var(--radius-hair); }
+:where(:root[data-feel]) .ic-pane-bar { background: var(--pane-raised); box-shadow: inset 0 calc(-1 * var(--separator)) 0 var(--pane-line); }
+:where(:root[data-feel]) .ic-pane-row { inline-size: 70%; background: color-mix(in srgb, var(--pane-ink) 35%, var(--pane-page)); }
+:where(:root[data-feel]) .ic-pane-row + .ic-pane-row { inline-size: 45%; }
+:where(:root[data-feel]) .ic-pane-button {
+  align-self: end;
+  inline-size: 40%;
+  block-size: var(--space-2);
+  background: var(--light-primary-fill);
+  box-shadow: inset 0 0 0 var(--separator) var(--light-primary-edge);
+}
+/* A motion card shows its own level when pointed at or focused: the dot crosses its track the way
+   that level moves. Still's never moves, and with the motion off (Still, reduced motion, low power)
+   none does; the words under each card say the same. */
+:where(:root[data-feel]) .ic-motion-demo {
+  position: relative;
+  display: block;
+  block-size: var(--space-2);
+  inline-size: var(--space-7);
+  margin-block: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-control);
+}
+:where(:root[data-feel]) .ic-motion-demo > i {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--text-soft);
+}
+:where(:root[data-feel~='motion']) .ic-motion-demo[data-level='subtle'] > i { transition: translate var(--motion-slow) var(--spring-gentle); }
+:where(:root[data-feel~='motion']) .ic-motion-demo[data-level='expressive'] > i { transition: translate var(--motion-spring-release) var(--spring-bouncy); }
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='motion']) .ic-card:hover .ic-motion-demo:not([data-level='still']) > i {
+    translate: calc(var(--space-7) - var(--space-2)) 0;
+  }
+}
+:where(:root[data-feel~='motion']) .ic-card:focus-within .ic-motion-demo:not([data-level='still']) > i {
+  translate: calc(var(--space-7) - var(--space-2)) 0;
+}
+:where(:root[data-feel]) :where([dir='rtl']) .ic-motion-demo { scale: -1 1; }
 
 /* ---------- The legacy Cloud rail ---------- */
 
@@ -180,14 +325,64 @@
   color: var(--motif);
   text-shadow: 0 0 var(--space-3) color-mix(in srgb, var(--motif) 45%, transparent);
 }
-/* each song's cover sits before its name, in the line */
-:where(:root[data-feel]) .shell[data-mode='cloud'] .link-handoff > .cover-art {
-  display: inline-grid;
-  vertical-align: middle;
-  margin-inline-end: var(--space-2);
+/* Each song's cover sits in a column before its lines, and one line joins the two covers: the
+   hand-off from one song into the next, drawn down once as the card arrives. The line is decoration;
+   "From" and "Into" say the same in words. (Covers are drawn only in the Cloud shell.) */
+:where(:root[data-feel]) .shell[data-mode='cloud'] .link-card > .link-handoff:has(> .cover-art) {
+  position: relative;
+  min-block-size: var(--space-6);
+  padding-inline-start: calc(var(--space-6) + var(--space-2));
 }
+:where(:root[data-feel]) .shell[data-mode='cloud'] .link-card > .link-handoff > .cover-art[data-size] {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: var(--space-6);
+  margin: 0;
+}
+:where(:root[data-feel]) .shell[data-mode='cloud'] .link-card > .link-handoff:has(> .cover-art):has(+ .link-handoff > .cover-art)::after {
+  content: '';
+  position: absolute;
+  /* from just under the first cover to just above the second (the card's rows are --space-2 apart) */
+  inset-block: calc(var(--space-6) + var(--space-1)) calc(var(--space-1) - var(--space-2));
+  inset-inline-start: calc((var(--space-6) - var(--space-hair)) / 2);
+  inline-size: var(--space-hair);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--motif) 60%, transparent);
+  transform-origin: top;
+  pointer-events: none;
+}
+:where(:root[data-feel~='motion']) .shell[data-mode='cloud'] .link-card > .link-handoff:has(> .cover-art):has(+ .link-handoff > .cover-art)::after {
+  animation: feel-line-down var(--motion-spring-snappy) var(--spring-gentle) both;
+  /* after its card has arrived (data-stagger='auto' numbers the cards) */
+  animation-delay: calc(min(var(--i, 0), 8) * var(--motion-stagger) + var(--motion-reveal));
+}
+/* the joining line lights with the shared word */
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='depth']) .shell[data-mode='cloud'] .link-card:hover > .link-handoff:has(> .cover-art)::after { background: var(--motif); }
+}
+:where(:root[data-feel~='depth']) .shell[data-mode='cloud'] .link-card:focus-within > .link-handoff:has(> .cover-art)::after { background: var(--motif); }
 /* a harmonic match: the two covers, and the two measured keys lit */
-:where(:root[data-feel]) .discovery-covers { display: flex; gap: var(--space-1); }
+:where(:root[data-feel]) .discovery-covers { position: relative; display: flex; align-items: center; gap: var(--space-3); }
+:where(:root[data-feel]) .shell[data-mode='cloud'] .discovery-covers > .cover-art[data-size] { inline-size: var(--space-6); }
+/* the two keys' songs joined by a line drawn across once the match arrives (decoration: the words
+   under it name both keys) */
+:where(:root[data-feel]) .shell[data-mode='cloud'] .discovery-covers::before {
+  content: '';
+  position: absolute;
+  inset-block-start: calc(50% - var(--space-hair) / 2);
+  inset-inline: var(--space-6);
+  block-size: var(--space-hair);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--motif) 60%, transparent);
+  transform-origin: left;
+  pointer-events: none;
+}
+:where(:root[data-feel~='motion']) .shell[data-mode='cloud'] .discovery-covers::before {
+  animation: feel-line-across var(--motion-spring-snappy) var(--spring-gentle) both;
+  animation-delay: var(--motion-reveal);
+}
+:where(:root[data-feel]) :where([dir='rtl']) .discovery-covers::before { transform-origin: right; }
 :where(:root[data-feel]) .discovery .discovery-key {
   padding-inline: var(--space-1);
   border-radius: var(--radius-sm);
@@ -227,4 +422,13 @@
 
 @media (forced-colors: active) {
   :where(:root[data-feel]) .link-card .phrase { text-shadow: none; }
+  :where(:root[data-feel]) .shell[data-mode='cloud'] .link-card > .link-handoff:has(> .cover-art)::after { background: CanvasText; }
+  :where(:root[data-feel]) .lw-storage-ring-track { stroke: GrayText; }
+  :where(:root[data-feel]) .lw-storage-ring-fill { stroke: CanvasText; }
+  /* the system's colours replace a theme's, so its drawing would only mislead; the names stay */
+  :where(:root[data-feel]) .ic-preview { display: none; }
+  :where(:root[data-feel]) .ic-card:has(input:checked) { outline: var(--space-hair) solid Highlight; }
+  :where(:root[data-feel]) .ic-motion-demo,
+  :where(:root[data-feel]) .ic-motion-demo > i { border: var(--separator) solid CanvasText; }
 }
+

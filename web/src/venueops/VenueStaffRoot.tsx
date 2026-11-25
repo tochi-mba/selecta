@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useWorkProfile } from '../business/feelBits';
 import { setFlags } from '../flags';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { StaffDashboard } from './StaffDashboard';
@@ -20,6 +21,9 @@ function wordsOf(failure: unknown): string {
 export function VenueStaffRoot() {
   const match = /^\/venue\/staff\/([A-Za-z0-9_-]+)$/.exec(window.location.pathname);
   const session = match?.[1] ?? '';
+  // This screen opens outside the Shell, straight from RuntimeApp, so it holds the calm profile
+  // itself: a venue tablet is a work tool, and nothing on it answers the music (ADR-0477 plan 3.14).
+  useWorkProfile();
   const [allowed, setAllowed] = useState(false);
   const [state, setState] = useState<DashboardState | null>(null);
   const [error, setError] = useState('');
