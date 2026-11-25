@@ -17,9 +17,11 @@ is off. Tenant routes are scoped to the signed-in person's workspace and check t
 
 The routes are mounted only once every one of them has a flag owner in the registry, so the Cloud
 app keeps starting (`assert_cloud_api_routes_owned`) until the flag file lists them.
+FastAPI reads the route signatures at runtime, and `SignedIn` is local to `install_routes`, so this
+module must not use postponed annotations (`from __future__ import annotations`): with them the
+claims parameter becomes a required query field and every signed-in route answers 422, as in the
+admin route modules.
 """
-
-from __future__ import annotations
 
 import logging
 from collections.abc import Callable

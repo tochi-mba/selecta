@@ -21,8 +21,9 @@ const rules: Rule[] = FILES.flatMap((file) => [...read(file).matchAll(/([^{}]+)\
 const declared = (property: string) => rules.flatMap((rule) => [...rule.body.matchAll(new RegExp(`(?:^|;|\\s)${property}\\s*:\\s*([^;]+)`, 'g'))]
   .map((match) => ({ ...rule, value: match[1].trim() })));
 
-/** Selectors that set a single line: a big title, a counter or a glyph inside a button. */
-const SINGLE_LINE = /track-title|\.count\b|button\b|\bi\b|term-hint-button|\.display\b/;
+/** Selectors that set a single line: a big title, a counter or a glyph inside a button. The number
+ * roll (ADR-0477, feel/numberRoll.tsx) is a counter: one nowrap line of digit columns. */
+const SINGLE_LINE = /track-title|\.count\b|\.number-roll-digits\b|button\b|\bi\b|term-hint-button|\.display\b/;
 const READING = /overlay-body|\.hint\b|note|lede|help|nudge|empty-state|lucy-text|small\b/;
 
 describe('reading rhythm (SF-0202-07)', () => {
