@@ -46,6 +46,10 @@ from selecta.workers.runner import LocalRunner
 _NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}(?:\.[A-Za-z0-9]{1,16}){0,2}$")
 
 
+class ContractBroken(RuntimeError):
+    """What a remote worker meets as the gateway's HTTP 422: the job can't publish there."""
+
+
 class LocalCloudStore(JobStore):
     """`JobStore` plus the gateway's input and output slots, over the on-disk object store."""
 
@@ -93,6 +97,15 @@ class LocalCloudStore(JobStore):
         if not _NAME.fullmatch(name):
             raise InputInvalid("The artifact file name is unsafe.")
         key = derived_key(context.job.workspace_id, kind, input_hash, context.attempt_id, name)
+        # The gateway's rule, so a contract break shows here and not first on staging: a remote
+        # worker gets an upload slot only inside the namespace the job declares
+        # (`cloud_ports.signed_outputs`), and its completion is refused for any other key.
+        prefix = cloud_ports.output_prefix(context.job, context.attempt_id)
+        if prefix is None or not key.startswith(prefix):
+            raise ContractBroken(
+                "invalid_output_slots: this job declares no output namespace for "
+                f"{kind}/{input_hash[:12]}, so the worker gateway would refuse its upload."
+            )
         size, digest = self.artifacts.publish(key, Path(source))
         if (size, digest) != file_sha256(Path(source)):
             raise InputInvalid("The stored output doesn't match the file the handler made.")
