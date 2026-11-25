@@ -15,7 +15,9 @@ production does (a real workspace rule on `lucy.usage_windows`, and a cutover ti
 - `cutover`: "past" sets a cutover time that has passed, "none" clears it;
 - `plan`: "premium" gives an expiring override, "free" revokes it;
 - `spend`: `{"session": true, "week": true}` uses a window up, as settled turns would have;
-- `used`: `{"session": 40, "week": 85}` sets the percentage of a window already used.
+- `used`: `{"session": 40, "week": 85}` sets the percentage of a window already used;
+- `extra`: true grants `lucy.extra_usage` to this workspace and credits one prepaid pack the size
+  of a week's allowance (ADR-0486), as a paid pack checkout would have; false takes the rule away.
 
 It answers with the mode the workspace is now in and the read model every surface draws.
 `POST /test/emit {"user", "topic": "lucy.usage"}` tells open pages to read it again.
@@ -33,11 +35,11 @@ from sqlalchemy.engine import Engine
 from selecta.ai import usage_mode, usage_units
 from selecta.ai.usage_mode import WINDOWS_FLAG
 from selecta.ai.usage_schema import lucy_usage_state
-from selecta.billing import stripe_sync
+from selecta.billing import lucy_packs, stripe_sync
 from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Rule, RuleKind
 from selecta.lucy.providers import ScriptedProvider
-from selecta.persistence import db_now, transaction
+from selecta.persistence import db_now, new_id, transaction
 
 REPLY = "Here is a short answer from the test Lucy."
 NOTE = "e2e lucy usage"
@@ -62,14 +64,14 @@ def _mine(rule: Rule, workspace_id: str) -> bool:
             and list(params.get("ids") or ()) == [workspace_id])
 
 
-def _grant(engine: Engine, workspace_id: str, on: bool) -> None:
+def _grant(engine: Engine, workspace_id: str, on: bool, flag: str = WINDOWS_FLAG) -> None:
     with transaction(engine) as conn:
-        current = list(flag_rules.load_snapshot(conn).for_flag(WINDOWS_FLAG))
+        current = list(flag_rules.load_snapshot(conn).for_flag(flag))
         rest = [rule for rule in current if not _mine(rule, workspace_id)]
         mine = [Rule(RuleKind.WORKSPACES, {"ids": [workspace_id], "on": True, "note": NOTE})]
         proposed = [*mine, *rest] if on else rest
         if [r.to_dict() for r in proposed] != [r.to_dict() for r in current]:
-            flag_rules.save(conn, WINDOWS_FLAG, proposed, author="e2e",
+            flag_rules.save(conn, flag, proposed, author="e2e",
                             reason="browser tests: Lucy's session and week allowance")
 
 
@@ -119,6 +121,9 @@ def install(app: FastAPI, engine: Engine, workspace_of: Callable[[str], str]) ->
             _grant(engine, workspace_id, bool(body["grant"]))
             # this instance reads the new rules at once, as after any rule change
             app.state.flag_rules.invalidate()
+        if "extra" in body:
+            _grant(engine, workspace_id, bool(body["extra"]), lucy_packs.FLAG)
+            app.state.flag_rules.invalidate()
         with transaction(engine, workspace_id) as conn:
             now = db_now(conn)
             plan_id = stripe_sync.effective_entitlement(conn, workspace_id, now).plan_id
@@ -129,6 +134,11 @@ def install(app: FastAPI, engine: Engine, workspace_of: Callable[[str], str]) ->
             # a plan change lifts the limits before anything is counted against them
             usage_units.roll(conn, workspace_id, plan_id=plan_id, now=now)
             _counters(conn, workspace_id, body.get("spend") or {}, body.get("used") or {}, now)
+            if body.get("extra"):
+                week = conn.scalar(sa.select(lucy_usage_state.c.week_limit)
+                                   .where(lucy_usage_state.c.workspace_id == workspace_id))
+                lucy_packs.credit(conn, workspace_id=workspace_id, payment_id=f"pi_e2e_{new_id()}",
+                                  units=int(week), now=now)
             return {
                 "workspace_id": workspace_id,
                 "plan": plan_id,

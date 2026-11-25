@@ -160,14 +160,14 @@ def settle(
         lucy_packs.spend(conn, workspace_id=workspace_id, units=-spare, now=now)
 
 
-def meter_line(conn: Connection, workspace_id: str, now: float) -> dict[str, int] | None:
+def meter_line(conn: Connection, workspace_id: str, now: float) -> dict[str, Any] | None:
     """The meter's third line (rule 7): the whole percentage left across live packs, as a share
     of the pack bought last and never above 100. None with no balance."""
     held = lucy_packs.balance(conn, workspace_id, now)
     remaining, last = held["remaining_units"], held["last_pack_units"]
     if remaining <= 0 or not last:
         return None
-    return {"left": min(100, max(1, remaining * 100 // last))}
+    return {"left": min(100, max(1, remaining * 100 // last)), "expires_at": held["expires_at"]}
 
 
 __all__ = ["EXTRA_POOL", "FLAG", "granted", "meter_line", "offered", "reserve", "settle"]

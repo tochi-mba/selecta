@@ -8,7 +8,7 @@ import { humanize } from '../lucy/words';
 import { Action } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { PermissionCard, PlanGroupView } from './LucyCards';
-import { LucyLimitStep } from './LucyLimitStep';
+import { LucyLimitStep, type ExtraOutcome } from './LucyLimitStep';
 
 /** The conversation itself. It's a log a screen reader can browse, but it doesn't speak each word as
  * it arrives: a separate, quiet announcer says what happened at most every couple of seconds. Text is
@@ -119,7 +119,7 @@ function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest
   onRate?: (id: string, rating: 'up' | 'down') => Promise<void>;
   /** The limit this reply was the first to meet (ADR-0483 rule 6): its next step shows once, here. */
   limit?: LimitNotice;
-  onExtra?: () => void;
+  onExtra?: () => ExtraOutcome | Promise<ExtraOutcome>;
 }) {
   const headingId = useId();
   const who = message.role === 'user' ? 'You' : message.role === 'assistant' ? 'Lucy' : 'Note';
@@ -265,7 +265,7 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   onRate?: (id: string, rating: 'up' | 'down') => Promise<void>;
   onOlder?: () => Promise<void>;
   /** Use extra usage, offered in a limit's next step only when this is given. */
-  onExtra?: () => void;
+  onExtra?: () => ExtraOutcome | Promise<ExtraOutcome>;
 }) {
   const newest = [...view.messages].reverse().find((message) => message.role === 'assistant')?.id;
   const fresh = useFresh(view, pending);

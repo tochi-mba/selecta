@@ -298,13 +298,14 @@ def test_the_meter_has_the_extra_line_only_while_a_balance_exists(extra):
     assert "extra" not in meter(extra, ALICE)
 
     credit(extra, ALICE)
-    assert meter(extra, ALICE)["extra"] == {"left": 100}
+    assert meter(extra, ALICE)["extra"]["left"] == 100
 
     spend(extra, ALICE, week=True)
     confirm(extra, ALICE)
     ask(extra, ALICE, "play Rema")
     shown = meter(extra, ALICE)["extra"]
-    assert set(shown) == {"left"} and 0 < shown["left"] < 100, "some is spent, so not all"
+    assert set(shown) == {"left", "expires_at"}
+    assert 0 < shown["left"] < 100, "some is spent, so not all"
 
     workspace = extra.workspaces[ALICE]
     with transaction(extra.engine, workspace) as conn:
@@ -316,13 +317,15 @@ def test_the_meter_has_the_extra_line_only_while_a_balance_exists(extra):
 def test_the_extra_line_is_a_share_of_the_pack_bought_last_and_never_above_all(extra):
     credit(extra, ALICE, units=1_000, payment="pi_small", bought_ago=DAY)
     credit(extra, ALICE, units=4_000, payment="pi_large")
-    assert meter(extra, ALICE)["extra"] == {"left": 100}  # 5,000 of a 4,000 pack
+    assert meter(extra, ALICE)["extra"]["left"] == 100  # 5,000 of a 4,000 pack
 
     workspace = extra.workspaces[ALICE]
     with transaction(extra.engine, workspace) as conn:
         assert packs.spend(conn, workspace_id=workspace, units=3_000, now=db_now(conn)) == 3_000
-    assert meter(extra, ALICE)["extra"] == {"left": 50}
-    assert set(meter(extra, ALICE)["extra"]) == {"left"}, "a share only, never units"
+    assert meter(extra, ALICE)["extra"]["left"] == 50
+    shown = meter(extra, ALICE)["extra"]
+    assert set(shown) == {"left", "expires_at"}, "a share and its expiry, never units"
+    assert shown["expires_at"] > 0
 
 
 # The rules on their own, with the time passed in -----------------------------------------------

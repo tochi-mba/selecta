@@ -20,7 +20,7 @@ const WEEK_SPENT = /used all of Lucy.s allowance for this week/;
 /** What the usage UI never shows (ADR-0484 rule 4): turn counts, tokens, money or a model's name. */
 const NEVER = /turns? |token|\$|Sonnet|Opus|Haiku|Claude/i;
 
-type Setup = { grant?: boolean; cutover?: 'past' | 'none'; plan?: 'free' | 'premium'; spend?: { session?: boolean; week?: boolean }; used?: { session?: number; week?: number } };
+type Setup = { grant?: boolean; cutover?: 'past' | 'none'; plan?: 'free' | 'premium'; spend?: { session?: boolean; week?: boolean }; used?: { session?: number; week?: number }; extra?: boolean };
 
 async function lucyUsage(request: APIRequestContext, user: string, setup: Setup) {
   const answer = await request.post('/test/lucy-usage', { data: { user, ...setup } });
@@ -196,6 +196,36 @@ test('with the week used up, Lucy answers in her own words with one next step', 
   await expect(step).toHaveCount(1);
   await expect(messages(page).getByRole('article').filter({ has: step })).toHaveCount(1);
   await accessible(page, 'Lucy at the limit');
+});
+
+test('with the week used up and a pack of extra usage, one press turns it on and Lucy answers again', async ({ page, request }) => {
+  // ADR-0486: `lucy.extra_usage` is on for this workspace and it holds one prepaid pack
+  const user = await person(request, 'lucy-extra', { grant: true, cutover: 'past', spend: { week: true }, extra: true });
+  await openLucy(page, user);
+  await expect(levels(page)).toHaveAccessibleName(/, 0% left this week$/);
+
+  // nothing is spent from the pack until the member says yes for this week
+  await say(page, 'Play something by Rema');
+  await expect(messages(page).getByText(WEEK_SPENT)).toBeVisible();
+  await expect(messages(page).getByText(REPLY, { exact: true })).toHaveCount(0);
+  const step = nextStep(page);
+  await expect(step).toHaveCount(1);
+  await step.getByRole('button', { name: 'Use extra usage' }).click();
+  await expect(step.getByRole('status')).toHaveText('Extra usage is on for this week. Send your message again.');
+  await expect(step.getByRole('button', { name: 'Use extra usage' })).toHaveCount(0);
+
+  // the same message again is answered for real, paid for from the pack
+  await say(page, 'Play something by Burna Boy');
+  await expect(messages(page).getByText(REPLY, { exact: true })).toBeVisible();
+  await expect(messages(page).getByText(WEEK_SPENT)).toHaveCount(1);
+
+  // the full meter has its third line, under the session and the week
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const meter = page.getByRole('dialog', { name: 'Lucy settings' }).locator('.lucy-usage');
+  await expect(meter.locator('.lucy-usage-words b')).toHaveText(['This session', 'This week', 'Extra usage']);
+  await expect(meter.getByRole('meter', { name: 'Extra usage' })).toHaveAttribute('aria-valuetext', /^\d+% left/);
+  await expect(meter.getByRole('meter', { name: 'This week' })).toHaveAttribute('aria-valuetext', /^0% left/);
+  expect(await meter.innerText()).not.toMatch(NEVER);
 });
 
 test('on Premium with the session used up, a lighter Lucy answers and says so once', async ({ page, request }) => {
