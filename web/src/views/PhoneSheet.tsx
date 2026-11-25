@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { pushHistoryMark } from '../router';
 import { Sheet } from '../ui/controls';
 
 export type Detent = 'half' | 'full' | 'fit';
@@ -19,7 +20,7 @@ function useBackCloses(close: () => void) {
   useEffect(() => {
     openSheets.push(close);
     try {
-      if (!isSheetEntry()) window.history.pushState({ ...(window.history.state ?? {}), editorSheet: true }, '');
+      if (!isSheetEntry()) pushHistoryMark({ editorSheet: true });
     } catch { /* history is not writable here; Close and Escape still work */ }
     if (!listening) {
       window.addEventListener('popstate', onBack);

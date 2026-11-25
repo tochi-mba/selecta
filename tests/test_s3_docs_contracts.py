@@ -104,7 +104,8 @@ def test_every_remote_address_the_local_server_calls_is_disclosed():
     text = doc("selecta-3-privacy.md")
     remote = set()
     for path in sources(ROOT / "src" / "selecta", (".py",)):
-        if {"cloud", "saas", "observability", "billing"} & set(
+        # the staff console (admin) is mounted only by api_cloud.py; its addresses are Cloud links
+        if {"cloud", "saas", "observability", "billing", "admin"} & set(
             path.relative_to(ROOT / "src" / "selecta").parts
         ):
             continue

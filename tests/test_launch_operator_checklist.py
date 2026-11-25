@@ -29,6 +29,8 @@ LOCAL_ONLY = frozenset(
         "SELECTA_DEV_SITE_URL",
         "SELECTA_DEV_STARTUP",
         "SELECTA_DEV_STRIPE_TEST_MODE",
+        # the scripted Lucy stand-in of the development stack (devstack/lucy_practice.py)
+        "SELECTA_DEV_LUCY_PRACTICE",
         "SELECTA_LOCAL_IDENTITY",
     }
 )
