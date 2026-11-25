@@ -1,5 +1,6 @@
 import { flagOn } from '../flags';
 import { showToast } from '../ui/toasts';
+import { handoffsHeard, onHandoffHeard } from '../audio/handoffHeard';
 import { tabBusyHere } from './accountTabs';
 import { importRunningHere, importSnapshot } from './importSession';
 import { installState, promptInstall, subscribeInstall, type InstallState } from './install';
@@ -11,7 +12,8 @@ import { readPersistState, requestPersist } from './persistence';
 // Not now (Safari on iPhone and iPad gets the Share, then Add to Home Screen guidance instead of a
 // button, since it has no install prompt):
 // - `import`: a long import is running, so an app window keeps it out of the way of other tabs.
-// - `played`: the first mix has played for a few minutes (about the first hand-off heard).
+// - `played`: the first hand-off has been heard: a hand-over played to its end in this tab while it
+//   was on screen (audio/handoffHeard.ts, T-20261125-ebda), not a guess from how long it played.
 // - `room`: a room is open to host a party.
 // The Workspace's own offer (StorageCard, VenuePosture) stays as it was.
 //
@@ -46,8 +48,6 @@ export const MAX_DISMISSALS = 2;
 /** A long import: it has run this long, or has this many files. */
 export const LONG_IMPORT_MS = 90_000;
 export const LONG_IMPORT_FILES = 300;
-/** How long the first mix plays before the offer: about the first hand-off. */
-export const PLAYED_MS = 3 * 60_000;
 const POLL_MS = 15_000;
 const TYPING_QUIET_MS = 5_000;
 
@@ -62,14 +62,14 @@ export function decideOffer(moment: InstallMoment, facts: OfferFacts, memory: Mo
   return 'show';
 }
 
-export type MomentSignals = { importHere: boolean; importMs: number; importTotal: number | null; playedMs: number; roomOpen: boolean };
+export type MomentSignals = { importHere: boolean; importMs: number; importTotal: number | null; handoffHeard: boolean; roomOpen: boolean };
 
 /** The moments that have arrived, most pressing first. */
 export function dueMoments(signals: MomentSignals): InstallMoment[] {
   const due: InstallMoment[] = [];
   if (signals.roomOpen) due.push('room');
   if (signals.importHere && (signals.importMs >= LONG_IMPORT_MS || (signals.importTotal ?? 0) >= LONG_IMPORT_FILES)) due.push('import');
-  if (signals.playedMs >= PLAYED_MS) due.push('played');
+  if (signals.handoffHeard) due.push('played');
   return due;
 }
 
@@ -139,8 +139,6 @@ export function watchInstallMoments(): () => void {
   let offered = false;
   let lastKey = 0;
   let importSince = 0;
-  let playedMs = 0;
-  let lastPoll = Date.now();
 
   const dismiss = (moment: InstallMoment) => {
     memory = { ...memory, dismissed: memory.dismissed.includes(moment) ? memory.dismissed : [...memory.dismissed, moment] };
@@ -173,13 +171,11 @@ export function watchInstallMoments(): () => void {
   const look = () => {
     const now = Date.now();
     const busy = tabBusyHere();
-    if (busy.playing) playedMs += Math.min(now - lastPoll, POLL_MS * 2);
-    lastPoll = now;
     const live = importSnapshot();
     const importHere = live.phase === 'running' && !live.elsewhere && importRunningHere();
     if (!importHere) importSince = 0;
     else if (!importSince) importSince = now;
-    const due = dueMoments({ importHere, importMs: importSince ? now - importSince : 0, importTotal: live.total, playedMs, roomOpen: busy.room });
+    const due = dueMoments({ importHere, importMs: importSince ? now - importSince : 0, importTotal: live.total, handoffHeard: handoffsHeard() > 0, roomOpen: busy.room });
     if (!due.length || offered) return;
     const install = installState();
     const facts: OfferFacts = {
@@ -204,7 +200,10 @@ export function watchInstallMoments(): () => void {
   window.addEventListener('keydown', key, true);
   document.addEventListener('visibilitychange', visible);
   const timer = window.setInterval(look, POLL_MS);
+  // the first hand-off is looked at as it is heard, not up to a poll later
+  const unhearHandoff = onHandoffHeard(() => look());
   return () => {
+    unhearHandoff();
     window.clearInterval(timer);
     window.removeEventListener('keydown', key, true);
     document.removeEventListener('visibilitychange', visible);

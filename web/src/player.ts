@@ -1,5 +1,6 @@
 import { fetchBytes, MixItem, post, SeamState } from './api';
 import { mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
+import { handoffWatcher, noteHandoffHeard, pageOnScreen } from './audio/handoffHeard';
 import { saveResume } from './lib';
 import { listenEnded, listenStarted } from './lucy/listening';
 
@@ -27,8 +28,10 @@ export type NowState = {
   /** Cloud's browser engine only: the hand-over it really scheduled, which a mix item there does
    * not carry. `window` is how long the next song takes to come in (seconds); `nextLength` is that
    * song's decoded length, 0 when it is not known; `nextFrom` is where in it the hand-over enters
-   * (0 until it has). Absent in local mode. */
-  blend?: { window: number; nextLength: number; nextFrom: number } | null;
+   * (0 until it has). `move` is the name of the move the engine really scheduled for it, as Up Next
+   * says it ("Blend, 8 bars"), or null where it played its own fade with no planned move behind it.
+   * Absent in local mode. */
+  blend?: { window: number; nextLength: number; nextFrom: number; move?: string | null } | null;
   notice: string;
   nextReady: boolean;
   lastSeamKey: string | null;
@@ -132,6 +135,7 @@ export class SetPlayer {
   private fallenBack = new Set<number>();
   private savedAt = 0;
   private heard = new Map<number, number>();
+  private heardWatch = handoffWatcher(noteHandoffHeard);
   private getMix: () => MixItem[];
   private refreshMix: () => void;
   state: NowState = {
@@ -329,6 +333,8 @@ export class SetPlayer {
 
   private update(changes: Partial<NowState>) {
     this.state = { ...this.state, ...changes };
+    // read only: says a hand-over played to its end here, on screen, once it has (T-20261125-ebda)
+    this.heardWatch({ phase: this.state.phase, position: this.state.position, inSeam: this.state.inSeam, songId: this.current?.songId, seamKey: this.state.lastSeamKey }, pageOnScreen());
     this.onChange(this.state);
   }
 

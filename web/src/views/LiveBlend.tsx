@@ -52,6 +52,24 @@ export function laneOf(peaks: readonly number[], duration: number, from: number,
   return path;
 }
 
+/** The shared timeline of one hand-over, in the outgoing song's seconds: where the hand-over starts
+ * (`seamAt`), the lead-in before it (`start`), its end (`end`) and the line for now (`head`).
+ *
+ * T-20261125-1110: the engine's clock for the outgoing song keeps counting past that song's own end
+ * while the next song is still being read. A mix resumed at 5:05 of a 5:05 song starts its late fade
+ * some seconds after the song has stopped, so the hand-over's start lay past the song's length, every
+ * bar of the lead-in read beyond the peaks, and the lane drew flat. That gap is silence the move does
+ * not include, so the drawing places the hand-over where the song really ended and moves the line back
+ * by the same amount. `length` is the song's own length (0 when unknown, which leaves it as it is). */
+export function blendTimeline(seamAt: number, span: number, songTime: number, length: number) {
+  const late = length > 0 ? Math.max(0, seamAt - length) : 0;
+  const at = seamAt - late;
+  // a short move (an echo out lasts about three seconds) would be a sliver beside the full lead-in,
+  // so the lead-in shrinks with it and the hand-over keeps at least a third of the drawing
+  const lead = Math.min(LEAD_S, Math.max(6, span * 2));
+  return { seamAt: at, start: Math.max(0, at - lead), end: at + span, head: songTime - late };
+}
+
 export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
   now: NowState;
   leaving?: MixItem;
@@ -88,13 +106,8 @@ export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
   }, [wanted, incoming?.id]);
 
   // one timeline, in the outgoing song's seconds: from the lead-in to the end of the hand-over
-  const seamAt = now.seamAt ?? 0;
   const span = switchAt ?? 0;
-  // a short move (an echo out lasts about three seconds) would be a sliver beside the full lead-in,
-  // so the lead-in shrinks with it and the hand-over keeps at least a third of the drawing
-  const lead = Math.min(LEAD_S, Math.max(6, span * 2));
-  const start = Math.max(0, seamAt - lead);
-  const end = seamAt + span;
+  const { seamAt, start, end, head } = blendTimeline(now.seamAt ?? 0, span, now.songTime, detail?.duration ?? 0);
   const across = (seconds: number) => (end > start ? Math.min(100, Math.max(0, ((seconds - start) / (end - start)) * 100)) : 0);
   const entry = across(seamAt);
   const outShape = useMemo(
@@ -112,10 +125,12 @@ export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
   );
 
   if (!on || !handing || !leaving || !entering || !detail || detail.id !== leaving.song_id || !outShape) return null;
-  const at = across(now.songTime).toFixed(2);
+  const at = across(head).toFixed(2);
   // only an answer of "none" is said; while the next song's peaks are still on their way, its lane waits
   const missing = read && !inShape;
-  const move = entering.seam?.state?.label;
+  // T-20261125-0e45: in Cloud the move is the one the engine really scheduled (NowState.blend.move),
+  // never the plan on the mix item; where it played no planned move there is no name to show
+  const move = now.blend ? now.blend.move : entering.seam?.state?.label;
   // decoration: the hand-over section around it already says, in words, what is happening
   return (
     <div className="live-blend" aria-hidden="true" data-incoming={inShape ? 'measured' : missing ? 'missing' : 'reading'}>

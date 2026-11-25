@@ -2,7 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MixItem, SongDetail } from '../api';
 import type { NowState } from '../player';
-import { LiveBlend } from './LiveBlend';
+import { blendTimeline, LiveBlend } from './LiveBlend';
 
 // T-20261125-5baf: in Cloud a mix item carries no switch point, so the blend drew nothing. The
 // engine's own hand-over (NowState.blend) now gives the span and the next song's decoded length.
@@ -64,6 +64,36 @@ describe('the live blend in Cloud', () => {
     const { container, queryByText } = render(<LiveBlend now={now()} leaving={item(1, 0)} entering={item(2, 0)} detail={detail} peaksOf={() => new Promise(() => {})} />);
     expect(container.querySelector('.live-blend')?.getAttribute('data-incoming')).toBe('reading');
     expect(queryByText(/only this song is drawn/)).toBeNull();
+  });
+
+  it('draws a song resumed at its very end from its real last seconds, not past its end (T-20261125-1110)', async () => {
+    // loud to the very end; the late fade started 6 s after the song stopped, while the next one was read
+    const loud = { ...detail, peaks: Array.from({ length: 400 }, () => 1) } as SongDetail;
+    const resumed = now({ seamAt: 206, songTime: 207, blend: { window: 3, nextLength: 240, nextFrom: 0, move: null } });
+    const { container } = render(<LiveBlend now={resumed} leaving={item(1, 0)} entering={item(2, 0)} detail={loud} peaksOf={async () => null} />);
+    await waitFor(() => expect(container.querySelector('.live-blend')).not.toBeNull());
+    const outgoing = barsOf(container.querySelector('.live-blend-out:not(.played)')?.getAttribute('d'));
+    // the six-second lead-in is the song's own last six seconds, all loud
+    const entry = (6 / 9) * 100;
+    expect(outgoing.filter((bar) => bar.x < entry - 2).length).toBeGreaterThan(5);
+    expect(outgoing.filter((bar) => bar.x < entry - 2).every((bar) => bar.height === 20)).toBe(true);
+    // the line moves back with it: one second into the hand-over
+    expect(container.querySelector('.live-blend-head')?.getAttribute('x1')).toBe(((7 / 9) * 100).toFixed(2));
+  });
+
+  it('keeps the timeline as it was when the hand-over starts inside the song', () => {
+    expect(blendTimeline(170, 16, 178, 200)).toEqual({ seamAt: 170, start: 150, end: 186, head: 178 });
+    expect(blendTimeline(206, 3, 207, 200)).toEqual({ seamAt: 200, start: 194, end: 203, head: 201 });
+    expect(blendTimeline(206, 3, 207, 0)).toEqual({ seamAt: 206, start: 200, end: 209, head: 207 });
+  });
+
+  it('names the move Cloud really scheduled, and no move where it played none (T-20261125-0e45)', async () => {
+    const planned = { ...item(2, 0), seam: { state: { label: 'Planned blend' } } } as unknown as MixItem;
+    const named = render(<LiveBlend now={now({ blend: { window: 16, nextLength: 240, nextFrom: 0, move: 'Echo out' } })} leaving={item(1, 0)} entering={planned} detail={detail} peaksOf={() => new Promise(() => {})} />);
+    expect(named.container.querySelector('.live-blend-caption b')?.textContent).toBe('Echo out');
+    named.unmount();
+    const none = render(<LiveBlend now={now({ blend: { window: 16, nextLength: 240, nextFrom: 0, move: null } })} leaving={item(1, 0)} entering={planned} detail={detail} peaksOf={() => new Promise(() => {})} />);
+    expect(none.container.querySelector('.live-blend-caption')).toBeNull();
   });
 
   it('draws nothing outside a hand-over', () => {

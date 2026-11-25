@@ -24,6 +24,7 @@ import type { PlayerLike } from '../playerContract';
 import { tabLog } from '../devices/audioTab';
 import type { SchedulerClock } from '../engine/scheduler';
 import { seamShown } from './blendState';
+import { handoffWatcher, noteHandoffHeard, pageOnScreen } from '../audio/handoffHeard';
 import { saveSongLength } from './songLength';
 
 /** The shell player for local-first Cloud (ADR-0462 BF-0462-06): the browser engine's speaker
@@ -217,8 +218,12 @@ export class LocalFirstPlayer implements PlayerLike {
     const timeless = (state: NowState) => JSON.stringify({ ...state, songTime: 0 });
     if (timeless(next) === timeless(this.state) && Math.abs(next.songTime - this.state.songTime) < 0.2) return;
     this.state = next;
+    // read only: says a hand-over played to its end here, on screen, once it has (T-20261125-ebda)
+    this.heard({ phase: this.facts.speaking ? next.phase : 'idle', position: next.position, inSeam: next.inSeam }, pageOnScreen());
     this.onChange(next);
   }
+
+  private heard = handoffWatcher(noteHandoffHeard);
 
   /** The facts with the level chosen here in place of the session's, until the session says it. */
   private shownFacts(): PlayerFacts {

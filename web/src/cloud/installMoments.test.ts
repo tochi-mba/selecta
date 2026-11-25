@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  decideOffer, dueMoments, FIRST_VISIT_QUIET_MS, LONG_IMPORT_FILES, LONG_IMPORT_MS, offerWords, parseMemory, PLAYED_MS,
+  decideOffer, dueMoments, FIRST_VISIT_QUIET_MS, LONG_IMPORT_FILES, LONG_IMPORT_MS, offerWords, parseMemory,
   type InstallMoment, type MomentMemory, type OfferFacts,
 } from './installMoments';
 
@@ -42,7 +42,7 @@ describe('decideOffer', () => {
 });
 
 describe('dueMoments', () => {
-  const quiet = { importHere: false, importMs: 0, importTotal: null, playedMs: 0, roomOpen: false };
+  const quiet = { importHere: false, importMs: 0, importTotal: null, handoffHeard: false, roomOpen: false };
   it('is empty when nothing has happened', () => {
     expect(dueMoments(quiet)).toEqual([]);
   });
@@ -52,9 +52,9 @@ describe('dueMoments', () => {
     expect(dueMoments({ ...quiet, importHere: true, importTotal: LONG_IMPORT_FILES })).toEqual(['import']);
     expect(dueMoments({ ...quiet, importHere: false, importMs: LONG_IMPORT_MS * 2 })).toEqual([]);
   });
-  it('the first mix after a few minutes of play, and an open room first of all', () => {
-    expect(dueMoments({ ...quiet, playedMs: PLAYED_MS - 1 })).toEqual([]);
-    expect(dueMoments({ ...quiet, playedMs: PLAYED_MS, roomOpen: true })).toEqual(['room', 'played']);
+  it('the first hand-off heard here, and an open room first of all', () => {
+    expect(dueMoments({ ...quiet, handoffHeard: false })).toEqual([]);
+    expect(dueMoments({ ...quiet, handoffHeard: true, roomOpen: true })).toEqual(['room', 'played']);
   });
 });
 

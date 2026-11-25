@@ -7,6 +7,8 @@ import { motionMs } from '../ui/exitMotion';
 import { BuildMoment } from './BuildMoment';
 import { CoverArt } from './CoverArt';
 import { BeatSpot, spaceOf, springOf, useFeelPart } from './feelBits';
+import { useStageTravel } from './stageTravel';
+import { arriveFromQueue } from './coverToHero';
 
 /** The whole song change on Listen, leaving and arriving, at most (ADR-0477). */
 const LISTEN_CHANGE_MS = 320;
@@ -53,6 +55,8 @@ export function ListenHero({ item, stage, children }: { item?: MixItem; stage: b
   const header = useRef<HTMLElement>(null);
   const ambient = useFeelPart('ambient');
   const songId = item?.song_id;
+  // going on Stage and back is drawn as the hero filling the screen and returning (stageTravel.ts)
+  useStageTravel(header, stage);
 
   // The cover is the thing that travels between pages (feel-scene.css names it only while a page
   // transition runs). CoverArt takes no extra attributes, and wrapping it would break the sheets that
@@ -103,7 +107,9 @@ export function ListenHero({ item, stage, children }: { item?: MixItem; stage: b
         (element as HTMLElement).animate(frames, { duration, delay, easing: 'ease-out', fill: 'backwards' });
       }
     };
-    run(node.querySelector(':scope > .cover-art'), [{ transform: 'scale(0.9)', opacity: 0.5 }, { transform: 'none', opacity: 1 }]);
+    // a song chosen from the queue brings its cover up from the row it was pressed in (coverToHero.ts)
+    const cover = node.querySelector<HTMLElement>(':scope > .cover-art');
+    if (!arriveFromQueue(cover, songId, duration + delay, easing)) run(cover, [{ transform: 'scale(0.9)', opacity: 0.5 }, { transform: 'none', opacity: 1 }]);
     for (const words of Array.from(node.querySelectorAll(':scope > .track-title, :scope > .artist'))) {
       run(words, [{ transform: `translateY(${rise}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }]);
     }

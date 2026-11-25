@@ -46,6 +46,17 @@ describe('the hand-over Listen shows in Cloud', () => {
     expect(shown).toMatchObject({ seamAt: null, nextReady: false, inSeam: false, blend: null });
   });
 
+  it('names the move the engine really scheduled, and none where it fell back to its own fade (T-20261125-0e45)', () => {
+    const echo: SeamRecord = { ...record(0, 170, 4), schedule: { ...record(0, 170, 4).schedule, style: 'echo_out' } };
+    const before = seamShown({ position: 0, songTime: 160 }, unknown, [echo], clock({ next: { index: 1, at: 170, length: 240 } }));
+    expect(before.blend?.move).toBe('Echo out');
+    const during = seamShown({ position: 1, songTime: 2 }, unknown, [echo], clock({ length: 240, entered: { fromIndex: 0, fromAt: 170, fromLength: 200, heard: 2 } }));
+    expect(during.blend).toMatchObject({ window: 4, move: 'Echo out' });
+    // the plan said 170 s; the engine faded at the song's end instead, so it says no move at all
+    const fell = seamShown({ position: 0, songTime: 190 }, unknown, [echo], clock({ next: { index: 1, at: 197, length: 240 } }));
+    expect(fell.blend?.move).toBeNull();
+  });
+
   it('a fallback fade lasts no longer than half a short incoming song', () => {
     expect(handoverWindow([], 0, 1, 50, 4)).toBe(2);
     expect(handoverWindow([], 0, 1, 50, 0)).toBe(FALLBACK_FADE_SECONDS);

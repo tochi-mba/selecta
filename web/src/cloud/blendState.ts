@@ -1,6 +1,7 @@
 import { FALLBACK_FADE_SECONDS } from '../dsp/crossfade';
 import type { SeamRecord } from '../dsp/seamProvider';
 import type { SchedulerClock } from '../engine/scheduler';
+import { playedWords } from './playedSeams';
 
 // What Listen shows about a hand-over in Cloud, from what the browser engine really scheduled
 // (engine/scheduler.ts clock()), not from the seam the provider planned. The two differ when the
@@ -22,21 +23,36 @@ export type SeamShown = {
   inSeam: boolean;
   seamAt: number | null;
   nextReady: boolean;
-  blend: { window: number; nextLength: number; nextFrom: number } | null;
+  blend: { window: number; nextLength: number; nextFrom: number; move: string | null } | null;
 };
+
+/** The planned seam the engine really played for the hand-over from `fromIndex` into `toIndex`
+ * that starts at `at` in the outgoing song, or null where it played its own fade instead. */
+function playedSeam(records: readonly SeamRecord[], fromIndex: number, toIndex: number, at: number): SeamRecord | null {
+  for (let index = records.length - 1; index >= 0; index -= 1) {
+    const record = records[index];
+    if (record.fromIndex !== fromIndex || record.toIndex !== toIndex) continue;
+    const end = record.schedule.startSeconds + record.schedule.windowSeconds;
+    if (at >= record.schedule.startSeconds - SAME_SEAM_S && at < end) return record;
+  }
+  return null;
+}
 
 /** How long the hand-over from `fromIndex` into `toIndex`, which the engine starts at `at` in the
  * outgoing song, lasts. A planned seam it really played gives its own remaining window; otherwise
  * the engine played its fallback fade, which is at most FALLBACK_FADE_SECONDS and at most half the
  * incoming song (engine/scheduler.ts fadeInto). */
 export function handoverWindow(records: readonly SeamRecord[], fromIndex: number, toIndex: number, at: number, nextLength: number): number {
-  for (let index = records.length - 1; index >= 0; index -= 1) {
-    const record = records[index];
-    if (record.fromIndex !== fromIndex || record.toIndex !== toIndex) continue;
-    const end = record.schedule.startSeconds + record.schedule.windowSeconds;
-    if (at >= record.schedule.startSeconds - SAME_SEAM_S && at < end) return end - at;
-  }
+  const record = playedSeam(records, fromIndex, toIndex, at);
+  if (record) return record.schedule.startSeconds + record.schedule.windowSeconds - at;
   return nextLength > 0 ? Math.min(FALLBACK_FADE_SECONDS, nextLength / 2) : FALLBACK_FADE_SECONDS;
+}
+
+/** The name of the move that hand-over really plays, in Up Next's words (playedSeams.ts), or null
+ * where the engine fell back to its own fade with no planned seam: no name is made up for that. */
+export function handoverMove(records: readonly SeamRecord[], fromIndex: number, toIndex: number, at: number): string | null {
+  const record = playedSeam(records, fromIndex, toIndex, at);
+  return record ? playedWords(record.schedule).label : null;
 }
 
 /** The song, time and hand-over Listen shows while this device's engine plays. `at` is where the
@@ -61,7 +77,12 @@ export function seamShown(
         seamAt: entered.fromAt,
         nextReady: true,
         // where the incoming song came in, by its own clock less the time it has been heard
-        blend: { window, nextLength: clock.length, nextFrom: Math.max(0, at.songTime - entered.heard) },
+        blend: {
+          window,
+          nextLength: clock.length,
+          nextFrom: Math.max(0, at.songTime - entered.heard),
+          move: handoverMove(records, entered.fromIndex, at.position, entered.fromAt),
+        },
       };
     }
   }
@@ -69,5 +90,8 @@ export function seamShown(
   const next = clock.next;
   if (!next) return { ...at, duration, inSeam: false, seamAt: null, nextReady: false, blend: null };
   const window = handoverWindow(records, at.position, next.index, next.at, next.length);
-  return { ...at, duration, inSeam: at.songTime >= next.at, seamAt: next.at, nextReady: true, blend: { window, nextLength: next.length, nextFrom: 0 } };
+  return {
+    ...at, duration, inSeam: at.songTime >= next.at, seamAt: next.at, nextReady: true,
+    blend: { window, nextLength: next.length, nextFrom: 0, move: handoverMove(records, at.position, next.index, next.at) },
+  };
 }
