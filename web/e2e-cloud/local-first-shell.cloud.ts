@@ -43,7 +43,7 @@ test('a local-first account finds its account places in the side bar account men
   await expect(page.getByRole('main').getByRole('link', { name: 'Connect music' })).toBeVisible();
   // on a computer there is no More: the account's pages and Sign out sit in the account menu
   const main = page.getByRole('navigation', { name: 'Main' });
-  await expect(main.getByRole('button', { name: 'More' })).toBeHidden();
+  await expect(main.getByRole('button', { name: 'More', exact: true })).toBeHidden();
   await main.getByRole('button', { name: /^Account: / }).click();
   const menu = page.getByRole('menu', { name: 'Account' });
   await expect(menu.getByRole('menuitem', { name: 'Account' })).toBeVisible();
