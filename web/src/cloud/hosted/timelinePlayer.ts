@@ -16,6 +16,8 @@ export type TimelinePart = {
   name?: string | null;
   move?: string | null;
   index?: number;
+  /** A song part plays at its mix level (the level the seam clips were rendered at). */
+  gain_db?: number;
 };
 
 export type PlayerState = { playing: boolean; part: number; at: number; waiting: boolean; error: string | null };
@@ -102,7 +104,10 @@ export class TimelinePlayer {
       const part = this.parts[index];
       const source = this.context.createBufferSource();
       source.buffer = audio;
-      source.connect(this.context.destination);
+      const level = this.context.createGain();
+      level.gain.value = 10 ** ((part.gain_db ?? 0) / 20);
+      source.connect(level);
+      level.connect(this.context.destination);
       const when = Math.max(this.nextAt, this.context.currentTime + 0.02);
       const length = Math.min(part.seconds, Math.max(0, audio.duration - part.from_s));
       source.start(when, part.from_s, length);

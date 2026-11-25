@@ -279,6 +279,41 @@ def plan_mix(engine: Engine, workspace_id: str, read_object: Callable[[str, Path
     return [{"asset_id": by_number[item.song.id], "move": item.transition} for item in planned]
 
 
+_LOUDNESS: dict[str, tuple[float, float]] = {}
+
+
+def _loudness(result: dict, analysis_key: str | None,
+              read_object: Callable[[str, Path], Path] | None) -> tuple[float, float] | None:
+    """(LUFS, peak dB) of a song: from its analysis job's result, or, for an analysis made before
+    the result carried them, read once from the stored analysis file."""
+    lufs, peak = result.get("lufs"), result.get("peak_db")
+    if isinstance(lufs, int | float) and isinstance(peak, int | float):
+        return float(result["lufs"]), float(result["peak_db"])
+    if not analysis_key or read_object is None:
+        return None
+    if analysis_key not in _LOUDNESS:
+        import numpy as np
+
+        with tempfile.TemporaryDirectory(prefix="selecta-loudness-") as folder:
+            path = read_object(analysis_key, Path(folder) / "analysis.npz")
+            with np.load(path) as data:
+                summary = json.loads(str(data["summary"]))
+        _LOUDNESS[analysis_key] = (float(summary["lufs"]), float(summary["peak_db"]))
+    return _LOUDNESS[analysis_key]
+
+
+def gain_db(loudness: tuple[float, float] | None) -> float:
+    """The level the local app plays a song at in a mix (`SongInfo.gain_db`). A rendered seam
+    has it built in, so the song parts around it must be played at it too, or every join steps
+    by several decibels (measured: about 6 dB on chart songs)."""
+    from selecta.analysis.song import PEAK_CEILING_DB, TARGET_LUFS
+
+    if loudness is None:
+        return 0.0
+    lufs, peak = loudness
+    return round(float(min(TARGET_LUFS - lufs, PEAK_CEILING_DB - peak)), 3)
+
+
 def _sign(client, buckets, key: str, workspace_id: str) -> str | None:
     try:
         bucket = validate_key(key)
@@ -319,7 +354,8 @@ def _seam_spec(workspace_id: str, a: dict, b: dict, move: str | None, lane, crea
 
 def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dict[str, Any]],
               *, client, buckets, created_by: str | None = None,
-              retry: bool = False) -> dict[str, Any]:
+              retry: bool = False,
+              read_object: Callable[[str, Path], Path] | None = None) -> dict[str, Any]:
     """Ask for what the mix needs and say where it stands (module notes)."""
     from selecta.work import proxies
 
@@ -335,8 +371,12 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
         by_id = {song["id"]: song for song in _songs(conn, workspace_id, ids)}
         songs = [by_id[i] for i in ids if i in by_id]
         for song in songs:
-            row = _artifact(conn, workspace_id, "analysis", analysis_hash(song["sha256"]))
+            digest = analysis_hash(song["sha256"])
+            row = _artifact(conn, workspace_id, "analysis", digest)
             song["analysis_key"] = _first_key(row["keys"]) if row is not None else None
+            job = _latest_job(conn, workspace_id, ANALYSE, digest)
+            song["loudness"] = _loudness((job["result"] if job is not None else None) or {},
+                                         song["analysis_key"], read_object)
         seams, wanted = [], []
         for index in range(len(songs) - 1):
             a, b, move = songs[index], songs[index + 1], moves[index + 1]
@@ -391,6 +431,7 @@ def _timeline(workspace_id, songs, seams, playback, client, buckets, each_seam, 
             cues = None
         parts.append({"kind": "song", "asset_id": song["id"], "name": song["display_name"],
                       "from_s": round(start, 4), "seconds": round(max(0.0, end - start), 4),
+                      "gain_db": gain_db(song.get("loudness")),
                       "url": _sign(client, buckets, file_key, workspace_id) if file_key else None,
                       "file": "lossless" if file_key else "preparing"})
         if cues is not None:
