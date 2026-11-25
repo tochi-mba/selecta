@@ -142,7 +142,17 @@ the hash for songs analysed before: one gentle pass on a daemon thread from `api
 (flag on, Desktop app only), a few songs per batch, each hash its own write, and only where the
 row still has the file's size and time and no hash. It never analyses and never touches another
 column. `db.upsert_song` clears a hash when its file's size or time changes, whenever the column
-exists, so a hash never outlives its bytes.
+exists, so a hash never outlives its bytes. The job skips a file the system marks as not on this
+computer (a cloud placeholder that reading would download) and any file it can't read, leaving it
+for a later pass.
+
+Song identity by audio (`library.audio_identity`, docs/engineering/audio-identity.md): the file
+hash changes with every tag edit, so a song also gets an audio id, a hash of its audio alone
+(`songs.audio_id`, `lib0004audioid`; `local_songs.audio_id` in Cloud). The job and analysis fill
+it in the same read as the file hash, and features of a song that has one are stored and read
+first under `audio_features_key`, so a re-tagged file finds them again. In Cloud a new file hash
+whose audio id matches exactly one song is recorded as that song's (`local_song_hashes`), never a
+new song. Sharing measurements across accounts keeps the file hash.
 
 Reads and writes on the old connection: the store reads the last commit through its own
 connection. `analysis.song.load_song` reads through the caller's own connection when that

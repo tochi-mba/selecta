@@ -151,21 +151,20 @@ whole-file hash identifies them, as before.
 
 ## Desktop
 
-`songs.audio_id` (library migration `lib0004audioid`, nullable, indexed). With
-`core.engine_store` and `library.audio_identity` on, the hash job (`engine_store/song_hashes.py`)
-fills `content_hash` and `audio_id` in one read of the file, and analysis records both. A Desktop
-song is its `songs` row, keyed by path, so a re-tagged file already kept its analysis and
-corrections, and the scan never re-analyses a changed file. What the audio id adds: when a file's
-size or time changes, `db.upsert_song` clears both hashes for the hash job to fill again, and
-the features stored by audio id (below) are found again under the same key, so nothing is
-measured twice and nothing reads the older fallback file.
+`songs.audio_id` (migration `lib0004audioid`, nullable, indexed; "" once read and found to have
+no id). With `core.engine_store` and `library.audio_identity` on, the hash job fills
+`content_hash` and `audio_id` in one read, and analysis records both. A Desktop song is its row,
+keyed by path, so a re-tagged file always kept its analysis and corrections and is never
+re-analysed for it. What the audio id adds: `db.upsert_song` clears both hashes when size or time
+changes, the job fills them again, and the features stored under
+`songs.audio_features_key(workspace, audio_id, version)` are found under the same key. Reads try
+that key, then `features_key` (file hash), then `features/{song_id}.npz`; nothing is deleted.
 
-A moved or renamed file is not matched automatically: the scan forgets the old path and adds the
-new one, as before. To-do item "Re-point a moved song by its audio id" describes doing it safely.
-
-Features key: `engine_store.songs.audio_features_key(workspace, audio_id, version)`. A song with
-an audio id publishes and reads its features there first; the content-hash key
-(`features_key`) and then `features/{song_id}.npz` are read as fallbacks, and nothing is deleted.
+Neither the job nor analysis's hash reads a file the system marks as not on this computer
+(Windows offline or recall attributes, macOS dataless); any read error skips the song for a later
+pass. A moved file is not matched automatically (to-do item "Re-point a moved song by its audio
+id"), and a file whose audio changed in place keeps its old analysis, as before (to-do item "A
+Desktop file whose audio changed keeps its old analysis").
 
 ## Cloud: the same song with new bytes
 
@@ -188,5 +187,13 @@ transaction lock per workspace; SQLite writers already queue):
 3. No match, two or more rows, or a deleted match: a new song, exactly as before. A wrong merge
    loses a member's data; a missed merge only costs a re-measure.
 
-The browser keeps a file's audio id beside its file hash (derived kind `audio`, keyed by the file
-hash), so a file already seen is not read again.
+An upload (`storage/catalogue_link.py`) still finds its song by the row's own hash only (to-do
+item "An upload of a re-tagged copy becomes its own catalogue song"). The browser computes the audio id in the same read as the file hash where the file is hashed
+whole (up to 64 MB), and in a second streamed pass otherwise (`audioIdentity.fileIdentity`). It
+keeps the id beside the file hash (derived kind `audio`, version `a1`, keyed by the file hash), so
+a file already seen is not read again. A file the import memo recognises without reading is read
+once for its audio id, and the id is kept and sent only if the bytes still hash to the remembered
+hash. Older catalogue rows fill in when a device next imports or rescans the file.
+
+With the flag off the columns exist (migrations are not feature switches) but stay empty and are
+never read or matched, and the server drops any `audio_id` it is sent.
