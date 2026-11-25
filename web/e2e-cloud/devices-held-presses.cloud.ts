@@ -53,7 +53,8 @@ test('a press for an offline speaker waits for it, and one that runs out is repo
 
   // 3. It drops off again. A skip pressed now runs out before it returns: it is dropped, the
   //    song never changes, and the controller is told it was not played.
-  await expect(phone.getByTestId('playing-where')).toHaveText('Playing on Den laptop', { timeout: 15_000 });
+  // the held pause was applied, so the speaker is back and paused (ADR-0475 R9: "Paused on {device}")
+  await expect(phone.getByTestId('playing-where')).toHaveText('Paused on Den laptop', { timeout: 15_000 });
   const song = await songOn(phone);
   await laptopContext.setOffline(true);
   expect((await request.post('/test/expire-lease', { data: { user: 'bob' } })).ok()).toBe(true);
@@ -64,7 +65,7 @@ test('a press for an offline speaker waits for it, and one that runs out is repo
   expect((await expired.json()).expired).toBe(1);
   await expect(phone.getByTestId('presses-missed')).toContainText('Not played while Den laptop was offline: Skip (waited too long)');
   await laptopContext.setOffline(false);
-  await expect(phone.getByTestId('playing-where')).toHaveText('Playing on Den laptop', { timeout: 15_000 });
+  await expect(phone.getByTestId('playing-where')).toHaveText('Paused on Den laptop', { timeout: 15_000 });
   await expect(phone.getByTestId('presses-missed')).toContainText('Skip (waited too long)');
   expect(await songOn(phone)).toBe(song);
   expect(await playingAudio(laptop)).toBe(0);
