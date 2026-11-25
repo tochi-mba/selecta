@@ -681,6 +681,7 @@
       "about": "When a room ends, the host, its guests and a paired screen see the room's totals.",
       "routes": [
         "GET /api/rooms/{room_id}/recap",
+        "GET /api/room-recaps",
         "GET /api/guest/rooms/{room_id}/recap"
       ],
       "requires": ["rooms"],

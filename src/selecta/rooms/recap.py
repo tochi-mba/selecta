@@ -181,4 +181,41 @@ def recap_of(
     return built
 
 
-__all__ = ["recap_of"]
+def build_missing(ctx: RoomContext, workspace_id: str, newest: int = 3) -> None:
+    """Build the recap of each of the host's latest ended rooms that has none yet, so the host
+    sees a room's numbers the moment it ends, whether or not a guest or a screen asked first."""
+    from selecta.rooms.schema import rooms
+
+    with transaction(ctx.engine, workspace_id) as conn:
+        ended = conn.execute(
+            sa.select(rooms.c.id)
+            .where(rooms.c.workspace_id == workspace_id, rooms.c.status == "ended")
+            .where(
+                ~sa.select(room_recaps.c.room_id)
+                .where(room_recaps.c.room_id == rooms.c.id)
+                .exists()
+            )
+            .order_by(rooms.c.ended_at.desc())
+            .limit(newest)
+        ).scalars().all()
+    for room_id in ended:
+        recap_of(ctx, workspace_id, room_id)
+
+
+def recent(conn: Connection, workspace_id: str, limit: int = 12) -> list[dict[str, Any]]:
+    """The host's kept recaps, newest first: the rooms they have hosted, in numbers."""
+    rows = conn.execute(
+        sa.select(room_recaps.c.room_id, room_recaps.c.built_at, room_recaps.c.data)
+        .where(room_recaps.c.workspace_id == workspace_id)
+        .order_by(room_recaps.c.built_at.desc(), room_recaps.c.room_id)
+        .limit(limit * 3)
+    )
+    kept = [
+        {"room_id": row.room_id, "recap": dict(row.data), "lines": rules.lines(row.data)}
+        for row in rows
+        if row.data  # a room nobody joined keeps an empty one, and is not a night to list
+    ]
+    return kept[:limit]
+
+
+__all__ = ["build_missing", "recap_of", "recent"]

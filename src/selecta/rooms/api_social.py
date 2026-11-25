@@ -493,6 +493,16 @@ def install_host_routes(
             raise refusal(error) from error
         return {"recap": built, "lines": recap_rules.lines(built) if built else []}
 
+    @app.get("/api/room-recaps")
+    def room_recaps(
+        request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
+    ) -> dict[str, Any]:
+        """Tonight in numbers for the rooms this account has hosted, newest first."""
+        workspace_id = workspace(request, claims)
+        recap.build_missing(social.rooms(), workspace_id)
+        with transaction(engine, workspace_id) as conn:
+            return {"recaps": recap.recent(conn, workspace_id)}
+
     @app.delete("/api/rooms/{room_id}/requests/{request_id}/dedication")
     def clear_dedication(
         room_id: str,

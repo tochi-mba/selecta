@@ -513,6 +513,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/rooms/{room_id}/rounds/{round_id}/cancel"): None,
     ("DELETE", "/api/rooms/{room_id}/requests/{request_id}/dedication"): None,
     ("GET", "/api/crowd-marks"): None,
+    ("GET", "/api/room-recaps"): None,
 }
 # The scoped routes that name one resource. In his own workspace, Bob asking for Alice's
 # resource must get the same answer as asking for one that doesn't exist.

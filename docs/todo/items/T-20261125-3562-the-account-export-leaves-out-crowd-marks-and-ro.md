@@ -2,7 +2,7 @@
 id: T-20261125-3562
 title: The account export leaves out crowd marks and room recaps
 area: rooms
-status: open
+status: done
 priority: normal
 who: claude
 created: 2026-11-25

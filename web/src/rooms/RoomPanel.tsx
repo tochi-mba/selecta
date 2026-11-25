@@ -183,9 +183,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   if (!panel) {
     if (loadError) return <section className="room-panel" aria-labelledby="room-title"><h2 id="room-title" className="visually-hidden">Room</h2><Problem retry={load}>Couldn’t load your room. {loadError}</Problem></section>;
     const start = <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`).then((ok) => { if (ok) setJustOpened(true); return ok; })} />;
-    // ADR-0488: the room that just ended leaves its totals above the form for the next one
-    if (!lastRoom.current || !flagOn('rooms.recap')) return start;
-    return <><RoomRecap api={api} workspaceId={workspaceId} roomId={lastRoom.current} tell={(words, problem) => (problem ? showProblem(words) : showToast(words))} />{start}</>;
+    // ADR-0488: the rooms this account has hosted leave their totals above the form for the next
+    // (read again when a room has just ended here)
+    if (!flagOn('rooms.recap')) return start;
+    return <><RoomRecap key={lastRoom.current} api={api} workspaceId={workspaceId} tell={(words, problem) => (problem ? showProblem(words) : showToast(words))} />{start}</>;
   }
 
   const room = panel.room;

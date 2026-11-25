@@ -101,7 +101,23 @@ def _kept_library(conn: Any, workspace_id: str) -> dict[str, Any]:
     current = rows(
         select(local_current_mix).where(local_current_mix.c.workspace_id == workspace_id)
     )
-    return {"songs": songs, "saved_mixes": saved, "current_mix": current[0] if current else None}
+    # ADR-0488: what the host's rooms left behind that is the host's to keep. Neither holds a
+    # guest id or a nickname: a recap is a room's totals, a crowd mark is how often rooms loved
+    # a song or a blend.
+    from selecta.rooms.social_schema import crowd_marks, room_recaps
+
+    recaps = rows(
+        select(room_recaps.c.room_id, room_recaps.c.built_at, room_recaps.c.data)
+        .where(room_recaps.c.workspace_id == workspace_id).order_by(room_recaps.c.built_at)
+    )
+    marks = rows(
+        select(crowd_marks.c.zone_key, crowd_marks.c.song_id, crowd_marks.c.next_song_id,
+               crowd_marks.c.loves, crowd_marks.c.rooms, crowd_marks.c.last_at)
+        .where(crowd_marks.c.workspace_id == workspace_id)
+        .order_by(crowd_marks.c.song_id, crowd_marks.c.next_song_id)
+    )
+    return {"songs": songs, "saved_mixes": saved, "current_mix": current[0] if current else None,
+            "rooms": {"recaps": [row for row in recaps if row["data"]], "crowd_marks": marks}}
 
 
 def install_routes(
@@ -343,12 +359,16 @@ def install_routes(
                     },
                     "library": f"{len(kept['songs'])} songs in library.json (details, never "
                     "the files on your devices)",
+                    "rooms": f"{len(kept['rooms']['recaps'])} room recaps and "
+                    f"{len(kept['rooms']['crowd_marks'])} crowd marks in rooms.json (totals "
+                    "only, no guest)",
                 }
                 archive.writestr("manifest.json", json.dumps(manifest, indent=2))
                 archive.writestr("settings.json", json.dumps(settings, indent=2))
                 archive.writestr("assets.json", json.dumps(exported_assets, indent=2))
                 archive.writestr("mixes.json", json.dumps(mixes, indent=2, default=str))
                 archive.writestr("library.json", json.dumps(kept["songs"], indent=2, default=str))
+                archive.writestr("rooms.json", json.dumps(kept["rooms"], indent=2, default=str))
                 # ADR-0476: this person's Lucy conversations, as they read them
                 archive.writestr("lucy-conversations.json", json.dumps(lucy_talk, indent=2))
                 archive.writestr("lucy-usage.json", json.dumps(lucy_usage, indent=2, default=str))
