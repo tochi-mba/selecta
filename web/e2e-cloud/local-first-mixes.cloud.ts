@@ -53,8 +53,10 @@ test('a new member makes a mix from the songs on this device, and it is still th
   await page.goto('/mixes/mine');
   await expect(page.getByRole('heading', { name: 'My Mixes' })).toBeVisible();
   // named after its own songs, so two mixes never share a title
-  await expect(page.getByRole('heading', { name: 'Bravo here to Alpha here' })).toBeVisible();
-  await expect(page.getByText(/^2 songs, about/)).toBeVisible();
+  const saved = page.getByRole('region', { name: /^Saved mixes/ }).getByRole('listitem').filter({ hasText: 'Bravo here to Alpha here' });
+  await expect(saved).toHaveCount(1);
+  await expect(saved).toContainText('Current mix');
+  await expect(saved).toContainText('2 songs');
   // and Listen plays it in the order the recipe keeps: the ending chosen in MixSetup last
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Listen', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Bravo here' })).toBeVisible();
