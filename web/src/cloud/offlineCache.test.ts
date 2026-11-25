@@ -9,7 +9,7 @@ import { localFirstRequest, mergeSongs, type CatalogueSong } from './localFirstR
 import {
   CATALOGUE_DB_PREFIX, checkedAt, forgetAccountSnapshot, forgetCached, readCached, rememberAccount, rememberedAccount, writeCached,
 } from './offlineCache';
-import { CLOUD_SHELL_CACHE, CLOUD_SW_URL, syncOfflineShell } from './offlineShell';
+import { CLOUD_SHELL_CACHE, CLOUD_SW_URL, cloudShellOpened, syncOfflineShell } from './offlineShell';
 import { OfflineError } from './resilientRequest';
 
 // What the browser keeps so Cloud opens offline (cloud.offline_shell): the last catalogue per
@@ -150,6 +150,13 @@ describe('the app-shell worker', () => {
     expect(worker.cloudWorker.unregister).toHaveBeenCalled();
     expect(worker.kioskWorker.unregister).not.toHaveBeenCalled();
     expect(deleted).toEqual([CLOUD_SHELL_CACHE]);
+  });
+
+  it('knows a page Cloud’s worker opened, and no other', () => {
+    expect(cloudShellOpened({ controller: { scriptURL: `https://selecta.test${CLOUD_SW_URL}` } })).toBe(true);
+    expect(cloudShellOpened({ controller: { scriptURL: 'https://selecta.test/kiosk-sw.js' } })).toBe(false);
+    expect(cloudShellOpened({ controller: null })).toBe(false);
+    expect(cloudShellOpened(undefined)).toBe(false);
   });
 
   it('a browser that refuses service workers simply has none, and may be asked again', async () => {

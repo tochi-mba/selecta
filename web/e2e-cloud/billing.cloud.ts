@@ -6,17 +6,17 @@ import { accessible, listener, signedIn } from './cloud';
 test('Plan & billing shows storage, analysis today, Lucy turns and exports, with resets', async ({ page, request }) => {
   const user = listener('meters');
   await signedIn(page, request, user, { songs: 2, seconds: 2 });
-  await request.post('/test/usage', { data: { user, amounts: { analysis_song: 12, 'lucy_turn.haiku': 9, export: 1 } } });
+  await request.post('/test/usage', { data: { user, amounts: { analysis_song: 12, 'lucy_turn.everyday': 9, export: 1 } } });
   await page.goto('/account/billing');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Plan & billing');
   const storage = page.getByRole('region', { name: 'Storage' });
   await expect(storage).toContainText('of 10.0 GB');
-  await expect(page.getByRole('region', { name: 'Analysis today' })).toContainText('12 of 150 songs');
-  await expect(page.getByRole('region', { name: 'Analysis today' })).toContainText('Resets');
+  await expect(page.getByRole('region', { name: 'Songs analysed today' })).toContainText('12 of 150 songs');
+  await expect(page.getByRole('region', { name: 'Songs analysed today' })).toContainText('Resets');
   await expect(page.getByRole('region', { name: 'Lucy turns this month' })).toContainText('9 of 40 turns');
   await expect(page.getByRole('region', { name: 'Lucy turns this month' })).toContainText(/Resets (\d+ \w+|\w+ \d+)/);
   await expect(page.getByRole('region', { name: 'Exports this month' })).toContainText('1 of 3 exports');
-  await expect(page.getByText('Includes Lucy Basic.')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Your plan' }).getByRole('listitem').filter({ hasText: 'Lucy Basic.' })).toBeVisible();
   await accessible(page, 'billing');
 });
 
@@ -24,7 +24,9 @@ test('checkout needs all three consents, sends the consent version, and waits fo
   const user = listener('checkout');
   await signedIn(page, request, user, { path: '/account/billing' });
   await request.post('/test/checkout-delay', { data: { seconds: 4 } });
-  const choose = page.getByRole('button', { name: 'Choose Premium' });
+  // the plan picker: a radio per plan, then one Continue button for the chosen plan
+  await page.getByRole('radiogroup', { name: 'Plan' }).getByRole('radio', { name: /^Premium/ }).check();
+  const choose = page.getByRole('button', { name: 'Continue with Premium' });
   await expect(choose).toBeDisabled();
   await page.getByLabel('I agree to the subscription terms.').check();
   await page.getByLabel('I ask for access to start immediately.').check();
@@ -58,7 +60,8 @@ test('a paid plan changes or cancels in the portal', async ({ page, request }) =
   await request.post('/test/checkout-delay', { data: { seconds: 0 } });
   for (const box of ['I agree to the subscription terms.', 'I ask for access to start immediately.']) await page.getByLabel(box).check();
   await page.getByLabel(/14-day cancellation right/).check();
-  await page.getByRole('button', { name: 'Choose Standard' }).click();
+  await page.getByRole('radiogroup', { name: 'Plan' }).getByRole('radio', { name: /^Standard/ }).check();
+  await page.getByRole('button', { name: 'Continue with Standard' }).click();
   await page.getByRole('button', { name: 'Pay' }).click();
   await expect(page.getByText(/You’re on Standard/)).toBeVisible({ timeout: 30_000 });
   // The server only returns to an https address, and this test server has no TLS: send the
@@ -67,7 +70,7 @@ test('a paid plan changes or cancels in the portal', async ({ page, request }) =
     const body = route.request().postDataJSON() as { return_url: string };
     await route.continue({ postData: JSON.stringify({ return_url: body.return_url.replace(/^http:/, 'https:') }) });
   });
-  await page.getByRole('button', { name: 'Change plan or cancel' }).click();
+  await page.getByRole('button', { name: 'Change plan' }).click();
   await expect(page.getByRole('heading', { name: 'Test billing portal' })).toBeVisible();
   await page.getByRole('link', { name: 'Return to SelectaDJ' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Plan & billing');

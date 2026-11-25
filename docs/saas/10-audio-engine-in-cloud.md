@@ -70,6 +70,19 @@ This type is introduced before merge in PR #56, so no legacy production migratio
 
 The rule runs before a file is stored (`JobContext.publish`, so for both `LocalArtifactStore` and `R2ArtifactStore`; `publish_artifact` and `RemoteWorkerClient.publish_artifact` behind the gateway), when a handler queues an output (`CollectingSink`), when `complete` accepts outputs (local runner, cloud runner and the gateway's `/complete`) and in `artifacts.write`. A refusal raises `ProvenanceInvalid`; at `complete` the attempt fails with error class `engine_bug` (the gateway answers 422 `completion_rejected`) and no row is written. Migration `a3f8d2c61b97` made both columns NOT NULL and rewrote the older flat `play.proxy` provenance into this shape (input hashes unchanged); it stops instead of guessing if any row lacks either. Invariant 5 (`selecta.audit.invariants`) flags a row whose provenance fails the rule. Tests: `tests/test_cloud_artifact_provenance.py`.
 
+### 10.7 Hosted processing, end to end (as built 2026-11-25)
+
+For an account with the `cloud.hosted_media` grant, flag `cloud.hosted_render` (requires the grant and `cloud.stored_media`) runs the engine on the server. Module `selecta.hosted_render`, routes `routes/hosted_render.py` (installed with the playback proxy routes):
+
+- **Upload.** An accepted upload gets an `analyse.song` job at once (`storage/api.py` calls `hosted_render.on_upload_accepted`; a failure there never fails the upload). `POST /api/hosted/songs/prepare` makes the job for older uploads; a failed analysis is retried only when the customer asks (`retry: true`).
+- **Status.** `GET /api/hosted/songs`: per song queued, running, ready (tempo, Camelot key) or failed with the worker's reason; counts and a time estimate from the median real run time (`jobs.actual_cost_s`) of this workspace's last 25 finished jobs.
+- **Mix.** `POST /api/hosted/mixes/plan` orders analysed songs with the local planner (`planner.beam.plan_set`) and returns its planned move per hand-off. `POST /api/hosted/mixes/render` asks for each song's lossless playback file (`work.proxies.prepare`, `play.proxy`) and a `seam.render` per hand-off with the planned move as its style, and answers with a timeline: song parts cut at each seam's cue points, the seam clips between them, signed links, and every seam's state and audit result. The web plays it as rendered (`web/src/cloud/hosted/timelinePlayer.ts`: parts decoded ahead and scheduled back to back on one AudioContext clock).
+- **Seams.** `seam.render` now chooses moves the local app's way (`workers/engine_seams.py`): the planned move first, then `seam_kinds.fallback_order` (blends, effects, reverb last), each placed by `seam_making._bar_cue_render` (four placements, beats tightened, audited), and a clean cut when nothing passes. Stem moves and word moves are skipped on the server (Demucs is under review, Cloud fetches no lyrics; §10.3, §10.5); the job result lists them as `not_on_server`.
+- **Export.** `POST /api/hosted/mixes/export` makes one `export.render` job; `GET /api/hosted/exports/{job_id}` gives its state, estimate and a signed link to the FLAC.
+- Every job names its stored inputs in `input_ref["objects"]`, which the worker gateway signs and the dev worker reads (the business horizon's jobs now do too).
+
+Measured differences from the local app and the operator runbook: [hosted-mode-walkthrough.md](../engineering/hosted-mode-walkthrough.md).
+
 ---
 
 [← 09-lucy-ai-gateway.md](09-lucy-ai-gateway.md) · [Contents](README.md#chapters) · [11-ui-ux.md →](11-ui-ux.md)

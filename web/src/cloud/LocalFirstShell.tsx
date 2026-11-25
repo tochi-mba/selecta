@@ -27,8 +27,7 @@ import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
 import { RequestsContext, RequestsPanel, useRequests, type RequestRow } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
-import type { Account, Api } from './api';
-import { planName } from './api';
+import { planName, type Account, type Api } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
 import { forgetHostedAssets, hostedAssets, hostedResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
@@ -371,17 +370,17 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       if (typeof document === 'undefined' || document.visibilityState === 'visible') void sweepLapsed();
     };
     const timer = window.setInterval(refreshWhenActive, AVAILABILITY_REFRESH_MS);
+    // a browser's first visit registers its device after the startup sweep: report then, or the
+    // server counts no songs here and nothing can play on this device until the next sweep
+    const registered = () => { void sweepLapsed(true); };
+    window.addEventListener(DEVICE_REGISTERED, registered);
     window.addEventListener('focus', refreshWhenActive);
     document.addEventListener('visibilitychange', refreshWhenActive);
-    // ADR-0475: the startup sweep can finish before this browser is registered as a device, and
-    // then had no device to report for; once registered, the songs here are reported (a sweep
-    // reports only while no report has gone yet), so Play counts this device's music
-    window.addEventListener(DEVICE_REGISTERED, refreshWhenActive);
     return () => {
+      window.removeEventListener(DEVICE_REGISTERED, registered);
       window.clearInterval(timer);
       window.removeEventListener('focus', refreshWhenActive);
       document.removeEventListener('visibilitychange', refreshWhenActive);
-      window.removeEventListener(DEVICE_REGISTERED, refreshWhenActive);
     };
   }, [sweepLapsed]);
 

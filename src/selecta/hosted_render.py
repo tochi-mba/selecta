@@ -191,12 +191,11 @@ def on_upload_accepted(engine: Engine, work: Work, workspace_id: str, asset_id: 
 
 
 def _measured(conn: Connection, workspace_id: str, kind: str) -> float:
-    """Median seconds a finished job of this type took here, or the first guess."""
-    rows = conn.execute(sa.select(jobs.c.started_at, jobs.c.finished_at).where(
+    """Median seconds the last finished jobs of this type really ran here (`actual_cost_s`, the
+    successful attempt alone, so a retried job's lost time doesn't count), or the first guess."""
+    took = sorted(float(value) for value in conn.execute(sa.select(jobs.c.actual_cost_s).where(
         jobs.c.workspace_id == workspace_id, jobs.c.type == kind, jobs.c.state == "succeeded",
-        jobs.c.started_at.is_not(None), jobs.c.finished_at.is_not(None))
-        .order_by(jobs.c.finished_at.desc()).limit(25)).all()
-    took = sorted(float(r.finished_at - r.started_at) for r in rows if r.finished_at > r.started_at)
+        jobs.c.actual_cost_s > 0).order_by(jobs.c.finished_at.desc()).limit(25)).scalars())
     return took[len(took) // 2] if took else FIRST_GUESS_S[kind]
 
 
@@ -255,7 +254,16 @@ def plan_mix(engine: Engine, workspace_id: str, read_object: Callable[[str, Path
             path = _read_analysis(read_object, key, Path(folder))
             infos.append(song_from_analysis(path, Path(song["original_key"]), number, side))
             by_number[number] = song["id"]
-    planned = plan_set(infos, count=min(count, len(infos)), seed=None)
+    # A song with nowhere to leave or land (a short clip has no exit cue) can't join a mix: the
+    # planner would start there and stop at one song. Try the next start when a plan is short.
+    usable = [song for song in infos if song.exit_cues() and song.entry_cues()]
+    planned: list = []
+    for start in usable[:6]:
+        tried = plan_set(usable, start_id=start.id, count=min(count, len(usable)), seed=None)
+        if len(tried) > len(planned):
+            planned = tried
+        if len(planned) >= min(count, len(usable)):
+            break
     return [{"asset_id": by_number[item.song.id], "move": item.transition} for item in planned]
 
 
@@ -306,8 +314,11 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
     ids = [str(item["asset_id"]) for item in order]
     moves = [item.get("move") if isinstance(item.get("move"), str) else None for item in order]
     prepare_songs(engine, work, workspace_id, ids, retry=retry, created_by=created_by)
+    with transaction(engine, workspace_id) as conn:
+        # only this workspace's own live songs: anyone else's id reads as a missing song
+        own = [song["id"] for song in _songs(conn, workspace_id, ids)]
     playback = {p.asset_id: p for p in proxies.prepare(
-        work.store, workspace_id, ids, need="mix", created_by=created_by)}
+        work.store, workspace_id, own, need="mix", created_by=created_by)} if own else {}
     with transaction(engine, workspace_id) as conn:
         by_id = {song["id"]: song for song in _songs(conn, workspace_id, ids)}
         songs = [by_id[i] for i in ids if i in by_id]

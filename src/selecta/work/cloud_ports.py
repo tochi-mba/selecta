@@ -96,7 +96,7 @@ class CloudJobFlags:
             flag_id,
             context,
             build_states=flags.effective(),
-            rules=self.rules.snapshot,
+            rules=self.rules.snapshot_for(conn),
             entitled=plan.flags,
             plan_gated=plans.plan_gated_flags(),
             user_prefs=user_preferences(conn, owner.id),

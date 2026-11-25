@@ -150,8 +150,17 @@ def main() -> None:
     signal.signal(signal.SIGINT, lambda *_: stop.set())
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     print("[WORKER] Ready: claiming Cloud jobs from the local database.", flush=True)
+    # A deployment's maintenance loop reaps leases a dead worker left behind; the dev stack has
+    # none, so a worker stopped mid-job held its jobs (and the plan's lane cap) forever.
+    reaped_at = 0.0
     while not stop.is_set():
         time.sleep(0.5)
+        if time.monotonic() - reaped_at > 15.0:
+            reaped_at = time.monotonic()
+            try:
+                store.reap_expired()
+            except Exception as error:  # noqa: BLE001 - a busy database is tried again later
+                print(f"[WORKER] Couldn't reap expired leases yet: {error}", flush=True)
     for runner in runners:
         runner.stop(timeout=10)
 

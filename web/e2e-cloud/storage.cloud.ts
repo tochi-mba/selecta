@@ -35,7 +35,7 @@ test('over quota: the banner names the overage, uploads wait, listening and down
   await nav(page).getByRole('button', { name: 'Plan & billing' }).click();
   await expect(page.getByRole('region', { name: 'Exports this month' })).toContainText('Paused while you are over your storage limit');
   await banner.getByRole('button', { name: 'Upgrade' }).click();
-  await expect(page.getByRole('button', { name: 'Choose Premium' })).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Plan' }).getByRole('radio', { name: /^Premium/ })).toBeVisible();
 });
 
 test('Download my data saves a ZIP with originals, settings.json and mixes.json', async ({ page, request }) => {
@@ -48,7 +48,11 @@ test('Download my data saves a ZIP with originals, settings.json and mixes.json'
   // A ZIP's central directory names every entry in plain bytes.
   const names = readFileSync(await saved.path()).toString('latin1');
   for (const entry of ['settings.json', 'mixes.json', 'manifest.json', 'assets.json', 'originals/']) expect(names).toContain(entry);
-  await expect(page.getByText(/original files, settings\.json and mixes\.json/)).toBeVisible();
+  // the card says what the file holds, one line each (defd3675)
+  const holds = page.getByRole('list', { name: 'What is in the file' });
+  await expect(holds).toContainText('Your original audio');
+  await expect(holds).toContainText('settings.json');
+  await expect(holds).toContainText('mixes.json');
 });
 
 test('a refreshed browser carries on an upload from the parts already uploaded', async ({ page, request }) => {
