@@ -4,6 +4,7 @@ import { App } from './App';
 import type { MixData } from './api';
 import { setCopyMode } from './copy';
 import { startFeel } from './feel/root';
+import { startPointerLight } from './feel/pointerLight';
 import { setFlags } from './flags';
 import { handOnStartupStatus } from './startupStatus';
 import { BrandMark } from './ui/BrandMark';
@@ -29,6 +30,7 @@ export function RuntimeApp() {
   // ADR-0477: keep <html data-feel> right from the very first screen, so the local app, Welcome,
   // every sign-in screen and both Cloud frames get the feel sheets, not only pages inside the Shell
   useEffect(() => startFeel(), []);
+  useEffect(() => startPointerLight(), []);
 
   useEffect(() => {
     let current = true;
