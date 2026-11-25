@@ -388,7 +388,9 @@ def install_routes(
         try:
             rooms().disconnect_display(token)
         except RoomError as error:
-            raise refusal(error) from error
+            venue = getattr(app.state, "zone_rooms", None)  # ADR-0488: a venue zone's screen
+            if venue is None or not venue().unpair_self(token):
+                raise refusal(error) from error
         response.delete_cookie(
             DISPLAY_COOKIE, path="/api/display", secure=True, httponly=True, samesite="strict"
         )
@@ -401,6 +403,11 @@ def install_routes(
         try:
             shown = rooms().display_view(token)
         except RoomError as error:
+            # ADR-0488: a screen staff paired to a venue zone reads that zone's room
+            venue = getattr(app.state, "zone_rooms", None)
+            seen = venue().screen_view(token) if venue is not None else None
+            if seen is not None:
+                return seen
             raise refusal(error) from error
         answer = {
             "state": shown.state.value,

@@ -433,6 +433,93 @@
       "scope": "global",
       "kind": "release",
       "owner": "business"
+    },
+    "business.rooms.keeps": {
+      "label": "Venue rooms: keep the songs you liked",
+      "about": "A venue guest's heart saves the playing song to a list kept only on their own phone. Off while Business is not on sale.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "GET /api/venue-rooms/{code}/pulse",
+        "GET /api/zones/{zone_id}/room/social",
+        "PATCH /api/zones/{zone_id}/room/social"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.reactions": {
+      "label": "Venue rooms: reactions",
+      "about": "Venue guests love the playing song or the blend into it; the room sees counts, and the zone learns what its guests loved. Off while Business is not on sale.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "POST /api/venue-rooms/{code}/reactions",
+        "DELETE /api/venue-rooms/{code}/reactions"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.rounds": {
+      "label": "Venue rooms: pick the next song",
+      "about": "A venue room votes between songs the zone's content rules allow now; the winner is the next request the player is given. Off while Business is not on sale.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "POST /api/zones/{zone_id}/room/rounds",
+        "POST /api/zones/{zone_id}/room/rounds/{round_id}/cancel",
+        "POST /api/venue-rooms/{code}/rounds/{round_id}/vote"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.dedications": {
+      "label": "Venue rooms: dedications",
+      "about": "A venue guest adds one line from a fixed list to their own request. Off while Business is not on sale.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "PUT /api/venue-rooms/{code}/requests/{request_id}/dedication",
+        "DELETE /api/venue-rooms/{code}/requests/{request_id}/dedication",
+        "DELETE /api/zones/{zone_id}/requests/{request_id}/dedication"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.recap": {
+      "label": "Venue rooms: tonight in numbers",
+      "about": "A zone's totals for its last trading stretch, for staff, for guests once it has closed, and for a patron screen. Off while Business is not on sale.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "GET /api/zones/{zone_id}/room/recap",
+        "GET /api/venue-rooms/{code}/recap"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.display": {
+      "label": "Venue rooms: patron screen",
+      "about": "Pair a screen at /display to a zone, to show its join code, what is playing and what the room is doing together. Off while Business is not on sale.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "POST /api/zones/{zone_id}/room/displays",
+        "DELETE /api/zones/{zone_id}/room/displays/{display_id}"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
     }
   }
 }

@@ -23,6 +23,7 @@ from selecta.business.rooms.schema import business_zone_room_guests as guests_t
 from selecta.business.rooms.schema import business_zone_room_requests as requests_t
 from selecta.business.rooms.schema import business_zone_room_retired_codes as retired
 from selecta.business.rooms.schema import business_zone_rooms as rooms_t
+from selecta.business.rooms.social import song_number
 from selecta.persistence import new_id, transaction
 from selecta.rooms import codes, limits, nicknames
 
@@ -242,6 +243,9 @@ class GuestsMixin:
             if playing:
                 payload["now_playing"] = {k: playing.get(k) for k in ("title", "artist",
                                                                       "length_s")}
+                # ADR-0488: a number made from the words, for the page to keep and match by
+                payload["now_playing"]["song_id"] = song_number(
+                    playing.get("title") or "", playing.get("artist") or "")
             payload["coming_up"] = [
                 {"request_id": r["id"], "title": r["title"], "artist": r["artist"],
                  "votes": r["votes"], "mine": r["guest_id"] == guest["id"]}
@@ -255,6 +259,8 @@ class GuestsMixin:
                  "status": r["status"], "text": STATUS_TEXT[r["status"]], "votes": r["votes"]}
                 for r in mine
             ]
+            # ADR-0488: which shared features are on, and this guest's own taps and vote
+            payload.update(self.guest_social(conn, guest, room, now))
             return payload
 
     def search(self, token: str, query: str, *, room_key: str | None = None,

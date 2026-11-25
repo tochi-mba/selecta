@@ -224,6 +224,11 @@ def install_routes(
         staff(request, zone_id, ("business.kiosk.play",),
               lambda s, c, a: s.record_kiosk_address(c, zone_id, address))
 
+    # ADR-0488: what a standing room does together, and the patron screen's view of it
+    from selecta.business.rooms import api_social
+
+    api_social.install_staff_routes(app, staff=staff)
+    app.state.zone_rooms = service
     api_guest.install_guest_routes(app, service=service, flag_on=flag_on,
                                    allowed_origins=allowed_origins)
 
