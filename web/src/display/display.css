@@ -102,9 +102,18 @@ p { margin: 0.4em 0; }
 .d-disconnect:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .d-disconnect[aria-busy] { cursor: progress; }
 .d-reconnecting { position: fixed; top: 3vmin; right: 3vmin; margin: 0; padding: 0.4em 0.9em; border-radius: var(--radius-pill); background: var(--ink); color: var(--surface-base); font-size: 0.75em; font-weight: var(--weight-strong); animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+/* What a room does together (ADR-0488, social.ts): the room's hearts under the playing song, and
+   one heart rising for each new love. A heart answers a guest's tap; none moves on a timer. */
+.d-social { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em 1.2em; margin: 0.8em 0 0; font-size: 0.95em; font-weight: var(--weight-strong); }
+.d-loves { display: inline-flex; align-items: center; gap: 0.4em; font-variant-numeric: tabular-nums; }
+.d-heart { width: 1em; height: 1em; fill: var(--selected); }
+.d-loved { animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-rising { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.d-rise { position: absolute; bottom: 14vh; width: 5vmin; height: 5vmin; fill: var(--selected); opacity: 0; animation: d-rise calc(var(--motion-slow) * 8) var(--motion-ease) forwards; }
 /* a tall or narrow screen (a portrait TV, a tablet on a stand): the room on top, the code under it */
 @media (max-width: 900px), (orientation: portrait) { .d-room { grid-template-columns: 1fr; gap: 5vmin; } .d-qr { width: min(38vmin, 100%); } body { overflow: auto; } }
 @keyframes d-arrive { from { opacity: 0; transform: translateY(0.4em); } }
 @keyframes d-drift { from { transform: translate(-0.8vmin, -0.6vmin); } to { transform: translate(0.8vmin, 0.6vmin); } }
 @keyframes d-turn { to { transform: rotate(360deg); } }
+@keyframes d-rise { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-46vh) scale(1.15); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

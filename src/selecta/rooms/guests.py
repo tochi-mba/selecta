@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 import sqlalchemy as sa
 
 from selecta.persistence import new_id, transaction
-from selecta.rooms import codes, nicknames
+from selecta.rooms import codes, nicknames, reactions
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.planning import pump, withdraw_from_planner
 from selecta.rooms.schema import room_bans, room_guests, room_votes
@@ -220,6 +220,8 @@ def ban_guest(
             voted_on = list(voted_on)
             conn.execute(sa.delete(room_votes).where(room_votes.c.guest_id == guest.id))
             recount_votes(conn, voted_on)
+            # ADR-0488: their hearts and blend taps go too, and the plays are counted again
+            reactions.forget_guest(conn, room, guest.id)
             ctx.publish(conn, room, "room.guest", {"guest_id": guest.id, "status": "banned"})
         guest = load_guest(conn, room, guest_id)
     withdraw_from_planner(ctx, workspace_id, withdrawn)

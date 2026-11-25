@@ -21,6 +21,7 @@
 
 import { ApiError, call, h, patch, replace, Song, songLine, store } from '../rooms/dom';
 import { art, bars, chip, empty, icon, IconName, outlineRow, songText, Tone } from './parts';
+import * as social from './social/social';
 import './guest.css';
 
 type Item = { request_id: string; song: Song | null; status: string; votes: number; nickname: string | null; voted: boolean; mine: boolean };
@@ -35,6 +36,9 @@ type View = {
   /** ADR-0475: a browser-first room offers only the songs of the device making the sound. Absent
    * (an older server) is ready. */
   music?: 'ready' | 'choosing' | 'reconnecting' | 'none';
+  /** ADR-0488: a paired big screen is showing now, and which of the room's shared features are
+   * on. Absent (an older server) is no screen and none of them. */
+  screen?: boolean; social?: social.Features;
 };
 /** What the guest is told while the room has no device to play from; never a device's name. */
 const MUSIC_WORDS: Record<string, { title: string; more: string }> = {
@@ -200,7 +204,9 @@ function joinScreen(error = ''): void {
     button,
     h('p', { className: 'g-small g-center' }, "You'll get a nickname you can change. No account needed."),
     h('details', { className: 'g-keeps' }, h('summary', {}, 'What SelectaDJ keeps'),
-      h('p', { className: 'g-small' }, 'A random guest id, a scrambled form of your network address, your nickname and your requests. They are deleted 30 days after the room closes. No tracking.')),
+      h('p', { className: 'g-small' }, 'A random guest id, a scrambled form of your network address, your nickname, your requests, and your votes and reactions. They are deleted 30 days after the room closes. Songs you keep stay on this phone only. No tracking.')),
+    // ADR-0488: songs kept in earlier rooms are on this phone, so they show before joining
+    social.earlier(),
   );
   (button as HTMLButtonElement).focus();
 }
@@ -268,7 +274,11 @@ function songItem(song: Song | null, key: string | undefined, ...extra: (Node | 
 /** The room is over: thanks, and what became of the songs this guest asked for. */
 function closed(v: View | null): void {
   connection('ok');
-  stop('moon', 'This room has closed', 'Thanks for coming. The host has ended the party.', v?.my_requests.length ? myRequests(v) : null);
+  social.stop();
+  stop('moon', 'This room has closed', 'Thanks for coming. The host has ended the party.',
+    v?.my_requests.length ? myRequests(v) : null,
+    // ADR-0488: the songs this guest kept are on their phone, so they outlive the room
+    social.keptAfter(roomId ?? code, v?.room_name ?? ''));
 }
 
 function voteButton(item: Item): HTMLElement | null {
@@ -335,6 +345,7 @@ function shell(): Record<string, HTMLElement> {
       searchPanel(),
       h('div', { id: 'g-mine' }),
       h('div', { id: 'g-lists' }),
+      h('div', { id: 'g-kept' }),
       h('p', { className: 'g-leave' }, leaving),
       h('div', { className: 'g-bar', id: 'g-bar' }));
     replace(root, page);
@@ -344,7 +355,7 @@ function shell(): Record<string, HTMLElement> {
   const part = (id: string) => document.getElementById(id) as HTMLElement;
   // a screen reader hears the room's name when the room first opens
   if (opened) window.setTimeout(() => { if (!root.contains(document.activeElement)) document.getElementById('g-name')?.focus({ preventScroll: true }); }, 0);
-  return { head: part('g-head'), banners: part('g-banners'), now: part('g-now'), search: part('g-search'), lists: part('g-lists'), mine: part('g-mine') };
+  return { head: part('g-head'), banners: part('g-banners'), now: part('g-now'), search: part('g-search'), lists: part('g-lists'), mine: part('g-mine'), kept: part('g-kept') };
 }
 
 // Only the parts that change are redrawn, and those are patched in place (keyed by request), so a
@@ -383,6 +394,9 @@ function draw(): void {
     active && v.waiting.length ? section('Waiting for the host', h('ul', { className: 'g-list' }, ...v.waiting.map((item) => songItem(item.song, item.request_id, voteButton(item))))) : null);
   // nothing shows here until the guest has asked for something
   patch(parts.mine, active && v.my_requests.length ? myRequests(v) : null);
+  // ADR-0488: the songs this guest kept, and the room's pulse while something in it moves
+  patch(parts.kept, active ? social.kept(v) : null);
+  social.sync(v, active);
   if (changed) say(changed);
 }
 
@@ -398,6 +412,7 @@ function nowPlaying(v: View): HTMLElement {
         h('h2', {}, bars(playing), song && v.music_paused ? 'Paused' : 'Now playing'),
         h('p', { className: song ? 'g-now' : 'g-now g-muted' }, song ? song.title : 'Nothing playing yet'),
         h('p', { className: 'g-now-by' }, song ? song.artist : 'Ask for a song and the host adds it to the mix.'))),
+    social.hero(v),
     v.up_next.length ? h('div', { className: 'g-next', 'data-key': 'next' },
       h('h2', {}, 'Up next'),
       h('ol', { className: 'g-list' }, ...v.up_next.slice(0, 3).map((next, index) => songItem(next, `next-${index}-${next.song_id}`)))) : null);
@@ -801,6 +816,7 @@ async function leave(button: HTMLElement): Promise<void> {
     await call(`${base()}/leave`, { method: 'POST' });
   } catch { /* leaving locally is enough if the server can't be reached */ }
   busy.delete('leave');
+  social.stop();
   store(roomKey, null);
   roomId = null;
   view = null;
@@ -825,6 +841,8 @@ if (viewport) {
 if (new URLSearchParams(location.search).get('at') === 'venue') {
   void import('./venue').then((venue) => venue.startVenue(root, code));
 } else {
+  // ADR-0488: kept songs are filed under the room's id, which stays the same through a new code
+  social.init({ base, shelf: () => roomId ?? code, redraw: draw, say, buzz });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && roomId) void refresh(); });
   window.addEventListener('online', () => { if (roomId) void refresh(); });
   // the phone says it lost its signal: say so at once, without waiting for the next read to fail

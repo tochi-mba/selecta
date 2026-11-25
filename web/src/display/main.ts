@@ -11,6 +11,8 @@
 
 import { ApiError, call, h, patch, replace, Song } from '../rooms/dom';
 import { qrSvg } from '../rooms/qr';
+import type { Pulse } from '../guest/social/social';
+import * as social from './social';
 import './display.css';
 
 type Item = { request_id: string; song: Song | null; votes: number; nickname: string | null };
@@ -20,6 +22,8 @@ type View = {
   now_playing: Song | null; up_next: Song[]; upcoming: Item[]; music_paused: boolean;
   /** ADR-0475 D29: the speaker's state, said as the guest page says it; absent is ready. */
   music?: 'ready' | 'choosing' | 'reconnecting' | 'none' | null;
+  /** ADR-0488: the room's pulse, the same one the phones read. Absent from an older server. */
+  pulse?: Pulse;
 };
 /** The second screen says what guests are told while the room has no device playing. */
 const MUSIC_WORDS: Record<string, { title: string; more: string }> = {
@@ -139,7 +143,9 @@ function drawRoom(view: View): void {
     h('header', { className: 'd-top', 'data-key': 'top' }, brand(), h('h1', {}, view.room_name ?? 'Room')),
     h('div', { className: 'd-playing', 'data-key': 'playing', 'data-on': playing },
       h('h2', { 'data-key': 'now-title' }, h('span', { className: 'd-eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), waitingOn ? (view.music === 'reconnecting' ? 'Paused' : 'Waiting') : now && view.music_paused ? 'Paused' : 'Now playing'),
-      h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? view.music ?? 'none'}` }, now ? now.title : waitingOn ? waitingOn.title : 'Nothing playing yet', h('span', { className: 'd-by' }, now ? now.artist : waitingOn ? waitingOn.more : 'Scan the code and pick the first song.'))),
+      h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? view.music ?? 'none'}` }, now ? now.title : waitingOn ? waitingOn.title : 'Nothing playing yet', h('span', { className: 'd-by' }, now ? now.artist : waitingOn ? waitingOn.more : 'Scan the code and pick the first song.')),
+      // ADR-0488: the room's hearts for this song; absent when reactions are off for the screen
+      now ? social.line(view.pulse) : null),
     h('div', { className: 'd-lists', 'data-key': 'lists' },
       next.length ? h('div', { 'data-key': 'next-col' },
         h('h2', { 'data-key': 'next-title' }, 'Up next'),
@@ -149,6 +155,8 @@ function drawRoom(view: View): void {
         view.upcoming.length
           ? h('ol', { className: 'd-list', id: 'd-upcoming' }, ...view.upcoming.slice(0, next.length ? 3 : 5).map((item) => line(item.song, item.request_id, item.nickname)))
           : h('p', { className: 'd-muted d-none', id: 'd-upcoming' }, 'No requests yet. Scan the code and ask for a song.'))));
+  // ADR-0488: a heart rises for each love since the last look
+  social.rise(now ? view.pulse : undefined);
 }
 
 async function tick(): Promise<void> {

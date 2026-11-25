@@ -42,6 +42,15 @@ STATUS = {
     Refusal.INVALID_NICKNAME: 422,
     Refusal.INVALID_NAME: 422,
     Refusal.NO_SUCH_PAIRING: 404,
+    Refusal.FEATURE_OFF: 409,
+    Refusal.SONG_CHANGED: 409,
+    Refusal.NO_ROUND: 409,
+    Refusal.ROUND_OPEN: 409,
+    Refusal.TOO_FEW_SONGS: 409,
+    Refusal.JOINED_LATE: 403,
+    Refusal.NOT_AN_OPTION: 422,
+    Refusal.NO_SUCH_LINE: 422,
+    Refusal.NO_SPEAKER: 409,
 }
 
 # A deployment behind a proxy names the header carrying the visitor's address, for example

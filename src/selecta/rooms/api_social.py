@@ -18,13 +18,18 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable, Mapping
-from typing import Any
+from typing import Any, Literal
 
 import sqlalchemy as sa
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
+from pydantic import BaseModel, Field
+from sqlalchemy.engine import Engine
 
+from selecta.flags import cloud_gate
+from selecta.flags.rules import RulesCache
+from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
-from selecta.rooms import limits
+from selecta.rooms import limits, reactions
 from selecta.rooms import pulse as pulses
 from selecta.rooms.api_common import check_origin, refusal
 from selecta.rooms.display import DisplayState, DisplayView
@@ -32,14 +37,21 @@ from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.host_features import SOCIAL, HostFeatures
 from selecta.rooms.schema import room_guests
 from selecta.rooms.service import Rooms
+from selecta.rooms.social_schema import room_plays
 from selecta.rooms.store import GuestRef, GuestStatus
 from selecta.rooms.views import GuestView
+from selecta.roomsocial import reactions as tap_rules
 
 STANDING_SECONDS = 5.0  # how long a guest's standing is remembered between pulse reads
 MAX_STANDINGS = 50_000
 
 Gate = Callable[[Request, str], tuple[str, GuestRef]]
 Hit = Callable[[str, str, limits.Window], None]
+
+
+class TapBody(BaseModel):
+    kind: Literal["love", "blend"]
+    play_id: str = Field(min_length=1, max_length=36)
 
 
 class Social:
@@ -162,5 +174,101 @@ def install_guest_routes(
         social.active(ref)
         return social.pulse(ref.workspace_id, ref.room_id)
 
+    # Reactions (rooms.reactions): a love for the playing song, or for the blend into it.
+    social.extras.append(_reactions_extra)
+    social.guest_parts.append(lambda seen, on: _my_taps(social, seen, on))
 
-__all__ = ["Gate", "Hit", "Social", "install_guest_routes"]
+    def tapped(token: str, ref: GuestRef, body: TapBody, *, on: bool) -> dict[str, Any]:
+        social.offered(ref, "reactions")
+        act = reactions.react if on else reactions.unreact
+        try:
+            play = act(social.rooms(), token, body.kind, body.play_id)
+        except RoomError as error:
+            # The song changed under the tap: the fresh pulse rides along, so the page shows
+            # the new song without waiting for its next read.
+            if error.refusal is Refusal.SONG_CHANGED:
+                social.changed(ref.room_id)
+                answer = refusal(error)
+                answer.detail["pulse"] = social.pulse(ref.workspace_id, ref.room_id)
+                raise answer from error
+            raise refusal(error) from error
+        social.changed(ref.room_id)
+        return {
+            "play_id": play.id,
+            "kind": body.kind,
+            "on": on,
+            "pulse": social.pulse(ref.workspace_id, ref.room_id),
+        }
+
+    @app.post("/api/guest/rooms/{room_id}/reactions")
+    def guest_react(room_id: str, body: TapBody, request: Request) -> dict[str, Any]:
+        token, ref = tap(request, room_id)
+        return tapped(token, ref, body, on=True)
+
+    @app.delete("/api/guest/rooms/{room_id}/reactions")
+    def guest_unreact(room_id: str, body: TapBody, request: Request) -> dict[str, Any]:
+        token, ref = tap(request, room_id)
+        return tapped(token, ref, body, on=False)
+
+
+def _reactions_extra(conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str, Any]:
+    """What the pulse says about the room's taps beyond the counts: how many guests are here,
+    and whether enough of them loved the blend for a big screen to say so."""
+    if not pulse.features.get("reactions", False) or pulse.play is None:
+        return {}
+    online = reactions.guests_online(conn, room, pulse.now)
+    return {
+        "online": online,
+        "blend_loved": pulse.play.previous_song_id is not None
+        and tap_rules.worth_saying(pulse.play.blends, online),
+    }
+
+
+def _my_taps(social: Social, seen: GuestView, on: Mapping[str, bool]) -> Mapping[str, Any]:
+    """This guest's own taps on the song that is on and the one before it, by play id."""
+    if not on.get("reactions", False) or not seen.guest_id:
+        return {}
+    with transaction(social.rooms().engine, seen.workspace_id) as conn:
+        recent = list(
+            conn.execute(
+                sa.select(room_plays.c.id)
+                .where(
+                    room_plays.c.workspace_id == seen.workspace_id,
+                    room_plays.c.room_id == seen.room_id,
+                )
+                .order_by(room_plays.c.started_at.desc(), room_plays.c.id.desc())
+                .limit(2)
+            ).scalars()
+        )
+        mine = reactions.mine(conn, seen.room_id, seen.guest_id, recent)
+    return {"my_taps": {play_id: sorted(kinds) for play_id, kinds in mine.items()}}
+
+
+def install_host_routes(
+    app: FastAPI,
+    *,
+    engine: Engine,
+    current_claims: Callable[..., Claims],
+    principal_for: Callable[..., Any],
+    rules: RulesCache,
+) -> None:
+    """What the host's own account reads: signed in, and gated by the feature's flag."""
+
+    def workspace(request: Request, claims: Claims, gate: str) -> str:
+        found = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        with transaction(engine, found.workspace.id) as conn:
+            cloud_gate.require(conn, found, gate, rules)
+        return found.workspace.id
+
+    @app.get("/api/crowd-marks")
+    def crowd_marks(
+        request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
+    ) -> dict[str, Any]:
+        """What rooms loved, for the planner and the library: songs, and pairs of songs that
+        blended. `rooms` is how many rooms loved it; `loves` is every tap."""
+        workspace_id = workspace(request, claims, "rooms.reactions")
+        with transaction(engine, workspace_id) as conn:
+            return {"marks": reactions.loved_songs(conn, workspace_id)}
+
+
+__all__ = ["Gate", "Hit", "Social", "TapBody", "install_guest_routes", "install_host_routes"]
