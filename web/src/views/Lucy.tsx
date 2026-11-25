@@ -1,7 +1,7 @@
 import { KeyboardEvent, memo, ReactNode, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { answerWithin, ApiError, MixData, problemKind, ProblemKind } from '../api';
 import { useApi } from '../requestContext';
-import { useLucyUsage } from '../cloud/lucyUsage';
+import { confirmExtraUsage, useLucyUsage } from '../cloud/lucyUsage';
 import { lucy, lucyTransport, newId } from '../lucy/client';
 import { isRunActive } from '../lucy/reducer';
 import type { ConversationScope, LucyStatus, Selection } from '../lucy/types';
@@ -424,6 +424,8 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel,
           onDecide={decide}
           onEdit={lucyTransport() ? fill : undefined}
           onOlder={convo.older}
+          // ADR-0486 rule 3: only a Cloud account can say yes to extra usage
+          onExtra={usageRequest ? () => confirmExtraUsage(usageRequest) : undefined}
           onRate={lucyTransport() ? async (id, rating) => { await lucy.rate(id, rating); } : undefined}
           empty={(
             <div className="lucy-empty">

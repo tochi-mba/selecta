@@ -22,9 +22,15 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
 | [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 10 | 0 | 110 | 0 | 0 | 0 | 0 |
 | [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 23 | 1 | 155 | 0 | 0 | 0 | 0 |
-| [selecta-lucy-usage-implementation-checklist.md](selecta-lucy-usage-implementation-checklist.md) | 52 | 2 | 2 | 48 | 0 | 0 | 2 | 0 |
+| [selecta-lucy-usage-implementation-checklist.md](selecta-lucy-usage-implementation-checklist.md) | 52 | 4 | 41 | 7 | 0 | 0 | 4 | 0 |
 | [selecta-service-operations-implementation-checklist.md](selecta-service-operations-implementation-checklist.md) | 30 | 0 | 4 | 26 | 0 | 0 | 0 | 0 |
 <!-- checklist-summary:end -->
+
+---
+
+# Selecta Room Social ADR (2026-11-25)
+
+**Proposed; the owner approved the build plan on 2026-11-25:** [ADR-0488](adr-0488-room-social-features.md), programme prefix RS. Five things a room can do together, in party rooms and venue rooms: pick the next song, keep the songs you liked, reactions that teach the DJ, dedications from a fixed list, and tonight in numbers. Phones send only taps, votes and picks from a list (ADR-0416's no-free-text rule holds), and every feature works with phones alone; a paired screen only adds a shared view. 0 of 12 tasks implemented; 0 independently Verified. Baseline main `ae460274`.
 
 ---
 

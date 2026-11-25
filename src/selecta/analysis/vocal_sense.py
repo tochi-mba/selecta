@@ -46,6 +46,12 @@ def singing_spans(
         voice, rate = sf.read(stems.vocals, dtype="float32")
     except Exception:
         return None
+    return spans_in(voice, rate, start)
+
+
+def spans_in(voice: np.ndarray, rate: int, start: float) -> list[tuple[float, float]]:
+    """Stretches of audible singing in a voice stem that begins `start` seconds into its song,
+    in song time. A stem seam already holds its voices, so it measures them with this directly."""
     if voice.ndim > 1:
         voice = voice.mean(axis=1)
     frame = max(int(FRAME_SECONDS * rate), 1)

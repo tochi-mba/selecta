@@ -175,6 +175,20 @@ def try_start_turn(
     return TurnStart(admitted, bucket, month, used, limit)
 
 
+def start_turn_unchecked(
+    conn: Connection, workspace_id: str, tier: Tier | str, request_class: RequestClass | str,
+    month: str,
+) -> RequestClass:
+    """Keep monthly counts available for rollback after the windows admit a turn."""
+    bucket = bucket_for(Tier(tier), request_class)
+    _ensure_row(conn, workspace_id, month, bucket)
+    conn.execute(
+        sa.update(ai_usage).where(_where(workspace_id, month, bucket))
+        .values(turns=ai_usage.c.turns + 1, updated_at=db_now(conn))
+    )
+    return bucket
+
+
 def refund_turn(
     conn: Connection, workspace_id: str, month: str, bucket: RequestClass | str
 ) -> bool:

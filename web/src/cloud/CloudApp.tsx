@@ -11,6 +11,7 @@ import { DEFAULT_SPEAKER_EVENT, HOLDINGS_EVENT } from '../devices/useHoldings';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
 import { ROOM_EVENT } from '../rooms/useRoomSession';
+import { ROOM_ROUND_EVENT } from '../rooms/useRoomRounds';
 import { LUCY_TURNS_EVENT, LucyCloudSettings } from '../views/LucyCloudSettings';
 import { LUCY_USAGE_EVENT } from './lucyUsage';
 import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
@@ -445,6 +446,7 @@ export function CloudApp() {
     // anything about the open room (a request, a guest, its settings, its end) reaches the shell's
     // room session, which reads the room again on whichever page the host is (useRoomSession)
     if (event.topic === 'requests.room' || event.topic.startsWith('room.')) window.dispatchEvent(new Event(ROOM_EVENT));
+    if (event.topic === 'room.round') window.dispatchEvent(new CustomEvent(ROOM_ROUND_EVENT, { detail: event.payload })); // ADR-0488
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }
     // the browser-first catalogue is kept until the library changes (localFirstRequest.ts)
     if (/^(upload|asset|library|local_media)\./.test(event.topic)) window.dispatchEvent(new Event(CATALOGUE_CHANGED_EVENT));

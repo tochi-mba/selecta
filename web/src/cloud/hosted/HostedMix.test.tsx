@@ -23,7 +23,7 @@ function stuckServer() {
 async function startExport(api: Api) {
   const view = render(<HostedMix api={api} workspaceId="ws" />);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-  fireEvent.click(screen.getByRole('button', { name: 'Make a mix on the server' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Make a mix' }));
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   fireEvent.click(screen.getByRole('button', { name: 'Export the whole mix' }));
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });

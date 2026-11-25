@@ -80,7 +80,8 @@ function JobDetail({ api, jobId, can, onChanged }: { api: AdminFetch; jobId: str
   );
 }
 
-function Workers({ api, canDrain }: { api: AdminFetch; canDrain: boolean }) {
+/** The worker list with Drain, Pause and Resume, shared by Jobs and Workers. */
+export function Workers({ api, canDrain }: { api: AdminFetch; canDrain: boolean }) {
   const workers = useLoad(() => api<{ workers: Worker[] }>('/admin/workers'), [api]);
   const run = async (id: string, command: string, reason: string) => { await api(`/admin/workers/${id}/${command}`, post({ reason })); await workers.reload(); };
   return (

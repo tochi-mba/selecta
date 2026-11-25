@@ -166,8 +166,9 @@ export function namesFromFilename(name: string): { artist: string; title: string
   const split = stemOf(name).split(' - ').filter((part) => part.trim());
   if (split.length && trackNumber.test(split[0])) split.shift();
   const title = (split.length >= 2 ? split.slice(1).join(' - ') : split[0] ?? '').replace(/^\s*\d{1,4}[.)]\s+/, '').trim();
+  // "001. Morgan Wallen - Last Night": the number belongs to the file, not to the artist
   return split.length >= 2
-    ? { artist: split[0].trim(), title }
+    ? { artist: split[0].replace(/^\s*\d{1,4}[.)]\s+/, '').trim(), title }
     : { artist: 'Unknown artist', title };
 }
 

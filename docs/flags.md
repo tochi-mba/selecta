@@ -126,6 +126,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `move.intertwined_stems` | **Intertwined stems.** Drums, bass and harmony trade over sixteen bars, with the vocals taking turns. | `stems` |
 | `render.repair` | **Second takes.** A transition that fails a check is tried again, or with another move, before you hear it. |  |
 | `render.spare_time` | **Spare-time transitions.** With nothing else to do, the best transitions across the library are tried out ahead of time. |  |
+| `render.one_engine` | **One engine for stem seams.** On: Studio shapes, strip and land and intertwined stems play through the same engine as every other transition, so the next song is nudged into the pocket, the beats are lined up on a second take, and the vocal check hears the separated voices; word and ride moves also lock half- and double-time songs to one pulse. Off: those seams mix their own stems as before, with none of that. |  |
 | `analysis.phrases` | **Phrase lines.** Transitions land on 8-bar phrase lines instead of any 4-bar mark, the way a DJ counts a song. |  |
 | `analysis.vocal_sense` | **Hear the voices.** When a song has no synced lyrics, listen to its separated voice to tell when someone sings, so it can still earn long blends and clashing voices are caught. | `stems` |
 | `planner.true_key` | **Heard harmony.** Key scoring also hears the measured chroma of the exact bars that will play together, not just the two key labels. |  |
@@ -287,6 +288,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |
 | `lucy.deep_plan` | **Lucy deep planning.** Use Lucy's premium planning model and larger plan allowance. | `lucy` |
 | `admin.console` | **Staff console.** Show internal tools to authenticated staff with the required permission. |  |
+| `admin.workers` | **Staff console: Workers.** The staff console's Workers page: hosted processing at a glance per pool, the gateway, autoscaler, storage and flags around the workers, customer waits, processing cost against a budget, and guarded actions (retry, cancel long waits, pause a pool, ask the autoscaler for a worker). | `admin.console` |
 
 ## Autopilot and venue
 

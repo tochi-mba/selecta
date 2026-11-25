@@ -14,6 +14,7 @@ code path it describes:
 | `selecta_oldest_queued_seconds{lane}` | gauge | `maintain` task `queue_metrics` |
 | `selecta_jobs_quarantined_total` | counter | `work.lifecycle` (a job quarantined) |
 | `selecta_spend_ceiling_hits_total{ceiling}` | counter | `ai.gateway.plan_turn`, autoscaling |
+| `selecta_lucy_usage_ledger_errors_total{step}` | counter | `ai.gateway` (units ledger failed) |
 | `selecta_audit_writes_total` | counter | `authz.audit.record` |
 | `selecta_reconciliation_drift{check}` | gauge | usage and Stripe reconciliation |
 | `selecta_backup_last_success_timestamp_seconds` | gauge | `maintain` task `backup_freshness` |
@@ -80,6 +81,8 @@ SERIES: Mapping[str, Series] = {
         Series("selecta_jobs_quarantined_total", "counter", "Jobs quarantined as poison."),
         Series("selecta_spend_ceiling_hits_total", "counter",
                "Work an AI or compute spend ceiling refused, by ceiling.", ("ceiling",)),
+        Series("selecta_lucy_usage_ledger_errors_total", "counter",
+               "Lucy units ledger writes that failed and were dropped, by step.", ("step",)),
         Series("selecta_audit_writes_total", "counter", "Audit rows written."),
         Series("selecta_reconciliation_drift", "gauge",
                "Differences the last reconciliation found, by check.", ("check",)),

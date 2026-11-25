@@ -145,3 +145,46 @@ go once each through the `emails` maintenance task.
 
 The owner must set the two **off** switches before launch; until then a customer gets Stripe's
 failed-payment email and ours for the same failure.
+
+### 8.7 Extra Lucy usage in packs (ADR-0486, flag `lucy.extra_usage`)
+
+The mechanism is built and is off for everyone. **Nothing can be bought** until the owner sets
+both variables below, the refund, expiry and VAT wording has been reviewed (LM-0486-02), and a
+staff rule grants the flag. No pack size or price is set in the code.
+
+What is built (`src/selecta/billing/lucy_packs.py`, `lucy_packs_routes.py`):
+
+- `SELECTA_STRIPE_PACK_PRICES`: JSON mapping a Stripe price id to `{"units": int, "label": str}`.
+  Unset, empty or invalid means no pack is on sale. `SELECTA_PACK_CONSENT_VERSION` names the
+  point-of-sale wording the buyer accepts; unset means unavailable.
+- `GET /api/billing/lucy-packs`: the catalogue, whether a pack can be bought now and the reason
+  if not (`packs_not_configured`, `paid_plan_required`, `pack_cap_reached`), this month's count
+  against the cap, the balance, whether this week is confirmed, and the workspace's packs.
+- `POST /api/billing/lucy-packs/checkout`: a Stripe Checkout Session in payment mode, card only,
+  with metadata `workspace_id`, `kind=lucy_pack`, `price_id` and `consent_version`. It needs an
+  `Idempotency-Key`, an allowlisted Origin and the right to manage billing. It writes no plan
+  consent row, so it never holds the plan checkout as in progress.
+- `POST /api/billing/lucy-packs/confirm`: the member's yes for the current week.
+- The Stripe webhook credits the pack. A `checkout.session.completed` event for a paid
+  payment-mode session of our kind adds one `lucy_usage_packs` row keyed by the payment intent
+  id, with the catalogue's units for that price. Its customer must be the workspace's own. An
+  unpaid session or a price outside the catalogue credits nothing and the event is stored as
+  `ignored` with the reason.
+
+The rules:
+
+| Rule | Behaviour |
+|---|---|
+| Prepaid only | A pack is paid for before any unit exists. No billing in arrears, no automatic top-up |
+| Paid plans only | A Free workspace is refused with `paid_plan_required` |
+| One credit per payment | Replayed and duplicated events credit once |
+| Monthly cap | `PACKS_PER_MONTH = 4` packs per workspace per calendar month (UTC), a starting hypothesis; a fifth is refused with `pack_cap_reached`. A refunded pack still counts |
+| Expiry | Units last 365 days from purchase, then stop counting |
+| Refund | An unspent pack is refundable for 14 days (`refundable`, `mark_refunded`). The staff route that returns the money is not built |
+| Spending | `spend` takes from the pack that expires soonest and never below zero. It is not wired into the gateway yet (LM-0486-04) |
+| Confirmation | One yes per week, stored as `extra_confirmed_week_seq` |
+
+Still open: the consent a buyer gives is sent to Stripe as session metadata and is not stored
+in our database; the cap counts credited packs, so sessions opened at the same time and all
+paid can pass it; the catalogue carries no price to show, so the page must take it from the
+label or from Stripe.

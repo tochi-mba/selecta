@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import soxr
@@ -17,6 +18,12 @@ from selecta.config import SAMPLE_RATE
 from selecta.render import dsp
 from selecta.render.engine import Rendered
 from selecta.render.script import Part, TransitionScript
+
+if TYPE_CHECKING:
+    from selecta.config import Settings
+
+VocalSpans = dict[str, list[tuple[float, float]]]
+"""Song seconds where each side sings, keyed "a" and "b", as a studio sensed them."""
 
 BEAT_TARGET_MS = 10.0
 BEAT_LIMIT_MS = 20.0
@@ -132,14 +139,24 @@ def _beat_alignment(rendered: Rendered) -> Check | None:
     )
 
 
-def _vocal_overlap(script: TransitionScript, count: int) -> Check | None:
+def _vocal_overlap(
+    script: TransitionScript,
+    count: int,
+    vocal_spans: VocalSpans | None = None,
+    settings: Settings | None = None,
+) -> Check | None:
     a, b = script.a.song, script.b.song
     if script.overlap[1] - script.overlap[0] < 0.5 or script.meta.get("wordplay"):
         return None
     time_step = 0.05
     times = np.arange(script.overlap[0], script.overlap[1], time_step)
     vocal_gains = script.meta.get("vocal_gains", {})
-    sensed = _sensed_spans(script) if not (a.vocals_known and b.vocals_known) else {}
+    if vocal_spans is not None:
+        sensed = _given_spans(script, vocal_spans)
+    elif not (a.vocals_known and b.vocals_known):
+        sensed = _sensed_spans(script, settings)
+    else:
+        sensed = {}
     if not (a.vocals_known and b.vocals_known) and not sensed:
         return Check(
             "vocal overlap",
@@ -177,7 +194,17 @@ def _vocal_overlap(script: TransitionScript, count: int) -> Check | None:
     )
 
 
-def _sensed_spans(script: TransitionScript) -> dict[str, list[tuple[float, float]]]:
+def _given_spans(script: TransitionScript, vocal_spans: VocalSpans) -> VocalSpans:
+    """Spans a studio passed in. Each named side uses them; a side left out keeps its lyrics.
+    A side with neither leaves nothing, which sends the caller down the old careful path."""
+    found = {side: list(spans) for side, spans in vocal_spans.items() if side in ("a", "b")}
+    for side, part in (("a", script.a), ("b", script.b)):
+        if side not in found and not part.song.vocals_known:
+            return {}
+    return found
+
+
+def _sensed_spans(script: TransitionScript, settings: Settings | None = None) -> VocalSpans:
     """Singing measured from the voice stem, for each side whose lyrics don't say. Empty when the
     build can't hear voices, which sends the caller down the old careful path."""
     from selecta.analysis.vocal_sense import sense_on, singing_spans
@@ -185,11 +212,14 @@ def _sensed_spans(script: TransitionScript) -> dict[str, list[tuple[float, float
 
     if not sense_on():
         return {}
-    found: dict[str, list[tuple[float, float]]] = {}
-    settings = Settings(home=default_home())
+    found: VocalSpans = {}
+    settings = settings or Settings(home=default_home())
     for side, part in (("a", script.a), ("b", script.b)):
         if part.song.vocals_known:
             continue
+        if not part.song.path:
+            # a script from JSON has no file here to listen to; its studio passes spans in
+            return {}
         source = np.asarray(part.warp.source)
         start, end = float(source.min()), float(source.max())
         spans = singing_spans(settings, Path(part.song.path), start, end - start)
@@ -207,17 +237,17 @@ def _phrase_integrity(script: TransitionScript) -> Check:
     if script.meta.get("wordplay"):
         return Check("phrase integrity", True, 0.0, 0.0, "", detail="cut on aligned words")
     vocal_gains = script.meta.get("vocal_gains", {})
+
     def gain_at(side: str, part: Part, time: float) -> float:
         gain = vocal_gains.get(side)
         if gain is None:
             return 1.0
         return float(np.interp(time, gain.times, gain.values))
+
     a_midline = (
         gain_at("a", script.a, script.overlap[1]) >= 0.25
         and a.vocals_known
-        and any(
-        line.start + 0.2 < exit_source < line.end - 0.2 for line in a.lines
-        )
+        and any(line.start + 0.2 < exit_source < line.end - 0.2 for line in a.lines)
     )
     entry_source = float(script.b.warp.source[0])
     b_midline = (
@@ -387,13 +417,20 @@ def _harmony(rendered: Rendered) -> Check | None:
     return Check("harmony", excess <= limit, round(excess, 3), round(limit, 3), "", fix="shorten")
 
 
-def audit(rendered: Rendered) -> AuditReport:
+def audit(
+    rendered: Rendered,
+    vocal_spans: VocalSpans | None = None,
+    settings: Settings | None = None,
+) -> AuditReport:
+    """Measure a rendered seam. A studio that sensed singing itself passes `vocal_spans`, and then
+    the audit separates nothing and reads no files. Otherwise it senses as it always has, with
+    the caller's `settings` when it has them."""
     script = rendered.script
     count = rendered.audio.shape[0]
     report = AuditReport()
     for check in (
         _beat_alignment(rendered),
-        _vocal_overlap(script, count),
+        _vocal_overlap(script, count, vocal_spans, settings),
         _phrase_integrity(script),
         *_seam_energy(rendered),
         _entry_level(rendered),

@@ -3,6 +3,8 @@ import { breathe } from '../media/breathe';
 import { TONAL_PROFILE_IMPLEMENTATION, type TonalProfile } from '../dsp/analysis/tonalProfile';
 import { derivedStore, withHashLock, type DerivedStore } from '../media/derived';
 import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
+import { seamWorkIdle } from '../dsp/seamWork';
+import { flagOn } from '../flags';
 import { importSnapshot } from './importSession';
 import { setTonalActivity } from './tonalActivity';
 
@@ -322,6 +324,8 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
     const waiting = (await media.all()).filter((song) => !known.has(song.identity.content_sha256) && !unreachable.has(song.songId));
     for (const song of waiting) {
       await spareTime(IDLE_GAP_MS, isStopped);
+      // a transition being prepared comes first: wait for it before reading the next song
+      if (flagOn('cloud.seam_lead')) await seamWorkIdle();
       await quiet(true);
       if (stopped) break;
       setTonalActivity('measuring');

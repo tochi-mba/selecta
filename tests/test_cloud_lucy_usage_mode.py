@@ -11,13 +11,14 @@ import pytest
 import sqlalchemy as sa
 
 from selecta import flags
-from selecta.ai import usage_mode
+from selecta.ai import gateway, registry, usage_mode, usage_units
+from selecta.ai.runs import Outcome
 from selecta.ai.usage_mode import ENFORCED, LEGACY, SHADOW, WINDOWS_FLAG
 from selecta.ai.usage_schema import lucy_usage_state
 from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Rule, RuleKind, RuleSnapshot
 from selecta.identity.schema import users, workspace_members, workspaces
-from selecta.persistence import transaction
+from selecta.persistence import db_now, transaction
 
 NOW = 1_800_000_000.0
 BUILD = "+cloud.local_media +lucy.cloud_conversation"
@@ -89,6 +90,27 @@ def test_a_workspace_is_on_the_shadow_model_by_default_once_the_build_measures(
     engine, shadow_build
 ):
     assert mode(engine, NO_RULES) == SHADOW
+
+
+def test_gateway_settles_shadow_usage_once_even_if_shadow_is_switched_off(engine, shadow_build):
+    with transaction(engine) as conn:
+        registry.seed_defaults(conn)
+    with transaction(engine, WORKSPACE) as conn:
+        turn = gateway.plan_turn(
+            conn, workspace_id=WORKSPACE, tier="free", request_class="everyday",
+            prompt_version="test", tool_schema_version="test",
+        )
+
+    flags.use(f"{BUILD} -lucy.usage_shadow")
+    with transaction(engine, WORKSPACE) as conn:
+        summary = gateway.finish_turn(conn, turn, outcome=Outcome.COMPLETED, tokens_out=100)
+        duplicate = gateway.finish_turn(conn, turn, outcome=Outcome.COMPLETED, tokens_out=100)
+        view = usage_units.units_view(conn, WORKSPACE, now=db_now(conn))
+
+    assert duplicate.already_finished
+    assert summary.account_cost_usd is not None and summary.account_cost_usd > 0
+    assert view is not None
+    assert view["week_used"] == usage_units.charge_for(Outcome.COMPLETED, summary.account_cost_usd)
 
 
 def test_with_the_shadow_flag_off_every_workspace_is_on_the_turn_model(engine):

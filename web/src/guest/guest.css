@@ -378,6 +378,41 @@ button[aria-busy="true"]::after { content: ''; position: absolute; inset: auto 0
 .g-card > .g-status { margin: var(--space-2) 0; }
 .g-card > footer { margin-top: var(--space-5); }
 
+/* What a room does together (ADR-0488, social/social.ts). The heart under the playing song keeps
+   it on this phone; "Your songs" lists what was kept. Each rule here belongs to a feature that
+   can be off, and nothing else on the page depends on any of them. */
+.g-hero-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-3); }
+.g-heart { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--control-height); padding: var(--space-2) var(--space-cozy); border-radius: var(--radius-pill); background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: var(--weight-label); font-variant-numeric: tabular-nums; }
+.g-heart:active { background: var(--surface-selected); }
+.g-heart[aria-pressed="true"] { border-color: var(--primary-edge); background: var(--primary-fill); color: var(--primary-ink); animation: g-pop var(--motion-slow) var(--motion-ease); }
+.g-heart[aria-pressed="true"] .g-icon path, .g-kept-mark .g-icon path { fill: currentColor; }
+.g-loved { font-size: var(--text-sm); font-weight: var(--weight-label); color: var(--ok); animation: g-settle var(--motion-reveal) var(--motion-ease) backwards; }
+/* Pick the next song: each offered song is a row with its votes as a number and a bar. The row is
+   the button; the chosen one is outlined in the primary colour, and the room's pick is marked. */
+.g-round-list > li { border-top: 0; padding: var(--space-1) 0; }
+.g-round-opt { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; min-height: 56px; padding: var(--space-2) var(--space-cozy); border-radius: var(--radius); background: transparent; color: var(--ink); border: 1px solid var(--line); text-align: left; }
+button.g-round-opt:active { background: var(--surface-selected); }
+.g-round-opt[aria-checked="true"], .g-round-won { border-color: var(--primary-edge); background: var(--surface-selected); }
+.g-round-opt[aria-disabled="true"] { color: var(--soft); }
+.g-round-count { font-variant-numeric: tabular-nums; font-weight: var(--weight-label); }
+.g-round-bar { grid-column: 1 / -1; height: 4px; border-radius: var(--radius-pill); background: var(--surface-control); overflow: hidden; }
+.g-round-bar i { display: block; height: 100%; border-radius: inherit; background: var(--primary-fill); transition: width var(--motion-slow) var(--motion-ease); }
+.g-round-result { margin: 0 0 var(--space-2); font-weight: var(--weight-label); animation: g-settle var(--motion-reveal) var(--motion-ease) backwards; }
+@media (hover: hover) { button.g-round-opt:hover:not([aria-disabled="true"]) { border-color: var(--ink); } }
+/* Tonight in numbers, on the ended screen */
+.g-recap { text-align: left; margin-top: var(--space-4); }
+.g-recap-list > li { padding: var(--space-snug) 0; font-weight: var(--weight-label); }
+/* Dedications: the line under the playing song, and the list a guest picks one from */
+.g-dedication { flex-basis: 100%; margin: 0; font-weight: var(--weight-label); animation: g-settle var(--motion-reveal) var(--motion-ease) backwards; }
+.g-dedicate { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+.g-lines { display: flex; flex-wrap: wrap; gap: var(--space-2); flex-basis: 100%; padding: var(--space-1) 0; }
+.g-lines [aria-pressed="true"] { border-color: var(--primary-edge); background: var(--surface-selected); }
+.g-kept-mark { display: inline-grid; place-items: center; width: var(--control-height); color: var(--soft); }
+.g-kept-acts { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0 var(--space-2); }
+.g-earlier .g-section { margin-top: var(--space-3); text-align: left; }
+.g-offscreen { position: fixed; inset: 0 auto auto -200vw; opacity: 0; }
+@media (hover: hover) { .g-heart:hover { border-color: var(--ink); } }
+
 @keyframes g-settle { from { opacity: 0; transform: translateY(6px); } }
 @keyframes g-draw { from { stroke-dashoffset: 1; } }
 @keyframes g-pop { 0% { transform: scale(0.85); } 55% { transform: scale(1.08); } }

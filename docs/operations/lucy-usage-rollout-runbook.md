@@ -9,8 +9,9 @@ procedure, not an alert runbook. The step of record is the
 
 State on 2026-11-25: the programme is at step 0, shadow metering only. Nothing here beyond
 "Stop shadow recording" is to be run until the ledger says the programme is entering step 1.
-Several controls this procedure needs are not built yet; each such step says so and gives no
-command.
+The controls are built: the month-start job, the staff switch, the member notice and the guard
+on rule changes. What is not done is said where it applies: the notice's wording is a draft
+until the owner approves it, and the release gates are all NO-GO.
 
 ## Flag mechanics this relies on
 
@@ -88,9 +89,28 @@ Do not raise the percentage unless all three hold:
   comparison is recorded in the step ledger;
 - the members being added have had their notice (see "Member notice" below).
 
-A guard in the admin change path that refuses a raise when these do not hold is **not built
-yet**. Until it is, the operator checks the three by hand and names the ledger entry in the
-change's reason.
+A guard in the admin change path (`src/selecta/flags/lucy_rollout_guard.py`) checks every
+change to this flag's rules and refuses, with the reason in a sentence, when:
+
+- a percentage rule uses any salt other than `lm-usage-windows`;
+- a percentage rule has no WORKSPACES rule with `"on": true` in front of it;
+- the highest percentage would go up and the reason does not contain `[lm-gates-green]`. Put
+  the marker in the reason only after checking that every row of the gate register is GO: it
+  is your word that the gates are green, kept in the flag's history. The first raise above
+  nothing needs it too;
+- the highest percentage would go up less than 7 days after it last went up. The guard reads
+  the last raise from the flag's rule history.
+
+The guard cannot see everything, so two checks stay with the operator. It counts the 7 days
+from when the last raise was saved (or, for a raise that waited as a delayed action, carried
+out), not from the 1st on which those workspaces switched, so the full week after the switch
+and the step's comparison in the ledger are still checked by hand. And it does not read the
+gate register or look at who has been sent the notice. A raise that waits as a delayed action
+was checked when it was proposed and is not checked again when it is carried out, so do not
+propose a second raise while one is waiting.
+
+Going back is never refused: lowering a percentage, removing or disabling a rule, a kill
+switch, or a rule that switches named accounts off all pass at any time, with no marker.
 
 To raise, save the **whole** rule list with `set_rules`, staff rule first and the percentage
 rule last, changing only the percentage:
@@ -109,9 +129,11 @@ rule last, changing only the percentage:
   rollout. With the same salt, 25% contains everyone who was in the 5%. A new salt reshuffles
   everyone: most of the first group would be dropped back mid-week and a different group
   switched without notice.
-- Do not use the Flags page's "rollout" action for this. It adds its rule in front of the staff
-  rule, which would switch off the staff accounts outside the percentage, and it makes up a new
-  salt when none is typed in.
+- The Flags page's "rollout" action is refused for this flag. It adds its rule in front of the
+  staff rule, which would switch off the staff accounts outside the percentage, and it makes up
+  a new salt when none is typed in. Use `set_rules` as above.
+- The reason for a raise carries the marker, for example
+  `"LM step 2: 5% of workspaces, ledger entry <date> [lm-gates-green]"`.
 - The steps are 5, then 25, then 100. Step 1's check (explain on one workspace inside and one
   outside the percentage) applies each time.
 - Add a dated row to the step ledger for each raise.
@@ -123,19 +145,58 @@ rule 6), so nobody loses part of a month they were counted in. Its first week op
 cutover with nothing used. In practice a rule saved during one month takes effect on the 1st of
 the next, and the week each step is held for is counted from that 1st.
 
-- **The job that gives each granted workspace its month-start cutover time is not built yet**
-  (LM-0487-04). The code can hold a cutover time for a workspace, but nothing sets one. Until
-  the job exists, granting the flag changes nothing for anyone: a granted workspace stays in
-  shadow.
-- **Cutting one account over now, for testing, is not built yet** as an operator control. Do
-  not edit the `lucy_usage_state` table by hand in production.
+- **The month-start job** (`src/selecta/ai/usage_rollout.py`) runs every minute inside the
+  maintenance service's `lucy_runs` task, so the maintenance service must be running. Each pass
+  does three things:
+  - a granted workspace with no cutover time is given the start of its next calendar month in
+    its own time zone that is at least 7 days away, so there is time for the notice. A rule
+    saved on 20 November gives 1 December; one saved on 26 November gives 1 January;
+  - a workspace whose cutover time has passed, and which is still granted, is switched: its
+    first week opens at that moment with nothing used and no session open;
+  - a workspace that has a cutover time and is no longer granted has it cleared, along with the
+    record that it was told. If it is granted again later it starts from a new month start and
+    is told again.
+- A workspace gets a cutover time only once it has a `lucy_usage_state` row, which shadow
+  recording makes on its first Lucy turn. A granted workspace that has never used Lucy is
+  scheduled after its first turn.
+- **Cut one account over now, or take its switch away** (staff and test accounts):
+  `PUT /api/admin/ai/workspaces/{workspace_id}/cutover` with
+  `{"when": "now", "reason": "..."}` or `{"when": "cancel", "reason": "..."}`. "now" sets the
+  cutover to this moment and opens a fresh week; the workspace is on the new model only if a
+  rule also grants it the flag. "cancel" clears the cutover, so the workspace is back on turns
+  with its month's counts; if it is still granted, the job gives it its next month start again.
+  Both are audited as `admin.lucy.cutover`. No notice is sent for "now". Do not edit the
+  `lucy_usage_state` table by hand in production.
 
 ## Member notice
 
-Paid members are told in the product and by email before their cutover what changes and that
-the price does not (ADR-0487 rule 11). **The notice is not built yet** and its wording is not
-approved (gate 7). No paid member's workspace is to be cut over before both are done, so step 2
-cannot start.
+Members are told before their cutover what changes and that the price does not (ADR-0487
+rule 11). The notice is built. **Its wording is a draft and is not approved (gate 7)**, so no
+paid member's workspace is to be given a cutover time before the owner approves the words, and
+step 2 cannot start.
+
+- **In the product**, for Free and paid alike: from the moment a granted workspace has a
+  cutover time ahead of it, the Lucy card on the Account page shows a note above the meter with
+  the date in the account's time zone. It goes when the workspace switches or loses its grant.
+  The words are in `web/src/views/LucyCloudSettings.tsx`.
+- **By email**, to the owner of each workspace on a paid plan
+  (`src/selecta/notify/lucy_usage_mail.py`; the draft subject and lines are constants at the
+  top of that file). It is part of the maintenance service's `emails` task, which runs every
+  minute, so it needs the email settings and the `cloud.email` flag like every other email.
+  With the 7 days the month-start job leaves, the email goes out at least a week before the
+  switch.
+- **Once per switch.** The record is `notice_sent_at` in the workspace's `lucy_usage_state`
+  row, which lasts (the other emails are remembered for 7 days only). A switch that is
+  withdrawn or cancelled and later set again is told again.
+- **Who gets no email:** a Free workspace; an owner whose address is not verified, who is
+  deleted, or who has no usable address (the workspace is marked as told so it is not looked at
+  every minute, and the task logs how many); a workspace cut over with "now".
+- **If the service stops between marking and sending**, that one email is not sent and is not
+  tried again: the order was chosen so that nobody can get it twice. The note in the product
+  still tells the member. A send the provider cannot take yet (rate limit, outage) is tried
+  again on the next pass.
+- **To check before a step**, count the paid workspaces with a cutover time ahead and no
+  `notice_sent_at` in a read-only query. It should be none once the `emails` task has run.
 
 ## Rollback
 
@@ -151,8 +212,8 @@ What happens: once the rule change is live, the workspace is back on the turn mo
 next Lucy turn. The monthly turn counters were written all along, so that month's counts are
 intact and nothing is lost or given back twice. What members see: the monthly Lucy turns they
 had before, with this month's use already counted, in place of the session and week meters
-(which are themselves not built yet, ADR-0484). Their conversations are untouched. The
-faked-clock tests that prove cutover and roll back (LM-0487-04) are not written yet.
+(ADR-0484). Their conversations are untouched. The tests that prove cutover and roll back on a
+passed-in clock are in `tests/test_cloud_lucy_usage_rollout.py`.
 
 After a rollback, add a dated row to the step ledger saying why, and record any gate it reopens
 in the gate register. Nobody new is added until that gate is green again. Once step 5
@@ -183,4 +244,6 @@ possible.
   cap or the allowance table changes during the rollout.
 - [Lucy Usage checklist](../adr/selecta-lucy-usage-implementation-checklist.md) - the LM-0487
   tasks.
-- The code that decides a workspace's model: `src/selecta/ai/usage_mode.py`.
+- The code that decides a workspace's model: `src/selecta/ai/usage_mode.py`; the month-start
+  job: `src/selecta/ai/usage_rollout.py`; the guard: `src/selecta/flags/lucy_rollout_guard.py`;
+  the email: `src/selecta/notify/lucy_usage_mail.py`.

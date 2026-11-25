@@ -119,7 +119,9 @@ def install_routes(
                     room_requests.c.song_id,
                     room_requests.c.votes,
                     room_requests.c.submitted_at,
+                    room_requests.c.source,
                     rooms_table.c.name.label("room_name"),
+                    rooms_table.c.settings.label("room_settings"),
                 )
                 .select_from(
                     room_requests.join(rooms_table, rooms_table.c.id == room_requests.c.room_id)
@@ -142,6 +144,11 @@ def install_routes(
                     "song_id": int(row["song_id"]),
                     "votes": int(row["votes"] or 0),
                     "handed_at": row["submitted_at"],
+                    # ADR-0488: the room voted this one in. `add_now` says the host left "play
+                    # the winner automatically" on, so the speaker's browser adds it by itself.
+                    "room_pick": row["source"] == "round",
+                    "add_now": row["source"] == "round"
+                    and bool((row["room_settings"] or {}).get("round_auto_add", True)),
                 }
                 for row in rows
             ]

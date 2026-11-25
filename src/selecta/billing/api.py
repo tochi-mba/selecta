@@ -354,5 +354,12 @@ def install_routes(
                 )
         return {"received": True, "status": result.status}
 
+    from selecta.billing import lucy_packs_routes  # here: that module borrows this one's helpers
+
+    lucy_packs_routes.install_routes(
+        app, engine=engine, allowed_origins=allowed_origins, current_claims=current_claims,
+        principal_for=principal_for,
+    )
+
 
 __all__ = ["install_routes"]

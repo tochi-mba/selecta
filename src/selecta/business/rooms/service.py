@@ -14,6 +14,7 @@ open their own transactions and take the guest's token.
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Callable
 
@@ -27,6 +28,8 @@ from selecta.business.rooms.guests import GuestsMixin
 from selecta.business.rooms.moderation import ModerationMixin
 from selecta.business.rooms.network import JoinGate
 from selecta.business.rooms.requests import RequestsMixin
+from selecta.business.rooms.social import SocialMixin
+from selecta.business.rooms.social_votes import VotesMixin
 from selecta.rooms import codes, limits
 
 
@@ -39,7 +42,7 @@ def default_flag_on(flag_id: str) -> bool:
         return False  # not registered yet: off
 
 
-class ZoneRooms(RoomsCore, GuestsMixin, RequestsMixin, ModerationMixin):
+class ZoneRooms(RoomsCore, GuestsMixin, RequestsMixin, SocialMixin, VotesMixin, ModerationMixin):
     def __init__(
         self,
         engine: Engine,
@@ -73,6 +76,9 @@ class ZoneRooms(RoomsCore, GuestsMixin, RequestsMixin, ModerationMixin):
         self.gate = JoinGate(self.limiter)
         self.flag_on = flag_on
         self.plan_guest_max = plan_guest_max or (lambda conn, org: settings.PLAN_GUEST_MAX)
+        # ADR-0488: each room's pulse, made once a second and shared by its phones and screens
+        self._pulses = {}
+        self._pulse_lock = threading.Lock()
 
     @staticmethod
     def flag_off(flag_id: str) -> Refused:

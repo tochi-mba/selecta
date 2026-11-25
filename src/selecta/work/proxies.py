@@ -42,7 +42,9 @@ from selecta.work.model import TERMINAL, Job
 from selecta.work.state import lock_job
 
 NEEDS = ("mix", "preview", "request")
-PROXY_VERSION = 1
+# 2: frames of 4096 samples. Version 1 let ffmpeg take the first decoded MP3 frame's size (47
+# samples), so a song was 150,000+ tiny frames and a quarter bigger. Must equal audio_handlers.
+PROXY_VERSION = 2
 DIRECT_FORMATS = frozenset({"flac", "wav"})
 ANALYSIS_RATE = 44_100
 

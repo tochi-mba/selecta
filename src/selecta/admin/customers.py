@@ -233,7 +233,7 @@ def propose_deletion(conn: Connection, actor: Actor, user_id: str, *, reason: st
                              resource=ResourceRef("user", user_id, resource.workspace_id))
     safety.record(conn, actor, "account.delete", resource_type="user", resource_id=user_id,
                   workspace_id=resource.workspace_id, reason=reason.strip(),
-                  action_id=action.id)
+                  delayed_action=action.id)
     return action
 
 

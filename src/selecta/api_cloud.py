@@ -35,9 +35,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from selecta import flags, ratelimit
 from selecta.admin import guard as admin_guard
-from selecta.admin import routes as admin_routes
-from selecta.admin import routes_controls as admin_control_routes
-from selecta.admin import routes_economics as admin_economics_routes
+from selecta.admin import wiring as admin_wiring
 from selecta.admin.state import EmergencyCache
 from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
@@ -76,7 +74,6 @@ from selecta.identity.workos import WorkOSClient
 from selecta.local_media import api as local_media_routes
 from selecta.local_media import links as local_links_routes
 from selecta.local_media import recipe_api as local_recipe_routes
-from selecta.local_media.catalog import LocalMediaCatalog
 from selecta.lucy import cloud_routes as lucy_cloud_routes
 from selecta.lucy import cloud_settings as lucy_cloud_settings
 from selecta.observability import errors, metrics, tracing
@@ -87,7 +84,7 @@ from selecta.persistence.migrate import head as migration_head
 from selecta.playback import api as device_playback_routes
 from selecta.playback.zones import SQL_ZONES
 from selecta.rooms import wiring as rooms_wiring
-from selecta.rooms.cloud_ports import BrowserPlanner, OutboxPlaybackEvents, RoomPorts
+from selecta.rooms.cloud_ports import OutboxPlaybackEvents, RoomPorts, browser_first_ports
 from selecta.routes import business_hours as business_hours_routes
 from selecta.routes import business_kiosk as business_kiosk_routes
 from selecta.routes import business_zones as business_zones_routes
@@ -315,13 +312,7 @@ def create_cloud_app(
     verifier = verifier or settings.verifier()
     owns_workos = workos is None
     workos = workos or settings.workos_client()
-    # Without explicit ports, Rooms read the metadata-only local media catalogue (ADR-0458), so
-    # a local-first account can host a Room from its device-available tracks. The pepper still
-    # comes from `rooms.wiring.pepper_from_environment` when the ports carry none.
-    # The planner is the host's browser mix: accepted room requests wait for it (BrowserPlanner).
-    room_ports = room_ports or RoomPorts(
-        catalog=LocalMediaCatalog(engine), planner=BrowserPlanner(engine)
-    )
+    room_ports = room_ports or browser_first_ports(engine)  # catalogue, planner, now playing
 
     # One LISTEN connection per instance wakes event streams and reloads flag rules the moment
     # another instance commits (ADR-0407, ADR-0414). None on SQLite, which keeps polling.
@@ -677,11 +668,8 @@ def create_cloud_app(
             # The meter and the shell read one hosted decision (BF-0456-06, BF-0464-02).
             hosted = decisions.snapshot().get("cloud.hosted_media") is not False
             usage = meters.meters(
-                conn,
-                principal.workspace.id,
-                plan,
-                principal.user.timezone,
-                hosted_media_granted=hosted,
+                conn, principal.workspace.id, plan, principal.user.timezone,
+                hosted_media_granted=hosted, flag_rules=snapshot, now=now,
             )
         return {
             "user": {
@@ -960,30 +948,14 @@ def create_cloud_app(
     business_licensing_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
-    admin_routes.install_routes(
-        app,
-        engine=engine,
-        current_claims=current_claims,
-        emergency=emergency_cache,
-    )
-    admin_control_routes.install_routes(
-        app,
-        engine=engine,
-        current_claims=current_claims,
-        emergency_cache=emergency_cache,
-        rule_cache=rule_cache,
-    )
+    # The staff console, its controls, unit economics and the work queue read (admin.wiring).
+    admin_wiring.install(app, engine=engine, current_claims=current_claims,
+                         emergency_cache=emergency_cache, rule_cache=rule_cache)
     # Business pricing behind business.signups, and the release-gate readout (BZ-0441, BZ-0454).
     business_rollout_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         rules=rule_cache,
     )
-    # Unit economics and step-4 readiness for Browser-first Cloud (BF-0464-04/05, BF-0467-04).
-    admin_economics_routes.install_routes(app, engine=engine, current_claims=current_claims)
-    # Whether queued work is being picked up, per worker pool, for staff (work.queue_health).
-    from selecta.routes import work_queue as work_queue_routes
-
-    work_queue_routes.install_routes(app, engine=engine, current_claims=current_claims)
     # The Labs opening for browser-first Cloud (BF-0467-05).
     local_first_labs_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,

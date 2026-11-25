@@ -9,7 +9,7 @@ depends on a cron somebody forgot:
 | `reconciled`, `rebased`, `pruned` | 60 s, 60 s, 1 h | Fair-share heads, vtimes, old outbox |
 | `actions` | 15 s | Due dangerous actions (`admin.actions.run_due`), fenced by the term |
 | `reservations` | 60 s | Reservations whose upload ran out (`quota.expire_reservations`) |
-| `lucy_runs` | 60 s | Lucy turns whose server went away (`ai.gateway.sweep_abandoned`) |
+| `lucy_runs` | 60 s | Abandoned Lucy turns, expired usage windows and meter invalidation |
 | `flag_previews` | 10 min | Ended staff flag previews |
 | `admin_metrics` | 30 s | The Overview's aggregates (`admin.read_models.refresh`) |
 | `stripe_events` | 60 s | Stored Stripe events, as `billing-maintenance` |
@@ -79,18 +79,29 @@ def _in_transaction(engine: Engine, work: Callable[[Connection], object]):
 def core_tasks(engine: Engine) -> list[Task]:
     """The tasks that need nothing but the database."""
     from selecta.admin import actions, read_models
-    from selecta.ai.gateway import sweep_abandoned
     from selecta.flags.rules import expire_previews
     from selecta.usage.quota import expire_reservations
 
     return [
         Task("actions", 15.0, actions.maintenance_task(engine)),
         Task("reservations", 60.0, lambda _fence: expire_reservations(engine)),
-        Task("lucy_runs", 60.0, _in_transaction(engine, lambda c: len(sweep_abandoned(c)))),
+        Task("lucy_runs", 60.0, _in_transaction(engine, maintain_lucy_runs)),
         Task("flag_previews", 600.0, _in_transaction(engine, expire_previews)),
         Task("admin_metrics", 30.0, _in_transaction(engine, read_models.refresh)),
         Task("usage_reconcile", DAY_S, _in_transaction(engine, usage_reconciliation)),
     ]
+
+
+def maintain_lucy_runs(conn: Connection) -> int:
+    from selecta.ai import usage_rollout
+    from selecta.ai.gateway import sweep_abandoned
+    from selecta.ai.usage_events import publish_due_resets
+    from selecta.flags.rules import load_snapshot
+    from selecta.persistence import db_now
+
+    # granted workspaces get their switch time, due ones switch, withdrawn ones go back
+    moved = usage_rollout.maintain(conn, load_snapshot(conn), db_now(conn))
+    return len(sweep_abandoned(conn)) + publish_due_resets(conn) + moved
 
 
 def usage_reconciliation(conn: Connection) -> int:
