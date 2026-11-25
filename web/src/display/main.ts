@@ -139,6 +139,8 @@ function drawRoom(view: View): void {
   const now = waitingOn ? null : view.now_playing;
   const playing = Boolean(now) && !view.music_paused;
   const next = view.up_next.slice(0, 3);
+  // ADR-0488: while the room votes for the next song, the vote takes the place of the lists
+  const voting = social.roundPanel(view.pulse);
   patch(document.getElementById('d-info') as HTMLElement,
     h('header', { className: 'd-top', 'data-key': 'top' }, brand(), h('h1', {}, view.room_name ?? 'Room')),
     h('div', { className: 'd-playing', 'data-key': 'playing', 'data-on': playing },
@@ -146,7 +148,7 @@ function drawRoom(view: View): void {
       h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? view.music ?? 'none'}` }, now ? now.title : waitingOn ? waitingOn.title : 'Nothing playing yet', h('span', { className: 'd-by' }, now ? now.artist : waitingOn ? waitingOn.more : 'Scan the code and pick the first song.')),
       // ADR-0488: the room's hearts for this song; absent when reactions are off for the screen
       now ? social.line(view.pulse) : null),
-    h('div', { className: 'd-lists', 'data-key': 'lists' },
+    voting ?? h('div', { className: 'd-lists', 'data-key': 'lists' },
       next.length ? h('div', { 'data-key': 'next-col' },
         h('h2', { 'data-key': 'next-title' }, 'Up next'),
         h('ol', { className: 'd-list', 'data-key': 'next' }, ...next.map((song) => line(song, `next-${song.song_id}`)))) : null,

@@ -342,6 +342,7 @@ function shell(): Record<string, HTMLElement> {
       h('header', { className: 'g-head', id: 'g-head' }),
       h('div', { id: 'g-banners' }),
       h('div', { id: 'g-now' }),
+      h('div', { id: 'g-round' }),
       searchPanel(),
       h('div', { id: 'g-mine' }),
       h('div', { id: 'g-lists' }),
@@ -355,7 +356,7 @@ function shell(): Record<string, HTMLElement> {
   const part = (id: string) => document.getElementById(id) as HTMLElement;
   // a screen reader hears the room's name when the room first opens
   if (opened) window.setTimeout(() => { if (!root.contains(document.activeElement)) document.getElementById('g-name')?.focus({ preventScroll: true }); }, 0);
-  return { head: part('g-head'), banners: part('g-banners'), now: part('g-now'), search: part('g-search'), lists: part('g-lists'), mine: part('g-mine'), kept: part('g-kept') };
+  return { head: part('g-head'), banners: part('g-banners'), now: part('g-now'), search: part('g-search'), lists: part('g-lists'), mine: part('g-mine'), kept: part('g-kept'), round: part('g-round') };
 }
 
 // Only the parts that change are redrawn, and those are patched in place (keyed by request), so a
@@ -394,7 +395,9 @@ function draw(): void {
     active && v.waiting.length ? section('Waiting for the host', h('ul', { className: 'g-list' }, ...v.waiting.map((item) => songItem(item.song, item.request_id, voteButton(item))))) : null);
   // nothing shows here until the guest has asked for something
   patch(parts.mine, active && v.my_requests.length ? myRequests(v) : null);
-  // ADR-0488: the songs this guest kept, and the room's pulse while something in it moves
+  // ADR-0488: the vote for the next song, the songs this guest kept, and the room's pulse while
+  // something in it moves
+  patch(parts.round, active ? social.round(v) : null);
   patch(parts.kept, active ? social.kept(v) : null);
   social.sync(v, active);
   if (changed) say(changed);

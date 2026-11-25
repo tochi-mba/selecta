@@ -387,6 +387,18 @@ button[aria-busy="true"]::after { content: ''; position: absolute; inset: auto 0
 .g-heart[aria-pressed="true"] { border-color: var(--primary-edge); background: var(--primary-fill); color: var(--primary-ink); animation: g-pop var(--motion-slow) var(--motion-ease); }
 .g-heart[aria-pressed="true"] .g-icon path, .g-kept-mark .g-icon path { fill: currentColor; }
 .g-loved { font-size: var(--text-sm); font-weight: var(--weight-label); color: var(--ok); animation: g-settle var(--motion-reveal) var(--motion-ease) backwards; }
+/* Pick the next song: each offered song is a row with its votes as a number and a bar. The row is
+   the button; the chosen one is outlined in the primary colour, and the room's pick is marked. */
+.g-round-list > li { border-top: 0; padding: var(--space-1) 0; }
+.g-round-opt { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; min-height: 56px; padding: var(--space-2) var(--space-cozy); border-radius: var(--radius); background: transparent; color: var(--ink); border: 1px solid var(--line); text-align: left; }
+button.g-round-opt:active { background: var(--surface-selected); }
+.g-round-opt[aria-checked="true"], .g-round-won { border-color: var(--primary-edge); background: var(--surface-selected); }
+.g-round-opt[aria-disabled="true"] { color: var(--soft); }
+.g-round-count { font-variant-numeric: tabular-nums; font-weight: var(--weight-label); }
+.g-round-bar { grid-column: 1 / -1; height: 4px; border-radius: var(--radius-pill); background: var(--surface-control); overflow: hidden; }
+.g-round-bar i { display: block; height: 100%; border-radius: inherit; background: var(--primary-fill); transition: width var(--motion-slow) var(--motion-ease); }
+.g-round-result { margin: 0 0 var(--space-2); font-weight: var(--weight-label); animation: g-settle var(--motion-reveal) var(--motion-ease) backwards; }
+@media (hover: hover) { button.g-round-opt:hover:not([aria-disabled="true"]) { border-color: var(--ink); } }
 .g-kept-mark { display: inline-grid; place-items: center; width: var(--control-height); color: var(--soft); }
 .g-kept-acts { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0 var(--space-2); }
 .g-earlier .g-section { margin-top: var(--space-3); text-align: left; }

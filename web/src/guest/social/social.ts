@@ -22,13 +22,22 @@ export type Pulse = {
   song: Song | null; paused: boolean; play: Play | null;
   /** Guests whose pages are open, and whether enough of them loved the blend to say so. */
   online?: number; blend_loved?: boolean;
+  /** The vote for the next song the room is looking at: open, or just finished. */
+  round?: Round | null;
 };
 export type Kind = 'love' | 'blend';
+export type RoundOption = { position: number; song_id: number; votes: number; song?: Song | null };
+export type Round = {
+  round_id: string; state: 'open' | 'closed' | 'cancelled' | 'void'; opened_at: number; closes_at: number;
+  total: number; options: RoundOption[]; winner: number | null; outcome: string | null;
+};
 /** The parts of a room view this module reads; both pages' views have them. */
 export type RoomView = {
   room_name: string; now_playing: Song | null; screen?: boolean; social?: Features;
   /** This guest's own taps on the last two plays: play id to the kinds they tapped. */
   my_taps?: Record<string, Kind[]>;
+  /** This guest's vote in the open round, and whether they were here when it opened. */
+  my_vote?: { round_id: string; position: number | null; can_vote: boolean };
 };
 
 export type Host = {
@@ -46,10 +55,20 @@ const MAX_WAIT_MS = 15_000;
 
 let host: Host | null = null;
 let pulse: Pulse | null = null;
+// How far this phone's clock is from the server's, in seconds, measured when a pulse arrives:
+// a countdown follows the server's clock, never the phone's.
+let skew = 0;
 let timer = 0;
 let failures = 0;
 let reading = false;
 let toldStorage = false;
+
+function adopt(fresh: Pulse): void {
+  pulse = fresh;
+  skew = fresh.now - Date.now() / 1000;
+}
+/** The server's time now, in seconds. */
+export const serverNow = (): number => Date.now() / 1000 + skew;
 
 export function init(next: Host): void {
   host = next;
@@ -74,6 +93,7 @@ export function sync(view: RoomView | null, live: boolean): void {
 
 export function stop(): void {
   window.clearTimeout(timer);
+  window.clearInterval(ticking);
   timer = 0;
   pulse = null;
   failures = 0;
@@ -91,7 +111,7 @@ async function read(): Promise<void> {
   if (!host || reading) return;
   reading = true;
   try {
-    pulse = await call<Pulse>(`${host.base()}/pulse`);
+    adopt(await call<Pulse>(`${host.base()}/pulse`));
     failures = 0;
     host.redraw();
   } catch (error) {
@@ -160,7 +180,7 @@ async function tap(view: RoomView, play: Play, kind: Kind, song: Song): Promise<
   host.redraw();
   try {
     const answer = await call<{ pulse: Pulse }>(`${host.base()}/reactions`, { method: next ? 'POST' : 'DELETE', body: JSON.stringify({ kind, play_id: play.play_id }) });
-    pulse = answer.pulse;
+    adopt(answer.pulse);
     // the page's own read confirms it within five seconds; until then the choice stands
     const mine = new Set(view.my_taps?.[play.play_id] ?? []);
     if (next) mine.add(kind); else mine.delete(kind);
@@ -221,6 +241,115 @@ export function hero(view: RoomView): HTMLElement | null {
     blend(view, song),
     // said on every phone, so a room with no big screen hears it too
     on.reactions && play && pulse?.blend_loved ? h('span', { className: 'g-loved', 'data-key': 'loved', role: 'status' }, 'The room loved that blend') : null);
+}
+
+// --- Pick the next song -------------------------------------------------------------------
+
+// A vote shows at once, before the server answers: round id to the song just chosen.
+let choosing: { round_id: string; position: number } | null = null;
+let ticking = 0;
+let saidTen = '';
+
+export const clock = (seconds: number): string => {
+  const left = Math.max(0, Math.ceil(seconds));
+  return `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+};
+
+/** Keep the countdown's digits moving between pulses, without drawing the page again, and say
+ * the time once, at ten seconds, for someone who cannot see it. */
+function tick(round: Round): void {
+  window.clearInterval(ticking);
+  ticking = window.setInterval(() => {
+    const left = round.closes_at - serverNow();
+    const shown = document.getElementById('g-round-left');
+    if (!shown || left <= 0) { window.clearInterval(ticking); if (left <= 0) soon(); return; }
+    shown.textContent = clock(left);
+    if (left <= 10 && saidTen !== round.round_id) {
+      saidTen = round.round_id;
+      const live = document.getElementById('g-round-live');
+      if (live) live.textContent = '10 seconds left to vote.';
+    }
+  }, 1000);
+}
+
+async function castVote(round: Round, option: RoundOption): Promise<void> {
+  if (!host || choosing) return;
+  choosing = { round_id: round.round_id, position: option.position };
+  host.buzz(8);
+  host.redraw();
+  try {
+    const answer = await call<{ pulse: Pulse }>(`${host.base()}/rounds/${encodeURIComponent(round.round_id)}/vote`, { method: 'POST', body: JSON.stringify({ position: option.position }) });
+    adopt(answer.pulse);
+    voted = { round_id: round.round_id, position: option.position };
+  } catch (error) {
+    host.say((error as Error).message);
+    soon();
+  }
+  choosing = null;
+  host.redraw();
+}
+// the vote the server last confirmed for this guest, until the page's own read says the same
+let voted: { round_id: string; position: number } | null = null;
+
+function myChoice(view: RoomView, round: Round): number | null {
+  if (choosing?.round_id === round.round_id) return choosing.position;
+  if (voted?.round_id === round.round_id) return voted.position;
+  return view.my_vote?.round_id === round.round_id ? view.my_vote.position : null;
+}
+
+const RESULT_WORDS: Record<string, string> = {
+  waiting: 'Going into the mix.',
+  in_mix: 'It plays next.',
+  not_placed: 'It couldn’t go into the mix this time.',
+  no_votes: 'Nobody voted, so the DJ carries on.',
+  no_song: 'None of those songs can be played right now, so the DJ carries on.',
+  called_off: 'The host called off the vote.',
+  room_ended: 'The room ended before the vote did.',
+};
+
+function optionRow(view: RoomView, round: Round, option: RoundOption, mine: number | null, open: boolean): HTMLElement {
+  const share = round.total > 0 ? Math.round((option.votes / round.total) * 100) : 0;
+  const chosen = mine === option.position;
+  const won = !open && round.winner === option.position;
+  const mayVote = open && view.my_vote?.can_vote !== false;
+  const title = option.song?.title ?? 'A song';
+  const body = [
+    h('span', { className: 'g-song' }, h('strong', {}, title), option.song?.artist ? h('span', { className: 'g-meta' }, option.song.artist) : null),
+    h('span', { className: 'g-round-count', 'aria-hidden': 'true' }, String(option.votes)),
+    h('span', { className: 'g-round-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${share}%` })),
+  ];
+  const votesWord = option.votes === 1 ? '1 vote' : `${option.votes} votes`;
+  if (!open) return h('li', { className: won ? 'g-round-opt g-round-won' : 'g-round-opt', 'data-key': `opt-${option.position}`, 'aria-label': `${title}, ${votesWord}${won ? ', the room’s pick' : ''}` }, ...body);
+  return h('li', { 'data-key': `opt-${option.position}` },
+    h('button', {
+      type: 'button', className: 'g-round-opt', role: 'radio', 'aria-checked': String(chosen), 'aria-disabled': mayVote ? undefined : 'true',
+      'aria-label': `${title}${option.song?.artist ? ` by ${option.song.artist}` : ''}, ${votesWord}`,
+      onclick: () => { if (mayVote && !chosen) void castVote(round, option); },
+    }, ...body));
+}
+
+/** The vote for the next song: the songs offered, the tally and the time left while it is open,
+ * then what the room picked. Whole on the phone; a big screen only shows it larger. */
+export function round(view: RoomView): HTMLElement | null {
+  const found = features(view).rounds ? pulse?.round : null;
+  if (!found) { window.clearInterval(ticking); return null; }
+  const open = found.state === 'open' && found.closes_at > serverNow();
+  const mine = myChoice(view, found);
+  if (open) tick(found); else window.clearInterval(ticking);
+  const winner = found.options.find((option) => option.position === found.winner);
+  const result = found.state === 'closed' && winner
+    ? `The room picked ${winner.song?.title ?? 'a song'}. ${RESULT_WORDS[found.outcome ?? 'waiting'] ?? ''}`.trim()
+    : RESULT_WORDS[found.outcome ?? ''] ?? 'The vote has closed.';
+  return h('section', { className: 'g-section g-round', 'aria-label': 'Pick the next song', 'data-key': `round-${found.round_id}`, 'data-state': open ? 'open' : found.state },
+    h('h2', {}, 'Pick the next song', open ? h('span', { className: 'g-tally', id: 'g-round-left', 'aria-hidden': 'true' }, clock(found.closes_at - serverNow())) : null),
+    h('p', { className: 'g-offscreen', id: 'g-round-live', role: 'status' }),
+    open
+      ? h('p', { className: 'g-small', 'data-key': 'round-how' }, view.my_vote?.can_vote === false
+        ? 'This vote opened before you joined. You can vote in the next one.'
+        : mine === null ? 'Tap a song. You can change your mind until the time runs out.' : 'Your vote is in. Tap another song to change it.')
+      : h('p', { className: 'g-round-result', role: 'status', 'data-key': 'round-result' }, result),
+    h('ul', { className: 'g-list g-round-list', role: open ? 'radiogroup' : undefined, 'aria-label': 'Songs to choose from' }, ...found.options.map((option) => optionRow(view, found, option, mine, open))),
+    open && screenOn(view) ? h('p', { className: 'g-small', 'data-key': 'round-screen' }, 'The tally is on the big screen too.') : null);
 }
 
 async function copy(text: string): Promise<boolean> {

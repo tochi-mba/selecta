@@ -108,6 +108,18 @@ p { margin: 0.4em 0; }
 .d-loves { display: inline-flex; align-items: center; gap: 0.4em; font-variant-numeric: tabular-nums; }
 .d-heart { width: 1em; height: 1em; fill: var(--selected); }
 .d-loved { animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+/* The vote for the next song, in place of the lists: each song with its votes and a bar */
+.d-round { margin-top: 1.3em; padding-top: 1.1em; border-top: 1px solid var(--line); animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-round h2 { display: flex; align-items: baseline; gap: 0.8em; color: var(--ink); }
+.d-round-left { font-family: var(--display); font-weight: var(--weight-display); font-size: 1.5em; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; }
+.d-round-how, .d-round-result { margin: 0 0 0.8em; }
+.d-round-result { font-weight: var(--weight-strong); font-size: 1.15em; }
+.d-round-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6em; }
+.d-round-opt { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0.3em 1em; padding: 0.55em 0.8em; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface-raised); font-size: 1.1em; }
+.d-round-won { border-color: var(--selected); }
+.d-round-count { font-family: var(--display); font-weight: var(--weight-display); font-size: 1.3em; font-variant-numeric: tabular-nums; }
+.d-round-bar { grid-column: 1 / -1; height: 0.35em; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
+.d-round-bar i { display: block; height: 100%; border-radius: inherit; background: var(--selected); transition: width var(--motion-slow) var(--motion-ease); }
 .d-rising { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .d-rise { position: absolute; bottom: 14vh; width: 5vmin; height: 5vmin; fill: var(--selected); opacity: 0; animation: d-rise calc(var(--motion-slow) * 8) var(--motion-ease) forwards; }
 /* a tall or narrow screen (a portrait TV, a tablet on a stand): the room on top, the code under it */
