@@ -17,6 +17,7 @@ in `MODAL_FUNCTIONS` (the functions `infra/modal/selecta_workers.py` deploys, ch
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 from collections.abc import Callable, Mapping
@@ -205,8 +206,14 @@ def tick(
     meter: SpendMeter,
     now: float | None = None,
 ) -> list[Decision]:
-    """One autoscaling pass over every pool: decide, record alerts, then scale."""
-    from selecta.admin import alerts
+    """One autoscaling pass over every pool: decide, record alerts, then scale.
+
+    A staff request from the console's Workers page (`admin.state.scale_requests`: one worker for
+    a test hour, or none) replaces the decided size until it expires. After scaling, the pass
+    reports `health.modal` (1 when every scale call worked) and each pool's size, so the console
+    can tell that the autoscaler is running without ever seeing its token."""
+    from selecta.admin import alerts, read_models
+    from selecta.admin import state as admin_state
 
     with persistence.transaction(engine) as conn:
         moment = persistence.db_now(conn) if now is None else now
@@ -214,6 +221,7 @@ def tick(
         waits = p95_wait_seconds(conn, moment)
         running = live_workers(conn, moment)
         listening = someone_listening(conn, moment)
+        requested = admin_state.scale_requests(conn, moment)
         decisions = []
         for name, config in sorted(pools.items()):
             state = PoolState(
@@ -225,6 +233,8 @@ def tick(
                 primary_capacity=launcher.has_capacity(name, config.primary),
             )
             decision = decide(config, state)
+            if name in requested:
+                decision = dataclasses.replace(decision, workers=requested[name])
             for alert in decision.alerts:
                 if alert.kind == ALERT_SPEND:
                     metrics.add("selecta_spend_ceiling_hits_total", ceiling="compute")
@@ -239,14 +249,21 @@ def tick(
                     },
                 )
             decisions.append(decision)
+    failed = False
     for decision in decisions:
         fallback = decision.launch is not pools[decision.pool].primary
         try:
             launcher.scale(decision.pool, decision.workers, decision.launch, fallback=fallback)
         except Exception:  # noqa: BLE001 - one pool's provider error mustn't stop the others
             log.exception("Couldn't scale the %s pool", decision.pool)
+            failed = True
             continue
         meter.set(decision.pool, moment, decision.workers, decision.launch)
+    with persistence.transaction(engine) as conn:
+        read_models.report(conn, "health.modal", 0.0 if failed else 1.0, None, moment)
+        for decision in decisions:
+            read_models.report(conn, "autoscale.workers", decision.workers,
+                               {"pool": decision.pool}, moment)
     return decisions
 
 

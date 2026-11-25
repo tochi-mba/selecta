@@ -16,7 +16,7 @@ from typing import Any, Protocol
 
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.admin import commands, customers, emergency, flags_admin
+from selecta.admin import commands, customers, emergency, flags_admin, hosted_ops
 from selecta.authz import assignments, delayed, grants
 from selecta.authz.check import Actor, authorize
 from selecta.authz.errors import ActionStateError, NotReady
@@ -37,6 +37,7 @@ EXECUTORS: Mapping[delayed.ActionKind, delayed.Executor] = {
     delayed.ActionKind.OWNER_ASSIGN: assignments.assign_owner,
     delayed.ActionKind.CONTENT_ACCESS_GRANT: grants.issue_grant,
     delayed.ActionKind.ACCOUNT_DELETE: customers.execute_deletion,
+    delayed.ActionKind.JOBS_EXPIRE_QUEUED: hosted_ops.execute_expire,
 }
 
 
