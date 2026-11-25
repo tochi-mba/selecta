@@ -8,3 +8,82 @@
  *
  * The frame that stays (rail, header, player) is named so it never blinks; only the page moves.
  * Durations are motion tokens; Still, reduced motion and low power take them to 0. */
+
+/* Names exist only while a transition runs (data-nav), so a named element never changes stacking
+   or paint at rest, and two pages naming the same thing can only meet inside one transition. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) .nav { view-transition-name: vt-rail; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) .context-bar { view-transition-name: vt-header; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) .mini { view-transition-name: vt-dock; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) main#main { view-transition-name: vt-page; }
+
+  /* What a destination names with data-vt. The page being left names its side with
+     navigate(to, { share: [[element, 'mix-art']] }), which sets the same name inline. */
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) [data-vt='mix-art'] { view-transition-name: mix-art; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) [data-vt='song-art'] { view-transition-name: song-art; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) [data-vt='page-title'] { view-transition-name: page-title; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) [data-vt='player-art'] { view-transition-name: player-art; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) [data-vt='brand-mark'] { view-transition-name: brand-mark; }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power]) [data-vt='palette'] { view-transition-name: palette; }
+
+  /* Which way the new page arrives from: deeper pages from the right, Back from the left, the rail's
+     neighbours from below or above. A jump only fades. */
+  :root[data-nav='forward'] { --feel-scene-from-x: var(--space-loose); --feel-scene-from-y: 0px; }
+  :root[data-nav='back'] { --feel-scene-from-x: calc(-1 * var(--space-loose)); --feel-scene-from-y: 0px; }
+  :root[data-nav='down'] { --feel-scene-from-x: 0px; --feel-scene-from-y: var(--space-loose); }
+  :root[data-nav='up'] { --feel-scene-from-x: 0px; --feel-scene-from-y: calc(-1 * var(--space-loose)); }
+  :root[data-nav='jump'] { --feel-scene-from-x: 0px; --feel-scene-from-y: 0px; }
+
+  /* The frame that stays: it takes its new place at once and never fades, so the rail, the header
+     and the playing dock do not blink. Only the new snapshot is drawn, and it is live. */
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(vt-rail),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(vt-header),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(vt-dock),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-new(vt-rail),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-new(vt-header),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-new(vt-dock) {
+    animation: none;
+  }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-old(vt-rail),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-old(vt-header),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-old(vt-dock) {
+    display: none;
+  }
+
+  /* The page: the old one leaves fast, the new one arrives in 200ms, so the whole swap is within
+     240ms. Opacity eases (an effect); the short travel uses the gentle spring (spatial). */
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(vt-page) {
+    animation: none;
+  }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-old(vt-page) {
+    animation: feel-scene-leave var(--motion-fast) var(--motion-ease) both;
+  }
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-new(vt-page) {
+    animation:
+      feel-scene-enter var(--motion-handoff) var(--motion-ease) both,
+      feel-scene-travel var(--motion-handoff) var(--spring-gentle) both;
+  }
+
+  /* Shared things glide between their two places on the gentle spring. */
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(mix-art),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(song-art),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(page-title),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(player-art),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(brand-mark),
+  :root[data-nav]:not([data-motion='still']):not([data-low-power])::view-transition-group(palette) {
+    animation-duration: var(--motion-spring-glide);
+    animation-timing-function: var(--spring-gentle);
+  }
+}
+
+@keyframes feel-scene-leave {
+  to { opacity: 0; }
+}
+
+@keyframes feel-scene-enter {
+  from { opacity: 0; }
+}
+
+@keyframes feel-scene-travel {
+  from { translate: var(--feel-scene-from-x, 0px) var(--feel-scene-from-y, 0px); }
+}

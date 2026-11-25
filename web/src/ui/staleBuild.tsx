@@ -46,9 +46,22 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** `React.lazy`, with one retry and the updated panel instead of a crash or a blank page. */
-export function lazyPage<T extends ComponentType<any>>(load: () => Promise<{ default: T }>): LazyExoticComponent<T> {
-  return lazy(async () => {
+/** A lazy page that can also be fetched ahead of time. `preload` resolves once the page's code is
+ * here; it never rejects, because a page that fails to load says so itself when it is shown. */
+export type PreloadablePage<T extends ComponentType<any>> = LazyExoticComponent<T> & {
+  preload: () => Promise<void>;
+  loaded: () => boolean;
+};
+
+/** `React.lazy`, with one retry and the updated panel instead of a crash or a blank page.
+ *
+ * A page transition (shell/sceneTransition.ts) preloads the page it is going to, so the new page is
+ * captured as itself rather than as its skeleton. Once the code is here, React is handed a thenable
+ * that is already settled and calls back at once, so it renders the page without suspending. */
+export function lazyPage<T extends ComponentType<any>>(load: () => Promise<{ default: T }>): PreloadablePage<T> {
+  let module: { default: T } | null = null;
+  let loading: Promise<{ default: T }> | null = null;
+  const fetchOnce = async (): Promise<{ default: T }> => {
     try {
       return await load();
     } catch (first) {
@@ -62,6 +75,28 @@ export function lazyPage<T extends ComponentType<any>>(load: () => Promise<{ def
         return { default: StaleBuildPanel as unknown as T };
       }
     }
+  };
+  const start = (): Promise<{ default: T }> => {
+    if (!loading) {
+      loading = fetchOnce().then(
+        (value) => { module = value; return value; },
+        (error) => { loading = null; throw error; },
+      );
+    }
+    return loading;
+  };
+  const page = lazy(() => {
+    if (module) {
+      const ready = module;
+      // settled already: React reads the result during this call and does not suspend
+      const settled = { status: 'fulfilled', value: ready, then: (resolve: (value: { default: T }) => unknown) => resolve(ready) };
+      return settled as unknown as Promise<{ default: T }>;
+    }
+    return start();
+  });
+  return Object.assign(page, {
+    preload: () => start().then(() => undefined, () => undefined),
+    loaded: () => module !== null,
   });
 }
 
