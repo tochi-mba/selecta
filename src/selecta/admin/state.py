@@ -36,11 +36,20 @@ from enum import StrEnum
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.admin.schema import emergency_controls, upload_restrictions, worker_controls
+from selecta.admin.schema import (
+    emergency_controls,
+    staff_preferences,
+    upload_restrictions,
+    worker_controls,
+)
 from selecta.persistence import is_postgres
 
 ALL = "*"
 CHANNEL = "selecta_emergency_controls"
+PLATFORM_ROW = "_platform"
+"""`staff_preferences` keeps console-wide settings under this reserved id (never a user id): the
+hosted-processing budget and staff requests to the autoscaler (`admin.hosted_ops`)."""
+SCALE_KEY = "workers.scale"
 
 
 class Control(StrEnum):
@@ -145,6 +154,27 @@ def worker_hold(conn: Connection, worker_id: str | None) -> str | None:
     return conn.execute(
         sa.select(worker_controls.c.hold).where(worker_controls.c.worker_id == worker_id)
     ).scalar_one_or_none()
+
+
+def platform_setting(conn: Connection, key: str) -> dict | None:
+    """One console-wide setting (`PLATFORM_ROW`), or None when nobody has set it."""
+    value = conn.execute(
+        sa.select(staff_preferences.c.value).where(
+            staff_preferences.c.user_id == PLATFORM_ROW, staff_preferences.c.key == key
+        )
+    ).scalar_one_or_none()
+    return value if isinstance(value, dict) else None
+
+
+def scale_requests(conn: Connection, now: float) -> dict[str, int]:
+    """Pool -> workers staff asked the autoscaler to run until a time (the Workers page's "Start
+    one worker for an hour" and "Stop all workers"). Expired requests are ignored."""
+    found = platform_setting(conn, SCALE_KEY) or {}
+    out = {}
+    for pool, request in found.items():
+        if isinstance(request, dict) and float(request.get("until") or 0) > now:
+            out[pool] = max(0, int(request.get("workers", 0)))
+    return out
 
 
 def uploads_restricted(conn: Connection, workspace_id: str) -> bool:

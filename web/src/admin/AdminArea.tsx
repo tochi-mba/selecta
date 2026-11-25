@@ -15,9 +15,10 @@ import { adminPath, go, parseAdmin } from './route';
 import { ConsoleContext, DangerDialog, DangerRequest, needsWords, Toast, Toasts } from './safety';
 import { StaffPage } from './StaffPage';
 import { SystemPage } from './SystemPage';
+import { WorkersPage } from './WorkersPage';
 import './admin.css';
 
-export type AdminPage = 'overview' | 'customers' | 'billing' | 'jobs' | 'ai' | 'flags' | 'content' | 'emergency' | 'security' | 'communications' | 'system' | 'pilots';
+export type AdminPage = 'overview' | 'customers' | 'billing' | 'jobs' | 'workers' | 'ai' | 'flags' | 'content' | 'emergency' | 'security' | 'communications' | 'system' | 'pilots';
 
 /** The pages (doc 07b §7B.4), each shown only to roles that can read it and when its flag is on. */
 export const PAGES: { id: AdminPage; label: string; needs: string; flag?: string }[] = [
@@ -25,6 +26,9 @@ export const PAGES: { id: AdminPage; label: string; needs: string; flag?: string
   { id: 'customers', label: 'Customers', needs: 'accounts.list' },
   { id: 'billing', label: 'Billing', needs: 'billing.subscriptions.read' },
   { id: 'jobs', label: 'Jobs', needs: 'jobs.read' },
+  // Its own sidebar item, not a tab on Jobs: it is where staff look first when hosted processing
+  // stalls, so it must be one click from anywhere (doc 07b §7B.4, Workers).
+  { id: 'workers', label: 'Workers', needs: 'jobs.read', flag: 'admin.workers' },
   { id: 'ai', label: 'AI', needs: 'models.read' },
   { id: 'flags', label: 'Flags', needs: 'flags.read' },
   { id: 'content', label: 'Content', needs: 'legal.takedowns.read' },
@@ -178,6 +182,7 @@ export default function AdminArea({ token, onLeave, origin, email, features, onS
             {current?.id === 'customers' && <CustomersPage route={location} />}
             {current?.id === 'billing' && <BillingPage route={location} />}
             {current?.id === 'jobs' && <JobsPage api={api} can={can} />}
+            {current?.id === 'workers' && <WorkersPage />}
             {current?.id === 'ai' && <AiPage api={api} can={can} />}
             {current?.id === 'flags' && <FlagsPage api={api} can={can} />}
             {current?.id === 'content' && <ContentPage />}
