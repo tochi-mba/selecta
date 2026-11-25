@@ -2,7 +2,7 @@
 id: T-20261125-afaa
 title: Decide whether a room vote needs a minimum number of voters
 area: rooms
-status: open
+status: done
 priority: normal
 who: owner
 created: 2026-11-25
