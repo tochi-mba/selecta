@@ -13,7 +13,7 @@ import { feelOn, onFeelChange } from './root';
  *
  * It reads the same frames and runs the same feature tracker as the Listen visualizer
  * (feel/musicFeatures.ts), through the player's read-only taps or spectrum. Where the player has
- * none (the hosted dock's <audio> element, or the music playing on another device) the bus stays
+ * none (the hosted dock's audio element, or the music playing on another device) the bus stays
  * idle and only the ambient hue is shown (feel/hue.ts).
  *
  * The global CSS switch for reduced motion does not reach script animations, so the bus gates

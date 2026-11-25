@@ -32,6 +32,22 @@ ends with everything that needs you.*
   back. Each plan now answers with its own model: Free on Haiku, Standard on Sonnet, Premium on Opus.
 - Not yet: Lucy's memory of you and your listening history in Cloud. Chapter: [09 §9.7](09-lucy-ai-gateway.md).
 
+## Lucy's limits: one allowance on a session and a week (ADR-0480 to ADR-0487)
+
+- Accepted by you on 2026-11-25 and being built behind flags that are off for everyone: one Lucy
+  allowance weighted by what each turn costs, on a five-hour session under a weekly limit, with one
+  meter that shows what is really enforced. It will replace turns per month once measured and
+  rolled out. Prices and the 40% rule stay as they are.
+- Reading the code for it found faults in today's limits: the turns meter reads counters nothing
+  writes, two of the four turn classes can never happen, and the "out of turns" words are also
+  shown when the hidden dollar ceiling was the cause. Each is filed in `docs/todo/items/`.
+- Those three are fixed (2026-11-25): the meter reads what the gateway counts, messages count as
+  quick turns and deep plans as the plans say, and at the dollar ceiling Lucy says it is the plan's
+  monthly limit on her AI, not the turns. A test now fails if the two allowance tables disagree.
+- Needs you, later: the real sizes once four weeks of shadow data exist (LM-0487-03), pack prices
+  and the refund wording if packs are to be sold (LM-0486-01, -02), and the words of the notice
+  members get before they switch (LM-0487-05). Chapter: [09 §9.8](09-lucy-ai-gateway.md).
+
 ## Billing and plans
 
 - **When a payment goes wrong, people are told.** A failed renewal, a cancelled plan, a bank asking to

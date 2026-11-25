@@ -75,6 +75,9 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `lucy.remote_providers` | **AI services for Lucy.** Planning with Anthropic or an OpenAI-compatible host instead of the built-in planner. | `lucy` |
 | `lucy.listening_history` | **Listening history for Lucy.** What you play is noted so Lucy can know your most-played songs. | `lucy` |
 | `lucy.cloud_conversation` | **Lucy's conversation in Cloud.** Talk to Lucy in the browser about your library and mixes; she proposes changes you can save. | `lucy`, `cloud.local_media` |
+| `lucy.usage_windows` | **Lucy's allowance on a session and a week.** Measures Lucy by what each message costs, on a five-hour session and a weekly limit, in place of turns a month (ADR-0481 to ADR-0484). The build ships on so a rule can grant it, and with no matching rule it is off. **Cloud surface:** unreleased (The session and week meters and their pages are not built yet (ADR-0484)). | `lucy.cloud_conversation` |
+| `lucy.extra_usage` | **Extra Lucy usage in prepaid packs.** Buy a prepaid pack of extra Lucy usage, spent only once the weekly limit is reached (ADR-0486). The build ships on so a rule can grant it, and with no matching rule it is off. **Cloud surface:** unreleased (The pages for buying and seeing extra usage are not built yet (ADR-0486)). | `lucy.usage_windows` |
+| `lucy.usage_shadow` | **Measure Lucy's new allowance in the background.** Records what each Lucy turn would use under the new allowance without changing anything a member sees. Turning it off stops that recording at once. **Cloud surface:** headless (A background measurement of each turn; nothing on a Cloud screen changes). | `lucy.cloud_conversation` |
 
 ## My Mixes
 
@@ -165,7 +168,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `lyrics.word_timing` | **Word timing.** When each sung word lands, for moves that hand over on a word. | `lyrics.lookup` |
 | `analysis.time_estimates` | **Time estimates.** How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds. |  |
 | `library.scan_resume` | **Scans carry on after a stop.** A library scan saves its progress as it goes, so a scan interrupted by closing SelectaDJ or the computer carries on where it stopped. An interrupted export or lyric lookup is offered again. |  |
-| `library.art_embedded` | **Covers from your own files.** Shows the cover picture stored inside a song's own file. In Cloud it is read on your device and never uploaded (ADR-0478). Off: the generated colour tile, as before. Off by default while it is being built. |  |
+| `library.art_embedded` | **Covers from your own files.** Shows the cover picture stored inside a song's own file. In Cloud it is read on your device and never uploaded (ADR-0478). Off: the generated colour tile, as before. |  |
 | `library.art_lookup` | **Covers and song details from the web.** For a song whose file has no cover, looks up the release on MusicBrainz and its cover on the Cover Art Archive, and keeps the result in SelectaDJ's own catalogue. Only the artist, title, album and length are sent (ADR-0478). Off by default: the sources' terms are the owner's to clear first. | `library.art_embedded` |
 
 ## Learning
@@ -202,13 +205,13 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `app.auto_low_motion` | **Lower motion on a struggling device.** When frames keep arriving late, decorative movement switches to Still for this visit. Nothing is hidden, and Workspace can bring full motion back. |  |
 | `app.classic_nav` | **Classic navigation.** The older navigation labels over the same pages, with ?ui=classic as a way back. |  |
 | `app.scene_transitions` | **Page transitions.** With Expressive motion, pages move in the direction you went and shared things travel between them, where the browser supports it; otherwise they change at once. | `app.motion_choice` |
-| `app.feel_motion` | **Expressive feel.** Springy presses and releases, things arriving from where they were asked, and Expressive as the starting motion level (ADR-0477). Off: today's quiet feedback, with Subtle as the starting level. Off by default while it is being built. | `app.motion_choice` |
-| `app.feel_depth` | **Depth and light.** Lift shadows, lit edges and a glow on the main action, on the same colours as before (ADR-0477). Off: flat surfaces as before. Off by default while it is being built. |  |
-| `app.feel_pointer_light` | **Pointer light.** Cards and tiles show a soft light where the mouse is. Mouse only, and never the only sign of anything. Off by default while it is being built. | `app.feel_depth` |
-| `app.feel_music` | **Moves with the music.** While a mix plays, the Play control, the player bar and the playing row answer the measured beat of the real audio, and rest when it is paused (ADR-0477). Off: they stay still. Off by default while it is being built. | `app.motion_choice` |
-| `app.feel_ambient` | **Ambient colour.** A soft tint taken from the playing song, which travels to the next song's colour during a blend. Off: no tint. Off by default while it is being built. |  |
-| `app.feel_moments` | **Big moments.** A short celebration at rare moments: setup finished, a mix built, the first blend heard, a room opened, a plan upgraded, an export ready. Off: the plain words only. Off by default while it is being built. | `app.feel_motion` |
-| `app.feel_haptics` | **Phone taps.** A light tap from the phone on key presses, on phones that can do it. Off: no taps. Off by default while it is being built. |  |
+| `app.feel_motion` | **Expressive feel.** Springy presses and releases, things arriving from where they were asked, and Expressive as the starting motion level (ADR-0477). Off: today's quiet feedback, with Subtle as the starting level. | `app.motion_choice` |
+| `app.feel_depth` | **Depth and light.** Lift shadows, lit edges and a glow on the main action, on the same colours as before (ADR-0477). Off: flat surfaces as before. |  |
+| `app.feel_pointer_light` | **Pointer light.** Cards and tiles show a soft light where the mouse is. Mouse only, and never the only sign of anything. | `app.feel_depth` |
+| `app.feel_music` | **Moves with the music.** While a mix plays, the Play control, the player bar and the playing row answer the measured beat of the real audio, and rest when it is paused (ADR-0477). Off: they stay still. | `app.motion_choice` |
+| `app.feel_ambient` | **Ambient colour.** A soft tint taken from the playing song, which travels to the next song's colour during a blend. Off: no tint. |  |
+| `app.feel_moments` | **Big moments.** A short celebration at rare moments: setup finished, a mix built, the first blend heard, a room opened, a plan upgraded, an export ready. Off: the plain words only. | `app.feel_motion` |
+| `app.feel_haptics` | **Phone taps.** A light tap from the phone on key presses, on phones that can do it. Off: no taps. |  |
 | `app.install` | **Install as an app.** Chrome and Edge can install Selecta as its own window. |  |
 | `app.attention_announce` | **Say when Workspace needs attention.** When storage fills, analysis pauses with songs left, or a song or transition fails, a screen reader hears it once on whatever page is open. The header mark stays either way. |  |
 

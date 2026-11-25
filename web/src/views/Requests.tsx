@@ -18,7 +18,6 @@ import { BrowserRequests, useRoomLive, waitingCount as countWaiting } from './Br
 export type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
   | 'waiting' | 'searching' | 'approve' | 'preparing' | 'ready';
-
 type Transition = { from: string; to: string; key: string; status: string; label?: string };
 
 export type RequestRow = {
@@ -30,8 +29,7 @@ export type RequestRow = {
   stage?: Stage; waiting_on?: string; seconds?: number | null; after?: string | null;
   never?: boolean; no_cues?: boolean; declined?: boolean; bridge_choice?: boolean | null;
   saving?: boolean; picked?: number[] | null; behind?: string; bridge_lost?: boolean;
-  /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */
-  browser_note?: string;
+  /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */ browser_note?: string;
   plays_on?: string; where_note?: string; connect_here?: boolean; // ADR-0475: who plays it, the line saying so, and whether connecting here is the only way
   /** Cloud in the browser: the room a guest asked in, and the guest's nickname when it is known. */
   room_name?: string; asked_by?: string | null; room_request_id?: string;

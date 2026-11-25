@@ -409,7 +409,7 @@
 
 /* conversations */
 .lucy-history { display: grid; gap: var(--space-2); }
-.lucy-history-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.lucy-history-head { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .lucy-history-head h2 { font-size: var(--text-md); }
 .lucy-history-head .button { gap: var(--space-1); }
 .lucy-archived-toggle { justify-self: start; font-size: var(--text-sm); }
@@ -491,6 +491,67 @@
 @media (forced-colors: active) {
   .lucy-readiness-warning { border-inline-start-color: Highlight; border-block-color: CanvasText; }
 }
+
+/* ---------- Lucy usage (ADR-0484) ----------
+   What is left of this session and this week, never what is counted behind it. Warning and failed
+   are one colour, so near and spent always differ by a mark, an outline and words as well. */
+
+/* the full meter, in Lucy's settings and on Plan & billing */
+.lucy-usage { display: grid; gap: var(--space-3); min-width: 0; }
+.lucy-usage p { margin: 0; }
+.lucy-usage-line { display: grid; gap: var(--space-1); }
+.lucy-usage-words { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-hair) var(--space-3); }
+.lucy-usage-figure { font-variant-numeric: tabular-nums; }
+.lucy-usage-state { display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); font-weight: 600; }
+.lucy-usage-line[data-state='near'] .lucy-usage-state { color: var(--status-warning); }
+.lucy-usage-line[data-state='spent'] .lucy-usage-state { color: var(--status-failed); }
+.lucy-usage-note { font-size: var(--text-sm); color: var(--text-soft); }
+
+/* the twin level meter: two ladders of five segments, session on the left and week on the right */
+.lucy-levels { position: relative; display: inline-flex; }
+.lucy-levels-button { justify-content: center; min-height: var(--control-height); min-width: var(--control-height); padding: var(--space-1) var(--space-2); }
+.lucy-levels-pair { display: inline-flex; align-items: flex-end; gap: var(--space-1); }
+.lucy-ladder { display: inline-grid; justify-items: center; gap: var(--space-hair); }
+.lucy-ladder-rungs { display: grid; gap: var(--space-hair); padding: var(--space-hair); border: 1px solid transparent; border-radius: var(--radius-hair); }
+.lucy-ladder-seg { display: block; width: 8px; height: 3px; background: var(--border); transition: background-color var(--motion-reveal) var(--motion-ease); }
+.lucy-ladder-seg[data-lit] { background: var(--text-soft); }
+/* near: a marker above the ladder; spent: the ladder empty, inside a dashed outline */
+.lucy-ladder-mark { display: block; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--status-warning); }
+.lucy-ladder[data-state='near'] .lucy-ladder-seg[data-lit] { background: var(--status-warning); }
+.lucy-ladder[data-state='spent'] .lucy-ladder-rungs { border: 1px dashed var(--status-failed); }
+.lucy-ladder[data-state='spent'] .lucy-ladder-seg { background: none; }
+@media (prefers-reduced-motion: reduce) { .lucy-ladder-seg { transition: none; } }
+:root[data-motion='still'] .lucy-ladder-seg { transition: none; }
+.lucy-levels-panel { inset-block-start: 100%; inset-inline-start: 0; margin-top: 0; display: grid; gap: var(--space-2); justify-items: start; }
+.lucy-levels-panel p { margin: 0; }
+.lucy-levels-state { font-weight: 600; }
+/* in the conversation list's narrow column the label takes the column's own width */
+.lucy-history-head .lucy-levels { position: static; margin-inline-start: auto; }
+.lucy-history-head .lucy-levels-panel { inset-inline: 0; min-width: 0; max-width: none; }
+@media (pointer: coarse) {
+  .lucy-levels-button { min-height: 44px; min-width: 44px; }
+  .lucy-levels-panel .lucy-link, .lucy-limit-step button { min-height: 44px; }
+}
+@media (forced-colors: active) {
+  .lucy-ladder-seg { border: 1px solid CanvasText; }
+  .lucy-ladder-seg[data-lit], .lucy-ladder-mark { background: CanvasText; }
+  .lucy-ladder[data-state='spent'] .lucy-ladder-rungs { border-color: CanvasText; }
+}
+
+/* the one next step under Lucy's words when a limit was reached (ADR-0483 rule 6) */
+.lucy-limit-step {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 72ch;
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--status-action);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.lucy-limit-title { margin: 0; font: var(--type-label); }
+.lucy-limit-step ul { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0; padding: 0; }
 
 /* ---------- The feel (ADR-0477, plan 3.9) ----------
    Inert until <html data-feel> holds its word (feel/root.ts writes it from the app.feel_* flags and

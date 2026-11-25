@@ -7,10 +7,10 @@ from __future__ import annotations
 import pytest
 from cloud_world import HEADERS, signed_up
 
+from selecta.ai import allowance as lucy_allowance
 from selecta.billing.plans import plan_for
 from selecta.lucy import cloud_settings
-from selecta.persistence import transaction
-from selecta.usage import allowances
+from selecta.persistence import db_now, transaction
 
 
 def test_the_defaults_match_local_lucy_without_the_server_owned_parts(tmp_path, monkeypatch):
@@ -71,12 +71,13 @@ def test_an_unknown_phase_is_refused_by_name(tmp_path, monkeypatch):
 def test_the_turn_meter_counts_this_months_turns(tmp_path, monkeypatch):
     with signed_up(tmp_path, monkeypatch) as world:
         with transaction(world.engine, world.workspace_id) as conn:
-            allowances.try_consume(
-                conn, world.workspace_id, "lucy_turn.everyday", 7,
-                plan_for("free").lucy_turns("everyday"),
-            )
+            month = lucy_allowance.month_key(db_now(conn), "UTC")
+            for _ in range(7):
+                # counted where the AI gateway counts a turn, which is what the meter reads
+                lucy_allowance.try_start_turn(conn, world.workspace_id, "free", "everyday", month)
         usage = world.client.get("/api/account/lucy", headers=HEADERS).json()["usage"]
         assert (usage["used"], usage["limit"]) == (7, 40)
+        assert plan_for("free").lucy_turns("everyday") == 40
         assert usage["resets_at"] > 0
 
 

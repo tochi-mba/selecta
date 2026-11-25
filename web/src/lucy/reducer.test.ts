@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canAdvance, cardKey, EMPTY_VIEW, reduce, summarize, type LucyView } from './reducer';
+import { canAdvance, cardKey, EMPTY_VIEW, limitOf, limitSteps, reduce, summarize, type LucyView } from './reducer';
 import type { LucyEvent, Snapshot } from './types';
 
 const conversation = {
@@ -123,5 +123,36 @@ describe('a long Cloud conversation and its follow-ups (ADR-0476)', () => {
       event('message.completed', { message: 'm1', status: 'complete', content: 'Done.', meta: { followups: ['Make it shorter'] } }),
     ] });
     expect(view.messages[0].meta).toEqual({ followups: ['Make it shorter'] });
+  });
+});
+
+describe('a reply answered at a limit (ADR-0483)', () => {
+  const limit = { cause: 'session', back_words: '16:40', resets_at: 1_800_000_000, next: ['wait', 'plans'] };
+  const answered = (id: string, seq: number, meta: Record<string, unknown>) => [
+    event('message.started', { message: id, role: 'assistant', seq }),
+    event('message.completed', { message: id, status: 'complete', content: 'Words.', meta }),
+  ];
+
+  it('carries meta.limit through on the finished message, beside what was already there', () => {
+    const view = reduce(start(), { type: 'events', events: answered('m1', 2, { followups: ['Shorter'], limit }) });
+    expect(view.messages[0].meta).toEqual({ followups: ['Shorter'], limit });
+    expect(limitOf(view.messages[0].meta)).toEqual(limit);
+  });
+
+  it('reads no limit from a reply that has none, or one this build does not know', () => {
+    expect(limitOf({})).toBeNull();
+    expect(limitOf(undefined)).toBeNull();
+    expect(limitOf({ limit: 'session' })).toBeNull();
+    expect(limitOf({ limit: { cause: 'something_new', next: ['wait'] } })).toBeNull();
+    expect(limitOf({ limit: { cause: 'week', next: ['wait', 'dance', 'extra'] } })).toEqual({ cause: 'week', back_words: null, resets_at: null, next: ['wait', 'extra'] });
+  });
+
+  it('gives the next step to the first reply of each limit event only', () => {
+    const later = { ...limit, resets_at: 1_800_018_000, back_words: '21:40' };
+    const view = reduce(start(), { type: 'events', events: [
+      ...answered('m1', 2, { limit }), ...answered('m2', 4, { limit }), ...answered('m3', 6, {}), ...answered('m4', 8, { limit: later }),
+    ] });
+    expect([...limitSteps(view.messages).keys()]).toEqual(['m1', 'm4']);
+    expect(limitSteps(view.messages).get('m4')?.back_words).toBe('21:40');
   });
 });

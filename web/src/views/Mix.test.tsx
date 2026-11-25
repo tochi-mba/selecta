@@ -12,6 +12,7 @@ import { SeamInspector } from './SeamInspector';
 import { Mix } from './Mix';
 import { MixScope } from './mixScope';
 import { RequestsContext, RequestsState } from './Requests';
+import { feelOff } from '../test/feel';
 
 function Harness({ start, state = status(), notify = () => {}, refreshMix = () => {} }: { start: MixItem[]; state?: Status; notify?: (m: string) => void; refreshMix?: () => void }) {
   const [mix, setMix] = useState(start);
@@ -779,6 +780,8 @@ describe('saving as a file', () => {
   beforeEach(() => resetExports());
 
   it('does not carry an in-flight export across a change of editing scope', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     fakeBackend({
       'GET /exports/jobs': { jobs: [] },
       'POST /exports/jobs': exportJob(),
@@ -830,6 +833,8 @@ describe('saving as a file', () => {
   });
 
   it('only offers the file once it really exists', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     let jobs: ExportJob[] = [];
     const calls = fakeBackend({
       'GET /exports/jobs': () => ({ jobs }),

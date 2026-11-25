@@ -45,7 +45,7 @@ function RoomCode({ code, arriving, testId }: { code: string | null; arriving: b
 }
 
 export function RoomShare({ name, code, link, copied, copy, onFullScreen, arriving = false }: {
-  name: string; code: string | null; link: string; copied: boolean; copy: () => Promise<void>; onFullScreen: () => void;
+  name: string; code: string | null; link: string; copied: boolean; copy: () => Promise<unknown>; onFullScreen: () => void;
   /** the room was just opened on this page: the code and the QR arrive as a moment (ADR-0477) */
   arriving?: boolean;
 }) {

@@ -118,6 +118,42 @@
       "modes": ["cloud"],
       "kind": "release",
       "owner": "lucy"
+    },
+    "lucy.usage_windows": {
+      "label": "Lucy's allowance on a session and a week",
+      "about": "Measures Lucy by what each message costs, on a five-hour session and a weekly limit, in place of turns a month (ADR-0481 to ADR-0484). The build ships on so a rule can grant it, and with no matching rule it is off.",
+      "requires": ["lucy.cloud_conversation"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "default": true,
+      "rules_default": false,
+      "kind": "release",
+      "owner": "lucy",
+      "cloud_surface_kind": "unreleased",
+      "cloud_surface_reason": "The session and week meters and their pages are not built yet (ADR-0484)"
+    },
+    "lucy.extra_usage": {
+      "label": "Extra Lucy usage in prepaid packs",
+      "about": "Buy a prepaid pack of extra Lucy usage, spent only once the weekly limit is reached (ADR-0486). The build ships on so a rule can grant it, and with no matching rule it is off.",
+      "requires": ["lucy.usage_windows"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "default": true,
+      "rules_default": false,
+      "kind": "release",
+      "owner": "lucy",
+      "cloud_surface_kind": "unreleased",
+      "cloud_surface_reason": "The pages for buying and seeing extra usage are not built yet (ADR-0486)"
+    },
+    "lucy.usage_shadow": {
+      "label": "Measure Lucy's new allowance in the background",
+      "about": "Records what each Lucy turn would use under the new allowance without changing anything a member sees. Turning it off stops that recording at once.",
+      "requires": ["lucy.cloud_conversation"],
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "lucy",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "A background measurement of each turn; nothing on a Cloud screen changes"
     }
   }
 }

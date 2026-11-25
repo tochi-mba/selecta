@@ -168,6 +168,10 @@ class TurnSummary:
     cost_usd: float
     alerts: tuple[SpendAlert, ...] = ()
     already_finished: bool = False
+    account_cost_usd: float | None = None
+    """What the account was charged; `cost_usd` is what the platform booked. None when this
+    call settled nothing."""
+    answered_deployment_id: str | None = None
 
 
 def _builtin_route(
@@ -384,6 +388,7 @@ def _close(
     conn: Connection, run: RunRecord, outcome: Outcome, *, tokens_in: int, tokens_out: int,
     cache_read_tokens: int, cache_write_tokens: int, account_cost: float,
     platform_cost: float, error_code: str | None, policy: PlatformPolicy,
+    answered_id: str | None = None,
 ) -> TurnSummary:
     if not finish_run(
         conn, run.id, outcome=outcome, tokens_in=tokens_in, tokens_out=tokens_out,
@@ -404,30 +409,36 @@ def _close(
         alerts = reconcile(conn, run.spend_day, run.reserved_usd, platform_cost, policy)
     if run.lease_id is not None:
         release_lease(conn, run.lease_id)
-    return TurnSummary(run.id, outcome, platform_cost, alerts)
+    return TurnSummary(run.id, outcome, platform_cost, alerts, False, account_cost, answered_id)
 
 
 def finish_turn(
     conn: Connection, plan: TurnPlan | str, *, outcome: Outcome | str, tokens_in: int = 0,
     tokens_out: int = 0, cache_read_tokens: int = 0, cache_write_tokens: int = 0,
     error_code: str | None = None, policy: PlatformPolicy | None = None,
+    answered_by: Deployment | None = None, earlier_cost_usd: float = 0.0,
 ) -> TurnSummary:
     """Settle a turn once; a second call changes nothing and says `already_finished`.
 
-    Cost comes from the pinned deployment's prices. Failed and incomplete turns still count
+    The tokens are those of the attempt that answered, and the account is charged for them at
+    the prices of `answered_by`, the deployment that answered (the pinned one unless the turn
+    stepped down the model chain). `earlier_cost_usd` is what the attempts before it cost: the
+    platform books it, the account doesn't pay it. Failed and incomplete turns still count
     their dollars but give the person their turn back, since they'll press "try again".
     """
     run_id = plan.run_id if isinstance(plan, TurnPlan) else plan
     run = get_run(conn, run_id)
     if run is None:
         raise GatewayError("unknown_run", f"No Lucy run {run_id}.")
-    cost = run.deployment.prices.cost(tokens_in, tokens_out, cache_read_tokens,
-                                      cache_write_tokens)
+    answered = answered_by or run.deployment
+    cost = answered.prices.cost(tokens_in, tokens_out, cache_read_tokens, cache_write_tokens)
+    earlier = max(0.0, float(earlier_cost_usd))
     return _close(
         conn, run, Outcome(outcome), tokens_in=tokens_in, tokens_out=tokens_out,
         cache_read_tokens=cache_read_tokens, cache_write_tokens=cache_write_tokens,
-        account_cost=cost, platform_cost=cost, error_code=error_code,
-        policy=policy or PlatformPolicy.from_env(),
+        account_cost=cost, platform_cost=round(cost + earlier, 8) if earlier else cost,
+        error_code=error_code, policy=policy or PlatformPolicy.from_env(),
+        answered_id=answered.id,
     )
 
 

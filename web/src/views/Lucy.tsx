@@ -1,6 +1,7 @@
 import { KeyboardEvent, memo, ReactNode, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError, MixData, problemKind, ProblemKind } from '../api';
 import { useApi } from '../requestContext';
+import { useLucyUsage } from '../cloud/lucyUsage';
 import { lucy, lucyTransport, newId } from '../lucy/client';
 import { isRunActive } from '../lucy/reducer';
 import type { ConversationScope, LucyStatus, Selection } from '../lucy/types';
@@ -18,6 +19,7 @@ import { blockedWords, gateOf, LucyClosed, LucyNotice, ProviderNote } from './Lu
 import { LucyHistory } from './LucyHistory';
 import { ExamplePrompts, ProposalPane } from './LucyProposal';
 import { LucySettings } from './LucySettings';
+import { LucyUsageLevels } from './LucyUsageLevels';
 import { Announcer, Pending, Transcript, useAnnouncer, useStickToBottom } from './LucyTranscript';
 import type { ViewProps } from './shared';
 import '../styles/lucy.css';
@@ -94,9 +96,13 @@ export type LucyProps = {
   conversation: string | null; setMixData: ViewProps['setMixData']; player: ViewProps['player']; request?: ViewProps['request'];
   /** Cloud (ADR-0476): the account's own settings card in place of the bring-your-own-AI one. */
   settingsPanel?: ReactNode;
+  /** Cloud (ADR-0484): the account's own API, for Lucy's usage. Left out, as in Local mode, the
+   * twin level meter asks nothing and is not drawn. The page's `request` cannot stand in for it:
+   * in a local-first shell that one answers from the browser and refuses an account path. */
+  usageRequest?: ViewProps['request'];
 };
 
-export function Lucy({ conversation, setMixData, player, request, settingsPanel }: LucyProps) {
+export function Lucy({ conversation, setMixData, player, request, settingsPanel, usageRequest }: LucyProps) {
   // ADR-0462: this page's own mix read goes through the injected request; standalone local mounts
   // (and the existing tests) keep the local client by default.
   const { get } = useApi(request);
@@ -126,6 +132,8 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
   const attempt = useRef<{ conversation: string; clientId: string; text: string } | null>(null);
   const refocus = useRef(false);
 
+  // ADR-0484 rule 11: only a Cloud account has the usage read model, and only when the server sends it
+  const usage = useLucyUsage(usageRequest);
   const announcer = useAnnouncer();
   const convo = useConversation(conversation, announcer.say);
   const { view, revision } = convo;
@@ -331,6 +339,8 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
         </div>
       </div>
       <div className="row wrap lucy-head-actions">
+        {/* beside New while the conversation list is a column; here whenever it is not */}
+        {!historyColumn && <LucyUsageLevels windows={usage} onSettings={status ? () => setSettingsOpen(true) : undefined} />}
         {width >= HISTORY_AT
           ? <button type="button" aria-pressed={historyOpen} onClick={toggleHistory}>{historyOpen ? 'Hide conversations' : 'Show conversations'}</button>
           : <button type="button" aria-haspopup="dialog" onClick={() => setHistorySheet(true)}>Conversations</button>}
@@ -480,7 +490,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
       )}
       {status && <LucyNotice gate={gate} status={status} onBuiltin={chooseBuiltin} onSettings={() => setSettingsOpen(true)} />}
       <div className={`lucy-layout ${historyColumn ? 'has-history' : ''}`}>
-        {historyColumn && <aside className="lucy-history-col"><LucyHistory currentId={conversation} refreshKey={`${conversation}:${view.conversation?.title ?? ''}`} /></aside>}
+        {historyColumn && <aside className="lucy-history-col"><LucyHistory currentId={conversation} refreshKey={`${conversation}:${view.conversation?.title ?? ''}`} levels={<LucyUsageLevels windows={usage} onSettings={() => setSettingsOpen(true)} />} /></aside>}
         {!split && (
           <div className="lucy-tabs" role="tablist" aria-label="Lucy">
             {(['chat', 'mix'] as const).map((name) => (

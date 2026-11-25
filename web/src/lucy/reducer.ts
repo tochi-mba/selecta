@@ -1,5 +1,5 @@
 import type {
-  Card, CardStatus, Conversation, Family, LucyEvent, Message, MessageRole, MessageStatus, Permission, Revision,
+  Card, CardStatus, Conversation, Family, LimitCause, LimitNext, LimitNotice, LucyEvent, Message, MessageRole, MessageStatus, Permission, Revision,
   RevisionSummary, Run, RunState, Snapshot,
 } from './types';
 
@@ -105,6 +105,43 @@ const bySeq = (a: Message, b: Message) => a.seq - b.seq || (a.id < b.id ? -1 : a
 const lastSeq = (messages: Message[]) => messages.reduce((top, message) => Math.max(top, message.seq), 0);
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
 const num = (value: unknown, fallback = 0) => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
+
+const LIMIT_CAUSES: readonly LimitCause[] = ['session_lighter', 'session', 'week', 'lucy_off', 'backstop', 'platform', 'no_model'];
+const LIMIT_NEXT: readonly LimitNext[] = ['wait', 'plans', 'extra'];
+
+/** The limit a reply was answered under, from its `meta.limit` (ADR-0483), or null when it has
+ * none or names a cause this build does not know: then the reply is shown as any other. */
+export function limitOf(meta: Record<string, unknown> | null | undefined): LimitNotice | null {
+  const raw = meta?.limit;
+  if (!raw || typeof raw !== 'object') return null;
+  const limit = raw as Record<string, unknown>;
+  const cause = LIMIT_CAUSES.find((known) => known === limit.cause);
+  if (!cause) return null;
+  const next = Array.isArray(limit.next) ? LIMIT_NEXT.filter((step) => (limit.next as unknown[]).includes(step)) : [];
+  return {
+    cause,
+    back_words: typeof limit.back_words === 'string' && limit.back_words.trim() ? limit.back_words.trim() : null,
+    resets_at: typeof limit.resets_at === 'number' && Number.isFinite(limit.resets_at) ? limit.resets_at : null,
+    next,
+  };
+}
+
+/** Which replies show the "next step" block: the first reply of each limit event (a cause and the
+ * time it ends), so a later reply under the same limit does not offer it again. */
+export function limitSteps(messages: Message[]): Map<string, LimitNotice> {
+  const seen = new Set<string>();
+  const steps = new Map<string, LimitNotice>();
+  for (const message of messages) {
+    if (message.role !== 'assistant') continue;
+    const limit = limitOf(message.meta);
+    if (!limit) continue;
+    const event = `${limit.cause}:${limit.resets_at ?? ''}`;
+    if (seen.has(event)) continue;
+    seen.add(event);
+    steps.set(message.id, limit);
+  }
+  return steps;
+}
 
 function planFromCards(cards: Card[]): { plans: Record<string, PlanGroup>; planOrder: string[] } {
   const plans: Record<string, PlanGroup> = {};

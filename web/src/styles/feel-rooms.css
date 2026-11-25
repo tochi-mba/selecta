@@ -41,11 +41,8 @@
 
 /* ---------- Requests (rooms/RoomRequests.tsx) ---------- */
 
-/* .ask carries its own arrival (ask-in), which outranks feel.css's zero-weight fold: a row that
-   leaves folds instead. */
-:where(:root[data-feel~='motion']) .ask.feel-collapse-out {
-  animation: feel-collapse var(--motion-handoff) var(--motion-ease) forwards;
-}
+/* .ask carries its own arrival (ask-in); feel.css's weighted .feel-collapse-out rule outranks it,
+   so a row that leaves folds. */
 
 /* The tick an approved request draws in its mark when it reaches Ready to add, and the one beside
    a speaker just chosen. */

@@ -12,6 +12,7 @@ import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
 import { ROOM_EVENT } from '../rooms/useRoomSession';
 import { LUCY_TURNS_EVENT, LucyCloudSettings } from '../views/LucyCloudSettings';
+import { LUCY_USAGE_EVENT } from './lucyUsage';
 import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
 import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
@@ -435,6 +436,8 @@ export function CloudApp() {
     // ADR-0475 R8: another device chose the account's current mix
     if (event.topic === 'mix.current') window.dispatchEvent(new CustomEvent(CURRENT_MIX_EVENT, { detail: event.payload }));
     if (event.topic === 'lucy.turns') window.dispatchEvent(new Event(LUCY_TURNS_EVENT));
+    // ADR-0484 rule 7: Lucy's usage moved (a turn was admitted or settled, or a window reset)
+    if (event.topic === 'lucy.usage') window.dispatchEvent(new Event(LUCY_USAGE_EVENT));
     if (event.topic === 'devices.default_speaker') window.dispatchEvent(new Event(DEFAULT_SPEAKER_EVENT));
     if (event.topic === 'devices.holdings') window.dispatchEvent(new Event(HOLDINGS_EVENT));
     // a room request the host accepted, waiting for (or gone from) the browser mix's Requests

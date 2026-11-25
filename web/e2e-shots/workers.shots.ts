@@ -1,0 +1,50 @@
+import { expect, test } from '@playwright/test';
+import { asStaff, enterConsole } from '../e2e-cloud/cloud';
+// TEMPORARY (Workers page screenshots); not committed.
+const OUT = process.env.SHOTS_OUT!;
+
+test('workers page screenshots', async ({ page, request }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await asStaff(page, request);
+  const nav = await enterConsole(page, { changes: false });
+  await nav.getByRole('link', { name: 'Workers' }).click();
+  await expect(page.getByRole('region', { name: 'Pools' })).toBeVisible();
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `${OUT}/empty-1440-light.png`, fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${OUT}/empty-390-light.png`, fullPage: true });
+
+  const users = ['shot-ana', 'shot-ben', 'shot-cai'];
+  for (const user of users) await request.post('/test/seed', { data: { user, songs: 0 } });
+  const made = await request.post('/test/workers-demo', { data: { users } });
+  expect(made.ok(), await made.text()).toBeTruthy();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.reload();
+  const enter = page.getByRole('button', { name: 'Enter console' });
+  await expect(page.getByRole('region', { name: 'Pools' }).or(enter)).toBeVisible();
+  if (await enter.isVisible()) await enter.click();
+  await expect(page.getByText(/waiting for a worker/i).first()).toBeVisible();
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `${OUT}/waiting-1440-light.png`, fullPage: true });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${OUT}/waiting-1440-dark.png`, fullPage: true });
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${OUT}/waiting-768-light.png`, fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${OUT}/waiting-390-light.png`, fullPage: true });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${OUT}/waiting-390-dark.png`, fullPage: true });
+  const wide = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(wide).toBeLessThanOrEqual(390);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole('button', { name: 'Help for this page' }).click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${OUT}/help-1440.png` });
+});
