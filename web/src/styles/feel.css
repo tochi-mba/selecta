@@ -235,8 +235,10 @@
   animation: feel-flash calc(var(--motion-slow) * 4) var(--motion-ease) both;
 }
 /* leaving is faster than arriving; interpolate-size lets the height fold from auto where the
-   browser can, and elsewhere the row fades and then goes */
-:where(:root[data-feel~='motion'] .feel-collapse-out) {
+   browser can, and elsewhere the row fades and then goes. Unlike the arrivals this rule carries
+   weight (the class twice, about 0,4,0), so a row with its own arrival animation still folds when it
+   leaves, without !important. */
+:root[data-feel~='motion'] .feel-collapse-out.feel-collapse-out {
   overflow: clip;
   interpolate-size: allow-keywords;
   pointer-events: none;

@@ -36,6 +36,13 @@ describe('FL-0477-06 NumberRoll', () => {
     expect(screen.queryByText('1,234 songs')).toBeNull();
   });
 
+  it('gives the element holding it the final value as its accessible name, with no digit noise', () => {
+    const { rerender } = render(<button type="button"><NumberRoll value={1234} format={words} /></button>);
+    expect(screen.getByRole('button')).toHaveAccessibleName('1,234 songs');
+    rerender(<button type="button"><NumberRoll value={98765} format={words} /></button>);
+    expect(screen.getByRole('button')).toHaveAccessibleName('98,765 songs');
+  });
+
   it('is the plain value under Still, and when motion turns off while shown', () => {
     setPrefs({ motion: 'still' });
     const { container } = render(<NumberRoll value={56} format={words} />);

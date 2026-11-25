@@ -57,7 +57,10 @@ describe('corners and line weights (MP-0276-03)', () => {
     const allowed = /^(?:0|50%|inherit|var\(--radius(?:-sm|-pill|-mark|-hair)?\)(?: var\(--radius(?:-sm|-hair)?\))*(?: 0)*|calc\(var\(--radius\) \* 1\.5\)|0 var\(--radius-sm\) var\(--radius-sm\) 0|var\(--radius\) var\(--radius\) 0 0|0 0 var\(--radius\) var\(--radius\)|var\(--radius-hair\) var\(--radius-hair\) 0 0)$/;
     const off = declarations(/border-radius/).filter((item) => !allowed.test(item.value))
       // the drawn tie between two words in a seam diagram is a curve, not a corner
-      .filter((item) => !(item.selector === '.music-seam-diagram.words .word-tie' && item.value === '40%'));
+      .filter((item) => !(item.selector === '.music-seam-diagram.words .word-tie' && item.value === '40%'))
+      // ADR-0477's sliding indicator is drawn at one size and scaled to the choice by --ind-w and
+      // --ind-h, so its role radius is divided by that scale to paint at exactly --radius-sm
+      .filter((item) => !(item.file === 'styles/feel-shell.css' && item.value === 'calc(var(--radius-sm) / var(--ind-w)) / calc(var(--radius-sm) / var(--ind-h))'));
     expect(off.map((item) => `${item.file} ${item.selector}: ${item.value}`)).toEqual([]);
   });
 

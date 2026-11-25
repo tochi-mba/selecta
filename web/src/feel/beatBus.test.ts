@@ -164,6 +164,16 @@ describe('FL-0477-04 the beat bus only moves on measured music', () => {
     vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: query.includes('reduce'), addEventListener: vi.fn(), removeEventListener: vi.fn() })));
     frame(2000, kick());
     expect(animations).toHaveLength(0);
+
+    vi.unstubAllGlobals();
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => { pending = callback; return 1; }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn(() => { pending = null; }));
+    for (const level of ['lite', 'auto']) {
+      document.documentElement.dataset.lowPower = level;
+      frame(3000, kick());
+      expect(animations).toHaveLength(0);
+    }
+    delete document.documentElement.dataset.lowPower;
   });
 
   it('asks for no frames at all with nothing registered', () => {

@@ -7,6 +7,7 @@ import { cancelImportSession, clearImportMarker, clearImportSession, importSnaps
 import type { AudioSession, SpineDeps } from './deps';
 import { OnboardingSpine } from './OnboardingSpine';
 import { FRESH, ImportTally, loadState, onboardingPutOff, recordImportOutcome, settleVerifyLater, SpineState, storageKey } from './state';
+import { feelOff } from '../../test/feel';
 
 const WS = 'ws-1';
 const NOW = 1_800_000_000;
@@ -302,6 +303,8 @@ const pickOne = (user: ReturnType<typeof userEvent.setup>) => user.upload(screen
 
 describe('verify never blocks (progressive import)', () => {
   it('with cloud.resilient_import off, counts against the total once it is known, and names the file being read', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     setAccountFeatures({ 'cloud.resilient_import': false });
     const user = userEvent.setup();
     const held = heldImport();
