@@ -144,14 +144,14 @@ def meters(
 def library_size(connection: Connection, workspace_id: str, plan: Plan) -> dict[str, int]:
     """How many songs the library holds (on devices and hosted) against the plan's soft cap: a
     sanity bound the page mentions calmly, never a refusal (docs/saas/02-plans-and-economics.md)."""
-    from selecta.local_media.schema import local_songs
+    from selecta.local_media.versions import listed_songs
     from selecta.storage.schema import assets
 
     def counted(query: sa.Select) -> int:
         return int(connection.execute(query).scalar() or 0)
 
-    count = counted(sa.select(sa.func.count()).select_from(local_songs)
-                    .where(local_songs.c.workspace_id == workspace_id))
+    # songs, not files: an extra copy of a song is not another song (ADR-0469 amendment 2)
+    count = counted(sa.select(sa.func.count()).select_from(listed_songs(workspace_id).subquery()))
     count += counted(sa.select(sa.func.count()).select_from(assets)
                      .where(assets.c.workspace_id == workspace_id, assets.c.deleted_at.is_(None)))
     return {"songs": count, "soft_cap": plan.library_soft_cap_songs}
