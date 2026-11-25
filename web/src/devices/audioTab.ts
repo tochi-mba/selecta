@@ -38,8 +38,9 @@ export type AudioTab = {
   close: () => void;
 };
 
-export function audioTab(workspaceId: string, deps: { locks?: Locks | null; channel?: Channel | null } = {}): AudioTab {
-  const name = `selecta-audio:${workspaceId}`;
+export function audioTab(workspaceId: string, deps: { locks?: Locks | null; channel?: Channel | null; lock?: string } = {}): AudioTab {
+  // `lock`: another player that keeps the same one-tab rule for its own sound (the hosted mix)
+  const name = `${deps.lock ?? 'selecta-audio'}:${workspaceId}`;
   const locks: Locks | null = deps.locks !== undefined ? deps.locks : (typeof navigator !== 'undefined' && 'locks' in navigator ? (navigator as unknown as { locks: Locks }).locks : null);
   const channel: Channel | null = deps.channel !== undefined ? deps.channel : (typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(name) : null);
   let letGo: (() => void) | null = null;
