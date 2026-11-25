@@ -39,6 +39,7 @@ from test_cloud_jobs_support import make_store, worker
 from test_cloud_storage_fakes import FakeS3
 
 from selecta.admin import state
+from selecta.admin.schema import staff_change_windows
 from selecta.admin.state import DbWorkControls
 from selecta.ai import registry
 from selecta.ai.gateway import finish_turn, plan_turn, sweep_abandoned
@@ -52,7 +53,7 @@ from selecta.billing.schema import stripe_events
 from selecta.billing.webhooks import store_event
 from selecta.identity import accounts, privileged
 from selecta.identity.tokens import Claims
-from selecta.persistence import transaction
+from selecta.persistence import db_now, transaction
 from selecta.storage.deletion import read_ledger, replay_after_restore, tombstone
 from selecta.storage.keys import original_key
 from selecta.storage.maintenance import drain_physical_deletions
@@ -81,9 +82,12 @@ def _fresh_staff_sessions(world, now: float) -> None:
     with transaction(world.engine) as conn:
         for name in list(world.sessions):
             fresh = dataclasses.replace(tokens.add(name), issued_at=now, expires_at=now + 3000)
-            world.sessions[name] = privileged.start(
-                conn, fresh, staff_organization_id="staff-org"
-            ).id
+            started = privileged.start(conn, fresh, staff_organization_id="staff-org")
+            world.sessions[name] = started.id
+            # As in the console, they press "Make changes" (doc 07b §7B.7).
+            conn.execute(staff_change_windows.insert().values(
+                session_id=started.id, user_id=started.user_id, opened_at=now,
+                until=started.expires_at))
 
 
 def _engage_together(world, control: str, target: str, now: float) -> list[int]:
@@ -95,7 +99,8 @@ def _engage_together(world, control: str, target: str, now: float) -> list[int]:
     def press(who: str) -> None:
         barrier.wait()
         answer = world.post(
-            f"/api/admin/emergency/{control}/engage", who, reason="catastrophe drill", target=target
+            f"/api/admin/emergency/{control}/engage", who, reason="catastrophe drill",
+            target=target, confirm=control,
         )
         codes.append(answer.status_code)
 
@@ -108,6 +113,10 @@ def _engage_together(world, control: str, target: str, now: float) -> list[int]:
 
 
 def _release(world, control: str, target: str | None = None) -> None:
+    # Time passed in the drill: the operator signs in again and presses Make changes.
+    with world.engine.connect() as conn:
+        now = db_now(conn)
+    _fresh_staff_sessions(world, now)
     proposed = world.post(
         f"/api/admin/emergency/{control}/release", "operator", reason="recovered", target=target
     )
@@ -240,7 +249,8 @@ def test_flaky_r2_delayed_stripe_and_a_restore_during_traffic_with_pending_delet
     # Billing is in safe mode (Stripe events held) while R2 starts refusing purges.
     assert (
         world.post(
-            "/api/admin/emergency/billing.safe_mode/engage", "operator", reason="catastrophe drill"
+            "/api/admin/emergency/billing.safe_mode/engage", "operator", reason="catastrophe drill",
+            confirm="billing.safe_mode",
         ).status_code
         == 200
     )
