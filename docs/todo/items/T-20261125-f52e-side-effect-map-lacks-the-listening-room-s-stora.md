@@ -2,7 +2,7 @@
 id: T-20261125-f52e
 title: Side-effect map lacks the Listening Room's storage keys
 area: ci
-status: open
+status: done
 priority: normal
 who: claude
 created: 2026-11-25
@@ -11,3 +11,5 @@ commit:
 ---
 
 tests/test_ex_0114_side_effect_map.py::test_every_persisted_key_is_in_the_map_and_every_mapped_key_still_exists fails on feat/controller: persisted keys selecta.listeningRoom and selecta.listeningRoom.volume are not in docs/adr/selecta-experience-side-effect-map.md. Add their rows (the Listening Room's owner).
+
+2026-11-25: Rows added for selecta.listeningRoom (session and current-session keys) and selecta.listeningRoom.volume; the map's GET /api/catalog/art row was removed (a read with no side effect, which the scan took for a storage key).

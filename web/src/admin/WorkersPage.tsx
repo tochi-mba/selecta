@@ -1,4 +1,6 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { below } from '../styles/breakpoints';
+import { useMediaQuery } from '../ui/useMediaQuery';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { RollingCount } from '../views/feelPieces';
 import { AdminError, Reading } from './adminApi';
@@ -33,6 +35,7 @@ const hours = (seconds: number) => seconds < 3600 ? `${Math.round(seconds / 60)}
 
 export function WorkersPage() {
   const { api, can } = useConsole();
+  const narrow = useMediaQuery(below('phone'));
   const [data, setData] = useState<Status | null>(null);
   const [readAt, setReadAt] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -53,6 +56,9 @@ export function WorkersPage() {
   const pools = failed(data.pools) ? null : data.pools;
   const auto = failed(data.pieces.autoscaler) ? null : data.pieces.autoscaler;
   const paused = (pools ?? []).filter((p) => p.paused);
+  // At phone width the verdicts come first: each pool is a row that opens, and Around the
+  // workers moves above the pools so every state is on the first screen. Desktop is unchanged.
+  const pieces = <Pieces pieces={data.pieces} narrow={narrow} />;
   return (
     <div className="admin-page">
       <Headline pools={data.pools} />
@@ -66,13 +72,16 @@ export function WorkersPage() {
         </p>
       ))}
       <StuckAlerts alerts={data.stuck_alerts} />
-      <Section title="Pools" tour="workers-pools" help="One worker pool per kind of work. Each card says in one word whether it is fine, then the numbers behind that word.">
+      {narrow && pieces}
+      <Section title="Pools" tour="workers-pools" help={POOL_HELP}>
         {failed(data.pools) ? <Problem error={data.pools.error} onRetry={() => void load()} />
-          : <ul className="admin-pools">{data.pools.map((pool) => <PoolCard key={pool.pool} pool={pool} autoscaler={auto} onChange={() => void load()} />)}</ul>}
+          : <ul className="admin-pools">{data.pools.map((pool) => narrow
+            ? <PoolRow key={pool.pool} pool={pool} autoscaler={auto} onChange={() => void load()} />
+            : <PoolCard key={pool.pool} pool={pool} autoscaler={auto} onChange={() => void load()} />)}</ul>}
       </Section>
-      <Pieces pieces={data.pieces} />
+      {!narrow && pieces}
       <CustomersSection customers={data.customers} />
-      <CostSection cost={data.cost} onChange={() => void load()} />
+      <CostSection cost={data.cost} onChange={() => void load()} narrow={narrow} />
       {(can('jobs.retry') || can('jobs.cancel')) && (
         <Section title="Many jobs at once" tour="workers-bulk" help="Each counts first and says how many jobs and accounts it would touch. Retry runs at once; cancelling waits 15 minutes and can be cancelled.">
           <div className="admin-bulks">
@@ -132,39 +141,72 @@ function Headline({ pools }: { pools: Pool[] | Fail }) {
   return <p className={`admin-headline ${level}`} data-tour="workers-headline" role="status">{text}</p>;
 }
 
-function Fig({ label, help, children }: { label: string; help: string; children: ReactNode }) {
-  return <div><dt>{label}<WhatsThis label={label}>{help}</WhatsThis></dt><dd>{children}</dd></div>;
+function Fig({ label, children }: { label: string; children: ReactNode }) {
+  return <div><dt>{label}</dt><dd>{children}</dd></div>;
 }
+
+// One explanation for every figure of a pool, on the Pools section's "?", as Overview explains
+// its Services list once rather than on each line (the cards repeat the same eight figures).
+const POOL_HELP = 'One worker pool per kind of work; each card says in one word whether it is fine. Workers seen: workers that checked in with the gateway in the last three minutes. Last heartbeat: when any worker of the pool last checked in. Slots in use: jobs being worked on now, of the slots those workers offer. Queued: jobs waiting for a worker, including retries waiting for their time. Running: jobs a worker holds now. Failed, 24 h: jobs that ran out of attempts in the last day (open Jobs to read why). Oldest wait: how long the oldest queued job has waited, and its type; over 15 minutes counts as stuck and raises an alert once an hour. Autoscaler asks for: how many workers the autoscaler last set the pool to.';
 
 const VERDICT_TONE = { working: 'ok', idle: 'neutral', waiting: 'bad', failing: 'bad', paused: 'warn' } as const;
 
-function PoolCard({ pool, autoscaler, onChange }: { pool: Pool; autoscaler: Autoscaler | null; onChange: () => void }) {
-  const size = pool.autoscale_size;
+type PoolProps = { pool: Pool; autoscaler: Autoscaler | null; onChange: () => void };
+
+function PoolCard(props: PoolProps) {
+  const { pool } = props;
   return (
     <li className={`admin-pool ${pool.verdict.state}`} data-lift="row">
       <div className="admin-pool-head">
         <h3>{poolName(pool.pool)} <code className="admin-soft">{pool.pool}</code></h3>
         <Badge tone={VERDICT_TONE[pool.verdict.state]}>{pool.verdict.label}</Badge>
       </div>
+      <PoolBody {...props} />
+    </li>
+  );
+}
+
+/** At phone width a pool is one row (name, verdict, queued, oldest wait) that opens to the full
+ * card; a pool that needs attention starts open. */
+function PoolRow(props: PoolProps) {
+  const { pool } = props;
+  const [open, setOpen] = useState(pool.verdict.state !== 'idle' && pool.verdict.state !== 'working');
+  const id = useId();
+  return (
+    <li className={`admin-pool ${pool.verdict.state}`} data-lift="row">
+      <button type="button" className="admin-disclosure" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+        <strong>{poolName(pool.pool)}</strong>
+        <Badge tone={VERDICT_TONE[pool.verdict.state]}>{pool.verdict.label}</Badge>
+        <span className="admin-soft">{pool.queued.toLocaleString()} queued, {pool.oldest_wait_s === null ? 'none waiting' : `oldest ${waited(pool.oldest_wait_s)}`}</span>
+      </button>
+      {open && <div id={id} className="admin-disclosure-body"><PoolBody {...props} /></div>}
+    </li>
+  );
+}
+
+function PoolBody({ pool, autoscaler, onChange }: PoolProps) {
+  const size = pool.autoscale_size;
+  return (
+    <>
       <p className="admin-soft">Runs {pool.does}.</p>
       <p>{pool.verdict.why}</p>
       <dl className="admin-numbers">
-        <Fig label="Workers seen" help="Workers that checked in with the gateway in the last two minutes."><RollingCount value={pool.workers_seen} format={(n) => n.toLocaleString()} /></Fig>
-        <Fig label="Last heartbeat" help="When any worker of this pool last checked in."><Time at={pool.last_heartbeat} /></Fig>
-        <Fig label="Slots in use" help="Jobs being worked on now, of the slots the workers seen offer.">{pool.slots_in_use} of {pool.slots}</Fig>
-        <Fig label="Queued" help="Jobs waiting for a worker, including retries waiting for their time."><RollingCount value={pool.queued} format={(n) => n.toLocaleString()} /></Fig>
-        <Fig label="Running" help="Jobs a worker holds now.">{pool.running.toLocaleString()}</Fig>
-        <Fig label="Failed, 24 h" help="Jobs that ran out of attempts in the last 24 hours. Open Jobs to read why.">
+        <Fig label="Workers seen"><RollingCount value={pool.workers_seen} format={(n) => n.toLocaleString()} /></Fig>
+        <Fig label="Last heartbeat"><Time at={pool.last_heartbeat} /></Fig>
+        <Fig label="Slots in use">{pool.slots_in_use} of {pool.slots}</Fig>
+        <Fig label="Queued"><RollingCount value={pool.queued} format={(n) => n.toLocaleString()} /></Fig>
+        <Fig label="Running">{pool.running.toLocaleString()}</Fig>
+        <Fig label="Failed, 24 h">
           <span className={pool.failed_24h ? 'admin-tone-bad' : undefined}>{pool.failed_24h.toLocaleString()}</span>
           {pool.failed_24h > 0 && <> <a href={adminPath('jobs')} onClick={(event) => { event.preventDefault(); go(adminPath('jobs')); }}>Open Jobs</a></>}
         </Fig>
-        <Fig label="Oldest wait" help="How long the oldest queued job has waited, and its type. Over 15 minutes counts as stuck and raises an alert once an hour."><span className={pool.stuck ? 'admin-tone-bad' : pool.oldest_wait_s && pool.oldest_wait_s > 600 ? 'admin-tone-warn' : undefined}>{waited(pool.oldest_wait_s)}</span>{pool.oldest_job_type && <small className="admin-soft"> {pool.oldest_job_type}</small>}</Fig>
-        <Fig label="Autoscaler asks for" help="How many workers the autoscaler last set this pool to. Unknown while it isn’t running.">{size.state === 'unknown' ? <span className="admin-soft">not running</span> : `${size.value ?? 0} worker${size.value === 1 ? '' : 's'}`}</Fig>
+        <Fig label="Oldest wait"><span className={pool.stuck ? 'admin-tone-bad' : pool.oldest_wait_s && pool.oldest_wait_s > 600 ? 'admin-tone-warn' : undefined}>{waited(pool.oldest_wait_s)}</span>{pool.oldest_job_type && <small className="admin-soft"> {pool.oldest_job_type}</small>}</Fig>
+        <Fig label="Autoscaler asks for">{size.state === 'unknown' ? <span className="admin-soft">not running</span> : `${size.value ?? 0} worker${size.value === 1 ? '' : 's'}`}</Fig>
       </dl>
       {!!pool.retry_overdue && <p className="admin-warning">{pool.retry_overdue} retries are overdue: maintenance (selecta maintain) isn’t putting them back in line.</p>}
       {pool.recent.length > 0 && <p className="admin-soft">Last attempts: {pool.recent.map((a) => a.outcome === 'succeeded' ? 'ok' : (a.error_class ?? a.outcome)).join(', ')}.</p>}
       <PoolActions pool={pool} autoscaler={autoscaler} onChange={onChange} />
-    </li>
+    </>
   );
 }
 
@@ -203,7 +245,19 @@ function storagePiece(s: Storage): Piece {
   return { name: 'Object storage', badge: <Badge tone="bad">Problem</Badge>, means: s.problems.join(' '), todo: <>Fix the bucket named. {link}</> };
 }
 
-function Pieces({ pieces }: { pieces: Status['pieces'] }) {
+/** One line of Around the workers that opens to what it means and what to do (phone width). */
+function Disclosure({ name, badge, children }: { name: string; badge: ReactNode; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <li data-lift="row">
+      <button type="button" className="admin-disclosure" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}><strong>{name}</strong>{badge}</button>
+      {open && <div id={id} className="admin-disclosure-body">{children}</div>}
+    </li>
+  );
+}
+
+function Pieces({ pieces, narrow }: { pieces: Status['pieces']; narrow: boolean }) {
   const list: (Piece | { name: string; error: string })[] = [
     failed(pieces.gateway) ? { name: 'Worker gateway', error: pieces.gateway.error } : gatewayPiece(pieces.gateway),
     failed(pieces.autoscaler) ? { name: 'Autoscaler', error: pieces.autoscaler.error } : autoscalerPiece(pieces.autoscaler),
@@ -213,22 +267,32 @@ function Pieces({ pieces }: { pieces: Status['pieces'] }) {
     <Section title="Around the workers" tour="workers-pieces" help="What workers need to process anything. Each line says what its state means and what to do about it.">
       <ul className="admin-pieces">{list.map((piece) => 'error' in piece
         ? <li key={piece.name} data-lift="row"><strong>{piece.name}</strong><Problem error={piece.error} /></li>
+        : narrow ? <Disclosure key={piece.name} name={piece.name} badge={piece.badge}>
+          <p><span className="admin-soft">What this means: </span>{piece.means}</p>
+          <p><span className="admin-soft">What to do: </span>{piece.todo}</p>
+          {piece.extra}
+        </Disclosure>
         : <li key={piece.name} data-lift="row">
           <div className="admin-pool-head"><strong>{piece.name}</strong>{piece.badge}</div>
           <p><span className="admin-soft">What this means: </span>{piece.means}</p>
           <p><span className="admin-soft">What to do: </span>{piece.todo}</p>
           {piece.extra}
         </li>)}
-        <li data-lift="row">
-          <strong>Hosted flags</strong>
-          {failed(pieces.flags) ? <Problem error={pieces.flags.error} /> : <ul className="admin-health">{pieces.flags.map((f) => (
-            <li key={f.id}><code>{f.id}</code><Badge tone={f.on ? 'ok' : 'warn'}>{f.on ? 'On' : 'Off'}</Badge><span>{f.about}{f.note && `. ${f.note}`}.</span></li>
-          ))}</ul>}
-          <p><span className="admin-soft">What to do: </span>a flag that is off here is off in the build; change it in Flags, or grant hosted storage to an account from its customer page.</p>
-        </li>
+        {narrow && !failed(pieces.flags)
+          ? <Disclosure name="Hosted flags" badge={<Badge tone={pieces.flags.every((f) => f.on) ? 'ok' : 'warn'}>{pieces.flags.filter((f) => f.on).length} of {pieces.flags.length} on</Badge>}><Flags flags={pieces.flags} /></Disclosure>
+          : <li data-lift="row"><strong>Hosted flags</strong>{failed(pieces.flags) ? <Problem error={pieces.flags.error} /> : <Flags flags={pieces.flags} />}</li>}
       </ul>
     </Section>
   );
+}
+
+function Flags({ flags }: { flags: Flag[] }) {
+  return <>
+    <ul className="admin-health">{flags.map((f) => (
+      <li key={f.id}><code>{f.id}</code><Badge tone={f.on ? 'ok' : 'warn'}>{f.on ? 'On' : 'Off'}</Badge><span>{f.about}{f.note && `. ${f.note}`}.</span></li>
+    ))}</ul>
+    <p><span className="admin-soft">What to do: </span>a flag that is off here is off in the build; change it in Flags, or grant hosted storage to an account from its customer page.</p>
+  </>;
 }
 
 function CustomersSection({ customers }: { customers: Customers | Fail }) {
@@ -267,7 +331,9 @@ const BUDGET_WORDS = {
   projected_over: ['warn', 'On course to go over'], over: ['bad', 'Over budget'],
 } as const;
 
-function CostSection({ cost, onChange }: { cost: Cost | Fail; onChange: () => void }) {
+function CostSection({ cost, onChange, narrow }: { cost: Cost | Fail; onChange: () => void; narrow: boolean }) {
+  const [detail, setDetail] = useState(false);
+  const detailId = useId();
   if (failed(cost)) return <Section title="Cost" tour="workers-cost"><Problem error={cost.error} /></Section>;
   const b = cost.budget;
   const [tone, label] = BUDGET_WORDS[b.status];
@@ -283,7 +349,11 @@ function CostSection({ cost, onChange }: { cost: Cost | Fail; onChange: () => vo
       {(b.status === 'over' || b.status === 'near' || b.status === 'projected_over') && <p className="admin-warning" role="status">
         {b.status === 'over' ? `The estimate for ${cost.month} is over the $${b.monthly_usd} budget.` : b.status === 'near' ? `The estimate has passed ${b.warn_percent}% of the $${b.monthly_usd} budget.` : `At this pace ${cost.month} ends near ${usd(cost.projected_usd)}, over the $${b.monthly_usd} budget.`} Look at which pool grows below; pausing a pool stops new work in it.
       </p>}
-      <AdminTable caption="Processing per pool" rows={cost.pools} rowKey={(p) => p.pool} sortKey="csort" empty={null}
+      {narrow && <>
+        <ul className="admin-cost-list" aria-label={`Estimated cost per pool, ${cost.month}`}>{cost.pools.map((p) => <li key={p.pool}><span>{poolName(p.pool)}</span><strong>{usd(p.usd_month)}</strong></li>)}</ul>
+        <button type="button" className="admin-disclosure" aria-expanded={detail} aria-controls={detailId} onClick={() => setDetail(!detail)}>Rates and processing time per pool</button>
+      </>}
+      {(!narrow || detail) && <div id={detailId}><AdminTable caption="Processing per pool" rows={cost.pools} rowKey={(p) => p.pool} sortKey="csort" empty={null}
         cols={[
           { key: 'pool', label: 'Pool', render: (p) => poolName(p.pool) },
           { key: 'rate', label: 'Rate an hour', numeric: true, render: (p) => usd(p.rate_per_hour), help: 'One worker of the pool for an hour, from infra/workers/pools.json.' },
@@ -291,7 +361,7 @@ function CostSection({ cost, onChange }: { cost: Cost | Fail; onChange: () => vo
           { key: 'usd_today', label: 'Today', numeric: true, render: (p) => usd(p.usd_today) },
           { key: 'month', label: 'This month', numeric: true, render: (p) => hours(p.seconds_month), sort: (p) => p.seconds_month },
           { key: 'usd_month', label: 'Month', numeric: true, render: (p) => usd(p.usd_month), sort: (p) => p.usd_month ?? 0 },
-        ]} />
+        ]} /></div>}
       <p className="admin-soft">Days and months are UTC. Figures as of <Time at={cost.as_of} /> (counted at most every two minutes).</p>
     </Section>
   );

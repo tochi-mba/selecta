@@ -83,6 +83,8 @@ Support actions and their rules are in §7B.5. Impersonation is **not built**: a
 - **Many jobs at once:** retry failed jobs of a type; cancel jobs queued longer than N hours. Each counts first (jobs and accounts, the main errors).
 - **Workers:** the Jobs page's worker list with Drain, Pause and Resume, shown here too (`workers.read`).
 - **How hosted processing works:** a short explainer (upload, analysis, transitions, playback files, export, stems; which pool does which; the gateway and the autoscaler).
+- Help: one "?" on the Pools section explains every figure of a pool (the cards repeat the same eight), as Overview explains its Services list once; the key-number rows keep a "?" each, as Overview's key numbers do.
+- At phone width (below 640 px) the verdicts come first: Around the workers moves above the pools as rows that open (each a button with `aria-expanded`), each pool is a row (name, verdict, queued, oldest wait) that opens to its full card, with a pool that is not Idle or Working open from the start, and cost is a short list of the month per pool with the rates and times behind a disclosure. Desktop is unchanged.
 - Empty and failure states: no hosted accounts ("Grant it from a customer's page"), nobody waiting, no worker ever seen, a section that could not be read (it says so; the rest of the page stays current), a stale reading.
 
 **AI** (`models.read`). Tier routing, deployments with a warning for any route naming a missing deployment, spend against the ceiling, provider health, the two Lucy emergency controls.
