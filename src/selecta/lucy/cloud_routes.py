@@ -111,9 +111,8 @@ def suggestions(conn, workspace_id: str) -> list[str]:
     current mix, so the empty conversation starts from music they have."""
     import sqlalchemy as sa
 
-    from selecta.local_media import current_mix
     from selecta.local_media.schema import local_song_availability, local_songs
-    from selecta.lucy.cloud_tools import music_artists
+    from selecta.lucy.cloud_tools import _current_mix_id, music_artists
 
     rows = conn.execute(
         sa.select(local_songs.c.id, local_songs.c.title, local_songs.c.artist,
@@ -136,7 +135,8 @@ def suggestions(conn, workspace_id: str) -> list[str]:
         asks.append(f"An hour of {artists[0]} and {artists[1]}")
     elif artists:
         asks.append(f"A short mix of {artists[0]}")
-    if current_mix.read(conn, workspace_id).get("mix_id"):
+    # the mix Lucy's tools read: the account's current one, else the newest saved one
+    if _current_mix_id(conn, workspace_id):
         asks += ["What's in my current mix?", "Take the slowest songs out of my mix"]
     elif artists:
         asks.append("Make a 30 minute mix to dance to")
