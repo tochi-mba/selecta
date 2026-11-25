@@ -30,7 +30,8 @@ test('a paired display shows the room and survives a new code', async ({ browser
   await expect(qr.locator('svg')).toBeVisible();
   await expect(screen.getByRole('heading', { name: 'Garden party' })).toBeVisible();
   await expect(screen.getByText('Scan to request a song')).toBeVisible();
-  await expect(screen.getByText("The music's paused.")).toBeVisible();
+  // no device is playing yet: the screen is led by what's playing, and says nothing is (f3ee73dc)
+  await expect(screen.locator('#d-now')).toContainText('Nothing playing yet');
   await expect(screen.locator('#d-upcoming')).toContainText('No requests yet');
 
   // A guest's request shows up on the big screen.
@@ -38,8 +39,8 @@ test('a paired display shows the room and survives a new code', async ({ browser
   const guest = await phone.newPage();
   await guest.goto(joinPath);
   await guest.getByRole('button', { name: 'Join the room' }).click();
-  await guest.getByLabel("Search the host's songs").fill('Song 7');
-  await guest.getByRole('button', { name: 'Choose Song 7 - Artist 0' }).click();
+  await guest.getByRole('searchbox', { name: 'Request a song' }).fill('Song 7');
+  await guest.getByRole('button', { name: 'Add Song 7 - Artist 0' }).click();
   await guest.getByRole('button', { name: 'Send request', exact: true }).click();
   await expect(screen.locator('#d-upcoming')).toContainText('Song 7 - Artist 0', { timeout: 15_000 });
 

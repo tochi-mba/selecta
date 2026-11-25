@@ -45,6 +45,7 @@ import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
 import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
+import { DEVICE_REGISTERED } from '../devices/playbackWire';
 import { ControllerListen } from '../devices/ControllerListen';
 import { tabLog } from '../devices/audioTab';
 import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
@@ -377,11 +378,16 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     window.addEventListener(DEVICE_REGISTERED, registered);
     window.addEventListener('focus', refreshWhenActive);
     document.addEventListener('visibilitychange', refreshWhenActive);
+    // ADR-0475: the startup sweep can finish before this browser is registered as a device, and
+    // then had no device to report for; once registered, the songs here are reported (a sweep
+    // reports only while no report has gone yet), so Play counts this device's music
+    window.addEventListener(DEVICE_REGISTERED, refreshWhenActive);
     return () => {
       window.removeEventListener(DEVICE_REGISTERED, registered);
       window.clearInterval(timer);
       window.removeEventListener('focus', refreshWhenActive);
       document.removeEventListener('visibilitychange', refreshWhenActive);
+      window.removeEventListener(DEVICE_REGISTERED, refreshWhenActive);
     };
   }, [sweepLapsed]);
 
