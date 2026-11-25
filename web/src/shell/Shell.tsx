@@ -408,7 +408,7 @@ export function Shell({
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
       {!stage && (
         <nav className="nav" aria-label="Main">
-          <PageLink to="/mixes" className="brand" aria-label="SelectaDJ, go to Make a Mix"><span className="brand-word">SelectaDJ</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
+          <PageLink to="/mixes" className="brand"><span className="brand-word">SelectaDJ</span><span className="visually-hidden">, go to Make a Mix</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
           <ul>
             {cloudNav ? (
               <>
@@ -680,9 +680,10 @@ function AccountMenu({ account, places, current }: { account: ShellAccount; plac
   const onPlace = current !== null && places.some((item) => item.id === current);
   return (
     <div className="nav-account" ref={holder} onKeyDown={keys}>
-      <button ref={opener} className="nav-account-button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} aria-label={`Account: ${account.email}, ${account.plan} plan`} data-tip="Account" data-current={onPlace ? 'true' : undefined} onClick={() => { start.current = 'first'; setOpen(!open); }}>
+      <button ref={opener} className="nav-account-button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} data-tip="Account" data-current={onPlace ? 'true' : undefined} onClick={() => { start.current = 'first'; setOpen(!open); }}>
         <span className="account-avatar" aria-hidden="true">{account.email.slice(0, 1).toUpperCase()}</span>
-        <span className="account-who nav-label"><b>{account.email}</b><span>{account.plan} plan</span></span>
+        {/* named by its words, so the name says what is seen (WCAG 2.5.3): "Account: email, Free plan" */}
+        <span className="account-who nav-label"><span className="visually-hidden">Account:</span>{' '}<b>{account.email}</b><span className="visually-hidden">,</span>{' '}<span>{account.plan} plan</span></span>
         <span className="nav-label account-caret" aria-hidden="true"><Icon name="up" size="toolbar" /></span>
       </button>
       {open && (

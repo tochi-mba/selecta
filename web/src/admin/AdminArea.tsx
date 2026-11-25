@@ -230,7 +230,7 @@ function Bell({ api }: { api: ReturnType<typeof adminFetch> }) {
   }, [api]);
   return (
     <div className="admin-bell">
-      <button type="button" aria-expanded={open} aria-label={`Notifications, ${items.length} waiting`} onClick={() => setOpen(!open)}>Alerts {items.length > 0 && <span className="admin-badge warn">{items.length}</span>}</button>
+      <button type="button" aria-expanded={open} aria-label={`Alerts, ${items.length} waiting`} onClick={() => setOpen(!open)}>Alerts {items.length > 0 && <span className="admin-badge warn">{items.length}</span>}</button>
       {open && <ul className="admin-bell-list">{items.length ? items.slice(0, 10).map((item) => <li key={item.id}><a href={item.link} onClick={(event) => { event.preventDefault(); setOpen(false); go(item.link); }}>{item.text}</a></li>) : <li className="admin-soft">Nothing needs you. Alerts and waiting actions appear here.</li>}</ul>}
     </div>
   );

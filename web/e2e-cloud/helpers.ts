@@ -24,7 +24,7 @@ export async function hostWithRoom(browser: Browser, as = 'alice', name = 'Garde
   await host.goto(`/harness?as=${as}`);
   const current = host.getByTestId('room-code');
   if (!(await current.isVisible().catch(() => false))) {
-    await host.getByLabel('Room name guests will see').fill(name);
+    await host.getByLabel('Room name', { exact: true }).fill(name);
     await host.getByRole('button', { name: 'Open room' }).click();
   }
   await expect(host.getByTestId('room-code')).toHaveText(/^[2-9A-Z]{4}-[2-9A-Z]{4}$/);

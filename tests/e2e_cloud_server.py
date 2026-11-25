@@ -188,14 +188,17 @@ class E2EObjects(CloudObjects):
 def build(port: int):
     # The metadata-only catalogue (ADR-0458) is off by default and a per-user rule can never grant
     # what the build denies, so this test build turns its routes on; the local-first specs need
-    # them and no hosted page reads the flag. `cloud.local_first` stays off: those specs select
-    # the shell for their own person only.
+    # them and no hosted page reads the flag. `cloud.local_first` and `cloud.hosted_shell` stay
+    # off, so a seeded person opens the hosted site on its legacy rail: both have defaulted on
+    # since 57acb155, so they are turned off here by name. The local-first and shared-shell specs
+    # select those for their own person only (flags.cloud.ts lists both as not shipping).
     wanted = os.environ.get("SELECTA_FLAGS", "").strip()
     # The business flags too, each with a last "0 percent" rule so only the business specs'
     # own people see them (e2e_cloud_business).
     os.environ["SELECTA_FLAGS"] = (
-        f"{wanted} +cloud.local_media {e2e_cloud_business.build_flags()}".strip()
-    )
+        f"{wanted} +cloud.local_media -cloud.local_first -cloud.hosted_shell "
+        f"{e2e_cloud_business.build_flags()}"
+    ).strip()
     selecta_flags.use(None)  # read again, in case anything asked before this point
     base = f"http://127.0.0.1:{port}"
     home = make_home("selecta-cloud-e2e-")

@@ -33,7 +33,7 @@ test('an Owner walks through the console pages', async ({ page, request }) => {
   await nav.getByRole('link', { name: 'Customers' }).click();
   await expect(page.getByText('Search to begin.')).toBeVisible();
   await page.getByLabel('Email, user or workspace id').fill(`${customer}@example.test`);
-  await page.getByRole('search').getByRole('button', { name: 'Search' }).click();
+  await page.getByRole('search').getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByRole('button', { name: `Open ${customer}@example.test` }).click();
   await expect(page.getByRole('heading', { name: `${customer}@example.test` })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Suspend…' })).toBeDisabled();
