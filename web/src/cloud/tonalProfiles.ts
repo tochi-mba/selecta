@@ -2,6 +2,7 @@ import type { MediaResolver, MediaStore, StoredSong } from '../media';
 import { TONAL_PROFILE_IMPLEMENTATION, type TonalProfile } from '../dsp/analysis/tonalProfile';
 import { derivedStore, withHashLock, type DerivedStore } from '../media/derived';
 import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
+import { importSnapshot } from './importSession';
 
 /** Browser tonal profiles and harmonic-match answers (cloud.browser_harmonic).
  *
@@ -30,11 +31,18 @@ const PROFILE_RATE = 22050;
 /** A file this large or a recording this long is a DJ set or an album, not a song to pair. */
 const MAX_BYTES = 120 * 1024 * 1024;
 const MAX_SECONDS = 15 * 60;
-/** Between songs while music plays, so decoding never crowds the player. */
-const PLAYING_GAP_MS = 8000;
 const IDLE_GAP_MS = 1500;
 /** After a full pass, look again for newly connected songs this often. */
 const RESWEEP_MS = 60_000;
+/** While an import runs or music plays, measuring waits and looks again this often. Decoding a
+ * whole song competed with an import on a four-core laptop for the page, the disk and the cores,
+ * and can crowd the player, so it simply waits for both to finish. */
+const BUSY_POLL_MS = 5_000;
+/** One tab of this browser measures at a time: every open tab measuring the same new songs
+ * decoded each one several times over. */
+const PROFILER_LOCK = 'selecta-tonal-profiler';
+/** Samples mixed down per slice before the page is handed back (a few milliseconds each). */
+const MIX_SLICE = 1 << 19;
 
 export type ProfileRecord =
   | { sha: string; implementation: string; profile: TonalProfile }
@@ -216,22 +224,39 @@ function spareTime(gapMs: number, stopped: () => boolean): Promise<void> {
   });
 }
 
-/** One mono channel at PROFILE_RATE, in an array made only for the worker (so it is moved). */
+/** One mono channel at PROFILE_RATE, in an array made only for the worker (so it is moved). The
+ * mixdown runs in slices with the page handed back between them: one pass over a fifteen-minute
+ * stereo song is tens of millions of steps. Each sample is summed in the same order as before,
+ * so the result is the same to the bit. */
 async function decodeMono(bytes: ArrayBuffer): Promise<Float32Array> {
   const decoded = await new OfflineAudioContext(1, 1, PROFILE_RATE).decodeAudioData(bytes);
   const mono = new Float32Array(decoded.length);
   for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
     const data = decoded.getChannelData(channel);
-    for (let index = 0; index < data.length; index += 1) mono[index] += data[index] / decoded.numberOfChannels;
+    for (let start = 0; start < data.length; start += MIX_SLICE) {
+      if (start > 0) await new Promise((resolve) => window.setTimeout(resolve, 0));
+      const end = Math.min(data.length, start + MIX_SLICE);
+      for (let index = start; index < end; index += 1) mono[index] += data[index] / decoded.numberOfChannels;
+    }
   }
   return mono;
+}
+
+type ProfilerLocks = { request(name: string, options: { ifAvailable: boolean }, run: (lock: unknown) => Promise<void>): Promise<unknown> };
+
+/** Run one pass holding the browser-wide profiler lock, or skip it (another tab is measuring).
+ * Without Web Locks every tab measures, as before. */
+async function asTheMeasuringTab(pass: () => Promise<void>): Promise<void> {
+  const locks = typeof navigator !== 'undefined' ? (navigator as Navigator & { locks?: ProfilerLocks }).locks : undefined;
+  if (!locks || typeof locks.request !== 'function') { await pass(); return; }
+  await locks.request(PROFILER_LOCK, { ifAvailable: true }, async (lock) => { if (lock) await pass(); });
 }
 
 export type ProfilerOptions = {
   store: TonalStore;
   openMedia: () => Promise<MediaStore>;
   resolve: MediaResolver;
-  /** True while the mix is playing: songs are then measured further apart. */
+  /** True while the mix is playing: measuring then waits until it stops. */
   playing: () => boolean;
   /** Told after each song is measured, so an open page can show it. */
   onProfiled?: () => void;
@@ -279,29 +304,41 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
     else await options.store.put({ ...base, unreadable: 'undecodable' });
   };
 
+  // an import in this tab or another one (a following tab's snapshot says running too), or music
+  const busy = () => importSnapshot().phase === 'running' || options.playing();
+  const quiet = async () => {
+    while (!stopped && busy()) await new Promise((resolve) => window.setTimeout(resolve, BUSY_POLL_MS));
+  };
+
+  const pass = async () => {
+    const media = await options.openMedia();
+    const known = await options.store.records();
+    const waiting = (await media.all()).filter((song) => !known.has(song.identity.content_sha256) && !unreachable.has(song.songId));
+    for (const song of waiting) {
+      await spareTime(IDLE_GAP_MS, isStopped);
+      await quiet();
+      if (stopped) break;
+      try {
+        await measure(song.songId, song.identity.content_sha256);
+        options.onProfiled?.();
+      } catch {
+        // a worker that timed out or failed is replaced; this song is tried again next pass
+        (worker as Worker | null)?.terminate();
+        worker = null;
+        const sha = song.identity.content_sha256;
+        const times = (failures.get(sha) ?? 0) + 1;
+        failures.set(sha, times);
+        if (times >= 2) await options.store.put({ sha, implementation: TONAL_PROFILE_IMPLEMENTATION, unreadable: 'undecodable' });
+        else unreachable.add(song.songId);
+      }
+    }
+  };
+
   void (async () => {
     while (!stopped) {
       try {
-        const media = await options.openMedia();
-        const known = await options.store.records();
-        const waiting = (await media.all()).filter((song) => !known.has(song.identity.content_sha256) && !unreachable.has(song.songId));
-        for (const song of waiting) {
-          await spareTime(options.playing() ? PLAYING_GAP_MS : IDLE_GAP_MS, isStopped);
-          if (stopped) break;
-          try {
-            await measure(song.songId, song.identity.content_sha256);
-            options.onProfiled?.();
-          } catch {
-            // a worker that timed out or failed is replaced; this song is tried again next pass
-            (worker as Worker | null)?.terminate();
-            worker = null;
-            const sha = song.identity.content_sha256;
-            const times = (failures.get(sha) ?? 0) + 1;
-            failures.set(sha, times);
-            if (times >= 2) await options.store.put({ sha, implementation: TONAL_PROFILE_IMPLEMENTATION, unreadable: 'undecodable' });
-            else unreachable.add(song.songId);
-          }
-        }
+        await quiet();
+        if (!stopped) await asTheMeasuringTab(pass);
       } catch {
         // the song index is not open yet; try again on the next pass
       }

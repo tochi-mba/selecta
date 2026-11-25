@@ -62,7 +62,7 @@ import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, onboardingPutOff, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
-import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
+import { bindImportWorkspace, endImportSession, useImportShellView } from './importSession';
 import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
@@ -388,7 +388,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // The import session outlives any one page: each landed batch refreshes the counts, and a
   // finished import records its outcome in the onboarding state even with the spine gone.
   useEffect(() => { bindImportWorkspace(workspaceId); }, [workspaceId]);
-  const importLive = useImportSession(workspaceId);
+  const importLive = useImportShellView(workspaceId);
   const lastBatches = useRef(importLive.batches);
   useEffect(() => {
     const moved = importLive.batches !== lastBatches.current;

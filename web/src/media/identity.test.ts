@@ -21,6 +21,12 @@ describe('fileSha256', () => {
     expect(await fileSha256(bytes, { chunkSize: 5 })).toBe(whole);
   });
 
+  it('gives the same digest from WebCrypto and from the streamed hash that yields between pieces', async () => {
+    const bytes = new Uint8Array(700 * 1024).map((_, index) => (index * 31) & 255);
+    const blob = new Blob([bytes]);
+    expect(await fileSha256(blob, { chunkSize: 4 * 1024 * 1024 })).toBe(await fileSha256(blob));
+  });
+
   it('stops with AbortError when the import is cancelled', async () => {
     const controller = new AbortController();
     controller.abort();

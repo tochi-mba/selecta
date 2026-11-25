@@ -17,21 +17,49 @@ export type TrackIdentity = {
 /** Files are hashed in slices this large, so a 100 MB file never sits in memory whole. */
 export const HASH_CHUNK_BYTES = 4 * 1024 * 1024;
 
-/** The SHA-256 of a file's bytes, streamed in slices.
- * The hash is loaded lazily, as the upload path does: nobody pays for it before an import. */
+/** A file up to this size is hashed by WebCrypto in one call. The JavaScript hash below costs about
+ * 40 ms of the page's own time per megabyte on a slow laptop, so an import of thousands of songs
+ * kept the page too busy to answer; WebCrypto hashes off the page in native code instead. Bigger
+ * files keep the streamed hash, so a long WAV never sits in memory whole. */
+export const WHOLE_DIGEST_MAX_BYTES = 64 * 1024 * 1024;
+/** The streamed hash works in pieces this large (about 10 ms each) and hands the page back
+ * between them, so even a very large file never holds the page for long. */
+const UPDATE_SLICE_BYTES = 256 * 1024;
+
+const hex = (bytes: Uint8Array) => Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+
+/** The SHA-256 of a file's bytes, by WebCrypto where it exists and the file is not huge, else
+ * streamed in slices. Both give the same digest; only where the work happens differs.
+ * The streamed hash is loaded lazily, as the upload path does: nobody pays for it before an import. */
 export async function fileSha256(file: Blob, options: { signal?: AbortSignal; chunkSize?: number } = {}): Promise<string> {
   const cancelled = () => {
     if (options.signal?.aborted) throw new DOMException('The import was cancelled.', 'AbortError');
   };
   cancelled();
+  const subtle = typeof crypto !== 'undefined' ? crypto.subtle : undefined;
+  // a caller naming its own slice size asks for the streamed hash itself
+  if (options.chunkSize === undefined && file.size <= WHOLE_DIGEST_MAX_BYTES && subtle?.digest) {
+    let digest: ArrayBuffer | null = null;
+    try {
+      digest = await subtle.digest('SHA-256', await file.arrayBuffer());
+    } catch {
+      // a WebCrypto that refuses these bytes: the streamed hash below gives the same answer
+    }
+    cancelled();
+    if (digest) return hex(new Uint8Array(digest));
+  }
   const { sha256 } = await import('@noble/hashes/sha2.js');
   const chunkSize = options.chunkSize ?? HASH_CHUNK_BYTES;
   const hash = sha256.create();
   for (let offset = 0; offset < file.size; offset += chunkSize) {
     cancelled();
-    hash.update(new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer()));
+    const chunk = new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer());
+    for (let at = 0; at < chunk.length; at += UPDATE_SLICE_BYTES) {
+      if (at > 0) await new Promise((resolve) => setTimeout(resolve, 0));
+      hash.update(chunk.subarray(at, at + UPDATE_SLICE_BYTES));
+    }
   }
-  return Array.from(hash.digest(), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return hex(hash.digest());
 }
 
 /** Normalised display metadata: trimmed, inner whitespace collapsed, case kept as written.
@@ -83,10 +111,10 @@ export async function bytesSha256(bytes: ArrayBuffer): Promise<string> {
   if (subtle?.digest) {
     try {
       const digest = await subtle.digest('SHA-256', bytes);
-      return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+      return hex(new Uint8Array(digest));
     } catch {
       // fall through to the sliced hash
     }
   }
-  return fileSha256(new Blob([bytes]));
+  return fileSha256(new Blob([bytes]), { chunkSize: HASH_CHUNK_BYTES });
 }
