@@ -92,7 +92,7 @@ Verdicts:
 | What plays | Each song decoded at its mix level, rendered seam clips between them, scheduled on one clock | The raw MP3 original, mixed in the browser by the lighter engine | Lossless 24-bit FLAC playback files (`play.proxy`, 34 to 64 MB a song, about 6x the MP3) cut at each seam's cue points, the seam clips between them, at mix level, on one AudioContext clock |
 | Gapless | Yes | Browser crossfades | Yes (parts scheduled back to back; join alignment measured above) |
 | Starts playing | As soon as the first seam is ready | At once | Only when every part is ready or failed (a gap: see section 4) |
-| Export | Whole-mix render | Browser export only | `export.render`: one FLAC of the mix. Its transitions are chosen again by `render.setmix`, not the seams heard (T-20261125-4e63). A 12-song export ran for over 18 minutes on this machine (still running when measured; result in section 5) |
+| Export | Whole-mix render | Browser export only | `export.render`: one FLAC of the mix. Its transitions are chosen again by `render.setmix`, not the seams heard (T-20261125-4e63). A 12-song export was still rendering after 33 minutes on this loaded machine (all 12 songs fetched, the join running; the export limit is 2 hours), so a finished export file was not verified |
 
 ### 2.5 Measured times per stage per song (this machine, under load; upper bounds)
 
@@ -103,7 +103,7 @@ Verdicts:
 | `play.proxy` | 15 to 34 s | FLAC 34 to 64 MB |
 | `seam.render` | cut 40 to 77 s; blend attempt 326 to 442 s | one over 600 s and failed |
 | Demucs window (local only) | 888 s per 46 s window | refused on hosted |
-| `export.render` | over 18 minutes for 12 songs | |
+| `export.render` | over 33 minutes for 12 songs, unfinished when measured | the card said "Exporting on the server" with no time once past its estimate |
 
 ## 3. What was fixed (this branch)
 
