@@ -185,6 +185,26 @@ def test_asking_again_for_a_queued_export_takes_nothing_more(hosted, monkeypatch
     assert again["job_id"] == first["job_id"] and _used(engine, workspace) == 1
 
 
+# --- (14) a deleted song leaves the card and every mix at once ---------------------------------
+
+
+def test_a_deleted_song_is_never_analysed_listed_or_planned_again(hosted):  # noqa: F811
+    from selecta.storage.deletion import DeletionKind, tombstone
+
+    engine, work, workspace = hosted
+    kept, gone = song(engine, workspace, b"kept"), song(engine, workspace, b"gone")
+    with transaction(engine, workspace) as conn:
+        tombstone(conn, workspace, DeletionKind.SONG, gone["id"])
+    assert hosted_render.prepare_songs(engine, work, workspace)["queued"] == 1
+    listed = [entry["asset_id"] for entry in hosted_render.songs_status(engine,
+                                                                         workspace)["songs"]]
+    assert listed == [kept["id"]]
+    with transaction(engine, workspace) as conn:
+        own = [row["id"] for row in hosted_render._songs(conn, workspace,
+                                                         [gone["id"], kept["id"]])]
+    assert own == [kept["id"]]  # what mix_state and an export build their timeline from
+
+
 # --- (3) the hosted routes have their own, stricter rate limits ---------------------------------
 
 
