@@ -86,6 +86,11 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
     let live = true;
     const take = (value: AccountCurrent) => {
       if (!live) return;
+      // An older value than the one already seen (the event stream replays its history to a
+      // device that has just connected) is not the account's now: taking it would make this
+      // browser tell the account an old mix is current, and the speaker hear "made a new mix"
+      const known = account.seen();
+      if (known && value.revision < known.revision) return;
       account.heard(value);
       if (value.mix_id === recipes.current()) return;
       if (audible.current) {

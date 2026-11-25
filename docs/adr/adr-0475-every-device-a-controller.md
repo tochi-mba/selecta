@@ -240,7 +240,7 @@ A remote is any signed-in device of the same person that is not making the sound
 - **The play bar always says where it plays.** On a remote the mini player's second line is "{artist} · on {device}" (seen at 820x1180 on Library).
 - **One picker.** Every start that must choose a device goes through `whereToPlay` and `SpeakerPicker`; "Move the music" on a remote lists only open devices with music for a music that is already playing.
 - **Rename a device.** The Devices page has Rename on every device (seen at 360x740), and names are read live.
-- **Sizes.** The remote at 360x740 and 820x1180 and the speaker at 1440x900 were opened and looked at; none scrolls sideways. Found and left (to-do): a laptop that was playing said "Safari on iPad 2 made a new mix." with Play it now and Keep playing when a fresh tablet had only opened Listen and Library.
+- **Sizes.** The remote at 360x740 and 820x1180 and the speaker at 1440x900 were opened and looked at; none scrolls sideways. Found: a laptop that was playing said "Safari on iPad 2 made a new mix." when a fresh tablet had only opened Listen and Library. Cause: the event stream replays its history to a device that has just connected; the tablet took each old `mix.current`, which set its pointer and told the account that old mix was current (one PUT per replayed event, 50 in one run), so the account's current mix changed under the laptop. Fixed: a value older than the one the device has already seen is ignored (`useAccountMix`). Proved (`ctl19.js`): the same fresh tablet made no PUT of the current mix and the laptop showed no offer.
 
 ## Edge cases and what happens
 

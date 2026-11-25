@@ -93,6 +93,18 @@ describe('following the account on an open device', () => {
     expect(screen.queryByTestId('new-mix-arrived')).toBeNull();
   });
 
+  it('an old value replayed to a device that just connected is not taken, so it is never told back', async () => {
+    // seen on 2026-11-25 (ctl19): a fresh tablet's event stream replayed old mix.current events,
+    // the tablet took each, told the account, and the playing laptop said "made a new mix"
+    const recipes = store('now', value('now', 9));
+    render(<Harness recipes={recipes} audible={false} onPlay={vi.fn()} />);
+    await waitFor(() => expect(recipes.account!.heard).toHaveBeenCalled());
+    (recipes.setCurrent as ReturnType<typeof vi.fn>).mockClear();
+    act(() => { for (const [mix, revision] of [['a', 3], ['b', 4], ['c', 8]] as const) window.dispatchEvent(new CustomEvent(CURRENT_MIX_EVENT, { detail: value(mix, revision, 'Old phone') })); });
+    expect(recipes.setCurrent).not.toHaveBeenCalled();
+    expect(recipes.current()).toBe('now');
+  });
+
   it('the speaker keeps playing, and offers the new mix until a choice is made', async () => {
     const recipes = store('old', value('old', 1));
     const onPlay = vi.fn();
