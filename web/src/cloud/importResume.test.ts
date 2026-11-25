@@ -65,6 +65,28 @@ describe('the carry-on offer', () => {
     expect(result.current!.marker.checked).toBe(412);
   });
 
+  it('another tab is importing: this tab follows it and offers nothing to carry on or forget', async () => {
+    writeMarker('ws-1', marker({ kind: 'files', checked: 3, registered: 2 }));
+    // a Web Lock held by the other tab, as navigator.locks.query reports it
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: {
+        query: async () => ({ held: [{ name: 'selecta-import-ws-1' }] }),
+        request: () => new Promise(() => undefined),
+      },
+    });
+    try {
+      const given = parts('ws-1');
+      const { result } = renderHook(() => { useImportCarryOn(given); return useResumeOffer('ws-1'); });
+      await vi.waitFor(() => expect(importSnapshot()).toMatchObject({ phase: 'running', elsewhere: true }));
+      expect(result.current).toBeNull();
+      // the other tab's record is untouched
+      expect(readImportMarker('ws-1')).not.toBeNull();
+    } finally {
+      delete (navigator as { locks?: unknown }).locks;
+    }
+  });
+
   it('a remembered folder with permission granted carries on by itself under the same import id', async () => {
     writeMarker('ws-2', marker());
     await rememberFolder('ws-2', folder('granted'));

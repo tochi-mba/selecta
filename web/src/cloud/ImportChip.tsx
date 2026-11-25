@@ -79,7 +79,8 @@ export function ImportChip({ onView, workspaceId }: { onView: () => void; worksp
         ? <p>{words}</p>
         : (
           <div className="lw-chip-progress">
-            <p><b>Adding your music</b> <span>{checkedWords(live)}</span></p>
+            {/* an import that resumed after a reload or a closed tab says so (plan "Nothing is lost") */}
+            <p><b>{resilient && (live.resumed ?? 0) > 0 ? 'Carrying on your import' : 'Adding your music'}</b> <span>{checkedWords(live)}</span></p>
             <Meter label="Files checked" showLabel={false} value={typeof live.total === 'number' ? checked : undefined} max={Math.max(live.total ?? 1, 1)} valueText={checkedWords(live)} />
           </div>
         )}
