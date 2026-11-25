@@ -369,9 +369,11 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     // programme (next, or at the end), the same signed press a request uses
     const link = sources.controller?.() ?? null;
     if (link && method === 'POST' && route === '/mix/songs') {
-      const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number; position?: number };
-      const songId = Number(body.song_id);
-      if (!speakerHolds(link, songId)) {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number; song_ids?: number[]; position?: number };
+      const songId = Number(body.song_id ?? body.song_ids?.[0]);
+      // I88: several chosen songs go in at once, in order, those the speaker has (the bar said so)
+      const many = (body.song_ids ?? []).map(Number).filter((id) => speakerHolds(link, id));
+      if (!many.length && !speakerHolds(link, songId)) {
         // I85: on another open device, so offer to move the music there, never a refusal
         const device = holdersNow()?.(songId).online.find((name) => name !== link.speakerName);
         if (!device) throw new ApiError(notOnSpeaker(link.speakerName), 409, 'not_on_speaker');
@@ -381,7 +383,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       }
       const next = Number.isInteger(body.position) && Number(body.position) <= link.songIndex + 1;
       const order = [...link.programme];
-      order.splice(next ? link.songIndex + 1 : order.length, 0, songId);
+      order.splice(next ? link.songIndex + 1 : order.length, 0, ...(many.length ? many : [songId]));
       if (!(await link.send('set_programme', { songs: order, song_index: link.songIndex, keep_position: true }))) throw new ApiError(`${link.speakerName} didn’t take that. Try again.`, 409, 'speaker_refused');
       const list = await songs();
       return { name: '', can_undo: false, mix: order.map((id, position) => {

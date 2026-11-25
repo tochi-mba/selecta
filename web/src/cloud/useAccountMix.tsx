@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { MixData, Request } from '../api';
-import { MOVE_OFFER_EVENT, moveWords, type MoveOffer } from '../devices/controller';
+import { MOVE_NOW_EVENT, MOVE_OFFER_EVENT, moveWords, type MoveOffer } from '../devices/controller';
 import { showToast } from '../ui/toasts';
 import { onReconnect } from './connection';
 import { conflictWords, CURRENT_MIX_CONFLICT, CURRENT_MIX_EVENT, type AccountCurrent } from './currentMix';
@@ -68,6 +68,13 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
       showToast(`${offer.title} couldn’t be added. Try again.`, { tone: 'problem' });
     }
   }, [askToPlay, devices, recipes]);
+  const moveNow = useRef(moveOn);
+  moveNow.current = moveOn;
+  useEffect(() => {
+    const chosen = (event: Event) => { const offer = (event as CustomEvent<MoveOffer>).detail; if (offer) void moveNow.current(offer, true); };
+    window.addEventListener(MOVE_NOW_EVENT, chosen);
+    return () => window.removeEventListener(MOVE_NOW_EVENT, chosen);
+  }, []);
   const audible = useRef(audibleHere);
   audible.current = audibleHere;
   const refresh = useRef(refreshMix);

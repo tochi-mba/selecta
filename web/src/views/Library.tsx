@@ -1,6 +1,7 @@
 import { words } from '../copy';
 import { ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { HolderContext } from '../devices/controller';
+import { RemoteSelection } from './RemoteSelection';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
 import { useApi } from '../requestContext';
@@ -387,6 +388,12 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     notify(position !== undefined ? `${song.title} plays next.` : `Added ${song.title}.`, true);
     return true;
   };
+  // I88: chosen songs next on the speaker, in the order shown (each goes in after the last)
+  const playSelectedNext = async (chosen: readonly LibrarySong[]) => {
+    if (!chosen.length) return;
+    setMixData(await post<MixData>('/mix/songs', { song_ids: chosen.map((song) => song.id), position: now.position + 1 }));
+    notify(chosen.length === 1 ? `${chosen[0].title} plays next.` : `${chosen.length} songs play next.`, true);
+  };
   const never = async (song: LibrarySong) => {
     await post(`/songs/${song.id}/never`);
     notify(song.never ? `${song.title} can play again.` : `${song.title} won’t be picked for mixes.`);
@@ -670,6 +677,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           canSelect={batch && !!committedRows?.length && filter !== 'set_aside'}
           onSelectAll={() => { if (committedRows && !searching && !failed) setBatchSelection({ identity: selectionIdentity, ids: committedRows.slice(0, 200).map((song) => song.id) }); }}
           onClear={() => { setBatchSelection({ identity: selectionIdentity, ids: [] }); selectionEntryRef.current?.focus(); }}>
+          {holder?.speaking && now.phase !== 'idle' && <RemoteSelection songs={visibleSelected} holder={holder} disabled={searching || failed} playNext={playSelectedNext} />}
           {on('library.never_play') && (
             <>
               <button type="button" disabled={searching || failed} onClick={() => askBatch('never')}>Never play</button>

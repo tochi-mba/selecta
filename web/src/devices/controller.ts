@@ -86,6 +86,8 @@ export const notOnSpeaker = (speakerName: string) => `${speakerName} can’t pla
  * refuse: it asks whether to move the music to that device (`MOVE_OFFER_EVENT` on window, with
  * a `MoveOffer`), and the add answers `move_offered` so the row stays quiet. */
 export const MOVE_OFFER_EVENT = 'selecta-move-offer';
+/** I88: the person already chose the device ("Choose another device"): move without asking. */
+export const MOVE_NOW_EVENT = 'selecta-move-now';
 /** `programme`: the speaker's song now and what follows, which the moved music carries on with. */
 export type MoveOffer = { songId: number; title: string; device: string; speaker: string; programme: number[] };
 export const moveWords = (offer: Pick<MoveOffer, 'title' | 'device'>) => `${offer.title} is on ${offer.device}. Move the music there?`;
