@@ -143,6 +143,7 @@ const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 const LUCY_POLL_MS = 500;
 // Lucy loads only when someone opens her, as in local mode, so she costs the shell nothing.
 const Lucy = lazy(() => import('../views/Lucy'));
+const ListeningRoom = lazy(() => import('../listening-room/ListeningRoom')); // tools.listening_room
 
 export function LocalFirstShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
   api: Api;
@@ -852,6 +853,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       const item = moreItems.find((place) => place.id === route.id);
       if (!item) return <NotOnThisAccount />;
       if (item.id === 'workspace') return <ThisDevice openStore={openStore}>{connect}<StemsCard enabled={stems.enabled} store={stems.store} /></ThisDevice>;
+      if (item.id === 'listening_room') return <Suspense fallback={<Skeleton lines={4} label="Opening the Listening Room" />}><ListeningRoom workspaceId={workspaceId} mix={data.mix} mixName={data.name} mixId={recipes.current() ?? null} loading={data === EMPTY_MIX && !mixProblem} resolve={deviceTrack} shellPlaying={now.phase === 'playing' && (playback.view?.speaker === 'here' || !on('devices.remote_control'))} pauseShell={() => shellPlayer.togglePause()} /></Suspense>;
       return <main className="page" id="main" data-place={item.id}><h1 className="display small">{item.label}</h1><div className="stack">{more(item.id)}</div></main>;
     }
     if (!shared) {
