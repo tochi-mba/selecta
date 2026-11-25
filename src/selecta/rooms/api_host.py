@@ -24,6 +24,7 @@ from selecta.persistence import transaction
 from selecta.rooms import limits
 from selecta.rooms.api_common import item_json, join_path, refusal, too_many
 from selecta.rooms.errors import RoomError
+from selecta.rooms.host_features import SOCIAL
 from selecta.rooms.service import Rooms
 from selecta.rooms.settings import BOUNDS, RoomSettings
 from selecta.rooms.store import Guest, Room
@@ -47,6 +48,10 @@ def settings_json(settings: RoomSettings) -> dict[str, Any]:
     raw = settings.to_json()
     if not flags.on("rooms.votes"):
         raw["votes"] = False
+    # ADR-0488: a feature this build has switched off reads as off in the room's settings
+    for name, flag_id in SOCIAL.items():
+        if not flags.on(flag_id):
+            raw[name] = False
     return raw
 
 

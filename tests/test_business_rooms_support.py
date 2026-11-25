@@ -20,6 +20,7 @@ from selecta.business.content.engine import Decision, SongFacts
 from selecta.business.people.schema import business_activity
 from selecta.business.rooms.schema import TABLES
 from selecta.business.rooms.service import ZoneRooms
+from selecta.business.rooms.social_schema import TABLES as SOCIAL_TABLES
 from selecta.persistence import make_engine, metadata, transaction
 
 PEPPER = b"business-rooms-test-pepper-0123456789"
@@ -169,7 +170,8 @@ class Flags:
 @pytest.fixture
 def engine(tmp_path):
     built = make_engine(f"sqlite:///{tmp_path / 'rooms.sqlite'}")
-    metadata.create_all(built, tables=[*TABLES, business_activity, audit_events])
+    # ADR-0488: a standing room's guest view also reads what the room does together
+    metadata.create_all(built, tables=[*TABLES, *SOCIAL_TABLES, business_activity, audit_events])
     yield built
     built.dispose()
 

@@ -31,6 +31,16 @@ GUEST_SEARCH_PER_GUEST = Window(30, 60.0)
 GUEST_WRITE_PER_GUEST = Window(20, 60.0)
 GUEST_WRITE_PER_IP = Window(120, 60.0)  # a party shares one IP
 GUEST_WRITE_PER_ROOM = Window(600, 60.0)
+# ADR-0488. The pulse is the small shared answer a phone reads every couple of seconds while a
+# vote is open; it costs one indexed lookup, the answer itself being made once a second per room.
+GUEST_PULSE_PER_GUEST = Window(90, 60.0)
+# Taps: a heart, a blend tap, a vote for the next song. Each is one small write that changes
+# nothing when repeated, and a whole room taps at once when a song lands, from one address when
+# the party shares its Wi-Fi. So taps have their own windows, wider per address and per room
+# than the ones for requests, and no tighter per guest.
+TAP_PER_GUEST = Window(20, 60.0)
+TAP_PER_IP = Window(600, 60.0)
+TAP_PER_ROOM = Window(1200, 60.0)
 DISPLAY_PAIRING_PER_IP = Window(10, 60.0)
 DISPLAY_READ_PER_IP = Window(120, 60.0)
 # Pairing codes a host types for a big screen. A six-character code is about 29 bits, so an

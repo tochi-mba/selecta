@@ -7,15 +7,19 @@
 // used on the header band and the main button only when the server says it passes 4.5:1 in
 // both themes. The guest token lives in an HttpOnly cookie the page can't read.
 
-import { ApiError, call, h, patch, replace } from '../rooms/dom';
+import { ApiError, call, h, patch, replace, type Song } from '../rooms/dom';
+import * as social from './social/social';
 
 type Branding = { venue_name: string; zone_name: string; footer: string; logo_url: string | null; welcome: string | null; accent: string | null; accent_ink: string | null };
 type Asked = { request_id: string; title: string; artist: string; votes: number; mine: boolean };
 type Mine = { request_id: string; title: string; artist: string; status: string; text: string; votes: number };
 type State = {
   room_id: string; state: string; text: string; can_request: boolean; needs_screen_code: boolean; nickname: string;
-  branding: Branding; now_playing: { title: string; artist: string } | null; coming_up: Asked[]; my_requests: Mine[];
-};
+  branding: Branding; now_playing: Song | null; coming_up: Asked[]; my_requests: Mine[];
+  /** ADR-0488: the room's name as the shared features know it (the zone), and this guest's own
+   * dedications by request. The rest of what they read is `social.RoomView`. */
+  room_name: string; my_dedications?: Record<string, { line: string; words: string | null }>;
+} & Omit<social.RoomView, 'room_name' | 'now_playing'>;
 type Found = { song_id: string; title: string; artist: string; length_s: number | null };
 
 const POLL_MS = 5000;
@@ -36,6 +40,14 @@ export function startVenue(root: HTMLElement, code: string): void {
   let screenCode = '';
   let wait = 0;
   let searching = false;
+  let recapAsked = false;
+  let recapLines: string[] = [];
+  // ADR-0488: what the room does together. A standing room has no end, so songs a guest keeps
+  // are filed by the room and the day.
+  social.init({
+    base: () => base, shelf: () => `${code}:${new Date().toISOString().slice(0, 10)}`,
+    redraw: () => draw(), reread: () => void refresh(), say: (text) => { notice = text; draw(); }, buzz: () => undefined,
+  });
   // taps being answered ("ask:12", "vote:r1"): that button shows it is working and ignores a second tap
   const busy = new Set<string>();
   const working = (on: boolean): Record<string, string> => (on ? { 'aria-busy': 'true', 'aria-disabled': 'true' } : {});
@@ -75,7 +87,14 @@ export function startVenue(root: HTMLElement, code: string): void {
   async function refresh(): Promise<void> {
     window.clearTimeout(timer);
     try {
-      state = await call<State>(`${base}/state`);
+      const fresh = await call<State>(`${base}/state`);
+      state = { ...fresh, room_name: fresh.branding.zone_name, now_playing: fresh.now_playing && { ...fresh.now_playing, length_s: fresh.now_playing.length_s ?? 0 } };
+      // ADR-0488: once the zone has closed for the night, its numbers are asked for once
+      if (state.state === 'closed' && !recapAsked) {
+        recapAsked = true;
+        void call<{ lines: string[] }>(`${base}/recap`).then((answer) => { recapLines = answer.lines ?? []; draw(); }, () => undefined);
+      }
+      if (state.state !== 'closed') { recapAsked = false; recapLines = []; }
       draw();
     } catch (error) {
       if (fail(error)) return;
@@ -133,6 +152,7 @@ export function startVenue(root: HTMLElement, code: string): void {
 
   function draw(): void {
     if (!state) return;
+    const view = state;
     const brand = state.branding;
     const band = h('header', { className: 'g-brand', 'data-key': 'brand', style: accentStyle(brand) },
       brand.logo_url ? h('img', { src: brand.logo_url, alt: '', className: 'g-logo', width: 48, height: 48 }) : null,
@@ -142,6 +162,8 @@ export function startVenue(root: HTMLElement, code: string): void {
     if (brand.welcome) parts.push(h('p', { 'data-key': 'welcome' }, brand.welcome));
     parts.push(h('p', { className: 'g-status', 'data-key': 'state' }, state.text));
     if (state.now_playing) parts.push(h('p', { className: 'g-now', 'data-key': 'now' }, `Now: ${state.now_playing.title} by ${state.now_playing.artist}`));
+    // ADR-0488: the heart and the dedication for the playing song, then the vote for the next
+    parts.push(social.hero(state), social.round(state), social.recapCard(recapLines));
     if (state.can_request) {
       if (state.needs_screen_code) {
         parts.push(h('label', { className: 'g-field', 'data-key': 'code' }, 'Code on the screen', h('input', { value: screenCode, inputmode: 'text', maxlength: 8, autocomplete: 'off', autocapitalize: 'characters', oninput: (event: Event) => { screenCode = (event.target as HTMLInputElement).value.toUpperCase(); } })));
@@ -167,8 +189,11 @@ export function startVenue(root: HTMLElement, code: string): void {
     if (state.my_requests.length) {
       parts.push(h('h2', { 'data-key': 'mine-title' }, 'Your requests'), h('ul', { className: 'g-list', 'data-key': 'mine' }, ...state.my_requests.map((item) => h('li', { 'data-key': item.request_id },
         h('span', { className: 'g-song' }, `${item.title} by ${item.artist}`),
-        h('p', { className: `g-status g-${item.status}` }, item.text)))));
+        h('p', { className: `g-status g-${item.status}` }, item.text),
+        // a venue's "approved" is what the shared features call accepted: still waiting to play
+        social.dedication(view, { request_id: item.request_id, status: item.status === 'approved' ? 'accepted' : item.status, dedication: view.my_dedications?.[item.request_id]?.line, dedication_words: view.my_dedications?.[item.request_id]?.words })))));
     }
+    parts.push(social.kept(state));
     parts.push(h('footer', { className: 'g-small g-muted', 'data-key': 'footer' }, `You're ${state.nickname}. ${brand.footer}`));
     // what just happened floats over the bottom of the page, so it never pushes the page down
     parts.push(h('div', { className: 'g-dock', 'data-key': 'dock', 'data-open': notice ? true : undefined },
@@ -177,6 +202,7 @@ export function startVenue(root: HTMLElement, code: string): void {
     let card = root.querySelector(':scope > .g-venue');
     if (!card) { card = h('section', { className: 'g-card g-venue' }); replace(root, card); }
     patch(card, ...parts);
+    social.sync(state, state.state === 'open' || state.state === 'music_paused');
   }
 
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state) void refresh(); });

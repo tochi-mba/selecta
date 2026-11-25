@@ -31,6 +31,16 @@ class Refusal(StrEnum):
     INVALID_NICKNAME = "invalid_nickname"
     INVALID_NAME = "invalid_name"
     NO_SUCH_PAIRING = "no_such_pairing"
+    # What a room does together (ADR-0488).
+    FEATURE_OFF = "feature_off"
+    SONG_CHANGED = "song_changed"
+    NO_ROUND = "no_round"
+    ROUND_OPEN = "round_open"
+    TOO_FEW_SONGS = "too_few_songs"
+    JOINED_LATE = "joined_late"
+    NOT_AN_OPTION = "not_an_option"
+    NO_SUCH_LINE = "no_such_line"
+    NO_SPEAKER = "no_speaker"
 
 
 MESSAGES = {
@@ -70,6 +80,15 @@ MESSAGES = {
     Refusal.INVALID_NICKNAME: "Pick one of the nicknames offered.",
     Refusal.INVALID_NAME: "Give the room a name of up to 40 characters.",
     Refusal.NO_SUCH_PAIRING: "That display code isn't showing anywhere. Check the screen.",
+    Refusal.FEATURE_OFF: "That isn't on in this room.",
+    Refusal.SONG_CHANGED: "That song has finished.",
+    Refusal.NO_ROUND: "That vote has closed.",
+    Refusal.ROUND_OPEN: "The room is already voting.",
+    Refusal.TOO_FEW_SONGS: "There aren't enough songs to vote on right now.",
+    Refusal.JOINED_LATE: "This vote opened before you joined. You can vote in the next one.",
+    Refusal.NOT_AN_OPTION: "That song isn't in this vote.",
+    Refusal.NO_SUCH_LINE: "Pick one of the dedications offered.",
+    Refusal.NO_SPEAKER: "No device is playing the music right now, so the room can't vote.",
 }
 
 

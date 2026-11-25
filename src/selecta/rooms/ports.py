@@ -85,8 +85,23 @@ class SpeakerPort(Protocol):
 
 @dataclass(frozen=True)
 class NowPlaying:
+    """The song the speaker is on, and what follows it.
+
+    `current` is the loaded song, playing or paused; None when nothing is loaded or the music
+    was stopped. The rest says which play of it this is (ADR-0488): a source that cannot say
+    leaves the defaults, and the room then tells plays apart by song alone.
+    """
+
     current: SongSummary | None
     up_next: tuple[SongSummary, ...] = ()
+    state: str = "playing"  # playing or paused; only read while `current` is set
+    mix_key: str = ""  # the mix revision the speaker named, if any
+    song_index: int | None = None  # where in the programme the song sits
+    offset_s: float | None = None  # how far into the song the speaker is
+
+    @property
+    def paused(self) -> bool:
+        return self.current is not None and self.state != "playing"
 
 
 class NowPlayingPort(Protocol):

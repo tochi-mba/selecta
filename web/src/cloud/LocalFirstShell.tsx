@@ -50,7 +50,7 @@ import { ControllerListen } from '../devices/ControllerListen';
 import { tabLog } from '../devices/audioTab';
 import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
-import { addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
+import { useRoomRounds, addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
 import { SoundCheck } from './SoundCheck';
@@ -804,6 +804,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     }, requestsOn ? { label: 'Open requests', run: () => setRequesting(true) } : openRoom] });
   }, [api, workspaceId, request, setMixData, roomsPlace, requestsOn]);
   const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
+  useRoomRounds({ api, workspaceId, roomId: room?.id, enabled: roomsOn && account.features?.['rooms.rounds'] !== false, isSpeaker: () => playback.isSpeaker(), playing: roomPlayback, request });
   const roomWaiting = room ? room.toApprove : 0;
   // R12: what a sign-out in any tab of this browser would stop, answered from here
   setTabBusy({ playing: playback.isSpeaker() && now.phase === 'playing', room: !!room, importing: importLive.phase === 'running' });

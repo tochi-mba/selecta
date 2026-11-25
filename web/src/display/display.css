@@ -102,9 +102,33 @@ p { margin: 0.4em 0; }
 .d-disconnect:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .d-disconnect[aria-busy] { cursor: progress; }
 .d-reconnecting { position: fixed; top: 3vmin; right: 3vmin; margin: 0; padding: 0.4em 0.9em; border-radius: var(--radius-pill); background: var(--ink); color: var(--surface-base); font-size: 0.75em; font-weight: var(--weight-strong); animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+/* What a room does together (ADR-0488, social.ts): the room's hearts under the playing song, and
+   one heart rising for each new love. A heart answers a guest's tap; none moves on a timer. */
+.d-social { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em 1.2em; margin: 0.8em 0 0; font-size: 0.95em; font-weight: var(--weight-strong); }
+.d-loves { display: inline-flex; align-items: center; gap: 0.4em; font-variant-numeric: tabular-nums; }
+.d-heart { width: 1em; height: 1em; fill: var(--selected); }
+.d-recap-list { list-style: none; margin: 1em 0 0; padding: 0; display: grid; gap: 0.5em; font-size: 1.25em; font-weight: var(--weight-strong); }
+.d-recap-list li { animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-dedication { flex-basis: 100%; font-family: var(--display); font-weight: var(--weight-display); font-size: 1.5em; line-height: 1.15; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-loved { animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+/* The vote for the next song, in place of the lists: each song with its votes and a bar */
+.d-round { margin-top: 1.3em; padding-top: 1.1em; border-top: 1px solid var(--line); animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-round h2 { display: flex; align-items: baseline; gap: 0.8em; color: var(--ink); }
+.d-round-left { font-family: var(--display); font-weight: var(--weight-display); font-size: 1.5em; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; }
+.d-round-how, .d-round-result { margin: 0 0 0.8em; }
+.d-round-result { font-weight: var(--weight-strong); font-size: 1.15em; }
+.d-round-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6em; }
+.d-round-opt { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0.3em 1em; padding: 0.55em 0.8em; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface-raised); font-size: 1.1em; }
+.d-round-won { border-color: var(--selected); }
+.d-round-count { font-family: var(--display); font-weight: var(--weight-display); font-size: 1.3em; font-variant-numeric: tabular-nums; }
+.d-round-bar { grid-column: 1 / -1; height: 0.35em; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
+.d-round-bar i { display: block; height: 100%; border-radius: inherit; background: var(--selected); transition: width var(--motion-slow) var(--motion-ease); }
+.d-rising { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.d-rise { position: absolute; bottom: 14vh; width: 5vmin; height: 5vmin; fill: var(--selected); opacity: 0; animation: d-rise calc(var(--motion-slow) * 8) var(--motion-ease) forwards; }
 /* a tall or narrow screen (a portrait TV, a tablet on a stand): the room on top, the code under it */
 @media (max-width: 900px), (orientation: portrait) { .d-room { grid-template-columns: 1fr; gap: 5vmin; } .d-qr { width: min(38vmin, 100%); } body { overflow: auto; } }
 @keyframes d-arrive { from { opacity: 0; transform: translateY(0.4em); } }
 @keyframes d-drift { from { transform: translate(-0.8vmin, -0.6vmin); } to { transform: translate(0.8vmin, 0.6vmin); } }
 @keyframes d-turn { to { transform: rotate(360deg); } }
+@keyframes d-rise { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-46vh) scale(1.15); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

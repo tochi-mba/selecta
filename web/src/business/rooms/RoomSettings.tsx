@@ -11,6 +11,7 @@ import { businessOn, useBusiness } from '../context';
 import type { Venue, Zone } from '../types';
 import { useLoad } from '../venue/useVenue';
 import { openPrintSheet } from './printSheet';
+import { ZoneSocial } from './ZoneSocial';
 import { roomsClient, type RoomLimits, type RoomMode, type RoomsClient, type RoomView } from './roomsClient';
 
 const MODES: { value: RoomMode; label: string }[] = [
@@ -109,6 +110,7 @@ function ZoneRoom({ zone, rooms, disabled }: { zone: Zone; rooms: RoomsClient; d
         {screen && <p className="biz-screen-code" aria-live="polite"><strong>{screen}</strong></p>}
       </div>}
     </fieldset>}
+    <ZoneSocial zone={zone} rooms={rooms} off={off} />
     {error && <p role="alert">{error}</p>}
   </section>;
 }

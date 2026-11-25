@@ -11,11 +11,13 @@ This looks across every workspace, so the listing needs the maintenance database
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import sqlalchemy as sa
 
 from selecta.persistence import transaction
+from selecta.rooms import recap
 from selecta.rooms.codes import REUSE_BLOCK_DAYS
 from selecta.rooms.schema import (
     display_pairings,
@@ -25,7 +27,16 @@ from selecta.rooms.schema import (
     room_votes,
     rooms,
 )
+from selecta.rooms.social_schema import (
+    room_plays,
+    room_reactions,
+    room_round_options,
+    room_round_votes,
+    room_rounds,
+)
 from selecta.rooms.store import RoomContext, RoomStatus, resolve_now
+
+log = logging.getLogger(__name__)
 
 GUEST_DATA_DAYS = 30
 UNPAIRED_KEEP_SECONDS = 24 * 3600.0
@@ -58,11 +69,27 @@ def purge_guest_data(ctx: RoomContext, *, now: float | None = None) -> PurgeRepo
         ).rowcount
     guests = 0
     for room_id, workspace_id in due:
+        # ADR-0488: the recap is counted from the plays and taps about to go, so one nobody
+        # asked for yet is built first. It holds no guest data and stays.
+        try:
+            recap.recap_of(ctx, workspace_id, room_id, now=now)
+        except Exception:
+            log.exception("Couldn't build the recap of room %s before its purge", room_id)
         with transaction(ctx.engine, workspace_id) as conn:
             mine = (rooms.c.id == room_id, rooms.c.workspace_id == workspace_id)
             if conn.execute(sa.select(rooms.c.id).where(*mine)).first() is None:
                 continue
-            for table in (room_votes, room_requests, room_bans, display_pairings):
+            for table in (
+                room_reactions,
+                room_round_votes,
+                room_round_options,
+                room_rounds,
+                room_plays,
+                room_votes,
+                room_requests,
+                room_bans,
+                display_pairings,
+            ):
                 conn.execute(
                     sa.delete(table).where(
                         table.c.room_id == room_id, table.c.workspace_id == workspace_id

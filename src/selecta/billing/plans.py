@@ -130,7 +130,20 @@ def _lanes(interactive: int, standard: int) -> Mapping[str, int]:
 # Features every plan includes. Listing them keeps them checked against the registry, and taking
 # one out of a plan later makes it plan-gated without any other change.
 EVERY_PLAN = frozenset({"cloud.uploads", "devices.remote_control", "account.data_export"})
-PREMIUM_ONLY = frozenset({"rooms", "rooms.votes", "rooms.display", "lucy.deep_plan"})
+PREMIUM_ONLY = frozenset(
+    {
+        "rooms",
+        "rooms.votes",
+        "rooms.display",
+        # ADR-0488: what a room does together comes with Rooms.
+        "rooms.keeps",
+        "rooms.reactions",
+        "rooms.rounds",
+        "rooms.dedications",
+        "rooms.recap",
+        "lucy.deep_plan",
+    }
+)
 
 FREE_1 = Plan(
     id="free",
