@@ -32,7 +32,7 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
   /** Start this device's current mix from the top, here. */
   playHere: () => void;
   /** Ask another device to play a saved mix (ADR-0475 R2). */
-  askToPlay: (device: Device, mixId: string | null) => void;
+  askToPlay: (device: Device, mixId: string | null, move?: boolean) => void;
   /** The person's devices, to find the one an offer names. */
   devices?: () => readonly Device[];
 }): { banner: ReactNode; offerLater: (device: Device) => void; clearOffers: () => void } {
@@ -54,7 +54,7 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
     setMixData(added);
     if (!play) { showToast(`${offer.title} is in your mix for when the music is on ${offer.device}.`); return; }
     const device = devices?.().find((one) => one.name === offer.device);
-    if (device) askToPlay(device, recipes.current());
+    if (device) askToPlay(device, recipes.current(), true);
     else showToast(`${offer.device} isn’t open right now. Open SelectaDJ on it.`, { tone: 'problem' });
   }, [askToPlay, devices, recipes, request, setMixData]);
   const audible = useRef(audibleHere);
