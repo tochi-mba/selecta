@@ -140,8 +140,8 @@ def _fit_line(
         vocal,
         origin,
         next_start,
-        Stem(str(stems.vocals), origin),
-        Stem(str(band_of(stems)), origin),
+        Stem(str(stems.vocals), origin, "vocals", length),
+        Stem(str(band_of(stems)), origin, "band", length),
     )
 
 
@@ -251,7 +251,8 @@ def locate_voice_edge(settings: Settings, song: SongInfo, line: Line, at_end: bo
         if at_end
         else Word(text, edge, edge + EDGE_WORD_SECONDS, 1.0)
     )
-    return Phrase([word], 1.0, Stem(str(stems.vocals), origin), Stem(str(band_of(stems)), origin))
+    voice = Stem(str(stems.vocals), origin, "vocals", length)
+    return Phrase([word], 1.0, voice, Stem(str(band_of(stems)), origin, "band", length))
 
 
 def locate_line_edge(

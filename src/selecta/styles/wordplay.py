@@ -68,6 +68,19 @@ class Stem:
 
     path: str
     origin: float
+    name: str | None = None
+    """Which stem this is (`render.sources.STEM_NAMES`), so a script can name it without a path."""
+    duration: float = 0.0
+    """How long the separated window is."""
+
+    def part_source(self) -> dict:
+        """The `Part` fields that say where this stem's audio comes from."""
+        return {
+            "source_path": self.path,
+            "window_origin": self.origin,
+            "stem": self.name,
+            "stem_seconds": self.duration,
+        }
 
 
 def pulse(song: SongInfo) -> float:
@@ -113,8 +126,7 @@ def word_cut(
             Part(
                 song=b,
                 warp=Warp.identity(begin, enter_b - swell, swell + _DECLICK),
-                source_path=band_b.path,
-                window_origin=band_b.origin,
+                **band_b.part_source(),
                 gain=Curve([(begin, 0.0), (lead - _DECLICK, 0.75), (lead, 0.0)]),
                 low=Curve.constant(0.0),
                 highpass=sweep(begin, lead, 2500.0, 250.0),
@@ -266,8 +278,7 @@ def _ride(
     voice = Part(
         song=a,
         warp=timing.a_warp.trimmed(start - _CROSSFADE - 0.02, voice_end + 0.1),
-        source_path=voice_a.path,
-        window_origin=voice_a.origin,
+        **voice_a.part_source(),
         gain=Curve(
             [
                 (start - _CROSSFADE, 0.0),
@@ -309,8 +320,7 @@ def _ride(
         a=Part(
             song=a,
             warp=timing.a_warp,
-            source_path=band_a.path,
-            window_origin=band_a.origin,
+            **band_a.part_source(),
             render_from=start - _CROSSFADE - 0.02,
             render_until=band_gone + 0.1,
             gain=Curve(
@@ -326,8 +336,7 @@ def _ride(
         b=Part(
             song=b,
             warp=timing.b_warp,
-            source_path=band_b.path,
-            window_origin=band_b.origin,
+            **band_b.part_source(),
             render_until=handoff + 0.1,
             gain=band_gain,
             low=b_low,
@@ -368,8 +377,7 @@ def _hit(
             np.array([at, at + length + _DECLICK]),
             np.array([source, source + (length + _DECLICK) * speed]),
         ),
-        source_path=stem.path,
-        window_origin=stem.origin,
+        **stem.part_source(),
         gain=Curve(
             [
                 (at - 1e-6, 0.0),
@@ -575,8 +583,7 @@ def phrase_roll(
         warp=Warp.identity(
             phrase_end - _CROSSFADE, end_song - _CROSSFADE, band_a_gone - phrase_end + _CROSSFADE
         ),
-        source_path=band_a.path,
-        window_origin=band_a.origin,
+        **band_a.part_source(),
         gain=Curve(
             [
                 (phrase_end - _CROSSFADE, 0.0),
@@ -591,8 +598,7 @@ def phrase_roll(
     rises = Part(
         song=b,
         warp=Warp.identity(word_stage, enter_b - bed, bed + _DECLICK),
-        source_path=band_b.path,
-        window_origin=band_b.origin,
+        **band_b.part_source(),
         gain=Curve(
             [
                 (word_stage, 0.0),
