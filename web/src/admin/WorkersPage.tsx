@@ -22,8 +22,9 @@ type Cost = {
   pools: PoolCost[]; usd_today: number; usd_month: number; projected_usd: number; as_of: number; month: string;
   budget: { monthly_usd: number | null; warn_percent: number; status: 'unset' | 'ok' | 'near' | 'projected_over' | 'over'; set_at: number | null; version: string };
 };
+type StuckAlert = { id: string; created_at: number; summary: string; pool: string | null; acknowledged_at: number | null };
 type Status = {
-  now: number; pools: Pool[] | Fail; customers: Customers | Fail; cost: Cost | Fail;
+  now: number; pools: Pool[] | Fail; stuck_alerts?: StuckAlert[] | Fail; customers: Customers | Fail; cost: Cost | Fail;
   pieces: { gateway: Gateway | Fail; autoscaler: Autoscaler | Fail; storage: Storage | Fail; flags: Flag[] | Fail };
 };
 
@@ -64,6 +65,7 @@ export function WorkersPage() {
           <strong>{poolName(p.pool)} is paused</strong>{p.paused?.target === '*' ? ' (every pool, from Emergency)' : ''}{p.paused?.since && <> since <Time at={p.paused.since} /></>}: {p.paused?.reason || 'no reason given'}. Workers claim nothing new from it; running work finishes. {p.queued > 0 && `${p.queued} jobs wait meanwhile.`}
         </p>
       ))}
+      <StuckAlerts alerts={data.stuck_alerts} />
       <Section title="Pools" tour="workers-pools" help="One worker pool per kind of work. Each card says in one word whether it is fine, then the numbers behind that word.">
         {failed(data.pools) ? <Problem error={data.pools.error} onRetry={() => void load()} />
           : <ul className="admin-pools">{data.pools.map((pool) => <PoolCard key={pool.pool} pool={pool} autoscaler={auto} onChange={() => void load()} />)}</ul>}
@@ -82,6 +84,21 @@ export function WorkersPage() {
       {can('workers.read') && <Workers api={api} canDrain={can('workers.drain')} />}
       <Explainer />
     </div>
+  );
+}
+
+/** The jobs side's stuck-queue alerts (queue_watch, once per pool an hour); also in Alerts. */
+function StuckAlerts({ alerts }: { alerts?: StuckAlert[] | Fail }) {
+  if (!alerts) return null;
+  if (failed(alerts)) return <Problem error={alerts.error} />;
+  const open = alerts.filter((a) => !a.acknowledged_at);
+  if (!open.length) return null;
+  const link = adminPath('security', ['alerts']);
+  return (
+    <Section title="Stuck-queue alerts, last 24 hours" tour="workers-alerts" help="Raised by the maintenance service when a pool’s oldest queued job has waited over 15 minutes, at most once per pool an hour. Nothing is ever cancelled automatically. Acknowledge them in Staff and security, Alerts."
+      actions={<a href={link} onClick={(event) => { event.preventDefault(); go(link); }}>Open Alerts</a>}>
+      <ul className="admin-list">{open.slice(0, 5).map((a) => <li key={a.id} data-lift="row"><Time at={a.created_at} /> {a.summary} <Badge tone="warn">New</Badge></li>)}</ul>
+    </Section>
   );
 }
 
@@ -141,9 +158,10 @@ function PoolCard({ pool, autoscaler, onChange }: { pool: Pool; autoscaler: Auto
           <span className={pool.failed_24h ? 'admin-tone-bad' : undefined}>{pool.failed_24h.toLocaleString()}</span>
           {pool.failed_24h > 0 && <> <a href={adminPath('jobs')} onClick={(event) => { event.preventDefault(); go(adminPath('jobs')); }}>Open Jobs</a></>}
         </Fig>
-        <Fig label="Oldest wait" help="How long the oldest queued job has waited."><span className={pool.oldest_wait_s && pool.oldest_wait_s > 600 ? 'admin-tone-warn' : undefined}>{waited(pool.oldest_wait_s)}</span></Fig>
+        <Fig label="Oldest wait" help="How long the oldest queued job has waited, and its type. Over 15 minutes counts as stuck and raises an alert once an hour."><span className={pool.stuck ? 'admin-tone-bad' : pool.oldest_wait_s && pool.oldest_wait_s > 600 ? 'admin-tone-warn' : undefined}>{waited(pool.oldest_wait_s)}</span>{pool.oldest_job_type && <small className="admin-soft"> {pool.oldest_job_type}</small>}</Fig>
         <Fig label="Autoscaler asks for" help="How many workers the autoscaler last set this pool to. Unknown while it isn’t running.">{size.state === 'unknown' ? <span className="admin-soft">not running</span> : `${size.value ?? 0} worker${size.value === 1 ? '' : 's'}`}</Fig>
       </dl>
+      {!!pool.retry_overdue && <p className="admin-warning">{pool.retry_overdue} retries are overdue: maintenance (selecta maintain) isn’t putting them back in line.</p>}
       {pool.recent.length > 0 && <p className="admin-soft">Last attempts: {pool.recent.map((a) => a.outcome === 'succeeded' ? 'ok' : (a.error_class ?? a.outcome)).join(', ')}.</p>}
       <PoolActions pool={pool} autoscaler={autoscaler} onChange={onChange} />
     </li>

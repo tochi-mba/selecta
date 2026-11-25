@@ -5,8 +5,9 @@ missing setting) says so in that section and the rest of the page still works:
 
 - `pools`: per pool (cpu-light, cpu-heavy, export, gpu): workers seen and their last heartbeat,
   slots in use, jobs queued and running, failed in 24 hours, the oldest queued job's wait, the
-  recent attempts, whether staff paused it, and one verdict in plain words. The numbers come from
-  `pool_numbers()` only, so swapping it for the jobs side's own read API is one change.
+  recent attempts, whether staff paused it, and one verdict in plain words. The queue numbers
+  are the jobs side's read model (`work.queue_health.snapshot`, also `GET /api/admin/work/queue`);
+  `pool_numbers()` adds the rest. `stuck_alerts` are that side's `work.queue_stuck` alerts.
 - `pieces`: the worker gateway (reachable, schema the same as the API's), the autoscaler (running,
   and whether the Modal token is on this API service: yes or no, never the value), object storage
   and the hosted flags. Each says what it means and what to do.
@@ -74,49 +75,44 @@ HOSTED_FLAGS = (
 def _empty() -> dict[str, Any]:
     return {"workers_seen": 0, "last_heartbeat": None, "slots": 0, "slots_in_use": 0,
             "queued": 0, "running": 0, "failed_24h": 0, "succeeded_24h": 0,
-            "oldest_queued_at": None, "recent": []}
+            "oldest_queued_at": None, "recent": [], "retry_scheduled": 0, "retry_overdue": 0,
+            "oldest_job_type": None, "stuck": False}
 
 
 def pool_numbers(conn: Connection, now: float) -> dict[str, dict[str, Any]]:
-    """Each pool's numbers from the job tables. The one function to swap for the jobs side's
-    read API when it lands."""
+    """Each pool's numbers. The queue itself (queued, retries, running, the oldest wait, workers
+    seen, heartbeats, stuck) is the jobs side's read model, `work.queue_health.snapshot`, the
+    one behind `GET /api/admin/work/queue`; this adds slots in use, the last day's failures and
+    the latest attempts from the same tables."""
+    from selecta.work import queue_health
+
     out = {pool: _empty() for pool in POOLS_SHOWN}
 
     def row(pool: str) -> dict[str, Any] | None:
         return out.get(pool)
 
-    seen = sa.select(workers.c.pool, sa.func.count(), sa.func.coalesce(
-        sa.func.sum(workers.c.slots), 0)).where(
-        workers.c.last_seen_at >= now - WORKER_SEEN_S).group_by(workers.c.pool)
-    for pool, count, slots in conn.execute(seen):
-        if (r := row(pool)) is not None:
-            r["workers_seen"], r["slots"] = int(count), int(slots)
-    last = sa.select(workers.c.pool, sa.func.max(workers.c.last_seen_at)).group_by(workers.c.pool)
-    for pool, at in conn.execute(last):
-        if (r := row(pool)) is not None:
-            r["last_heartbeat"] = float(at) if at is not None else None
+    for found in queue_health.snapshot(conn, now)["pools"]:
+        if (r := row(found["pool"])) is None:
+            continue
+        r.update(workers_seen=found["workers_seen"], slots=found["slots_seen"],
+                 last_heartbeat=found["last_heartbeat_at"],
+                 queued=found["queued"] + found["retry_scheduled"],
+                 retry_scheduled=found["retry_scheduled"], retry_overdue=found["retry_overdue"],
+                 running=found["running"], oldest_job_type=found["oldest_job_type"],
+                 stuck=found["stuck"],
+                 oldest_queued_at=(now - found["oldest_wait_s"])
+                 if found["oldest_wait_s"] is not None else None)
     live = sa.select(job_attempts.c.pool, sa.func.count()).where(
         job_attempts.c.outcome.is_(None)).group_by(job_attempts.c.pool)
     for pool, count in conn.execute(live):
         if (r := row(pool)) is not None:
             r["slots_in_use"] = int(count)
-    states = sa.select(jobs.c.pool, jobs.c.state, sa.func.count()).where(
-        jobs.c.state.in_(WAITING_STATES + RUNNING_STATES)).group_by(jobs.c.pool, jobs.c.state)
-    for pool, state, count in conn.execute(states):
-        if (r := row(pool)) is not None:
-            r["queued" if state in WAITING_STATES else "running"] += int(count)
     for state, key in (("failed", "failed_24h"), ("succeeded", "succeeded_24h")):
         done = sa.select(jobs.c.pool, sa.func.count()).where(
             jobs.c.state == state, jobs.c.finished_at >= now - DAY).group_by(jobs.c.pool)
         for pool, count in conn.execute(done):
             if (r := row(pool)) is not None:
                 r[key] = int(count)
-    oldest = sa.select(jobs.c.pool, sa.func.min(sa.func.coalesce(
-        jobs.c.queued_at, jobs.c.created_at))).where(
-        jobs.c.state == str(JobState.QUEUED)).group_by(jobs.c.pool)
-    for pool, at in conn.execute(oldest):
-        if (r := row(pool)) is not None and at is not None:
-            r["oldest_queued_at"] = float(at)
     ended = conn.execute(sa.select(job_attempts.c.pool, job_attempts.c.outcome,
                                    job_attempts.c.error_class, job_attempts.c.ended_at)
                          .where(job_attempts.c.ended_at >= now - DAY)
@@ -394,6 +390,23 @@ def budget_version(budget: dict[str, Any] | None) -> str:
     return safety.version_of(budget or {})
 
 
+def stuck_alerts(conn: Connection, now: float) -> list[dict[str, Any]]:
+    """The jobs side's `work.queue_stuck` alerts of the last day (raised by `queue_watch`, at
+    most one per pool an hour); they are also in the console's bell and Alerts."""
+    from selecta.admin.schema import platform_alerts
+    from selecta.work import queue_health
+
+    rows = conn.execute(
+        sa.select(platform_alerts.c.id, platform_alerts.c.created_at, platform_alerts.c.summary,
+                  platform_alerts.c.metadata, platform_alerts.c.acknowledged_at)
+        .where(platform_alerts.c.kind == queue_health.ALERT_KIND,
+               platform_alerts.c.created_at >= now - DAY)
+        .order_by(platform_alerts.c.created_at.desc()).limit(20)).mappings()
+    return [{"id": r["id"], "created_at": r["created_at"], "summary": r["summary"],
+             "pool": (r["metadata"] or {}).get("pool"), "acknowledged_at": r["acknowledged_at"]}
+            for r in rows]
+
+
 # --- the whole page ----------------------------------------------------------------------------
 
 
@@ -430,6 +443,7 @@ def status(conn: Connection, actor: Actor) -> dict[str, Any]:
     return {
         "now": now,
         "pools": _section(conn, "the pool numbers", pools),
+        "stuck_alerts": _section(conn, "the stuck-queue alerts", lambda: stuck_alerts(conn, now)),
         "pieces": {
             "gateway": _section(conn, "the worker gateway", lambda: gateway(conn, now)),
             "autoscaler": _section(conn, "the autoscaler", lambda: autoscaler(conn, now)),
