@@ -636,6 +636,13 @@ def take_lucy_turn(conn: Connection, org: OrgFacts, workspace_id: str, request_c
                         LUCY_CEILINGS[pool_class])
 
 
+def count_lucy_turn(conn: Connection, org: OrgFacts, request_class: str, now: float) -> None:
+    """Count one business Lucy turn in the month's pool without checking the pool. For an
+    organisation admitted against its weekly pool in units (ADR-0482 rule 7)."""
+    pool_class = LUCY_CLASS_ALIASES[request_class]
+    add_counter(conn, org, lucy_meter(pool_class), local_month(org.time_zone, now), 1, now)
+
+
 def give_back_lucy_turn(conn: Connection, org: OrgFacts, request_class: str, now: float) -> None:
     """Return a turn that failed before Lucy answered (ADR-0404 refunds failed turns)."""
     pool_class = LUCY_CLASS_ALIASES[request_class]

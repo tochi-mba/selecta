@@ -1,10 +1,10 @@
-import { backWords, leftWords, lineWords, stateWords, usageLines, useLucyUsageNews, whenWords, type LucyUsageLine, type LucyWindows } from '../cloud/lucyUsage';
+import { backWords, expiresSoon, expiryWords, extraWords, leftWords, lineWords, stateWords, usageLines, useLucyUsageNews, whenWords, type LucyExtra, type LucyUsageLine, type LucyWindows } from '../cloud/lucyUsage';
 import { Icon } from '../ui/Icon';
 import { Meter, type MeterTone } from '../ui/Meter';
 import '../styles/lucy.css';
 
 /** The full Lucy usage meter (ADR-0484 rules 3 and 4): "This session" and "This week", each a bar
- * of what is left with when it comes back, in words. Free, Standard and Premium see the same
+ * of what is left with when it comes back, in words, and "Extra usage" while a pack has a balance. Free, Standard and Premium see the same
  * layout. Only the share left is ever shown, never what is counted behind it. */
 
 /** Here a full bar is good news, the other way round from storage, so the tone is said outright. */
@@ -28,6 +28,23 @@ function UsageLine({ line }: { line: LucyUsageLine }) {
   );
 }
 
+/** The third line (ADR-0486 rule 7): prepaid extra usage, as a share of the last pack bought, with
+ * when it runs out. Drawn only while the server sends a balance. */
+function ExtraLine({ extra }: { extra: LucyExtra }) {
+  const expiry = expiryWords(extra);
+  const soon = expiresSoon(extra);
+  return (
+    <div className="lucy-usage-line lucy-usage-extra" data-state={soon ? 'near' : 'ok'}>
+      <p className="lucy-usage-words">
+        <b>Extra usage</b>
+        <span className="lucy-usage-figure">{`${extra.left}% left`}{expiry ? <span className="soft"> · {expiry}</span> : null}</span>
+      </p>
+      <Meter kind="meter" label="Extra usage" showLabel={false} value={extra.left} max={100} valueText={extraWords(extra)} tone="neutral" />
+      {soon && <p className="lucy-usage-state"><Icon name="warning" size="compact" /> Expires soon</p>}
+    </div>
+  );
+}
+
 export function LucyUsageMeter({ windows, className = '' }: { windows: LucyWindows; className?: string }) {
   useLucyUsageNews(windows);
   const until = windows.session ? whenWords(windows.session.back_words) : '';
@@ -39,12 +56,7 @@ export function LucyUsageMeter({ windows, className = '' }: { windows: LucyWindo
           A lighter Lucy is answering until this session ends{until ? ` ${until}` : ''}. After that Lucy is back to normal.
         </p>
       )}
-      {windows.extra && (
-        <p className="lucy-usage-words lucy-usage-extra">
-          <b>Extra usage</b>
-          <span className="lucy-usage-figure">{`${windows.extra.left}% left`}</span>
-        </p>
-      )}
+      {windows.extra && <ExtraLine extra={windows.extra} />}
     </div>
   );
 }

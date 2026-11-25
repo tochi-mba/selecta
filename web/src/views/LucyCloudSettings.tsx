@@ -5,7 +5,7 @@ import { PHASES } from './LucySettings';
 import '../styles/lucy.css';
 import { Badge, Notice, SettingsCard } from '../cloud/AccountLayout';
 import { Action, Skeleton } from '../ui/controls';
-import { userLocale } from '../ui/format';
+import { dateWords, userLocale } from '../ui/format';
 import { Meter } from '../ui/Meter';
 import { LUCY_USAGE_EVENT, windowsOf, type LucyWindows } from '../cloud/lucyUsage';
 import { LucyUsageMeter } from './LucyUsageMeter';
@@ -23,7 +23,8 @@ export type CloudLucy = {
   tier: string;
   usage: { used: number; limit: number | null; fair_use: boolean; resets_at: number | null };
   /** ADR-0484: the one usage read model. Absent from a server that still counts turns. */
-  usage_windows?: LucyWindows | null;
+  usage_windows?: (LucyWindows & { estimated_messages?: number | null }) | null;
+  usage_cutover?: { at: number; time_zone: string };
 };
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -110,7 +111,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
   useEffect(() => {
     const again = () => {
       void asked.current<CloudLucy>('/account/lucy')
-        .then((next) => { if (live.current) setStatus((was) => (was ? { ...was, usage: next.usage, usage_windows: next.usage_windows } : was)); })
+        .then((next) => { if (live.current) setStatus((was) => (was ? { ...was, usage: next.usage, usage_windows: next.usage_windows, usage_cutover: next.usage_cutover } : was)); })
         .catch(() => {});
     };
     window.addEventListener(LUCY_TURNS_EVENT, again);
@@ -134,6 +135,8 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
 
   // the new meter only when the server sends its figures, never from a flag alone (ADR-0484)
   const windows = windowsOf(status.usage_windows);
+  const estimate = status.usage_windows?.estimated_messages;
+  const showEstimate = windows && typeof estimate === 'number' && Number.isSafeInteger(estimate) && estimate >= 0;
   const shown = PHASES.filter((phase) => ([] as FlagId[]).concat(phase.flag ?? []).every((flag) => accountFlagOn(flag, features)));
   const changed = enabled !== status.enabled || JSON.stringify(phases) !== JSON.stringify(status.phases)
     || privacy.share_lyrics !== status.privacy.share_lyrics || privacy.share_history !== status.privacy.share_history;
@@ -159,7 +162,19 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       badge={<Badge>{status.tier}</Badge>}
       about="Your plan sets how much Lucy can do. You choose whether to use it and what it may share."
     >
+      {/* ADR-0487 rule 11: said before the switch, to Free and paid alike, in the account’s own
+          time zone (the switch is a month start there). The words wait on the owner’s approval
+          (LM-0487-05) with the email’s. */}
+      {status.usage_cutover && !windows && (
+        <Notice role="note">
+          <strong>Lucy’s allowance changes on {dateWords(status.usage_cutover.at, { timeZone: status.usage_cutover.time_zone })}.</strong>{' '}
+          <span>In place of turns a month, you’ll have a share for each five-hour session and a share for each week. The price of your plan stays the same.</span>
+        </Notice>
+      )}
       {windows ? <LucyUsageMeter windows={windows} /> : <LucyTurnsMeter usage={status.usage} />}
+      {showEstimate && (
+        <p className="hint">About {estimate} more {estimate === 1 ? 'message' : 'messages'} like your recent ones.</p>
+      )}
       <form onSubmit={(event) => void save(event)}>
         <fieldset>
           <legend>Use</legend>

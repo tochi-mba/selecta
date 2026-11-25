@@ -286,3 +286,20 @@ def test_a_year_of_full_weeks_costs_what_todays_monthly_ceiling_does(tier, withi
     today_weekly_usd = TIER_LIMITS[tier].monthly_cost_ceiling_usd * 12 / 52
     weekly_usd = plans.lucy_weekly_limit(plans.lucy_usage(), tier.value) / 1_000_000
     assert weekly_usd == pytest.approx(today_weekly_usd, rel=within)
+
+
+def test_a_later_version_applies_only_from_its_effective_moment(monkeypatch):
+    from dataclasses import replace
+
+    first = plans.LUCY_USAGE[0]
+    later = replace(first, version=first.version + 1, effective_from=1_000.0)
+    monkeypatch.setattr(plans, "LUCY_USAGE", (first, later))
+
+    assert plans.effective_lucy_usage(999.0).version == first.version
+    assert plans.effective_lucy_usage(1_000.0).version == later.version
+    assert plans.effective_lucy_usage(5_000.0).version == later.version
+    assert plans.lucy_usage().version == later.version  # the newest, whatever the date
+
+
+def test_before_any_version_is_in_effect_the_first_one_meters():
+    assert plans.effective_lucy_usage(-1.0).version == plans.LUCY_USAGE[0].version

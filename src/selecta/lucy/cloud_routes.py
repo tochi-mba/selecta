@@ -372,8 +372,10 @@ def install_routes(
         try:
             with transaction(engine, ws) as conn:
                 device, device_name = device_of(conn, principal, device_id)
-                plan = cloud_agent.admit(conn, ws, conversation_id, text,
-                                         timezone=principal.user.timezone)
+                plan = cloud_agent.admit(
+                    conn, ws, conversation_id, text, timezone=principal.user.timezone,
+                    rules=getattr(app.state, "flag_rules", None),
+                )
                 turn = cloud_store.add_turn(conn, ws, conversation_id, client_id, text,
                                             device, device_name)
                 cloud_store.set_turn(conn, ws, turn["id"], run_id=plan.run_id)
