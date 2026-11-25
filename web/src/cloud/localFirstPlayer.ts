@@ -456,7 +456,7 @@ const songLevels = (): Levels => (levels ??= createLevels());
  * whole visit of style-less fades. A device that cannot be measured keeps the labelled fade. */
 const CALIBRATION_KEY = (deviceId: string) => `selecta.dsp.calibration.${deviceId}`;
 
-function recallCalibration(deviceId: string): WorkerCalibration | null {
+export function recallCalibration(deviceId: string): WorkerCalibration | null {
   try {
     const raw = localStorage.getItem(CALIBRATION_KEY(deviceId));
     if (!raw) return null;
@@ -467,7 +467,7 @@ function recallCalibration(deviceId: string): WorkerCalibration | null {
   }
 }
 
-function rememberCalibration(made: WorkerCalibration): void {
+export function rememberCalibration(made: WorkerCalibration): void {
   try {
     localStorage.setItem(CALIBRATION_KEY(made.deviceId), JSON.stringify(made));
   } catch {

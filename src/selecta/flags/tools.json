@@ -22,6 +22,17 @@
       "requires": ["stems"],
       "cli": ["stem-preview"]
     },
+    "tools.listening_room": {
+      "label": "Listening Room",
+      "about": "A Cloud page for judging transitions by ear: each transition in the current mix is played two ways on this device, blind, as A and B, and the answers are kept in this browser until the reveal says which was which. Version 1 compares the browser player before and after early planning, one level for every song and patient analysis (cloud.seam_lead).",
+      "requires": ["cloud.browser_dsp", "cloud.local_first"],
+      "surfaces": ["cloud.listen"],
+      "words": ["Listening Room"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "tools.old_planner": {
       "label": "Rolling set planner",
       "about": "The original rolling set plan, before mix ideas.",

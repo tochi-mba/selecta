@@ -211,6 +211,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `tools.key_benchmark` | **Key method benchmark.** Score a replacement key method against S-KEY's stored keys on this library, read-only, for choosing S-KEY's Cloud replacement. |  |
 | `tools.set_mix` | **Whole-set render.** Render a planned set straight to one file from the command line. |  |
 | `tools.stem_preview` | **Stem preview.** Hear two songs' stems side by side from the command line. | `stems` |
+| `tools.listening_room` | **Listening Room.** A Cloud page for judging transitions by ear: each transition in the current mix is played two ways on this device, blind, as A and B, and the answers are kept in this browser until the reveal says which was which. Version 1 compares the browser player before and after early planning, one level for every song and patient analysis (cloud.seam_lead). | `cloud.browser_dsp`, `cloud.local_first` |
 | `tools.old_planner` | **Rolling set planner.** The original rolling set plan, before mix ideas. |  |
 
 ## Cloud services
