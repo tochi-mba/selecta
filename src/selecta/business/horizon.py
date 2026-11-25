@@ -211,7 +211,11 @@ def request_seams(
                 lane=Lane.STANDARD,
                 zone_id=zone_id,
                 needed_by=needed_by,
-                input_ref={"source_key": key, "source_sha256": sha256, "zone_id": zone_id},
+                input_ref={
+                    "source_key": key, "source_sha256": sha256, "zone_id": zone_id,
+                    # the stored inputs the worker gateway signs (and the dev worker reads)
+                    "objects": [key],
+                },
             )
         ):
             made["analyses"] += 1
@@ -263,6 +267,7 @@ def request_seams(
                 input_ref={
                     "zone_id": zone_id,
                     "style": None,
+                    "objects": [a_key, a_analysis, b_key, b_analysis],
                     "a": {
                         "source_key": a_key,
                         "source_sha256": a["sha256"],
