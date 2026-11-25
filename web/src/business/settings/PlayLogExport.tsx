@@ -2,6 +2,7 @@
 // the server answers that venue's log as CSV with totals per track. Behind `business.licensing`.
 
 import { FormEvent, useState } from 'react';
+import { DrawnTick, useMotionOn } from '../../views/feelPieces';
 import { EXPORT_COPY as COPY } from '../copy/console';
 import { businessOn, useBusiness } from '../context';
 import { useLoad } from '../venue/useVenue';
@@ -82,15 +83,20 @@ function IsrcEditor({ venueId, onSaved }: { venueId: string; onSaved: () => Prom
   const tracks = useLoad(() => client.isrcTracks(venueId), [client, venueId]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [status, setStatus] = useState('');
+  // A save that lands draws a tick beside its words (ADR-0477); 0 while the last word is a problem.
+  const [saved, setSaved] = useState(0);
+  const moving = useMotionOn();
   const save = async (event: FormEvent, song: string, title: string) => {
     event.preventDefault();
     try {
       await client.saveIsrc(song, drafts[song] ?? '');
       setStatus(COPY.isrcSaved(title));
+      setSaved((count) => count + 1);
       await tracks.reload();
       await onSaved();
     } catch (problem) {
       setStatus((problem as Error).message);
+      setSaved(0);
     }
   };
   return <>
@@ -102,6 +108,6 @@ function IsrcEditor({ venueId, onSaved }: { venueId: string; onSaved: () => Prom
         <button type="submit">{COPY.isrcSave}</button>
       </form>
     </li>)}</ul>
-    <p role="status" aria-live="polite">{status}</p>
+    <p role="status" aria-live="polite">{moving && saved > 0 && <DrawnTick key={saved} className="biz-saved-tick" />}{status}</p>
   </>;
 }

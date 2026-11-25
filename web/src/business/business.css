@@ -47,6 +47,11 @@
 /* The tick a form draws beside its "Saved" words (DrawnTick, views/feelPieces.tsx). */
 .biz-saved-tick { margin-inline-end: var(--space-1); vertical-align: text-bottom; }
 :where(:root[data-feel~='motion']) .biz-beacon > .status > .ui-icon { animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both; }
+/* The calm profile (feelBits.ts useWorkProfile): while a work tool is open nothing answers the music
+   and nothing celebrates. The ambient layer sits on <body>, outside these pages, so the rule is
+   keyed on <html>. admin.css and venueops/staffDashboard.css carry the same line, because each area
+   loads only its own sheet. */
+:root[data-feel-profile='work'] :is(.ambient-layer, [data-beat], [data-playing-bars], .feel-moment) { display: none; }
 
 /* These two resets fire only under reduced motion and Still. There data-feel carries no 'motion'
    (feel/root.ts treats both as calm) and the motion tokens are zero, so the feel never asks for

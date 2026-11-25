@@ -9,6 +9,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { Api } from '../../cloud/api';
 import { INDICATOR_CLASS, useSlidingIndicator } from '../../feel/indicator';
 import { RollingCount } from '../../views/feelPieces';
+import { useWorkProfile } from '../feelBits';
 import { BOUNDARY_COPY, PRICING_COPY as COPY } from '../copy/pricing';
 import { Currency, Interval, money, Pricing, quote } from './pricingTotal';
 
@@ -116,9 +117,12 @@ export default function BusinessPricing({ api, onLeave }: { api: Api; onLeave: (
   }, [api, currency]);
   useEffect(fetchPrices, [fetchPrices]);
   const currencyId = useId();
+  useWorkProfile();
 
+  // Each part of the page rises in as it is drawn, as the personal plan grid does (ADR-0477); the
+  // prices arrive when they load, not before. Only with the feel's motion on.
   return (
-    <main className="biz biz-pricing">
+    <main className="biz biz-pricing" data-stagger="">
       <header className="biz-stack">
         <h1>{COPY.title}</h1>
         <p>{COPY.lead}</p>

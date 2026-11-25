@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useWorkProfile } from '../business/feelBits';
 import { AdminError, adminFetch, Me, startAdminSession, TokenSource, when } from './adminApi';
 import { AiPage } from './AiSecurityPages';
 import { BillingPage } from './BillingPage';
@@ -54,6 +55,8 @@ export default function AdminArea({ token, onLeave, origin, email, features, onS
   token: TokenSource; onLeave: () => void; origin?: string; email?: string;
   features?: Readonly<Record<string, boolean>> | null; onSignInAgain?: () => void;
 }) {
+  // a work tool: the component feel stays, nothing here answers the music (ADR-0477 plan 3.14)
+  useWorkProfile();
   const [session, setSession] = useState<string | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [location, setLocation] = useState(() => parseAdmin(window.location.pathname, window.location.search));

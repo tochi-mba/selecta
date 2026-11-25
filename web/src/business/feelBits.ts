@@ -1,6 +1,31 @@
 import { RefObject, useLayoutEffect, useRef } from 'react';
+import { publishAmbientHue } from '../feel/hue';
 import { feelCalm, feelOn } from '../feel/root';
 import { visibleRows } from '../views/feelPieces';
+
+/** How many work-tool roots are open right now; the profile stays on while any one is. */
+let workRoots = 0;
+
+/** The calm profile (ADR-0477 plan 3.14). Business, Admin and the venue staff screens are work
+ * tools: they keep the component feel and data motion, but nothing that answers the music and no
+ * celebrations. Each of their roots calls this once. While one is open, `<html>` carries
+ * `data-feel-profile="work"`, which each area's own sheet reads to keep the ambient layer, beat
+ * targets and celebrations out, and any tint left over from music played before the page opened is
+ * cleared here, because the ambient layer lives on <body> and is not part of these pages. With the
+ * feel flags off none of those things exist, so this changes nothing. */
+export function useWorkProfile() {
+  useLayoutEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const html = document.documentElement;
+    workRoots += 1;
+    html.dataset.feelProfile = 'work';
+    publishAmbientHue(null);
+    return () => {
+      workRoots = Math.max(0, workRoots - 1);
+      if (!workRoots) delete html.dataset.feelProfile;
+    };
+  }, []);
+}
 
 /** Small feel helpers for the work tools (Business, Admin, the venue tablet; ADR-0477 plan 3.14).
  * These are calm on purpose: they answer a change in the data once and never move by themselves.
