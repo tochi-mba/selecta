@@ -1,5 +1,6 @@
 import { assertNoPath, fileSha256, normalise } from './identity';
 import { readFileTags } from './tags';
+import { captureArt } from './art';
 import { isQuotaError, MediaStore } from './store';
 import type { DirectoryHandleLike, FileHandleLike, FileRef } from './store';
 import type { ImportJournal } from './importJournal';
@@ -284,6 +285,9 @@ export async function registrationOf(
     ? await fingerprints.identify(file, reuse.candidate.place, name, reuse.candidate.open, signal)
     : null;
   const content_sha256 = found ? found.sha : await fileSha256(file, { signal });
+  // `library.art_embedded`: the file's own picture becomes its cover later, at idle, on this
+  // device only. Queued, never awaited, and it can never fail or slow this import.
+  captureArt(file, content_sha256);
   // A duration measured here before for these bytes saves probing the file again; tags are
   // always the account's own, read from its own file (titles never travel by fingerprint).
   const knownDuration = fingerprints ? await fingerprints.knownDuration(content_sha256) : undefined;
