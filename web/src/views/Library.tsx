@@ -790,7 +790,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </p>
       )}
       {tail}
-      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable} />}
+      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable}
+        onPlayNext={holder?.speaking && now.phase !== 'idle' ? (song) => add(song, now.position + 1) : undefined} />}
       {confirmBatch && <Dialog title={batchWords(confirmBatch.action, confirmBatch.songs.length).title} onClose={() => setConfirmBatch(null)}
         footer={<>
           <button onClick={() => setConfirmBatch(null)}>Cancel</button>
