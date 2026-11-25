@@ -18,7 +18,8 @@ from selecta.ai.usage_schema import lucy_usage_state
 
 # `ai_runs.limited` -> the cause the page knows, and the window whose reset it names.
 CAUSES = {"session": ("session", "session"), "week": ("week", "week"),
-          "lighter": ("session_lighter", "session")}
+          "lighter": ("session_lighter", "session"), "off": ("lucy_off", "week")}
+NO_STEPS = {"session_lighter", "lucy_off"}
 TOP_PLAN = "premium"
 
 
@@ -30,14 +31,22 @@ def signal(limited: str | None, meter: dict[str, Any] | None, *, plan_id: str,
     cause, window = CAUSES[limited]
     line = (meter or {}).get(window) or {}
     steps: list[str] = []
-    if cause != "session_lighter":
+    if cause not in NO_STEPS:
         steps.append("wait")
         if plan_id != TOP_PLAN:
             steps.append("plans")
         if cause == "week" and extra_available:
             steps.append("extra")
+    if cause == "lucy_off":  # no reset to wait for: a person switched it off
+        return {"cause": cause, "resets_at": None, "back_words": None, "next": steps}
     return {"cause": cause, "resets_at": line.get("resets_at"),
             "back_words": line.get("back_words"), "next": steps}
+
+
+def switched_off(conn: Connection, workspace_id: str, *, now: float) -> bool:
+    """Whether staff have switched Lucy's AI off for this workspace (a factor of 0)."""
+    view = usage_units.units_view(conn, workspace_id, now=now)
+    return bool(view) and view.get("override_multiplier_milli") == 0
 
 
 def enforced_meter(conn: Connection, workspace_id: str, *, now: float) -> dict[str, Any] | None:
@@ -91,4 +100,4 @@ def state_words(meter: dict[str, Any] | None) -> str:
             "it in these words; never give a number of turns, tokens or units.")
 
 
-__all__ = ["CAUSES", "enforced_meter", "signal", "state_words"]
+__all__ = ["CAUSES", "enforced_meter", "signal", "state_words", "switched_off"]

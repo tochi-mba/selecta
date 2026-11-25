@@ -227,3 +227,18 @@ def test_a_session_not_yet_started_reads_as_full_and_no_meter_reads_as_nothing()
     assert "this session has not started" in cloud_limits.state_words(fresh)
     assert cloud_limits.state_words(None) == ""
     assert cloud_limits.state_words({"session": None, "week": None}) == ""
+
+
+def test_an_account_with_lucy_switched_off_is_told_so_and_not_that_it_used_anything(windows):
+    workspace = windows.workspaces[CAROL]
+    with transaction(windows.engine, workspace) as conn:
+        conn.execute(sa.update(lucy_usage_state)
+                     .where(lucy_usage_state.c.workspace_id == workspace)
+                     .values(override_multiplier_milli=0, week_limit=0, session_limit=0))
+
+    turn = say(windows, CAROL, "play Rema", "never said")
+
+    words = turn["message"]["content"]
+    assert "switched off for this account" in words and "used all" not in words
+    assert limit_of(turn) == {"cause": "lucy_off", "resets_at": None, "back_words": None,
+                              "next": []}

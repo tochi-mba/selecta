@@ -131,7 +131,7 @@ test('on the new allowance the twin level meter and the two-bar meter show what 
   await expect(page.locator('.lucy-head').getByRole('button', { name: /^Lucy usage: / })).toBeVisible();
 
   // the label's link opens the full meter in Lucy's settings, never a plan page
-  await page.keyboard.press('Enter');
+  await levels(page).click();
   await label.getByRole('button', { name: 'See the full meter in Lucy’s settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Lucy settings' });
   await twoBars(settings.locator('.lucy-usage'));

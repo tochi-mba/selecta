@@ -395,11 +395,18 @@ def builtin_words(job: Job, ctx: cloud_tools.CloudCtx) -> str:
                f"{_resets_words(job)}.")
     elif limited in {"session", "week"}:
         with transaction(job.engine, job.workspace_id) as conn:
-            meter = usage_units.read_model(conn, job.workspace_id, now=db_now(conn))
+            now = db_now(conn)
+            meter = usage_units.read_model(conn, job.workspace_id, now=now)
+            off = cloud_limits.switched_off(conn, job.workspace_id, now=now)
         reset = _reset_words(meter, limited)
-        why = f"You've used all of Lucy's allowance for this {limited}."
-        if reset:
-            why += f" It comes back {reset}."
+        if off:
+            # nothing was used up: staff switched Lucy's AI off for this account
+            why = ("Lucy's AI is switched off for this account, so I can't think this one "
+                   "through. SelectaDJ support can tell you why.")
+        else:
+            why = f"You've used all of Lucy's allowance for this {limited}."
+            if reset:
+                why += f" It comes back {reset}."
     elif limited == "platform":
         why = "Lucy's AI is very busy right now, so I can't think this one through."
     else:
@@ -520,7 +527,9 @@ async def run_turn(job: Job) -> None:
             if limit_note:
                 # what the page needs to offer the next step under these words (ADR-0483)
                 meter = usage_units.read_model(conn, job.workspace_id, now=db_now(conn))
-                meta["limit"] = cloud_limits.signal(limit_note, meter, plan_id=plan.tier.value)
+                off = cloud_limits.switched_off(conn, job.workspace_id, now=db_now(conn))
+                meta["limit"] = cloud_limits.signal(
+                    "off" if off else limit_note, meter, plan_id=plan.tier.value)
             cloud_store.finish_message(
                 conn, job.workspace_id, message["id"], writer.content, status, revision, meta,
             )
