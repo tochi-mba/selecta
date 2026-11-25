@@ -13,7 +13,8 @@ describe('Library row status across devices', () => {
   it('names this device, the open device with the file, the one that needs its folder, or none', () => {
     expect(deviceChip(1, 'here', holder)?.words).toBe('This device');
     expect(deviceChip(2, 'elsewhere', holder)?.words).toBe('Plays on Laptop');
-    expect(deviceChip(3, 'elsewhere', holder)?.words).toBe('Needs its folder again on Tablet');
+    expect(deviceChip(3, 'elsewhere', holder)?.words).toBe('On Tablet');
+    expect(deviceChip(3, 'elsewhere', holder)?.why).toBe('Open SelectaDJ on Tablet to play this.');
     expect(deviceChip(4, 'nowhere', holder)?.words).toBe('No device right now');
   });
   it('without another device, keeps the plain words', () => {

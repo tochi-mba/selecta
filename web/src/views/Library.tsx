@@ -1,5 +1,6 @@
 import { words } from '../copy';
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { HolderContext } from '../devices/controller';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
 import { useApi } from '../requestContext';
@@ -373,6 +374,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     return () => window.clearTimeout(wait);
   }, [typed, query]);
 
+  const holder = useContext(HolderContext);
   const inMix = new Set(mix.map((item) => item.song_id));
   const add = async (song: LibrarySong, position?: number) => {
     // "play next" means next in what's on screen, so it stops if that's changed
@@ -432,7 +434,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     // A new mix takes over the current one. Ask consistently with Explore
     // rather than replacing live music directly from a Library row.
     // ADR-0475: with another device playing, a new mix replaces nothing there; that device is asked
-    if (mix.length > 0 && now.phase !== 'idle' && !(playOn && !playOn.now)) {
+    // (I87: on a remote whose speaker has gone, nothing is playing, so nothing is replaced)
+    if (mix.length > 0 && now.phase !== 'idle' && !(playOn && !playOn.now) && !(holder && !holder.speaking)) {
       setConfirmStart({ song, order: orderOf(mix) });
       return;
     }
@@ -761,6 +764,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             selectionFull={selectedIdSet.size >= 200} searching={searching} failed={failed} building={building}
             duplicate={duplicateIds.has(song.id)} sharedTitle={sharedTitles.has(song.title ?? 'Untitled')}
             inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}
+            current={now.phase !== 'idle' && mix[now.position]?.song_id === song.id}
             linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
             lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} browser={!!browser} />
         ))}
