@@ -104,7 +104,8 @@ def install_routes(
         try:
             return hosted_render.mix_state(
                 engine, work, found.workspace.id, _order(body), client=client, buckets=buckets,
-                created_by=found.user.id, retry=body.get("retry") is True)
+                created_by=found.user.id, retry=body.get("retry") is True,
+                read_object=read_object)
         except R2Error as error:
             raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
         finally:

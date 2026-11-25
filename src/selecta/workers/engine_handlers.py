@@ -221,6 +221,9 @@ def analyse(
         "keys": artifact.keys,
         "bpm": summary["bpm"],
         "camelot": summary["camelot"],
+        # what a player needs to play the song at its mix level (SongInfo.gain_db)
+        "lufs": summary["lufs"],
+        "peak_db": summary["peak_db"],
         "checksum": artifact.checksum,
     }
 
