@@ -96,15 +96,19 @@ describe('LX-0364-06 motion only for real work', () => {
 });
 
 describe('LX-0364-02 one song identity in Library and Lucy', () => {
-  it('both rows draw the same SongMotif from the recording id beside the title, and no artwork', () => {
+  it('both rows draw the same SongMotif from the recording id beside the title, and art only through CoverArt', () => {
     const library = fs.readFileSync(`${SOURCE}views/LibraryRow.tsx`, 'utf8');
     const lucy = fs.readFileSync(`${SOURCE}views/LucySongs.tsx`, 'utf8');
-    expect(library).toMatch(/<SongMotif songId=\{song\.id\} \/><b dir="auto"/);
+    // ADR-0478: with library.art_embedded on, a Library row shows a real cover or the generated tile,
+    // and only through CoverArt; otherwise the motif, beside the title as before
+    expect(library).toMatch(/art \? <CoverArt seed=\{song\.id\} songId=\{song\.id\} size="small" \/> : <SongMotif songId=\{song\.id\} \/>/);
+    expect(library).toMatch(/\{face\}<b dir="auto"/);
     expect(lucy).toMatch(/<SongMotif songId=\{song\.song_id\} \/>/);
-    for (const source of [library, lucy]) expect(source).not.toMatch(/<img\b|artwork|cover_url|coverArt/i);
+    for (const source of [library, lucy]) expect(source).not.toMatch(/<img\b|cover_url/i);
+    expect(lucy).not.toMatch(/CoverArt|artwork/i);
     const one = render(<SongMotif songId={7} />).container.innerHTML;
     const again = render(<SongMotif songId={7} />).container.innerHTML;
     expect(again).toBe(one);
-    expect(doc).toMatch(/There is no artwork, real or invented\./);
+    expect(doc).toMatch(/never an invented picture/);
   });
 });

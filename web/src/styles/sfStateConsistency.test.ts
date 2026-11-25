@@ -55,7 +55,7 @@ describe('SF-0245-05 shared primitives keep one hover, focus and active language
       const twins = parts(rule.selector).map((part) => {
         const [head, tail] = [part.slice(0, part.indexOf(':hover')), part.slice(part.indexOf(':hover') + ':hover'.length)];
         return rules.some((other) => other.file === rule.file && !/:hover/.test(other.selector) && focus.test(other.selector)
-          && parts(other.selector).some((candidate) => candidate.startsWith(head) && candidate.endsWith(tail) && focus.test(candidate))
+          && other.selector.split(/,\s*(?![^()]*\))/).some((candidate) => candidate.startsWith(head) && candidate.endsWith(tail) && focus.test(candidate))
           && /opacity\s*:\s*1\b|visibility\s*:\s*visible/.test(other.body));
       });
       expect(twins.every(Boolean), `${rule.file} ${rule.selector} has no focus twin`).toBe(true);

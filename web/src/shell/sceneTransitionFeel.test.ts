@@ -40,6 +40,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  vi.useRealTimers();
   for (const entry of started) entry.finish();
   await settle();
   delete (document as unknown as Doc).startViewTransition;

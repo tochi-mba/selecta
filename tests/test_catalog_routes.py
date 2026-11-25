@@ -76,9 +76,9 @@ def test_every_route_is_refused_while_the_flag_is_off(world):
         ("PUT", "/api/catalog/settings"),
     ]:
         answer = call(world, method, path, lookups=True)
-        assert answer.status_code in (403, 404), (method, path, answer.text)
-        if answer.status_code == 403:
-            assert answer.json()["detail"]["code"] == "flag_off"
+        assert answer.status_code == 403, (method, path, answer.text)
+        assert answer.json()["code"] == "flag_off"
+        assert answer.json()["flag"] == "library.art_lookup"
 
 
 def test_the_setting_is_off_until_the_person_turns_it_on_and_is_theirs_alone(world):
