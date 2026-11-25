@@ -364,6 +364,7 @@ def problems(registry: Mapping[str, flags.Flag] | None = None) -> list[str]:
         if flag is not None and flag.core:
             found.append(f"{flag_id} is core, so every plan has it; no plan can leave it out")
     found += _requires_problems(gated, registry)
+    found += _lucy_usage_problems()
     # The per-venue business plan sits beside these plans, never in CATALOGUE (BZ-0441-03). A
     # registry without the Business area (a hand-made test registry) has no business plan.
     if "business.signups" in registry:
@@ -447,4 +448,162 @@ def _requires_problems(gated: frozenset[str], registry: Mapping[str, flags.Flag]
             for need in flag.requires:
                 if need in gated and need not in plan.flags:
                     found.append(f"{plan.id}: includes {flag_id} but not {need}, which it needs")
+    return found
+
+
+# --- Lucy's allowance in usage units (ADR-0481, ADR-0482, ADR-0485) ----------------------------
+#
+# One usage unit is one millionth of a US dollar. A version states one base weekly allowance
+# and, for each plan, a multiplier and a session share: a plan's weekly limit is the base times
+# its multiplier, and one five-hour session may use the session share of that week. The per-turn
+# cap, concurrent turns, seconds per turn and earlier-conversation size sit in the same entry
+# (ADR-0485 rule 5).
+#
+# This table is versioned on its own, apart from `CATALOGUE`. Add a version; never change one.
+#
+# Every value in version 1 is a STARTING HYPOTHESIS, not a measured figure: ADR-0487 sets the
+# real ones. The base is today's Free ceiling of $0.25 a month, times 12 and over 52. The
+# multipliers are today's ceilings against Free's, rounded to whole numbers (ADR-0485 rule 3).
+
+
+@dataclass(frozen=True)
+class LucyUsagePlan:
+    multiplier_milli: int  # 1000 is 1x; 0 means no Lucy model
+    session_share_milli: int | None  # None: no session window
+    max_turn_units: int
+    max_concurrent_turns: int
+    max_turn_seconds: int
+    history_chars: int
+
+
+@dataclass(frozen=True)
+class LucyUsageVersion:
+    version: int
+    base_weekly_units: int
+    plans: Mapping[str, LucyUsagePlan]
+    # A venue's pooled weekly allowance. Venue pools have no session window (ADR-0482 rule 7).
+    venue_weekly_units: int
+
+
+LUCY_USAGE_1 = LucyUsageVersion(
+    version=1,
+    base_weekly_units=57_692,
+    plans=MappingProxyType(
+        {
+            "free": LucyUsagePlan(
+                multiplier_milli=1_000,
+                session_share_milli=250,
+                max_turn_units=20_000,
+                max_concurrent_turns=1,
+                max_turn_seconds=60,
+                history_chars=12_000,
+            ),
+            "standard": LucyUsagePlan(
+                multiplier_milli=14_000,
+                session_share_milli=250,
+                max_turn_units=150_000,
+                max_concurrent_turns=2,
+                max_turn_seconds=120,
+                history_chars=40_000,
+            ),
+            "premium": LucyUsagePlan(
+                multiplier_milli=26_000,
+                session_share_milli=250,
+                max_turn_units=600_000,
+                max_concurrent_turns=2,
+                max_turn_seconds=180,
+                history_chars=80_000,
+            ),
+        }
+    ),
+    venue_weekly_units=773_000,
+)
+
+# Every version, oldest first.
+LUCY_USAGE: tuple[LucyUsageVersion, ...] = (LUCY_USAGE_1,)
+
+
+def lucy_usage(version: int | None = None) -> LucyUsageVersion:
+    """That version of Lucy's allowance table, or the newest one."""
+    if not LUCY_USAGE:
+        raise UnknownPlan("Lucy's allowance table has no versions.")
+    if version is None:
+        return LUCY_USAGE[-1]
+    for usage in LUCY_USAGE:
+        if usage.version == version:
+            return usage
+    raise UnknownPlan(f"Lucy's allowance table has no version {version}.")
+
+
+def _lucy_usage_plan(usage: LucyUsageVersion, plan_id: str) -> LucyUsagePlan:
+    """That plan's entry. An unknown plan gets Free's, so a bad id never gets more than Free."""
+    plan = usage.plans.get(plan_id)
+    return usage.plans["free"] if plan is None else plan
+
+
+def lucy_weekly_limit(
+    usage: LucyUsageVersion, plan_id: str, override_multiplier_milli: int | None = None
+) -> int:
+    """A plan's weekly limit in usage units: the base times the plan's multiplier. A per-account
+    override (ADR-0485 rule 7) replaces the plan's multiplier; 0 means no Lucy model."""
+    multiplier = _lucy_usage_plan(usage, plan_id).multiplier_milli
+    if override_multiplier_milli is not None:
+        multiplier = override_multiplier_milli
+    return max(0, usage.base_weekly_units * multiplier // 1000)
+
+
+def lucy_session_limit(
+    usage: LucyUsageVersion, plan_id: str, override_multiplier_milli: int | None = None
+) -> int | None:
+    """What one session may use, in usage units: the plan's share of its weekly limit. `None`
+    when the plan has no session window. At least 1 whenever the weekly limit is above 0."""
+    share = _lucy_usage_plan(usage, plan_id).session_share_milli
+    if share is None:
+        return None
+    weekly = lucy_weekly_limit(usage, plan_id, override_multiplier_milli)
+    if weekly <= 0:
+        return 0
+    return max(1, weekly * share // 1000)
+
+
+def _lucy_usage_problems() -> list[str]:
+    found: list[str] = []
+    if not LUCY_USAGE:
+        found.append("Lucy usage: has no versions")
+    elif LUCY_USAGE[0].version != 1:
+        found.append(f"Lucy usage: versions start at 1, not {LUCY_USAGE[0].version}")
+    last = 0
+    for usage in LUCY_USAGE:
+        name = f"Lucy usage v{usage.version}"
+        if usage.version <= last:
+            found.append(f"{name}: versions must go up; {usage.version} follows {last}")
+        last = usage.version
+        if usage.base_weekly_units <= 0:
+            found.append(f"{name}: base_weekly_units must be more than 0")
+        if usage.venue_weekly_units <= 0:
+            found.append(f"{name}: venue_weekly_units must be more than 0")
+        for plan_id in CATALOGUE:
+            if plan_id not in usage.plans:
+                found.append(f"{name}: has no entry for the {plan_id} plan")
+        for plan_id, plan in usage.plans.items():
+            found += _lucy_usage_plan_problems(f"{name} {plan_id}", plan)
+    return found
+
+
+def _lucy_usage_plan_problems(name: str, plan: LucyUsagePlan) -> list[str]:
+    found: list[str] = []
+    if plan.multiplier_milli < 0:
+        found.append(f"{name}: multiplier_milli can't be negative")
+    share = plan.session_share_milli
+    if share is not None and not 1 <= share <= 1000:
+        found.append(f"{name}: session_share_milli must be from 1 to 1000, or None")
+    positive = {
+        "max_turn_units": plan.max_turn_units,
+        "max_concurrent_turns": plan.max_concurrent_turns,
+        "max_turn_seconds": plan.max_turn_seconds,
+        "history_chars": plan.history_chars,
+    }
+    for name_of, value in positive.items():
+        if value <= 0:
+            found.append(f"{name}: {name_of} must be more than 0")
     return found

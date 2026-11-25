@@ -103,6 +103,8 @@ Script animations are not stopped by a stylesheet, so every engine in `web/src/f
 | Request pill | a request is working | `request-pulse` | 1.8s loop, exception | none |
 | Pending line | a render is in line | `pending-flow` | 2.4s loop, exception | none |
 | Lucy progress | Lucy is working | `lucy-slide` when the length is unknown; width when known | 1.6s loop exception; `--motion-reveal` | none |
+| Lucy usage ladders (`views/LucyUsageLevels.tsx`, `.lucy-ladder-seg`) | a segment goes out as usage is counted, or comes back when a window resets | the segment's background colour changes once; no keyframes and no loop | `--motion-reveal` with `--motion-ease` | none: `transition: none` under Still and reduced motion; the label's words carry the figures |
+| Meter (`ui/Meter`) | the value changes; no value known | fill width follows the value; indeterminate fill runs `lucy-slide` | `--motion-reveal`; `--motion-loop-slide` 1.6s loop | none; the words still say the value |
 | Lucy conversation (`styles/lucy.css`) | you send; Lucy answers; a step is named; a revision adds a song | your message rises from the box (`feel-lucy-rise`); Lucy's words and each streamed chunk fade in (`feel-lucy-fade`); one pass of light on a new step (`feel-lucy-shimmer`); the added song's edge lights (`feel-lucy-edge`) | spring and effects tokens | shown at rest |
 | Drag in the editor | dragging a song | drop line follows the pointer, no transition; the dragged row casts `--shadow-float` | pointer | unchanged (it is the pointer) |
 | Spectrum visualizer | playing on Listen | canvas redrawn from the analyser | at most 15fps, stops when hidden or off screen | one still frame |

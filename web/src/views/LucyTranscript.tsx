@@ -1,12 +1,13 @@
 import { Fragment, ReactNode, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { feelOn } from '../feel/root';
 import { flagOn } from '../flags';
-import type { LucyView } from '../lucy/reducer';
-import type { CardStatus, Message } from '../lucy/types';
+import { limitSteps, type LucyView } from '../lucy/reducer';
+import type { CardStatus, LimitNotice, Message } from '../lucy/types';
 import { humanize } from '../lucy/words';
 import { Action } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { PermissionCard, PlanGroupView } from './LucyCards';
+import { LucyLimitStep } from './LucyLimitStep';
 
 /** The conversation itself. It's a log a screen reader can browse, but it doesn't speak each word as
  * it arrives: a separate, quiet announcer says what happened at most every couple of seconds. Text is
@@ -99,7 +100,7 @@ function useStreamTail(content: string, streaming: boolean): number | null {
   return streaming && feelOn('motion') && span.current.from < span.current.to ? span.current.from : null;
 }
 
-function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest, onEdit, onRate, arrival, step }: {
+function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest, onEdit, onRate, arrival, step, limit, onExtra }: {
   message: Message;
   /** How a message that came in while the page was open arrives: yours rises, Lucy's fades in. */
   arrival?: 'rise' | 'fade';
@@ -115,6 +116,9 @@ function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest
   onEdit?: (text: string) => void;
   /** Thumbs up or down on an answer (Cloud keeps it for Lucy's evaluation). */
   onRate?: (id: string, rating: 'up' | 'down') => Promise<void>;
+  /** The limit this reply was the first to meet (ADR-0483 rule 6): its next step shows once, here. */
+  limit?: LimitNotice;
+  onExtra?: () => void;
 }) {
   const headingId = useId();
   const who = message.role === 'user' ? 'You' : message.role === 'assistant' ? 'Lucy' : 'Note';
@@ -136,6 +140,8 @@ function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest
             // keyed by the step, so its one pass of light runs again only when the step changes
             ? <p className="soft lucy-thinking"><span key={step ?? ''} className="lucy-thinking-words" dir="auto">{step ? `${step}…` : 'Thinking…'}</span></p>
             : null}
+        {/* never while the reply is still arriving */}
+        {limit && message.status !== 'streaming' && <LucyLimitStep limit={limit} onExtra={onExtra} />}
         {(canBranch || unfinished || answered || (onEdit && message.role === 'user')) && !message.id.startsWith('turn:') && message.status !== 'streaming' && (
           <div className="lucy-msg-actions">
             {(unfinished || (answered && latest)) && message.turn && <Action className="quiet" working="Trying again…" run={() => onRetry(message.turn!)}>Try again</Action>}
@@ -245,7 +251,7 @@ function useFresh(view: LucyView, pending: Pending | null) {
   return { message: (message: Message) => seen.messages.get(message.id), other: (id: string) => seen.others.has(id) };
 }
 
-export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide, onEdit, onRate, onOlder }: {
+export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide, onEdit, onRate, onOlder, onExtra }: {
   view: LucyView;
   still: boolean;
   pending: Pending | null;
@@ -257,9 +263,12 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   onEdit?: (text: string) => void;
   onRate?: (id: string, rating: 'up' | 'down') => Promise<void>;
   onOlder?: () => Promise<void>;
+  /** Use extra usage, offered in a limit's next step only when this is given. */
+  onExtra?: () => void;
 }) {
   const newest = [...view.messages].reverse().find((message) => message.role === 'assistant')?.id;
   const fresh = useFresh(view, pending);
+  const limits = limitSteps(view.messages);
   // the step Lucy is really running for a turn, named by its own step events (a card's title)
   const stepOf = (turn: string | null) => {
     if (!turn || !flagOn('app.feel_motion')) return undefined;
@@ -270,7 +279,7 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
     key: message.seq,
     order: 0,
     node: <MessageItem key={message.id} message={message} superseded={!!message.turn && !!view.superseded[message.turn]} onBranch={onBranch} onRetry={onRetry} canBranch={canBranch} latest={message.id === newest} onEdit={onEdit} onRate={onRate}
-      arrival={fresh.message(message)} step={message.status === 'streaming' && !message.content ? stepOf(message.turn) : undefined} />,
+      arrival={fresh.message(message)} limit={limits.get(message.id)} onExtra={onExtra} step={message.status === 'streaming' && !message.content ? stepOf(message.turn) : undefined} />,
   }));
   for (const plan of view.planOrder) {
     const group = view.plans[plan];

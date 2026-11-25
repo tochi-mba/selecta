@@ -1,9 +1,9 @@
 import { act, render, renderHook, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cloudAccount } from '../test/cloudAccount';
+import { cloudAccount, LUCY_WINDOWS } from '../test/cloudAccount';
 import { CloudError } from './api';
-import { Billing, yearlyComparison } from './Billing';
+import { Billing, LUCY_LEVEL_WORDS, yearlyComparison } from './Billing';
 import { checkoutAvailable, checkoutBody, checkoutProblem, consentVersionFor, NO_CONSENT, useCheckoutReturn } from './checkout';
 import { Meters } from './Meters';
 
@@ -284,5 +284,57 @@ describe('Plan & billing for a local-first account (BF-0464-03)', () => {
   it('does not tie a paid downgrade or a pause to library size', () => {
     render(<Billing account={{ ...localFirst(), entitlement: { ...cloudAccount({ plan: 'standard' }).entitlement } }} blocked busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
     expect(document.body.textContent).not.toMatch(/bigger than the new plan|lifts the pause on uploads/);
+  });
+});
+
+describe('Lucy on the plan cards with the usage read model (ADR-0484 rule 4, ADR-0483 rule 9)', () => {
+  const NEVER_SHOWN = /turn|token|Sonnet|Opus|Haiku|Claude|\d+ (everyday|planning|deep)|lighter model/i;
+  /** The page's markup without the ids React makes up afresh for each render. */
+  const sameAs = (html: string) => html.replace(/\b(id|for|name|aria-labelledby|aria-describedby|aria-controls)="[^"]*"/g, '');
+  const lucyLine = (card: HTMLElement) => [...card.querySelectorAll('li')].find((line) => line.querySelector('b')?.textContent === 'Lucy') as HTMLElement;
+  const local = (plan: string, lucyWindows?: typeof LUCY_WINDOWS) => ({ ...cloudAccount({ plan, lucyWindows }), experience: { local_first: true, hosted: false } });
+  const show = (account: ReturnType<typeof local>) => render(<Billing account={account} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+
+  it('keeps the cards’ Lucy words exactly as they were while the server does not send the new figures', () => {
+    const absent = show(local('free'));
+    const words = [lucyLine(planCard('Standard')).textContent, lucyLine(planCard('Premium')).textContent];
+    expect(words[0]).toContain('400 everyday turns');
+    expect(words[1]).toContain('25 deep plans');
+    const before = sameAs(absent.container.innerHTML);
+    absent.unmount();
+    const account = local('free');
+    account.usage!.lucy_windows = null;
+    expect(sameAs(show(account).container.innerHTML)).toBe(before);
+  });
+
+  it('describes Lucy by level only once the figures are there: no counts and no names', () => {
+    show(local('free', LUCY_WINDOWS));
+    const standard = lucyLine(planCard('Standard'));
+    const premium = lucyLine(planCard('Premium'));
+    expect(standard).toHaveTextContent(`Lucy ${LUCY_LEVEL_WORDS.standard}`);
+    expect(premium).toHaveTextContent(`Lucy ${LUCY_LEVEL_WORDS.premium}`);
+    for (const line of [standard, premium]) {
+      expect(line.textContent).not.toMatch(NEVER_SHOWN);
+      expect(line.textContent).not.toMatch(/\d/);
+    }
+    // the plan this account is on says its own level the same way
+    const free = [...document.querySelectorAll('li')].find((line) => line.textContent?.includes(LUCY_LEVEL_WORDS.free));
+    expect(free).toBeTruthy();
+  });
+
+  it('writes three honest lines, one for each plan, with no numbers or multipliers', () => {
+    const lines = Object.values(LUCY_LEVEL_WORDS);
+    expect(new Set(lines).size).toBe(3);
+    for (const line of lines) {
+      expect(line).not.toMatch(NEVER_SHOWN);
+      expect(line).not.toMatch(/\d|×|times as|twice|double/i);
+      expect(line).not.toContain(String.fromCharCode(0x2014));
+    }
+  });
+
+  it('a paid local-first account reads its own plan by level too', () => {
+    show(local('standard', LUCY_WINDOWS));
+    expect(document.body.textContent).toContain(LUCY_LEVEL_WORDS.standard);
+    expect(document.body.textContent).not.toMatch(/400 everyday turns|Claude/);
   });
 });

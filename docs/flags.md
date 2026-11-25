@@ -75,6 +75,9 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `lucy.remote_providers` | **AI services for Lucy.** Planning with Anthropic or an OpenAI-compatible host instead of the built-in planner. | `lucy` |
 | `lucy.listening_history` | **Listening history for Lucy.** What you play is noted so Lucy can know your most-played songs. | `lucy` |
 | `lucy.cloud_conversation` | **Lucy's conversation in Cloud.** Talk to Lucy in the browser about your library and mixes; she proposes changes you can save. | `lucy`, `cloud.local_media` |
+| `lucy.usage_windows` | **Lucy's allowance on a session and a week.** Measures Lucy by what each message costs, on a five-hour session and a weekly limit, in place of turns a month (ADR-0481 to ADR-0484). The build ships on so a rule can grant it, and with no matching rule it is off. **Cloud surface:** unreleased (The session and week meters and their pages are not built yet (ADR-0484)). | `lucy.cloud_conversation` |
+| `lucy.extra_usage` | **Extra Lucy usage in prepaid packs.** Buy a prepaid pack of extra Lucy usage, spent only once the weekly limit is reached (ADR-0486). The build ships on so a rule can grant it, and with no matching rule it is off. **Cloud surface:** unreleased (The pages for buying and seeing extra usage are not built yet (ADR-0486)). | `lucy.usage_windows` |
+| `lucy.usage_shadow` | **Measure Lucy's new allowance in the background.** Records what each Lucy turn would use under the new allowance without changing anything a member sees. Turning it off stops that recording at once. **Cloud surface:** headless (A background measurement of each turn; nothing on a Cloud screen changes). | `lucy.cloud_conversation` |
 
 ## My Mixes
 

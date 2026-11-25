@@ -23,7 +23,7 @@ import re
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from sqlalchemy.engine import Engine
@@ -54,19 +54,68 @@ HISTORY_MESSAGES = 200
 HISTORY_CHARS = {"free": 12_000, "standard": 40_000, "premium": 80_000}
 """How much earlier conversation is sent verbatim, per plan (about 3k, 10k and 20k tokens)."""
 NOTE_CHARS = 700
+# A length is a number and a unit that ends there: "2 hours", "90min", "2h30", never "2 house
+# tracks" or "10 minor-key songs" (the unit must not run on into another word).
+_HOURS = r"(?:hours?|hrs?|h)(?![a-z])"
+_MINUTES = r"(?:minutes?|mins?)(?![a-z])"
 PLANNING = re.compile(
-    r"\b(make|build|create|plan|start)\b.{0,40}\b(mix|set|playlist)\b|\b\d+\s*(hour|hr|h|min)",
+    r"\b(make|build|create|plan|start)\b.{0,40}\b(mix|set|playlist)\b"
+    rf"|\b\d+(?:\.\d+)?[\s-]*(?:{_HOURS}|{_MINUTES})",
     re.IGNORECASE,
 )
+_COUNT = {name: number for number, name in enumerate(
+    "one two three four five six seven eight nine ten eleven twelve".split(), start=1)}
+ASKED_HOURS = re.compile(
+    rf"\b(\d+(?:\.\d+)?|{'|'.join(_COUNT)})[\s-]*{_HOURS}", re.IGNORECASE)
+ASKED_MINUTES = re.compile(rf"\b(\d+(?:\.\d+)?)[\s-]*{_MINUTES}", re.IGNORECASE)
+LONG_EVENT = re.compile(
+    r"\b(all[\s-]night(?:er)?|all[\s-]day|(?:whole|entire) (?:night|evening|day|party|event)"
+    r"|wedding|festival)\b",
+    re.IGNORECASE,
+)
+DEEP_PLAN_MINUTES = 120
+"""A whole new mix this long or longer, or for a named long event, is a deep plan."""
+QUESTION = re.compile(
+    r"^\W*(?:what|whats|who|whos|whose|which|when|where|how\s+(?:long|many|much))\b",
+    re.IGNORECASE,
+)
+QUICK_WORDS = 8
+"""A question this short that asks for no new mix is a quick turn."""
 
 BUSY_WORDS = ("Lucy is busy right now. Try again in a moment; this didn't use one of your "
               "turns, and your mixes and music are unaffected.")
 ProviderFactory = Callable[[gateway.ProviderSettings, gateway.TurnPlan], Any]
 
 
-def request_class(text: str) -> RequestClass:
-    """A whole new mix is a planning turn; anything else an everyday one (ADR-0404)."""
-    return RequestClass.PLANNING if PLANNING.search(text or "") else RequestClass.EVERYDAY
+def asked_minutes(text: str) -> float:
+    """The longest length the words ask for, in minutes: "2 hours 30 min" is 150, "three hour"
+    is 180, and words that name no length are 0."""
+    hours = [float(_COUNT.get(found.lower()) or found) for found in ASKED_HOURS.findall(text)]
+    minutes = [float(found) for found in ASKED_MINUTES.findall(text)]
+    return max(hours, default=0.0) * 60 + max(minutes, default=0.0)
+
+
+def request_class(text: str | None) -> RequestClass:
+    """Which of the four kinds of turn the plans sell these words ask for (ADR-0404).
+
+    - A whole new mix, or anything naming a length, is a planning turn; one of two hours or
+      more, or for a long event (a wedding, a festival, all night), is a deep plan.
+    - A short question that asks for no new mix ("what's playing next?") is a quick turn.
+    - Everything else is an everyday turn.
+
+    Every class is answered by the plan's own model, so this only decides which allowance the
+    turn counts against (`ai.allowance.BUCKETS`). A wrong guess never refuses a turn on its
+    own: a used-up allowance steps down to the next one (`ai.allowance.STEP_DOWN`).
+    """
+    words = (text or "").strip()
+    if not words:
+        return RequestClass.EVERYDAY
+    if PLANNING.search(words):
+        long = asked_minutes(words) >= DEEP_PLAN_MINUTES or LONG_EVENT.search(words)
+        return RequestClass.DEEP_PLAN if long else RequestClass.PLANNING
+    if len(words.split()) <= QUICK_WORDS and QUESTION.search(words):
+        return RequestClass.QUICK
+    return RequestClass.EVERYDAY
 
 
 def tier_of(conn, workspace_id: str) -> Tier:
@@ -285,6 +334,9 @@ def _model_history(job: Job, before_seq: int) -> list[dict[str, Any]]:
 
 
 def _resets_words(job: Job) -> str:
+    """The first day of the month after the turn's month, as "1 December". The turn's month is
+    already the account's own (`gateway.plan_turn` reads it in the account's time zone), so UTC
+    here only turns that month into a date and the day is right in every zone."""
     when = dt.datetime.fromtimestamp(month_resets_at(job.plan.month, "UTC"), dt.UTC)
     return f"{when.day} {when:%B}"
 
@@ -292,9 +344,15 @@ def _resets_words(job: Job) -> str:
 def builtin_words(job: Job, ctx: cloud_tools.CloudCtx) -> str:
     """What Lucy says when no model answers this turn: why, and what still works."""
     limited = job.plan.limited
-    if limited in {"allowance", "spend"}:
+    if limited == "allowance":
         why = (f"You've used this month's Lucy turns on your plan, so I can't think this one "
                f"through. They come back on {_resets_words(job)}.")
+    elif limited == "spend":
+        # The plan's monthly dollar ceiling, not its turns: turns may well be left, so saying
+        # they are used up would be untrue. Both start again with the account's month.
+        why = (f"You've reached your plan's monthly limit on Lucy's AI, which is separate from "
+               f"your turns, so I can't think this one through. It comes back on "
+               f"{_resets_words(job)}.")
     elif limited == "platform":
         why = "Lucy's AI is very busy right now, so I can't think this one through."
     else:
@@ -341,7 +399,9 @@ async def run_turn(job: Job) -> None:
         return job.stop.is_set()
 
     writer = Writer(events, message["id"], stopped)
+    # one attempt's tokens: a step down the model chain starts the count again
     usage = {"tokens_in": 0, "tokens_out": 0, "cache_read": 0, "cache_write": 0}
+    attempts = Attempts(plan)
     notes: list[str] = []
     outcome, error_code, final, error = Outcome.COMPLETED, None, "completed", None
     cycles = steps = 0
@@ -351,7 +411,7 @@ async def run_turn(job: Job) -> None:
             events.state("streaming")
             await writer.write(builtin_words(job, ctx))
         else:
-            cycles, steps = await _model_loop(job, ctx, events, writer, usage, notes)
+            cycles, steps = await _model_loop(job, ctx, events, writer, usage, notes, attempts)
             if not writer.text().strip():
                 # never a blank bubble
                 await writer.write("I don't have an answer for that. Could you say it another "
@@ -417,6 +477,7 @@ async def run_turn(job: Job) -> None:
                 conn, plan, outcome=outcome, tokens_in=usage["tokens_in"],
                 tokens_out=usage["tokens_out"], cache_read_tokens=usage["cache_read"],
                 cache_write_tokens=usage["cache_write"], error_code=error_code,
+                answered_by=attempts.plan.deployment, earlier_cost_usd=attempts.earlier_usd,
             )
         events.emit("message.completed", {"message": message["id"], "status": status,
                                           "content": writer.content,
@@ -428,7 +489,8 @@ async def run_turn(job: Job) -> None:
             outcome=outcome.value, text=writer.content, cost_usd=summary.cost_usd, **usage,
             proposals=list(ctx.proposed), tools=list(notes), cycles=cycles,
             deployment=plan.deployment.id, model=plan.deployment.model_id,
-            limited=plan.limited,
+            limited=plan.limited, answered_deployment=summary.answered_deployment_id,
+            account_cost_usd=summary.account_cost_usd,
         )
 
 
@@ -447,11 +509,18 @@ async def _say(writer: Writer, words: str) -> None:
     await writer.write(("\n\n" if writer.text() else "") + words)
 
 
+@dataclass
+class Attempts:
+    """Which model is answering the turn now, and what the attempts before it cost. The
+    account pays for the attempt that answers; the platform books them all (ADR-0481 rule 5)."""
+
+    plan: gateway.TurnPlan
+    earlier_usd: float = 0.0
+
+
 def _step_down_plans(engine: Engine, plan: gateway.TurnPlan) -> list[gateway.TurnPlan]:
     """The turn's own deployment, then each one down its fallback chain (Opus, Sonnet,
     Haiku) that the tier may use; never the built-in planner, never up."""
-    from dataclasses import replace
-
     from selecta.ai.spend import turn_limits
 
     chain = [plan]
@@ -470,13 +539,15 @@ def _step_down_plans(engine: Engine, plan: gateway.TurnPlan) -> list[gateway.Tur
 
 async def _model_loop(
     job: Job, ctx: cloud_tools.CloudCtx, events: Events, writer: Writer,
-    usage: dict[str, int], notes: list[str],
+    usage: dict[str, int], notes: list[str], attempts: Attempts,
 ) -> tuple[int, int]:
     """The model's work for this turn. A failure that isn't the key or a missing header
     (both shared by every model) steps down to the next model, quietly, before nothing has
-    been said; the last failure is the person's to hear."""
+    been said; the last failure is the person's to hear. `usage` holds the tokens of the
+    attempt in `attempts.plan`; what the attempts before it cost is kept apart."""
     chain = _step_down_plans(job.engine, job.plan)
     for index, plan in enumerate(chain):
+        attempts.plan = plan
         try:
             return await _one_model(job, ctx, events, writer, usage, notes, plan)
         except ProviderError as problem:
@@ -488,6 +559,10 @@ async def _model_loop(
             shared = problem.status in {401} or (problem.status == 400 and problem.configuration)
             if shared or writer.text().strip() or index == len(chain) - 1:
                 raise
+            attempts.earlier_usd += plan.deployment.prices.cost(
+                usage["tokens_in"], usage["tokens_out"], usage["cache_read"],
+                usage["cache_write"])
+            usage.update(dict.fromkeys(usage, 0))
     raise AssertionError("unreachable")
 
 
