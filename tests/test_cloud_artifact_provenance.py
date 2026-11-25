@@ -98,7 +98,8 @@ def test_an_output_without_a_sha256_checksum_is_refused(checksum):
 def test_the_playback_producer_and_the_rule_agree():
     made, _ = proxies.identity(SHA, 44_100)
     provenance.check("playback", made)
-    assert made["inputs"] == {"source": SHA} and made["versions"] == {"proxy": proxies.PROXY_VERSION}
+    assert made["inputs"] == {"source": SHA}
+    assert made["versions"] == {"proxy": proxies.PROXY_VERSION}
 
 
 # --- The schema ------------------------------------------------------------------------------

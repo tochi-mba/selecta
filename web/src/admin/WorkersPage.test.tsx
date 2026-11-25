@@ -128,6 +128,21 @@ describe('the Workers page', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('The server refused this (500).');
   });
 
+  it('at phone width shows each pool as a row that opens, a pool needing attention already open', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('max-width'), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
+    await open();
+    const heavy = screen.getByRole('button', { name: /CPU heavy.*Waiting for a worker.*14 queued/ });
+    expect(heavy).toHaveAttribute('aria-expanded', 'true');
+    const light = screen.getByRole('button', { name: /CPU light.*Idle/ });
+    expect(light).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(light);
+    expect(light).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById(light.getAttribute('aria-controls')!)).toHaveTextContent('cpu-light work');
+    const gateway = screen.getByRole('button', { name: /Worker gateway.*Not checked/ });
+    expect(gateway).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Rates and processing time per pool' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('says waits in plain words', () => {
     expect(waited(null)).toBe('nothing waiting');
     expect(waited(30)).toBe('under a minute');

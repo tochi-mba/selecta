@@ -16,7 +16,7 @@ test('an Owner walks through the console pages', async ({ page, request }) => {
   await request.post('/test/seed', { data: { user: customer, songs: 1, seconds: 4 } });
   await asStaff(page, request);
   const nav = await enter(page, { changes: false });
-  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Customers', 'Billing', 'Jobs', 'AI', 'Flags', 'Content', 'Emergency', 'Staff and security', 'Communications', 'System']);
+  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Customers', 'Billing', 'Jobs', 'Workers', 'AI', 'Flags', 'Content', 'Emergency', 'Staff and security', 'Communications', 'System']);
   await expect(page.getByText('Viewing. Nothing you do here changes anything.')).toBeVisible();
 
   // Overview: one sentence first, plain names, and what feeds what is not reporting.
@@ -68,5 +68,5 @@ test('an Owner walks through the console pages', async ({ page, request }) => {
 test('a role sees only the pages it can read', async ({ page, request }) => {
   await asStaff(page, request, 'support');
   const nav = await enter(page, { changes: false });
-  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Customers', 'Billing', 'Jobs', 'Flags', 'Emergency', 'Communications', 'System']);
+  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Customers', 'Billing', 'Jobs', 'Workers', 'Flags', 'Emergency', 'Communications', 'System']);
 });
