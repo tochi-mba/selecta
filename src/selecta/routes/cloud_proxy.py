@@ -122,3 +122,12 @@ def install_routes(
     def proxy_status(asset_id: str, request: Request,
                      claims: Claims = Depends(current_claims)):  # noqa: B008
         return prepare(asset_id, request, claims, submit=False)
+
+    # Hosted processing (`cloud.hosted_render`) shares this module's wiring: the same job store
+    # rules, object client and buckets, so `api_cloud` installs both with one call.
+    from selecta.routes import hosted_render
+
+    hosted_render.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=principal_for,
+        object_client_factory=object_client_factory, buckets=buckets,
+    )
