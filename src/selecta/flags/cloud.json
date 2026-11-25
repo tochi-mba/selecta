@@ -648,6 +648,7 @@
           "GET /api/admin/jobs/{job_id}",
           "POST /api/admin/jobs/{job_id}/{command}",
           "GET /api/admin/workers",
+          "GET /api/admin/work/queue",
           "POST /api/admin/workers/{worker_id}/{command}",
           "GET /api/admin/accounts",
           "GET /api/admin/accounts/{user_id}",
