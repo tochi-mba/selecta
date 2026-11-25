@@ -705,8 +705,9 @@ main.page h1[tabindex='-1']:focus { outline: none; }
   .nav li button.nav-more-desktop:is([aria-current='page'], [aria-expanded='true']) { color: var(--text); background: var(--surface-control); }
   :root[data-rail='collapsed'] .nav li button.nav-more-desktop { justify-content: center; }
   /* Request a song has a row of its own, on one line, with the side bar's toggle under it: side by
-     side the words wrapped onto two lines */
-  .nav-foot { flex-direction: column; align-items: stretch; gap: var(--space-1); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+     side the words wrapped onto two lines. Kept tight, so the local app's rail still fits a short
+     window (1280x500): a rail that can scroll even by 2px catches the wheel meant for the page */
+  .nav-foot { flex-direction: column; align-items: stretch; gap: var(--space-hair); padding-top: var(--space-2); border-top: 1px solid var(--border); }
   .nav-request { flex: none; justify-content: flex-start; white-space: nowrap; }
   .nav-collapse { align-self: flex-start; }
   :root[data-rail='collapsed'] .nav-request { justify-content: center; }
