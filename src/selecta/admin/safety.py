@@ -171,7 +171,8 @@ def guard(conn: Connection, actor: Actor, action_id: str, intent: Intent, *,
                 raise CommandRefused(400, "confirm_mismatch",
                                      "Type exactly what the dialog asks for to confirm.")
         started = actor.session_issued_at or 0.0
-        if now - started > STEP_UP_S:
+        # A delayed action already waits 15 minutes; step-up is for the instant ones.
+        if action.tier is Tier.DANGEROUS and now - started > STEP_UP_S:
             raise CommandRefused(403, "step_up_required",
                                  "Sign in again to do this: it needs a sign-in from the last "
                                  "5 minutes.", max_age=STEP_UP_S)

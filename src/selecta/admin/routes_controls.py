@@ -265,8 +265,10 @@ def install_routes(
         if command == "act":
 
             def act(conn: Connection, actor: Actor):
+                # Named with its workspace: this runs as that workspace, and on PostgreSQL the
+                # allow's audit row must carry it or row-level security refuses the insert.
                 authorize(conn, actor, "legal.takedowns.manage",
-                          ResourceRef("takedown_notice", notice_id))
+                          ResourceRef("takedown_notice", notice_id, workspace_id))
                 safety.guard(conn, actor, "takedown.act", body.intent(), target=notice_id[:8])
                 done = takedowns.act_on_notice(conn, actor, notice_id, reason=body.reason)
                 safety.record(conn, actor, "takedown.act", resource_type="takedown_notice",
