@@ -1,4 +1,5 @@
 import type { MediaResolver, MediaStore, StoredSong } from '../media';
+import { breathe } from '../media/breathe';
 import { TONAL_PROFILE_IMPLEMENTATION, type TonalProfile } from '../dsp/analysis/tonalProfile';
 import { derivedStore, withHashLock, type DerivedStore } from '../media/derived';
 import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
@@ -234,7 +235,7 @@ async function decodeMono(bytes: ArrayBuffer): Promise<Float32Array> {
   for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
     const data = decoded.getChannelData(channel);
     for (let start = 0; start < data.length; start += MIX_SLICE) {
-      if (start > 0) await new Promise((resolve) => window.setTimeout(resolve, 0));
+      if (start > 0) await breathe();
       const end = Math.min(data.length, start + MIX_SLICE);
       for (let index = start; index < end; index += 1) mono[index] += data[index] / decoded.numberOfChannels;
     }

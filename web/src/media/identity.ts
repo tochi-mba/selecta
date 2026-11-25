@@ -19,6 +19,7 @@ export const HASH_CHUNK_BYTES = 4 * 1024 * 1024;
 
 /** A file up to this size is hashed by WebCrypto in one call. The JavaScript hash below costs about
  * 40 ms of the page's own time per megabyte on a slow laptop, so an import of thousands of songs
+import { breathe } from './breathe';
  * kept the page too busy to answer; WebCrypto hashes off the page in native code instead. Bigger
  * files keep the streamed hash, so a long WAV never sits in memory whole. */
 export const WHOLE_DIGEST_MAX_BYTES = 64 * 1024 * 1024;
@@ -55,7 +56,7 @@ export async function fileSha256(file: Blob, options: { signal?: AbortSignal; ch
     cancelled();
     const chunk = new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer());
     for (let at = 0; at < chunk.length; at += UPDATE_SLICE_BYTES) {
-      if (at > 0) await new Promise((resolve) => setTimeout(resolve, 0));
+      if (at > 0) await breathe();
       hash.update(chunk.subarray(at, at + UPDATE_SLICE_BYTES));
     }
   }
