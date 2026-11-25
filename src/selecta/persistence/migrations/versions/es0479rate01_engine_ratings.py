@@ -1,7 +1,7 @@
 """Engine store tables for Cloud, starting with ratings, behind a fail-closed policy (ADR-0479).
 
 Revision ID: es0479rate01
-Revises: lm0481usage01
+Revises: rs0488soc02
 
 Creates the engine tables from `engine_store.schema`. On PostgreSQL each gets the
 `workspace_isolation` policy without the empty-scope branch the earlier tenant tables have
@@ -23,7 +23,7 @@ from alembic import op
 from selecta.engine_store import schema
 
 revision = "es0479rate01"
-down_revision = "lm0481usage01"
+down_revision = "rs0488soc02"
 branch_labels = None
 depends_on = None
 
