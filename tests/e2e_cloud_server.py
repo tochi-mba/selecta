@@ -85,7 +85,42 @@ from selecta.identity.tokens import BadSignature, Claims  # noqa: E402
 from selecta.local_media import store as local_media_store  # noqa: E402
 from selecta.persistence import db_now, make_engine, migrate, transaction  # noqa: E402
 from selecta.playback.schema import playback_commands, playback_sessions  # noqa: E402
+from selecta.playback.model import PlayState, position_at  # noqa: E402
+from selecta.playback.store import load_session  # noqa: E402
 from selecta.rooms.cloud_ports import RoomPorts  # noqa: E402
+from selecta.rooms.ports import NowPlaying  # noqa: E402
+
+
+class SessionDeck(FakeNowPlaying):
+    """What is playing in a room, for the browser tests (ADR-0488): the account's playback
+    session says where the speaker is, and the made-up Rooms library names the song at that
+    place. The real app reads the session and the account's own library
+    (`rooms.session_now_playing`); here the library is the synthetic one guests search. With
+    nothing playing it answers as the plain fake does, so a test can still set a song by hand."""
+
+    def __init__(self, engine, catalog) -> None:
+        super().__init__()
+        self.engine = engine
+        self.catalog = catalog
+
+    def now_playing(self, workspace_id: str) -> NowPlaying:
+        if self.current is not None:
+            return super().now_playing(workspace_id)
+        with transaction(self.engine, workspace_id) as conn:
+            session = load_session(conn, workspace_id)
+            if session is None or session.state is PlayState.STOPPED:
+                return NowPlaying(None)
+            offset = position_at(session, db_now(conn)).offset_ms / 1000.0
+        songs = self.catalog.songs
+        index = max(0, session.song_index)
+        return NowPlaying(
+            songs[index % len(songs) + 1],
+            (songs[(index + 1) % len(songs) + 1],),
+            "playing" if session.state is PlayState.PLAYING else "paused",
+            session.mix_revision_id or "",
+            index,
+            offset,
+        )
 from selecta.storage import api as storage_api  # noqa: E402
 from selecta.usage import allowances, quota  # noqa: E402
 from selecta.work import outbox  # noqa: E402
@@ -258,11 +293,12 @@ def build(port: int):
         allowed_origins=(base, f"http://localhost:{port}"),
         staff_organization_id=e2e_cloud_staff.STAFF_ORG,
     )
+    catalog = FakeSongCatalog(40)
     ports = RoomPorts(
         pepper=PEPPER,
-        catalog=FakeSongCatalog(40),
+        catalog=catalog,
         planner=FakeRequestPlanner(),
-        now_playing=FakeNowPlaying(),
+        now_playing=SessionDeck(engine, catalog),
     )
     authkit = e2e_cloud_authkit.FakeAuthKit(f"http://localhost:{port}")
     app = create_cloud_app(settings, engine=engine, verifier=E2EVerifier(authkit), room_ports=ports)

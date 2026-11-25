@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { useLiveFlash } from '../business/feelBits';
+import { useChangePing, useLiveFlash } from '../business/feelBits';
 import { FlagId, useFlag } from '../flags';
 import { CommandKind, DashboardState, STEERING, StaffCommand } from './staffApi';
 import './staffDashboard.css';
@@ -61,6 +61,9 @@ function Dashboard({ state, onCommand, onStop, genres = [], link }: StaffDashboa
   useEffect(() => { headingRef.current?.focus(); }, []);
   const [genre, setGenre] = useState(genres[0] ?? '');
   const nav = state?.nav ?? 'loading';
+  // The status dot pops once when the venue's state really changes, never on a timer; the words
+  // beside it say the state either way.
+  const navPing = useChangePing(nav);
   const enabled = new Set(state?.enabled ?? []);
   const stopEnabled = state ? state.stop.enabled : true;
   const drawLink = link ?? ((path: string, label: string) => <a href={path}>{label}</a>);
@@ -74,7 +77,7 @@ function Dashboard({ state, onCommand, onStop, genres = [], link }: StaffDashboa
       <header className="staff-top">
         <div className="staff-heading">
           <h1 id="staff-dashboard-title" ref={headingRef} tabIndex={-1}>Staff dashboard</h1>
-          <p className="staff-nav" data-testid="staff-nav"><span className="staff-nav-dot" aria-hidden="true" />{NAV_WORDS[nav]}</p>
+          <p className="staff-nav" data-testid="staff-nav"><span key={navPing} className={navPing ? 'staff-nav-dot feel-pop' : 'staff-nav-dot'} aria-hidden="true" />{NAV_WORDS[nav]}</p>
         </div>
         <button type="button" className="staff-stop" onClick={onStop} disabled={!stopEnabled}
           aria-describedby="staff-stop-help">

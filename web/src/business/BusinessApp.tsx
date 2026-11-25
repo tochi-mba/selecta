@@ -18,6 +18,7 @@ import { businessApi } from './api';
 import { businessClient } from './client';
 import { AssertiveRegion } from './components/Notices';
 import { BusinessContext, BusinessCtx, businessOn, BusinessRoute, parseBusinessPath } from './context';
+import { useWorkProfile } from './feelBits';
 import { SHELL_COPY, SWITCHER_COPY } from './copy/shell';
 import { BusinessShell } from './shell/BusinessShell';
 import { landingPath } from './shell/nav';
@@ -54,6 +55,8 @@ export type BusinessAppProps = {
 
 export default function BusinessApp({ api, route, account, onLeaveToPersonal, token, clock, forceOffline, stream: forcedStream, device }: BusinessAppProps) {
   const on = businessOn(account.features, 'business.workspaces');
+  // a work tool: the component feel stays, nothing here answers the music (ADR-0477 plan 3.14)
+  useWorkProfile();
   const [current, setCurrent] = useState<BusinessRoute>(route);
   // The host may hand a fresh route object on every render; follow it only when it says
   // something new, or the landing redirect below and the host would undo each other forever.

@@ -10,13 +10,15 @@ For an account with the `cloud.hosted_media` grant (ADR-0456), `cloud.hosted_ren
   reason, with totals and a time estimate (from this workspace's own finished jobs) only while
   something is moving.
 - **Server mixes.** `plan_mix` orders the analysed songs with the local planner
-  (`planner.beam.plan_set`) and its planned move per hand-off. `mix_state` then asks for what the
+  (`planner.beam.plan_set`), each recording once (`one_per_recording`: copies and versions of
+  one song are planned once), and its planned move per hand-off. `mix_state` then asks for what the
   mix needs: each song's lossless playback file (`work.proxies.prepare`, the same `play.proxy`
   the player uses) and a `seam.render` per hand-off once both analyses exist, with the planned
   move as the style (the worker renders it the local app's way, `workers.engine_seams`). It
   answers with a timeline: song parts cut at each rendered seam's cue points and the seam clips
   between them, each with a short-lived signed link, and the state of every seam.
-- **Export** (`request_export`): one `export.render` job for the mix's songs.
+- **Export** (`hosted_export`): one `export.render` job naming the exact timeline `mix_state`
+  answers, which the worker joins as the player plays it.
 
 Every job carries its stored inputs in `input_ref["objects"]`, which is what the worker gateway
 signs (and the dev worker reads). Jobs are idempotent by their input hashes, so polling never
@@ -27,8 +29,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import tempfile
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -50,10 +53,11 @@ ANALYSE, SEAM, EXPORT = "analyse.song", "seam.render", "export.render"
 MAX_PLAN_SONGS = 60
 WORKER_SEEN_S = 180.0
 URL_TTL_S = 900
-# Until a workspace has finished jobs of its own, the estimate uses these (seconds per job),
+# Until a workspace has finished analyses of its own, the estimate uses this (seconds per job),
 # measured on the dev worker with real 3 to 4 minute songs
-# (docs/engineering/hosted-mode-walkthrough.md).
-FIRST_GUESS_S = {ANALYSE: 20.0, SEAM: 25.0, "play.proxy": 3.0, EXPORT: 240.0}
+# (docs/engineering/hosted-mode-walkthrough.md). Transitions have first guesses by kind
+# (`hosted_estimate.SEAM_FIRST_GUESS_S`); an export's time comes from its own progress.
+FIRST_GUESS_S = {ANALYSE: 20.0}
 
 
 def _hash(payload: dict[str, Any]) -> str:
@@ -70,13 +74,6 @@ def seam_hash(a_sha256: str, b_sha256: str, style: str | None) -> str:
         {"a": a_sha256, "b": b_sha256, "style": style, "analysis": ANALYSIS_VERSION,
          "render": RENDER_VERSION}
     )
-
-
-def export_hash(shas: Sequence[str]) -> str:
-    from selecta.workers.engine_handlers import EXPORT_VERSION  # heavy module: only when asked
-
-    return _hash({"songs": list(shas), "analysis": ANALYSIS_VERSION, "render": RENDER_VERSION,
-                  "export": EXPORT_VERSION})
 
 
 def _first_key(keys: Any) -> str | None:
@@ -282,7 +279,7 @@ def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
                     "analysis": {"state": "ready" | "running" | "queued" | "failed"
                                           | "not_started", "job_id"?, "why"?, "bpm"?,
                                  "camelot"?},
-                    "same_file_as"?: [asset_id, ...]}],
+                    "same_file_as"?: [asset_id, ...], "same_recording_as"?: [asset_id, ...]}],
          "totals": {"waiting", "running", "done", "failed", "total"},
          "moving": bool, "waiting_for": "worker" | "retry" | None,
          "counts": {"ready", "running", "queued", "failed", "not_started"},
@@ -295,7 +292,9 @@ def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
     `WORKER_SEEN_S` (`waiting_for` "worker"), or every unfinished song waits on a retry's
     backoff or a hold (`waiting_for` "retry"). Queued work never expires: it waits for a worker
     however long that takes, and operators hear of it (`work.queue_health`). Songs with the same
-    bytes share one analysis; each names the others in `same_file_as`.
+    bytes share one analysis; each names the others in `same_file_as`. `same_recording_as` names
+    every other upload of the same recording (copies, or another file of it: `recording_of`);
+    a planned mix uses only the first.
     """
     with transaction(engine, workspace_id) as conn:
         songs = _songs(conn, workspace_id)
@@ -320,6 +319,15 @@ def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
     for twins in by_digest.values():
         for entry in twins if len(twins) > 1 else ():
             entry["same_file_as"] = [t["asset_id"] for t in twins if t is not entry]
+    # copies and other files of one recording: a mix plans the first of them only
+    owner = recording_of(songs)
+    groups: dict[str, list[str]] = {}
+    for song in songs:
+        groups.setdefault(owner[song["id"]], []).append(song["id"])
+    for entry in out:
+        others = [i for i in groups[owner[entry["asset_id"]]] if i != entry["asset_id"]]
+        if others:
+            entry["same_recording_as"] = others
     counts = {name: sum(1 for s in out if s["analysis"]["state"] == name)
               for name in ("ready", "running", "queued", "failed", "not_started")}
     totals = {name: sum(1 for s in out if s["status"]["state"] == name)
@@ -350,9 +358,58 @@ def _read_analysis(read_object: Callable[[str, Path], Path], key: str, folder: P
     return read_object(key, folder / (hashlib.sha256(key.encode()).hexdigest()[:16] + ".npz"))
 
 
+_TRACK_NUMBER = re.compile(r"^\s*\d{1,3}\s*[.)_-]\s*")
+
+
+def title_artist(display_name: str | None) -> tuple[str, str]:
+    """(title, artist) as an import reads "001. Artist - Title.mp3"; artist "" when unnamed."""
+    stem = Path(display_name or "").stem
+    artist, _, title = _TRACK_NUMBER.sub("", stem).rpartition(" - ")
+    return (title or stem).strip(), artist.strip()
+
+
+def one_per_recording(ready: Sequence[tuple[dict, Any]]) -> list[tuple[dict, Any]]:
+    """The first upload of each recording, in upload order (to-do T-20261125-ed08).
+
+    The duplicate-songs rule of the local catalogue (ADR-0469 amendment 2,
+    `local_media.versions`): identical bytes are always one recording; a different file is the
+    same recording when its normalised title and artist match and its length is within
+    `VERSION_TOLERANCE_S` (a remix or extended mix differs by more and stays its own song). A
+    hosted upload has no tags here, so title and artist come from its file name, and only a name
+    that has both counts (two "Untitled" files are not one song).
+    """
+    first = recording_of([song for song, _extra in ready])
+    return [(song, extra) for song, extra in ready if first[song["id"]] == song["id"]]
+
+
+def recording_of(songs: Sequence[dict]) -> dict[str, str]:
+    """Each song's id mapped to the id of the first song (in this order) of its recording, by
+    the rule `one_per_recording` describes."""
+    from selecta.local_media.versions import name_key, same_length
+
+    first: dict[str, str] = {}
+    by_content: dict[str, str] = {}
+    by_name: dict[tuple[str, str], list[tuple[str, Any]]] = {}
+    for song in songs:
+        title, artist = title_artist(song.get("display_name"))
+        key = name_key(title, artist) if title and artist else None
+        found = by_content.get(song["sha256"])
+        if found is None and key is not None:
+            found = next((owner for owner, length in by_name.get(key, ())
+                          if same_length(length, song.get("duration_s"))), None)
+        if found is None:
+            found = song["id"]
+            if key is not None:
+                by_name.setdefault(key, []).append((found, song.get("duration_s")))
+        by_content.setdefault(song["sha256"], found)
+        first[song["id"]] = found
+    return first
+
+
 def plan_mix(engine: Engine, workspace_id: str, read_object: Callable[[str, Path], Path],
              ids: Sequence[str] | None = None, count: int = 12) -> list[dict[str, Any]]:
-    """The local planner's order and moves for the analysed songs (module notes)."""
+    """The local planner's order and moves for the analysed songs, each recording once
+    (`one_per_recording`; module notes)."""
     from selecta.planner.beam import plan_set
     from selecta.workers.engine_handlers import song_from_analysis
 
@@ -364,7 +421,7 @@ def plan_mix(engine: Engine, workspace_id: str, read_object: Callable[[str, Path
             key = _first_key(row["keys"]) if row is not None else None
             if key:
                 ready.append((song, key))
-    ready = ready[:MAX_PLAN_SONGS]
+    ready = one_per_recording(ready)[:MAX_PLAN_SONGS]
     if len(ready) < 2:
         return [{"asset_id": song["id"], "move": None} for song, _key in ready]
     infos, by_number = [], {}
@@ -466,9 +523,17 @@ def _seam_spec(workspace_id: str, a: dict, b: dict, move: str | None, lane, crea
 def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dict[str, Any]],
               *, client, buckets, created_by: str | None = None,
               retry: bool = False,
-              read_object: Callable[[str, Path], Path] | None = None) -> dict[str, Any]:
-    """Ask for what the mix needs and say where it stands (module notes)."""
-    from selecta.work import proxies
+              read_object: Callable[[str, Path], Path] | None = None,
+              files: bool = False) -> dict[str, Any]:
+    """Ask for what the mix needs and say where it stands (module notes).
+
+    Answers `parts`, `seams`, `counts`, `complete`, `worker_seen` and the time left:
+    `estimate_s` (seconds, or null when it would be a guess), `estimate_why` (null, `no_worker`,
+    `overrunning` or `busy`) and `work` (`queued`, `running`, `slots`), by `hosted_estimate`.
+    With `files`, each part also carries `_file` (`key`, `sha256`): what an export joins.
+    """
+    from selecta import hosted_estimate
+    from selecta.work import fleet, proxies
 
     ids = [str(item["asset_id"]) for item in order]
     moves = [item.get("move") if isinstance(item.get("move"), str) else None for item in order]
@@ -488,6 +553,12 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
             job = _latest_job(conn, workspace_id, ANALYSE, digest)
             song["loudness"] = _loudness((job["result"] if job is not None else None) or {},
                                          song["analysis_key"], read_object)
+            prepared = playback.get(song["id"])
+            if prepared is not None and prepared.status == "ready":
+                made = _artifact(conn, workspace_id, "playback", prepared.input_hash)
+                song["file_sha256"] = made["checksum"] if made is not None else None
+            elif prepared is not None and prepared.status == "direct":
+                song["file_sha256"] = song["sha256"]
         seams, wanted = [], []
         for index in range(len(songs) - 1):
             a, b, move = songs[index], songs[index + 1], moves[index + 1]
@@ -508,22 +579,27 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
             seams.append({"index": index, "planned_move": move, **state, "row": row,
                           "move": result.get("move"), "passed": result.get("audit_passed"),
                           "fell_back": result.get("fell_back"), "checks": result.get("checks")})
-        each_seam = _measured(conn, workspace_id, SEAM)
-        each_analysis = _measured(conn, workspace_id, ANALYSE)
-        worker = _worker_seen(conn, "cpu-heavy")
+        slots = fleet.pool_slots(conn, "cpu-heavy", db_now(conn) - WORKER_SEEN_S)
     for index, a, b, move, old in wanted:
         lane = Lane.INTERACTIVE if index < 2 else Lane.STANDARD
         _job, refused = _make(work, _seam_spec(workspace_id, a, b, move, lane, created_by), old)
         if refused:
             seams[index].update(state="refused", why=refused)
-    timeline = _timeline(workspace_id, songs, seams, playback, client, buckets,
-                         each_seam, each_analysis)
-    if not worker:
-        timeline["estimate_s"] = None
-    return {**timeline, "worker_seen": worker}
+    timeline = _timeline(workspace_id, songs, seams, playback, client, buckets, files=files)
+    with transaction(engine, workspace_id) as conn:
+        # after the jobs above are made, so they count; hand-offs still waiting for analysis
+        # count as transitions to come
+        later = [seam["planned_move"] for seam in seams
+                 if seam["state"] == "waiting_for_analysis"]
+        left = hosted_estimate.mix_estimate(
+            conn, workspace_id, hosted_estimate.Durations(conn, workspace_id, FIRST_GUESS_S),
+            slots=slots, now=db_now(conn), later_seams=later)
+    if timeline["complete"]:
+        left = {**left, "estimate_s": 0, "estimate_why": None}
+    return {**timeline, **left, "worker_seen": slots > 0}
 
 
-def _timeline(workspace_id, songs, seams, playback, client, buckets, each_seam, each_analysis):
+def _timeline(workspace_id, songs, seams, playback, client, buckets, *, files=False):
     parts: list[dict[str, Any]] = []
     start = 0.0
     for index, song in enumerate(songs):
@@ -546,11 +622,15 @@ def _timeline(workspace_id, songs, seams, playback, client, buckets, each_seam, 
                       "gain_db": gain_db(song.get("loudness")),
                       "url": _sign(client, buckets, file_key, workspace_id) if file_key else None,
                       "file": "lossless" if file_key else "preparing"})
+        if files:
+            parts[-1]["_file"] = {"key": file_key, "sha256": song.get("file_sha256")}
         if cues is not None:
             key = _first_key(seam["row"]["keys"])
             parts.append({"kind": "seam", "index": index, "from_s": 0.0,
                           "seconds": round(cues[2], 4), "move": seam.get("move"),
                           "url": _sign(client, buckets, key, workspace_id) if key else None})
+            if files:
+                parts[-1]["_file"] = {"key": key, "sha256": seam["row"]["checksum"]}
             start = cues[1]
         else:
             start = 0.0
@@ -567,77 +647,11 @@ def _timeline(workspace_id, songs, seams, playback, client, buckets, each_seam, 
                    "songs_analysed": analysed,
                    "songs": len(songs),
                    "files_ready": sum(1 for p in parts if p["kind"] == "song" and p["url"])},
-        "estimate_s": round(waiting * each_seam + (len(songs) - analysed) * each_analysis),
         "complete": waiting == 0 and all(p["url"] for p in parts),
     }
 
 
-def request_export(engine: Engine, work: Work, workspace_id: str, ids: Iterable[str],
-                   created_by: str | None = None) -> dict[str, Any]:
-    """One `export.render` job for these songs once all are analysed."""
-    ids = list(ids)
-    with transaction(engine, workspace_id) as conn:
-        songs = _songs(conn, workspace_id, ids)
-        sides = []
-        for song in songs:
-            row = _artifact(conn, workspace_id, "analysis", analysis_hash(song["sha256"]))
-            if row is None:
-                return {"state": "waiting_for_analysis"}
-            name = song["display_name"] or "Untitled"
-            artist, _, title = name.rpartition(" - ")
-            sides.append({"source_key": original_key(workspace_id, song["id"]),
-                          "source_sha256": song["sha256"], "analysis_key": _first_key(row["keys"]),
-                          "title": Path(title or name).stem[:120], "artist": artist or None})
-    if len(sides) < 2:
-        return {"state": "refused", "why": "An export needs at least two songs."}
-    objects = [key for side in sides for key in (side["source_key"], side["analysis_key"])]
-    shas = [side["source_sha256"] for side in sides]
-    digest = _hash({"songs": shas, "kind": "hosted-export"})
-    spec = JobSpec(
-        workspace_id=workspace_id, type=EXPORT, idempotency_key=f"hosted-export:{digest}",
-        lane=Lane.STANDARD, created_by=created_by,
-        input_ref={"songs": sides, "objects": objects,
-                   "output": _output("export", export_hash(shas))})
-    with transaction(engine, workspace_id) as conn:
-        old = _latest_job(conn, workspace_id, EXPORT, spec.idempotency_key)
-    # a live export that can never publish (queued before outputs were declared) is replaced;
-    # a finished one is asked for again by making a new job, as before
-    broken = old is not None and hosted_status.needs_new(
-        False, old, spec.input_ref["output"]) == "no_output"
-    job_id, refused = _make(work, spec, old if broken else None)
-    if refused:
-        return {"state": "refused", "why": refused}
-    if job_id is None:
-        return {"state": "queued", "job_id": old["id"]}
-    return {"state": "queued", "job_id": job_id}
-
-
-def export_status(engine: Engine, workspace_id: str, job_id: str, *, client,
-                  buckets) -> dict[str, Any] | None:
-    with transaction(engine, workspace_id) as conn:
-        job = conn.execute(sa.select(jobs).where(
-            jobs.c.workspace_id == workspace_id, jobs.c.id == job_id,
-            jobs.c.type == EXPORT)).mappings().first()
-        if job is None:
-            return None
-        each = _measured(conn, workspace_id, EXPORT)
-        now = db_now(conn)
-    state = _state(None, job)
-    result = job["result"] or {}
-    if str(job["state"]) == "succeeded":
-        key = _first_key(result.get("keys"))
-        return {"state": "ready", "url": _sign(client, buckets, key, workspace_id) if key else None,
-                "size_bytes": result.get("size_bytes")}
-    out = {**state, "progress": [job["progress_done"], job["progress_total"]]}
-    if state["state"] == "running" and job["started_at"]:
-        out["estimate_s"] = max(0, round(each - (now - float(job["started_at"]))))
-    elif state["state"] == "queued":
-        out["estimate_s"] = round(each)
-    return out
-
-
 __all__ = [
-    "FLAG", "Work", "analysis_hash", "export_status", "mix_state", "on_upload_accepted",
-    "plan_mix", "prepare_songs", "request_export", "seam_hash", "song_status",
-    "songs_status",
+    "FLAG", "Work", "analysis_hash", "mix_state", "on_upload_accepted", "plan_mix",
+    "prepare_songs", "seam_hash", "song_status", "songs_status",
 ]

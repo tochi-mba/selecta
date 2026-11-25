@@ -75,6 +75,12 @@ export const HELP: Record<AdminPage, PageHelp> = {
     tasks: [['A takedown arrived', 'Log it with the workspace, song, complainant and work, then Act or Reject with a reason.']],
     runbook: RUNBOOK,
   },
+  covers: {
+    purpose: 'Cover images SelectaDJ stored from the Cover Art Archive. Hide one when a rights holder or a report says it must go; it stops being served to every account at once.',
+    numbers: [['Hidden', 'SelectaDJ no longer serves the image; songs that used it show their generated tile. Browsers that already loaded it may keep their copy for up to an hour.'], ['Source', 'The archive’s cover for the release itself, or for its release group when the release had none.']],
+    tasks: [['A cover must come down', 'Find it by song, release, artist or the art id from the report, press Make changes, then Hide with a reason. The audit log keeps who, when and why.'], ['A hide was a mistake', 'Find the image (hidden ones are listed too) and Unhide it with a reason.']],
+    runbook: RUNBOOK,
+  },
   emergency: {
     purpose: 'Switches for an incident: pause uploads, pause a worker pool, disable Lucy, billing safe mode, read-only, stop sign-ups. Engaging is instant; releasing waits 15 minutes.',
     numbers: [['Engaged', 'In force now, for everyone or one pool.']],
@@ -151,6 +157,10 @@ export const TOURS: Record<AdminPage, TourStep[]> = {
     { target: 'notices', title: 'Notices', text: 'Overdue first. Act hides the song and starts its deletion; Reject keeps it.' },
     { target: 'log-notice', title: 'Log a notice', text: 'Record what arrived, with the workspace and the song.', needs: 'legal.takedowns.manage' },
     { target: 'restrictions', title: 'Repeat infringers', text: 'Accounts with uploads restricted after repeated valid notices.' },
+  ],
+  covers: [
+    { target: 'covers-search', title: 'Find a cover', text: 'By song, release, artist, art id or release id. Hidden covers are listed too.' },
+    { target: 'covers-list', title: 'Hide or unhide', text: 'Each change needs a reason and goes in the audit log. Browsers may keep a hidden cover for up to an hour.', needs: 'legal.takedowns.manage' },
   ],
   emergency: [
     { target: 'emergency-state', title: 'What is engaged', text: 'Every control, and whether it is on now.' },

@@ -612,9 +612,70 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* Stop in Send's place while Lucy works and nothing is written (LucyComposer, motion only): it takes
+   Send's look with .primary and springs in with the shared .feel-pop, so there is nothing to add. */
+
+/* an example prompt's copy travelling to the box (lucy/flight.ts draws it only while the motion is
+   on, after the words are already in the box); never pressable, gone when it lands */
+.lucy-flight {
+  position: fixed;
+  z-index: var(--layer-toast);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  overflow: hidden;
+  border: 1px solid var(--edge-selected);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lift);
+  color: var(--text);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+/* opening a plan's steps: the list drops open from the summary while each card arrives after the
+   one before (data-stagger); both are the shared keyframes, played once */
+:where(:root[data-feel~='motion']) .lucy-plan .lucy-cards {
+  animation: feel-item-in var(--motion-spring-snappy) var(--spring-gentle) both;
+}
+/* an answered request, with the motion on, is a one-line receipt (LucyCards); a yes given on this
+   page draws its tick once (.feel-tick), and "What it was for" keeps everything it named */
+.lucy-permission.is-receipt {
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+  border-width: 1px;
+  border-color: var(--border);
+}
+.lucy-receipt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+.lucy-receipt-said { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--status-ready); font-weight: 600; }
+.lucy-receipt-tick {
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lucy-receipt-what { min-width: 0; color: var(--text-soft); overflow-wrap: anywhere; }
+/* a song the new revision took out (LucySongs, motion only): faded, its name struck through, it
+   stays a moment to be seen, then the row folds away (the shared .feel-collapse-out, held back) */
+.lucy-song-slot.is-gone .lucy-song { opacity: .55; }
+.lucy-song-slot.is-gone .lucy-song-name b { text-decoration: line-through var(--separator) var(--status-failed); }
+:root[data-feel~='motion'] .lucy-songs > li.lucy-song-slot.is-gone.feel-collapse-out { animation-delay: var(--motion-slow); }
+/* the twin meter's rungs light one after another from the bottom when a share changes */
+:where(:root[data-feel~='motion']) .lucy-ladder-seg:nth-last-child(2) { transition-delay: var(--motion-stagger); }
+:where(:root[data-feel~='motion']) .lucy-ladder-seg:nth-last-child(3) { transition-delay: calc(2 * var(--motion-stagger)); }
+:where(:root[data-feel~='motion']) .lucy-ladder-seg:nth-last-child(4) { transition-delay: calc(3 * var(--motion-stagger)); }
+:where(:root[data-feel~='motion']) .lucy-ladder-seg:nth-last-child(5) { transition-delay: calc(4 * var(--motion-stagger)); }
+
 @media (forced-colors: active) {
   .lucy-thinking-words { background: none; color: inherit; }
   .lucy-saved-tick { stroke: CanvasText; }
+  .lucy-receipt-tick { stroke: CanvasText; }
+  .lucy-flight { display: none; }
 }
 
 @keyframes feel-lucy-rise {

@@ -67,6 +67,13 @@ CAPABILITY_ONLY = {
     ("GET", "/api/guest/rooms/{room_id}/nicknames"),
     ("PUT", "/api/guest/rooms/{room_id}/nickname"),
     ("POST", "/api/guest/rooms/{room_id}/leave"),
+    # ADR-0488: what a room does together, behind the same room cookie
+    ("GET", "/api/guest/rooms/{room_id}/pulse"), ("GET", "/api/guest/rooms/{room_id}/recap"),
+    ("POST", "/api/guest/rooms/{room_id}/reactions"),
+    ("DELETE", "/api/guest/rooms/{room_id}/reactions"),
+    ("POST", "/api/guest/rooms/{room_id}/rounds/{round_id}/vote"),
+    ("PUT", "/api/guest/rooms/{room_id}/requests/{request_id}/dedication"),
+    ("DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}/dedication"),
     # Rooms for Business guests (ADR-0451): the table card's code plus the guest's HttpOnly cookie
     # scoped to /api/venue-rooms; a wrong code gets a visitor cookie and the lockout, never
     # another room (service rules in tests/test_business_rooms_*.py; no route-level test yet).
@@ -75,6 +82,11 @@ CAPABILITY_ONLY = {
     ("GET", "/api/venue-rooms/{code}/search"),
     ("POST", "/api/venue-rooms/{code}/requests"),
     ("POST", "/api/venue-rooms/{code}/requests/{request_id}/vote"),
+    ("GET", "/api/venue-rooms/{code}/pulse"), ("GET", "/api/venue-rooms/{code}/recap"),
+    ("POST", "/api/venue-rooms/{code}/reactions"), ("DELETE", "/api/venue-rooms/{code}/reactions"),
+    ("POST", "/api/venue-rooms/{code}/rounds/{round_id}/vote"),
+    ("PUT", "/api/venue-rooms/{code}/requests/{request_id}/dedication"),
+    ("DELETE", "/api/venue-rooms/{code}/requests/{request_id}/dedication"),
     ("POST", "/api/display/pairings"),
     ("GET", "/api/display/view"),
     ("DELETE", "/api/display/pairing"),
@@ -226,6 +238,14 @@ BUSINESS_SCOPED = {
     ("POST", "/api/zones/{zone_id}/room/guests/{guest_id}/ban"),
     ("POST", "/api/zones/{zone_id}/room/pause"),
     ("POST", "/api/zones/{zone_id}/room/resume"),
+    # ADR-0488: the zone's shared features; tests/test_business_rooms_social.py holds the rules
+    ("GET", "/api/zones/{zone_id}/room/social"), ("PATCH", "/api/zones/{zone_id}/room/social"),
+    ("POST", "/api/zones/{zone_id}/room/rounds"),
+    ("POST", "/api/zones/{zone_id}/room/rounds/{round_id}/cancel"),
+    ("GET", "/api/zones/{zone_id}/room/recap"),
+    ("POST", "/api/zones/{zone_id}/room/displays"),
+    ("DELETE", "/api/zones/{zone_id}/room/displays/{display_id}"),
+    ("DELETE", "/api/zones/{zone_id}/requests/{request_id}/dedication"),
     ("POST", "/api/zones/{zone_id}/venue-network"),
     # ADR-0452/0453: people, invitations, overview and setup; every one resolves the caller in
     # the named organisation (guard.actor_for) and its venues by scope, 404 otherwise
@@ -485,6 +505,15 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/rooms/{room_id}/displays"): {"pairing_code": "ABC-123"},
     ("DELETE", "/api/rooms/{room_id}/displays"): None,
     ("DELETE", "/api/rooms/{room_id}/displays/{display_id}"): None,
+    # ADR-0488: what a room does together, as the host's account reaches it
+    ("GET", "/api/rooms/{room_id}/pulse"): None,
+    ("GET", "/api/rooms/{room_id}/recap"): None,
+    ("POST", "/api/rooms/{room_id}/rounds"): {},
+    ("POST", "/api/rooms/{room_id}/rounds/{round_id}/close"): None,
+    ("POST", "/api/rooms/{room_id}/rounds/{round_id}/cancel"): None,
+    ("DELETE", "/api/rooms/{room_id}/requests/{request_id}/dedication"): None,
+    ("GET", "/api/crowd-marks"): None,
+    ("GET", "/api/room-recaps"): None,
 }
 # The scoped routes that name one resource. In his own workspace, Bob asking for Alice's
 # resource must get the same answer as asking for one that doesn't exist.

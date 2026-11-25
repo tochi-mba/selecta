@@ -151,7 +151,8 @@ class SocialMixin:
         where = (tables.plays.c.room_id == room["id"],
                  tables.plays.c.play_key == playing["play_key"])
         row = conn.execute(sa.select(tables.plays).where(*where)).mappings().first()
-        if row is not None or state.paused:
+        # paused at the very start is loaded, not played; paused part-way in has played
+        if row is not None or (state.paused and float(playing.get("offset_s") or 0.0) <= 0.0):
             return row
         before = conn.execute(sa.select(tables.plays.c.id).where(
             tables.plays.c.room_id == room["id"]).order_by(

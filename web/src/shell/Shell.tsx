@@ -21,6 +21,7 @@ import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock
 import { pageStart } from '../ui/focusReturn';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
+import { startKeycaps } from '../ui/keycaps';
 import { aboutOf, classicDestinations, describeRoute, destinationOf, destinationsFor, type MoreDestination, type ShellMode, type ShellRoute, workspaceTabs } from './manifest';
 import { PageLink } from './PageLink';
 import { supportHref } from '../support';
@@ -135,6 +136,9 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
   const rang = useRise(unseen);
   const asked = useRise(waiting);
   useThemeReveal(bar);
+  const barLit = useFeel('depth');
+  const barMoves = useFeel('motion');
+  useBarScroll(bar, barLit || barMoves);
   return (
     <header className="context-bar" ref={bar}>
       <nav className="crumbs" aria-label="Breadcrumb">
@@ -230,6 +234,36 @@ function useRise(count: number): number {
   return rises.current;
 }
 
+/** ADR-0477 (plan 3.0 "Scrolling", 3.2 "Context bar"): once the page scrolls under the context bar
+ * the bar turns to glass (`data-scrolled`), and once the page's own title has gone up under it the
+ * bar's last crumb, which names the same page, takes the title's place (`data-condensed`), so the
+ * name of the page never leaves the screen. One passive scroll listener, folded into a frame, that
+ * writes an attribute only when its answer changes; nothing listens while the feel is off. */
+function useBarScroll(bar: { current: HTMLElement | null }, wanted: boolean) {
+  useEffect(() => {
+    const element = bar.current;
+    if (!element || !wanted) return undefined;
+    let frame = 0;
+    let title: HTMLElement | null = null;
+    const look = () => {
+      frame = 0;
+      element.toggleAttribute('data-scrolled', window.scrollY > 0);
+      if (!title?.isConnected) title = element.closest('.content')?.querySelector<HTMLElement>('main h1, h1') ?? null;
+      const under = title ? title.getBoundingClientRect().bottom <= element.getBoundingClientRect().bottom : false;
+      element.toggleAttribute('data-condensed', under && window.scrollY > 0);
+    };
+    const later = () => { if (!frame) frame = window.requestAnimationFrame(look); };
+    look();
+    window.addEventListener('scroll', later, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', later);
+      window.cancelAnimationFrame(frame);
+      element.removeAttribute('data-scrolled');
+      element.removeAttribute('data-condensed');
+    };
+  }, [bar, wanted]);
+}
+
 type RevealDocument = Document & { startViewTransition?: (update: () => void) => { finished?: Promise<unknown> } | undefined };
 
 /** ADR-0477: choosing a theme from the bar's theme menu spreads the new colours out in a circle from
@@ -284,12 +318,27 @@ function PlayingBars() {
   return <span ref={bars} className="nav-bars" data-playing-bars="" aria-hidden="true"><i /><i /><i /></span>;
 }
 
+/** Whether the rail has been drawn once in this visit (see RailList). */
+let railArrived = false;
+
 /** The rail's list of places, with one mark that slides to the current place (feel/indicator.ts).
  * Its own component, so the mark is measured whenever the list is drawn, the Stage's return too.
  * A press on a place gives a phone's small tick. */
 function RailList({ children }: { children: ReactNode }) {
   const list = useRef<HTMLUListElement>(null);
   useSlidingIndicator(list, 'a[aria-current="page"], button[aria-current="page"]');
+  // ADR-0477: the first time the app's frame is drawn in a visit (after sign-in or set-up), its
+  // places come in one after another (styles/feel-shell.css). Never again in the same visit: the
+  // rail is passed hundreds of times a day, and the Stage's return must not replay it.
+  useLayoutEffect(() => {
+    const node = list.current;
+    if (railArrived || !node) return;
+    railArrived = true;
+    if (!feelOn('motion')) return;
+    node.setAttribute('data-feel-first', '');
+    [...node.children].filter((item) => !item.classList.contains(INDICATOR_CLASS))
+      .forEach((item, index) => (item as HTMLElement).style.setProperty('--i', String(index)));
+  }, []);
   return (
     <ul ref={list} data-indicator-shape="fill" onClick={(event) => { if ((event.target as Element).closest('a, button')) tick(); }}>
       {children}
@@ -458,6 +507,8 @@ export function Shell({
   const prefs = usePrefs();
   const on = useFlags();
   useKeyboardInset();
+  // the shortcuts list's keycaps light while their key is held (ui/keycaps.ts)
+  useEffect(() => startKeycaps(), []);
   useMusicFeel({ player, now, song, next });
   // playback starting and a new page are the heavy moments: a struggling device is noticed then
   const playing = now.phase === 'playing';

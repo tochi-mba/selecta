@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { feelOn } from '../feel/root';
+import { motionMs } from '../ui/exitMotion';
 import { clock } from '../lib';
 import type { EditOp, Ledger, LedgerSeam, ProposalSnapshot, PSeam, PSong, Selection } from '../lucy/types';
 import { bpmWords, energyWords, isReadyStatus, keyDistanceWords, keyWords, seamWords, tempoGapWords } from '../lucy/words';
@@ -82,6 +84,9 @@ function SeamRow({ seam, entry, readyOnly, number, into, onAsk, selected }: {
   );
 }
 
+/** A song the newest revision took out, and where it stood before. */
+type Gone = { song: PSong; at: number };
+
 export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, onAsk }: {
   snapshot: ProposalSnapshot;
   ledger: Ledger | undefined;
@@ -96,13 +101,46 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
   // Songs a new current revision really added glow once with a lit edge (lucy.css). The first list
   // shown, and an older revision being looked at, have nothing new in them. Worked out once per
   // revision, so a redraw never lights a row again.
-  const seen = useRef<{ snapshot: ProposalSnapshot | null; known: Set<string> | null; added: Set<string> }>({ snapshot: null, known: null, added: new Set() });
+  // Songs it really took out stay a moment, struck through, and fold away (only with the feel's
+  // motion on; otherwise they simply go, as before). They are hidden from assistive technology,
+  // because the summary above already says what was taken out.
+  const seen = useRef<{ snapshot: ProposalSnapshot | null; known: Set<string> | null; added: Set<string>; before: PSong[]; gone: Gone[] }>({ snapshot: null, known: null, added: new Set(), before: [], gone: [] });
   if (seen.current.snapshot !== snapshot) {
     const before = seen.current.known;
     const now = songs.map((song) => song.occurrence);
-    seen.current = { snapshot, known: new Set(now), added: new Set(before && editable ? now.filter((occurrence) => !before.has(occurrence)) : []) };
+    const kept = new Set(now);
+    const gone = before && editable && feelOn('motion')
+      ? seen.current.before.flatMap((song, at) => (kept.has(song.occurrence) ? [] : [{ song, at }]))
+      : [];
+    seen.current = { snapshot, known: kept, added: new Set(before && editable ? now.filter((occurrence) => !before.has(occurrence)) : []), before: songs, gone };
   }
   const added = seen.current.added;
+  const [, redraw] = useState(0);
+  const forget = (occurrence?: string) => {
+    seen.current.gone = occurrence ? seen.current.gone.filter((item) => item.song.occurrence !== occurrence) : [];
+    redraw((count) => count + 1);
+  };
+  const leaving = seen.current.gone.length;
+  useEffect(() => {
+    if (!leaving) return undefined;
+    // the fallback for when no animationend arrives (a hidden tab, or the motion turned off meanwhile)
+    const timer = window.setTimeout(() => forget(), motionMs('--motion-handoff', 200) * 2 + 400);
+    return () => window.clearTimeout(timer);
+    // only a new revision starts a new leaving; forget is rebuilt on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot, leaving > 0]);
+  const goneBefore = (index: number) => seen.current.gone.filter((item) => Math.min(item.at, songs.length) === index);
+  const ghost = ({ song }: Gone) => (
+    <li key={`gone-${song.occurrence}`} className="lucy-song-slot is-gone feel-collapse-out" aria-hidden="true" inert
+      onAnimationEnd={(event) => { if (event.target === event.currentTarget) forget(song.occurrence); }}>
+      <div className="lucy-song">
+        <span className="lucy-song-n" />
+        <div className="lucy-song-main">
+          <p className="lucy-song-name"><b dir="auto">{song.title || 'Untitled'}</b> <span className="soft" dir="auto">{song.artist || 'Unknown artist'}</span></p>
+        </div>
+      </div>
+    </li>
+  );
   const seamOf = (a: string, b: string) => snapshot.seams.find((seam) => seam.a_occ === a && seam.b_occ === b);
   const entryOf = (a: string, b: string) => ledger?.seams.find((seam) => seam.a_occ === a && seam.b_occ === b);
 
@@ -136,7 +174,8 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
         const nextSong = songs[index + 1];
         const songSelected = selection?.occurrence === song.occurrence;
         const name = song.title || 'Untitled';
-        return (
+        return [
+          ...goneBefore(index).map(ghost),
           <li key={song.occurrence} className="lucy-song-slot">
             {previous && !live && (
               <SeamRow
@@ -186,9 +225,10 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
                 </button>
               </div>
             </div>
-          </li>
-        );
+          </li>,
+        ];
       })}
+      {goneBefore(songs.length).map(ghost)}
     </ol>
   );
 }

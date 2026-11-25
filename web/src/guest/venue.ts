@@ -68,7 +68,11 @@ export function startVenue(root: HTMLElement, code: string): void {
     const button = h('button', { className: 'g-primary', type: 'button', onclick: () => void join(button as HTMLButtonElement) }, 'Join');
     card(h('p', { className: 'g-eyebrow' }, 'SelectaDJ requests'), h('h1', {}, 'Ask for a song'),
       h('p', {}, "You'll see what's playing here and can ask for songs. Nothing plays on your phone."),
-      error ? h('p', { className: 'g-error', role: 'alert' }, error) : null, button);
+      error ? h('p', { className: 'g-error', role: 'alert' }, error) : null, button,
+      h('details', { className: 'g-keeps' }, h('summary', {}, 'What SelectaDJ keeps'),
+        h('p', { className: 'g-small' }, 'A random guest id, a scrambled form of your network address, your nickname, your requests, and your votes and reactions. They are deleted 30 days after you were last here. Songs you keep stay on this phone only. No tracking.')),
+      // ADR-0488: songs kept on earlier visits are on this phone, so they show before joining
+      social.earlier());
   }
 
   async function join(button: HTMLButtonElement): Promise<void> {

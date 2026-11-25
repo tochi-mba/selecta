@@ -3,7 +3,10 @@
 // boundaries plus a list editor when `onChange` is given. Energy is a word and a pattern, never
 // colour alone; a text list repeats it all for screen readers. Reused by S2, S3 and S4.
 
-import { KeyboardEvent } from 'react';
+import { KeyboardEvent, PointerEvent, useRef } from 'react';
+import { tick } from '../../feel/haptics';
+import { feelOn } from '../../feel/root';
+import { flagOn } from '../../flags';
 import { DAYPART_COPY } from '../copy/onboarding';
 import { clock } from '../time';
 import type { Daypart } from '../types';
@@ -32,6 +35,13 @@ export const TEMPLATES: { id: 'cafe_day' | 'bar_evening' | 'restaurant'; name: s
 const STEP = 15;
 const ENERGIES: Daypart['energy'][] = ['calm', 'steady', 'lifted', 'peak'];
 
+/** Where a dragged boundary lands for a pointer `x` pixels across a bar `width` wide showing `span`
+ * minutes: on the nearest 15-minute step, and never past `min` or `max` (its neighbours' limits). */
+export function boundaryAt(x: number, width: number, span: number, min: number, max: number, step = STEP): number {
+  const raw = width > 0 ? (x / width) * span : min;
+  return Math.min(max, Math.max(min, Math.round(raw / step) * step));
+}
+
 /** The block playing at a minute of the day, or null between blocks. */
 export function daypartAt(dayparts: Daypart[], minutes: number): Daypart | null {
   return dayparts.find((part) => (minutes >= part.start && minutes < part.end) || (minutes + 1440 >= part.start && minutes + 1440 < part.end)) ?? null;
@@ -47,10 +57,12 @@ export function DaypartBar({ dayparts, label, nowMinutes, onChange, disabled }: 
   const words = (part: Daypart) => DAYPART_COPY.textEquivalent(part.name, DAYPART_COPY.energy[part.energy], clock(part.start), clock(part.end));
 
   const update = (id: string, change: Partial<Daypart>) => onChange?.(sorted.map((part) => (part.id === id ? { ...part, ...change } : part)));
-  const moveBoundary = (index: number, delta: number) => {
+  const limits = (index: number) => [sorted[index].start + STEP, sorted[index + 1].end - STEP] as const;
+  const setBoundary = (index: number, minutes: number) => {
     const left = sorted[index];
     const right = sorted[index + 1];
-    const at = Math.min(right.end - STEP, Math.max(left.start + STEP, left.end + delta));
+    const [min, max] = limits(index);
+    const at = Math.min(max, Math.max(min, minutes));
     const touching = left.end === right.start;
     onChange?.(sorted.map((part, i) => (i === index ? { ...part, end: at } : i === index + 1 && touching ? { ...part, start: at } : part)));
   };
@@ -58,7 +70,45 @@ export function DaypartBar({ dayparts, label, nowMinutes, onChange, disabled }: 
     const delta = event.key === 'ArrowRight' || event.key === 'ArrowUp' ? STEP : event.key === 'ArrowLeft' || event.key === 'ArrowDown' ? -STEP : event.key === 'PageUp' ? 60 : event.key === 'PageDown' ? -60 : 0;
     if (!delta) return;
     event.preventDefault();
-    moveBoundary(index, delta);
+    setBoundary(index, sorted[index].end + delta);
+  };
+
+  // Dragging a boundary (ADR-0477 plan 3.14), with app.feel_motion on; off, the boundaries move by
+  // keyboard and the list below, as before. The times snap to 15-minute steps as the pointer moves,
+  // each step a small tick on a phone. With motion on the handle follows the pointer between steps
+  // and glides onto the step it landed on when let go (forms.css); in Still it simply snaps. The
+  // offset is written on the handle alone, so nothing re-renders between steps.
+  const draggable = editable && flagOn('app.feel_motion');
+  const track = useRef<HTMLDivElement>(null);
+  const dragging = useRef<{ index: number; at: number } | null>(null);
+  const grab = (event: PointerEvent<HTMLDivElement>, index: number) => {
+    if (!draggable || event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.focus();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    event.currentTarget.dataset.dragging = '';
+    dragging.current = { index, at: sorted[index].end };
+  };
+  const follow = (event: PointerEvent<HTMLDivElement>, index: number) => {
+    const held = dragging.current;
+    const box = track.current?.getBoundingClientRect();
+    if (!held || held.index !== index || !box || box.width <= 0) return;
+    const [min, max] = limits(index);
+    const x = Math.min((max / span) * box.width, Math.max((min / span) * box.width, event.clientX - box.left));
+    const at = boundaryAt(x, box.width, span, min, max);
+    if (at !== held.at) {
+      held.at = at;
+      tick();
+      setBoundary(index, at);
+    }
+    if (feelOn('motion')) event.currentTarget.style.translate = `${Math.round(x - (at / span) * box.width)}px 0`;
+  };
+  const letGo = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    dragging.current = null;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    delete event.currentTarget.dataset.dragging;
+    event.currentTarget.style.translate = '';
   };
 
   return <figure className="bzf-daypart" aria-label={label}>
@@ -72,11 +122,13 @@ export function DaypartBar({ dayparts, label, nowMinutes, onChange, disabled }: 
         </div>)}
         {nowMinutes != null && <div className="bzf-now" style={{ left: pct(nowMinutes) }}><span>{DAYPART_COPY.now}</span></div>}
       </div>
-      {editable && <div className="bzf-boundaries">
+      {editable && <div ref={track} className="bzf-boundaries">
         {sorted.slice(0, -1).map((part, index) => <div key={part.id} role="slider" tabIndex={0} className="bzf-boundary"
           aria-label={DAYPART_COPY.boundary(part.name, sorted[index + 1].name)}
           aria-valuemin={part.start + STEP} aria-valuemax={sorted[index + 1].end - STEP} aria-valuenow={part.end} aria-valuetext={clock(part.end)}
-          style={{ left: pct(part.end) }} onKeyDown={(event) => boundaryKeys(event, index)}>
+          style={{ left: pct(part.end) }} onKeyDown={(event) => boundaryKeys(event, index)}
+          data-drag={draggable || undefined} onPointerDown={(event) => grab(event, index)} onPointerMove={(event) => follow(event, index)}
+          onPointerUp={letGo} onPointerCancel={letGo} onLostPointerCapture={letGo}>
           <span className="visually-hidden">{clock(part.end)}</span>
         </div>)}
       </div>}

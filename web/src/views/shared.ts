@@ -16,7 +16,8 @@ export type ViewProps = {
   draftPlace?: number | null;
   openDraft?: (id: number) => void;
   closeDraft?: () => void;
-  playDraft?: (id: number, from?: number) => Promise<void>;
+  /** `face`: the pressed row's mix face, which travels into Listen's cover (ADR-0477). */
+  playDraft?: (id: number, from?: number, face?: Element | null) => Promise<void>;
   renamedDraft?: (name: string) => void;
   refreshMix: () => void;
   setMixData: (data: MixData) => void;

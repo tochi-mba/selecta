@@ -908,7 +908,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
               mixName={data.mix.length ? data.name : newest?.name ?? ''} mixSongs={data.mix.length || (newest?.songs ?? 0)} devices={holdings.devices} thisDeviceId={playback.device?.id ?? null}
               mixIds={data.mix.length ? songOrder : newest?.ids ?? []} ids={holdings.ids}
               now={playback.serverNow()} asking={playOn.state}
-              onPlayOn={(device) => void playOn.ask(device, recipes.current() ?? newest?.mix_id ?? null)} notice={where.notice} onDismissNotice={where.clearNotice}
+              onPlayOn={(device) => void playOn.ask(device, recipes.current() ?? newest?.mix_id ?? null)} notice={where.notice} onDismissNotice={where.clearNotice} hosted={coexisting && on('cloud.hosted_render')}
             />
           );
         }

@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { setPrefs, Theme, usePrefs } from '../state/prefs';
 import { Menu } from './controls';
 import { Icon, IconName } from './Icon';
@@ -16,11 +17,15 @@ const iconFor = (theme: Theme): IconName => (theme === 'light' ? 'sun' : theme =
 export function ThemeMenu({ className = '' }: { className?: string }) {
   const { theme } = usePrefs();
   const current = THEMES.find((option) => option.id === theme);
+  // ADR-0477: a new theme's icon turns in where the old one was (sun into moon), keyed so it is a new
+  // element; only after a change, never when the bar is first drawn (styles/feel-shell.css)
+  const first = useRef(theme);
+  const changed = theme !== first.current;
   return (
     <Menu
       className={`theme-menu ${className}`}
       title={`Theme: ${current?.label}`}
-      label={<><Icon name={iconFor(theme)} /><span className="visually-hidden">Theme: {current?.label}</span></>}
+      label={<><Icon key={theme} name={iconFor(theme)} className={changed ? 'feel-swap' : undefined} /><span className="visually-hidden">Theme: {current?.label}</span></>}
     >
       {THEMES.map((option) => (
         <button key={option.id} role="menuitemradio" aria-checked={theme === option.id} onClick={() => setPrefs({ theme: option.id })}>

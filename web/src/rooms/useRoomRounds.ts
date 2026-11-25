@@ -49,14 +49,15 @@ export function useRoomRounds({ api, workspaceId, roomId, enabled, isSpeaker, pl
 
     const offer = async (openedBy: string) => {
       const { mix, player } = playing.current;
-      if (!speaker.current() || player.state.phase !== 'playing' || !mix.length) return;
+      if (!speaker.current() || (player.state.phase !== 'playing' && player.state.phase !== 'paused') || !mix.length) return;
       const from = mix[Math.min(Math.max(0, player.state.position), mix.length - 1)]?.song_id ?? null;
       const [pool, pairs, marks] = await Promise.all([
         request<{ songs: { song_id: number; artist?: string }[] }>('/mix/suggest?limit=400').then((answer) => answer.songs, () => []),
         request<MeasuredPair[]>('/discoveries').catch(() => [] as MeasuredPair[]),
         api<{ marks: CrowdMark[] }>('/crowd-marks', {}, workspaceId).then((answer) => answer.marks, () => [] as CrowdMark[]),
       ]);
-      const songIds = pickCandidates({ pool, from, pairs, marks });
+      // never a song the mix already holds, whatever the suggestions say
+      const songIds = pickCandidates({ pool, from, pairs, marks, avoid: mix.map((song) => song.song_id) });
       if (!live || songIds.length < 2) return;
       // refused when another device beat this one to it, or the songs can't be played: either
       // way the room's pulse says what stands

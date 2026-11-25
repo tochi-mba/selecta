@@ -12,11 +12,11 @@ import hashlib
 import json
 from types import SimpleNamespace
 
-from selecta import hosted_render
+from selecta import hosted_export, hosted_render
 from selecta.config import ANALYSIS_VERSION
 from selecta.scheduling.policy import Lane
 from selecta.seam_kinds import RENDER_VERSION
-from selecta.storage.keys import derived_key
+from selecta.storage.keys import derived_key, original_key
 from selecta.work import cloud_ports
 from selecta.workers.engine_handlers import EXPORT_VERSION
 
@@ -56,8 +56,25 @@ def test_a_transition_job_declares_the_namespace_the_worker_publishes_into():
     assert derived_key(WORKSPACE, "seam", published, ATTEMPT, "seam.flac").startswith(_prefix(spec))
 
 
-def test_the_export_hash_is_the_one_the_export_worker_publishes_under():
-    shas = [A["sha256"], B["sha256"]]
-    published = _worker_hash({"songs": shas, "analysis": ANALYSIS_VERSION,
-                              "render": RENDER_VERSION, "export": EXPORT_VERSION})
-    assert hosted_render.export_hash(shas) == published
+def test_an_export_job_declares_the_namespace_the_export_worker_publishes_into():
+    """The export names its exact timeline; its idempotency key and declared output are the
+    worker's own hash of that timeline (workers.export_join.export_hash, written out here)."""
+    timeline = [
+        {"kind": "song", "key": f"w/{WORKSPACE}/playback/{'c' * 64}/attempts/{ATTEMPT}/p.flac",
+         "sha256": "c" * 64, "from_s": 0.0, "seconds": 150.0, "gain_db": -3.5},
+        {"kind": "seam", "key": f"w/{WORKSPACE}/seam/{'d' * 64}/attempts/{ATTEMPT}/seam.flac",
+         "sha256": "d" * 64, "from_s": 0.0, "seconds": 16.0, "gain_db": 0.0},
+        {"kind": "song", "key": original_key(WORKSPACE, A["id"]), "sha256": A["sha256"],
+         "from_s": 20.0, "seconds": 160.0, "gain_db": 0.0},
+    ]
+    spec = hosted_export.export_spec(WORKSPACE, timeline, None)
+    published = _worker_hash({"timeline": [
+        ["song", "c" * 64, 0.0, 150.0, -3.5], ["seam", "d" * 64, 0.0, 16.0, 0.0],
+        ["song", A["sha256"], 20.0, 160.0, 0.0]], "export": EXPORT_VERSION})
+    assert spec.input_ref["output"] == {"kind": "export", "input_hash": published}
+    assert spec.idempotency_key == f"hosted-export:{published}"
+    assert spec.input_ref["timeline"] == timeline
+    assert spec.input_ref["objects"] == [part["key"] for part in timeline]
+    assert derived_key(WORKSPACE, "export", published, ATTEMPT, "mix.flac").startswith(
+        _prefix(spec))
+    assert EXPORT_VERSION >= 2  # 1 re-planned the set; its files are not this export

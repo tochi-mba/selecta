@@ -271,7 +271,10 @@ def add_routes(app, ctx) -> None:
             try:
                 # SF-0246-06: the decoded samples' checksum is kept with the frozen revision, so
                 # the file can be checked against exactly what this job froze
-                checksum = verify_export(exports / job["name"], made["seconds"])
+                # ADR-0477: the same decode measures the written file's outline, which the
+                # finished-file card draws, so the waveform shown is the file's own
+                shape: list[float] = []
+                checksum = verify_export(exports / job["name"], made["seconds"], shape)
             except (OSError, ValueError):
                 (exports / job["name"]).unlink(missing_ok=True)
                 raise ValueError(
@@ -286,6 +289,7 @@ def add_routes(app, ctx) -> None:
                 "ready",
                 seconds=made["seconds"],
                 checksum=checksum or None,
+                shape=shape or None,
                 finished_at=time.time(),
             )
         except Exception as problem:  # noqa: BLE001 - it becomes the job's reason, not a lost thread

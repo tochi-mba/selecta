@@ -2,6 +2,7 @@ import { CSSProperties, ReactNode, useEffect, useId, useState } from 'react';
 import { ApiError } from '../api';
 import { length } from '../lib';
 import { lucy, lucyTransport } from '../lucy/client';
+import { flyInto } from '../lucy/flight';
 import type { ProposalState } from '../lucy/reducer';
 import type { Diff, EditOp, Phases, ProposalSnapshot, Revision, Rule, Selection } from '../lucy/types';
 import { countsWords, EXAMPLE_PROMPTS, isReadyStatus, plural, whenWords } from '../lucy/words';
@@ -38,7 +39,12 @@ export function ExamplePrompts({ onPick, prompts }: { onPick: (text: string) => 
   return (
     <div className="lucy-examples" role="group" aria-label="Example requests" data-stagger>
       {shown.map((prompt, index) => (
-        <button key={prompt} type="button" data-lift style={{ '--i': index } as CSSProperties} onClick={() => onPick(prompt)}>{prompt}</button>
+        <button key={prompt} type="button" data-lift style={{ '--i': index } as CSSProperties} onClick={(event) => {
+          const from = event.currentTarget;
+          onPick(prompt);
+          // the words are already in the box; with the feel's motion on a copy travels there too
+          flyInto(from, () => document.querySelector('.lucy-composer textarea'), prompt);
+        }}>{prompt}</button>
       ))}
     </div>
   );

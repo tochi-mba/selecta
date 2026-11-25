@@ -43,7 +43,7 @@ from selecta.rooms.api_common import (
     too_many,
 )
 from selecta.rooms.errors import Refusal, RoomError
-from selecta.rooms.host_features import HostFeatures, offered
+from selecta.rooms.host_features import HostFeatures
 from selecta.rooms.requesting import BATCH_MAX
 from selecta.rooms.schema import room_guests
 from selecta.rooms.service import Rooms
@@ -177,8 +177,9 @@ def install_routes(
 
     def host_allows(ref: GuestRef, flag_id: str) -> bool:
         """Whether the host's account has `flag_id` on now, as the host's own site decides it
-        (`host_features`: every guest-facing flag decided together, remembered for 5 s)."""
-        return features.on(ref.workspace_id, flag_id)
+        (`host_features`: every guest-facing flag decided together). Decided again on each
+        call: a host who loses a feature loses it for their guests at once."""
+        return features.on(ref.workspace_id, flag_id, fresh=True)
 
     def voting(ref: GuestRef) -> None:
         if not host_allows(ref, "rooms.votes"):
@@ -198,11 +199,7 @@ def install_routes(
         # ADR-0488: which of the five the room offers, and this guest's own taps and vote. A
         # screen only counts while the host's account may pair one.
         answer["screen"] = seen.screen and host_allows(ref, "rooms.display")
-        live = seen.settings is not None and seen.room_status.value != "ended"
-        answer["social"] = (
-            offered(seen.settings, features.of(ref.workspace_id)) if live else {}
-        )
-        answer.update(social.mine(seen, answer["social"]))
+        answer.update(social.mine(ref))
         # ADR-0475: a browser-first room offers only the speaker's songs, so the guest page says
         # when there is no speaker yet, or it is reconnecting
         music = getattr(rooms().catalog, "music_state", None)

@@ -101,6 +101,18 @@ Moderation: approve/pass requests, remove a guest, ban a guest for the room's li
 - **Guest privacy**: a short notice on the join page; data kept is the guest id, hashed IP, nickname and requests, deleted 30 days after the room closes; no tracking; guests may be children, so nothing is profiled.
 
 
+**What a room does together (ADR-0488, proposed 2026-11-25).** Five things beyond asking for songs, each with its own flag and its own room setting, in party rooms and in venue rooms:
+
+| Feature | What a guest does | Flag |
+|---|---|---|
+| Pick the next song | Votes once between two to four songs the room is offered; the winner goes into the mix | `rooms.rounds` |
+| Keep the songs you liked | Taps a heart; the song is saved on their own phone and nowhere else | `rooms.keeps` |
+| Reactions | Loves the playing song, or the blend into it; the room sees counts, never who | `rooms.reactions` |
+| Dedications | Puts one line from a fixed list on their own waiting request | `rooms.dedications` |
+| Tonight in numbers | Sees the room's totals once it has ended | `rooms.recap` |
+
+A phone only ever sends a tap, a vote for an offered song or the id of a listed line, so the "no free text anywhere" rule above still holds. Every feature works with phones alone: a paired screen that has looked in the last 30 seconds adds a shared view, and the host is offered the big-screen settings only while a screen is paired. Phones and screens read the room's pulse, a small answer made once a second per room, by polling. Reactions, votes and plays are deleted with the guest data after 30 days; the recap and the crowd marks (what rooms loved, for the planner) hold no guest data and stay with the host. Venue rooms have the same five behind `business.rooms.*` flags, with the server offering only songs the zone's content rules allow, and a patron screen paired at `/display` (`business.rooms.display`).
+
 ### 11A.3 Current implementation
 
 What the cloud app does today. The domain rules are in `src/selecta/playback/` and `src/selecta/rooms/`; the routes are installed by `rooms/wiring.py` from `api_cloud.create_cloud_app`.

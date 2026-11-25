@@ -12,7 +12,7 @@ import { MixScope, useMixPath } from './mixScope';
 import { words } from '../copy';
 import { Meter } from '../ui/Meter';
 import { DrawnTick, RollingCount, useFeelOn } from './feelPieces';
-import { MomentLayer, plainCount, useReachedMoment } from './feelLocal';
+import { ExportShape, MomentLayer, plainCount, useReachedMoment } from './feelLocal';
 
 /** Is this job a file of the mix exactly as it is now? */
 function sameVersion(job: ExportJob, mix: MixItem[]): boolean {
@@ -132,9 +132,9 @@ export function ExportPanel(props: {
         </li>
         <li aria-current={stage === 'encoding' ? 'step' : undefined} data-done={passed(1) ? '' : undefined}>
           {passed(1) && <DrawnTick size="compact" className="export-stage-tick" />}
+          {/* how far the file has been written is not reported, so this stage carries only the
+              stepper's lit edge, never a bar that would have to guess */}
           Create the FLAC file
-          {/* how long the file takes to write is not reported, so this bar only says it is going */}
-          {feel && stage === 'encoding' && <Meter className="export-stage-meter" label="Creating the FLAC file" showLabel={false} valueText="Creating the FLAC file" />}
         </li>
         <li aria-current={file ? 'step' : undefined}>Download your mix</li>
       </ol>
@@ -165,6 +165,8 @@ export function ExportPanel(props: {
           Ready{file.seconds != null ? `, ${length(file.seconds)} long` : ''}: <a href={`/api/exports/${encodeURIComponent(file.name)}`} download className={feel ? 'button primary export-download' : undefined} onClick={() => { if (feel) setPressed(file.name); }}>download {file.name}</a>
           {/* the press handed the file to the browser's own download; the tick says it was taken */}
           {feel && pressed === file.name && <DrawnTick size="compact" className="export-download-tick" />}
+          {/* the written file's own waveform, measured when it was verified */}
+          {feel && <ExportShape shape={file.shape} />}
         </p>
       )}
       {(!file || changedSince) && (

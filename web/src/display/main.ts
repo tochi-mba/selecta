@@ -27,8 +27,9 @@ type View = {
   pulse?: Pulse;
   /** Tonight in numbers, in words, for ten minutes after the room ends; first line is its title. */
   recap_lines?: string[];
-  /** A venue zone's screen: the line staff wrote to welcome guests. */
-  branding?: { welcome?: string | null };
+  /** A venue zone's screen: the venue's logo, its welcome line, and its accent colour with the
+   * ink that reads on it (sent only when the server found the pair readable). */
+  branding?: { welcome?: string | null; logo_url?: string | null; accent?: string | null; accent_ink?: string | null };
 };
 /** The second screen says what guests are told while the room has no device playing. */
 const MUSIC_WORDS: Record<string, { title: string; more: string }> = {
@@ -102,7 +103,7 @@ function drawPairing(): void {
       h('h1', {}, 'Pair this screen'),
       h('ol', { className: 'd-steps' },
         step('1', 'Open your room in SelectaDJ'),
-        step('2', 'Find Big screen'),
+        step('2', 'Find Display screens'),
         step('3', 'Type this code')),
       // one box a letter, so it reads from the sofa; the label says it letter by letter
       h('p', { className: 'd-sr' }, `Pairing code ${pairingCode.split('').join(' ')}`),
@@ -172,7 +173,10 @@ function drawRoom(view: View): void {
   // ADR-0477: the whole screen takes the playing song's colour
   paintAmbient(now, view.music_paused);
   patch(document.getElementById('d-info') as HTMLElement,
-    h('header', { className: 'd-top', 'data-key': 'top' }, brand(), h('h1', {}, view.room_name ?? 'Room'), view.branding?.welcome ? h('p', { className: 'd-muted' }, view.branding.welcome) : null),
+    h('header', { className: 'd-top', 'data-key': 'top' }, brand(),
+      view.branding?.logo_url ? h('img', { className: 'd-logo', src: view.branding.logo_url, alt: '' }) : null,
+      h('h1', { className: view.branding?.accent && view.branding.accent_ink ? 'd-accented' : undefined, style: view.branding?.accent && view.branding.accent_ink ? `background:${view.branding.accent};color:${view.branding.accent_ink}` : undefined }, view.room_name ?? 'Room'),
+      view.branding?.welcome ? h('p', { className: 'd-muted' }, view.branding.welcome) : null),
     h('div', { className: 'd-playing', 'data-key': 'playing', 'data-on': playing },
       h('h2', { 'data-key': 'now-title' }, h('span', { className: 'd-eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), waitingOn ? (view.music === 'reconnecting' ? 'Paused' : 'Waiting') : now && view.music_paused ? 'Paused' : 'Now playing'),
       h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? view.music ?? 'none'}` }, now ? now.title : waitingOn ? waitingOn.title : 'Nothing playing yet', h('span', { className: 'd-by' }, now ? now.artist : waitingOn ? waitingOn.more : 'Scan the code and pick the first song.')),

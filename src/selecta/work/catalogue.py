@@ -53,7 +53,8 @@ CATALOGUE = MappingProxyType(
             JobType(
                 "mix.prepare", INTERNAL, Lane.STANDARD, "core.make_a_mix", 0.0, 0.0, workflow=True
             ),
-            JobType("export.render", EXPORT, Lane.STANDARD, "cloud.hosted_media", 7_200.0, 300.0),
+            # joins heard parts (export_join): about 8 s for a 9 minute mix, plus downloads
+            JobType("export.render", EXPORT, Lane.STANDARD, "cloud.hosted_media", 1_800.0, 60.0),
             JobType(
                 "discover.sweep", CPU_HEAVY, Lane.SPECULATIVE, "discover.word_links", 900.0, 60.0
             ),

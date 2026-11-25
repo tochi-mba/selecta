@@ -180,10 +180,10 @@ class VotesMixin:
 
     def maybe_want_round(self, conn: Connection, room, now: float, online: int,
                          chosen: dict[str, Any]) -> None:
-        """Start a vote by itself: the zone set "every N songs", someone is here, nothing is
+        """Start a vote by itself: the zone set "every N songs", two guests are here, nothing is
         open or still waiting to play, this song has just started and it is the Nth."""
         every = int(chosen["round_every_songs"])
-        if every <= 0 or online <= 0:
+        if every <= 0 or online < rules.MIN_VOTERS:
             return
         last = self._latest_round(conn, room)
         since = 0.0
@@ -287,8 +287,8 @@ class VotesMixin:
                 tables.round_options.c.round_id == current["id"])).mappings()]
         playable = [o.song_id for o in options if self._fits_now(conn, room, o.song_id, now)]
         won = rules.winner(current["id"], options, playable)
-        values: dict[str, Any] = {"status": rules.VOID, "outcome": "no_votes" if not sum(
-            o.votes for o in options) else "no_song"}
+        values: dict[str, Any] = {"status": rules.VOID, "outcome": rules.void_reason(
+            sum(o.votes for o in options))}
         if won is not None:
             waiting = conn.execute(sa.select(requests_t).where(
                 requests_t.c.room_id == room["id"], requests_t.c.song_id == won.song_id,
@@ -323,6 +323,39 @@ class VotesMixin:
             tables.rounds.c.id == current["id"], tables.rounds.c.status == rules.OPEN).values(
             closed_at=now, **values))
         self.forget_pulse(room["id"])
+
+    def forget_guest_social(self, conn: Connection, room, guest_id: str) -> None:
+        """A guest staff removed or banned no longer has a say: their vote in the open round
+        goes, and so do their taps, with the plays they were on counted again."""
+        current = self._open_round(conn, room)
+        if current is not None and conn.execute(tables.round_votes.delete().where(
+                tables.round_votes.c.round_id == current["id"],
+                tables.round_votes.c.guest_id == guest_id)).rowcount:
+            self._recount_round(conn, current["id"])
+        touched = set(conn.execute(sa.select(tables.reactions.c.play_id).where(
+            tables.reactions.c.room_id == room["id"],
+            tables.reactions.c.guest_id == guest_id)).scalars())
+        if touched:
+            conn.execute(tables.reactions.delete().where(
+                tables.reactions.c.room_id == room["id"],
+                tables.reactions.c.guest_id == guest_id))
+            for kind, column in (("love", tables.plays.c.loves), ("blend", tables.plays.c.blends)):
+                count = sa.select(sa.func.count()).select_from(tables.reactions).where(
+                    tables.reactions.c.play_id == tables.plays.c.id,
+                    tables.reactions.c.kind == kind).scalar_subquery()
+                conn.execute(tables.plays.update().where(
+                    tables.plays.c.id.in_(sorted(touched))).values({column.name: count}))
+        self.forget_pulse(room["id"])
+
+    def queue_dedications(self, conn: Connection, request_ids: list[str]) -> dict[str, str]:
+        """The dedication on each of these requests, in words, for the staff queue."""
+        from selecta.roomsocial import dedications as lines
+
+        if not request_ids or not self.flag_on("business.rooms.dedications"):
+            return {}
+        return {row.request_id: lines.words_of(row.line) or "" for row in conn.execute(
+            sa.select(tables.dedications.c.request_id, tables.dedications.c.line).where(
+                tables.dedications.c.request_id.in_(request_ids)))}
 
     # ---- the recap -----------------------------------------------------------------------
 

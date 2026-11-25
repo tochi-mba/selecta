@@ -54,6 +54,14 @@
 .bzf-boundaries { position: relative; height: var(--control-height); margin-top: calc(-1 * var(--space-2)); }
 .bzf-boundary { position: absolute; top: 0; width: 24px; height: var(--control-height); transform: translateX(-12px); border: 1px solid var(--edge-interactive); border-radius: var(--radius-sm); background: var(--surface-control, var(--surface-raised)); cursor: ew-resize; }
 .bzf-boundary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Dragging a boundary (DaypartBar, ADR-0477 plan 3.14). data-drag is set only with app.feel_motion
+   on, so with the flag off the handles behave as before. The times snap to 15-minute steps; with
+   motion on the handle follows the pointer between them and, let go, glides onto its step on the
+   gentle spring (no overshoot: a schedule is a precise drop). While held it floats a little. */
+.bzf-boundary[data-drag] { touch-action: none; }
+:where(:root[data-feel~='motion']) .bzf-boundary[data-drag] { transition: translate var(--motion-spring-snappy) var(--spring-gentle); }
+:where(:root[data-feel~='motion']) .bzf-boundary[data-dragging] { transition: none; }
+:where(:root[data-feel~='depth']) .bzf-boundary[data-dragging] { box-shadow: var(--shadow-float); }
 .bzf-daypart-list { width: 100%; border-collapse: collapse; }
 .bzf-daypart-list th, .bzf-daypart-list td { padding: var(--space-1) var(--space-2); text-align: start; border-bottom: var(--separator) solid var(--edge-decorative); }
 .bzf-daypart-list input:not([type]), .bzf-daypart-list select { width: 100%; min-width: 0; }

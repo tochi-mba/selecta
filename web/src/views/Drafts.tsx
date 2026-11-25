@@ -92,7 +92,7 @@ function RenderLine({ inLine, current, onMove, onLeave }: {
  * row that's handed the same draft as last time doesn't redraw. */
 type RowActions = {
   open: (id: number) => void;
-  play: (id: number) => Promise<void> | void;
+  play: (id: number, face?: Element | null) => Promise<void> | void;
   rename: (id: number) => void;
   renamed: () => void;
   duplicate: (draft: DraftInfo) => void;
@@ -124,9 +124,12 @@ const DraftRow = memo(function DraftRow({ draft, twin, failure, renaming, editor
   const facts = draftReadiness(draft);
   const who = twin ? `${draft.name} (draft ${draft.id})` : draft.name;
   const signature = useMemo(() => (draft.song_ids ?? []).map((song_id) => ({ song_id })), [draft.song_ids]);
+  // the face Play hands on, named only for that one transition (a list never names every row's
+  // face at once: a repeated name makes the browser give the transition up)
+  const tile = useRef<HTMLSpanElement>(null);
   return (
     <li className={`${draft.place ? 'draft in-line' : 'draft'}${fresh ? ' feel-flash' : ''}`} data-lift="row">
-      {face && <MixArt seed={`draft-${draft.id}`} songs={signature} />}
+      {face && <MixArt seed={`draft-${draft.id}`} songs={signature} tileRef={tile} />}
       <div className="draft-name">
         {renaming ? (
           <RenameDraft id={draft.id} name={draft.name} onDone={actions.renamed} />
@@ -157,7 +160,7 @@ const DraftRow = memo(function DraftRow({ draft, twin, failure, renaming, editor
       </div>
       <div className="row wrap draft-actions">
         {editor && <button className={primary ? 'draft-edit primary' : 'draft-edit'} aria-label={`Edit ${who}`} onClick={() => actions.open(draft.id)}>Edit</button>}
-        <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${who}`} run={() => actions.play(draft.id)}>
+        <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${who}`} run={() => actions.play(draft.id, tile.current)}>
           Play
         </Action>
         <Menu title={`More actions for ${who}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {who}</span></>}>
@@ -343,7 +346,7 @@ export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
   latest.current = { openDraft, playDraft, prioritize, duplicate, act };
   const actions = useMemo<RowActions>(() => ({
     open: (id) => latest.current.openDraft?.(id),
-    play: (id) => latest.current.playDraft?.(id),
+    play: (id, face) => latest.current.playDraft?.(id, 0, face),
     rename: (id) => setRenaming(id),
     renamed: () => {
       setRenaming((was) => {

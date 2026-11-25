@@ -11,6 +11,8 @@ deletes anything):
 - Orphans: feature files for songs no longer in the library, seams for songs that have gone or
   rendered by an older engine (their keys can never be asked for again), and stem windows whose
   source file has gone or changed since.
+- Covers: the song files' own pictures kept for a file version no song has any more, and
+  pictures no kept file names (ADR-0478; reading them again is cheap and automatic).
 - Age: stem windows nobody has used for `STEM_MAX_AGE_S`. They are the largest thing cached
   (four lossless stems per window) and are only needed while a seam is being made.
 - Duplicates: identical seam clips under two keys are joined by a hard link, so the disk holds
@@ -322,6 +324,57 @@ def _song_orphans(settings: Settings, songs: set[int], swept: Swept) -> None:
             _remove(folder, reason, swept)
 
 
+def _old_covers(settings: Settings, conn: sqlite3.Connection, now: float, swept: Swept) -> None:
+    """The song files' own covers (ADR-0478 FL-0478-02, `<home>/art/v1/`): a marker per file
+    version, and each distinct picture once. A marker whose file version no song has any more (the
+    file was retagged, replaced or left the library) goes, then every picture no remaining marker
+    names. A song's version is known both from the library's record and, where the file can be
+    reached, from the file itself, so a drive that is unplugged keeps its covers. Anything younger
+    than CRASH_GRACE_S is left, since a scan may be writing it now. Whatever goes is read again
+    from the file the next time it is asked for, so nothing here can lose a cover for good."""
+    from selecta import longpaths
+    from selecta.library import art
+
+    root = settings.home / "art" / art.VERSION
+    markers, pictures = root / "files", root / "pictures"
+    if not markers.is_dir() and not pictures.is_dir():
+        return
+    live: set[str] = set()
+    for song_path, size, mtime in conn.execute("SELECT path, size, mtime FROM songs"):
+        with contextlib.suppress(TypeError, ValueError):
+            live.add(art.file_key(song_path, int(size), float(mtime)))
+        try:
+            stat = longpaths.stat(Path(song_path))
+        except (OSError, ValueError):
+            continue
+        live.add(art.file_key(song_path, stat.st_size, stat.st_mtime))
+    named: set[str] = set()
+    if markers.is_dir():
+        for marker in markers.iterdir():
+            if not marker.is_file() or not _within(markers, marker):
+                continue
+            young = _age(marker, now) <= CRASH_GRACE_S
+            if marker.name.endswith(".part"):
+                if not young:
+                    _remove(marker, "crash leftover", swept)
+                continue
+            if marker.name in live or young:
+                with contextlib.suppress(OSError, UnicodeDecodeError):
+                    named.add(marker.read_text("ascii").partition(" ")[0].strip())
+                continue
+            _remove(marker, "cover of a file that changed or left", swept)
+    if pictures.is_dir():
+        for picture in pictures.iterdir():
+            if not picture.is_file() or not _within(pictures, picture):
+                continue
+            if _age(picture, now) <= CRASH_GRACE_S:
+                continue
+            if picture.name.endswith(".part"):
+                _remove(picture, "crash leftover", swept)
+            elif picture.name.partition(".")[0] not in named:
+                _remove(picture, "cover no song uses", swept)
+
+
 def _old_stems(settings: Settings, kept: _Kept, now: float, swept: Swept) -> None:
     stems = settings.home / "stems"
     if not stems.is_dir():
@@ -426,6 +479,7 @@ def tidy(settings: Settings, now: float | None = None) -> Swept:
         try:
             with contextlib.closing(sqlite3.connect(settings.db_path, timeout=5.0)) as conn:
                 _orphans(settings, conn, kept, now, swept)
+                _old_covers(settings, conn, now, swept)
         except sqlite3.Error:
             pass  # no library to compare against yet; the orphans wait for the next start
     _old_stems(settings, kept, now, swept)

@@ -112,16 +112,26 @@ def test_a_seam_renders_from_two_analysis_artifacts(library):
     assert rate == SR and audio.shape[1] == 2 and np.max(np.abs(audio)) > 0.05
 
 
-def test_an_export_renders_the_whole_mix_as_flac(library):
+def test_an_export_joins_the_parts_of_the_mix_as_flac(library):
+    """Export renders nothing: it joins the timeline's parts (here the two originals back to
+    back, a straight change) into one 24-bit FLAC (workers.export_join)."""
     store, tmp_path, sides, run = library
-    job = _job("export.render", {"songs": [_side(sides[0]), _side(sides[1])]})
+    timeline = [
+        {"kind": "song", "key": sides[0]["source_key"], "sha256": sides[0]["source_sha256"],
+         "from_s": 0.0, "seconds": 60.0, "gain_db": -2.0},
+        {"kind": "song", "key": sides[1]["source_key"], "sha256": sides[1]["source_sha256"],
+         "from_s": 10.0, "seconds": 50.0, "gain_db": 0.0},
+    ]
+    job = _job("export.render", {"timeline": timeline})
     ctx = _ctx(store, tmp_path, job, "attempt-export")
     result = run["export.render"](job, ctx)
     [output] = ctx.artifacts.outputs
-    assert output.kind == "export" and result["songs"] == 2
+    assert output.kind == "export" and result["songs"] == 2 and result["parts"] == 2
+    assert output.provenance["versions"] == {"export": engine_handlers.EXPORT_VERSION}
     with store.open_input(result["keys"][0]) as path:
         info = sf.info(path)
-    assert info.format == "FLAC" and info.duration > 150
+    assert info.format == "FLAC" and info.subtype == "PCM_24"
+    assert info.frames == 110 * SR
 
 
 def test_a_source_that_does_not_match_its_checksum_is_refused(library):
@@ -141,9 +151,12 @@ def test_inputs_from_another_workspace_are_refused(library):
 
 
 @pytest.mark.parametrize("ref", [
-    {"songs": []}, {"songs": [{"source_sha256": "a" * 64}]}, {"songs": "x"}, [],
+    {"timeline": []}, {"timeline": [{"kind": "song", "key": "k", "sha256": "a" * 64}]},
+    {"timeline": "x"}, [],
+    # an export queued before exports were joined from the heard parts
+    {"songs": [{"source_sha256": "a" * 64}, {"source_sha256": "b" * 64}]},
 ])
-def test_an_export_needs_two_or_more_songs(library, ref):
+def test_an_export_needs_a_timeline_of_two_or_more_parts(library, ref):
     store, tmp_path, _, run = library
     job = _job("export.render", ref)
     with pytest.raises(InputInvalid):

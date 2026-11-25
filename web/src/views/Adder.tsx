@@ -6,6 +6,7 @@ import { Action, Problem, Skeleton } from '../ui/controls';
 import { TransitionsWorkedOutLive } from './liveTransitions';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { useMixPath } from './mixScope';
+import { flyInto } from './feelEditor';
 
 /** What could go at this place in the mix: the best fits first, and the same order when searching. A
  * song that can't go in yet says why, and how to get it ready. */
@@ -29,12 +30,17 @@ export function Adder(props: {
   // MI-0138-08: the chosen song is marked at once, and only goes in when the server has added it
   const [adding, setAdding] = useState<Suggestion | null>(null);
   const addingNow = useRef(false);
+  const list = useRef<HTMLUListElement>(null);
   const add = async (song: Suggestion) => {
     if (addingNow.current) return;
     addingNow.current = true;
     setAdding(song);
+    // the feel (ADR-0477): where the chosen suggestion was, so the new row can fly in from there
+    const from = list.current?.querySelector(`[data-suggestion="${song.song_id}"]`)?.getBoundingClientRect();
     try {
       await onAdd(song);
+      // only the row that really holds this song at this place: a refused add flies nothing
+      flyInto(from, () => document.querySelector(`[data-position="${position}"][data-song-key^="${song.song_id}#"]`));
     } finally {
       addingNow.current = false;
       setAdding(null);
@@ -95,9 +101,9 @@ export function Adder(props: {
       {songs?.length === 0 && (
         <p className="hint">{query ? 'Nothing matches that.' : unranked ? 'Every song that plays on this device is already in the mix. Connect more music in Library to add others.' : 'Nothing to suggest here yet.'}</p>
       )}
-      <ul className="suggestions" data-stagger="">
+      <ul className="suggestions" data-stagger="" ref={list}>
         {songs?.map((song, index) => (
-          <li key={song.song_id} style={{ '--i': index } as CSSProperties}>
+          <li key={song.song_id} style={{ '--i': index } as CSSProperties} data-suggestion={song.song_id}>
             <button className="suggestion" disabled={!song.analysed} aria-busy={adding?.song_id === song.song_id || undefined} onClick={() => void add(song)}>
               <b>{song.title}</b>
               <span>{song.artist}</span>

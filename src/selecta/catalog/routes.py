@@ -12,6 +12,9 @@ is off. Tenant routes are scoped to the signed-in person's workspace and check t
 - `GET /api/catalog/songs/{song_id}/candidates` and `PUT /api/catalog/songs/{song_id}/choice`:
   "Wrong cover?".
 - `GET` and `PUT /api/catalog/settings`: the person's "Look up covers and details on the web".
+- `GET /api/admin/catalog/art?q=`: staff find catalogue images by art or release id, or by song
+  or release title or artist, with whether each is hidden (`legal.takedowns.manage`, the same
+  permission as hiding, since only the people who may hide need to find).
 - `POST /api/admin/catalog/art/{art_id}/{command}`: staff hide or unhide a catalogue image with a
   reason, audited like a takedown (`legal.takedowns.manage`).
 
@@ -28,7 +31,7 @@ from collections.abc import Callable
 from typing import Annotated, Any
 
 import sqlalchemy as sa
-from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Engine
 
@@ -48,6 +51,7 @@ ROUTES = (
     "PUT /api/catalog/songs/{song_id}/choice",
     "GET /api/catalog/settings",
     "PUT /api/catalog/settings",
+    "GET /api/admin/catalog/art",
     "POST /api/admin/catalog/art/{art_id}/{command}",
 )
 # An hour, not a week and never immutable: a hidden (taken down) image stops being served at
@@ -193,6 +197,23 @@ def install_routes(
         workspace_id, user_id = who(request, claims, WorkspaceAction.LIBRARY_READ)
         with transaction(engine, workspace_id) as conn:
             return {"lookups": service.set_allowed(conn, user_id, body.lookups)}
+
+    @app.get("/api/admin/catalog/art")
+    def admin_catalog_art_search(
+        request: Request,
+        q: Annotated[str, Query(max_length=200)] = "",
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        from selecta.admin import http
+        from selecta.authz.check import authorize
+
+        actor = http.staff_actor(engine, request, claims)
+
+        def find(conn) -> dict[str, Any]:
+            authorize(conn, actor, "legal.takedowns.manage")
+            return {"art": service.staff_art_search(conn, q), "limit": service.STAFF_SEARCH_LIMIT}
+
+        return http.run(engine, actor, find)
 
     @app.post("/api/admin/catalog/art/{art_id}/{command}")
     def admin_catalog_art(

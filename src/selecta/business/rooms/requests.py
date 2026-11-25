@@ -197,9 +197,12 @@ class RequestsMixin:
             .where(requests_t.c.room_id == room["id"], requests_t.c.status == "sent")
             .order_by(requests_t.c.votes.desc(), requests_t.c.created_at, requests_t.c.id)
         ).mappings().all()
+        # ADR-0488: the listed line a guest put on a request, so staff see it before approving
+        said = self.queue_dedications(conn, [r["id"] for r in rows])
         return [{"id": r["id"], "zone_id": zone.id, "title": r["title"], "artist": r["artist"],
                  "nickname": r["nickname"], "guest_id": r["guest_id"],
-                 "waited_seconds": int(now - r["created_at"]), "votes": r["votes"]}
+                 "waited_seconds": int(now - r["created_at"]), "votes": r["votes"],
+                 **({"dedication": said[r["id"]]} if said.get(r["id"]) else {})}
                 for r in rows]
 
     def seen_staff(self, conn: Connection, actor: BusinessActor, zone) -> None:

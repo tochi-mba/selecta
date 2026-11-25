@@ -181,8 +181,30 @@
   from { opacity: 0; translate: calc(var(--feel-side, 1) * -1 * var(--space-5)) 0; }
 }
 
-/* The finish: the one celebration of the blend over the card (feel/moment.tsx), and Open SelectaDJ
-   as the one glowing action on it. */
+/* The sound check's level ring: it swells and brightens with the check tone's measured level and
+   rests when the tone ends (steps.tsx ToneRing writes its transform and opacity from the audio). */
+:where(:root[data-feel~='motion']) .cloud-tone-playing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+:where(:root[data-feel~='motion']) .cloud-tone-ring {
+  flex: none;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  border: var(--marker) solid var(--playing);
+  border-radius: var(--radius-pill);
+  transform: scale(0.6);
+  opacity: 0.35;
+}
+
+/* The finish: the blend drawing names the person's own first two songs (OnboardingSpine), the one
+   celebration of the blend over the card (feel/moment.tsx), and Open SelectaDJ as the one glowing
+   action on it. */
+:where(:root[data-feel~='motion']) .cloud-spine-blend {
+  margin-block-start: var(--space-4);
+  max-inline-size: var(--content-reading);
+}
 :where(:root[data-feel]) .cloud-spine[data-spine='finished']:has(> .cloud-spine-moment) { position: relative; }
 :where(:root[data-feel]) .cloud-spine-moment { position: absolute; inset: 0; pointer-events: none; }
 :root[data-feel~='depth'] .cloud-spine[data-spine='finished'] > .cloud-actions > .primary {

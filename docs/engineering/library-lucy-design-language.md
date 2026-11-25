@@ -68,6 +68,12 @@ exists. Each animation runs once, ends at the element's resting look, and answer
 | A step's result draws in | a card seen running that reached `completed` | `.lucy-visual.is-drawn > *`, shared `feel-arrive` | `--motion-spring-snappy`, `--spring-snappy` |
 | An added song glows | an occurrence the new current revision added | `.lucy-song.feel-flash`, shared `feel-flash` with `feel-lucy-edge` (arrives) | `--motion-slow`, `--motion-ease`, `--marker`, `--selected` |
 | Saved tick | a save confirmed on this page that the server says went through | `.lucy-saved-tick` with the shared `.feel-tick` | `--icon-size`, `--icon-stroke`, `--status-ready` |
+| Send becomes Stop | Lucy is really working and nothing is written in the box; Send comes back, springing in, as soon as there are words | `LucyComposer` gives Stop `.primary` in Send's place, shared `.feel-pop` | none of its own |
+| An example prompt flies into the box | an example pressed; the words are in the box first | `lucy/flight.ts` animates a copy, `.lucy-flight`, by transform and opacity (arrives) | `--layer-toast`, `--edge-selected`, `--shadow-lift`, `--motion-spring-glide`, `--spring-snappy` |
+| A plan's steps drop open | "Show all steps" pressed | `.lucy-plan .lucy-cards`, shared `feel-item-in`, with each card's `data-stagger` arrival | `--motion-spring-snappy`, `--spring-gentle` |
+| An answer becomes a receipt | a request answered; the tick draws only for a yes given on this page | `.lucy-permission.is-receipt`, `.lucy-receipt-tick` with the shared `.feel-tick`, `data-arrive` | `--icon-size`, `--icon-stroke`, `--status-ready`, `--border` |
+| A taken-out song strikes and folds | an occurrence the new current revision removed | `.lucy-song-slot.is-gone`, faded and struck through, then the shared `.feel-collapse-out` held back by `--motion-slow` | `--status-failed`, `--separator`, `--motion-slow`, `--motion-handoff` |
+| The twin meter's rungs light in turn | the server sent a new share | `.lucy-ladder-seg` transition delays, from the bottom rung up | `--motion-stagger` |
 
 The shared asks from `web/src/styles/feel.css` are used as they are: new step groups and notes
 `data-arrive`; opened plan cards and example prompts `data-stagger`; example prompts `data-lift`;

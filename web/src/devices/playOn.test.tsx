@@ -111,6 +111,13 @@ describe('Listen on a device with no music while nothing plays', () => {
     expect(holdingWords(device('laptop', 'Laptop', 2864, false, 1_000 - 7200), 1_000)).toBe('2,864 songs. Not open right now, last open 2 hours ago');
   });
 
+  it('a hosted account is told its uploads play here, and pointed at Make a Mix (T-20261125-a502)', () => {
+    render(<ControllerListen hosted mixName="" mixSongs={0} devices={[device('laptop', 'Laptop', 2864, false, 1_000 - 7200)]} thisDeviceId="phone" now={1_000} asking={null} onPlayOn={vi.fn()} />);
+    expect(screen.queryByTestId('controller-none')).toBeNull();
+    expect(screen.getByTestId('controller-hosted')).toHaveTextContent('Your uploaded songs are kept in your SelectaDJ storage and play right here in this browser.');
+    expect(screen.getByRole('link', { name: 'Make a mix from them' })).toHaveAttribute('href', '/mixes');
+  });
+
   it('shows what the other device said while it is being asked', () => {
     render(<ControllerListen mixName="Friday mix" mixSongs={12} devices={[device('laptop', 'Laptop', 12, true)]} thisDeviceId="phone" now={1_000} asking={{ phase: 'needs_gesture', device: 'Laptop', deviceId: 'laptop' }} onPlayOn={vi.fn()} />);
     expect(screen.getByTestId('play-on-status')).toHaveTextContent('Waiting for a tap on Laptop. Press Play there to allow sound.');

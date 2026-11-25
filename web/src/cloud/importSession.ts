@@ -357,7 +357,8 @@ export function startImportSession(options: {
       owner.claim = claim;
       claim.share(snapshot);
       claim.onCancelAsked(() => { if (live()) cancelImportSession(); });
-      unhook = guardUnload(live);
+      // only picked or dropped files are lost to a reload; a folder carries on by itself next visit
+      if (owner.kind !== 'folder') unhook = guardUnload(live);
     }
     writeMarker(owner.workspaceId, markerFor(owner, snapshot));
     try {
@@ -406,8 +407,10 @@ export function importProblemWords(error: unknown): string {
   return 'The import stopped part way. Everything already checked is kept, and it carries on from there.';
 }
 
-/** While files are being read, closing or reloading the tab asks first. Nothing is lost if the
- * member leaves anyway: the import carries on next time from the journal. */
+/** While picked files are being read, closing or reloading the tab asks first: the browser
+ * forgets files it was handed, so carrying on needs them picked again. A folder's import (one
+ * chosen, watched or carried on by itself) never asks: SelectaDJ keeps its handle and the journal,
+ * and the next visit carries on where this one stopped, so a reload loses nothing. */
 function guardUnload(live: () => boolean): () => void {
   if (typeof window === 'undefined') return () => {};
   const ask = (event: BeforeUnloadEvent) => {

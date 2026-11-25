@@ -80,5 +80,9 @@ export const ICON_STROKES: Record<IconSize, number> = { compact: 2.4, toolbar: 2
  * docs/engineering/icon-inventory.md (MP-0277-01). */
 export function Icon({ name, size = 'standard', className, ...props }: { name: IconName; size?: IconSize } & Omit<SVGProps<SVGSVGElement>, 'width' | 'height' | 'strokeWidth' | 'viewBox'>) {
   const box = ICON_SLOTS[size];
-  return <svg {...props} className={className ? `ui-icon ${className}` : 'ui-icon'} data-icon={name} data-size={size} viewBox="0 0 24 24" width={box} height={box} fill="none" stroke="currentColor" strokeWidth={ICON_STROKES[size]} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={paths[name]} /></svg>;
+  return <svg {...props} className={className ? `ui-icon ${className}` : 'ui-icon'} data-icon={name} data-size={size} viewBox="0 0 24 24" width={box} height={box} fill="none" stroke="currentColor" strokeWidth={ICON_STROKES[size]} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{name === 'more' ? MORE_DOTS.map((dot) => <path key={dot} d={dot} />) : <path d={paths[name]} />}</svg>;
 }
+
+/** More's three dots drawn as three paths, the same shapes as its one path, so each dot can hop on
+ * its own when the More sheet opens (ADR-0477, styles/feel-shell.css). */
+const MORE_DOTS = paths.more.split(/(?=M)/);

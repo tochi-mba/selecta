@@ -2,7 +2,7 @@
 id: T-20261124-fad2
 title: Room and guest page say Nothing playing while the host's mix is paused
 area: rooms
-status: open
+status: done
 priority: normal
 who: claude
 created: 2026-11-24

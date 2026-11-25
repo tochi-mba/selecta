@@ -324,6 +324,16 @@ def _save_batch(
         )
 
 
+def _tell(progress: Callable[[int, int], None] | None, done: int, found: int) -> None:
+    """Pass progress on. A listener that fails is a display problem, never the scan's."""
+    if progress is None:
+        return
+    try:
+        progress(done, found)
+    except Exception:  # noqa: BLE001 - showing progress can never stop a scan
+        return
+
+
 def _listing(root: Path, should_stop: Callable[[], bool]) -> Iterator[Path]:
     # files only, in ordinary form, reaching folders past Windows' old 260-character limit
     for path in longpaths.walk_files(root):
@@ -338,6 +348,7 @@ def scan_folder(
     careful: bool = False,
     should_stop: Callable[[], bool] = lambda: False,
     checkpoint: bool = False,
+    progress: Callable[[int, int], None] | None = None,
 ) -> ScanReport:
     """Read a folder into the library. All the slow reading comes before any of the writing, and
     that's where it can be stopped, so stopping leaves the library exactly as it was.
@@ -345,13 +356,17 @@ def scan_folder(
     With `checkpoint` (library.scan_resume) the folder and a `scanning` state are remembered at
     the start, and newly read songs are saved in batches, so a scan cut off by a restart carries
     on: files already saved match on size and time and are not read again. Songs that have gone
-    are only removed at the very end, so a partial scan never removes anything."""
+    are only removed at the very end, so a partial scan never removes anything.
+
+    `progress`, when given, is told how many files have been looked at and how many there
+    are, once the folder has been listed and after each file, so a page or a terminal can show
+    real progress. Whatever it does, it never stops or slows the scan."""
     root = root.resolve()
     if not checkpoint:
-        return _scan(conn, root, careful, should_stop, False)
+        return _scan(conn, root, careful, should_stop, False, progress)
     _note_progress(conn, root, None, 0)
     try:
-        report = _scan(conn, root, careful, should_stop, True)
+        report = _scan(conn, root, careful, should_stop, True, progress)
     except ScanStopped:
         conn.commit()  # songs read so far stay; a stop asked for is not an interruption
         forget_interrupted_scan(conn)
@@ -366,6 +381,7 @@ def _scan(
     careful: bool,
     should_stop: Callable[[], bool],
     checkpoint: bool,
+    progress: Callable[[int, int], None] | None = None,
 ) -> ScanReport:
     report = ScanReport(root=root)
     known = db.known_files(conn)
@@ -383,6 +399,7 @@ def _scan(
     report.found = len(files)
     if checkpoint:
         _note_progress(conn, root, report.found, 0)
+    _tell(progress, 0, report.found)
 
     songs: list[dict] = []
     batch: list[dict] = []
@@ -395,6 +412,8 @@ def _scan(
     for done, path in enumerate(files):
         if should_stop():
             raise ScanStopped
+        if done:
+            _tell(progress, done, report.found)
         if checkpoint and len(batch) >= CHECKPOINT_EVERY:
             _save_batch(conn, batch, subtitled, root)
             batch = []
@@ -430,6 +449,7 @@ def _scan(
         report.new_or_changed += 1
         report.fresh.append(key)
 
+    _tell(progress, report.found, report.found)
     classify(songs, subtitled, root)
 
     for song in songs:
