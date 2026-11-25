@@ -339,11 +339,11 @@ test('a feature switched off while its page is open closes up at once, without a
   const user = await person(page, request, 'premium', '/listen');
   await page.evaluate(() => { (window as unknown as { stayed: boolean }).stayed = true; });
   const panel = page.locator('.room-panel');
-  await expect(panel.getByRole('heading', { name: 'Big screen' })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'Display screens' })).toBeVisible();
   await expect(panel.getByLabel('Guests can vote')).toBeVisible();
 
   await switchOff(request, user, ['rooms.display']);
-  await expect(panel.getByRole('heading', { name: 'Big screen' })).toHaveCount(0, { timeout: 10_000 });
+  await expect(panel.getByRole('heading', { name: 'Display screens' })).toHaveCount(0, { timeout: 10_000 });
   await expect(panel.getByLabel('Guests can vote')).toBeVisible();
 
   await switchOff(request, user, ['rooms']);
@@ -358,7 +358,7 @@ test('a feature switched off while its page is open closes up at once, without a
   // Back on: everything comes back the same way.
   await switchOff(request, user, []);
   await expect(menu.getByRole('button', { name: 'Add music' })).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator('.room-panel').getByRole('heading', { name: 'Big screen' })).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.room-panel').getByRole('heading', { name: 'Display screens' })).toBeVisible({ timeout: 10_000 });
   expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
 });
 

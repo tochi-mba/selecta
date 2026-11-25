@@ -121,10 +121,11 @@ export const LibraryRow = memo(function LibraryRow({
             aria-disabled={failed || undefined}
             onChange={(event) => { if (!failed) actions.toggle(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
         </label>}
-        <button className="link song-open lw-open" onClick={() => actions.open(song.id)} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
+        <button className="link song-open lw-open" onClick={() => actions.open(song.id)} aria-label={`Details for ${name} ${artist}${searched && song.match ? ` · ${song.match}` : ''}`} data-focus-key={`song-details-${song.id}`}>
           <SongMotif songId={song.id} />
           <span className="lw-song">
-            <b dir="auto" title={title}>{title}</b>
+            {/* the name holds every word the row shows (WCAG 2.5.3), so title and artist are two words apart */}
+            <b dir="auto" title={title}>{title}</b>{' '}
             <span dir="auto" title={artist}>{artist}{searched && song.match ? ` · ${song.match}` : ''}</span>
           </span>
         </button>

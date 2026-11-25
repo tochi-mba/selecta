@@ -199,12 +199,15 @@ test('the staff console pages pass WCAG AA', async ({ page, request }) => {
   await asStaff(page, request);
   const nav = await enterConsole(page);
   const found: string[] = [];
+  // the redesigned console's pages are links (59906603, e1d2d27a)
   for (const [id, label] of [
-    ['site.admin.overview', 'Overview'], ['site.admin.jobs', 'Jobs & workers'], ['site.admin.accounts', 'Accounts & billing'],
-    ['site.admin.ai', 'AI routing'], ['site.admin.security', 'Security'], ['site.admin.flags', 'Flags'],
+    ['site.admin.overview', 'Overview'], ['site.admin.customers', 'Customers'], ['site.admin.billing', 'Billing'],
+    ['site.admin.jobs', 'Jobs'], ['site.admin.ai', 'AI'], ['site.admin.flags', 'Flags'], ['site.admin.content', 'Content'],
+    ['site.admin.emergency', 'Emergency'], ['site.admin.security', 'Staff and security'],
+    ['site.admin.communications', 'Communications'], ['site.admin.system', 'System'],
   ] as const) {
-    await nav.getByRole('button', { name: label, exact: true }).click();
-    await expect(nav.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
+    await nav.getByRole('link', { name: label, exact: true }).click();
+    await expect(nav.getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
     found.push(...(await settledCheck(page, `${id} ${label}`)));
   }
   expect(found).toEqual([]);

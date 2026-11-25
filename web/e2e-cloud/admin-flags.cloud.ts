@@ -75,7 +75,7 @@ test('an Owner applies each kind of flag change on the Flags page, and each show
   const them = await theirs.newPage();
   await signedIn(them, request, customer, { path: '/listen' });
   await them.evaluate(() => { (window as unknown as { stayed: boolean }).stayed = true; });
-  const bigScreen = them.locator('.room-panel').getByRole('heading', { name: 'Big screen' });
+  const bigScreen = them.locator('.room-panel').getByRole('heading', { name: 'Display screens' });
   await expect(bigScreen).toBeVisible();
   const customerId = (await accountOf(request, customer)).user.id;
 

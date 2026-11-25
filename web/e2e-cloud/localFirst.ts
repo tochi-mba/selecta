@@ -31,7 +31,9 @@ export async function asLocalFirst(page: Page, user: string, { hosted = false }:
       const answer = await route.fetch();
       const account = await answer.json();
       account.experience = { ...(account.experience ?? {}), local_first: true, hosted };
-      account.features = { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true, 'cloud.progressive_import': true };
+      // and the flags that need cloud.local_first, which the server decides off for that reason
+      // alone (the offline shell, the workspace and the mix outbox, dd62cd5a, came after this)
+      account.features = { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true, 'cloud.progressive_import': true, 'cloud.offline_shell': true, 'cloud.workspace': true, 'cloud.mix_outbox': true };
       await route.fulfill({ response: answer, json: account });
     } catch {
       // the test ended while an account refresh was in flight: nothing is waiting for it

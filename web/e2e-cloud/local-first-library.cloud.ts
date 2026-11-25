@@ -24,7 +24,7 @@ test('a grandfathered account sees hosted copies, songs on its other devices and
   await expect(row(page, 'Lost song').getByText('Missing on every device')).toBeVisible();
 
   // the details panel's Play line gives the same answer as the row
-  await page.getByRole('button', { name: 'Details for Away song' }).click();
+  await page.getByRole('button', { name: /^Details for Away song / }).click();
   await expect(page.getByText('Not on this device').last()).toBeVisible();
 });
 

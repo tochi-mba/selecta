@@ -743,9 +743,16 @@ function nameLine(v: View): HTMLElement {
   const saving = state === 'saving';
   return h('button', {
     type: 'button', className: 'g-name', 'data-nickname': state, ...working(busy.has('nicknames') || saving), disabled: saving,
-    'aria-label': saving ? `You're ${v.nickname}. Saving ${nameSave?.name}...` : `You're ${v.nickname}${state === 'saved' ? '. Saved' : ''}. Change nickname`,
     onclick: () => void nicknames(),
-  }, state === 'saved' ? icon('check') : icon('person'), h('span', { className: 'g-name-text' }, saving ? `Saving ${nameSave?.name}...` : v.nickname), saving ? null : h('span', { className: 'g-name-change' }, state === 'saved' ? 'Saved' : 'Change'));
+  },
+  // named by its own words plus hidden ones (WCAG 2.5.3): "You're Fox. Change nickname", or
+  // "You're Fox. Saving Owl...", so the name always contains what is seen
+  state === 'saved' ? icon('check') : icon('person'),
+  h('span', { className: 'g-sr' }, saving ? `You're ${v.nickname}. ` : "You're "),
+  h('span', { className: 'g-name-text' }, saving ? `Saving ${nameSave?.name}...` : v.nickname),
+  saving ? null : h('span', { className: 'g-sr' }, '. '),
+  saving ? null : h('span', { className: 'g-name-change' }, state === 'saved' ? 'Saved' : 'Change'),
+  saving || state === 'saved' ? null : h('span', { className: 'g-sr' }, ' nickname'));
 }
 
 async function saveNickname(name: string): Promise<void> {
