@@ -475,6 +475,16 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.seam_lead": {
+      "label": "Browser transitions planned early",
+      "about": "In a browser mix, each transition is worked out as its song starts instead of 45 seconds before it ends, every song plays at one level (-14 LUFS, as local mode), and a slow analysis moment is waited for instead of turning beatmatching off for the visit (ADR-0477 phase 1). Off: transitions are planned late and songs play at their own level, as before.",
+      "requires": ["cloud.browser_dsp"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.browser_moves": {
       "label": "Browser transition moves",
       "about": "Local mode's moves in a browser mix: SelectaDJ picks a bass swap, filter sweep, cut, echo out or reverb wash for each transition from the audio as it plays, the member can choose one, and each transition says what really played (ADR-0459).",

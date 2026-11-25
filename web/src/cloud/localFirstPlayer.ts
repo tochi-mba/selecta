@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixItem } from '../api';
 import * as provider from '../dsp/seamProvider';
 import { LOAD_NEXT_WITHIN } from '../engine/scheduler';
+import { createLevels, type Levels } from '../engine/level';
 import { browserMovesAllowed, browserMovesOn, browserStemMovesAllowed } from './browserMoves';
 import { flagOn } from '../flags';
 import { isOnline } from './connection';
@@ -406,6 +407,7 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
       ...seams,
       calibration: seams.workerCalibration,
       deviceId: seams.deviceId,
+      patient: seamLeadOn,
       abilities: () => provider.abilitiesFrom((feature) => roster.get(feature)),
       sourceSafe: (source) => provider.abilityOf((feature) => roster.get(feature), `seam_source_${source}`),
       onBudgetState: (state) => {
@@ -420,7 +422,13 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
       },
     }) : undefined;
     // queueLength lets an unavailable track skip with a notice instead of ending the set (ADR-0458)
-    const speaker = engine.createSpeaker({ audio: opened, probe, resolve, queueLength, seam });
+    // cloud.seam_lead (ADR-0477 phase 1): plan each transition as its song starts, and play every
+    // song at one level; both read the flag as they run, so a change needs no new speaker
+    const speaker = engine.createSpeaker({
+      audio: opened, probe, resolve, queueLength, seam,
+      planAhead: seamLeadOn,
+      level: (buffer) => (seamLeadOn() ? songLevels().of(buffer) : Promise.resolve(1)),
+    });
     return { speaker, refusal: probe.ok ? null : probe.reason };
   } catch (problem) {
     engine.dispose();
@@ -434,6 +442,12 @@ export const SEAMS_KEPT = 128;
 export const JUMP_LEAD_SECONDS = 4;
 
 const offlinePlaybackOn = () => flagOn('cloud.offline_playback');
+/** ADR-0477 phase 1: early seam planning, song levels and patient analysis. */
+export const SEAM_LEAD_FLAG = 'cloud.seam_lead';
+const seamLeadOn = () => flagOn(SEAM_LEAD_FLAG);
+// one measuring worker for the page, made the first time a song needs its level
+let levels: Levels | null = null;
+const songLevels = (): Levels => (levels ??= createLevels());
 
 /** The hook the local-first shell uses: one stable LocalFirstPlayer over the device session. */
 /** Worker calibration is device evidence (ADR-0457): measured on this device, at most 30 days
