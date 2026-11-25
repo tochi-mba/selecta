@@ -68,10 +68,8 @@ const NO_SURFACE: Partial<Record<FlagId, string>> = {
   'autopilot.safe_transitions': 'The transition safety gate is evaluated by the server, not on a Cloud page.',
   'autopilot.ai_director': 'AI director decisions run in the server planner; its control UI is not yet released.',
   'business.signups': 'Business self-serve sign-up is disabled pending legal review; no Cloud sign-up page.',
-  'business.orgs': 'Business organisation, venue and crate APIs are not yet wired to a customer-facing page.',
   'business.schedules': 'Venue scheduling APIs are server-only until the venue console is built.',
   'business.offline': 'Offline venue playback is managed by kiosk/server commands, not a Cloud page.',
-  'business.workspaces': 'Business workspace switching currently has an API but no visible menu in Cloud.',
   'business.pilots': 'Staff-only pilot provisioning is an admin API, not a customer-facing Cloud page.',
   'cloud.tracing': 'Server-side OpenTelemetry job spans, with no person-facing Cloud page.',
   'cloud.metrics': 'Server-side service telemetry consumed by SLOs and alerts, with no person-facing Cloud page.',
@@ -79,6 +77,25 @@ const NO_SURFACE: Partial<Record<FlagId, string>> = {
   'cloud.autoscale': 'Server-side maintenance task that sizes worker pools, with no person-facing Cloud page.',
   'cloud.dmca_renewal_reminder': 'Server-side maintenance alert for the owner, with no person-facing Cloud page.',
   'lucy.deep_plan': 'No control on the site: the server decides it for each Lucy turn.',
+};
+
+/** Cloud features whose pages exist but are not ones this sweep can open: the person it signs in
+ * has no organisation, and the test build keeps the local-first shell off. Each names the spec
+ * that opens its pages instead, and a to-do that brings it into the sweep. Unlike NO_SURFACE,
+ * these are real pages; the entry goes once the sweep can reach them. */
+const BUSINESS_PAGES = 'A SelectaDJ for Business page under /b/{org}, shown only to organisation members while business sign-up is off; business.cloud.ts opens it with its own people (T-20261125-5322).';
+const LOCAL_FIRST_SHELL = 'Shown only inside the local-first shell, which this test build keeps off; local-first-*.cloud.ts open that shell (T-20261125-83f5).';
+const ELSEWHERE: Partial<Record<FlagId, string>> = {
+  ...Object.fromEntries(([
+    'business.start', 'business.orgs', 'business.zones', 'business.entitlements', 'business.kiosk',
+    'business.workspaces', 'business.billing', 'business.licensing', 'business.roles',
+    'business.devices.shared', 'business.console', 'business.venue_view', 'business.staff_controls',
+    'business.mix_exports', 'business.content_controls', 'business.content_controls.bulk',
+    'business.content_controls.lyrics_hint', 'business.rooms', 'business.rooms.branding',
+    'business.rooms.print', 'business.rooms.screen_code',
+  ] as FlagId[]).map((id) => [id, BUSINESS_PAGES])),
+  'cloud.browser_harmonic': `Make a Mix's Harmonic matches. ${LOCAL_FIRST_SHELL}`,
+  'lucy.cloud_conversation': `Lucy's conversation in the browser. ${LOCAL_FIRST_SHELL}`,
 };
 
 type Spec = (typeof REGISTRY)[FlagId] & { modes?: string[]; when_locked?: string; default?: boolean; owner?: string };
@@ -142,6 +159,20 @@ const asPattern = (route: string) => {
 
 const off = (account: Account, id: FlagId) => account.features[id] === false;
 const teased = (account: Account, id: FlagId) => Boolean(account.feature_locks[id]);
+
+/** The reads a plan-locked (teased) feature still makes on purpose. Only while teased: a feature
+ * a rule switched off asks nothing at all. */
+const TEASED_READS: Partial<Record<FlagId, string[]>> = {
+  // A host who downgraded mid-party keeps the room that is open until it ends (ADR-0475 audit,
+  // e3db7234), so the Listen page reads the current room once on a plan without Rooms; with no
+  // room open it shows the teaser and does not poll.
+  rooms: ['GET /api/rooms/current'],
+};
+const teasedRead = (account: Account, id: FlagId, method: string, path: string) =>
+  teased(account, id) && (TEASED_READS[id] ?? []).some((route) => {
+    const allowed = asPattern(route);
+    return allowed.method === method && allowed.path.test(path);
+  });
 
 /** Everything wrong with the page as it is now, for this account's decisions. */
 async function problems(page: Page, where: string, account: Account): Promise<string[]> {
@@ -210,7 +241,7 @@ async function sweep(page: Page, request: APIRequestContext, flags: FlagId[], su
     await page.emulateMedia({ colorScheme: 'light' });
     const routes = FLAG_IDS.filter((id) => off(account, id)).flatMap((id) => (spec(id).routes ?? []).map((route) => ({ id, ...asPattern(route) })));
     for (const asked of seen.requests) {
-      const gone = routes.find((route) => route.method === asked.method && route.path.test(asked.path));
+      const gone = routes.find((route) => route.method === asked.method && route.path.test(asked.path) && !teasedRead(account, route.id, asked.method, asked.path));
       if (gone) found.push(`${plan}: asked the server ${asked.method} ${asked.path}, but ${gone.id} is off`);
     }
     found.push(...seen.refused.map((refusal) => `${plan}: the server refused ${refusal}`));
@@ -228,8 +259,14 @@ test('every cloud feature a person can see is in the sweep, or says why not', ()
     const cloudOnly = (flag.modes ?? []).length === 1 && flag.modes?.[0] === 'cloud';
     if (!cloudOnly || flag.core || untargetable(id)) continue;
     const excluded = Boolean(flag.cloud_surface_kind && flag.cloud_surface_reason);
-    if (!cloudSurfaces(id).length && !NO_SURFACE[id] && !excluded) missing.push(`${id} names no cloud surface`);
-    if (cloudSurfaces(id).length && (NO_SURFACE[id] || excluded)) missing.push(`${id} has surfaces and a nonvisual exclusion`);
+    const recorded = [NO_SURFACE[id], ELSEWHERE[id], excluded].filter(Boolean).length;
+    if (!cloudSurfaces(id).length && !recorded) missing.push(`${id} names no cloud surface`);
+    if (recorded > 1) missing.push(`${id} is recorded as both pageless and covered elsewhere`);
+    if (cloudSurfaces(id).length && recorded) missing.push(`${id} has surfaces and a nonvisual exclusion`);
+  }
+  // An entry for a flag that is no longer in the registry is stale.
+  for (const id of Object.keys({ ...NO_SURFACE, ...ELSEWHERE }) as FlagId[]) {
+    if (!FLAG_IDS.includes(id)) missing.push(`${id} is recorded but not in the registry`);
   }
   for (const id of FLAG_IDS) {
     for (const surface of cloudSurfaces(id)) if (!SURFACES[surface]) missing.push(`${id}: the sweep doesn't open ${surface}`);
@@ -308,7 +345,7 @@ test('a Free account sees each plan-locked feature as a teaser naming its plan, 
     expect(account.feature_locks[id], `${id} isn't teased for Free`).toBe('premium');
   }
   // Listen: the room panel is a locked teaser, with the plan, and nothing about votes or screens.
-  const teaser = page.locator('.room-locked');
+  const teaser = page.locator('.room-invite');
   await expect(teaser.getByRole('heading', { name: 'Rooms Premium' })).toBeVisible();
   await expect(teaser).toContainText('Rooms are part of Premium.');
   // Overview: the rooms card names the plan and leads to it.
@@ -318,7 +355,9 @@ test('a Free account sees each plan-locked feature as a teaser naming its plan, 
   await expect(page.locator('main h1')).toHaveText('Plan & billing');
   await expect(page.getByRole('region', { name: 'Premium' })).toContainText('guest request rooms');
   const rooms = teasers.flatMap((id) => (spec(id).routes ?? []).map(asPattern));
-  expect(seen.requests.filter((asked) => rooms.some((route) => route.method === asked.method && route.path.test(asked.path)))).toEqual([]);
+  // Only the one read a downgraded host's open room needs (TEASED_READS), and nothing it writes.
+  const asked = seen.requests.filter((one) => rooms.some((route) => route.method === one.method && route.path.test(one.path)));
+  expect(asked.filter((one) => !teasers.some((id) => teasedRead(account, id, one.method, one.path)))).toEqual([]);
   expect(seen.refused).toEqual([]);
 
   // Switched off by a rule, the same feature is hidden, never teased, even though Premium has it.
@@ -328,7 +367,7 @@ test('a Free account sees each plan-locked feature as a teaser naming its plan, 
   for (const surface of ['cloud.listen', 'cloud.home', 'cloud.billing']) {
     await open(page, surface);
     expect(await problems(page, `rooms ruled off · ${surface}`, ruled)).toEqual([]);
-    await expect(page.locator('.room-locked')).toHaveCount(0);
+    await expect(page.locator('.room-invite')).toHaveCount(0);
     await expect(page.getByText('PREMIUM FEATURE')).toHaveCount(0);
   }
   await switchOff(request, user, []);
@@ -389,10 +428,11 @@ test('hosted media is an account grant: revoking it hides uploads but keeps stor
 // still closes up. The person is seeded with a stored song and catalogue songs on a device, so a
 // mark that leaked would have something to show.
 //
-// Honest scope: a flag on for a new account on this server (`cloud.hosted_media` and
-// `cloud.stored_media` ship on; this test build also turns `cloud.local_media` on) is switched
-// off by a real per-user rule. The others ship off and a rule can never grant past the build
-// (ADR-0414), so off is every account's state and the sweep checks that state as is. Where a
+// Honest scope: a flag on for a new account on this server (most ship on since 57acb155, and this
+// test build also turns `cloud.local_media` on) is switched off by a real per-user rule. A flag
+// that ships off, or that the test build turns off by name (`cloud.local_first`,
+// `cloud.hosted_shell`), is off for every account, and a rule can never grant past the build
+// (ADR-0414), so the sweep checks that state as is. Where a
 // flag has a visible on-state (the local-first shell, its catalogue, the upload entry), the
 // "marks are real" test first shows each mark with the flag on, so an absent mark means
 // something. `devices.browser_player`, `cloud.browser_dsp`, `cloud.venue_tablet` and
@@ -405,18 +445,18 @@ type Mark = { text?: RegExp; role?: { role: 'navigation' | 'heading' | 'button' 
 const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> = {
   'cloud.hosted_media': { surfaces: ['cloud.uploads'], ships: true, marks: [{ role: { role: 'button', name: 'Add music' } }, { text: /upload tracks/i }] },
   'cloud.stored_media': { surfaces: ['cloud.library', 'cloud.listen'], ships: true, marks: [{ role: { role: 'button', name: 'Library' } }] },
-  'cloud.local_first': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: false, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'link', name: 'Make a Mix' } }] },
+  'cloud.local_first': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: true, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'link', name: 'Make a Mix' } }] },
   // Its on-state (the shared shell's Main navigation and More for a hosted account) is shown below
   // and in hosted-shell.cloud.ts; off, the legacy rail is all there is.
-  'cloud.hosted_shell': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: false, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'button', name: 'More' } }] },
-  'cloud.local_media': { surfaces: ['cloud.library'], ships: false, marks: [{ role: { role: 'heading', name: 'Connect music' } }, { text: /Local song \d/ }] },
-  'devices.browser_player': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser player/ }, { text: /This device can.t play mixes/ }] },
-  'cloud.browser_dsp': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser DSP/ }] },
+  'cloud.hosted_shell': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: true, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'button', name: 'More' } }] },
+  'cloud.local_media': { surfaces: ['cloud.library'], ships: true, marks: [{ role: { role: 'heading', name: 'Connect music' } }, { text: /Local song \d/ }] },
+  'devices.browser_player': { surfaces: ['cloud.listen'], ships: true, marks: [{ text: /Browser player/ }, { text: /This device can.t play mixes/ }] },
+  'cloud.browser_dsp': { surfaces: ['cloud.listen'], ships: true, marks: [{ text: /Browser DSP/ }] },
   'cloud.venue_tablet': { surfaces: ['cloud.listen', 'cloud.settings'], ships: false, marks: [{ text: /Venue tablet/ }] },
-  'cloud.local_export': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Local export/ }] },
+  'cloud.local_export': { surfaces: ['cloud.listen'], ships: true, marks: [{ text: /Local export/ }] },
   // Its on-state (the shell import chip, the carry-on offer) is drawn by the onboarding and shell
   // work; these marks are that copy, so with the flag off none of it may appear.
-  'cloud.progressive_import': { surfaces: ['cloud.home', 'cloud.library', 'cloud.listen'], ships: false, marks: [{ text: /Checking your music: \d+ of/ }, { text: /Keep checking / }, { text: /Continue while it finishes/ }] },
+  'cloud.progressive_import': { surfaces: ['cloud.home', 'cloud.library', 'cloud.listen'], ships: true, marks: [{ text: /Checking your music: \d+ of/ }, { text: /Keep checking / }, { text: /Continue while it finishes/ }] },
   // Its on-state (join, leave, the closed refusal) is local-first-labs.labs.ts, on a server whose
   // build turns it on (playwright.labs.config.ts).
   'cloud.local_first_labs': { surfaces: ['cloud.settings'], ships: false, marks: [{ role: { role: 'region', name: 'Labs: browser-first Cloud' } }, { role: { role: 'button', name: 'Join Labs' } }] },
@@ -438,7 +478,8 @@ test('every Browser-first flag declares its Cloud surfaces, and the sweep covers
     expect(FLAG_IDS, id).toContain(id);
     expect([...cloudSurfaces(id)].sort(), `${id} surfaces`).toEqual([...BF[id].surfaces].sort());
     for (const surface of BF[id].surfaces) expect(SURFACES[surface], `${id}: ${surface}`).toBeTruthy();
-    // The registry default: only hosted and stored media ship on; the rest ship dark.
+    // The registry default (57acb155 turned the local-first shell, its catalogue and the
+    // browser player on); the test build turns some back off by name (e2e_cloud_server.py).
     expect(spec(id).default !== false, `${id} default`).toBe(BF[id].ships);
   }
 });
