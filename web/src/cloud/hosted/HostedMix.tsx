@@ -9,7 +9,7 @@ import { audioTab, type AudioTab } from '../../devices/audioTab';
 import { OtherTabLine } from '../../devices/OtherTabLine';
 import { TimelinePlayer, type PlayerState, type TimelinePart } from './timelinePlayer';
 import {
-  analysedWords, clock, downloadWords, exportWords, moveName, recordingsOf, renderDetail, seamWords, songNames, songsMoving, songState, stillWords, timeLeft, totalsOf,
+  analysedWords, clock, downloadWords, exportWords, moveName, poolWords, recordingsOf, renderDetail, seamWords, songNames, songsMoving, songState, stillWords, timeLeft, totalsOf,
   type ExportState, type HostedSong, type Seam, type SongsStatus,
 } from './hostedWords';
 import './hostedMix.css';
@@ -54,6 +54,7 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
   const [exported, setExported] = useState<ExportState | null>(null);
   const [error, setError] = useState('');
   const [planning, setPlanning] = useState(false);
+  const [sampled, setSampled] = useState<string | null>(null);
   const [playing, setPlaying] = useState<PlayerState | null>(null);
   const [retrying, setRetrying] = useState<Set<string>>(() => new Set());
   // another tab took the sound ('away'), or that tab has let go since ('gone'): ADR-0475 F
@@ -149,8 +150,9 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
     setPlanning(true); setError(''); setExported(null); setMix(null); setOtherTab(null);
     player.current?.close(); player.current = null; setPlaying(null);
     try {
-      const planned = await call<{ songs: Planned[] }>('/hosted/mixes/plan', { count: 12 });
+      const planned = await call<{ songs: Planned[]; considered?: number; analysed?: number }>('/hosted/mixes/plan', { count: 12 });
       setOrder(planned.songs.length >= 2 ? planned.songs : null);
+      setSampled(planned.songs.length >= 2 ? poolWords(planned) : null);
       if (planned.songs.length < 2) setError('A mix needs at least two analysed songs.');
     } catch (problemSeen) { setError(problem(problemSeen, 'SelectaDJ could not plan a mix.')); }
     finally { setPlanning(false); }
@@ -309,6 +311,7 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
         </Action>
         {ready < 2 && songs && <span className="hosted-mix-hint">A mix needs at least two different analysed songs.</span>}
       </div>
+      {order && sampled && <p className="hosted-mix-hint">{sampled}</p>}
 
       {mix && !mix.complete && (
         <Meter

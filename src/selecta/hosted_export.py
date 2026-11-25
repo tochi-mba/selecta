@@ -12,6 +12,12 @@ without rendering anything (`workers.export_join`).
 `export_status` reads the job: `progress` and `parts_done` / `parts_total` are real units (parts
 written, plus the upload as the last unit), and `estimate_s` is given only while the job is
 running and has written at least one part, from its own pace so far.
+
+A new export is what the plan pays for (`allow_export`): it takes one of the plan's exports this
+month (`Plan.exports_per_month`, the same counter the Plan & billing meter shows), and none is
+made while storage is over the plan's limit (`over_quota_read_only`), because a kept export
+counts against storage. Asking again for an export already made or already queued takes
+nothing, and a job that isn't made gives its export back.
 """
 
 from __future__ import annotations
@@ -32,6 +38,42 @@ from selecta.work.model import TERMINAL
 from selecta.work.schema import jobs
 
 NOT_READY = "The mix isn't ready yet: export opens once every part of it is ready."
+READ_ONLY = ("Your storage is over your plan's limit, so a new export can't be kept. Delete some "
+             "songs or exports, or move to a plan with more storage, to export again.")
+USED_UP = ("You've made this month's {limit} exports on your plan. More open on the 1st, or "
+           "move to a plan with more.")
+
+
+def allow_export(engine: Engine, workspace_id: str, created_by: str | None, *,
+                 charge: bool = True):
+    """(None, what was taken) when a new export may be made, else (the reason, None). With
+    `charge` false (the export was paid for by an earlier ask) only storage is checked."""
+    from selecta.billing import plans, stripe_sync
+    from selecta.identity.schema import users
+    from selecta.usage import allowances, quota
+
+    with transaction(engine, workspace_id) as conn:
+        if quota.usage(conn, workspace_id).read_only:
+            return READ_ONLY, None
+        if not charge:
+            return None, None
+        entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
+        plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
+        zone = conn.execute(sa.select(users.c.timezone).where(
+            users.c.id == created_by)).scalar() if created_by else None
+        limit = allowances.limit_for(plan, "export")
+        taken = allowances.try_consume(conn, workspace_id, "export", 1, limit,
+                                       timezone=zone or "UTC")
+    if not taken.ok:
+        return USED_UP.format(limit=int(limit or 0)), None
+    return None, taken
+
+
+def _give_back(engine: Engine, workspace_id: str, taken) -> None:
+    from selecta.usage import allowances
+
+    with transaction(engine, workspace_id) as conn:
+        allowances.give_back(conn, taken)
 
 
 def export_timeline(parts: Sequence[dict[str, Any]]) -> list[dict[str, Any]] | None:
@@ -93,7 +135,26 @@ def request_export(engine: Engine, work: Work, workspace_id: str, order: Sequenc
     if old is not None and not broken and str(old["state"]) not in TERMINAL:
         return {"state": "queued", "job_id": old["id"], "parts_done": 0, "parts_total": total,
                 "progress": [0, total]}  # asked twice: still the one job
-    job_id, refused = hosted_render._make(work, spec, old if broken else None)
+    taken = None
+    # Only a first ask takes one of the plan's exports: a broken job's replacement, or the same
+    # export asked again after it failed or was cancelled, was paid for by that first ask.
+    paid = old is not None and (broken or str(old["state"]) != "succeeded")
+    why, taken = allow_export(engine, workspace_id, created_by, charge=not paid)
+    if why is not None:
+        return {"state": "refused", "why": why}
+    try:
+        if broken:
+            job_id, refused = hosted_render._make(work, spec, old)
+            created = True
+        else:
+            job_id, refused, created = work.submit_new(spec)
+    except Exception:
+        if taken is not None:
+            _give_back(engine, workspace_id, taken)
+        raise
+    if taken is not None and (refused or job_id is None or not created):
+        # nothing new was made (refused, or another device's press made this export first)
+        _give_back(engine, workspace_id, taken)
     if refused:
         return {"state": "refused", "why": refused}
     return {"state": "queued", "job_id": job_id or old["id"], "parts_done": 0,

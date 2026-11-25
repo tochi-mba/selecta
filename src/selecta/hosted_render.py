@@ -163,11 +163,17 @@ class Work:
         self.store = store
 
     def submit(self, spec: JobSpec) -> tuple[str | None, str | None]:
+        job_id, refused, _created = self.submit_new(spec)
+        return job_id, refused
+
+    def submit_new(self, spec: JobSpec) -> tuple[str | None, str | None, bool]:
+        """`submit`, also saying whether this call made the job (False when another request
+        made the same job first: two devices pressing Export at once make one job)."""
         admission = self.store.admit(spec)
         if not admission.creates_job:
-            return None, getattr(admission, "reason", None) or "Not admitted right now."
+            return None, getattr(admission, "reason", None) or "Not admitted right now.", False
         made = self.store.enqueue(spec)
-        return made.job.id, None
+        return made.job.id, None, bool(made.created)
 
     def renew(self, spec: JobSpec, old_job_id: str) -> tuple[str | None, str | None]:
         """A fresh job in place of one that can never finish (`JobStore.replace`): never two
@@ -406,10 +412,26 @@ def recording_of(songs: Sequence[dict]) -> dict[str, str]:
     return first
 
 
+def planning_pool(ready: Sequence[tuple[dict, Any]], *, pick=None) -> list[tuple[dict, Any]]:
+    """The songs a plan chooses from: every recording when there are `MAX_PLAN_SONGS` or fewer,
+    else that many picked at random, so every song of a large library can reach a mix (the
+    first 60 uploads used to be the only ones ever planned) and each Make another mix picks
+    again. Kept in upload order. `pick` is `random.sample`'s shape, for tests."""
+    import random
+
+    if len(ready) <= MAX_PLAN_SONGS:
+        return list(ready)
+    chosen = set((pick or random.sample)(range(len(ready)), MAX_PLAN_SONGS))
+    return [item for number, item in enumerate(ready) if number in chosen]
+
+
 def plan_mix(engine: Engine, workspace_id: str, read_object: Callable[[str, Path], Path],
-             ids: Sequence[str] | None = None, count: int = 12) -> list[dict[str, Any]]:
+             ids: Sequence[str] | None = None, count: int = 12,
+             pool: dict[str, int] | None = None) -> list[dict[str, Any]]:
     """The local planner's order and moves for the analysed songs, each recording once
-    (`one_per_recording`; module notes)."""
+    (`one_per_recording`; module notes), chosen from `planning_pool`. With `pool`, it is
+    filled with `considered` (the songs the plan chose from) and `analysed` (every analysed
+    recording), so the page can say plainly when a large library was sampled."""
     from selecta.planner.beam import plan_set
     from selecta.workers.engine_handlers import song_from_analysis
 
@@ -421,7 +443,10 @@ def plan_mix(engine: Engine, workspace_id: str, read_object: Callable[[str, Path
             key = _first_key(row["keys"]) if row is not None else None
             if key:
                 ready.append((song, key))
-    ready = one_per_recording(ready)[:MAX_PLAN_SONGS]
+    recordings = one_per_recording(ready)
+    ready = planning_pool(recordings)
+    if pool is not None:
+        pool.update(considered=len(ready), analysed=len(recordings))
     if len(ready) < 2:
         return [{"asset_id": song["id"], "move": None} for song, _key in ready]
     infos, by_number = [], {}
@@ -472,13 +497,29 @@ def _loudness(result: dict, analysis_key: str | None,
 def gain_db(loudness: tuple[float, float] | None) -> float:
     """The level the local app plays a song at in a mix (`SongInfo.gain_db`). A rendered seam
     has it built in, so the song parts around it must be played at it too, or every join steps
-    by several decibels (measured: about 6 dB on chart songs)."""
+    by several decibels (measured: about 6 dB on chart songs).
+
+    It never lifts a song's loudest sample over `PEAK_CEILING_DB` (-1 dBFS), so a quiet song
+    given positive gain can't clip. A near-silent file (a sample peak around -120 dB, a loudness
+    of minus infinity) would ask for over 100 dB of gain; the level is held inside
+    `GAIN_RANGE_DB`, the range an export accepts, so such a song plays at most 24 dB up and its
+    mix can still be exported."""
+    import math
+
     from selecta.analysis.song import PEAK_CEILING_DB, TARGET_LUFS
 
     if loudness is None:
         return 0.0
     lufs, peak = loudness
-    return round(float(min(TARGET_LUFS - lufs, PEAK_CEILING_DB - peak)), 3)
+    wanted = min(TARGET_LUFS - lufs, PEAK_CEILING_DB - peak)
+    if not math.isfinite(wanted):
+        return 0.0
+    low, high = GAIN_RANGE_DB
+    return round(float(min(high, max(low, wanted))), 3)
+
+
+GAIN_RANGE_DB = (-60.0, 24.0)
+"""The song levels an export accepts (`workers.export_join.check_timeline`)."""
 
 
 def _sign(client, buckets, key: str, workspace_id: str) -> str | None:

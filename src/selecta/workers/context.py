@@ -21,6 +21,7 @@ cancelled, preempted, timed out or has lost its lease.
 from __future__ import annotations
 
 import logging
+import subprocess
 import threading
 import time
 import traceback
@@ -279,6 +280,33 @@ class JobContext:
 
 
 Handler = Callable[[Job, JobContext], Any]
+
+
+def run_tool(command: list[str], ctx: JobContext, failure: str) -> None:
+    """Run an outside program (ffmpeg) on a file from a customer, bounded by the attempt.
+
+    The command is a list, never a shell line, so nothing in a file can become a command. While
+    it runs the attempt is checked every 100 ms: a cancel, a lost lease or the job's runtime
+    limit (`timed_out`) stops the program at once, so a file that makes it hang can never keep a
+    worker for longer than its job may run. A program that exits with an error raises
+    `InputInvalid(failure)`.
+    """
+    with subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL) as process:
+        try:
+            while process.poll() is None:
+                ctx.check_in()
+                threading.Event().wait(0.1)
+            if process.returncode != 0:
+                raise InputInvalid(failure)
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
 
 
 def classify(problem: BaseException) -> ErrorClass:

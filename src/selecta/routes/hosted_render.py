@@ -108,11 +108,14 @@ def install_routes(
         count = body.get("count", 12)
         if isinstance(count, bool) or not isinstance(count, int) or not 2 <= count <= 60:
             raise HTTPException(400, detail={"code": "invalid_count"})
+        pool: dict[str, int] = {}
         try:
-            songs = hosted_render.plan_mix(engine, found.workspace.id, read_object, count=count)
+            songs = hosted_render.plan_mix(engine, found.workspace.id, read_object, count=count,
+                                           pool=pool)
         except R2Error as error:
             raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
-        return {"songs": songs}
+        # `considered` of `analysed`: a library over 60 recordings is sampled for each plan
+        return {"songs": songs, **pool}
 
     @app.post("/api/hosted/mixes/render")
     def hosted_render_mix(request: Request, body: dict = Body(...),  # noqa: B008
