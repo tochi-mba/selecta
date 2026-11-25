@@ -56,6 +56,7 @@ import e2e_cloud_authkit  # noqa: E402
 import e2e_cloud_business  # noqa: E402
 import e2e_cloud_flags  # noqa: E402
 import e2e_cloud_kiosk  # noqa: E402
+import e2e_cloud_lucy  # noqa: E402
 import e2e_cloud_staff  # noqa: E402
 import httpx  # noqa: E402
 import numpy as np  # noqa: E402
@@ -305,6 +306,9 @@ def build(port: int):
     # (web/e2e-cloud/localFirst.ts): since 57acb155 it is a staff grant, off with no rule.
     e2e_cloud_flags.grant_everyone(engine, "cloud.hosted_media")
     e2e_cloud_business.install(app, engine, lambda user: account_of(user)["user"]["id"])
+    # A scripted Lucy model, and the control that puts one person on the session and week
+    # allowance (ADR-0484); with no rule, everyone stays on the turns meter.
+    e2e_cloud_lucy.install(app, engine, workspace_of)
     e2e_cloud_kiosk.install(
         app,
         engine,

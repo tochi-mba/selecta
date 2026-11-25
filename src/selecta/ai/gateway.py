@@ -395,11 +395,17 @@ def plan_turn(
         lease_id=lease_id, spend_day=spend_day, reserved_usd=reserved,
     )
     if mode == usage_mode.SHADOW:
-        entitlement = effective_entitlement(conn, workspace_id, now)
-        usage_units.record_shadow(
-            conn, workspace_id=workspace_id, run_id=run_id,
-            plan_id=entitlement.plan_id, tier=tier.value, now=now,
-        )
+        # Shadow recording must never cost anyone a turn: it runs in a savepoint, and a failure
+        # is counted and dropped (ADR-0487 rule 1).
+        try:
+            with conn.begin_nested():
+                entitlement = effective_entitlement(conn, workspace_id, now)
+                usage_units.record_shadow(
+                    conn, workspace_id=workspace_id, run_id=run_id,
+                    plan_id=entitlement.plan_id, tier=tier.value, now=now,
+                )
+        except Exception:
+            _usage_error("record")
     elif enforced and not chosen.deployment.is_builtin:
         emit_usage_for_enforced_run(conn, workspace_id, run_id, now=now)
     return TurnPlan(
@@ -498,13 +504,25 @@ def _close(
     if run.lease_id is not None:
         release_lease(conn, run.lease_id)
     now = db_now(conn)
-    if usage_units.settle(
-        conn, run_id=run.id, outcome=outcome.value,
-        charged_units=usage_units.charge_for(outcome.value, account_cost),
-        answered_deployment_id=answered_id, now=now,
-    ):
-        emit_usage_for_enforced_run(conn, run.workspace_id, run.id, now=now)
+    # The units ledger settles in a savepoint: a failure there is counted and dropped, and the
+    # turn's own settlement above stands.
+    try:
+        with conn.begin_nested():
+            if usage_units.settle(
+                conn, run_id=run.id, outcome=outcome.value,
+                charged_units=usage_units.charge_for(outcome.value, account_cost),
+                answered_deployment_id=answered_id, now=now,
+            ):
+                emit_usage_for_enforced_run(conn, run.workspace_id, run.id, now=now)
+    except Exception:
+        _usage_error("settle")
     return TurnSummary(run.id, outcome, platform_cost, alerts, False, account_cost, answered_id)
+
+
+def _usage_error(step: str) -> None:
+    from selecta.observability import metrics
+
+    metrics.add("selecta_lucy_usage_ledger_errors_total", step=step)
 
 
 def finish_turn(

@@ -1,5 +1,6 @@
 import { Fragment, ReactNode, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { feelOn } from '../feel/root';
+import { whenWords } from '../cloud/lucyUsage';
 import { flagOn } from '../flags';
 import { limitSteps, type LucyView } from '../lucy/reducer';
 import type { CardStatus, LimitNotice, Message } from '../lucy/types';
@@ -293,6 +294,14 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   }
   for (const note of view.notes) {
     entries.push({ key: note.afterSeq, order: 2, node: <li key={note.id} className={`lucy-note is-${note.tone}`} data-arrive={fresh.other(note.id) || undefined}><p>{note.text}</p></li> });
+  }
+  // ADR-0483 rule 3: a lighter Lucy says so once a session. That notice is a live event, which a
+  // page that reads the conversation afterwards never hears, so there the reply's own note says it
+  for (const [id, limit] of limits) {
+    const message = limit.cause === 'session_lighter' ? view.messages.find((found) => found.id === id) : undefined;
+    if (!message || message.status === 'streaming' || (message.turn && view.notes.some((note) => note.turn === message.turn))) continue;
+    const when = whenWords(limit.back_words);
+    entries.push({ key: message.seq, order: -1, node: <li key={`lighter-${id}`} className="lucy-note is-info"><p>A lighter Lucy is answering until this session ends{when ? ` ${when}` : ''}.</p></li> });
   }
   entries.sort((a, b) => a.key - b.key || a.order - b.order);
   const waiting = view.permissions.filter((permission) => permission.status === 'pending');

@@ -28,7 +28,7 @@ import httpx
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
-from selecta.billing import branding
+from selecta.billing import branding, lucy_packs
 from selecta.billing.schema import insert_ignore, stripe_events, subscriptions
 from selecta.billing.stripe_sync import (
     PriceMap,
@@ -159,6 +159,7 @@ def event_refs(event: Mapping[str, Any]) -> dict[str, Any]:
             workspace=obj.get("client_reference_id") or metadata.get("workspace_id"),
             session=stripe_id(obj.get("id")),
         )
+        refs.update(lucy_packs.session_refs(obj))  # a pack of extra Lucy usage (ADR-0486)
     elif kind == "invoice":
         parent = (obj.get("parent") or {}).get("subscription_details") or {}
         refs.update(
@@ -302,6 +303,10 @@ def process_event(
         return ProcessResult(event_id, row["status"], duplicate=True)
     now = db_now(conn) if now is None else now
     refs = dict(row["refs"] or {})
+    if refs.get("kind") == lucy_packs.KIND:  # a paid pack is credited once; no subscription
+        status, error = lucy_packs.credit_from_refs(conn, refs, now)
+        _mark(conn, row["id"], EventStatus(status), now, error)
+        return ProcessResult(event_id, status, error=error)
     if not _claim(conn, refs):
         return ProcessResult(event_id, "busy")
     try:
