@@ -169,6 +169,8 @@ Built (`web/src/cloud/accountTabs.ts`, `CloudApp.tsx`): a sign-out or sign-in is
 
 Proved (2026-11-25, two tabs of one browser, `signout.js`): tab 1 playing as the dev account; Sign out in tab 2 asked first ("Signing out stops the music." with Cancel and Sign out); tab 1 was silent 159 ms later and showed "You signed out in another tab."; when tab 2 signed in as another account, tab 1 said "Signed in as {email} in another tab." with Continue, showing nothing of the first account.
 
+Proved (2026-11-25, `ctl17.js`, two tabs of one browser and a phone): tab 1 played as the dev account; Sign out in tab 2 asked first and tab 1 was silent 104 ms later with "You signed out in another tab."; tab 2 signed in as a second account, finished getting started later, connected four songs and played them (sound in tab 2) while tab 1 stayed silent on "Signed in as {email} in another tab." with Continue. The first account's phone (360x740) then showed "Nothing is playing" with "None of your devices has music connected yet." (the laptop had signed out), and its Devices page listed the phone as This device with Rename and Sign out, the same-named phones numbered.
+
 Not built yet: the 401-on-next-request and focus checks as extra triggers (the server's session end already reaches the tab), drafts kept per account, and a browser proof of the new path.
 
 ### R11. A remote can do what the speaker's screen can (capability table)
@@ -231,6 +233,14 @@ A remote is any signed-in device of the same person that is not making the sound
 - **D30, a room with no device open.** A room opens when the account has songs but no device with music is open (`songs_waiting_for_a_speaker`); its guests are told the host is choosing, and the songs appear once a device opens. Not built: closing the room while the speaker picker is open does not close the picker (the picker is the Play button's, not the room's).
 - **E34, no connection.** With no connection the one rule asks no device and opens no picker (what other devices hold may be stale); this device plays if it can, under the usual offline words, so there is never an empty picker.
 - **Still open:** B7 (saying "Carrying on from {old} on {new}" when an offline speaker's mix resumes elsewhere), B16 (one-time offers remembered per account), F42 to F44 (housekeeping once per device across tabs, one tab scanning a folder, previews across tabs).
+
+### Lessons from Spotify Connect and the form factors (2026-11-25, `ctl18.js`)
+
+- **The speaker is not lost after a pause.** Paused from the phone for 35 seconds, the laptop stayed the speaker ("Paused on Edge on Windows"; it keeps checking in while paused), and Play from the phone started it again.
+- **The play bar always says where it plays.** On a remote the mini player's second line is "{artist} · on {device}" (seen at 820x1180 on Library).
+- **One picker.** Every start that must choose a device goes through `whereToPlay` and `SpeakerPicker`; "Move the music" on a remote lists only open devices with music for a music that is already playing.
+- **Rename a device.** The Devices page has Rename on every device (seen at 360x740), and names are read live.
+- **Sizes.** The remote at 360x740 and 820x1180 and the speaker at 1440x900 were opened and looked at; none scrolls sideways. Found and left (to-do): a laptop that was playing said "Safari on iPad 2 made a new mix." with Play it now and Keep playing when a fresh tablet had only opened Listen and Library.
 
 ## Edge cases and what happens
 
