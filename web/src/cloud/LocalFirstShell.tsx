@@ -76,6 +76,7 @@ import { MixProblem, StatusProblem, ThisDevice } from './localFirstParts';
 import { setTabBusy } from './accountTabs';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
+import { DEVICE_REGISTERED } from '../devices/playbackWire';
 import { ChangedFromLine } from '../devices/ChangedFromLine';
 import { PlayNoticeLine } from '../devices/PlayNoticeLine';
 import { HostedMix } from './hosted/HostedMix';
@@ -370,9 +371,14 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       if (typeof document === 'undefined' || document.visibilityState === 'visible') void sweepLapsed();
     };
     const timer = window.setInterval(refreshWhenActive, AVAILABILITY_REFRESH_MS);
+    // a browser's first visit registers its device after the startup sweep: report then, or the
+    // server counts no songs here and nothing can play on this device until the next sweep
+    const registered = () => { void sweepLapsed(true); };
+    window.addEventListener(DEVICE_REGISTERED, registered);
     window.addEventListener('focus', refreshWhenActive);
     document.addEventListener('visibilitychange', refreshWhenActive);
     return () => {
+      window.removeEventListener(DEVICE_REGISTERED, registered);
       window.clearInterval(timer);
       window.removeEventListener('focus', refreshWhenActive);
       document.removeEventListener('visibilitychange', refreshWhenActive);

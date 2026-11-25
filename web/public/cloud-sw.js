@@ -76,7 +76,10 @@ async function shellFile(request) {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   const hashed = url.pathname.startsWith('/assets/');
-  const kept = await cache.match(request, { ignoreSearch: !hashed });
+  // ignoreVary: the server may answer with "Vary: Origin" (its CORS layer), and the page's module
+  // scripts send an Origin header that a copy kept by the warm-up below never had; a shell file is
+  // the same bytes whoever asked, so a kept copy is never missed for that
+  const kept = await cache.match(request, { ignoreSearch: !hashed, ignoreVary: true });
   if (kept && hashed) return kept;
   try {
     const answer = await fetch(request);
@@ -125,7 +128,7 @@ self.addEventListener('message', (event) => {
         try {
           const url = new URL(String(raw), self.location.origin);
           if (url.origin !== self.location.origin || !isShellFile(url) || leftAlone(url)) continue;
-          if (await cache.match(url.href)) continue;
+          if (await cache.match(url.href, { ignoreVary: true })) continue;
           const answer = await fetch(url.href);
           if (answer.ok && answer.type === 'basic') await cache.put(url.href, answer);
         } catch {

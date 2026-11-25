@@ -446,7 +446,8 @@ export function endImportSession(): void {
     owner.suspended = true;
     writeMarker(owner.workspaceId, markerFor(owner, snapshot, true));
     owner.controller.abort(IMPORT_SUSPENDED);
-  } else {
+  } else if (owner || !following) {
+    // a tab that only follows another tab's import lets go of it; it never cancels it
     cancelImportSession();
   }
   stopFollowing();

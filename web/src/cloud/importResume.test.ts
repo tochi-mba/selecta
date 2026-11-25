@@ -77,12 +77,15 @@ describe('the carry-on offer', () => {
     });
     try {
       const given = parts('ws-1');
-      const { result } = renderHook(() => { useImportCarryOn(given); return useResumeOffer('ws-1'); });
+      const { result, unmount } = renderHook(() => { useImportCarryOn(given); return useResumeOffer('ws-1'); });
       await vi.waitFor(() => expect(importSnapshot()).toMatchObject({ phase: 'running', elsewhere: true }));
       expect(result.current).toBeNull();
       // the other tab's record is untouched
       expect(readImportMarker('ws-1')).not.toBeNull();
+      unmount();
     } finally {
+      // this tab stops following, as a shell going away does
+      endImportSession();
       delete (navigator as { locks?: unknown }).locks;
     }
   });
