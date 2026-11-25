@@ -29,7 +29,8 @@ export const ROOM_EVENT = 'selecta:room';
 
 type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 type Song = { song_id: number; title: string; artist: string };
-export type RoomAsk = { request_id: string; song: Song | null; nickname: string | null; votes: number };
+/** `dedication`: the listed line the guest put on it, in words (ADR-0488). */
+export type RoomAsk = { request_id: string; song: Song | null; nickname: string | null; votes: number; dedication?: string | null };
 type Guest = { status: string; online?: boolean };
 type Current = {
   room: {
@@ -91,7 +92,7 @@ export function noteRoom(panel: RoomRead | null) {
     const before = liveRoom && liveRoom.id === panel.room.id ? liveRoom : null;
     const still = new Set([...panel.inbox, ...panel.coming_up].map((ask) => ask.request_id));
     const left = (before?.coming ?? []).filter((ask) => !still.has(ask.request_id)).map((ask) => ({ ...ask, at: Date.now() }));
-    const brief = (ask: RoomAsk): RoomAsk => ({ request_id: ask.request_id, song: ask.song && { song_id: ask.song.song_id, title: ask.song.title, artist: ask.song.artist }, nickname: ask.nickname, votes: ask.votes });
+    const brief = (ask: RoomAsk): RoomAsk => ({ request_id: ask.request_id, song: ask.song && { song_id: ask.song.song_id, title: ask.song.title, artist: ask.song.artist }, nickname: ask.nickname, votes: ask.votes, ...(ask.dedication ? { dedication: ask.dedication } : {}) });
     next = {
       id: panel.room.id, name: panel.room.name, code: panel.code,
       inbox: panel.inbox.map(brief), coming: panel.coming_up.map(brief),

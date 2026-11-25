@@ -26,7 +26,7 @@ export function ZoneSocial({ zone, rooms, off }: { zone: Zone; rooms: RoomsClien
   const [pairing, setPairing] = useState('');
   const [recap, setRecap] = useState<string[] | null>(null);
   if (!social.data) return null;
-  const { settings, on, screens, display_on: displayOn } = social.data;
+  const { settings, on, screens, lines, display_on: displayOn } = social.data;
   const anything = on.keeps || on.reactions || on.rounds || on.dedications || on.recap;
   if (!anything && !displayOn) return null;
   const run = async (work: () => Promise<unknown>, done?: string) => {
@@ -40,6 +40,11 @@ export function ZoneSocial({ zone, rooms, off }: { zone: Zone; rooms: RoomsClien
     {on.keeps && <Check label="Guests can keep songs on their own phone" checked={settings.keeps} off={off} change={(keeps) => void change({ keeps })} />}
     {on.reactions && <Check label="Guests can love a song or a blend (the room sees counts, never who)" checked={settings.reactions} off={off} change={(reactions) => void change({ reactions })} />}
     {on.dedications && <Check label="Guests can add a dedication from a fixed list to their request" checked={settings.dedications} off={off} change={(dedications) => void change({ dedications })} />}
+    {on.dedications && settings.dedications && <fieldset className="venue-fields" disabled={off}>
+      <legend>Lines guests can pick (untick one to hide it)</legend>
+      {lines.map((line) => <Check key={line.id} label={line.words} checked={!settings.dedications_hidden.includes(line.id)} off={off}
+        change={(shown) => void change({ dedications_hidden: shown ? settings.dedications_hidden.filter((id) => id !== line.id) : [...settings.dedications_hidden, line.id] })} />)}
+    </fieldset>}
     {on.recap && <Check label="Tonight in numbers, once the zone has closed" checked={settings.recap} off={off} change={(recap) => void change({ recap })} />}
     {on.rounds && <Check label="The room can vote for the next song, from songs your rules allow" checked={settings.rounds} off={off} change={(next) => void change({ rounds: next })} />}
     {on.rounds && settings.rounds && <>

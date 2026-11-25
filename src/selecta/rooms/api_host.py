@@ -29,6 +29,7 @@ from selecta.rooms.service import Rooms
 from selecta.rooms.settings import BOUNDS, RoomSettings
 from selecta.rooms.store import Guest, Room
 from selecta.rooms.views import HostView
+from selecta.roomsocial import dedications as dedication_lines
 
 
 class OpenBody(BaseModel):
@@ -100,6 +101,11 @@ def host_json(view: HostView) -> dict[str, Any]:
             for name in ("pending_per_guest", "requests_per_guest_per_hour", "pending_per_room")
         },
         "music_paused": view.music_paused,
+        # ADR-0488: every line a guest could pick, so the host can hide the ones they don't want
+        "dedication_lines": [
+            {"id": line.id, "words": line.words}
+            for line in dedication_lines.lines_for(dedication_lines.PARTY)
+        ],
         "displays": view.displays,
         "screens": [
             {

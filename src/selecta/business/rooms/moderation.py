@@ -45,6 +45,7 @@ class ModerationMixin:
         now = self.clock()
         conn.execute(guests_t.update().where(guests_t.c.id == guest_id).values(status="removed"))
         self._withdraw_waiting(conn, guest_id, now)
+        self.forget_guest_social(conn, room, guest_id)  # ADR-0488: their vote and taps go too
         self._moderation_note(conn, actor, zone, "rooms.guest_removed",
                               f"{decider(actor)[2]} removed {guest['nickname']}.")
         return {"guest_id": guest_id, "status": "removed"}
@@ -65,6 +66,7 @@ class ModerationMixin:
             # On the venue's own Wi-Fi the address isn't a ban key; drop it from the row.
             ip_hash=None if own_network else guest["ip_hash"]))
         self._withdraw_waiting(conn, guest_id, now)
+        self.forget_guest_social(conn, room, guest_id)  # ADR-0488: their vote and taps go too
         self._moderation_note(conn, actor, zone, "rooms.guest_banned",
                               f"{decider(actor)[2]} banned {guest['nickname']} for "
                               f"{'a day' if length == 'day' else '7 days'}.")

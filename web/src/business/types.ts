@@ -165,7 +165,7 @@ export type ZoneAlert = {
 export type Daypart = { id: string; name: string; start: number; end: number; energy: 'calm' | 'steady' | 'lifted' | 'peak'; crate_ids?: string[] };
 export type ZoneSchedule = { zone_id: string; version: number; updated_by?: string | null; updated_at?: number | null; dayparts: Daypart[] };
 
-export type GuestRequest = { id: string; zone_id: string; title: string; artist: string; nickname: string; waited_seconds: number; votes: number };
+export type GuestRequest = { id: string; zone_id: string; title: string; artist: string; nickname: string; waited_seconds: number; votes: number; /** ADR-0488: the listed line the guest put on it */ dedication?: string };
 
 export type ContentRules = {
   explicit: 'allow' | 'block' | 'block_daytime';

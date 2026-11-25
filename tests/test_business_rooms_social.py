@@ -282,3 +282,32 @@ def test_a_banned_or_idle_guest_takes_their_taps_with_them(room, engine):
         assert conn.execute(sa.select(sa.func.count()).select_from(requests_t)).scalar_one() == 0
         assert conn.execute(sa.select(sa.func.count()).select_from(tables.reactions)
                             ).scalar_one() == 0
+
+def test_a_guest_staff_ban_loses_their_vote_and_taps_and_staff_see_dedications(room):
+    svc, code, _player = room
+    guests = []
+    for n in range(1, 4):  # a second apart, so "the first to join" means one guest
+        guests.append(join(svc, code, n))
+        svc.clock.advance(1)
+    play = pulse(svc, guests[0], code)["play"]["play_id"]
+    for guest in guests[:2]:
+        svc.react(guest, "love", play, True, room_key=code)
+    with transaction(svc.engine) as conn:
+        started = svc.start_round(conn, staff(), BAR)
+    svc.cast_round_vote(guests[0], started["round_id"], 0, room_key=code)
+    placed = svc.place(guests[2], "s2", room_key=code)["request_id"]
+    svc.set_dedication(guests[2], placed, "cheers", room_key=code)
+    with transaction(svc.engine) as conn:
+        queued = svc.queue(conn, staff(), BAR)
+        banned = conn.execute(sa.select(requests_t.c.guest_id).where(
+            requests_t.c.id == placed)).scalar()
+        assert [row.get("dedication") for row in queued] == ["Cheers, everyone"]
+        from selecta.business.rooms.schema import business_zone_room_guests as guests_t
+
+        voter = conn.execute(sa.select(guests_t.c.id).where(
+            guests_t.c.id != banned, guests_t.c.nickname != "The room").order_by(
+            guests_t.c.joined_at)).scalars().first()
+        svc.ban_guest(conn, staff(), BAR, voter, "day")
+    after = pulse(svc, guests[1], code)
+    assert after["play"]["loves"] == 1
+    assert [option["votes"] for option in after["round"]["options"]] == [0, 0, 0]

@@ -3,6 +3,7 @@ import { Action } from '../ui/controls';
 import { Field } from '../ui/primitives';
 import { NumberField } from './RoomLimits';
 import { SettingsSection } from './RoomSettings';
+import type { RoomAsk } from './useRoomSession';
 
 // What a room does together, in the host's settings (ADR-0488): three more groups after Limits.
 //
@@ -14,7 +15,7 @@ import { SettingsSection } from './RoomSettings';
 
 export type SocialSettings = {
   keeps: boolean; reactions: boolean; rounds: boolean; round_seconds: number; round_every_songs: number;
-  round_auto_add: boolean; dedications: boolean; recap: boolean;
+  round_auto_add: boolean; dedications: boolean; dedications_hidden: string[]; recap: boolean;
   screen_rounds: boolean; screen_reactions: boolean; screen_dedications: boolean; screen_recap: boolean;
 };
 export type SocialGroup = 'together' | 'rounds' | 'screen';
@@ -35,8 +36,14 @@ function Check({ label, help, checked, change }: { label: string; help: string; 
   );
 }
 
-export function RoomSocial({ api, workspaceId, base, settings, on, screens, saved, save, tell }: {
+export function RoomSocial({ api, workspaceId, base, settings, on, screens, saved, save, tell, lines, asks, onChanged }: {
   api: Api; workspaceId: string;
+  /** Every line a guest could pick, hidden or not. */
+  lines: { id: string; words: string }[];
+  /** The room's waiting requests, for the dedications on them. */
+  asks: RoomAsk[];
+  /** Read the room again after a dedication was cleared. */
+  onChanged: () => void;
   /** `/rooms/{id}` for this room. */
   base: string;
   settings: SocialSettings;
@@ -87,6 +94,14 @@ export function RoomSocial({ api, workspaceId, base, settings, on, screens, save
     } catch (problem) { tell((problem as Error).message || 'Couldn’t call off the vote.', true); }
   };
 
+  const dedicated = asks.filter((ask) => ask.dedication);
+  const clear = async (requestId: string) => {
+    try {
+      await api(`${base}/requests/${encodeURIComponent(requestId)}/dedication`, { method: 'DELETE' }, workspaceId);
+      tell('Dedication cleared. The request stays.');
+      onChanged();
+    } catch (problem) { tell((problem as Error).message || 'Couldn’t clear it. Try again.', true); }
+  };
   const together = on.keeps || on.reactions || on.dedications || on.recap;
   const onScreen = screens > 0 && ((on.rounds && settings.rounds) || (on.reactions && settings.reactions) || (on.dedications && settings.dedications) || (on.recap && settings.recap));
   return (
@@ -96,6 +111,25 @@ export function RoomSocial({ api, workspaceId, base, settings, on, screens, save
           {on.keeps && <Check label="Guests can keep songs" help="A heart saves the playing song on the guest’s own phone." checked={settings.keeps} change={(keeps) => save({ keeps }, 'together')} />}
           {on.reactions && <Check label="Guests can react" help="Guests love a song or the blend into it. The room sees counts, never who tapped." checked={settings.reactions} change={(reactions) => save({ reactions }, 'together')} />}
           {on.dedications && <Check label="Dedications" help="A guest can add one line from a fixed list to their request, such as Happy birthday." checked={settings.dedications} change={(dedications) => save({ dedications }, 'together')} />}
+          {on.dedications && settings.dedications && lines.length > 0 && (
+            <fieldset className="room-lines">
+              <legend className="room-help">Lines guests can pick. Untick one to hide it.</legend>
+              {lines.map((line) => {
+                const hidden = settings.dedications_hidden.includes(line.id);
+                return (
+                  <label className="room-check" key={line.id}>
+                    <input type="checkbox" checked={!hidden} onChange={(event) => save({ dedications_hidden: event.target.checked ? settings.dedications_hidden.filter((id) => id !== line.id) : [...settings.dedications_hidden, line.id] }, 'together')} /> {line.words}
+                  </label>
+                );
+              })}
+            </fieldset>
+          )}
+          {on.dedications && dedicated.map((ask) => (
+            <div className="room-setting-row" key={ask.request_id}>
+              <span><b>{ask.dedication}</b><span className="room-help">On {ask.song?.title ?? 'a song'}{ask.nickname ? `, from ${ask.nickname}` : ''}</span></span>
+              <Action type="button" className="quiet" run={() => clear(ask.request_id)} working="Clearing…" aria-label={`Clear the dedication on ${ask.song?.title ?? 'that song'}`}>Clear</Action>
+            </div>
+          ))}
           {on.recap && <Check label="Tonight in numbers" help="When the room ends, you and your guests see its totals." checked={settings.recap} change={(recap) => save({ recap }, 'together')} />}
         </SettingsSection>
       )}

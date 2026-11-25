@@ -62,6 +62,8 @@ export function RequestApprovalQueue({ requests, onDecide, onDecided, big = fals
               <span>{requestedBy(request.nickname)}</span>
               <span>{waitedWords(request.waited_seconds)}</span>
               <span>{votesWords(request.votes)}</span>
+              {/* ADR-0488: the line the guest chose, so staff see it before it reaches the room */}
+              {request.dedication && <span>Dedication: {request.dedication}</span>}
             </p>
             <div className="biz-request-actions">
               <BigAction big={big} disabled={disabled} aria-label={`${STAFF_COPY.approve} ${song}`} run={() => decide(request.id, 'approve')}>{STAFF_COPY.approve}</BigAction>

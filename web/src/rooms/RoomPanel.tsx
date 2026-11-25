@@ -49,13 +49,15 @@ type Confirm = { title: string; body: string; confirmLabel: string; run: () => P
 type Settings = RoomSettingsValue;
 // what a room opened by an older server reads as, until it sends these settings itself
 const SOCIAL_DEFAULTS: SocialSettings = {
-  keeps: true, reactions: true, rounds: true, round_seconds: 45, round_every_songs: 0, round_auto_add: true, dedications: true, recap: true,
+  keeps: true, reactions: true, rounds: true, round_seconds: 45, round_every_songs: 0, round_auto_add: true, dedications: true, dedications_hidden: [], recap: true,
   screen_rounds: true, screen_reactions: true, screen_dedications: true, screen_recap: true,
 };
 type Panel = {
   room: { id: string; name: string; status: string; settings: Settings; ends_at: number };
   code: string | null; join_path: string | null; guests: Guest[]; inbox: Item[]; coming_up: Item[]; unfit: Item[];
   music_paused: boolean; displays: number; screens?: Screen[]; now?: number;
+  /** ADR-0488: every dedication line a guest could pick in this room */
+  dedication_lines?: { id: string; words: string }[];
   /** false when the host adds each accepted request to the mix in this browser */
   renders_apply?: boolean; bounds?: LimitBounds;
 };
@@ -377,6 +379,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
             on={{ keeps: flagOn('rooms.keeps'), reactions: flagOn('rooms.reactions'), rounds: flagOn('rooms.rounds'), dedications: flagOn('rooms.dedications'), recap: flagOn('rooms.recap') }}
             saved={saved === 'together' || saved === 'rounds' || saved === 'screen' ? saved : null} save={save}
             tell={(words, problem) => (problem ? showProblem(words) : showToast(words))}
+            lines={panel.dedication_lines ?? []} asks={[...panel.inbox, ...panel.coming_up]} onChanged={() => void load()}
           />
         </RoomSettings>
       </section>
