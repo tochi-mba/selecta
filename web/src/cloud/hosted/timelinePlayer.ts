@@ -46,7 +46,7 @@ export type PlayerState = {
 /** A read the storage refused because the signed link ran out (or never was valid). */
 export class LinkExpired extends Error {}
 
-type Context = BaseAudioContext & { close?: () => Promise<void>; resume?: () => Promise<void> };
+type Context = BaseAudioContext & { close?: () => Promise<void>; resume?: () => Promise<void>; suspend?: () => Promise<void> };
 type Scheduled = { source: AudioBufferSourceNode; level: GainNode; when: number; end: number; part: number; partAt: number; samples: number };
 
 export type PlayerDeps = {
@@ -67,8 +67,18 @@ const TRIES = 4;
 /** The engine's rate (worker SAMPLE_RATE): the context runs at it, so nothing is resampled. */
 const RATE = 44100;
 
+/** Set when the store's CORS rules refused a ranged read: from then on whole-body reads, cut here. */
+let rangesRefused = false;
+
 async function readSignedUrl(url: string, start: number, end: number): Promise<Uint8Array> {
-  const answer = await fetch(url, { headers: { Range: `bytes=${start}-${end - 1}` }, cache: 'no-store' });
+  let answer: Response;
+  try {
+    answer = await fetch(url, rangesRefused ? { cache: 'no-store' } : { headers: { Range: `bytes=${start}-${end - 1}` }, cache: 'no-store' });
+  } catch (problem) {
+    if (rangesRefused || !(problem instanceof TypeError)) throw problem;
+    rangesRefused = true; // a refused preflight looks like a network error; try once without
+    answer = await fetch(url, { cache: 'no-store' });
+  }
   if (answer.status === 403 || answer.status === 400 || answer.status === 401) throw new LinkExpired('The link to this part ran out.');
   if (answer.status === 416) return new Uint8Array(0);
   if (!answer.ok) throw new Error('A part of this mix could not be fetched.');
@@ -105,6 +115,7 @@ export class TimelinePlayer {
   private nextAt = 0;
   private ending = false;
   private pumping = false;
+  private live = false;
   private generation = 0;
   private cancelTimer: (() => void) | null = null;
   private linksAt: number;
@@ -152,8 +163,9 @@ export class TimelinePlayer {
   async play(from = 0, at = 0) {
     this.halt();
     const generation = this.generation;
-    const context = this.deps.context();
+    const context = this.context ?? this.deps.context();
     this.context = context;
+    this.live = true;
     this.nextPart = Math.max(0, Math.min(from, this.parts.length - 1));
     this.nextAt = Math.max(0, at);
     this.ending = false;
@@ -223,7 +235,7 @@ export class TimelinePlayer {
     this.pumping = true;
     const generation = this.generation;
     try {
-      while (generation === this.generation && this.context && !this.ending && this.ahead() < this.deps.aheadS) {
+      while (generation === this.generation && this.live && this.context && !this.ending && this.ahead() < this.deps.aheadS) {
         if (!this.reader) {
           if (this.nextPart >= this.parts.length) { this.ending = true; break; }
           const part = this.parts[this.nextPart];
@@ -309,7 +321,7 @@ export class TimelinePlayer {
 
   private tick() {
     const context = this.context;
-    if (!context) return;
+    if (!context || !this.live) return;
     const now = context.currentTime;
     for (const item of [...this.scheduled]) if (item.end <= now) this.release(item);
     const playingNow = this.scheduled.find((item) => item.when <= now && now < item.end);
@@ -334,8 +346,9 @@ export class TimelinePlayer {
   }
 
   /** Silence everything, let every decoded window go and close the audio context. */
-  private halt() {
+  private halt(close = false) {
     this.generation += 1;
+    this.live = false;
     this.cancelTimer?.();
     this.cancelTimer = null;
     for (const item of this.scheduled) {
@@ -347,16 +360,27 @@ export class TimelinePlayer {
     this.reader = null;
     this.pumping = false;
     const context = this.context;
-    this.context = null;
-    void context?.close?.().catch(() => undefined);
+    if (close) {
+      this.context = null;
+      void context?.close?.().catch(() => undefined);
+    } else {
+      // kept, silent, for the next Play: making a context can hold the page for most of a second
+      void context?.suspend?.().catch(() => undefined);
+    }
   }
 
-  /** Stop where it is (Play again starts from there with `play(state.part, state.at)`). */
+  /** Stop where it is and let every decoded window go (Play again starts from there with
+   * `play(state.part, state.at)`). The silent context is kept until `close`. */
   stop() {
     const was = this.state.playing;
     this.halt();
     if (was) this.emit({ playing: false, waiting: false });
   }
 
-  close() { this.stop(); }
+  /** Stop and close the audio context (leaving the page). */
+  close() {
+    const was = this.state.playing;
+    this.halt(true);
+    if (was) this.emit({ playing: false, waiting: false });
+  }
 }

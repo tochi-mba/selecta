@@ -130,8 +130,9 @@ export function frameAt(bytes: Uint8Array, at: number, stream: StreamInfo): Fram
  * before it are whole. With `final` (the window ends at the end of the file) it is a whole frame. */
 export function framesIn(bytes: Uint8Array, stream: StreamInfo, final = false): { frames: Frame[]; next: Frame | null } {
   const candidates: Frame[] = [];
-  for (let at = 0; at + 6 <= bytes.length; at += 1) {
-    if (bytes[at] !== 0xff) continue;
+  // the browser's own indexOf finds each 0xff; only a sync code (0xfff8 or 0xfff9) is looked at
+  for (let at = bytes.indexOf(0xff); at >= 0 && at + 6 <= bytes.length; at = bytes.indexOf(0xff, at + 1)) {
+    if ((bytes[at + 1] & 0xfe) !== 0xf8) continue;
     const frame = frameAt(bytes, at, stream);
     if (frame) candidates.push(frame);
   }
