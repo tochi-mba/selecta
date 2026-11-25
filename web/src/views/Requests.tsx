@@ -1,7 +1,8 @@
-import { flagOn } from '../flags';
+import { flagOn, useFlag, useFlagHeard } from '../flags';
 import { Icon } from '../ui/Icon';
 import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
 import { Action, Problem, Skeleton } from '../ui/controls';
+import { AudioPreview } from '../ui/AudioPreview';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
 import { ApiError, SERVER_FAILED_WORDS, MixData, MixItem, Request, SongRow } from '../api';
 import { useApi, useRequest } from '../requestContext';
@@ -10,10 +11,8 @@ import { etaWords } from '../lib';
 import { PlayerLike } from '../playerContract';
 import { operationId } from '../state/async';
 import { orderOf } from '../state/readiness';
-import { AudioPreview } from '../ui/AudioPreview';
 import { TermHint } from '../ui/Glossary';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { useFlag, useFlagHeard } from '../flags';
 import { BrowserRequests, useRoomLive, waitingCount as countWaiting } from './BrowserRequests';
 
 export type Stage =
@@ -27,8 +26,7 @@ export type RequestRow = {
   status: string; available: number; reason?: string;
   offer?: string; ready?: boolean; needs_approval?: boolean;
   route?: { id: number; title: string; artist?: string | null }[];
-  transitions?: Transition[];
-  after_id?: number;
+  transitions?: Transition[]; after_id?: number;
   stage?: Stage; waiting_on?: string; seconds?: number | null; after?: string | null;
   never?: boolean; no_cues?: boolean; declined?: boolean; bridge_choice?: boolean | null;
   saving?: boolean; picked?: number[] | null; behind?: string; bridge_lost?: boolean;
