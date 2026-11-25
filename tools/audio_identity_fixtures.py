@@ -400,7 +400,8 @@ def main() -> int:
         print("\n".join(wrong))
         return 1
     manifest = {"version": "a1", "spec": "docs/engineering/audio-identity.md", "files": entries}
-    (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    # always LF, so the generator's output is the same file on every machine
+    (OUT / "manifest.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode())
     print(f"{len(entries)} fixtures written to {OUT.relative_to(ROOT)}")
     return 0
 
