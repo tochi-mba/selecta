@@ -11,7 +11,8 @@ import { showToast } from '../ui/toasts';
 import { countOf } from '../ui/format';
 import { registeredDeviceId } from './ConnectMusic';
 import { startImport, type WatchExtras } from './importResume';
-import { cancelImportSession, importSnapshot, readImportMarker, subscribeImport } from './importSession';
+import { breathe } from '../media/breathe';
+import { cancelImportSession, IMPORT_TAB_FREED, importSnapshot, readImportMarker, subscribeImport } from './importSession';
 
 // Watching music folders (`cloud.music_folders`).
 //
@@ -359,6 +360,9 @@ function later(run: () => void, ms: number): void {
 }
 
 function whenIdle(run: () => void): void {
+  // A hidden tab has no idle periods (the callback waited out its timeout, itself held back), and
+  // nobody is using the page then, so the check simply starts.
+  if (document.visibilityState === 'hidden') { void breathe().then(run); return; }
   const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
   if (typeof idle === 'function') idle(() => run(), { timeout: 10_000 });
   else later(run, 1_000);
@@ -403,9 +407,18 @@ export function bindWatch(mine: Parts, given?: { extras?: WatchExtras; firstChec
     if (queue.length) void runQueue();
     else whenIdle(() => autoCheck('due'));
   });
+  // EDGE CASE (two tabs open): the tab that was importing a watched folder closed part way. Its
+  // marker stays, and this tab carries the folder on at once, skipping what the journal holds.
+  const freed = () => {
+    if (parts !== mine) return;
+    const marker = readImportMarker(mine.workspaceId);
+    if (marker?.folderId && state.rows?.some((row) => row.id === marker.folderId && row.handle)) void checkFolders([marker.folderId]);
+  };
   document.addEventListener('visibilitychange', visible);
+  window.addEventListener(IMPORT_TAB_FREED, freed);
   return () => {
     document.removeEventListener('visibilitychange', visible);
+    window.removeEventListener(IMPORT_TAB_FREED, freed);
     unhear();
     if (parts === mine) endWatch();
   };

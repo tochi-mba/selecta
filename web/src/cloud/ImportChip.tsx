@@ -5,6 +5,7 @@ import { useFlag } from '../flags';
 import { Icon } from '../ui/Icon';
 import { Meter } from '../ui/Meter';
 import { IconButton } from '../ui/primitives';
+import { AWAY_WORDS, useImportWasAway } from './backgroundImport';
 import { useImportAnnouncer } from './importAnnouncer';
 import { allowAndCarryOn, carryOnNow, retryImportNow, useResumeOffer } from './importResume';
 import { useImportSession } from './importSession';
@@ -26,6 +27,7 @@ export function ImportChip({ onView, workspaceId }: { onView: () => void; worksp
   const resilient = useFlag('cloud.resilient_import');
   const offer = useResumeOffer(workspaceId ?? '');
   const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  const away = useImportWasAway();
   const [hiddenIn, setHiddenIn] = useState<string | null>(null);
   const [refused, setRefused] = useState(false);
   const waitKey = resilient ? `${live.phase}:${live.waiting?.why ?? ''}:${offer?.kind ?? ''}` : live.phase;
@@ -88,6 +90,8 @@ export function ImportChip({ onView, workspaceId }: { onView: () => void; worksp
               ? <span><NumberRoll value={checked} format={formatCount} />{typeof live.total === 'number' ? ` of ${formatCount(live.total)} checked` : ' checked'}</span>
               : <span>{checkedWords(live)}</span>}</p>
             <Meter label="Files checked" showLabel={false} value={typeof live.total === 'number' ? checked : undefined} max={Math.max(live.total ?? 1, 1)} valueText={checkedWords(live)} />
+            {/* only once the person has been elsewhere: a hidden tab runs at a lower priority */}
+            {away && !live.elsewhere && <small>{AWAY_WORDS}</small>}
           </div>
         )}
       {resilient && live.waiting?.why === 'server' && !live.elsewhere && <button type="button" onClick={retryImportNow}>Try now</button>}

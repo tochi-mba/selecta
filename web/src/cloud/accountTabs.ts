@@ -51,6 +51,11 @@ export function setTabBusy(state: Partial<TabBusy>): void {
   here = { ...here, ...state };
 }
 
+/** What this tab is doing now, as the shell last said (the install moments read it). */
+export function tabBusyHere(): TabBusy {
+  return here;
+}
+
 /** Listen for the other tabs' sign-outs and sign-ins. */
 export function onAccountMessage(listen: (message: AccountMessage) => void): () => void {
   open();

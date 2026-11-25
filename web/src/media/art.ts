@@ -1,5 +1,6 @@
 import { flagOn } from '../flags';
 import { hasArt, putArt } from './artStore';
+import { breathe } from './breathe';
 import { artSupported, makeArt, type ArtRequest, type ArtResponse, type MadeArt } from './artWorker';
 import { readFilePicture, type FilePicture } from './tags';
 
@@ -51,6 +52,9 @@ export function captureArt(file: File, sha: string): void {
 }
 
 function idle(): Promise<void> {
+  // A hidden tab has no idle periods, so each cover waited out the timeout, itself held back to
+  // once a minute after a few minutes away. Nobody is using a hidden page, so it simply takes turns.
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return breathe();
   return new Promise((resolve) => {
     const scope = globalThis as { requestIdleCallback?: (run: () => void, options?: { timeout: number }) => number };
     if (typeof scope.requestIdleCallback === 'function') scope.requestIdleCallback(() => resolve(), { timeout: 2_000 });
