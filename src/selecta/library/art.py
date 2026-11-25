@@ -15,6 +15,14 @@ Two folders under `<home>/art/v1/`:
 
 Reading a picture can never fail a scan or a request: anything wrong is simply no cover, and the
 page draws the generated tile, as before.
+
+**What is refused (T-20261125-4054).** Since the bytes are served as stored and the browser
+decodes them, the picture's size and motion are read from its header first (`picture_header`;
+no decoder, so no Pillow). A picture whose header does not read, that declares more than
+`MAX_PICTURE_PIXELS`, or that moves (a GIF with more than one frame, an APNG, an animated WebP) is
+no cover: a looping cover would ignore Still and reduced motion, where only the music may move.
+The route checks the kept bytes again before serving, so a picture kept before this rule is
+refused too.
 """
 
 from __future__ import annotations
@@ -41,6 +49,9 @@ log = logging.getLogger(__name__)
 VERSION = "v1"
 MAX_PICTURE_BYTES = 4 * 1024 * 1024
 """A bigger picture is skipped: kept unscaled, it would be a slow cover on every Library row."""
+MAX_PICTURE_PIXELS = 40_000_000
+"""About 40 megapixels, as in Cloud: far past any real cover, short of a decode that can end the
+tab. A small file can declare a far bigger picture than its bytes suggest."""
 FRONT_COVER = 3
 OTHER_PICTURE = 0
 NO_PICTURE = "-"
@@ -68,6 +79,175 @@ def sniff(data: bytes) -> str | None:
     if data[:6] in (b"GIF87a", b"GIF89a"):
         return "image/gif"
     return None
+
+
+@dataclass(frozen=True)
+class Header:
+    width: int
+    height: int
+    animated: bool
+
+
+def _u16be(data: bytes, at: int) -> int:
+    return int.from_bytes(data[at:at + 2], "big")
+
+
+def _u16le(data: bytes, at: int) -> int:
+    return int.from_bytes(data[at:at + 2], "little")
+
+
+def _jpeg(data: bytes) -> Header | None:
+    at = 2
+    while at + 3 < len(data):
+        if data[at] != 0xFF:
+            return None
+        while at < len(data) and data[at] == 0xFF:  # fill bytes may sit before a marker
+            at += 1
+        if at >= len(data):
+            return None
+        marker = data[at]
+        at += 1
+        if marker == 0x01 or 0xD0 <= marker <= 0xD7:  # standalone markers carry no length
+            continue
+        if marker in (0xD9, 0xDA):  # the image data began with no frame header
+            return None
+        if at + 1 >= len(data):
+            return None
+        length = _u16be(data, at)
+        if length < 2:
+            return None
+        if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+            if at + 7 > len(data):
+                return None
+            # a zero height means "given later" (DNL): unknown, so refused by the caller
+            return Header(_u16be(data, at + 5), _u16be(data, at + 3), False)
+        at += length
+    return None
+
+
+def _png(data: bytes) -> Header | None:
+    if len(data) < 24 or data[12:16] != b"IHDR":
+        return None
+    width, height = int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    # an animated PNG says so with an acTL chunk before its first image data
+    animated, at = False, 8
+    while at + 8 <= len(data):
+        length = int.from_bytes(data[at:at + 4], "big")
+        kind = data[at + 4:at + 8]
+        if kind == b"acTL":
+            animated = True
+            break
+        if kind in (b"IDAT", b"IEND"):
+            break
+        at += 12 + length
+    return Header(width, height, animated)
+
+
+def _skip_sub_blocks(data: bytes, at: int) -> int:
+    """The offset after a GIF's run of data sub-blocks, or -1 when the file is cut short."""
+    while at < len(data):
+        size = data[at]
+        at += 1
+        if size == 0:
+            return at
+        at += size
+    return -1
+
+
+def _gif(data: bytes) -> Header | None:
+    if len(data) < 13:
+        return None
+    width, height = _u16le(data, 6), _u16le(data, 8)
+    at = 13
+    if data[10] & 0x80:
+        at += 3 * (1 << ((data[10] & 0x07) + 1))
+    frames = 0
+    while at < len(data):
+        block = data[at]
+        if block == 0x3B:  # the trailer
+            break
+        if block == 0x21:
+            at = _skip_sub_blocks(data, at + 2)
+        elif block == 0x2C:
+            if at + 10 > len(data):
+                return None
+            # a frame may declare itself larger than the screen; the decoder sizes for the larger
+            width = max(width, _u16le(data, at + 1) + _u16le(data, at + 5))
+            height = max(height, _u16le(data, at + 3) + _u16le(data, at + 7))
+            flags_byte = data[at + 9]
+            at += 10
+            if flags_byte & 0x80:
+                at += 3 * (1 << ((flags_byte & 0x07) + 1))
+            at = _skip_sub_blocks(data, at + 1)  # past the LZW code size, then the image data
+            frames += 1
+            if frames > 1:
+                break
+        else:
+            return None
+        if at < 0:  # cut short: whether more frames follow is unknown, so it is refused
+            return None
+    if frames == 0:
+        return None
+    return Header(width, height, frames > 1)
+
+
+def _webp(data: bytes) -> Header | None:
+    if len(data) < 30:
+        return None
+    # any animation chunk anywhere in the file counts, whatever the flags claim
+    animated, at = False, 12
+    while at + 8 <= len(data):
+        kind = data[at:at + 4]
+        if kind in (b"ANIM", b"ANMF"):
+            animated = True
+            break
+        size = int.from_bytes(data[at + 4:at + 8], "little")
+        at += 8 + size + (size & 1)
+    first = data[12:16]
+    if first == b"VP8X":
+        animated = animated or bool(data[20] & 0x02)
+        width = int.from_bytes(data[24:27], "little") + 1
+        height = int.from_bytes(data[27:30], "little") + 1
+        return Header(width, height, animated)
+    if first == b"VP8 ":
+        if data[23:26] != b"\x9d\x01\x2a":
+            return None
+        return Header(_u16le(data, 26) & 0x3FFF, _u16le(data, 28) & 0x3FFF, animated)
+    if first == b"VP8L":
+        if data[20] != 0x2F:
+            return None
+        bits = int.from_bytes(data[21:25], "little")
+        return Header((bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1, animated)
+    return None
+
+
+def picture_header(data: bytes) -> Header | None:
+    """The picture's declared size and whether it moves, read from its header bytes alone, or
+    None when the header is not one this reads. Never raises and never decodes."""
+    try:
+        mime = sniff(data)
+        if mime == "image/jpeg":
+            return _jpeg(data)
+        if mime == "image/png":
+            return _png(data)
+        if mime == "image/gif":
+            return _gif(data)
+        if mime == "image/webp":
+            return _webp(data)
+    except Exception:  # noqa: BLE001 - a header that does not read is no cover
+        return None
+    return None
+
+
+def servable(data: bytes) -> bool:
+    """Whether these picture bytes may be shown as a cover: a readable header, a still picture,
+    and no more than `MAX_PICTURE_PIXELS` (module notes)."""
+    if not data or len(data) > MAX_PICTURE_BYTES:
+        return False
+    header = picture_header(data)
+    if header is None or header.animated or header.width < 1 or header.height < 1:
+        return False
+    return header.width * header.height <= MAX_PICTURE_PIXELS
 
 
 def _rank(kind: object) -> int:
@@ -111,7 +291,7 @@ def _read(path: Path) -> tuple[bytes, str] | None:
     except Exception:  # noqa: BLE001 - a damaged tag is no cover
         return None
     for _, data in candidates:
-        if not data or len(data) > MAX_PICTURE_BYTES:
+        if not servable(data):
             continue
         mime = sniff(data)
         if mime is not None:
@@ -221,10 +401,14 @@ def warm(home: Path, paths: Iterable[str], should_stop: Callable[[], bool] = lam
 __all__ = [
     "CACHE_CONTROL",
     "MAX_PICTURE_BYTES",
+    "MAX_PICTURE_PIXELS",
     "Cover",
+    "Header",
     "cover_for",
     "file_key",
+    "picture_header",
     "read_picture",
+    "servable",
     "sniff",
     "warm",
 ]
