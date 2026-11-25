@@ -128,6 +128,8 @@ class TurnPlan:
     extra_offered: bool = False
     """The week is spent and the page may offer extra usage (ADR-0486): the flag is on for the
     workspace and it holds a pack balance."""
+    enforced: bool = False
+    """Admitted under the session and week allowance (ADR-0487), not the month's turns."""
 
     @property
     def is_builtin(self) -> bool:
@@ -428,7 +430,7 @@ def plan_turn(
         prompt_version=prompt_version, tool_schema_version=tool_schema_version, limits=limits,
         reserved_usd=reserved, spend_day=spend_day, lease_id=lease_id,
         fallback_used=chosen.fallback_used, limited=limited, alerts=tuple(alerts),
-        skipped=chosen.skipped, extra_offered=extra_offered,
+        skipped=chosen.skipped, extra_offered=extra_offered, enforced=enforced,
     )
 
 

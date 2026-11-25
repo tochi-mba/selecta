@@ -13,13 +13,17 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
-from selecta.ai import usage_units
+from selecta.ai import usage_units, usage_windows
+from selecta.ai.allowance import month_resets_at
 from selecta.ai.usage_schema import lucy_usage_state
 
 # `ai_runs.limited` -> the cause the page knows, and the window whose reset it names.
+# "backstop" is the plan's monthly ceiling on Lucy's AI, kept above the weekly limit (ADR-0482
+# rule 9); "turn" is one message reaching the most work a single message may do (ADR-0483 rule 3).
 CAUSES = {"session": ("session", "session"), "week": ("week", "week"),
-          "lighter": ("session_lighter", "session"), "off": ("lucy_off", "week")}
-NO_STEPS = {"session_lighter", "lucy_off"}
+          "lighter": ("session_lighter", "session"), "off": ("lucy_off", "week"),
+          "backstop": ("backstop", "month"), "turn": ("turn", None)}
+NO_STEPS = {"session_lighter", "lucy_off", "turn"}
 TOP_PLAN = "premium"
 
 
@@ -41,6 +45,14 @@ def signal(limited: str | None, meter: dict[str, Any] | None, *, plan_id: str,
         return {"cause": cause, "resets_at": None, "back_words": None, "next": steps}
     return {"cause": cause, "resets_at": line.get("resets_at"),
             "back_words": line.get("back_words"), "next": steps}
+
+
+def month_line(month: str, time_zone: str | None, now: float) -> dict[str, Any]:
+    """When the account's month starts again, shaped like a line of the meter, for the note of
+    a turn the monthly ceiling stopped."""
+    resets_at = month_resets_at(month, time_zone)
+    return {"resets_at": resets_at,
+            "back_words": usage_windows.back_words(resets_at, time_zone, now)}
 
 
 def switched_off(conn: Connection, workspace_id: str, *, now: float) -> bool:
@@ -100,4 +112,4 @@ def state_words(meter: dict[str, Any] | None) -> str:
             "it in these words; never give a number of turns, tokens or units.")
 
 
-__all__ = ["CAUSES", "enforced_meter", "signal", "state_words", "switched_off"]
+__all__ = ["CAUSES", "enforced_meter", "month_line", "signal", "state_words", "switched_off"]

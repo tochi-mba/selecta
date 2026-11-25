@@ -192,6 +192,8 @@ class Job:
     device_id: str | None = None
     stop: threading.Event = field(default_factory=threading.Event)
     result: dict[str, Any] = field(default_factory=dict)
+    capped: bool = False
+    """This message reached the most work one message may do (the per-turn cap)."""
 
 
 class Runner:
@@ -387,6 +389,12 @@ def builtin_words(job: Job, ctx: cloud_tools.CloudCtx) -> str:
     if limited == "allowance":
         why = (f"You've used this month's Lucy turns on your plan, so I can't think this one "
                f"through. They come back on {_resets_words(job)}.")
+    elif limited == "spend" and job.plan.enforced:
+        # The same monthly ceiling for an account on the session and week allowance, where it
+        # is a backstop above the weekly limit (ADR-0482 rule 9) and turns mean nothing.
+        why = (f"You've reached your plan's monthly safety limit on Lucy's AI, which sits above "
+               f"your weekly allowance, so I can't think this one through. It comes back on "
+               f"{_resets_words(job)}.")
     elif limited == "spend":
         # The plan's monthly dollar ceiling, not its turns: turns may well be left, so saying
         # they are used up would be untrue. Both start again with the account's month.
@@ -434,6 +442,8 @@ async def run_turn(job: Job) -> None:
     if changed:
         events.emit("run.limit", {"limit": "plan", "text": changed})
     limit_note = plan.limited if plan.limited in {"session", "week"} else None
+    if plan.limited == "spend" and plan.enforced and plan.is_builtin:
+        limit_note = "backstop"
     if plan.limited == "lighter" and (notice := _lighter_notice(job)):
         events.emit("run.limit", {"limit": "lighter", "text": notice})
         limit_note = "lighter"
@@ -524,7 +534,13 @@ async def run_turn(job: Job) -> None:
         if followups:
             meta["followups"] = followups
         with transaction(job.engine, job.workspace_id) as conn:
-            if limit_note:
+            if job.capped and plan.enforced and not limit_note:
+                limit_note = "turn"
+            if limit_note in {"backstop", "turn"}:
+                month = cloud_limits.month_line(plan.month, job.timezone, db_now(conn))
+                meta["limit"] = cloud_limits.signal(limit_note, {"month": month},
+                                                    plan_id=plan.tier.value)
+            elif limit_note:
                 # what the page needs to offer the next step under these words (ADR-0483)
                 meter = usage_units.read_model(conn, job.workspace_id, now=db_now(conn))
                 off = cloud_limits.switched_off(conn, job.workspace_id, now=db_now(conn))
@@ -656,9 +672,13 @@ async def _model_turns(
     with transaction(job.engine, job.workspace_id) as conn:
         seq = cloud_store.turn_row(conn, job.workspace_id, job.turn_id).seq
     messages = _model_history(job, seq) + [provider.user(job.text)]
-    with transaction(job.engine, job.workspace_id) as conn:
-        allowance = cloud_limits.state_words(
-            cloud_limits.enforced_meter(conn, job.workspace_id, now=db_now(conn)))
+    allowance = ""
+    if plan.enforced:
+        # The model the turn was admitted under, not the switch time alone: an account whose
+        # grant has gone is on turns again at once, and is told its turn counts.
+        with transaction(job.engine, job.workspace_id) as conn:
+            allowance = cloud_limits.state_words(
+                cloud_limits.enforced_meter(conn, job.workspace_id, now=db_now(conn)))
     system = [
         cloud_prompt.INSTRUCTIONS_WINDOWS if allowance else cloud_prompt.INSTRUCTIONS,
         cloud_prompt.dynamic(cloud_tools.library_summary(ctx),
@@ -715,7 +735,9 @@ async def _model_turns(
             events.emit("run.limit", {"limit": "spend", "used": spent,
                                       "max": limits.max_cost_usd,
                                       "text": "Lucy reached the cost limit for one message."})
-            await writer.write("\n\n(I stopped here: that was as much work as one message "
+            job.capped = True
+            await writer.write(TURN_CAP_WORDS if plan.enforced else
+                               "\n\n(I stopped here: that was as much work as one message "
                                "allows.)")
             break
         events.state("running_tools", cycles, steps)
@@ -756,6 +778,9 @@ async def _model_turns(
     return cycles, steps
 
 
+TURN_CAP_WORDS = ("\n\n(I stopped here: one message can only do so much work, and this one "
+                  "reached that limit. The reply so far stands; send another message and I'll "
+                  "carry on from it.)")
 TIER_WORDS = {"free": "Lucy Basic", "standard": "Lucy Standard", "premium": "Lucy Advanced"}
 
 
