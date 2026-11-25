@@ -32,7 +32,7 @@ describe('the import path never deletes or moves a member file', () => {
     }
     expect(code(source('artStore.ts')).match(DESTRUCTIVE) ?? []).toEqual(['write(', 'write(', 'write(']);
     expect(code(source('artStore.ts'))).toMatch(/async function write\(key: string, row: ArtRow\)[^]*?transaction\.objectStore\(ART\)\.put\(row, key\)/);
-    expect([...new Set([...code(source('art.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]))].sort()).toEqual(['../flags', './artStore', './artWorker', './tags']);
+    expect([...new Set([...code(source('art.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]))].sort()).toEqual(['../flags', './artStore', './artWorker', './breathe', './tags']);
     // The importer reaches only identity, the tag reader and the store (never a file-system helper).
     expect([...code(source('tags.ts')).matchAll(/from '([^']+)'/g)]).toEqual([]);
     const imports = [...code(source('importer.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
