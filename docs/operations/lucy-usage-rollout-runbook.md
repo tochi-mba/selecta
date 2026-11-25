@@ -106,8 +106,10 @@ from when the last raise was saved (or, for a raise that waited as a delayed act
 out), not from the 1st on which those workspaces switched, so the full week after the switch
 and the step's comparison in the ledger are still checked by hand. And it does not read the
 gate register or look at who has been sent the notice. A raise that waits as a delayed action
-was checked when it was proposed and is not checked again when it is carried out, so do not
-propose a second raise while one is waiting.
+is checked when it is proposed and again when it is carried out, against the rules and history
+as they are by then. So a second raise proposed while one is waiting is refused when its turn
+comes (the action ends as failed, with the refusal in its note, and nothing is saved): propose
+it again once the week has passed. A waiting change that only goes back is always carried out.
 
 Going back is never refused: lowering a percentage, removing or disabling a rule, a kill
 switch, or a rule that switches named accounts off all pass at any time, with no marker.

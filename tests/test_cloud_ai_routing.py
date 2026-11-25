@@ -606,7 +606,8 @@ def test_a_run_pinned_at_its_start_keeps_its_deployment_after_routing_changes(cl
         )
     with transaction(cloud_engine) as conn:
         registry.save_deployment(conn, replace(DEFAULTS["opus-high"], prices=Prices(9.0, 99.0),
-                                               eval_passed_at=1.0))
+                                               eval_passed_at=1.0),
+                                 reason="a new price mid-run [lm-price-change]")
         changed = registry.normalise_map(DEFAULT_ROUTING)
         changed["premium"]["deep_plan"] = ["sonnet-medium"]
         registry.create_routing_version(conn, changed, "staff", "opus off", activate=True)
