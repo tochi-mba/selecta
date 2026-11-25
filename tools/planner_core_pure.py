@@ -172,9 +172,7 @@ def check() -> tuple[list[str], list[str]]:
     offenders = static_offenders()
     stubbed = _child(stub=True)
     offenders += [
-        f"importing the planner core loads {name}"
-        for name in stubbed["loaded"]
-        if forbidden(name)
+        f"importing the planner core loads {name}" for name in stubbed["loaded"] if forbidden(name)
     ]
     offenders += [
         f"importing the planner core reads {path}" for path in _data_files(stubbed["opened"])
