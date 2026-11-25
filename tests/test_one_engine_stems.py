@@ -15,13 +15,16 @@ import selecta.render.intertwine as intertwine_module
 import selecta.studio as studio_module
 from selecta import flags
 from selecta import seam_making as seam_module
+from selecta.audit.checks import AuditReport, Check
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.lyrics.align import Word
+from selecta.planner.memory import SeamMemory
 from selecta.render import dsp
 from selecta.render.engine import SongCache
 from selecta.render.engine import render as engine_render
 from selecta.render.script_json import from_json, to_json
 from selecta.render.stem_seam import HANDOVER_SECONDS, TAIL_SECONDS, vocal_spans
+from selecta.seam_kinds import SeamRequest
 from selecta.stems import StemWindow
 from selecta.studio import CELLS, LANES, START_SHAPE, _lane_gain, prepare_session, render_shape
 from selecta.styles.wordplay import Stem, vocal_ride
@@ -183,6 +186,30 @@ def test_the_audit_hears_the_voices_the_shape_turns_up(studio, monkeypatch):
     monkeypatch.setattr(seam_module, "audit", listening)
     seam_module._stem_audit(muted, SongCache())
     assert heard and all(given == vocal_spans(muted.script) for given in heard)
+
+
+def test_strip_and_land_searches_repairs_and_keeps_its_record_through_the_engine(
+    studio, monkeypatch
+):
+    a, b, settings, _folder, _session = studio
+    seen = []
+
+    def judged(take, vocal_spans=None, settings=None):
+        seen.append((take, vocal_spans))
+        failed = [Check("harmony", False, 0.3, 0.16)] if len(seen) == 1 else []
+        return AuditReport(failed)
+
+    monkeypatch.setattr(seam_module, "audit", judged)
+    rendered, report, _why = seam_module._arranged(
+        settings, SeamRequest(a.id, b.id, "stem_arrange"), a, b, SeamMemory()
+    )
+    assert report.passed and len(seen) == 2
+    assert all(take.script.meta["stem_lanes"] for take, _ in seen)
+    assert all(spans is not None for _, spans in seen), "each take hears its own voices"
+    assert rendered is seen[1][0]
+    assert rendered.script.meta["shape"]["b"]["other"][: CELLS - 2] == [0] * (CELLS - 2)
+    assert len(rendered.script.meta["arc"]) == CELLS
+    assert "nudge" in rendered.drift_ms
 
 
 def _intertwine_pair(tmp_path):

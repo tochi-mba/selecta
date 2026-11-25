@@ -14,6 +14,7 @@ from synth import make_track
 import selecta.seam_making as seam_making
 import selecta.seams as seams_module
 import selecta.studio as studio_module
+from selecta import flags
 from selecta.arrange import (
     FIRST_ARC,
     PRESENT_DB,
@@ -737,6 +738,9 @@ def _fake_stems(monkeypatch, tmp_path):
 
 @pytest.fixture
 def arranged(tmp_path, monkeypatch):
+    # these pin the search, repairs and session reuse on the old private mix, which counts every
+    # split; tests/test_one_engine_stems.py covers strip and land through the engine
+    flags.use("-render.one_engine")
     a, b = _pair(tmp_path)
     made = _fake_stems(monkeypatch, tmp_path)
     settings = Settings(tmp_path / "home")
