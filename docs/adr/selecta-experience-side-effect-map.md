@@ -327,6 +327,10 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 |---|---|
 | `POST /api/admin/jobs/{job_id}/{command}` | Retries, cancels or otherwise acts on a job |
 | `POST /api/admin/workers/{worker_id}/{command}` | Drains or acts on a worker |
+| `POST /api/admin/hosted/jobs/retry-failed` | Retries every failed job of one type from the last 7 days, at most 500, after the console counted them (Careful, audited) |
+| `POST /api/admin/hosted/jobs/expire-queued` | Proposes cancelling jobs queued longer than N hours as a delayed action (15 minutes, cancellable); when it runs it cancels at most 500 |
+| `POST /api/admin/hosted/pools/{pool}/{command}` | Pauses or resumes a worker pool (its `workers.drained` control), or records a staff request the autoscaler carries out (one worker for an hour, none, or hand back) |
+| `PUT /api/admin/hosted/budget` | Sets the monthly hosted processing budget the Workers page measures against (audited) |
 | `POST /api/admin/accounts/{user_id}/{command}` | Suspends or acts on an account |
 | `POST /api/admin/overrides` | Grants an override |
 | `POST /api/admin/overrides/mass` | Grants overrides in bulk |

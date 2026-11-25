@@ -39,6 +39,24 @@ export const HELP: Record<AdminPage, PageHelp> = {
     tasks: [['Retry a failed job', 'Find it, open it, Retry. Retrying makes new work; nothing to undo.'], ['Drain a worker', 'It finishes running work and claims nothing new; Resume undoes it.']],
     runbook: RUNBOOK,
   },
+  workers: {
+    purpose: 'Hosted processing at a glance: for each worker pool, whether it is working, idle, waiting for a worker or failing; the gateway, autoscaler, storage and flags around the workers; what customers are waiting for; and what processing costs this month.',
+    numbers: [
+      ['Verdict', 'Working: workers are checking in. Idle: nothing is queued. Waiting for a worker: jobs are queued and no worker has checked in for two minutes, so nothing is processing them. Failing: the last attempts in the pool all failed. Paused: staff stopped new claims.'],
+      ['Workers seen', 'Workers that checked in with the worker gateway in the last two minutes. Workers are Modal containers that start when the autoscaler asks for them.'],
+      ['Slots in use', 'Jobs being worked on now, out of the slots the workers seen offer.'],
+      ['Oldest wait', 'How long the oldest queued job of the pool has waited for a worker.'],
+      ['Estimated cost', 'Processing seconds the workers reported, times each pool’s hourly rate from infra/workers/pools.json. An estimate: Modal also bills container start-up and idle time. Modal’s invoice is the truth.'],
+      ['As of', 'The page reads again every 30 seconds while it is open. If a read fails, the last good numbers stay with their time.'],
+    ],
+    tasks: [
+      ['Jobs are waiting with no worker', 'Look at Worker gateway and Autoscaler under Around the workers: each says what to do. Until the autoscaler runs, workers start only by hand (doc hosted-mode-walkthrough, section 5).'],
+      ['A pool keeps failing', 'Pause the pool so it stops burning attempts, open Jobs filtered to its failed jobs, read the error, fix the cause, then Resume and Retry failed jobs of that type.'],
+      ['Customers have waited for hours', 'Fix the worker first. If the work is no longer wanted, Cancel jobs waiting too long: it waits 15 minutes and can be cancelled.'],
+      ['Set a budget', 'Cost, Set budget: the monthly figure and when to warn. Needs a billing role.'],
+    ],
+    runbook: 'https://github.com/tochi-mba/selecta/blob/main/docs/engineering/hosted-mode-walkthrough.md',
+  },
   ai: {
     purpose: 'Lucy’s model routing per plan, the deployments behind it, spend against the ceiling, and Lucy’s emergency switches.',
     numbers: [['Routing version', 'Each routing change makes a new version that can be rolled back.']],
@@ -112,6 +130,13 @@ export const TOURS: Record<AdminPage, TourStep[]> = {
     { target: 'job-table', title: 'Open a job', text: 'Attempts, dependencies and errors, with Retry, Hold and Release.' },
     { target: 'workers', title: 'Workers', text: 'Drain or pause a worker; Resume undoes it.' },
   ],
+  workers: [
+    { target: 'workers-pools', title: 'Each pool in one word', text: 'Working, idle, waiting for a worker, failing or paused, with the numbers behind it.' },
+    { target: 'workers-pieces', title: 'What the workers need', text: 'The gateway, the autoscaler, storage and the flags, each with what to do when it is wrong.' },
+    { target: 'workers-customers', title: 'What customers see', text: 'Accounts and songs waiting, and the longest wait.' },
+    { target: 'workers-cost', title: 'Cost against the budget', text: 'An estimate from the repository’s rates, measured against the monthly budget.' },
+    { target: 'workers-bulk', title: 'Fix many jobs at once', text: 'Retry failed jobs of a type, or cancel jobs that waited too long. Each says how many first.', needs: 'jobs.retry' },
+  ],
   ai: [
     { target: 'routing', title: 'Routing', text: 'Which model each plan uses, in order of fallback.' },
     { target: 'deployments', title: 'Deployments', text: 'Every model deployment, with a warning when a route names one that is missing.' },
@@ -184,6 +209,11 @@ export const PLAYBOOKS: Playbook[] = [
     { text: 'Flags: turn it on for yourself only (preview) and try it.', link: '/admin/flags' },
     { text: 'Roll out to a small percentage; read the impact preview first.' },
     { text: 'Broad changes wait 15 minutes and can be cancelled; History rolls back.' }] },
+  { id: 'no-worker', title: 'Jobs wait and no worker takes them', steps: [
+    { text: 'Workers: find the pool that says Waiting for a worker.', link: '/admin/workers' },
+    { text: 'Around the workers: if the gateway is not ready, fix it first (Render, the worker-gateway service).' },
+    { text: 'If the autoscaler is not running, the Modal token is missing on the maintenance service: launch-operator-checklist section 5.' },
+    { text: 'Once a worker checks in the verdict turns to Working; the customers’ songs then go through in order.' }] },
   { id: 'undo', title: 'Undo a mistake', steps: [
     { text: 'Most changes show Undo for 10 seconds right after.' },
     { text: 'After that, Staff and security, Audit log: find the change; its record page has the opposite action.', link: '/admin/security/audit' },
@@ -213,4 +243,6 @@ export const METRICS: Record<string, { name: string; unit?: string; feeds: strin
   'jobs.wait_p95_s': { name: 'Wait, 95th percentile', unit: 's', feeds: 'From the last hour of job starts.' },
   'workers.live': { name: 'Live workers', feeds: 'Workers seen in the last two minutes.' },
   'workers.held': { name: 'Workers held by staff', feeds: 'Counted on each refresh.' },
+  'health.gateway': { name: 'Worker gateway', feeds: 'Checked by the API at the gateway’s /api/ready when the Workers page is open. To connect: set SELECTA_WORKER_GATEWAY_URL on the API service.' },
+  'autoscale.workers': { name: 'Workers the autoscaler asked for', feeds: 'Reported by the autoscaler each pass (selecta maintain with the Modal token).' },
 };
