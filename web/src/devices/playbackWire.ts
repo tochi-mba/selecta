@@ -31,7 +31,7 @@ export type AckResult = 'applied' | 'unavailable_here';
 export const PLAYBACK_COMMAND_EVENT = 'selecta-playback-command';
 /** Commands the speaker carries out itself by following the session; anything else (mix
  * steering, requests) is the server's to apply, so the speaker says unavailable_here. */
-export const SPEAKER_COMMANDS = new Set(['play', 'pause', 'skip', 'seek', 'set_programme', 'set_volume']);
+export const SPEAKER_COMMANDS = new Set(['play', 'pause', 'skip', 'seek', 'set_programme', 'set_volume', 'stop']);
 /** Commands that move the speaker to a (possibly missing) track. */
 export const MOVES_TRACK = new Set(['skip', 'seek', 'set_programme']);
 /** The most songs a session's programme may hold (the server's MAX_PROGRAMME). */

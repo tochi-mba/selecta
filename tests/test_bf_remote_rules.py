@@ -14,8 +14,9 @@ import pytest
 from cloud_party import ALICE, auth, party  # noqa: F401
 from test_cloud_playback_fakes import OTHER_USER, USER, WORKSPACE, follow_clock
 
-from selecta.playback import devices, fencing, session
+from selecta.playback import commands, devices, fencing, session
 from selecta.playback.model import (
+    LEASE_SECONDS,
     DeviceSignedOut,
     NotYourMusic,
     PlayState,
@@ -115,3 +116,30 @@ def test_the_outcome_route_answers_only_its_sender(party, clock, monkeypatch):
     assert mine.json()["status"] == "applied" and mine.json()["ack_result"] is None
     other = client.get(path, params={"device_id": speaker}, headers=auth(ALICE))
     assert other.status_code == 404
+
+
+# ---- G2 (57): Stop ends the music and frees the speaker
+
+
+def test_stop_ends_the_music_and_frees_the_speaker(engine, clock):
+    laptop, phone = _device(engine, "Laptop"), _device(engine, "Phone")
+    session.take_over(engine, WORKSPACE, laptop.id)
+    stopped = _press(engine, phone, "stop", key="stop-1")
+    assert stopped.status is CommandStatus.APPLIED
+    assert stopped.session.state is PlayState.STOPPED
+    # the speaker checks in before it has heard: that does not keep the lease past the stop
+    session.heartbeat(engine, WORKSPACE, laptop.id, Position(0, 0, seq=stopped.applied_seq - 1))
+    clock.advance(commands.STOP_GRACE_SECONDS + 1)
+    view = session.session_view(engine, WORKSPACE, phone.id)
+    assert view.speaker is session.SpeakerStatus.NONE
+    # any device may start the music again: this phone takes over without asking anyone
+    assert session.take_over(engine, WORKSPACE, phone.id).session.active_device_id == phone.id
+
+
+def test_stop_for_an_away_speaker_is_applied_not_held(engine, clock):
+    laptop, phone = _device(engine, "Laptop"), _device(engine, "Phone")
+    session.take_over(engine, WORKSPACE, laptop.id)
+    clock.advance(LEASE_SECONDS + 1)
+    stopped = _press(engine, phone, "stop", key="stop-away")
+    assert stopped.status is CommandStatus.APPLIED
+    assert session.session_view(engine, WORKSPACE, phone.id).speaker is session.SpeakerStatus.NONE

@@ -181,17 +181,28 @@ A remote is any signed-in device of the same person that is not making the sound
 | Volume and mute | Yes (G1, 2026-11-24) | `set_volume` on the session (every session carries `volume` now), last write wins; the speaker applies the session's level as it follows and sends its own only when its own slider moves; a new speaker rises from quiet over a second; unset plays at 80; at 100 "For more volume, turn up {speaker} itself." |
 | The speaker's screen says what changed elsewhere | Yes (G70) | "Volume changed from Phone.", "Paused from Phone.", "Skipped from Phone.", "Went back", "Muted", "Up next changed" for four seconds on the speaker, never for a seek within the song |
 | Add next, add a request | Yes (R4) | `set_programme` with the song after the playing one, `keep_position` |
-| Reorder, remove, clear Up next | Not yet | Same path as Add next (`set_programme`); not built |
+| Reorder, remove, clear Up next, with undo | Yes (G2, 56) | Edit on the remote's Up next: move up, move down, remove, Clear (asked first); one `set_programme` with `keep_position`, and Undo from the toast sends the order back |
 | Start a mix, a saved mix, Make a Mix | Yes (R8) | The account's current mix, played through the one rule (Play on {device}) |
-| Stop (end the session) | Not yet | Needs a `stop` command; not built |
-| Play here instead, move to another device | Yes | Take-over (here) or a start-ask (another device) |
+| Stop (end the session) | Yes (G2, 57) | The `stop` command: the session is stopped and the speaker's lease runs out 5 seconds later (`STOP_GRACE_SECONDS`), so the speaker is free and any device may start; the speaker fades out |
+| Play here instead, move to another device | Yes (G2, 58) | "Move the music" on the remote lists Play here instead and Move to {device} for each open device with music, saying first what it lacks ("Has 8 of 10 songs. 2 will be skipped."); a start ask marked `move`, which the asked device answers by taking over from the session's song and place |
 | See what plays, position, Up next, the speaker's state | Yes | The session, the anchor and the server clock |
 | Never play, per-song actions | Yes | Account-wide routes (`/local-media/songs/never`) |
 | Rooms: open, close, approve, add, dismiss | Yes | The rooms routes are the account's, not the speaker's |
-| Check the speaker for new music | Not yet | Needs an ask like a start-ask; not built |
-| Sleep timer | Not built; considered | |
+| Check the speaker for new music | Not built (G2, 63) | A browser can rescan a remembered folder only while it still has read permission, and asking again needs a press on that device; the remote would need a delivered ask and a progress report. Recorded, not built |
+| Sleep timer | Not built; considered (G2, 64) | Needs a stored deadline on the session and the speaker stopping itself at a song's end; Stop covers the immediate case |
 | Maximum volume on the speaker | Not built; considered | |
-| Media keys and lock screen on the remote | Not possible without the remote making sound; not faked | |
+| Media keys and lock screen on the remote | Not possible without the remote making sound; not faked (G2, 66) | Browsers show lock-screen controls only for a page playing media; SelectaDJ does not play silent audio to fake them |
+
+### R11, what a remote can do (G2, items 55 to 66), as built
+
+- **Transport (55).** Play, pause, next, previous (restart after 3 seconds), seek by drag and by key, and a tap on a song in Up next plays it now. Each press is pending until the speaker confirms and says when it didn't (G3 below).
+- **Queue (56).** Up next is live from the session. Edit shows each song with Move up, Move down and Remove; Clear asks "Clear Up next on {speaker}?" and keeps the playing song and the next one ("a mix keeps at least two songs", the browser mix's rule; Remove is off for the last one). Each change is one programme change that keeps the music where it is, with Undo in the toast for a few seconds (`RemoteQueue.tsx`). Add next and Add to the end come from the Library (I84).
+- **Start and stop (57).** Any mix, song or saved mix starts through the one rule (R1, R8). Stop is not Pause: it ends the music on the speaker and frees it.
+- **Move the music (58).** `RemoteMove.tsx`, while another device plays; the asked device starts at the session's song and place when its mix is the programme (`movedFrom` in `playOn.ts`).
+- **See everything (59).** Title, artist, place in the mix, position from the server's anchor, Up next, the device and its state ("Playing on", "Paused on", "Stopped on", "{device} is offline") and its sound. Not shown on a remote: the coming transition and artwork (the remote has no audio analysis).
+- **Per-song actions (60)** and **rooms (62)** are account routes, so a remote does what the speaker's screen does. **Mix settings (61)** are the mix editor's on any device; a changed mix is the account's current mix and is offered to the speaker (R8) rather than applied under the music.
+- **Lucy (65).** Lucy's tools act through the same functions: `useWhereToPlay().decide()` and the start ask to start music, and the remote's `send(command, args)` (`useRemote`: `toggle`, `next`, `previous`, `seekTo`, `skipTo`, `setVolume`, `stop`, `setUpNext`) for everything after, so a Lucy press is a press like any other.
+- **Not built:** rescan on the speaker (63), a sleep timer (64), lock-screen controls on a remote (66); reasons in the table above.
 
 ### R11, rules for every remote control (G3, items 67 to 71)
 

@@ -248,6 +248,7 @@ def test_every_command_type_travels_as_metadata_only(engine, laptop, phone):
         "reorder": {"order": [3, 1, 2]},
         "approve_request": {"request_id": "r-1"},
         "set_programme": {"songs": [song], "song_index": 0},
+        "stop": None,  # last: it ends the session (ADR-0475 G2)
     }
     assert set(examples) | {"set_volume"} == {name.value for name in commands.Command}
     ids = []

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { houseTab } from './audioTab';
+import { extrapolate, type SessionState } from './playbackWire';
 
 // ADR-0475 R2, "Play on {device}": one device asks another of the same person's devices to
 // become the speaker and start. It is an ask, not a remote take-over: the asked device decides
@@ -135,4 +136,14 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
 export function soundAllowedHere(): boolean {
   const activation = (typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { userActivation?: { hasBeenActive?: boolean } }).userActivation);
   return activation?.hasBeenActive === true;
+}
+
+/** ADR-0475 G2 (58): where an asked device starts when it takes over the programme that is
+ * playing: the session's song and place when this mix is that programme, else null (its start). */
+export function movedFrom(session: SessionState | null | undefined, mix: readonly { song_id: number }[], serverNow: number): { song_index: number; offset_ms: number } | null {
+  const playing = session?.programme?.[session.song_index]?.song_id;
+  if (!session || playing === undefined) return null;
+  // the song playing now, wherever it sits in this device's copy of the mix (it may lack some)
+  const at = mix.findIndex((item) => item.song_id === playing);
+  return at < 0 ? null : { song_index: at, offset_ms: extrapolate(session, serverNow) };
 }

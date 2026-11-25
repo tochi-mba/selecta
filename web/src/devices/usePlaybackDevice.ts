@@ -213,6 +213,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (publishing.current) return;
     appliedSeq.current = session.seq;
     if (!remoteControl) return;
+    // G2 (57): stopped from another device: the music ends here and the speaker is let go
+    if (session.state === 'stopped') { becomeRemote(''); return; }
     // G1: the session's level, set from any device; the engine ramps each change (no clicks)
     speaker.setVolume?.(Math.min(1, Math.max(0, levelOf(session) / 100)));
     // G70: a level this device did not send came from another one; said here even when the
@@ -234,7 +236,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       }
     } else if (session.state === 'paused' && speaker.active()) speaker.pause();
     else if (session.state === 'playing' && !speaker.active()) speaker.resume();
-  }, [couldNotStart, speaker, remoteControl]);
+  }, [becomeRemote, couldNotStart, speaker, remoteControl]);
 
   // Once a missed-lease safeguard silences the device, reconnect under the server's
   // session lock. If someone else took over, stay silent; otherwise resume from the
@@ -378,7 +380,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         leaseDeadline.current = next.session.lease_expires_at;
       }
       // this device is the speaker but this tab is not making the sound: another tab is
-      setOtherTab(next.speaker === 'here' && !speaking.current && !tab.holds() && !claiming.current);
+      setOtherTab(next.speaker === 'here' && next.session?.state !== 'stopped' && !speaking.current && !tab.holds() && !claiming.current);
       if (speaking.current && next.speaker !== 'here') {
         becomeRemote(next.speaker_name ? `Playback moved to ${next.speaker_name}` : 'Playback stopped.');
       } else if (speaking.current && next.session) {
@@ -784,7 +786,10 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   // never acked: the server records its own verdict for those.
   const handleCommand = useCallback(async (raw: CommandEvent): Promise<AckResult | null> => {
     if (!deviceId || !speaker || !remoteControl || raw.device_id !== deviceId) return null;
-    if (!speaking.current || acked.current.has(raw.command_id)) return null;
+    // a Stop may already have been followed from a session look, which let the sound go; the
+    // device is still the speaker for the stop's few seconds and says it carried it out
+    const stopping = raw.command === 'stop';
+    if ((!speaking.current && !stopping) || acked.current.has(raw.command_id)) return null;
     // A forged, mis-scoped or tampered envelope is never acted on and never acked.
     const event = await openEnvelope(raw, envelopeKey.current, workspaceId, deviceId);
     if (!event) return null;
@@ -798,7 +803,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       const now = await poll(true);
       // Applied only when this device is still the speaker and has followed the session to (or
       // past) the command; otherwise it says it could not, never that it did.
-      if (!now || now.speaker !== 'here' || !now.session || !speaking.current) return null;
+      if (!now || now.speaker !== 'here' || !now.session || (!speaking.current && !stopping)) return null;
       if (now.session.seq >= event.seq) {
         for (let waited = 0; publishing.current && waited < 20; waited += 1) await new Promise((resolve) => window.setTimeout(resolve, 100));
         await follow(now.session);

@@ -246,7 +246,12 @@ def heartbeat_in(
                 device_id, position.output.status, position.output.verified_at
             ),
         )
-    session = replace(session, lease_expires_at=now + LEASE_SECONDS, updated_at=now)
+    lease = now + LEASE_SECONDS
+    if session.state is PlayState.STOPPED and not accepted and session.lease_expires_at:
+        # stopped from another device (G2) before this speaker heard: its check-in keeps the
+        # lease only as long as the stop allowed, so the speaker is freed
+        lease = session.lease_expires_at
+    session = replace(session, lease_expires_at=lease, updated_at=now)
     save_session(conn, session)
     if previous is not None:
         _announce_move(conn, session, previous, device_id, events)
@@ -498,7 +503,11 @@ def submit_command_in(
         and not session.lease_live(now)
     ):
         status = CommandStatus.NO_SPEAKER
-    elif speaker_away and name in commands.SPEAKER_COMMANDS:
+    elif (
+        speaker_away
+        and name in commands.SPEAKER_COMMANDS
+        and name is not commands.Command.STOP  # an away speaker is simply stopped and freed
+    ):
         status = CommandStatus.DEFERRED
     else:
         session = commands.apply(
@@ -702,6 +711,13 @@ def session_view_in(
         )
     active = session.active_device_id
     name = device_names(conn, workspace_id, [active]).get(active)
+    if session.state is PlayState.STOPPED and not session.lease_live(now):
+        # stopped and let go (G2 Stop, or a speaker that stopped and went): nobody is the
+        # speaker, so any device may start the music
+        return SessionView(
+            session, position_at(session, now), SpeakerStatus.NONE, None, None, False,
+            notices=notices,
+        )
     if active == device_id:
         speaker = SpeakerStatus.HERE
     elif session.lease_live(now):

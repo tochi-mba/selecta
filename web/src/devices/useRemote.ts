@@ -43,6 +43,10 @@ export type Remote = {
   seekTo: (songIndex: number, offsetMs: number) => Promise<void>;
   skipTo: (songIndex: number) => Promise<void>;
   setVolume: (percent: number) => Promise<void>;
+  /** G2 (57): end the music on the speaker and free it (not a pause). */
+  stop: () => Promise<boolean>;
+  /** G2 (56): the songs after the playing one, in a new order (moved, removed or cleared). */
+  setUpNext: (songIds: readonly number[]) => Promise<boolean>;
   /** The session state the last press made. */
   sentSeq: () => number;
   /** The same session through the shell's player contract, for the mini player. */
@@ -149,6 +153,15 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
     await send('set_volume', { volume: Math.max(0, Math.min(100, Math.round(percent))) });
   }, [send]);
 
+  const stop = useCallback(() => send('stop'), [send]);
+  const setUpNext = useCallback(async (songIds: readonly number[]) => {
+    const at = latest.current.session;
+    if (!at) return false;
+    // the songs up to and with the playing one stay as they are; the music does not move
+    const kept = at.programme.slice(0, at.song_index + 1).map((entry) => entry.song_id);
+    return send('set_programme', { songs: [...kept, ...songIds], song_index: at.song_index, keep_position: true });
+  }, [send]);
+
   // The player contract for the mini player: one object for the whole visit, reading the newest
   // session each time it is asked.
   const volumeTimer = useRef(0);
@@ -216,7 +229,7 @@ export function useRemote({ remoteControl, device, mixSongIds, loadSongs }: {
     locked: false,
     seam: null,
   };
-  return { view: shown, session, book, current, playing, positionMs, toggle, next, previous, seekTo, skipTo, setVolume, player, now, song, hasNext: hasNext(session), pending: device.pending?.command ?? null, sentSeq: () => latest.current.device.sentSeq?.() ?? 0 };
+  return { view: shown, session, book, current, playing, positionMs, toggle, next, previous, seekTo, skipTo, setVolume, stop, setUpNext, player, now, song, hasNext: hasNext(session), pending: device.pending?.command ?? null, sentSeq: () => latest.current.device.sentSeq?.() ?? 0 };
 }
 
 const IDLE_NOW: NowState = { phase: 'idle', position: 0, songTime: 0, duration: 0, inSeam: false, seamAt: null, notice: '', nextReady: false, lastSeamKey: null, volume: 1, muted: false };

@@ -46,7 +46,7 @@ import { useRemote } from '../devices/useRemote';
 import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { ControllerListen } from '../devices/ControllerListen';
-import { soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
+import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
@@ -602,9 +602,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const startAskedMix = useCallback(async (ask: StartAsk, pressed: boolean): Promise<StartResult> => {
     // the mix the asker named; else the one this device already has; else the account's newest
     // saved mix (which mix is "current" is remembered per browser, so a fresh tab has none)
-    const wanted = ask.mix_id ?? recipes.current() ?? (await newestMix(recipes))?.mix_id ?? null;
+    // G2 (58): a move with no mix named takes over the programme that plays, from where it is
+    const programmeMove = ask.move && !ask.mix_id && remoteMix.length > 0;
+    const wanted = programmeMove ? null : ask.mix_id ?? recipes.current() ?? (await newestMix(recipes))?.mix_id ?? null;
     if (wanted && recipes.current() !== wanted) recipes.setCurrent(wanted);
-    const mix = await request<MixData>('/mix').catch(() => null);
+    const mix = programmeMove ? { ...data, mix: remoteMix } : await request<MixData>('/mix').catch(() => null);
     if (!mix?.mix.length) return 'no_mix';
     const here = await sources.here?.().catch(() => null);
     if (!mix.mix.some((item) => here?.get(item.song_id) === 'here')) {
@@ -619,9 +621,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     player.startFreeOnce = !ask.move;
     player.startMovingOnce = !!ask.move;
     hereOnPurpose.current = true;
-    void shellPlayer.playFrom(0);
+    // G2 (58): moving the programme that plays carries on from where it is
+    const from = ask.move ? movedFrom(playback.view?.session, mix.mix, playback.serverNow()) : null;
+    void shellPlayer.playFrom(from?.song_index ?? 0, from ? from.offset_ms / 1000 : 0);
     return 'starting';
-  }, [recipes, request, setMixData, shellPlayer, sources]);
+  }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources]);
   // what "Play on {device}" would play when this device has no current mix of its own: the
   // account's newest saved mix, read while Listen shows that card
   const [newest, setNewest] = useState<{ mix_id: string; name: string; songs: number; ids?: number[] } | null>(null);
@@ -646,7 +650,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // the other device is the speaker now: what was said while asking has done its job
   const resetAsk = playOn.reset;
   const speakerHereNow = remote?.view.speaker === 'elsewhere';
-  useEffect(() => { if (speakerHereNow) resetAsk(); }, [speakerHereNow, resetAsk]);
+  // (also when the music moved from one device to another: the ask that moved it is done)
+  const speakerNowId = remote?.view.speaker_device_id ?? null;
+  useEffect(() => { if (speakerHereNow) resetAsk(); }, [speakerHereNow, speakerNowId, resetAsk]);
   // the speaker is away, or a press found nobody playing: every way on from this device (R1)
   const speakerId = playback.view?.speaker_device_id ?? null;
   const [hereSongs, setHereSongs] = useState(0);
@@ -661,6 +667,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     devices: holdings.devices.filter((device) => device.device_id !== speakerId && device.device_id !== playback.device?.id),
     asking: playOn.state,
     onPlayOn: (device: { device_id: string; name: string }) => void playOn.ask(device, recipes.current() ?? null),
+    // G2 (58): the programme that plays moves, not a saved mix: the asked device plays it from here
+    onMove: (device: { device_id: string; name: string }) => void playOn.ask(device, null, true),
     hereSongs,
     // this device plays the programme from where it is: its mix becomes that order, then it takes over
     onPlayHere: () => {

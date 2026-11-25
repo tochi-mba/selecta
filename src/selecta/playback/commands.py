@@ -1,5 +1,8 @@
 """Remote commands: what each button press means, checked before anything changes.
 
+`stop` (ADR-0475 G2) ends the music rather than pausing it: the session is stopped and the
+speaker's lease runs out a few seconds later, so the speaker is free and any device may start.
+
 Play, pause, skip and seek change the session itself. Steering, reordering and approving a request
 change the mix, so they go through `MixControl`, and the session only records the revision that
 comes back. Every command is checked here first, so a bad one is refused without using up a
@@ -44,6 +47,7 @@ class Command(StrEnum):
     APPROVE_REQUEST = "approve_request"
     SET_VOLUME = "set_volume"
     SET_PROGRAMME = "set_programme"
+    STOP = "stop"
 
 
 STEER_DIRECTIONS = ("bigger", "calmer", "something_else")
@@ -52,8 +56,11 @@ MIX_COMMANDS = frozenset({Command.STEER, Command.REORDER, Command.APPROVE_REQUES
 # delivered (or dropped) when it comes back (BF-0461-04); mix commands change the plan itself.
 SPEAKER_COMMANDS = frozenset({
     Command.PLAY, Command.PAUSE, Command.SKIP, Command.SEEK, Command.SET_VOLUME,
-    Command.SET_PROGRAMME,
+    Command.SET_PROGRAMME, Command.STOP,
 })
+# ADR-0475 G2 (57): Stop ends the music and frees the speaker. The speaker has this long to hear
+# it and fade out; then the session has no speaker and any device may start the music again.
+STOP_GRACE_SECONDS = 5
 MAX_PROGRAMME = 1000
 
 
@@ -149,6 +156,14 @@ def apply(
         return replace(session, volume=min(args["volume"], cap))
     if name is Command.PLAY:
         return replace(frozen(session, now), state=PlayState.PLAYING)
+    if name is Command.STOP:
+        # not a pause: the session ends here, and the lease lapses once the speaker has heard
+        stopped = replace(frozen(session, now), state=PlayState.STOPPED)
+        if stopped.lease_expires_at is not None:
+            stopped = replace(
+                stopped, lease_expires_at=min(stopped.lease_expires_at, now + STOP_GRACE_SECONDS)
+            )
+        return stopped
     if name is Command.PAUSE:
         if session.state is PlayState.STOPPED:
             return session

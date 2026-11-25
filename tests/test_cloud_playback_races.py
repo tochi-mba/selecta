@@ -23,6 +23,7 @@ from selecta.playback.model import (
     CommandUnavailable,
     DeviceSignedOut,
     InvalidCommand,
+    NotYourMusic,
     PlayState,
     Position,
 )
@@ -298,7 +299,8 @@ COMMANDS = [
     ("approve_request", {"request_id": "r-1"}),
     ("seek", {"offset_ms": -5}),
 ]
-ALLOWED = (DeviceSignedOut, InvalidCommand, CommandUnavailable)
+# NotYourMusic: a press on another member's speaker (ADR-0475 G3, 69)
+ALLOWED = (DeviceSignedOut, InvalidCommand, CommandUnavailable, NotYourMusic)
 
 
 def test_random_device_actions_keep_every_playback_invariant(sqlite_engine, clock):

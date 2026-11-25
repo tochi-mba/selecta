@@ -39,7 +39,8 @@ function open(seen: SessionView | null, options: { remoteControl?: boolean; mix?
 describe('the remote on Listen', () => {
   it('shows what is playing on the other device, where it has got to and what is next', async () => {
     open(view());
-    expect(await screen.findByTestId('remote-title')).toHaveTextContent('Bravo');
+    // the title arrives with the library read, which a busy machine may take a moment over
+    await waitFor(() => expect(screen.getByTestId('remote-title')).toHaveTextContent('Bravo'));
     expect(screen.getByTestId('remote-where')).toHaveTextContent('Playing on Laptop');
     expect(screen.getByTestId('remote-artist')).toHaveTextContent('Tochi');
     expect(screen.getByText('Song 2 of 3')).toBeInTheDocument();

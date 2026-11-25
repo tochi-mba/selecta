@@ -1,8 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PageLink } from '../shell/PageLink';
 import { Icon } from '../ui/Icon';
 import { OPTIMISTIC_MS, speakerOutput } from './PlayingBar';
-import { advancing, clock, soundWords, stateWords, upNext, whereWords } from './remoteNow';
+import { advancing, clock, soundWords, stateWords, whereWords } from './remoteNow';
+import { RemoteQueue } from './RemoteQueue';
+import { RemoteMove } from './RemoteMove';
 import type { Remote } from './useRemote';
 import { askWords, stillAsking, type AskState } from './playOn';
 import { bestHolder, notOn, type DeviceHolding } from './controller';
@@ -51,6 +53,8 @@ export type PlayWays = {
   now: number;
   /** How many of the programme's songs a device holds, when known ("2 of 12 songs"). */
   ofMix?: (device: DeviceHolding) => { held: number | null; total: number } | undefined;
+  /** G2 (58): ask that device to take the music over from where it is. */
+  onMove?: (device: DeviceHolding) => void;
 };
 
 export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs, notice, onDismissNotice }: {
@@ -67,7 +71,6 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
   speakerSongs?: ReadonlySet<number> | null;
 }) {
   const { view, session, current } = remote;
-  const nextId = useId();
   const moving = advancing(view, session);
   // the position moves from the session's anchor; no request is made for it
   const [, tick] = useState(0);
@@ -117,7 +120,6 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
   // said about the speaker, by name: this device cannot play its check tone
   const sound = soundWords(view, speakerOutput(session));
   const state = stateWords(view, session);
-  const coming = upNext(session, remote.book);
   const playLabel = remote.playing ? 'Pause' : 'Play';
 
   return (
@@ -172,6 +174,9 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
             <button type="button" className="remote-play primary" onClick={() => void remote.toggle()} aria-label={playLabel} title={playLabel}><Icon name={remote.playing ? 'pause' : 'play'} size="hero" /></button>
             <button type="button" className="remote-step" onClick={() => void remote.next()} disabled={!remote.hasNext} aria-label="Next song" title="Next song"><Icon name="next" /></button>
           </div>
+          {/* G2 (57): Stop is not Pause: it ends the music and frees the speaker */}
+          <button type="button" className="remote-stop" onClick={() => void remote.stop()} aria-label={`Stop the music on ${view.speaker_name ?? 'the speaker'}`} data-testid="remote-stop"><Icon name="stop" /> Stop</button>
+          {ways && view.speaker === 'elsewhere' && <RemoteMove ways={ways} total={session.programme.length} />}
           {shownVolume !== null && (
             <label className="remote-volume">
               <Icon name={shownVolume === 0 ? 'muted' : 'volume'} />
@@ -194,21 +199,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
           {shownVolume === 100 && <p className="remote-hint" data-testid="volume-max">For more volume, turn up {view.speaker_name ?? 'the speaker'} itself.</p>}
         </section>
         <div className="remote-side">
-          {coming.length > 0 && (
-            <section className="remote-next" aria-labelledby={nextId}>
-              <h2 id={nextId}>Up next</h2>
-              <ol>
-                {coming.map((entry) => (
-                  <li key={entry.index}>
-                    <button type="button" onClick={() => void remote.skipTo(entry.index)} title={`Play ${entry.title} now`}>
-                      <span className="remote-next-place" aria-hidden="true">{entry.index + 1}</span>
-                      <span className="remote-next-words"><b dir="auto">{entry.title}</b>{entry.artist && <span dir="auto">{entry.artist}</span>}{speakerSongs && !speakerSongs.has(entry.songId) && <span className="remote-next-missing" data-testid="not-on-speaker">{notOn(view.speaker_name ?? 'the speaker')}</span>}</span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
+          <RemoteQueue remote={remote} speakerSongs={speakerSongs} />
           <p className="remote-device" data-testid="remote-device">
             {playableHere > 0
               ? <>This device is working as a remote. To play here instead, <PageLink to="/mixes">make a mix on this device</PageLink>.</>
