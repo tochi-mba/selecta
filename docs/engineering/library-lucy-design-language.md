@@ -41,8 +41,31 @@ song row is also known by its occurrence id, so the same recording twice is two 
 
 ## Motion (LX-0364-06)
 
-Lucy has one animation: the indeterminate bar on a step that is running with no count to show. It
+Lucy has one loop: the indeterminate bar on a step that is running with no count to show. It
 appears only for real running work, never for decoration, and both the app's Still setting
 (`:root[data-motion='still']`) and the system's reduced-motion setting remove it. The step keeps its
 words ("Working"). The slide's length is `--motion-loop-slide`. Progress bars resize with `--motion-reveal` and `--motion-ease`; the duration is 0 ms under Still and reduced
 motion. A message's time fades in over `--motion-fast` when it is pointed at or focused, with no transition under Still and reduced motion. Nothing else in Lucy or the Library moves on its own.
+
+### The feel (ADR-0477, plan 3.9)
+
+Everything below is scoped to `:where(:root[data-feel~='motion'])` or `:where(:root[data-feel~='depth'])`
+inside `.lucy`, so with the `app.feel_*` flags off, Still, reduced motion or low power none of it
+exists. Each animation runs once, ends at the element's resting look, and answers something real.
+
+| What | Trigger (real) | How | Tokens |
+|---|---|---|---|
+| Your message rises | the stand-in under the box after Send, or words sent from another device | `.lucy-msg.is-rise article`, `feel-lucy-rise` (arrives) | `--motion-spring-snappy`, `--spring-snappy`, `--space-5` |
+| Lucy's message fades in | a reply that started while the page was open | `.lucy-msg.is-fade`, `feel-lucy-fade` (arrives) | `--motion-slow`, `--motion-ease` |
+| Streamed chunk fades in | each `message.delta` that grew the reply; only the newest chunk is wrapped | `.lucy-chunk`, `feel-lucy-fade` (arrives) | `--motion-slow`, `--motion-ease` |
+| The running step's name | the title of the step card Lucy is running for that turn, from `step.*` events; "Thinking…" when there is none | `.lucy-thinking-words`, `feel-lucy-shimmer`, one pass, replayed only when the step changes (answers you) | `--text-soft`, `--text`, `--motion-slow`, `--motion-ease` |
+| The box lights while written in | focus inside the composer | `transition` on `box-shadow` (depth) | `--shadow-lift`, `--edge-light`, `--motion-fast`, `--motion-ease` |
+| A step's result draws in | a card seen running that reached `completed` | `.lucy-visual.is-drawn > *`, shared `feel-arrive` | `--motion-spring-snappy`, `--spring-snappy` |
+| An added song glows | an occurrence the new current revision added | `.lucy-song.feel-flash`, shared `feel-flash` with `feel-lucy-edge` (arrives) | `--motion-slow`, `--motion-ease`, `--marker`, `--selected` |
+| Saved tick | a save confirmed on this page that the server says went through | `.lucy-saved-tick` with the shared `.feel-tick` | `--icon-size`, `--icon-stroke`, `--status-ready` |
+
+The shared asks from `web/src/styles/feel.css` are used as they are: new step groups and notes
+`data-arrive`; opened plan cards and example prompts `data-stagger`; example prompts `data-lift`;
+history, memory and settings rows `data-lift="row"`; the "Lucy is turned off" and gone-conversation
+cards `data-glow` and `data-arrive`; Stop, "New messages" and saved words `.feel-pop`; a deleted
+conversation `.feel-collapse-out`. A save that went through also asks for the phone's `success()` buzz.

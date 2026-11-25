@@ -1,6 +1,9 @@
 import { Fragment, ReactNode, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { feelOn } from '../feel/root';
+import { flagOn } from '../flags';
 import type { LucyView } from '../lucy/reducer';
-import type { Message } from '../lucy/types';
+import type { CardStatus, Message } from '../lucy/types';
+import { humanize } from '../lucy/words';
 import { Action } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { PermissionCard, PlanGroupView } from './LucyCards';
@@ -13,37 +16,58 @@ const BOLD = /\*\*(.+?)\*\*/g;
 const BULLET = /^\s*[-*•]\s+/;
 const NUMBERED = /^\s*\d+[.)]\s+/;
 
-function inline(line: string, key: string): ReactNode[] {
+/** A line's own words, with the part from `tail` on (a position in the line, if any) wrapped so it
+ * can fade in once. The wrapper is keyed by where the newest chunk starts, so the next chunk is a new
+ * element and everything before it is plain text again: earlier words never fade twice. */
+function inline(line: string, key: string, tail: number | null = null): ReactNode[] {
   const parts: ReactNode[] = [];
+  const fresh: ReactNode[] = [];
+  const put = (node: ReactNode, at: number) => (tail !== null && at >= tail ? fresh : parts).push(node);
+  const plain = (from: number, to: number) => {
+    if (tail !== null && tail > from && tail < to) {
+      parts.push(line.slice(from, tail));
+      fresh.push(line.slice(tail, to));
+    } else if (to > from) put(line.slice(from, to), from);
+  };
   let last = 0;
   for (const match of line.matchAll(BOLD)) {
     const at = match.index ?? 0;
-    if (at > last) parts.push(line.slice(last, at));
-    parts.push(<strong key={`${key}-${at}`}>{match[1]}</strong>);
+    plain(last, at);
+    put(<strong key={`${key}-${at}`}>{match[1]}</strong>, at);
     last = at + match[0].length;
   }
-  if (last < line.length) parts.push(line.slice(last));
+  plain(last, line.length);
+  if (fresh.length) parts.push(<span key={`${key}-new-${tail}`} className="lucy-chunk">{fresh}</span>);
   return parts;
 }
 
-/** Paragraphs, line breaks, **bold** and simple lists. Anything else stays exactly as typed. */
-export function RichText({ text }: { text: string }) {
+/** Paragraphs, line breaks, **bold** and simple lists. Anything else stays exactly as typed. With
+ * `tail`, the text from that position on is the chunk that has just streamed in. */
+export function RichText({ text, tail = null }: { text: string; tail?: number | null }) {
   const blocks: ReactNode[] = [];
   const lines = text.replace(/\r\n?/g, '\n').split('\n');
-  let run: { kind: 'p' | 'ul' | 'ol'; lines: string[] } | null = null;
+  // where each line starts in the whole text, so the streamed tail can be found inside a line
+  const starts: number[] = [];
+  lines.reduce((at, line) => { starts.push(at); return at + line.length + 1; }, 0);
+  const tailIn = (index: number, cut = 0) => (tail === null ? null : Math.max(0, tail - starts[index] - cut));
+  let run: { kind: 'p' | 'ul' | 'ol'; lines: string[]; at: number[] } | null = null;
   const close = () => {
     if (!run) return;
     const key = `b${blocks.length}`;
+    const at = run.at;
     if (run.kind === 'p') {
-      blocks.push(<p key={key}>{run.lines.map((line, index) => <Fragment key={index}>{index > 0 && <br />}{inline(line, `${key}-${index}`)}</Fragment>)}</p>);
+      blocks.push(<p key={key}>{run.lines.map((line, index) => <Fragment key={index}>{index > 0 && <br />}{inline(line, `${key}-${index}`, tailIn(at[index]))}</Fragment>)}</p>);
     } else {
       const List = run.kind;
       const marker = run.kind === 'ul' ? BULLET : NUMBERED;
-      blocks.push(<List key={key}>{run.lines.map((line, index) => <li key={index}>{inline(line.replace(marker, ''), `${key}-${index}`)}</li>)}</List>);
+      blocks.push(<List key={key}>{run.lines.map((line, index) => {
+        const bare = line.replace(marker, '');
+        return <li key={index}>{inline(bare, `${key}-${index}`, tailIn(at[index], line.length - bare.length))}</li>;
+      })}</List>);
     }
     run = null;
   };
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
     const kind = !line.trim() ? null : BULLET.test(line) ? 'ul' : NUMBERED.test(line) ? 'ol' : 'p';
     if (kind === null) {
       close();
@@ -51,9 +75,10 @@ export function RichText({ text }: { text: string }) {
     }
     if (!run || run.kind !== kind) {
       close();
-      run = { kind, lines: [] };
+      run = { kind, lines: [], at: [] };
     }
     run.lines.push(line);
+    run.at.push(index);
   }
   close();
   return <div className="lucy-text" dir="auto">{blocks}</div>;
@@ -66,8 +91,20 @@ const STATE_WORDS: Partial<Record<Message['status'], string>> = {
   failed: 'Didn’t finish',
 };
 
-function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest, onEdit, onRate }: {
+/** Where the newest streamed chunk of a reply starts, or null when there is nothing new to fade in.
+ * It moves only when the text grows, so a redraw for any other reason never restarts a fade. */
+function useStreamTail(content: string, streaming: boolean): number | null {
+  const span = useRef({ from: content.length, to: content.length });
+  if (content.length !== span.current.to) span.current = { from: Math.min(span.current.to, content.length), to: content.length };
+  return streaming && feelOn('motion') && span.current.from < span.current.to ? span.current.from : null;
+}
+
+function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest, onEdit, onRate, arrival, step }: {
   message: Message;
+  /** How a message that came in while the page was open arrives: yours rises, Lucy's fades in. */
+  arrival?: 'rise' | 'fade';
+  /** The name of the step Lucy is really running for this reply, from its step events. */
+  step?: string;
   superseded: boolean;
   onBranch: (id: string) => Promise<void>;
   onRetry: (turn: string) => Promise<void>;
@@ -85,14 +122,20 @@ function MessageItem({ message, superseded, onBranch, onRetry, canBranch, latest
   const unfinished = message.role === 'assistant' && ['interrupted', 'cancelled', 'failed'].includes(message.status);
   const answered = message.role === 'assistant' && message.status !== 'streaming' && !!message.content;
   const when = timeOf(message.created_at);
+  const tail = useStreamTail(message.content, message.status === 'streaming');
   return (
-    <li className={`lucy-msg is-${message.role} is-${message.status}`}>
+    <li className={`lucy-msg is-${message.role} is-${message.status}${arrival ? ` is-${arrival}` : ''}`}>
       <article aria-labelledby={headingId}>
         <h3 id={headingId} className="lucy-msg-who">
           {who}{state && <span className="lucy-msg-state"> · {state}</span>}
           {when && <time className="lucy-msg-time" dateTime={when.iso}>{when.words}</time>}
         </h3>
-        {message.content ? <RichText text={message.content} /> : message.status === 'streaming' ? <p className="soft lucy-thinking">Thinking…</p> : null}
+        {message.content
+          ? <RichText text={message.content} tail={tail} />
+          : message.status === 'streaming'
+            // keyed by the step, so its one pass of light runs again only when the step changes
+            ? <p className="soft lucy-thinking"><span key={step ?? ''} className="lucy-thinking-words" dir="auto">{step ? `${step}…` : 'Thinking…'}</span></p>
+            : null}
         {(canBranch || unfinished || answered || (onEdit && message.role === 'user')) && !message.id.startsWith('turn:') && message.status !== 'streaming' && (
           <div className="lucy-msg-actions">
             {(unfinished || (answered && latest)) && message.turn && <Action className="quiet" working="Trying again…" run={() => onRetry(message.turn!)}>Try again</Action>}
@@ -162,6 +205,46 @@ export type Pending = { conversation: string | null; text: string; state: 'sendi
 
 type Entry = { key: number; order: number; node: ReactNode };
 
+const WORKING: ReadonlySet<CardStatus> = new Set(['running', 'progress', 'retrying']);
+
+type FreshState = { scope: string | null; known: Set<string> | null; top: number; messages: Map<string, 'rise' | 'fade'>; others: Set<string>; risen: Set<string> };
+const blankFresh = (scope: string | null): FreshState => ({ scope, known: null, top: 0, messages: new Map(), others: new Set(), risen: new Set() });
+
+/** Which messages, step groups and notes came in while the page was open. A conversation that has
+ * just opened shows what it already held as it is; only what arrives after that arrives. Your own
+ * words rose once already as the stand-in under the box, so the server's copy of them does not rise
+ * again; words sent from another device do. An earlier page of history is never new. The marks are
+ * kept, so a redraw never plays an arrival twice. */
+function useFresh(view: LucyView, pending: Pending | null) {
+  const scope = view.conversation?.id ?? null;
+  const state = useRef<FreshState>(blankFresh(scope));
+  if (state.current.scope !== scope) state.current = blankFresh(scope);
+  const seen = state.current;
+  if (pending) seen.risen.add(pending.text.trim());
+  const others = [...view.planOrder.map((plan) => `plan-${plan}`), ...view.notes.map((note) => note.id)];
+  if (!seen.known) {
+    if (view.loaded) {
+      seen.known = new Set([...view.messages.map((message) => message.id), ...others]);
+      seen.top = view.messages.reduce((top, message) => Math.max(top, message.seq), 0);
+    }
+  } else {
+    for (const message of view.messages) {
+      if (seen.known.has(message.id)) continue;
+      seen.known.add(message.id);
+      if (message.seq < seen.top) continue;
+      seen.top = message.seq;
+      if (message.role !== 'user') seen.messages.set(message.id, 'fade');
+      else if (message.content.trim() && !seen.risen.has(message.content.trim())) seen.messages.set(message.id, 'rise');
+    }
+    for (const id of others) {
+      if (seen.known.has(id)) continue;
+      seen.known.add(id);
+      seen.others.add(id);
+    }
+  }
+  return { message: (message: Message) => seen.messages.get(message.id), other: (id: string) => seen.others.has(id) };
+}
+
 export function Transcript({ view, still, pending, empty, canBranch, onBranch, onRetry, onDecide, onEdit, onRate, onOlder }: {
   view: LucyView;
   still: boolean;
@@ -176,10 +259,18 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
   onOlder?: () => Promise<void>;
 }) {
   const newest = [...view.messages].reverse().find((message) => message.role === 'assistant')?.id;
+  const fresh = useFresh(view, pending);
+  // the step Lucy is really running for a turn, named by its own step events (a card's title)
+  const stepOf = (turn: string | null) => {
+    if (!turn || !flagOn('app.feel_motion')) return undefined;
+    const working = Object.values(view.cards).find((card) => card.turn === turn && WORKING.has(card.status));
+    return working ? working.title || humanize(working.op) || undefined : undefined;
+  };
   const entries: Entry[] = view.messages.map((message) => ({
     key: message.seq,
     order: 0,
-    node: <MessageItem key={message.id} message={message} superseded={!!message.turn && !!view.superseded[message.turn]} onBranch={onBranch} onRetry={onRetry} canBranch={canBranch} latest={message.id === newest} onEdit={onEdit} onRate={onRate} />,
+    node: <MessageItem key={message.id} message={message} superseded={!!message.turn && !!view.superseded[message.turn]} onBranch={onBranch} onRetry={onRetry} canBranch={canBranch} latest={message.id === newest} onEdit={onEdit} onRate={onRate}
+      arrival={fresh.message(message)} step={message.status === 'streaming' && !message.content ? stepOf(message.turn) : undefined} />,
   }));
   for (const plan of view.planOrder) {
     const group = view.plans[plan];
@@ -189,10 +280,10 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
     const answered = view.messages.find((message) => message.role === 'assistant' && message.turn === group.turn);
     // the steps sit between what was asked and Lucy's answer to it
     const key = asked ? asked.seq : answered ? answered.seq : Number.MAX_SAFE_INTEGER;
-    entries.push({ key, order: asked ? 1 : -1, node: <li key={`plan-${plan}`} className="lucy-log-plan"><PlanGroupView group={group} cards={cards} still={still} /></li> });
+    entries.push({ key, order: asked ? 1 : -1, node: <li key={`plan-${plan}`} className="lucy-log-plan" data-arrive={fresh.other(`plan-${plan}`) || undefined}><PlanGroupView group={group} cards={cards} still={still} /></li> });
   }
   for (const note of view.notes) {
-    entries.push({ key: note.afterSeq, order: 2, node: <li key={note.id} className={`lucy-note is-${note.tone}`}><p>{note.text}</p></li> });
+    entries.push({ key: note.afterSeq, order: 2, node: <li key={note.id} className={`lucy-note is-${note.tone}`} data-arrive={fresh.other(note.id) || undefined}><p>{note.text}</p></li> });
   }
   entries.sort((a, b) => a.key - b.key || a.order - b.order);
   const waiting = view.permissions.filter((permission) => permission.status === 'pending');
@@ -206,7 +297,7 @@ export function Transcript({ view, still, pending, empty, canBranch, onBranch, o
         <ol className="lucy-log">
           {entries.map((entry) => entry.node)}
           {showPending && (
-            <li className={`lucy-msg is-user is-${pending.state}`}>
+            <li className={`lucy-msg is-user is-${pending.state} is-rise`}>
               <article aria-label="Your message">
                 <h3 className="lucy-msg-who">You<span className="lucy-msg-state"> · {pending.state === 'sending' ? 'Sending…' : pending.state === 'sent' ? 'Sent' : 'Not sent'}</span></h3>
                 <RichText text={pending.text} />
