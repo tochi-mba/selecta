@@ -640,7 +640,7 @@
       ],
       "requires": ["rooms"],
       "surfaces": ["cloud.listen"],
-      "words": ["loved that blend", "Guests can react"],
+      "words": ["loved that blend", "Guests can react", "Loved in"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "rooms"

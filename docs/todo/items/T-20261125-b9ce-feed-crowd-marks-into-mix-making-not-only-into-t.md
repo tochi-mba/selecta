@@ -2,7 +2,7 @@
 id: T-20261125-b9ce
 title: Feed crowd marks into mix making, not only into the vote's choices
 area: rooms
-status: open
+status: done
 priority: normal
 who: claude
 created: 2026-11-25

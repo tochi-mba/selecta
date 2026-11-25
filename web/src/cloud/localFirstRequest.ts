@@ -115,6 +115,8 @@ export type Availability = {
   elsewhere?: import('../devices/controller').WhereHeld | null;
   /** By file rather than by song, for a song's versions: this device's own answers and the rows. */
   files?: { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; rows: ReadonlyMap<number, CatalogueSong> };
+  /** ADR-0488: how many rooms loved each song (the account's crowd marks), when Rooms is on. */
+  loved?: ReadonlyMap<number, number>;
 };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
@@ -128,6 +130,9 @@ export function availabilityOf(song: CatalogueSong, known: Availability): SongAv
   if (device === 'reconnect') return 'reconnect';
   return (song.available_on ?? 0) > 0 ? 'elsewhere' : 'nowhere';
 }
+
+/** ADR-0488: what rooms made of a song, said after how it plays; nothing when no room loved it. */
+const lovedWords = (rooms: number) => (rooms > 0 ? ` Loved in ${rooms} ${rooms === 1 ? 'room' : 'rooms'}.` : '');
 
 /** A catalogue song in the Library's shape. Nothing is analysed in the browser yet, so no tempo,
  * key or energy is claimed; where it can play from rides alongside as `availability`. */
@@ -155,7 +160,7 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     // ADR-0475 I83: a song another open device holds plays there, so it can be played, added
     // and started from here, on that device
     readiness: playable
-      ? { status: 'mix_ready', reason: WORKED_OUT_LIVE }
+      ? { status: 'mix_ready', reason: `${WORKED_OUT_LIVE}${lovedWords(known.loved?.get(song.id) ?? 0)}` }
       : openElsewhere
         ? { status: 'mix_ready', reason: `Plays on ${openElsewhere}.` }
       : here
@@ -315,6 +320,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     const hosted = (await sources.hosted?.(grouping.files).catch(() => null)) ?? NO_AVAILABILITY.hosted;
     return {
       here: hereBySong(grouping, here), hosted: setBySong(grouping, hosted), elsewhere: await holders(),
+      loved: await lovedNow(),
       files: { here, rows: new Map(grouping.files.map((file) => [file.id, file])) },
     };
   };
@@ -338,7 +344,21 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     if (where?.before.length) return { rank: 1, where: `On ${where.before[0]}, not open now` };
     return { rank: where ? 2 : 1, where: where ? 'On no device right now' : notOnSpeaker(link.speakerName).replace(/:.*$/, '') };
   };
-  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf) : null;
+  // ADR-0488: how many rooms loved each song, for an account with Rooms; nothing without
+  const lovedInRooms = sources.rooms === false ? undefined : () => cloud<{ marks: { song_id: number; next_song_id: number | null; rooms: number }[] }>('/crowd-marks')
+    .then((answer) => new Map(answer.marks.filter((mark) => mark.next_song_id === null && mark.rooms > 0).map((mark) => [mark.song_id, mark.rooms])));
+  // read at most once a minute: the Library asks where songs are far more often than rooms end
+  let lovedKept: Map<number, number> | undefined;
+  let lovedAt = 0;
+  async function lovedNow(): Promise<Map<number, number> | undefined> {
+    if (!lovedInRooms) return undefined;
+    if (!lovedAt || Date.now() - lovedAt > 60_000) {
+      lovedAt = Date.now();
+      lovedKept = await lovedInRooms().catch(() => lovedKept);
+    }
+    return lovedKept;
+  }
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
     songs: async () => {
