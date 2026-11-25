@@ -240,6 +240,11 @@ def test_nobody_voting_or_the_leader_gone_and_calling_it_off(party, clock):
     rounds.open_round(rooms, HOST, room_id, [5, 6])
     clock.advance(60)
     assert rounds.settle_due(rooms, HOST, room_id).outcome == "no_votes"
+    alone = rounds.open_round(rooms, HOST, room_id, [5, 6])
+    rounds.cast(rooms, guests[0].guest_token, alone.id, 0)
+    clock.advance(60)
+    lone = rounds.settle_due(rooms, HOST, room_id)  # one tap is not the room's pick
+    assert (lone.status, lone.winner_song_id, lone.outcome) == ("void", None, "too_few")
     second = rounds.open_round(rooms, HOST, room_id, [5, 6, 7])
     rounds.cast(rooms, guests[0].guest_token, second.id, 0)
     rounds.cast(rooms, guests[1].guest_token, second.id, 0)
@@ -296,7 +301,8 @@ def test_the_timer_asks_once_on_the_nth_song_while_someone_is_here(party, clock)
     assert asked() == []  # one song so far
     rooms.now_playing.index = 1
     clock.advance(200)
-    rooms.guest_view(guests[0].guest_token)  # a guest's page is still open
+    for guest in guests[:2]:  # two pages are still open: a pick needs two voters
+        rooms.guest_view(guest.guest_token)
     _play_id(rooms, opened)
     assert asked() == [{"state": "wanted", "opened_by": "timer"}]
     _play_id(rooms, opened)

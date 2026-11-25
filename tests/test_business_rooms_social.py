@@ -180,6 +180,12 @@ def test_a_vote_nobody_votes_in_has_no_winner_and_one_can_be_called_off(room):
     done = pulse(svc, guest, code)["round"]
     assert (done["state"], done["winner"], done["outcome"]) == ("void", None, "no_votes")
     with transaction(svc.engine) as conn:
+        alone = svc.start_round(conn, staff(), BAR)
+    svc.cast_round_vote(guest, alone["round_id"], 0, room_key=code)
+    svc.clock.advance(60)
+    lone = pulse(svc, guest, code)["round"]  # one tap is not the room's pick
+    assert (lone["state"], lone["winner"], lone["outcome"]) == ("void", None, "too_few")
+    with transaction(svc.engine) as conn:
         second = svc.start_round(conn, staff(), BAR)
         assert second["round_id"] != first["round_id"]
         assert svc.cancel_round(conn, staff(), BAR, second["round_id"])["state"] == "cancelled"
@@ -188,12 +194,14 @@ def test_a_vote_nobody_votes_in_has_no_winner_and_one_can_be_called_off(room):
 def test_a_vote_starts_by_itself_every_so_many_songs(room):
     svc, code, player = room
     guest = join(svc, code, 1)
+    other = join(svc, code, 2)  # a pick needs two voters, so a vote waits for two guests
     with transaction(svc.engine) as conn:
         svc.update_social(conn, manager(), BAR, {"round_every_songs": 2})
     assert pulse(svc, guest, code)["round"] is None  # one song so far
     player.index = 2
     svc.clock.advance(200)
-    svc.guest_state(guest, code)  # the guest's page is still open
+    for here in (guest, other):  # both pages are still open
+        svc.guest_state(here, code)
     assert pulse(svc, guest, code)["round"]["state"] == "open"
 
 
