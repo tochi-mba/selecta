@@ -284,6 +284,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |
 | `lucy.deep_plan` | **Lucy deep planning.** Use Lucy's premium planning model and larger plan allowance. | `lucy` |
 | `admin.console` | **Staff console.** Show internal tools to authenticated staff with the required permission. |  |
+| `admin.workers` | **Staff console: Workers.** The staff console's Workers page: hosted processing at a glance per pool, the gateway, autoscaler, storage and flags around the workers, customer waits, processing cost against a budget, and guarded actions (retry, cancel long waits, pause a pool, ask the autoscaler for a worker). | `admin.console` |
 
 ## Autopilot and venue
 
