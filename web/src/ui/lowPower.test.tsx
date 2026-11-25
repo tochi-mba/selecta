@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setFlags } from '../flags';
 import { prefs, reloadPrefs, setPrefs } from '../state/prefs';
+import { FEEL_OFF } from '../test/feel';
 import { keepFullMotion, lowPowerActive, lowPowerLevel, resetLowPower, REST_MS, SLOW_FRAME_MS, struggling, watchLowPower, WINDOW_FRAMES } from './lowPower';
 import { useReducedMotion } from './useReducedMotion';
 
@@ -50,9 +51,8 @@ function fakeClock() {
   };
 }
 
-/** These tests pin the behaviour with the feel flags off (one step, straight to Still); the two
- * steps the feel system adds (ADR-0477) have their own test below. */
-const FEEL_OFF = { 'app.feel_motion': false, 'app.feel_depth': false, 'app.feel_pointer_light': false, 'app.feel_music': false, 'app.feel_ambient': false, 'app.feel_moments': false };
+// These tests pin the behaviour with the feel flags off (one step, straight to Still); the two
+// steps the feel system adds (ADR-0477) have their own test below.
 
 function Probe() {
   return <span>{useReducedMotion() ? 'Still' : 'Animated'}</span>;

@@ -70,11 +70,25 @@ Built in PRs #133 and #134. The local Lucy page is reused in the browser-first C
 
 - **What she works over.** The account's catalogue of song details and its mixes as recipes, never the music files (they stay on the person's devices). Her tools search the catalogue, list artists, read the current and saved mixes, and propose a mix; a proposal is a list of catalogue songs, and saving it writes a recipe revision. She also knows where the playing mix is and an open room's waiting requests.
 - **Storage.** Five tenant tables (`lucy_cloud_conversations`, `_messages`, `_turns`, `_events`, `_proposals`) with the workspace isolation policy (migrations `bf0476lucy01` to `03`). A conversation belongs to the workspace and the person who started it; anyone else gets the answer a made-up id gets. Conversations are in Download my data (`lucy-conversations.json`).
-- **Every turn through the gateway.** Admitted by `gateway.plan_turn` with the plan's tier and ceilings, settled with the real tokens, given back when it fails or is stopped. One turn in flight per conversation (a partial unique index); a refusal is answered at once in plain words and counts nothing. When the allowance or the dollar ceiling is used up, the built-in planner answers and says so, with the date turns come back.
+- **Every turn through the gateway.** Admitted by `gateway.plan_turn` with the plan's tier and ceilings, settled with the real tokens, given back when it fails or is stopped. One turn in flight per conversation (a partial unique index); a refusal is answered at once in plain words and counts nothing. When the allowance or the dollar ceiling is used up, the built-in planner answers and says which of the two it was, with the date it comes back. The words decide which allowance a turn counts against: a whole new mix is a planning turn, one of two hours or more (or for a wedding, a festival, all night) a deep plan, a short question that asks for no mix a quick turn, anything else an everyday turn. The turns meter reads the same counters admission uses (`ai_usage`).
 - **Several devices.** A turn records the device it came from; every device sees the same conversation, the person's words and the turns meter (`lucy.turns` on the workspace stream).
 - **Streaming.** The page reads the conversation's event log with a cursor every 500 ms while visible (a bearer token cannot ride on `EventSource`); text deltas are batched and pruned once a reply is complete.
 - **Not in Cloud yet.** Memory facts and listening history; a real-phone keyboard check; song titles in the playing position.
 - **Evaluation.** `tests/lucy_eval/` (72 cases) and `tools/lucy_eval.py`; run within the owner's spending limit.
+
+### 9.8 One usage allowance on a session and a week (ADR-0480 to ADR-0487, flag `lucy.usage_windows`)
+
+Accepted by the owner on 2026-11-25 and being built behind flags that are off for everyone, so what follows is not yet what members get. Today Lucy is limited twice: by turns per class per calendar month, which the customer is sold, and by a monthly dollar ceiling per account (§9.3), which the customer never sees and which is the limit that really holds since each plan moved to one model. The [Lucy Usage ADR set](../adr/README.md#selecta-lucy-usage-adr-set-2026-11-25) proposes to make them one thing.
+
+- **One allowance, weighted by cost.** A turn is charged what it cost, reserved at admission and settled with the real tokens. The request class stops deciding what a person is charged ([ADR-0481](../adr/adr-0481-one-cost-weighted-lucy-allowance.md)).
+- **Two windows.** A five-hour session that opens at the first message and a weekly limit with a fixed reset per account, in place of the calendar month. Venue pools get the weekly limit only ([ADR-0482](../adr/adr-0482-rolling-session-window-and-weekly-limit.md)).
+- **At the limit.** Session spent: a lighter Lucy answers and says so once. Week spent: the built-in planner. Each cause has its own true words and the real time it ends ([ADR-0483](../adr/adr-0483-behaviour-at-the-limit-and-truthful-words.md)).
+- **One meter.** Session and week as percentages with reset times, read from the ledger the gateway enforces; never tokens, dollars or model names ([ADR-0484](../adr/adr-0484-one-truthful-lucy-usage-meter.md)).
+- **Plans as multipliers** of one base allowance, written once in the plan catalogue ([ADR-0485](../adr/adr-0485-plan-multipliers-and-one-allowance-catalogue.md)).
+- **Extra usage** in prepaid packs, deferred until the owner decides ([ADR-0486](../adr/adr-0486-extra-usage-credits.md)).
+- **Measured before it is sized.** Shadow metering on beta accounts sets every number; the 40% rule and the prices do not change ([ADR-0487](../adr/adr-0487-lucy-usage-measurement-migration-and-rollout.md)).
+
+Faults found in the present model while writing the set are listed in [ADR-0480](../adr/adr-0480-lucy-usage-goal-evidence-and-boundaries.md) and filed in `docs/todo/items/`. The market research behind the design is in [docs/research/ai-chat-usage-limits.md](../research/ai-chat-usage-limits.md).
 
 ---
 

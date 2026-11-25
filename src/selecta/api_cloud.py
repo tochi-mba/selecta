@@ -980,6 +980,10 @@ def create_cloud_app(
     )
     # Unit economics and step-4 readiness for Browser-first Cloud (BF-0464-04/05, BF-0467-04).
     admin_economics_routes.install_routes(app, engine=engine, current_claims=current_claims)
+    # Whether queued work is being picked up, per worker pool, for staff (work.queue_health).
+    from selecta.routes import work_queue as work_queue_routes
+
+    work_queue_routes.install_routes(app, engine=engine, current_claims=current_claims)
     # The Labs opening for browser-first Cloud (BF-0467-05).
     local_first_labs_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,

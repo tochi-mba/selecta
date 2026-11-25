@@ -7,6 +7,8 @@ import { Badge, Notice, SettingsCard } from '../cloud/AccountLayout';
 import { Action, Skeleton } from '../ui/controls';
 import { userLocale } from '../ui/format';
 import { Meter } from '../ui/Meter';
+import { LUCY_USAGE_EVENT, windowsOf, type LucyWindows } from '../cloud/lucyUsage';
+import { LucyUsageMeter } from './LucyUsageMeter';
 
 /** Lucy's settings in Cloud mode (docs/saas/09-lucy-ai-gateway.md §9.5). Only the person's own
  * choices are here: Use Lucy, the phases, and what may be shared with Selecta's AI provider. The
@@ -20,6 +22,8 @@ export type CloudLucy = {
   privacy: { share_lyrics: boolean; share_history: boolean };
   tier: string;
   usage: { used: number; limit: number | null; fair_use: boolean; resets_at: number | null };
+  /** ADR-0484: the one usage read model. Absent from a server that still counts turns. */
+  usage_windows?: LucyWindows | null;
 };
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -106,11 +110,15 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
   useEffect(() => {
     const again = () => {
       void asked.current<CloudLucy>('/account/lucy')
-        .then((next) => { if (live.current) setStatus((was) => (was ? { ...was, usage: next.usage } : was)); })
+        .then((next) => { if (live.current) setStatus((was) => (was ? { ...was, usage: next.usage, usage_windows: next.usage_windows } : was)); })
         .catch(() => {});
     };
     window.addEventListener(LUCY_TURNS_EVENT, again);
-    return () => window.removeEventListener(LUCY_TURNS_EVENT, again);
+    window.addEventListener(LUCY_USAGE_EVENT, again);
+    return () => {
+      window.removeEventListener(LUCY_TURNS_EVENT, again);
+      window.removeEventListener(LUCY_USAGE_EVENT, again);
+    };
   }, []);
 
   if (!status || !phases) {
@@ -124,6 +132,8 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
     );
   }
 
+  // the new meter only when the server sends its figures, never from a flag alone (ADR-0484)
+  const windows = windowsOf(status.usage_windows);
   const shown = PHASES.filter((phase) => ([] as FlagId[]).concat(phase.flag ?? []).every((flag) => accountFlagOn(flag, features)));
   const changed = enabled !== status.enabled || JSON.stringify(phases) !== JSON.stringify(status.phases)
     || privacy.share_lyrics !== status.privacy.share_lyrics || privacy.share_history !== status.privacy.share_history;
@@ -149,7 +159,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       badge={<Badge>{status.tier}</Badge>}
       about="Your plan sets how much Lucy can do. You choose whether to use it and what it may share."
     >
-      <LucyTurnsMeter usage={status.usage} />
+      {windows ? <LucyUsageMeter windows={windows} /> : <LucyTurnsMeter usage={status.usage} />}
       <form onSubmit={(event) => void save(event)}>
         <fieldset>
           <legend>Use</legend>

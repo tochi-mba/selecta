@@ -51,6 +51,10 @@ export function sceneTransitionsSupported(doc: Document = document): boolean {
 export function sceneTransitionsWanted(win: Window = window): boolean {
   if (!flagOn('app.scene_transitions') || !flagOn('app.motion_choice')) return false;
   if (prefs().motion !== 'expressive') return false;
+  // a page nobody is looking at has nothing to animate, and a browser does not run a view
+  // transition's update while the page is hidden: the app opened in a background tab stayed on
+  // "Starting SelectaDJ" until it was looked at. Hidden, the page changes at once.
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
   if (win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false) return false;
   // low power at either step means no page travel; ui/lowPower.ts writes the attribute
   if (typeof document !== 'undefined' && document.documentElement.dataset.lowPower) return false;
@@ -174,6 +178,12 @@ export function changeScene(update: () => void, doc: Document = document, win: W
     return;
   }
   running = transition ?? null;
+  // The browser gives up on the animation when the swap takes too long (a slow computer) or when a
+  // newer transition skips this one. The page has still changed, so those rejections are expected
+  // and must not surface as unhandled errors.
+  const quiet = transition as { ready?: Promise<unknown>; updateCallbackDone?: Promise<unknown> } | undefined;
+  quiet?.ready?.catch?.(() => undefined);
+  quiet?.updateCallbackDone?.catch?.(() => undefined);
   const finished = transition?.finished;
   if (finished && typeof finished.then === 'function') finished.then(settle, settle);
   else settle();

@@ -114,7 +114,13 @@ describe('entering the console', () => {
   it('shows only the pages the roles can read, and hides a page whose flag is off', async () => {
     permissions = ['platform.dashboard.read', 'jobs.read', 'accounts.list', 'flags.read', 'business.pilots.create'];
     const nav = await enter('/admin', { 'business.pilots': false });
-    expect(nav.getAllByRole('link').map((a) => a.textContent)).toEqual(['Overview', 'Customers', 'Jobs', 'Flags', 'Emergency', 'Communications', 'System']);
+    expect(nav.getAllByRole('link').map((a) => a.textContent)).toEqual(['Overview', 'Customers', 'Jobs', 'Workers', 'Flags', 'Emergency', 'Communications', 'System']);
+  });
+
+  it('hides Workers when its flag is off and the rest of the sidebar closes up', async () => {
+    permissions = ['platform.dashboard.read', 'jobs.read', 'flags.read'];
+    const nav = await enter('/admin', { 'admin.workers': false });
+    expect(nav.getAllByRole('link').map((a) => a.textContent)).toEqual(['Overview', 'Jobs', 'Flags', 'Emergency', 'Communications', 'System']);
   });
 
   it('reads the page, record and filters from the address', () => {
@@ -242,7 +248,7 @@ describe('help, tours and the palette', () => {
       expect(TOURS[page.id].length, page.id).toBeGreaterThanOrEqual(3);
       expect(TOURS[page.id].length, page.id).toBeLessThanOrEqual(6);
     }
-    expect(PLAYBOOKS.map((p) => p.id)).toEqual(['refund', 'sign-in', 'payment', 'incident', 'takedown', 'add-staff', 'flag', 'undo']);
+    expect(PLAYBOOKS.map((p) => p.id)).toEqual(['refund', 'sign-in', 'payment', 'incident', 'takedown', 'add-staff', 'flag', 'no-worker', 'undo']);
   });
 
   it('opens help with the ? key and a tour from it', async () => {

@@ -60,6 +60,18 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
   },
 };
 
+/** Lucy on each plan in level words only (ADR-0484 rule 4, ADR-0483 rule 9): no counts and no
+ * names of what answers. Used once the server sends the usage read model; until then the cards
+ * keep the words above. Each is drawn after the bold "Lucy", as the axes are. */
+export const LUCY_LEVEL_WORDS: Record<'free' | Paid, string> = {
+  free: 'Basic: a small share of Lucy each week. Once a session’s share is used, a simpler built-in planner answers until the session ends.',
+  standard: 'Standard: more of Lucy each week than Free, with a lighter Lucy for the rest of a session once its share is used.',
+  premium: 'Advanced: the most of Lucy each week, with a lighter Lucy for the rest of a session once its share is used.',
+};
+
+/** Whether the server sent the usage read model, so the cards describe Lucy by level. */
+const lucyByLevel = (account: Account) => Boolean(account.usage?.lucy_windows);
+
 /** Whether this account's Cloud experience is local-first only, so storage is no part of its plan. */
 export function sellsLocalFirst(account: Pick<Account, 'experience'>) {
   return account.experience?.local_first === true && account.experience?.hosted !== true;
@@ -72,7 +84,8 @@ function axisShown(axis: Axis, account: Account) {
 }
 
 function shownAxes(plan: Paid, account: Account) {
-  return LOCAL_FIRST_AXES[plan].axes.filter((axis) => axisShown(axis, account));
+  const axes = LOCAL_FIRST_AXES[plan].axes.filter((axis) => axisShown(axis, account));
+  return lucyByLevel(account) ? axes.map((axis) => (axis.name === 'Lucy' ? { ...axis, words: LUCY_LEVEL_WORDS[plan] } : axis)) : axes;
 }
 
 /** Whether the feel's motion is on, read live so turning it off mid-page puts the plain marks back. */
@@ -138,7 +151,8 @@ function currentIncludes(account: Account, local: boolean): Axis[] {
   if (local && (plan === 'standard' || plan === 'premium')) return shownAxes(plan, account);
   const lines: Axis[] = [];
   if (holdsHostedStorage(account)) lines.push({ name: 'Storage', words: `${bytes(account.usage?.storage.limit_bytes ?? account.entitlement.storage_limit_bytes)} for your music.` });
-  if (account.lucy && accountFlagOn('lucy', account.features)) lines.push({ name: 'Lucy', words: `${account.lucy.tier.replace(/^Lucy\s+/, '')}.` });
+  const level = lucyByLevel(account) ? (LUCY_LEVEL_WORDS as Record<string, string | undefined>)[plan] : undefined;
+  if (account.lucy && accountFlagOn('lucy', account.features)) lines.push({ name: 'Lucy', words: level ?? `${account.lucy.tier.replace(/^Lucy\s+/, '')}.` });
   const sold = PLANS.find((item) => item.id === plan);
   if (sold && !local) lines.push({ name: 'Extras', words: aboutPlan(sold, account) });
   return lines;

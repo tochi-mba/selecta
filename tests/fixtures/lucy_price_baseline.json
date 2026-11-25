@@ -1,0 +1,135 @@
+{
+  "recorded_on": "2026-11-25",
+  "measured_on": null,
+  "measurement": null,
+  "note": "No measurement has been run yet. These are the starting figures, all estimates until LM-0487-02 and LM-0487-03 are done. The next rewrite must name a measurement (ADR-0487 rule 10).",
+  "model_prices": {
+    "claude-haiku-5-5": {
+      "input_usd_per_mtok": 0.1,
+      "output_usd_per_mtok": 0.5
+    },
+    "claude-sonnet-5-5": {
+      "input_usd_per_mtok": 2.0,
+      "output_usd_per_mtok": 10.0
+    },
+    "claude-opus-5-5": {
+      "input_usd_per_mtok": 4.0,
+      "output_usd_per_mtok": 20.0
+    }
+  },
+  "cache_read_multiplier": 0.1,
+  "cache_write_multiplier": 1.25,
+  "deployments": {
+    "builtin": {
+      "model": "builtin",
+      "input_usd_per_mtok": 0.0,
+      "output_usd_per_mtok": 0.0,
+      "per_turn_cost_cap_usd": 0.0,
+      "fallback_id": null
+    },
+    "haiku-low": {
+      "model": "claude-haiku-5-5",
+      "input_usd_per_mtok": 0.1,
+      "output_usd_per_mtok": 0.5,
+      "per_turn_cost_cap_usd": 0.01,
+      "fallback_id": "builtin"
+    },
+    "haiku-medium": {
+      "model": "claude-haiku-5-5",
+      "input_usd_per_mtok": 0.1,
+      "output_usd_per_mtok": 0.5,
+      "per_turn_cost_cap_usd": 0.02,
+      "fallback_id": "builtin"
+    },
+    "sonnet-medium": {
+      "model": "claude-sonnet-5-5",
+      "input_usd_per_mtok": 2.0,
+      "output_usd_per_mtok": 10.0,
+      "per_turn_cost_cap_usd": 0.15,
+      "fallback_id": "haiku-medium"
+    },
+    "opus-high": {
+      "model": "claude-opus-5-5",
+      "input_usd_per_mtok": 4.0,
+      "output_usd_per_mtok": 20.0,
+      "per_turn_cost_cap_usd": 0.6,
+      "fallback_id": "sonnet-medium"
+    }
+  },
+  "routing": {
+    "free": {
+      "quick": [
+        "haiku-low"
+      ],
+      "everyday": [
+        "haiku-low"
+      ],
+      "planning": [
+        "haiku-low"
+      ],
+      "deep_plan": [
+        "haiku-low"
+      ]
+    },
+    "standard": {
+      "quick": [
+        "sonnet-medium"
+      ],
+      "everyday": [
+        "sonnet-medium"
+      ],
+      "planning": [
+        "sonnet-medium"
+      ],
+      "deep_plan": [
+        "sonnet-medium"
+      ]
+    },
+    "premium": {
+      "quick": [
+        "opus-high"
+      ],
+      "everyday": [
+        "opus-high"
+      ],
+      "planning": [
+        "opus-high"
+      ],
+      "deep_plan": [
+        "opus-high"
+      ]
+    }
+  },
+  "lucy_usage": {
+    "1": {
+      "base_weekly_units": 57692,
+      "venue_weekly_units": 773000,
+      "plans": {
+        "free": {
+          "multiplier_milli": 1000,
+          "session_share_milli": 250,
+          "max_turn_units": 20000,
+          "max_concurrent_turns": 1,
+          "max_turn_seconds": 60,
+          "history_chars": 12000
+        },
+        "standard": {
+          "multiplier_milli": 14000,
+          "session_share_milli": 250,
+          "max_turn_units": 150000,
+          "max_concurrent_turns": 2,
+          "max_turn_seconds": 120,
+          "history_chars": 40000
+        },
+        "premium": {
+          "multiplier_milli": 26000,
+          "session_share_milli": 250,
+          "max_turn_units": 600000,
+          "max_concurrent_turns": 2,
+          "max_turn_seconds": 180,
+          "history_chars": 80000
+        }
+      }
+    }
+  }
+}

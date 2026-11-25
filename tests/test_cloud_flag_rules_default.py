@@ -56,7 +56,9 @@ def test_hosted_media_is_the_grant_flag_and_browser_first_ships_on():
     assert registry[LOCAL_FIRST].default is True
     assert registry[LOCAL_FIRST].rules_default is True
     grants = [flag.id for flag in registry.values() if not flag.rules_default]
-    assert grants == [HOSTED_MEDIA], "a new grant flag needs its own tests here"
+    assert sorted(grants) == [HOSTED_MEDIA, "lucy.extra_usage", "lucy.usage_windows"], (
+        "a new grant flag needs its own tests here"
+    )
     assert flags.problems() == []
 
 

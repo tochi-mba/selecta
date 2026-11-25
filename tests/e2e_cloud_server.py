@@ -74,6 +74,7 @@ from test_cloud_rooms_fakes import (  # noqa: E402
 )
 
 from selecta import flags as selecta_flags  # noqa: E402
+from selecta.ai import allowance as lucy_allowance  # noqa: E402
 from selecta.api_cloud import CloudSettings, create_cloud_app  # noqa: E402
 from selecta.billing import api as billing_api  # noqa: E402
 from selecta.billing import stripe_sync  # noqa: E402
@@ -418,15 +419,26 @@ def build(port: int):
     def use(body: dict = Body(default={})):  # noqa: B008
         workspace_id = workspace_of(str(body["user"]))
         plan = plan_for("free")
+        zone = body.get("timezone", "Europe/London")
         with transaction(engine, workspace_id) as conn:
             for kind, amount in body.get("amounts", {}).items():
+                if kind.startswith("lucy_turn."):
+                    # Lucy turns are counted where the AI gateway counts them (`ai_usage`),
+                    # which is what the turns meter reads; no turn writes an allowance counter.
+                    month = lucy_allowance.month_key(db_now(conn), zone)
+                    for _ in range(int(amount)):
+                        started = lucy_allowance.try_start_turn(
+                            conn, workspace_id, "free", kind.removeprefix("lucy_turn."), month
+                        )
+                        assert started.admitted, kind
+                    continue
                 taken = allowances.try_consume(
                     conn,
                     workspace_id,
                     kind,
                     float(amount),
                     allowances.limit_for(plan, kind),
-                    timezone=body.get("timezone", "Europe/London"),
+                    timezone=zone,
                 )
                 assert taken.ok, kind
         return {"ok": True}

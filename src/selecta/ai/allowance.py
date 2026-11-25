@@ -3,11 +3,15 @@
 People see turns, never tokens. Each tier has a few allowance buckets, and each request class
 counts against one of them:
 
-- Free: 40 everyday turns on Haiku; every kind of request counts there.
+- Free: 40 everyday turns; every kind of request counts there.
 - Standard: 400 everyday turns (quick questions count here too) and 40 whole-mix planning turns
-  (deep plans route down to planning).
-- Premium: 150 everyday turns (planning counts here), 25 deep plans, and quick answers on Haiku
-  under fair use: a high ceiling that only stops abuse.
+  (deep plans count as planning).
+- Premium: 150 everyday turns (planning counts here), 25 deep plans, and quick answers under
+  fair use: a high ceiling that only stops abuse.
+
+Each plan answers every class on its own model (owner, 2026-11-24: Free on Haiku, Standard on
+Sonnet, Premium on Opus; `registry.DEFAULT_ROUTING`), so a class decides which allowance a turn
+counts against, not which model answers it.
 
 A turn is counted when it starts, in one conditional update that takes the row's lock, so two
 turns racing for the last slot can't both get it. Nothing is checked once a turn is running: when
@@ -65,9 +69,10 @@ def classes_from(request_class: RequestClass | str) -> list[RequestClass]:
 
 
 def _zone(timezone: str | None) -> dt.tzinfo:
+    # A name that is a folder of zones ("Europe") fails with an `OSError`, not a lookup error.
     try:
         return ZoneInfo(timezone or "UTC")
-    except (ZoneInfoNotFoundError, ValueError):
+    except (ZoneInfoNotFoundError, ValueError, OSError):
         return dt.UTC
 
 
@@ -221,6 +226,16 @@ def month_cost(conn: Connection, workspace_id: str, month: str) -> float:
         )
     ).scalar()
     return float(total or 0.0)
+
+
+def turns_by_class(conn: Connection, workspace_id: str, month: str) -> dict[str, int]:
+    """Turns counted this month per allowance class: the numbers `try_start_turn` enforces."""
+    rows = conn.execute(
+        sa.select(ai_usage.c.request_class, ai_usage.c.turns).where(
+            ai_usage.c.workspace_id == workspace_id, ai_usage.c.month == month
+        )
+    ).all()
+    return {str(name): int(turns or 0) for name, turns in rows}
 
 
 def remaining(

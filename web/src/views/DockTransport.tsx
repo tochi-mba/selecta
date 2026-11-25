@@ -1,6 +1,6 @@
 // The hosted dock's small transport (ADR-0477, plan 3.4): Play or Pause, where in the song, and the
 // time, in SelectaDJ's own look instead of the browser's audio widget. It drives the dock's own
-// <audio> element and reads its clock from that element's events (cloud/CloudTransportDock.tsx), so
+// audio element and reads its clock from that element's events (cloud/CloudTransportDock.tsx), so
 // what it shows is what the element is doing. Fully keyboard operable: a button and a native range.
 // Nothing here answers the beat; the hosted element cannot be measured safely.
 import { RefObject, useId } from 'react';

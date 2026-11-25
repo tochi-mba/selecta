@@ -13,6 +13,8 @@ Covers S3-0072-01, S3-0072-02, S3-0072-03, S3-0072-05, S3-0072-06, S3-0072-07, S
 
 Cloud-only transactional email can use `api.postmarkapp.com` or `api.resend.com`. These are configured by the cloud service and are never contacted by the local music server.
 
+Cloud-only cover and details lookups (ADR-0478, `library.art_lookup`, and only for an account that turned on "Look up covers and details on the web") ask `musicbrainz.org` and fetch front covers from `coverartarchive.org`, from SelectaDJ's servers. They send an ISRC, or the artist and title; the length is compared on the server and not sent. The pictures inside the person's files never leave their device. The local music server's covers come from the songs' own files and contact neither host.
+
 Rechecked on 2026-11-11 against every remote address in `src/selecta` (`tests/test_s3_docs_contracts.py`); Cloud hosts belong to Cloud mode and its own docs. Nothing else goes anywhere: no analytics, telemetry, remote fonts, icons or scripts. Copy on the first screen and in Sources says the lyric lookup part out loud, and the wording matches the table above. An automated browser test records every request during navigation and fails on any that isn't to the local server.
 
 "Your audio stays on this PC" is the claim the app makes, and it's accurate. It deliberately doesn't claim "nothing leaves this PC", which wouldn't be.

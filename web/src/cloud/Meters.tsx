@@ -2,6 +2,8 @@ import { accountFlagOn } from '../flags';
 import { Meter as Bar } from '../ui/Meter';
 import { NumberRoll } from '../feel/numberRoll';
 import { Account, Allowance, bytes, holdsHostedStorage, isOverQuota, resetWords } from './api';
+import { windowsOf, type LucyWindows } from './lucyUsage';
+import { LucyUsageMeter } from '../views/LucyUsageMeter';
 
 // The usage meters on Plan & billing (docs/saas/11-ui-ux.md §11.1): storage used of the limit,
 // songs analysed today, Lucy turns this month and exports this month, each with when it resets.
@@ -27,6 +29,17 @@ function Meter({ label, used, limit, figure, rest, note, reset, warn }: { label:
         ? <Bar kind="meter" label={label} showLabel={false} value={Math.round(percent)} max={100} valueText={words} warnAt={0.8} dangerAt={1} tone={warn ? 'danger' : undefined} />
         : <p className="cloud-meter-free">Fair use: counted, never cut off.</p>}
       {under && <p className="cloud-meter-reset">{under}</p>}
+    </section>
+  );
+}
+
+/** Lucy's usage on Plan & billing (ADR-0484): the same two lines as Lucy's settings, in place of the
+ * count of turns, whenever the server sends the new figures. */
+function LucyUsageCard({ windows }: { windows: LucyWindows }) {
+  return (
+    <section className="cloud-card cloud-meter-card lucy-usage-card" aria-label="Lucy usage" data-glow="">
+      <p className="cloud-meter-name">Lucy</p>
+      <LucyUsageMeter windows={windows} />
     </section>
   );
 }
@@ -73,6 +86,7 @@ export function Meters({ account }: { account: Account }) {
   if (!usage) return <div className="cloud-meters acct-usage"><StorageMeter account={account} /></div>;
   const lucy = usage.lucy_turns_month;
   const exports = usage.exports_month;
+  const lucyWindows = windowsOf(usage.lucy_windows);
   // Analysis and export allowances count server work on hosted audio. A browser-first account
   // analyses and exports on its own device, so showing them would meter something never used.
   const hosted = holdsHostedStorage(account);
@@ -81,7 +95,8 @@ export function Meters({ account }: { account: Account }) {
       <StorageMeter account={account} />
       {hosted && <Meter label="Songs analysed today" used={usage.analysis_today.used} limit={usage.analysis_today.limit}
         {...allowanceParts(usage.analysis_today, 'songs')} reset={resetWords(usage.analysis_today.resets_at, 'day', zone)} />}
-      {accountFlagOn('lucy', account.features) && <Meter label="Lucy turns this month" used={lucy.used} limit={lucy.limit}
+      {accountFlagOn('lucy', account.features) && lucyWindows && <LucyUsageCard windows={lucyWindows} />}
+      {accountFlagOn('lucy', account.features) && !lucyWindows && <Meter label="Lucy turns this month" used={lucy.used} limit={lucy.limit}
         {...allowanceParts(lucy, 'turns')}
         note={lucy.limit !== null && lucy.fair_use ? 'Quick turns are extra, on fair use' : undefined}
         reset={lucy.resets_at ? resetWords(lucy.resets_at, 'month', zone) : undefined} />}

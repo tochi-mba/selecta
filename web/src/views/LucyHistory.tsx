@@ -1,4 +1,4 @@
-import { CSSProperties, FormEvent, useEffect, useRef, useState } from 'react';
+import { CSSProperties, FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { problemKind } from '../api';
 import { feelOn } from '../feel/root';
 import { lucy } from '../lucy/client';
@@ -19,7 +19,11 @@ const LEAVE_FALLBACK_MS = 600;
 
 const titleOf = (conversation: Conversation) => conversation.title || conversation.last_user_text || 'Untitled conversation';
 
-export function LucyHistory({ currentId, refreshKey, onPicked }: { currentId: string | null; refreshKey: string; onPicked?: () => void }) {
+export function LucyHistory({ currentId, refreshKey, onPicked, levels }: {
+  currentId: string | null; refreshKey: string; onPicked?: () => void;
+  /** The twin level meter (ADR-0484 rule 11), beside New while this list is the page's own column. */
+  levels?: ReactNode;
+}) {
   const [query, setQuery] = useState('');
   const [asked, setAsked] = useState('');
   const [archived, setArchived] = useState(false);
@@ -95,6 +99,7 @@ export function LucyHistory({ currentId, refreshKey, onPicked }: { currentId: st
     <nav className="lucy-history" aria-label="Conversations with Lucy">
       <div className="lucy-history-head">
         <h2>Conversations</h2>
+        {levels}
         <PageLink to="/mixes/lucy" className="button" onClick={onPicked}><Icon name="plus" size="toolbar" /> New</PageLink>
       </div>
       <SearchField label="Search conversations" value={query} onChange={setQuery} placeholder="Search" />

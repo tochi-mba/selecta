@@ -115,6 +115,7 @@
       "routes": [
         "GET /api/hosted/songs",
         "POST /api/hosted/songs/prepare",
+        "POST /api/hosted/songs/{asset_id}/retry",
         "POST /api/hosted/mixes/plan",
         "POST /api/hosted/mixes/render",
         "POST /api/hosted/mixes/export",
@@ -647,6 +648,7 @@
           "GET /api/admin/jobs/{job_id}",
           "POST /api/admin/jobs/{job_id}/{command}",
           "GET /api/admin/workers",
+          "GET /api/admin/work/queue",
           "POST /api/admin/workers/{worker_id}/{command}",
           "GET /api/admin/accounts",
           "GET /api/admin/accounts/{user_id}",
@@ -719,6 +721,22 @@
           "POST /api/admin/banners/{banner_id}/end",
           "GET /api/status-banner"
         ],
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    },
+    "admin.workers": {
+      "label": "Staff console: Workers",
+      "about": "The staff console's Workers page: hosted processing at a glance per pool, the gateway, autoscaler, storage and flags around the workers, customer waits, processing cost against a budget, and guarded actions (retry, cancel long waits, pause a pool, ask the autoscaler for a worker).",
+      "requires": ["admin.console"],
+      "routes": [
+        "GET /api/admin/hosted/status",
+        "GET /api/admin/hosted/preview",
+        "POST /api/admin/hosted/jobs/retry-failed",
+        "POST /api/admin/hosted/jobs/expire-queued",
+        "POST /api/admin/hosted/pools/{pool}/{command}",
+        "PUT /api/admin/hosted/budget"
+      ],
       "modes": ["cloud"],
       "kind": "ops",
       "owner": "platform"

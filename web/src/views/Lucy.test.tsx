@@ -219,3 +219,54 @@ describe('UF-0378 entry intent and conversation continuity', () => {
     expect(calls.some((call) => call.method === 'POST')).toBe(false);
   });
 });
+
+describe('the twin level meter on the Lucy page (ADR-0484 rule 11)', () => {
+  const windows = {
+    session: { left: 72, state: 'ok', resets_at: 4_000_000_000, back_words: '16:40', segments: 4, open: true },
+    week: { left: 90, state: 'ok', resets_at: 4_000_400_000, back_words: 'Thursday 09:00', segments: 5 },
+  };
+  const NAME = 'Lucy usage: 72% left this session, 90% left this week';
+  const cloudRequest = (usage_windows?: unknown) => vi.fn(async (path: string) => (path === '/account/lucy' ? { enabled: true, ...(usage_windows ? { usage_windows } : {}) } : {})) as never;
+  const wide = (width: number) => vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(width);
+
+  it('is absent in Local mode, and in Cloud until the server sends the new figures', async () => {
+    backend();
+    const local = render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} />);
+    await screen.findAllByText(/Proposed - not built/i);
+    expect(document.querySelector('.lucy-levels')).toBeNull();
+    local.unmount();
+    const request = cloudRequest();
+    render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} usageRequest={request} settingsPanel={<p>Cloud settings</p>} />);
+    await screen.findAllByText(/Proposed - not built/i);
+    await waitFor(() => expect(request).toHaveBeenCalledWith('/account/lucy'));
+    expect(document.querySelector('.lucy-levels')).toBeNull();
+  });
+
+  it('sits in the header when the conversation list is not a column, and its link opens Lucy’s settings', async () => {
+    backend();
+    render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} usageRequest={cloudRequest(windows)} settingsPanel={<p>Cloud settings</p>} />);
+    const button = await screen.findByRole('button', { name: NAME });
+    expect(button.closest('.lucy-head-actions')).not.toBeNull();
+    expect(document.querySelectorAll('.lucy-levels')).toHaveLength(1);
+    await userEvent.click(button);
+    await userEvent.click(screen.getByRole('button', { name: 'See the full meter in Lucy’s settings' }));
+    expect(within(await screen.findByRole('dialog', { name: 'Lucy settings' })).getByText('Cloud settings')).toBeInTheDocument();
+  });
+
+  it('sits beside New when the conversation list is a column, so only one is ever shown', async () => {
+    backend();
+    const width = wide(1400);
+    try {
+      render(<Lucy conversation="cv_1" setMixData={vi.fn()} player={player} usageRequest={cloudRequest(windows)} settingsPanel={<p>Cloud settings</p>} />);
+      const button = await screen.findByRole('button', { name: NAME });
+      expect(button.closest('.lucy-history-head')).not.toBeNull();
+      expect(document.querySelectorAll('.lucy-levels')).toHaveLength(1);
+      // the list opened as a sheet has none of its own: the header's is still the only one
+      await userEvent.click(screen.getByRole('button', { name: 'Hide conversations' }));
+      expect(document.querySelectorAll('.lucy-levels')).toHaveLength(1);
+      expect(screen.getByRole('button', { name: NAME }).closest('.lucy-head-actions')).not.toBeNull();
+    } finally {
+      width.mockRestore();
+    }
+  });
+});

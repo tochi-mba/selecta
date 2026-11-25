@@ -29,3 +29,5 @@ sections.
 - [Emergency controls](emergency/README.md)
 - [Game day: emergency controls drill](game-day.md)
 - [Browser-first Cloud rollout](bf-rollout-runbook.md)
+- [Lucy Usage rollout](lucy-usage-rollout-runbook.md)
+- [Lucy price change](lucy-price-change.md)

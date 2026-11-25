@@ -270,10 +270,23 @@ Each makes worker jobs only for the caller's own workspace; nothing is stored in
 
 | Route | Side effect |
 |---|---|
-| `POST /api/hosted/songs/prepare` | Queues `analyse.song` for stored songs with no analysis (and, with `retry`, failed ones) |
+| `POST /api/hosted/songs/prepare` | Queues `analyse.song` for stored songs with no analysis, replaces a job that can never finish (no declared output, cancelled, evicted, or failed on our side up to 3 times) by cancelling it and queueing a fresh one in one transaction, and, with `retry`, renews failed ones |
+| `POST /api/hosted/songs/{asset_id}/retry` | For one of the caller's own songs: cancels its failed or stuck `analyse.song` job and queues a fresh one (never two live jobs) |
 | `POST /api/hosted/mixes/plan` | None stored: reads analyses and returns the local planner's order and moves |
 | `POST /api/hosted/mixes/render` | Queues `play.proxy` and `seam.render` jobs the mix still needs, then returns its timeline with signed links |
 | `POST /api/hosted/mixes/export` | Queues one `export.render` job for the mix's songs |
+
+### Covers and details from the web (`src/selecta/catalog/routes.py`) - `library.art_lookup` (ADR-0478)
+
+Song links are per workspace (`song_catalog_links`); the lookups, releases and cover images they point at are shared reference data (`catalog_lookups`, `catalog_releases`, `catalog_recordings`, `catalog_art`). Dark in the build until the owner clears the sources' terms.
+
+| Route | Side effect |
+|---|---|
+| `POST /api/catalog/art` | When the person allows lookups: links the caller's own songs to a shared lookup key, copies a finished lookup to the link, and queues `catalog.lookup` jobs for keys never asked or due again |
+| `GET /api/catalog/art/{art_id}/{size}` | None: serves a stored, visible cover image (browser-private cache, a week) |
+| `PUT /api/catalog/songs/{song_id}/choice` | Keeps the person's "Wrong cover?" choice on the caller's own song link; queues a `catalog.lookup` job to fetch a picked release's cover when it isn't stored |
+| `PUT /api/catalog/settings` | Saves the person's own "Look up covers and details on the web" choice (`user_flag_preferences`, `catalog:lookups`) |
+| `POST /api/admin/catalog/art/{art_id}/{command}` | Staff hide or unhide a shared cover image with a reason; audited (`legal.catalog_art.hidden` / `unhidden`) |
 
 ### Local media catalogue (`src/selecta/local_media/api.py`) - Cloud library (ADR-0458)
 
@@ -327,6 +340,10 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 |---|---|
 | `POST /api/admin/jobs/{job_id}/{command}` | Retries, cancels or otherwise acts on a job |
 | `POST /api/admin/workers/{worker_id}/{command}` | Drains or acts on a worker |
+| `POST /api/admin/hosted/jobs/retry-failed` | Retries every failed job of one type from the last 7 days, at most 500, after the console counted them (Careful, audited) |
+| `POST /api/admin/hosted/jobs/expire-queued` | Proposes cancelling jobs queued longer than N hours as a delayed action (15 minutes, cancellable); when it runs it cancels at most 500 |
+| `POST /api/admin/hosted/pools/{pool}/{command}` | Pauses or resumes a worker pool (its `workers.drained` control), or records a staff request the autoscaler carries out (one worker for an hour, none, or hand back) |
+| `PUT /api/admin/hosted/budget` | Sets the monthly hosted processing budget the Workers page measures against (audited) |
 | `POST /api/admin/accounts/{user_id}/{command}` | Suspends or acts on an account |
 | `POST /api/admin/overrides` | Grants an override |
 | `POST /api/admin/overrides/mass` | Grants overrides in bulk |

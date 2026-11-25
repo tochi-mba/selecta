@@ -848,7 +848,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const page = (): ReactNode => {
     // ADR-0476: Lucy reads the account's API herself, so she opens at once, never behind the
     // catalogue's first load (2,919 songs took about 30 s on staging)
-    if (route.page === 'lucy' && lucyHere) return <Suspense fallback={<Skeleton lines={4} label="Opening Lucy" />}><Lucy conversation={route.conversation} setMixData={setMixData} player={shellPlayer} request={request} settingsPanel={<LucyCloudSettings request={cloud} />} /></Suspense>;
+    if (route.page === 'lucy' && lucyHere) return <Suspense fallback={<Skeleton lines={4} label="Opening Lucy" />}><Lucy conversation={route.conversation} setMixData={setMixData} player={shellPlayer} request={request} usageRequest={cloud} settingsPanel={<LucyCloudSettings request={cloud} />} /></Suspense>;
     if (route.page === 'more') {
       const item = moreItems.find((place) => place.id === route.id);
       if (!item) return <NotOnThisAccount />;

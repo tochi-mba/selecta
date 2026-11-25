@@ -56,6 +56,8 @@ Each press of play in `usePreview` has a session number. `onended`, `onerror` an
 | Cloud transport dock (Cloud mode only) | `web/src/cloud/CloudTransportDock.tsx` | Dock transport and managed audio controls | The Cloud speaker session |
 | Browser harmonic matches (Cloud mode only, `cloud.browser_harmonic`) | `web/src/cloud/BrowserHarmonicMatches.tsx` | One `<audio>` element playing the end of one song, then the start of the other, from the files on this device | `browser-harmonic-matches` |
 | Browser Workspace diagnostics (Cloud mode only, `cloud.workspace`) | `web/src/cloud/BrowserDiagnostics.tsx` | A Web Audio context opened on a press to probe what this browser can do, closed straight after | Nobody: it never plays a sound |
+| Hosted mix player (Cloud mode only, `cloud.hosted_render`) | `web/src/cloud/hosted/timelinePlayer.ts` | One Web Audio context, made on Play, playing the server-rendered parts back to back | The hosted mix card: it plays only after a press of Play and closes when the card goes |
+| The Listening Room (`tools.listening_room`) | `web/src/listening-room/audition.ts` | Its own speaker, taken with `takeAudio` for each audition | `listening-room`: anything else that takes the sound fades the audition out |
 
 Export makes no sound. Its result is a downloaded file. `tests/test_s3_docs_contracts.py` fails if a file under `web/src` starts sound (`takeAudio(`, `new Audio(`, `<audio`, `new AudioContext(`) and isn't named in this table (audit rerun 2026-11-11).
 

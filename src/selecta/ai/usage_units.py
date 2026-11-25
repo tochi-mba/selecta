@@ -1,0 +1,534 @@
+"""Lucy's allowance in usage units: the workspace's windows and the per-run ledger.
+
+This is the shadow form (ADR-0487 rule 1). Every turn is recorded against a five-hour session
+and a week (ADR-0482) and charged what it cost (ADR-0481), but nothing is refused and nothing is
+reserved: the `*_reserved` columns stay at 0 until enforced admission is built. `settle` already
+releases a reservation, so admission only has to write one.
+
+- `lucy_usage_state` holds one row per workspace: its week, its session and what each has used.
+- `lucy_usage_ledger` holds one row per run, with the week and session the run was admitted in.
+
+Every write is one guarded statement that is safe to repeat and safe when two servers run it at
+once. Whether a statement changed a row is read from `RETURNING`, never from a row count. The
+time is passed in as `now`: callers read it from `persistence.db_now`.
+
+`read_model` is the one view of usage for every surface (ADR-0484 rule 1). It never writes: a
+week or session whose end has passed is shown as already rolled over.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+import sqlalchemy as sa
+from sqlalchemy.engine import Connection
+
+from selecta.ai import usage_windows as windows
+from selecta.ai.usage_schema import insert_ignore, lucy_usage_ledger, lucy_usage_state
+from selecta.billing import plans
+from selecta.identity.schema import users, workspaces
+from selecta.persistence import new_id
+
+SHADOW = "shadow"
+PLAN_POOL = "plan"
+# A turn that ended this way through no fault of the person is charged nothing (ADR-0481 rule 5).
+REFUNDED_OUTCOMES = frozenset({"failed", "incomplete", "abandoned"})
+
+_state = lucy_usage_state
+_ledger = lucy_usage_ledger
+
+
+@dataclass(frozen=True)
+class Targets:
+    """What a plan gets under one version of the allowance catalogue, in usage units."""
+
+    plan_id: str
+    catalogue_version: int
+    week_limit: int
+    session_limit: int | None
+    turn_cap: int
+
+
+def targets(
+    plan_id: str,
+    *,
+    catalogue_version: int | None = None,
+    override_multiplier_milli: int | None = None,
+) -> Targets:
+    """That plan's limits from the allowance catalogue: the newest version unless one is named.
+    An unknown plan gets Free's. An override replaces the plan's multiplier; 0 means no Lucy."""
+    usage = plans.lucy_usage(catalogue_version)
+    entry = usage.plans.get(plan_id) or usage.plans["free"]
+    return Targets(
+        plan_id=plan_id,
+        catalogue_version=usage.version,
+        week_limit=plans.lucy_weekly_limit(usage, plan_id, override_multiplier_milli),
+        session_limit=plans.lucy_session_limit(usage, plan_id, override_multiplier_milli),
+        turn_cap=entry.max_turn_units,
+    )
+
+
+def charge_for(outcome: str, cost_usd: float) -> int:
+    """What a turn costs the person's allowance (ADR-0481 rule 5): nothing when it failed
+    through no fault of theirs, otherwise what it used, stopped or not."""
+    if str(outcome) in REFUNDED_OUTCOMES:
+        return 0
+    return windows.to_units(cost_usd)
+
+
+# --- the state row -----------------------------------------------------------------------------
+
+
+def _anchor(conn: Connection, workspace_id: str, now: float) -> windows.Anchor:
+    """The weekday and local hour the workspace was created, in its owner's time zone
+    (ADR-0482 rule 3). A workspace with no row or no owner is anchored at `now` in UTC."""
+    found = conn.execute(
+        sa.select(workspaces.c.created_at, users.c.timezone)
+        .select_from(workspaces.join(users, workspaces.c.owner_user_id == users.c.id))
+        .where(workspaces.c.id == workspace_id)
+    ).first()
+    if found is None:
+        return windows.anchor_for(now, "UTC")
+    return windows.anchor_for(float(found.created_at), found.timezone)
+
+
+def _row(conn: Connection, workspace_id: str) -> sa.Row | None:
+    return conn.execute(sa.select(_state).where(_state.c.workspace_id == workspace_id)).first()
+
+
+def ensure_state(conn: Connection, workspace_id: str, *, plan_id: str, now: float) -> None:
+    """Create the workspace's row if it has none: its first week, with no session open."""
+    if _row(conn, workspace_id) is not None:
+        return
+    anchor = _anchor(conn, workspace_id, now)
+    start, end = windows.week_bounds(anchor, now)
+    target = targets(plan_id)
+    insert_ignore(
+        conn,
+        _state,
+        {
+            "id": new_id(),
+            "workspace_id": workspace_id,
+            "time_zone": anchor.time_zone,
+            "anchor_weekday": anchor.weekday,
+            "anchor_hour": anchor.hour,
+            "plan_id": plan_id,
+            "catalogue_version": target.catalogue_version,
+            "week_seq": 1,
+            "week_started_at": start,
+            "week_ends_at": end,
+            "week_limit": target.week_limit,
+            "week_used": 0,
+            "week_reserved": 0,
+            "session_seq": 0,
+            "session_ends_at": None,
+            "session_limit": target.session_limit,
+            "session_used": 0,
+            "session_reserved": 0,
+            "created_at": now,
+            "updated_at": now,
+        },
+        ["workspace_id"],
+    )
+
+
+def _stored_anchor(row: sa.Row) -> windows.Anchor:
+    return windows.Anchor(row.time_zone, int(row.anchor_weekday), int(row.anchor_hour))
+
+
+def _changed(conn: Connection, statement: sa.Update) -> bool:
+    return conn.execute(statement.returning(_state.c.id)).first() is not None
+
+
+def _roll_week(conn: Connection, row: sa.Row, plan_id: str, now: float) -> bool:
+    """Move to the week that holds `now`. The guard on `week_seq` lets one caller win."""
+    start, end = windows.week_bounds(_stored_anchor(row), now)
+    target = targets(plan_id, override_multiplier_milli=row.override_multiplier_milli)
+    return _changed(
+        conn,
+        sa.update(_state)
+        .where(
+            _state.c.workspace_id == row.workspace_id,
+            _state.c.week_seq == row.week_seq,
+            _state.c.week_ends_at <= now,
+        )
+        .values(
+            week_seq=_state.c.week_seq + 1,
+            week_started_at=start,
+            week_ends_at=end,
+            week_used=0,
+            week_reserved=0,
+            plan_id=plan_id,
+            catalogue_version=target.catalogue_version,
+            week_limit=target.week_limit,
+            # A row with no session window keeps none.
+            session_limit=sa.case(
+                (_state.c.session_limit.is_not(None), target.session_limit),
+                else_=_state.c.session_limit,
+            ),
+            updated_at=now,
+        ),
+    )
+
+
+def _close_session(conn: Connection, workspace_id: str, now: float) -> bool:
+    return _changed(
+        conn,
+        sa.update(_state)
+        .where(
+            _state.c.workspace_id == workspace_id,
+            _state.c.session_ends_at.is_not(None),
+            _state.c.session_ends_at <= now,
+        )
+        .values(session_ends_at=None, session_used=0, session_reserved=0, updated_at=now),
+    )
+
+
+def _raise_limits(conn: Connection, row: sa.Row, plan_id: str, now: float) -> bool:
+    """Lift the limits to the current plan's at the pinned catalogue version; never lower."""
+    target = targets(
+        plan_id,
+        catalogue_version=int(row.catalogue_version),
+        override_multiplier_milli=row.override_multiplier_milli,
+    )
+    week_low = _state.c.week_limit < target.week_limit
+    low = [week_low]
+    values: dict[str, Any] = {
+        "week_limit": sa.case((week_low, target.week_limit), else_=_state.c.week_limit),
+        "plan_id": sa.case((week_low, plan_id), else_=_state.c.plan_id),
+        "updated_at": now,
+    }
+    if target.session_limit is not None:
+        # NULL (no session window) compares as unknown, so such a row keeps NULL.
+        session_low = _state.c.session_limit < target.session_limit
+        low.append(session_low)
+        values["session_limit"] = sa.case(
+            (session_low, target.session_limit), else_=_state.c.session_limit
+        )
+    return _changed(
+        conn,
+        sa.update(_state)
+        .where(
+            _state.c.workspace_id == row.workspace_id,
+            _state.c.catalogue_version == row.catalogue_version,
+            sa.or_(*low),
+        )
+        .values(**values),
+    )
+
+
+def roll(conn: Connection, workspace_id: str, *, plan_id: str, now: float) -> None:
+    """Bring the workspace's row up to `now`. Three guarded updates, each safe to run twice:
+
+    1. a week that has ended becomes the week holding `now`, with nothing used, the current plan
+       and the newest catalogue version (ADR-0485 rule 6); this is where a downgrade and a
+       changed override land;
+    2. a session that has ended is closed;
+    3. an upgrade lifts the limits at once (ADR-0482 rule 5).
+    """
+    row = _row(conn, workspace_id)
+    if row is None:
+        return
+    if float(row.week_ends_at) <= now:
+        _roll_week(conn, row, plan_id, now)
+        # Read again whoever won: the upgrade step needs the catalogue version now pinned.
+        row = _row(conn, workspace_id)
+    _close_session(conn, workspace_id, now)
+    if row is not None:
+        _raise_limits(conn, row, plan_id, now)
+
+
+def open_session(conn: Connection, workspace_id: str, *, now: float) -> None:
+    """Open a session when none is open (ADR-0482 rule 2). A row with no session limit, as a
+    venue pool has, never opens one."""
+    _changed(
+        conn,
+        sa.update(_state)
+        .where(
+            _state.c.workspace_id == workspace_id,
+            _state.c.session_ends_at.is_(None),
+            _state.c.session_limit.is_not(None),
+        )
+        .values(
+            session_seq=_state.c.session_seq + 1,
+            session_ends_at=windows.session_end(now),
+            session_used=0,
+            session_reserved=0,
+            updated_at=now,
+        ),
+    )
+
+
+# --- the ledger --------------------------------------------------------------------------------
+
+
+def record_shadow(
+    conn: Connection, *, workspace_id: str, run_id: str, plan_id: str, tier: str, now: float
+) -> bool:
+    """Record that a run was admitted, in the week and session open at `now`. True when the
+    ledger row was written; a second call for the same run writes nothing."""
+    ensure_state(conn, workspace_id, plan_id=plan_id, now=now)
+    roll(conn, workspace_id, plan_id=plan_id, now=now)
+    open_session(conn, workspace_id, now=now)
+    row = _row(conn, workspace_id)
+    if row is None:
+        return False
+    in_session = row.session_ends_at is not None
+    return insert_ignore(
+        conn,
+        _ledger,
+        {
+            "id": new_id(),
+            "workspace_id": workspace_id,
+            "run_id": run_id,
+            "mode": SHADOW,
+            "pool": PLAN_POOL,
+            "tier": str(tier),
+            "catalogue_version": row.catalogue_version,
+            "week_seq": row.week_seq,
+            "session_seq": row.session_seq if in_session else None,
+            "week_ends_at": row.week_ends_at,
+            "session_ends_at": row.session_ends_at,
+            "reserved_units": 0,
+            "created_at": now,
+        },
+        ["run_id"],
+    )
+
+
+def _floored(column: sa.ColumnElement, less: int) -> sa.ColumnElement:
+    """`column - less`, never below 0. SQLite has no GREATEST."""
+    left = column - less
+    return sa.case((left < 0, 0), else_=left)
+
+
+def settle(
+    conn: Connection,
+    *,
+    run_id: str,
+    outcome: str,
+    charged_units: int,
+    answered_deployment_id: str | None,
+    now: float,
+) -> bool:
+    """Charge a run once. False when the run has no ledger row or was already settled.
+
+    The charge is added to the week and the session the run was admitted in, when each is still
+    the current one. A window that has since closed is left alone and the charge stays on the
+    ledger row only (ADR-0482 rule 6). The run's reservation is released the same way.
+    """
+    charged = max(0, int(charged_units))
+    claimed = conn.execute(
+        sa.update(_ledger)
+        .where(_ledger.c.run_id == run_id, _ledger.c.settled_at.is_(None))
+        .values(
+            charged_units=charged,
+            outcome=str(outcome),
+            answered_deployment_id=answered_deployment_id,
+            settled_at=now,
+        )
+        .returning(
+            _ledger.c.week_seq,
+            _ledger.c.session_seq,
+            _ledger.c.reserved_units,
+            _ledger.c.workspace_id,
+        )
+    ).first()
+    if claimed is None:
+        return False
+    reserved = max(0, int(claimed.reserved_units or 0))
+    same_week = _state.c.week_seq == claimed.week_seq
+    if claimed.session_seq is None:
+        same_session: sa.ColumnElement = sa.false()
+    else:
+        same_session = sa.and_(
+            _state.c.session_seq == claimed.session_seq, _state.c.session_ends_at.is_not(None)
+        )
+    conn.execute(
+        sa.update(_state)
+        .where(_state.c.workspace_id == claimed.workspace_id, sa.or_(same_week, same_session))
+        .values(
+            week_used=sa.case(
+                (same_week, _state.c.week_used + charged), else_=_state.c.week_used
+            ),
+            week_reserved=sa.case(
+                (same_week, _floored(_state.c.week_reserved, reserved)),
+                else_=_state.c.week_reserved,
+            ),
+            session_used=sa.case(
+                (same_session, _state.c.session_used + charged), else_=_state.c.session_used
+            ),
+            session_reserved=sa.case(
+                (same_session, _floored(_state.c.session_reserved, reserved)),
+                else_=_state.c.session_reserved,
+            ),
+            updated_at=now,
+        )
+    )
+    return True
+
+
+# --- reading -----------------------------------------------------------------------------------
+
+
+def units_view(conn: Connection, workspace_id: str, *, now: float) -> dict | None:
+    """The workspace's raw figures as of `now`, for support and reports. None with no row.
+
+    Nothing is written. A week whose end has passed is shown as the week holding `now`: nothing
+    used, and the limits its stored plan gets from the newest catalogue version with any
+    override. A session whose end has passed is shown closed with nothing used.
+    """
+    row = _row(conn, workspace_id)
+    if row is None:
+        return None
+    view: dict[str, Any] = {
+        "plan_id": row.plan_id,
+        "catalogue_version": int(row.catalogue_version),
+        "override_multiplier_milli": row.override_multiplier_milli,
+        "time_zone": row.time_zone,
+        "anchor_weekday": int(row.anchor_weekday),
+        "anchor_hour": int(row.anchor_hour),
+        "week_seq": int(row.week_seq),
+        "week_started_at": float(row.week_started_at),
+        "week_ends_at": float(row.week_ends_at),
+        "week_limit": int(row.week_limit),
+        "week_used": int(row.week_used),
+        "week_reserved": int(row.week_reserved),
+        "session_seq": int(row.session_seq),
+        "session_ends_at": None if row.session_ends_at is None else float(row.session_ends_at),
+        "session_limit": None if row.session_limit is None else int(row.session_limit),
+        "session_used": int(row.session_used),
+        "session_reserved": int(row.session_reserved),
+    }
+    if view["week_ends_at"] <= now:
+        start, end = windows.week_bounds(_stored_anchor(row), now)
+        target = targets(row.plan_id, override_multiplier_milli=row.override_multiplier_milli)
+        view.update(
+            catalogue_version=target.catalogue_version,
+            week_seq=view["week_seq"] + 1,
+            week_started_at=start,
+            week_ends_at=end,
+            week_limit=target.week_limit,
+            week_used=0,
+            week_reserved=0,
+        )
+        if view["session_limit"] is not None:
+            view["session_limit"] = target.session_limit
+    if view["session_ends_at"] is not None and view["session_ends_at"] <= now:
+        view.update(session_ends_at=None, session_used=0, session_reserved=0)
+    return view
+
+
+def _line(used: int, limit: int, resets_at: float | None, time_zone: str, now: float) -> dict:
+    return {
+        "left": windows.percent_left(used, limit),
+        "state": windows.state(used, limit),
+        "resets_at": resets_at,
+        "back_words": (
+            None if resets_at is None else windows.back_words(resets_at, time_zone, now)
+        ),
+        "segments": windows.segments_lit(used, limit),
+    }
+
+
+def read_model(conn: Connection, workspace_id: str, *, now: float) -> dict | None:
+    """What every surface shows for Lucy's usage as of `now` (ADR-0484). None with no row.
+
+    Each line gives the whole percentage left, a state, the reset time and its plain words, and
+    the lit segments of the level meter. Reserved units count as used (rule 6). `session` is
+    None for a row with no session limit. Nothing is written.
+    """
+    view = units_view(conn, workspace_id, now=now)
+    if view is None:
+        return None
+    zone = view["time_zone"]
+    week = _line(
+        view["week_used"] + view["week_reserved"],
+        view["week_limit"],
+        view["week_ends_at"],
+        zone,
+        now,
+    )
+    session = None
+    if view["session_limit"] is not None:
+        session = _line(
+            view["session_used"] + view["session_reserved"],
+            view["session_limit"],
+            view["session_ends_at"],
+            zone,
+            now,
+        )
+        session["open"] = view["session_ends_at"] is not None
+    return {"session": session, "week": week, "time_zone": zone}
+
+
+def export(conn: Connection, workspace_id: str) -> dict:
+    """The workspace's usage record for Download my data: its windows as stored and one entry
+    per run. The only id is each run's."""
+    row = _row(conn, workspace_id)
+    state = None
+    if row is not None:
+        state = {
+            "time_zone": row.time_zone,
+            "anchor_weekday": int(row.anchor_weekday),
+            "anchor_hour": int(row.anchor_hour),
+            "plan_id": row.plan_id,
+            "week_seq": int(row.week_seq),
+            "week_started_at": float(row.week_started_at),
+            "week_ends_at": float(row.week_ends_at),
+            "week_limit": int(row.week_limit),
+            "week_used": int(row.week_used),
+            "session_seq": int(row.session_seq),
+            "session_ends_at": (
+                None if row.session_ends_at is None else float(row.session_ends_at)
+            ),
+            "session_limit": None if row.session_limit is None else int(row.session_limit),
+            "session_used": int(row.session_used),
+            "cutover_at": None if row.cutover_at is None else float(row.cutover_at),
+            "created_at": float(row.created_at),
+        }
+    runs = conn.execute(
+        sa.select(
+            _ledger.c.run_id,
+            _ledger.c.created_at,
+            _ledger.c.mode,
+            _ledger.c.charged_units,
+            _ledger.c.outcome,
+            _ledger.c.week_seq,
+            _ledger.c.session_seq,
+        )
+        .where(_ledger.c.workspace_id == workspace_id)
+        .order_by(_ledger.c.created_at, _ledger.c.run_id)
+    ).all()
+    return {
+        "state": state,
+        "runs": [
+            {
+                "run_id": run.run_id,
+                "created_at": float(run.created_at),
+                "mode": run.mode,
+                "charged_units": None if run.charged_units is None else int(run.charged_units),
+                "outcome": run.outcome,
+                "week_seq": int(run.week_seq),
+                "session_seq": None if run.session_seq is None else int(run.session_seq),
+            }
+            for run in runs
+        ],
+    }
+
+
+__all__ = [
+    "REFUNDED_OUTCOMES",
+    "Targets",
+    "charge_for",
+    "ensure_state",
+    "export",
+    "open_session",
+    "read_model",
+    "record_shadow",
+    "roll",
+    "settle",
+    "targets",
+    "units_view",
+]
