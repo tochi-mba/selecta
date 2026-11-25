@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { bytes, when } from './adminApi';
 import { planBadge, statusBadge } from './CustomersPage';
+import { LucyAllowance } from './LucyUsage';
 import { useLoad } from './parts';
 import { adminPath, go } from './route';
 import { ActionButton, careful, REASONS, useConsole, write } from './safety';
@@ -77,7 +78,7 @@ export function CustomerRecord({ userId, tab }: { userId: string; tab: string })
       <div className="admin-record-body">
         <div className="admin-record-main">
           {tab === 'overview' && <><Overview r={r} userId={userId} onChange={reload} /><Jobs r={r} /></>}
-          {tab === 'configuration' && <StorageMode api={ctx.api} userId={userId} canChange={ctx.can('accounts.configure') && ctx.changesUntil !== null} />}
+          {tab === 'configuration' && <><StorageMode api={ctx.api} userId={userId} canChange={ctx.can('accounts.configure') && ctx.changesUntil !== null} /><LucyAllowance workspaceId={r.workspace_id} email={email} /></>}
           {tab === 'billing' && <><StripeLive userId={userId} email={email} /><Billing r={r} /></>}
           {tab === 'devices' && <Devices r={r} />}
           {tab === 'sign-ins' && <SignInsPanel userId={userId} />}
