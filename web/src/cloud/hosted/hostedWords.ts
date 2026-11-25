@@ -141,7 +141,8 @@ export function exportWords(state: ExportState): { fraction: number | null; valu
   if (state.state === 'failed') return { fraction: null, value: 'Stopped', detail: `The export could not be made: ${(state.why ?? 'it stopped part way').replace(/\.$/, '')}.` };
   if (state.state === 'ready') return { fraction: 1, value: 'Ready', detail: null };
   const parts = exportParts(state);
-  const fraction = parts ? parts.done / parts.total : typeof state.progress === 'number' && Number.isFinite(state.progress) ? Math.min(1, Math.max(0, state.progress)) : null;
+  // in the queue nothing is known yet: the bar says something is happening, not "0 percent"
+  const fraction = state.state === 'queued' && !parts?.done ? null : parts ? parts.done / parts.total : typeof state.progress === 'number' && Number.isFinite(state.progress) ? Math.min(1, Math.max(0, state.progress)) : null;
   if (state.worker_seen === false) return { fraction, value: 'Waiting for a server', detail: stillWords('worker') };
   const value = !parts || (state.state === 'queued' && parts.done === 0)
     ? (state.state === 'queued' ? 'Waiting for a server' : 'Joining the mix')

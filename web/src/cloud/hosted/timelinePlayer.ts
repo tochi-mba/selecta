@@ -109,7 +109,11 @@ async function readSignedUrl(url: string, start: number, end: number, signal?: A
 }
 
 function newContext(): Context {
-  const make = (options?: AudioContextOptions) => new AudioContext(options);
+  // an older Safari (before 14.1) has only the prefixed constructor
+  const Made = (globalThis as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
+    ?? (globalThis as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Made) throw new CannotDecode('this browser cannot play audio from a web page. Try it in another browser, or export the mix and play the download.');
+  const make = (options?: AudioContextOptions) => new Made(options);
   try { return make({ sampleRate: RATE, latencyHint: 'playback' }); } catch { return make(); }
 }
 
@@ -172,7 +176,12 @@ export class TimelinePlayer {
   async play(from = 0, at = 0) {
     this.halt('keep');
     const generation = this.generation;
-    const context = this.context ?? this.deps.context();
+    let context: Context;
+    try { context = this.context ?? this.deps.context(); } catch (problem) {
+      // no Web Audio here at all: said plainly, never a silent press
+      this.emit({ playing: false, waiting: false, error: problem instanceof Error && problem.message ? problem.message : CANNOT_DECODE });
+      return;
+    }
     this.context = context;
     this.live = true;
     this.nextPart = Math.max(0, Math.min(from, this.parts.length - 1));
