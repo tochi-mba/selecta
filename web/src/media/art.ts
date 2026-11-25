@@ -24,6 +24,9 @@ type Job = { file: File; sha: string };
 const queue: Job[] = [];
 const queued = new Set<string>();
 let running = false;
+/** How long the import must be quiet before covers start. */
+const QUIET_MS = 4_000;
+let quietTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** Queue a file's own picture to become its cover, keyed by the content hash the import just
  * computed. Returns at once; does nothing while the flag is off or where the browser cannot
@@ -34,7 +37,14 @@ export function captureArt(file: File, sha: string): void {
     if (queued.has(sha) || queue.length >= MAX_QUEUE) return;
     queued.add(sha);
     queue.push({ file, sha });
-    if (!running) void drain();
+    // Covers wait for the import to go quiet. Reading pictures while hundreds of files are still
+    // being hashed and registered competed with the import for the page, so the queue only starts
+    // once no new file has arrived for a few seconds; a large import gets its covers at the end.
+    if (quietTimer !== undefined) clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => {
+      quietTimer = undefined;
+      if (!running) void drain();
+    }, QUIET_MS);
   } catch {
     // a cover is never worth an import
   }
