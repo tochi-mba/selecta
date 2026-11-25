@@ -1,5 +1,5 @@
 import { KeyboardEvent, memo, ReactNode, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { ApiError, MixData, problemKind, ProblemKind } from '../api';
+import { answerWithin, ApiError, MixData, problemKind, ProblemKind } from '../api';
 import { useApi } from '../requestContext';
 import { confirmExtraUsage, useLucyUsage } from '../cloud/lucyUsage';
 import { lucy, lucyTransport, newId } from '../lucy/client';
@@ -244,7 +244,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel,
     try {
       if (!id) {
         const scope = askedScope ?? undefined;
-        const made = await lucy.createConversation({ title: '', scope });
+        const made = await answerWithin(lucy.createConversation({ title: '', scope }));
         id = made.id;
         forgetSent(null, text);
         refocus.current = true;
@@ -254,7 +254,17 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel,
       const again = attempt.current?.conversation === id && attempt.current.text === text ? attempt.current : null;
       const mine = again ?? { conversation: id, clientId: newId(), text };
       attempt.current = mine;
-      const accepted = await lucy.sendTurn(id, { client_id: mine.clientId, text, expected_revision: view.proposal?.currentId ?? null, ...(selection ? { selection: selection.sel } : {}) });
+      // A send that never answers must not leave "Sending…" for ever: after the limit it reads as
+      // "didn't answer" and Send works again with the same client id, so the server never takes it
+      // twice. If the answer comes after all, the message is shown as sent.
+      const sentTo = id;
+      const accepted = await answerWithin(lucy.sendTurn(id, { client_id: mine.clientId, text, expected_revision: view.proposal?.currentId ?? null, ...(selection ? { selection: selection.sel } : {}) }), undefined, (late) => {
+        setPending((was) => (was?.state === 'failed' && was.conversation === sentTo && was.text === text ? { conversation: sentTo, text, state: 'sent', turn: late.turn.id } : was));
+        if (attempt.current === mine) attempt.current = null;
+        forgetSent(sentTo, text);
+        const box = unsentNow.current;
+        if (box.key === unsentKey(sentTo) && box.text.trim() === text) box.change('');
+      });
       attempt.current = null;
       forgetSent(id, text);
       setSelection(null);

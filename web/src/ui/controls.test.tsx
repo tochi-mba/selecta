@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Action, Dialog, Menu, Problem, Section, Status, Tooltip } from './controls';
+import { Action, ACTION_LIMIT_MS, Dialog, Menu, Problem, Section, Status, TOO_LONG, Tooltip } from './controls';
 import { clearToasts, dismissToast, showProblem, showToast, Toaster } from './toasts';
 import { activityEntries, blockedBy, canUndo, clearFinishedActivity, markNewestUndone, recordActivity, runUndo } from '../state/activity';
 
@@ -52,6 +52,52 @@ describe('a button that takes time', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('The disk is full.');
     expect(screen.getByRole('button', { name: 'Save' })).not.toHaveAttribute('aria-busy');
+  });
+
+  it('comes back and says so when the work never answers, and can be pressed again', () => {
+    vi.useFakeTimers();
+    try {
+      const run = vi.fn(() => new Promise<void>(() => {}));
+      render(<><Action run={run} working="Asking…">Allow</Action><Toaster /></>);
+      const button = screen.getByRole('button', { name: 'Allow' });
+      fireEvent.click(button);
+      act(() => { vi.advanceTimersByTime(ACTION_LIMIT_MS - 1); });
+      expect(button).toHaveAttribute('aria-busy', 'true');
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(button).not.toHaveAttribute('aria-busy');
+      expect(screen.getByRole('alert')).toHaveTextContent(TOO_LONG);
+      fireEvent.click(button);
+      expect(run).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a long job can wait as long as it needs', () => {
+    vi.useFakeTimers();
+    try {
+      render(<Action run={() => new Promise<void>(() => {})} limit={0}>Export</Action>);
+      fireEvent.click(screen.getByRole('button'));
+      act(() => { vi.advanceTimersByTime(ACTION_LIMIT_MS * 10); });
+      expect(screen.getByRole('button')).toHaveAttribute('aria-busy', 'true');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a late failure after the limit is still reported', async () => {
+    vi.useFakeTimers();
+    try {
+      let fail: (error: Error) => void = () => {};
+      render(<><Action run={() => new Promise<void>((_ok, no) => { fail = no; })}>Save</Action><Toaster /></>);
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      act(() => { vi.advanceTimersByTime(ACTION_LIMIT_MS); });
+      await act(async () => fail(new Error('The disk is full.')));
+      expect(screen.getByText('The disk is full.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save' })).not.toHaveAttribute('aria-busy');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('doesn’t mind the page going away before it’s finished', async () => {

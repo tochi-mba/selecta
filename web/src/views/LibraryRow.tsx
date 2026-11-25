@@ -156,7 +156,7 @@ export const LibraryRow = memo(function LibraryRow({
             ? movesTo
               ? <Action className="lw-start small" title={`Play on ${movesTo}`} aria-label={`Play ${spoken} on ${movesTo}`} disabled={searching} run={() => actions.add(song, true)}><Icon name="play" size="compact" /><span>Play on {movesTo}</span></Action>
               : !inMix && <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={searching} run={async () => { if (await actions.add(song, true) === false) return; setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
-            : facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
+            : facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} limit={0} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
           {((!facts.setAside && neverFlag) || facts.canAdd) && (
             <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
               <Action role="menuitem" run={() => actions.open(song.id)}>Song details</Action>
@@ -206,7 +206,7 @@ export const LibraryRow = memo(function LibraryRow({
         {!(where && !where.canPlay) && facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}
       </div>
       <div className="song-actions">
-        {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => actions.start(song)}>Start a mix</Action>}
+        {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" limit={0} disabled={building || searching} run={() => actions.start(song)}>Start a mix</Action>}
         {facts.canAnalyse && measured && (
           <Action disabled={queued} working="Asking…" run={() => actions.analyse(song)}>
             {song.readiness?.status === 'needs_attention' && !queued ? 'Try analysing again' : lineWords(linePlace)}

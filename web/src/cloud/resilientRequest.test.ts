@@ -244,6 +244,17 @@ describe('resilient', () => {
     await expect(wrapped('/slow')).rejects.toBeInstanceOf(TimeoutError);
   });
 
+  it('a write with no answer in time is a TimeoutError and a keyless POST is sent once', async () => {
+    let calls = 0;
+    const api = ((_path: string, init?: RequestInit) => new Promise((_resolve, reject) => {
+      calls += 1;
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+    })) as Api;
+    const wrapped = resilient(api, { baseMs: 1, readTimeoutMs: 0, writeTimeoutMs: 5 });
+    await expect(wrapped('/mixes', { method: 'POST', body: '{}' })).rejects.toBeInstanceOf(TimeoutError);
+    expect(calls).toBe(1);
+  });
+
   it('a 401 marks the store signed out without calling the connection lost', async () => {
     const api = (async () => { throw new CloudError('Sign in', 401); }) as Api;
     await expect(resilient(api, { readTimeoutMs: 0 })('/account')).rejects.toMatchObject({ status: 401 });

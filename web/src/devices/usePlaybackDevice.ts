@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { browserName, capabilities, currentFacts, deviceKind } from './deviceInfo';
-import { holdWakeLock, WakeLockHold } from './wakeLock';
+import { followPlaying, holdWakeLock, WakeLockHold } from './wakeLock';
 import { flagOn } from '../flags';
 import { isOnline, onReconnect } from '../cloud/connection';
 import { audioTab, tabLog } from './audioTab';
@@ -505,6 +505,11 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     // A granted lock that disappears is evidence of uncertainty; an unsupported wake-lock API
     // (always false) does not by itself downgrade output.
     const watchWakeLock = window.setInterval(() => {
+      // held while this speaker plays and let go while it is paused (only once it has spoken, so a
+      // remote never asks); a lock let go here is not a lost one, so it is not reported as lost
+      const phase = speaking.current ? speaker?.state?.().phase : undefined;
+      const next = followPlaying(wake.current, phase === 'playing' ? true : phase === 'paused' ? false : null);
+      if (next !== wake.current) { wake.current = next; wakeWasHeld.current = false; return; }
       const held = wake.current?.held() ?? false;
       if (speaking.current && wakeWasHeld.current && !held) speaker?.wakeLockLost?.();
       wakeWasHeld.current = held;

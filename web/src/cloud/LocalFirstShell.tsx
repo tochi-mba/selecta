@@ -62,12 +62,12 @@ import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, onboardingPutOff, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
-import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
+import { bindImportWorkspace, endImportSession, useImportShellView } from './importSession';
 import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
 import { profilesBySong, provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
-import { waveformFor } from './sharedWaveforms';
+import { waveformBook } from './sharedWaveforms';
 import { withVersions } from './songVersions';
 import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
@@ -388,7 +388,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // The import session outlives any one page: each landed batch refreshes the counts, and a
   // finished import records its outcome in the onboarding state even with the spine gone.
   useEffect(() => { bindImportWorkspace(workspaceId); }, [workspaceId]);
-  const importLive = useImportSession(workspaceId);
+  const importLive = useImportShellView(workspaceId);
   const lastBatches = useRef(importLive.batches);
   useEffect(() => {
     const moved = importLive.batches !== lastBatches.current;
@@ -431,8 +431,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
 
   // cloud.offline_playback: said once when playing offline ended because another device took over
   const [takeoverSeen, setTakeoverSeen] = useState('');
+  // Listen's waveforms for the visit: from the audio the engine decoded to play each song, else its file
+  const [waveforms] = useState(waveformBook);
   const { player, refusal, device: playback, seams: scheduled, prefetch, output } = useLocalFirstPlayer({
-    api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver,
+    api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver, request, decoded: waveforms.fromDecoded,
   });
   // what each transition really played on this device this visit, for the editor (cloud.browser_moves)
   const played = useMemo(() => (on('cloud.browser_moves') ? playedByPair(scheduled) : {}), [scheduled]);
@@ -486,21 +488,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     if (!browserHarmonic) return undefined;
     return startTonalProfiler({ store: tonal, openMedia: openStore, resolve: deviceTrack, playing: () => playingNow.current() });
   }, [browserHarmonic, tonal, openStore, deviceTrack]);
-  // Listen's strip: each song's waveform from its own file here, decoded once and kept for the visit
-  const waveforms = useRef(new Map<number, Promise<number[] | null>>());
-  const waveformOf = useCallback((songId: number) => {
-    let made = waveforms.current.get(songId);
-    if (!made) {
-      made = waveformFor(songId, {
-        resolve: resolveTrack, openStore, shared: sharedDerived,
-        decode: async (bytes) => peaksFrom(await new OfflineAudioContext(1, 1, 44100).decodeAudioData(bytes)),
-      }).catch(() => null);
-      waveforms.current.set(songId, made);
-      // a song not readable yet (not connected this visit) is tried again next time
-      void made.then((peaks) => { if (!peaks) waveforms.current.delete(songId); });
-    }
-    return made;
-  }, [resolveTrack, openStore, sharedDerived]);
+  // a song the engine has not decoded yet (the strip's first song, say) is decoded from its own file
+  const waveformOf = useCallback((songId: number) => waveforms.of(songId, {
+    resolve: resolveTrack, openStore, shared: sharedDerived,
+    decode: async (bytes) => peaksFrom(await new OfflineAudioContext(1, 1, 44100).decodeAudioData(bytes)),
+  }), [waveforms, resolveTrack, openStore, sharedDerived]);
   // Make a Mix sets the new mix and asks to play it in the same breath (local mode's player reads
   // the mix from its server). Here the engine learns the mix from the next render, so a play asked
   // for straight after a new mix waits for that render instead of playing the old one.
@@ -724,7 +716,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     cloud, refreshHoldings: holdings.refresh,
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
     askToPlay: (device) => void playOn.ask(device, recipes.current()),
-    asking: playOn.state, playHereInstead: () => { playOn.reset(); void player.playHereInstead(); }, playingOn: playback.view?.speaker === 'elsewhere' ? playback.view.speaker_device_id : null,
+    asking: playOn.state, playHereInstead: () => { playOn.reset(); void player.playHereInstead(); }, playingOn: playback.view?.speaker === 'elsewhere' ? playback.view.speaker_device_id : null, playableHere: followsHere, speakingHere: playback.view?.speaker === 'here',
   });
   soundElsewhere.current = !on('devices.remote_control') ? null
     : speakerElsewhere ? () => { accountMix.offerLater(speakerElsewhere); return true; }

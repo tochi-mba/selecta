@@ -1,5 +1,6 @@
 import { fetchBytes, MixItem, post, SeamState } from './api';
 import { mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
+import { handoffWatcher, noteHandoffHeard, pageOnScreen } from './audio/handoffHeard';
 import { saveResume } from './lib';
 import { listenEnded, listenStarted } from './lucy/listening';
 
@@ -24,6 +25,13 @@ export type NowState = {
    * still entering, so the handoff names it, not the song after it. */
   seamTail?: boolean;
   seamAt: number | null;
+  /** Cloud's browser engine only: the hand-over it really scheduled, which a mix item there does
+   * not carry. `window` is how long the next song takes to come in (seconds); `nextLength` is that
+   * song's decoded length, 0 when it is not known; `nextFrom` is where in it the hand-over enters
+   * (0 until it has). `move` is the name of the move the engine really scheduled for it, as Up Next
+   * says it ("Blend, 8 bars"), or null where it played its own fade with no planned move behind it.
+   * Absent in local mode. */
+  blend?: { window: number; nextLength: number; nextFrom: number; move?: string | null } | null;
   notice: string;
   nextReady: boolean;
   lastSeamKey: string | null;
@@ -40,6 +48,8 @@ const SAVE_EVERY = 5;
 const RESTART_WITHIN = 4;
 const SOUND_KEY = 'selecta.sound';
 const WAKE_WAIT_MS = 3000;
+/** Play waits this long for a song's audio before it says so and lets Play ask again. */
+export const FIRST_SONG_WAIT_MS = 45_000;
 const SEAM_POLL_FIRST = 1000;
 const SEAM_POLL_MOST = 5000;
 const SEAM_POLL_NEAR_END = 30;
@@ -125,6 +135,7 @@ export class SetPlayer {
   private fallenBack = new Set<number>();
   private savedAt = 0;
   private heard = new Map<number, number>();
+  private heardWatch = handoffWatcher(noteHandoffHeard);
   private getMix: () => MixItem[];
   private refreshMix: () => void;
   state: NowState = {
@@ -322,6 +333,8 @@ export class SetPlayer {
 
   private update(changes: Partial<NowState>) {
     this.state = { ...this.state, ...changes };
+    // read only: says a hand-over played to its end here, on screen, once it has (T-20261125-ebda)
+    this.heardWatch({ phase: this.state.phase, position: this.state.position, inSeam: this.state.inSeam, songId: this.current?.songId, seamKey: this.state.lastSeamKey }, pageOnScreen());
     this.onChange(this.state);
   }
 
@@ -448,12 +461,23 @@ export class SetPlayer {
     }
     this.update({ phase: 'loading', position, songTime: offset, duration: item.duration, notice: '', inSeam: false });
     let buffer: AudioBuffer;
+    // A download that never answers must not leave "Loading" for ever: Play gives up waiting, drops
+    // the stuck download from the cache so the next press fetches afresh, and says so.
+    const loading = this.loadSong(item.song_id);
+    let slow: number | undefined;
     try {
-      buffer = await this.loadSong(item.song_id);
+      buffer = await Promise.race([loading, new Promise<never>((_done, fail) => {
+        slow = window.setTimeout(() => {
+          if (this.songs.get(item.song_id) === loading) this.songs.delete(item.song_id);
+          fail(new Error('That song is taking too long to load. Press play to try again.'));
+        }, FIRST_SONG_WAIT_MS);
+      })]);
     } catch (error) {
       if (generation !== this.playGeneration) return;
       this.update({ phase: 'idle', notice: (error as Error).message });
       return;
+    } finally {
+      window.clearTimeout(slow);
     }
     if (generation !== this.playGeneration) return;
     const playing = this.layer(buffer);

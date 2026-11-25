@@ -12,6 +12,7 @@ import {
 } from './folderWatch';
 import { checkedOf, checkedWords } from './ImportStatus';
 import { useImportSession, type ImportSnapshot } from './importSession';
+import { useInstallState, type InstallState } from './install';
 import './libraryWorkspace.css';
 
 /** Your music folders (`cloud.music_folders`): every folder this browser watches for this
@@ -22,7 +23,7 @@ import './libraryWorkspace.css';
 
 const STATE: Record<FolderRow['state'] | 'checking', { kind: StatusKind; words: string }> = {
   watching: { kind: 'ready', words: 'Watching' },
-  unchecked: { kind: 'queued', words: 'Not checked yet' },
+  unchecked: { kind: 'queued', words: 'Waiting for its first check' },
   permission: { kind: 'needs-action', words: 'Needs your permission' },
   missing: { kind: 'warning', words: 'Not found' },
   visit: { kind: 'paused', words: 'Chosen this visit' },
@@ -38,8 +39,15 @@ export function rowWords(row: FolderRow, now = Date.now()): string {
   if (row.state === 'permission') parts.push('The browser asks before SelectaDJ reads it again. Allow brings back all its songs at once.');
   else if (row.state === 'missing') parts.push('It may have been renamed or moved. Choose it again and its songs are kept.');
   else if (row.state === 'visit') parts.push('This browser can’t keep it between visits, so choose it again next time.');
-  else parts.push(row.checkedAt ? `Checked ${relativeTime((now - row.checkedAt) / 1000)}` : 'Not checked yet');
+  else parts.push(row.checkedAt ? `Checked ${relativeTime((now - row.checkedAt) / 1000)}` : 'Checked when SelectaDJ is next idle');
   return parts.join(', ');
+}
+
+/** Under a folder that needs permission again: how to stop being asked each visit. Installed, the
+ * browser usually keeps a folder's permission by itself, so only the first sentence is said then. */
+export function keepAccessWords(install: InstallState, installOffered: boolean): string {
+  const ask = 'Choose Allow on every visit when the browser offers it, and it stops asking.';
+  return install === 'installed' || !installOffered ? ask : `${ask} Installed as an app, SelectaDJ usually keeps this permission between visits.`;
 }
 
 /** How far a check of this row has got, in words, or null when it is not being checked. */
@@ -128,6 +136,8 @@ function FolderRowView({ row, watch, live, onAddFolder, onStop }: {
   const progress = checkWords(row, watch, live);
   const state = progress ? STATE.checking : STATE[row.state];
   const canPick = dirPicker().supported;
+  const installNow = useInstallState();
+  const installOn = useFlag('app.install');
   const again = () => (row.handle && canPick ? void pickFolderAgain(row.id) : onAddFolder());
   const busy = !!progress;
   const allow = async () => { setRefused(!(await allowFolder(row.id))); };
@@ -142,6 +152,7 @@ function FolderRowView({ row, watch, live, onAddFolder, onStop }: {
       <div className="mf-row-text">
         <b dir="auto">{row.name}</b>
         <span className="mf-row-words">{progress ? progress.words : rowWords(row)}</span>
+        {row.state === 'permission' && canPick && !progress && <span className="mf-row-words">{keepAccessWords(installNow, installOn)}</span>}
         {refused && <span className="mf-row-refused" role="alert">The browser did not allow it. Press Allow to be asked again.</span>}
         {/* the bar's place is always kept, so a check starting or ending never moves the list */}
         <div className="mf-row-meter" aria-hidden={progress ? undefined : 'true'}>

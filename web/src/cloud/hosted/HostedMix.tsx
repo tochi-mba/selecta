@@ -32,6 +32,9 @@ type MixState = {
 };
 
 const POLL_MS = 3000;
+/** An export is followed at most this long (or twice its estimate, if longer) before the page stops
+ * asking and offers Check again, so a job stuck in the queue is not polled for ever. */
+export const EXPORT_FOLLOW_MS = 15 * 60_000;
 const problem = (error: unknown, fallback: string) => (error instanceof CloudError || error instanceof Error ? error.message || fallback : fallback);
 const finished = (state: ExportState | null) => !!state && ['ready', 'failed', 'refused'].includes(state.state);
 
@@ -59,6 +62,10 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
   const progress = useRef({ done: -1, at: Date.now() });
   const tab = useRef<AudioTab | null>(null);
   const [poke, setPoke] = useState(0);
+  const [overdue, setOverdue] = useState(false);
+  // the export follow stops when the page is left
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const phone = useMediaQuery(below('tablet'));
 
   const call = useCallback(<T,>(path: string, body?: unknown) => api<T>(path, body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }, workspaceId), [api, workspaceId]);
@@ -185,19 +192,38 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
     finally { setRetrying((was) => { const next = new Set(was); next.delete(song.asset_id); return next; }); }
   };
 
+  /** Follow an export until it ends, the page is left, or the time limit passes. */
+  const follow = async (first: ExportState) => {
+    let state = first;
+    const started = Date.now();
+    const limit = Math.max(EXPORT_FOLLOW_MS, (state.estimate_s ?? 0) * 2000);
+    setOverdue(false);
+    while (mounted.current && state.job_id && !finished(state)) {
+      if (Date.now() - started > limit) { setOverdue(true); return; }
+      await new Promise((done) => window.setTimeout(done, POLL_MS * 2));
+      if (!mounted.current) return;
+      const id: string = state.job_id;
+      state = { ...(await call<ExportState>(`/hosted/exports/${encodeURIComponent(id)}`)), job_id: id };
+      setExported(state);
+    }
+  };
+
   const exportMix = async () => {
     if (!order) return;
     setError('');
     try {
-      let state = await call<ExportState>('/hosted/mixes/export', { songs: order });
+      // a newer server may answer `ready` at once (this exact mix was exported already) or
+      // `refused` with its reason; both end the follow straight away
+      const state = await call<ExportState>('/hosted/mixes/export', { songs: order });
       setExported(state);
-      while (state.job_id && !finished(state)) {
-        await new Promise((done) => window.setTimeout(done, POLL_MS * 2));
-        const id: string = state.job_id;
-        state = { ...(await call<ExportState>(`/hosted/exports/${encodeURIComponent(id)}`)), job_id: id };
-        setExported(state);
-      }
+      await follow(state);
     } catch (problemSeen) { setError(problem(problemSeen, 'SelectaDJ could not export this mix.')); setExported(null); }
+  };
+
+  const checkAgain = async () => {
+    if (!exported) return;
+    setError('');
+    try { await follow(exported); } catch (problemSeen) { setError(problem(problemSeen, 'SelectaDJ could not check this export.')); }
   };
 
   const retrySeams = async () => {
@@ -221,7 +247,7 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
   const total = playing?.total ?? (mix ? mix.parts.reduce((sum, part) => sum + part.seconds, 0) : 0);
   const elapsed = playing?.elapsed ?? 0;
   const stoppedPartWay = !!playing && !playing.playing && !playing.error && (playing.part > 0 || playing.at > 0);
-  const exporting = !!exported && !finished(exported);
+  const exporting = !!exported && !finished(exported) && !overdue;
   const exportLine = exported ? exportWords(exported) : null;
   const download = exported?.state === 'ready' && exported.url ? downloadWords(exported, phone) : null;
   // the one polite status line: what the card is doing right now, said once
@@ -359,6 +385,12 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
             <Meter label="Exporting the mix" value={exportLine?.fraction ?? undefined} max={1} valueText={exportLine?.value} detail={exportLine?.detail} />
           )}
           {exported && finished(exported) && exportLine?.detail && <p className="hosted-mix-hint" data-tone={exported.state === 'ready' ? undefined : 'problem'}>{exportLine.detail}</p>}
+          {exported && overdue && !finished(exported) && (
+            <div className="hosted-mix-actions">
+              <p className="hosted-mix-hint">The export is taking longer than expected. It carries on on the server.</p>
+              <Action className="small" run={checkAgain} working="Checking…">Check again</Action>
+            </div>
+          )}
         </div>
       )}
 

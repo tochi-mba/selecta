@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SetPlayer } from '../player';
 import { fakeBackend, status } from '../test/backend';
+import { feelOff } from '../test/feel';
 import { Workshop } from './Workshop';
 
 // SF-0232-03: background work says what it really knows. A job with a count says "N to go" or
@@ -42,6 +43,8 @@ const jobs = {
 
 describe('progress copy', () => {
   it('counts what is left in real units and never shows a made-up percentage or bar', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     fakeBackend({ 'GET /jobs': jobs });
     show();
     expect(await screen.findByText('12 to go')).toBeInTheDocument();

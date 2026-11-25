@@ -5,10 +5,16 @@ import { authKitConfig, followReturnTo } from './authConfig';
 import { noteSessionEnded } from './authTrail';
 import { BrandMark } from '../ui/BrandMark';
 import { persistAfterFirstImport } from './persistence';
+import { watchImportInBackground } from './backgroundImport';
+import { watchInstallMoments } from './installMoments';
 
 export function CloudRoot({ clientId }: { clientId: string }) {
   // The first finished import asks the browser to keep SelectaDJ's details (plan W5b).
   useEffect(() => persistAfterFirstImport(), []);
+  // An import keeps going in a hidden tab and says how far it got; installing is offered at the
+  // moments it helps (flag `app.install`, checked when an offer is due).
+  useEffect(() => watchImportInBackground(), []);
+  useEffect(() => watchInstallMoments(), []);
   const config = authKitConfig(import.meta.env);
   if ('error' in config) {
     return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>Cloud sign-in needs configuration</h1><p>{config.error}</p></main>;

@@ -1,7 +1,7 @@
 import { flagOn } from '../flags';
 import { LinkIfThere } from '../shell/PageLink';
 import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
-import { ApiError, Client, FolderCheck, Folders, Jobs, Storage } from '../api';
+import { answerWithin, ApiError, Client, FolderCheck, Folders, Jobs, Storage } from '../api';
 import { useApi } from '../requestContext';
 import { gb, storageWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -413,9 +413,10 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     setRelinkProblem('');
     setRelocation(null);
     try {
-      setRelocation(await post<RelinkPreview>('/folders/relink/preview', {
+      // a preview only reads, so a late answer is dropped: the button is free again after the limit
+      setRelocation(await answerWithin(post<RelinkPreview>('/folders/relink/preview', {
         old: relocate.old, new: relocate.target.trim(), confirmed: sameRecording,
-      }));
+      })));
     } catch (error) {
       setRelinkProblem((error as Error).message);
       return false;

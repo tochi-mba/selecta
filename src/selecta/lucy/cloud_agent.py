@@ -94,6 +94,8 @@ QUICK_WORDS = 8
 
 BUSY_WORDS = ("Lucy is busy right now. Try again in a moment; this didn't use one of your "
               "turns, and your mixes and music are unaffected.")
+DOWN_WORDS = ("Lucy can't answer right now because of a problem on SelectaDJ's side. Your "
+              "mixes and music are safe, and this didn't use one of your turns.")
 ProviderFactory = Callable[[gateway.ProviderSettings, gateway.TurnPlan], Any]
 
 
@@ -389,7 +391,7 @@ def builtin_words(job: Job, ctx: cloud_tools.CloudCtx) -> str:
     if limited == "allowance":
         why = (f"You've used this month's Lucy turns on your plan, so I can't think this one "
                f"through. They come back on {_resets_words(job)}.")
-    elif limited == "spend" and job.plan.enforced:
+    elif limited == "spend" and getattr(job.plan, "enforced", False):
         # The same monthly ceiling for an account on the session and week allowance, where it
         # is a backstop above the weekly limit (ADR-0482 rule 9) and turns mean nothing.
         why = (f"You've reached your plan's monthly safety limit on Lucy's AI, which sits above "
@@ -507,9 +509,9 @@ async def run_turn(job: Job) -> None:
         said = bool(writer.text())
         outcome = Outcome.INCOMPLETE if said else Outcome.FAILED
         final, error_code, error = "failed", problem.code, str(problem)
-        words = (BUSY_WORDS if problem.recoverable else
-                 "Lucy can't answer right now because of a problem on SelectaDJ's side. Your "
-                 "mixes and music are safe, and this didn't use one of your turns.")
+        words = BUSY_WORDS if problem.recoverable else DOWN_WORDS
+        if plan.enforced:  # no turns on the session and week allowance (ADR-0481 rule 5)
+            words = words.replace("one of your turns", "any of your allowance")
         events.emit("error", {"code": problem.code, "message": words,
                               "recoverable": problem.recoverable})
         await _say(writer, words)

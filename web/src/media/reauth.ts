@@ -1,5 +1,6 @@
 import { fileSha256 } from './identity';
 import type { FileHandleLike, MediaStore, StoredSong } from './store';
+import { askReadAccess } from './withTimeout';
 
 // Re-authorisation (ADR-0458, BF-0458-07).
 //
@@ -86,7 +87,8 @@ async function regrant(store: MediaStore, song: StoredSong): Promise<RegrantOutc
   if (song.ref.kind !== 'handle') return { status: 'missing' };
   const handle = song.ref.handle;
   try {
-    if (handle.requestPermission && (await handle.requestPermission({ mode: 'read' })) !== 'granted') return { status: 'denied' };
+    // a prompt the browser swallowed counts as denied, so the press can be offered again
+    if ((await askReadAccess(handle)) !== 'granted') return { status: 'denied' };
     const file = await handle.getFile();
     const digest = await fileSha256(file);
     if (digest !== song.identity.content_sha256) {

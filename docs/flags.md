@@ -286,6 +286,11 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
 | `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |
+| `rooms.keeps` | **Keep the songs you liked.** A room guest's heart saves the playing song to a list kept only on their own phone. | `rooms` |
+| `rooms.reactions` | **Room reactions.** Guests love the playing song or the blend into it; the room sees counts, and the planner learns what rooms loved. | `rooms` |
+| `rooms.rounds` | **Pick the next song.** The room votes between songs the DJ can blend into, and the winner goes into the mix. | `rooms` |
+| `rooms.dedications` | **Room dedications.** A guest adds one line from a fixed list to their own request, shown while the song plays. | `rooms` |
+| `rooms.recap` | **Tonight in numbers.** When a room ends, the host, its guests and a paired screen see the room's totals. | `rooms` |
 | `lucy.deep_plan` | **Lucy deep planning.** Use Lucy's premium planning model and larger plan allowance. | `lucy` |
 | `admin.console` | **Staff console.** Show internal tools to authenticated staff with the required permission. |  |
 | `admin.workers` | **Staff console: Workers.** The staff console's Workers page: hosted processing at a glance per pool, the gateway, autoscaler, storage and flags around the workers, customer waits, processing cost against a budget, and guarded actions (retry, cancel long waits, pause a pool, ask the autoscaler for a worker). | `admin.console` |
@@ -352,3 +357,9 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `business.rooms.branding` | **Rooms for Business branding.** The venue's logo, colour and welcome line on the guest request page. | `business.rooms` |
 | `business.rooms.print` | **Rooms for Business print sheet.** A printable sheet of table cards with each zone's join code. | `business.rooms` |
 | `business.rooms.screen_code` | **Rooms for Business screen code.** A rotating join code shown on the zone's display screen. | `business.rooms` |
+| `business.rooms.keeps` | **Venue rooms: keep the songs you liked.** A venue guest's heart saves the playing song to a list kept only on their own phone. Off while Business is not on sale. | `business.rooms` |
+| `business.rooms.reactions` | **Venue rooms: reactions.** Venue guests love the playing song or the blend into it; the room sees counts, and the zone learns what its guests loved. Off while Business is not on sale. | `business.rooms` |
+| `business.rooms.rounds` | **Venue rooms: pick the next song.** A venue room votes between songs the zone's content rules allow now; the winner is the next request the player is given. Off while Business is not on sale. | `business.rooms` |
+| `business.rooms.dedications` | **Venue rooms: dedications.** A venue guest adds one line from a fixed list to their own request. Off while Business is not on sale. | `business.rooms` |
+| `business.rooms.recap` | **Venue rooms: tonight in numbers.** A zone's totals for its last trading stretch, for staff, for guests once it has closed, and for a patron screen. Off while Business is not on sale. | `business.rooms` |
+| `business.rooms.display` | **Venue rooms: patron screen.** Pair a screen at /display to a zone, to show its join code, what is playing and what the room is doing together. Off while Business is not on sale. | `business.rooms` |

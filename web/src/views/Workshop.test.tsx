@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SetPlayer } from '../player';
-import { setPrefs } from '../state/prefs';
+import { resetPrefs } from '../state/prefs';
+import { feelOff } from '../test/feel';
 import type { WorkshopTab } from '../router';
 import { fakeBackend, status } from '../test/backend';
 import { Workshop } from './Workshop';
@@ -160,7 +161,9 @@ describe('motion preference', () => {
     const still = screen.getByRole('radio', { name: 'Still' });
     const subtle = screen.getByRole('radio', { name: 'Subtle' });
     const expressive = screen.getByRole('radio', { name: 'Expressive' });
-    expect(subtle).toBeChecked();
+    // with app.feel_motion on (as in every test unless it says), the default is Expressive (ADR-0477)
+    expect(expressive).toBeChecked();
+    expect(subtle).not.toBeChecked();
     fireEvent.click(still);
     expect(still).toBeChecked();
     expect(document.documentElement.dataset.motion).toBe('still');
@@ -168,6 +171,19 @@ describe('motion preference', () => {
     fireEvent.click(expressive);
     expect(expressive).toBeChecked();
     expect(document.documentElement.dataset.motion).toBe('expressive');
-    setPrefs({ motion: 'subtle' });
+    fireEvent.click(subtle);
+    expect(subtle).toBeChecked();
+    expect(JSON.parse(localStorage.getItem('selecta.prefs') ?? '{}').motion).toBe('subtle');
+    resetPrefs();
+  });
+
+  it('starts on Subtle with the feel off, as before the feel system', () => {
+    feelOff();
+    resetPrefs();
+    fakeBackend({});
+    show({}, 'overview');
+    expect(screen.getByRole('radio', { name: 'Subtle' })).toBeChecked();
+    expect(document.documentElement.dataset.motion).toBe('subtle');
+    resetPrefs();
   });
 });

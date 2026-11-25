@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import type { ImportEvent, ImportSource, ImportSummary } from '../media';
 import type { ImportWait } from '../media/importer';
 import { flagOn } from '../flags';
@@ -149,6 +149,42 @@ export function importSnapshotFor(workspaceId: string | undefined): ImportSnapsh
 export function useImportSession(workspaceId?: string): ImportSnapshot {
   const read = () => importSnapshotFor(workspaceId);
   return useSyncExternalStore(subscribeImport, read, read);
+}
+
+/** What the whole app shell reads of the import. */
+export type ImportShellView = Pick<ImportSnapshot, 'phase' | 'batches' | 'summary' | 'registered' | 'total'>;
+/** The shell's song count moves at most this often while an import runs. */
+const SHELL_VIEW_EVERY_MS = 1_000;
+
+/** The import as the app shell needs it, for a hook at the very top of the page. The snapshot
+ * changes several times per file (and four times a second in a tab following another tab's
+ * import), and every change re-rendered the whole shell and the page inside it, which kept a slow
+ * laptop's page busy for the whole import. This view changes only when the phase, a landed batch
+ * or the summary does, and its counts at most once a second (the last count always lands). */
+export function useImportShellView(workspaceId?: string, options: { counts?: boolean } = {}): ImportShellView {
+  // a caller that never shows the counts (counts: false) is not re-rendered for them at all
+  const followCounts = options.counts !== false;
+  const kept = useRef<{ view: ImportShellView; at: number } | null>(null);
+  const subscribe = useCallback((listener: () => void) => {
+    let trailing: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = subscribeImport(() => {
+      listener();
+      // a count held back by the once-a-second rule is read again when the second is up
+      trailing ??= setTimeout(() => { trailing = null; listener(); }, SHELL_VIEW_EVERY_MS);
+    });
+    return () => { unsubscribe(); if (trailing) clearTimeout(trailing); };
+  }, []);
+  const read = (): ImportShellView => {
+    const next = importSnapshotFor(workspaceId);
+    const was = kept.current;
+    const now = Date.now();
+    const same = was !== null && was.view.phase === next.phase && was.view.batches === next.batches && was.view.summary === next.summary;
+    const counted = was !== null && (!followCounts || (was.view.registered === next.registered && was.view.total === next.total));
+    if (was && same && (counted || now - was.at < SHELL_VIEW_EVERY_MS)) return was.view;
+    kept.current = { view: { phase: next.phase, batches: next.batches, summary: next.summary, registered: next.registered, total: next.total }, at: now };
+    return kept.current.view;
+  };
+  return useSyncExternalStore(subscribe, read, read);
 }
 
 function writeMarker(workspaceId: string, marker: ImportMarker) {

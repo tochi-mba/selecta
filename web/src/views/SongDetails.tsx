@@ -13,6 +13,7 @@ import { SongRelated } from './SongRelated';
 import { SongVersions } from './SongVersions';
 import { ViewProps } from './shared';
 import { CoverArt } from './CoverArt';
+import { SongCatalog } from './SongCatalog';
 import type { CSSProperties } from 'react';
 
 const LOWEST_TEMPO = 40;
@@ -158,6 +159,9 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           <p className="song-details-id">Recording ID {song.id}</p>
         </div>
       </div>
+      {/* ADR-0478: "Wrong cover?" and the catalogue's album and year, only in Cloud with
+          library.art_lookup on; otherwise nothing is drawn and the sheet is as it was */}
+      {flagOn('library.art_lookup') && <SongCatalog song={song} notify={notify} />}
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       {facts.reason && <p className="hint">{facts.reason}</p>}
       <SongPlaces song={song} onPlayNext={onPlayNext} />

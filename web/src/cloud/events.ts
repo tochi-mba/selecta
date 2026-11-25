@@ -95,8 +95,17 @@ export function openEventStream(options: StreamOptions): { close: () => void } {
     };
     if (failures === 0) options.onState('connecting');
     try {
+      // the silence limit covers the token too: a sign-in renewal that never settles falls back to
+      // polling like a stream that never answers, instead of leaving the tab connecting for ever
+      quiet();
+      const token = await new Promise<string>((resolve, reject) => {
+        if (mine.signal.aborted) { reject(new DOMException('No token in time.', 'AbortError')); return; }
+        mine.signal.addEventListener('abort', () => reject(new DOMException('No token in time.', 'AbortError')), { once: true });
+        options.token().then(resolve, reject);
+      });
+      if (closed) { window.clearTimeout(silence); return; }
       const headers: Record<string, string> = {
-        Authorization: `Bearer ${await options.token()}`,
+        Authorization: `Bearer ${token}`,
         'X-Workspace-ID': options.workspaceId,
         Accept: 'text/event-stream',
       };

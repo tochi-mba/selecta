@@ -1,11 +1,16 @@
+import { useRef } from 'react';
 import { useFlag } from '../flags';
 import { length, runningTime } from '../lib';
+import { navigate } from '../router';
+import { sceneTransitionsSupported, sceneTransitionsWanted } from '../shell/sceneTransition';
 import { MixSignature } from '../ui/MusicObjects';
 import { PageLink } from '../shell/PageLink';
 import { mixReadiness } from '../state/readiness';
 import { Action, Status } from '../ui/controls';
 import { ViewProps } from './shared';
 import { PlayingBars } from './feelBits';
+import { MixArt } from './MixArt';
+import { useFeelOn } from './feelPieces';
 
 /** The one mix that's really yours to hear right now. Its transitions being ready is a different thing
  * from its songs being saved, so it says which. */
@@ -16,8 +21,18 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent, lead
 }) {
   const facts = mixReadiness(mix);
   const editing = useFlag('editor');
+  // ADR-0477: the card wears the mix's own face while the feel is on (nothing is added with it off),
+  // and Play or Open carries that face into Listen's cover when page transitions run
+  const feel = useFeelOn();
+  const tile = useRef<HTMLSpanElement>(null);
+  const toListen = () => {
+    const face = tile.current;
+    if (face && sceneTransitionsSupported() && sceneTransitionsWanted()) navigate('/listen', { share: [[face, 'player-art']] });
+    else setView('Now');
+  };
   return (
     <section className={`carry-on ${prominent ? 'prominent' : ''}`} aria-label="Current mix">
+      {feel && <MixArt seed={mixName} songs={mix} travels tileRef={tile} />}
       <div className="carry-on-words">
         <p className="eyebrow">
           {now.phase === 'idle' ? 'Current mix' : now.phase === 'paused' ? 'Paused' : 'Playing now'}
@@ -46,13 +61,14 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent, lead
       <div className="row wrap">
         {now.phase === 'idle' ? (
           <Action className={lead ? 'primary' : undefined} run={async () => {
-            setView('Now');
+            // the page change only starts its animation; the music starts straight after
+            toListen();
             await player.togglePause();
           }}>
             Play
           </Action>
         ) : (
-          <button className={lead ? 'primary' : undefined} onClick={() => setView('Now')}>Open</button>
+          <button className={lead ? 'primary' : undefined} onClick={toListen}>Open</button>
         )}
         {editing && <button onClick={() => setView('Edit')}>Edit</button>}
       </div>

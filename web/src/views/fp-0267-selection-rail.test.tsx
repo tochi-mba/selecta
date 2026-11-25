@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SetPlayer } from '../player';
 import { setPrefs } from '../state/prefs';
 import { fakeBackend, status } from '../test/backend';
+import { feelOff } from '../test/feel';
 import { Library } from './Library';
 
 const row = (id: number, title: string) => ({
@@ -50,6 +51,8 @@ describe('FP-0267-02 at zero selected, a named way in and nothing disabled', () 
   });
 
   it('the keyboard alone enters selection, from a row checkbox or from the entry button', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     sameIds();
     show();
     await screen.findByText('First');
@@ -96,6 +99,8 @@ describe('FP-0267-03, FP-0267-05 the rail is there only for a real selection, an
 
 describe('FP-0267-06 a changed result drops the selection and never re-attaches old IDs', () => {
   it('a filter change, a sort change and Back each clear it, though the same IDs come back', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     sameIds();
     show();
     await screen.findByText('First');

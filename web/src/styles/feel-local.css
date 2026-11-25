@@ -103,6 +103,13 @@
   inline-size: 100%;
 }
 
+/* ---------- "Wrong cover?" in song details (views/SongCatalog.tsx, library.art_lookup) ----------
+   A release's cover fades in once decoded, as the song sheet's own cover does (feel-library.css);
+   without motion it simply appears. */
+:where(:root[data-feel~='motion']) .song-catalog-thumb > .cover-art .cover-art-image {
+  transition: opacity var(--motion-reveal) var(--motion-ease);
+}
+
 /* ---------- Forced colours ----------
    Borders and outlines carry every state; the lit word and the glows would only be noise. */
 @media (forced-colors: active) {

@@ -12,8 +12,8 @@ import { useReducedMotion } from '../ui/useReducedMotion';
 // Motion follows the person's choice (state/prefs.ts) and the device's own setting:
 //   Still, reduced motion, low power   a still drawing, the playhead resting on the blend
 //   Subtle (the default)               the playhead crosses and the blend point answers it
-//   Expressive                         each bar also lifts as the playhead passes, and the card
-//                                      leans a few degrees toward the pointer
+//   Expressive                         the card leans a few degrees toward the pointer, and the
+//                                      bars under the playhead lift while the person drags it
 //
 // With the feel system's motion on (ADR-0477), the blend drawing is also something to play with:
 // the playhead can be dragged, or moved with the arrow keys once the drawing has focus. Its own
@@ -178,13 +178,16 @@ export function BlendArt({ variant = 'blend', from = 'Now playing', to = variant
     idle.current = window.setTimeout(release, KEY_IDLE_MS);
   };
 
+  // the bar under the playhead while the person drags it (Expressive): it lifts only in answer to
+  // them, never on the loop's timer
+  const liftAt = driving && leans ? Math.round((HEAD_FROM + place * HEAD_SPAN - LEFT - 2.5) / STEP) : -1;
   return (
     <div ref={card} className="welcome-art" data-variant={variant} aria-hidden={scrubs ? undefined : 'true'} data-scrub={scrubs ? (driving ? 'held' : 'free') : undefined} onPointerMove={follow} onPointerLeave={settle}>
       <span className="welcome-art-tag" aria-hidden={scrubs || undefined}>{from}</span>
       <svg viewBox="0 0 480 300" preserveAspectRatio="xMidYMid meet" focusable="false" aria-hidden={scrubs || undefined}>
         <g className="welcome-art-out">
           {OUTGOING.map((height, index) => (
-            <rect key={index} className={missing && index >= SEAM ? 'spent' : undefined} style={at(index)} x={LEFT + index * STEP} y={78 - height / 2} width="5" height={height} rx="2.5" opacity={missing ? (index < SEAM ? 1 : 0.16) : level(index, false)} />
+            <rect key={index} className={missing && index >= SEAM ? 'spent' : index === liftAt ? 'lift' : undefined} style={at(index)} x={LEFT + index * STEP} y={78 - height / 2} width="5" height={height} rx="2.5" opacity={missing ? (index < SEAM ? 1 : 0.16) : level(index, false)} />
           ))}
         </g>
         {missing ? (
@@ -192,7 +195,7 @@ export function BlendArt({ variant = 'blend', from = 'Now playing', to = variant
           <path className="welcome-art-empty" d="M12 222 H468" />
         ) : (
           <g className="welcome-art-in">
-            {INCOMING.map((height, index) => <rect key={index} style={at(index)} x={LEFT + index * STEP} y={222 - height / 2} width="5" height={height} rx="2.5" opacity={level(index, true)} />)}
+            {INCOMING.map((height, index) => <rect key={index} className={index === liftAt ? 'lift' : undefined} style={at(index)} x={LEFT + index * STEP} y={222 - height / 2} width="5" height={height} rx="2.5" opacity={level(index, true)} />)}
           </g>
         )}
         <path className="welcome-art-curve" d={missing ? 'M12 132 H162 C200 132 220 144 240 150' : 'M12 132 H162 C230 132 250 168 318 168 H468'} />

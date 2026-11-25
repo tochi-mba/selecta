@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { activityEntries, canUndo, runUndo } from '../state/activity';
+import { activityEntries, canUndo, runUndo, UNDO_LIMIT_MS } from '../state/activity';
 import { clearToasts, showProblem, showToast, Toaster } from './toasts';
 
 /** UF-0370-07: an Undo outlives a burst of notifications and a change of page. The notification can
@@ -40,5 +40,27 @@ describe('scoped Undo survives bursts and navigation', () => {
     render(<Toaster />);
     expect(screen.getByText('Moved a song.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Undo/ })).toBeInTheDocument();
+  });
+});
+
+describe('an Undo that never answers (T-20261125-f1eb)', () => {
+  it('counts as failed after the limit, keeps older Undos blocked, and a late success marks it undone', async () => {
+    vi.useFakeTimers();
+    try {
+      let answer: (value?: unknown) => void = () => undefined;
+      showToast('Moved one song.', { scope: 'mix:9', undo: vi.fn() });
+      showToast('Moved another song.', { scope: 'mix:9', undo: () => new Promise((resolve) => { answer = resolve; }) });
+      const [newer, older] = activityEntries().filter((entry) => entry.scope === 'mix:9');
+      const running = runUndo(newer.id).catch((error: unknown) => error);
+      await vi.advanceTimersByTimeAsync(UNDO_LIMIT_MS + 10);
+      expect(String(await running)).toMatch(/couldn’t confirm this Undo/);
+      expect(activityEntries().find((entry) => entry.id === newer.id)?.undoState).toBe('failed');
+      expect(canUndo(older.id)).toBe(false);
+      answer();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(activityEntries().find((entry) => entry.id === newer.id)?.undoState).toBe('undone');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

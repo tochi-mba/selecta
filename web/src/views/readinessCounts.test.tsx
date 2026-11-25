@@ -22,8 +22,12 @@ function props(): ViewProps {
 
 afterEach(cleanup);
 
-const readyCounts = (root: ParentNode) => {
-  const text = (root.textContent ?? '').replace(/\s+/g, ' ');
+/** The counts as a screen reader hears them: a rolling figure's digit strips are decoration
+ * (aria-hidden) beside its visually hidden copy, so they are left out (ADR-0477 NumberRoll). */
+const readyCounts = (root: Element) => {
+  const heard = root.cloneNode(true) as Element;
+  heard.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+  const text = (heard.textContent ?? '').replace(/\s+/g, ' ');
   return [...text.matchAll(/(\d[\d,]*) ?(?:songs )?(?:are )?ready for mixes/g)].map((match) => Number(match[1].replace(/,/g, '')));
 };
 

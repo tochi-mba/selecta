@@ -81,6 +81,65 @@
   :where(:root[data-feel]) .devices-meter { display: none; }
 }
 
+/* ---------- The sound moving to another speaker (devices/SpeakerMoved.tsx) ---------- */
+
+/* The old speaker's chip, the track a single pulse crosses, then the new speaker's chip, where the
+   tick draws once the pulse has arrived. Drawn only with motion on and only after the session
+   really names the new speaker; the words for a screen reader are in the line itself. The pulse is
+   the whole track's width sliding across it, so only transform moves. */
+:where(:root[data-feel~='motion']) .speaker-moved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font: var(--type-meta);
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) backwards;
+}
+:where(:root[data-feel~='motion']) .speaker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: var(--space-hair) var(--space-2);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius-pill);
+  overflow-wrap: anywhere;
+}
+:where(:root[data-feel~='motion']) .speaker-chip-new {
+  border-color: var(--status-ready);
+}
+:where(:root[data-feel~='motion']) .speaker-moved-track {
+  position: relative;
+  flex: 1 1 var(--space-6);
+  min-inline-size: var(--space-6);
+  block-size: var(--marker);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-control);
+}
+:where(:root[data-feel~='motion']) .speaker-moved-pulse {
+  position: absolute;
+  inset: 0;
+  animation: feel-speaker-pulse var(--motion-spring-glide) var(--spring-gentle) both;
+}
+:where(:root[data-feel~='motion']) .speaker-moved-pulse > i {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--status-ready);
+}
+/* the tick waits for the pulse to land */
+:where(:root[data-feel~='motion']) .speaker-chip-new .feel-tick {
+  animation-delay: var(--motion-spring-glide);
+}
+@media (forced-colors: active) {
+  :where(:root[data-feel]) .speaker-moved-pulse > i { background: CanvasText; }
+}
+
 /* ---------- The remote (devices/RemoteListen.tsx, devices/PlayingBar.tsx) ---------- */
 
 /* the playing song's cover beside its words; the words keep their own column */
@@ -106,6 +165,10 @@
 
 @keyframes feel-qr-wave {
   from { opacity: 0; }
+}
+@keyframes feel-speaker-pulse {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 @keyframes feel-beacon {
   from { opacity: 0.8; scale: 1; }
