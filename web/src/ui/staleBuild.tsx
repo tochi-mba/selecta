@@ -137,6 +137,26 @@ export function StaleBuildPanel() {
   );
 }
 
+export const SLOW_PAGE_MS = 30_000;
+
+/** Goes inside a page's loading fallback. A failed import is handled by `lazyPage`, but one that
+ * stalls (a network that never answers) would leave the skeleton waiting for ever, so after a
+ * generous limit this offers Reload. Nothing reloads by itself: music keeps playing until they do. */
+export function SlowToArrive({ ms = SLOW_PAGE_MS }: { ms?: number }) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSlow(true), ms);
+    return () => window.clearTimeout(timer);
+  }, [ms]);
+  if (!slow) return null;
+  return (
+    <p className="slow-to-arrive" role="status">
+      <span>SelectaDJ is taking a while to open this. Reload to ask again; anything playing keeps playing until you do.</span>
+      <button type="button" onClick={reloadForUpdate}>Reload</button>
+    </p>
+  );
+}
+
 /** The entry script's build mark in the site's current index.html, or null when unknown. */
 async function liveBuild(): Promise<string | null> {
   try {

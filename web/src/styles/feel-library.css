@@ -9,7 +9,7 @@
  *
  * Where a rule has to outrank an existing one (the phone editor's own timings, the Cloud sheet's
  * tile sizes) it carries :root[data-feel] or extra class weight instead of :where. No new keyframes:
- * everything here reuses feel.css's feel-pop. */
+ * everything here reuses feel.css's feel-pop, feel-arrive and feel-flash. */
 
 /* ---------- My Mixes: each mix's face (views/MixArt.tsx) ---------- */
 
@@ -26,13 +26,103 @@
 }
 .mix-art[data-collage] {
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: var(--space-hair);
 }
-/* outranks the Cloud sheet's tile sizes (cloudMusic.css), whichever loads first */
-.shell .mix-row > .mix-art > .cover-art[data-size] {
+/* only real covers go in: two sit side by side, three put the first one tall, four make a square */
+.mix-art[data-collage='2'] { grid-template-rows: 1fr; }
+.mix-art[data-collage='3'] > :first-child { grid-row: span 2; }
+/* outranks the Cloud sheet's tile sizes (cloudMusic.css), whichever loads first; the same face
+   sits on a saved mix's row, the current mix card and a local draft's row */
+.shell :is(.mix-row, .carry-on, .draft) > .mix-art > .cover-art[data-size] {
   inline-size: 100%;
   block-size: 100%;
   border-radius: 0;
+}
+/* The local app's sheet hides cover tiles (listening.css), so there a face draws its own tiles: the
+   same stable colour from the seed, the motif on it, and a real picture over it once decoded. */
+.mix-art:not(.shell[data-mode='cloud'] .mix-art) > .cover-art {
+  display: grid;
+  place-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  color: var(--text);
+  background: linear-gradient(var(--art-turn, 135deg), color-mix(in srgb, var(--motif) 45%, var(--surface-control)), var(--surface-control));
+  overflow: hidden;
+}
+.mix-art:not(.shell[data-mode='cloud'] .mix-art) > .cover-art :is(.song-motif, .ui-icon) { width: 50%; height: 50%; margin: 0; color: inherit; }
+.mix-art:not(.shell[data-mode='cloud'] .mix-art) > .cover-art[data-art] > * { grid-area: 1 / 1; }
+.mix-art:not(.shell[data-mode='cloud'] .mix-art) > .cover-art .cover-art-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity var(--motion-reveal) var(--motion-ease);
+}
+.mix-art:not(.shell[data-mode='cloud'] .mix-art) > .cover-art .cover-art-image[data-ready] { opacity: 1; }
+/* the current mix card's face rests on the card with a little depth, like a sleeve on a shelf */
+:where(:root[data-feel~='depth']) .carry-on > .mix-art { box-shadow: var(--shadow-rest); }
+@media (forced-colors: active) {
+  .mix-art { border: 1px solid CanvasText; }
+  .mix-art:not(.shell[data-mode='cloud'] .mix-art) > .cover-art { background: Canvas; color: CanvasText; }
+  :where(:root[data-feel]) .carry-on > .mix-art { box-shadow: none; }
+}
+
+/* ---------- My Mixes rows: a copy arrives, a name is changed in place ---------- */
+
+/* A copy's row rises into its place on top and glows once in the selection colour. The fold that
+   removes a row carries more weight (feel.css), so a deleted copy still folds away. */
+:where(:root[data-feel~='motion']) :is(.mix-rows > .mix-row, .draft-list > .draft).feel-flash {
+  animation:
+    feel-arrive var(--motion-spring-snappy) var(--spring-snappy) both,
+    feel-flash calc(var(--motion-slow) * 4) var(--motion-ease) both;
+}
+/* Rename: the field takes the name's place in the name's own type, and its frame fades in around
+   the words, so the name seems to open for typing rather than being swapped for a form. */
+:where(:root[data-feel~='motion']) .shell .mix-row .rename-draft input { font: var(--type-song); }
+:where(:root[data-feel~='motion']) :is(.mix-row, .draft) .rename-draft input {
+  transition: border-color var(--motion-reveal) var(--motion-ease), background-color var(--motion-reveal) var(--motion-ease);
+}
+@starting-style {
+  :where(:root[data-feel~='motion']) :is(.mix-row, .draft) .rename-draft input {
+    border-color: transparent;
+    background-color: transparent;
+  }
+}
+/* and the saved name settles back where the field was */
+:where(:root[data-feel~='motion']) [data-renamed] {
+  transition: opacity var(--motion-reveal) var(--motion-ease), translate var(--motion-spring-snappy) var(--spring-snappy);
+}
+@starting-style {
+  :where(:root[data-feel~='motion']) [data-renamed] {
+    opacity: 0;
+    translate: 0 var(--space-1);
+  }
+}
+
+/* ---------- Make a Mix: the energy arc's drawing trail (views/arcTrail.tsx) ---------- */
+
+/* The last stretch of the pointer's path glows under the curve while drawing; letting go glides it
+   onto the curve and fades it there. Only the pointer adds to it. The element only exists with the
+   motion part on and the feel not calm, so Still, reduced motion and low power draw the plain curve. */
+:where(:root[data-feel~='motion']) .energy-arc-preview .energy-arc-trail {
+  fill: none;
+  stroke: var(--motif);
+  stroke-width: var(--space-1);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: 0.4;
+  pointer-events: none;
+  transition: d var(--motion-spring-glide) var(--spring-gentle), opacity var(--motion-spring-glide) var(--motion-ease);
+}
+:where(:root[data-feel~='motion']) .energy-arc-preview .energy-arc-trail[data-settled] { opacity: 0; }
+/* the glow is depth's, and the first low-power step and Subtle go without it */
+:where(:root[data-feel~='depth']:not([data-low-power], [data-motion='subtle'])) .energy-arc-preview .energy-arc-trail {
+  filter: drop-shadow(0 0 var(--space-1) var(--motif));
+}
+:where(:root[data-motion='subtle']) .energy-arc-preview .energy-arc-trail { stroke-opacity: 0.25; }
+@media (forced-colors: active) {
+  .energy-arc-preview .energy-arc-trail { display: none; }
 }
 /* the editor's head shows the same face (EditorHeader, feel parts only): the place a saved mix's
    tile travels to on Edit */

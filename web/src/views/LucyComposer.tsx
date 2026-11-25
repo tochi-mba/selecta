@@ -1,4 +1,5 @@
-import { KeyboardEvent, ReactNode, RefObject, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { KeyboardEvent, ReactNode, RefObject, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { feelOn, onFeelChange } from '../feel/root';
 import { lucyTransport } from '../lucy/client';
 import { Action } from '../ui/controls';
 import { Icon } from '../ui/Icon';
@@ -124,6 +125,14 @@ export function Composer({ value, onChange, onSend, onStop, running, sending, bl
     if (!blocked && !sending && value.trim()) onSend();
   };
   const canSend = !blocked && !sending && !!value.trim();
+  const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+  const morph = moving && running && !sending && !value.trim();
+  // Send springs back in only when it returns from Stop, never on an ordinary redraw: each return
+  // gives it a new key, so its one arrival plays once and is not cut short by the next keystroke
+  const wasMorph = useRef(false);
+  const returns = useRef(0);
+  if (wasMorph.current && !morph) returns.current += 1;
+  useEffect(() => { wasMorph.current = morph; });
   return (
     <form className="lucy-composer" onSubmit={(event) => {
       event.preventDefault();
@@ -150,10 +159,12 @@ export function Composer({ value, onChange, onSend, onStop, running, sending, bl
         <span id={hintId} className="hint">{blocked || (running ? RUNNING_WORDS() : 'Enter sends · Shift+Enter for a new line')}</span>
         <div className="row">
           {voice && <VoiceButton onWords={(words) => onChange(latest.current.trim() ? `${latest.current.trimEnd()} ${words}` : words)} />}
-          {/* Stop springs in beside Send when real work starts; Send stays, because a new message
-              can replace the running one, so the two never become one button */}
-          {running && <Action type="button" className="feel-pop" working="Stopping…" run={onStop}><Icon name="stop" /> Stop</Action>}
-          <button type="submit" className="primary" disabled={!canSend} aria-busy={sending || undefined}>{sending ? 'Sending…' : 'Send'}</button>
+          {/* Stop springs in when real work starts. With the feel's motion on and nothing written,
+              Send could do nothing anyway, so Stop takes its place and its weight (the send morphs
+              into stop); as soon as there are words to send, Send is back beside Stop, because a new
+              message can still replace the running one. With the motion off both stay, as before. */}
+          {running && <Action type="button" className={morph ? 'primary feel-pop lucy-stop' : 'feel-pop'} working="Stopping…" run={onStop}><Icon name="stop" /> Stop</Action>}
+          {!morph && <button key={returns.current} type="submit" className={`primary${returns.current ? ' feel-pop' : ''}`} disabled={!canSend} aria-busy={sending || undefined}>{sending ? 'Sending…' : 'Send'}</button>}
         </div>
       </div>
     </form>

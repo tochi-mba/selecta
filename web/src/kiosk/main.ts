@@ -10,6 +10,8 @@ import { h, replace } from '../rooms/dom';
 import { kioskApi } from './api';
 import { zoneAudio } from './audio';
 import { startBurnIn } from './burnIn';
+import { screenDirection } from './direction';
+import type { KioskScreen } from './state';
 import { createController, HEALTH_MS, HEARTBEAT_MS, HORIZON_MS, UPDATE_CHECK_MS, VIEW_MS } from './controller';
 import { KIOSK_COPY } from './copy';
 import { deviceKey, openKeyStore } from './deviceKey';
@@ -51,6 +53,7 @@ async function start(): Promise<void> {
 
   const stage = h('div', { className: 'k-stage', id: 'k-stage' });
   replace(root, stage);
+  let shownKind: KioskScreen['kind'] | null = null;
   const burnIn = startBurnIn(() => stage.querySelector('.k-screen'), () => controller.view().burn_in !== false);
 
   const controller = createController({
@@ -82,6 +85,10 @@ async function start(): Promise<void> {
         onDonePairing: screen.kind === 'unpaired' && controller.state().paired ? () => controller.showCode(false) : undefined,
       });
       if (screen.kind === 'needs_tap' && extra.timeUnknown) node.append(h('p', { className: 'k-quiet' }, KIOSK_COPY.timeUnknown));
+      // ADR-0477: a new screen arrives from ahead or behind along the player's day (kiosk.css)
+      const way = screenDirection(shownKind, screen.kind);
+      shownKind = screen.kind;
+      if (way) node.dataset.enter = way;
       replace(stage, node);
       burnIn.apply();
     },

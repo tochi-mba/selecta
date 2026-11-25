@@ -165,4 +165,8 @@
    index.html draws the same waiting gate the Cloud runtime shows (boot.css .gate-loading) inside
    #root, and React replaces it on its first render. With JavaScript off it would wait forever, so
    it gives way to the <noscript> message, which only becomes elements when scripts cannot run. */
-body:has(noscript > p) .boot-splash { display: none; }
+/* The splash is `hidden` in the page itself and shown here, so it only ever appears styled: until
+   this sheet has arrived there is nothing to see, never a bare letter on a white page (which the
+   development server showed for as long as the scripts took to start). */
+.boot-splash[hidden] { display: grid; }
+body:has(noscript > p) .boot-splash[hidden] { display: none; }

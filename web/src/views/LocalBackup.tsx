@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { Action, Dialog } from '../ui/controls';
 import { words } from '../copy';
+import { answerWithin } from '../api';
 import { BytesRequest, useBytes } from '../requestContext';
 
 type Preview = {
@@ -11,6 +12,10 @@ type Preview = {
   skips: string;
 };
 type BackupStatus = { pending_restart: boolean; rollback_available: boolean; problem?: string | null };
+
+/** Backups are long by nature, so the buttons have no Action limit; this one is generous, so only a
+ * local server that never answers frees them, with words that say so. */
+const BACKUP_LIMIT_MS = 10 * 60_000;
 
 async function askBackup(bytes: BytesRequest, path: string, init?: RequestInit): Promise<Response> {
   const response = await bytes('/backup' + path, init);
@@ -49,8 +54,7 @@ export function LocalBackup() {
   const download = async () => {
     setWorking(true); setIssue(''); setNotice('');
     try {
-      const response = await backupRequest('');
-      const blob = await response.blob();
+      const blob = await answerWithin(backupRequest('').then((response) => response.blob()), BACKUP_LIMIT_MS);
       const url = URL.createObjectURL(blob);
       try {
         const anchor = document.createElement('a');
@@ -78,10 +82,9 @@ export function LocalBackup() {
     if (!chosen) return;
     setWorking(true); setIssue(''); setPreview(null);
     try {
-      const response = await backupRequest('/preview', {
+      setPreview(await answerWithin(backupRequest('/preview', {
         method: 'POST', headers: { 'content-type': 'application/zip' }, body: chosen,
-      });
-      setPreview(await response.json() as Preview);
+      }).then((response) => response.json() as Promise<Preview>), BACKUP_LIMIT_MS));
     } catch (error) { setIssue((error as Error).message); return false; }
     finally { setWorking(false); }
   };
@@ -90,11 +93,12 @@ export function LocalBackup() {
     if (!chosen || !preview) return;
     setWorking(true); setIssue('');
     try {
-      await backupRequest('/stage', {
+      // a staging that lands after the limit still says a restore is waiting, read from the server
+      await answerWithin(backupRequest('/stage', {
         method: 'POST',
         headers: { 'content-type': 'application/zip', 'x-backup-token': preview.token },
         body: chosen,
-      });
+      }), BACKUP_LIMIT_MS, () => void backupRequest('/status').then((response) => response.json()).then(setStatus).catch(() => {}));
       setStatus((current) => ({ pending_restart: true, rollback_available: current?.rollback_available ?? false }));
       setNotice(words().restorePrepared);
       setChosen(null); setPreview(null);
@@ -108,7 +112,7 @@ export function LocalBackup() {
   return <section className="panel stack">
     <h2>Local data backup</h2>
     <p>Save your library records, drafts, feedback and preferences in a verified ZIP. Original music, audio caches and exports are not included; keep those files separately.</p>
-    <Action working="Preparing download…" disabled={working} run={download}>Download a backup</Action>
+    <Action working="Preparing download…" disabled={working} limit={0} run={download}>Download a backup</Action>
     {status?.pending_restart && <p className="warn" role="status">A validated restore is waiting for a restart. No running data has been replaced yet.</p>}
     {status?.rollback_available && <p className="hint">A pre-restore database rollback is preserved locally.</p>}
     {status?.problem && <p className="warn" role="alert">Restore was not applied: {status.problem}. Your current database has been kept.</p>}
@@ -119,13 +123,13 @@ export function LocalBackup() {
     </label>
     {/* MP-0293-06: `waiting`, not `disabled`, so the button keeps focus while it checks and the
         preview dialog can hand focus back to it on Cancel */}
-    {chosen && <Action waiting={working} working="Checking archive…" run={inspect}>Validate and preview restore</Action>}
+    {chosen && <Action waiting={working} working="Checking archive…" limit={0} run={inspect}>Validate and preview restore</Action>}
     {issue && <p className="warn" role="alert">{issue}</p>}
     {notice && <p role="status">{notice}</p>}
     {preview && <Dialog title="Replace local data on next restart?" onClose={() => setPreview(null)}
       footer={<>
         <button onClick={() => setPreview(null)}>Cancel - keep current data</button>
-        <Action className="primary" working="Preparing restore…" disabled={working} run={confirm}>Confirm staged restore</Action>
+        <Action className="primary" working="Preparing restore…" disabled={working} limit={0} run={confirm}>Confirm staged restore</Action>
       </>}>
       <p>Archive date: {preview.created_utc}</p>
       <p>This archive contains {preview.counts.songs} songs, {preview.counts.drafts} drafts, and {preview.counts.ratings} ratings.</p>

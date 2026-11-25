@@ -15,6 +15,7 @@ const ALL_OFF = {
   'app.feel_music': false, 'app.feel_ambient': false, 'app.feel_moments': false,
 };
 const SHA = 'e'.repeat(64);
+const OTHER = 'f'.repeat(64);
 const urlApi = URL as unknown as { createObjectURL?: unknown; revokeObjectURL?: unknown };
 const songs = [{ song_id: 1, sha256: SHA }, { song_id: 2 }, { song_id: 3 }, { song_id: 4 }, { song_id: 5 }];
 
@@ -40,15 +41,35 @@ describe('FL-0478-05 MixArt', () => {
     expect(face.container.querySelector('.mix-art')).toBeNull();
   });
 
-  it('is a collage of the first four songs\' covers, each over its own tile', async () => {
+  it('is a collage of the songs\' real covers only', async () => {
+    const picture = () => ({ small: new Blob(['s'], { type: 'image/webp' }), large: new Blob(['l'], { type: 'image/webp' }), hue: 10 });
+    await putArt(SHA, picture());
+    await putArt(OTHER, picture());
+    const { container } = render(<MixArt seed="mix-1" songs={[songs[0], { song_id: 2 }, { song_id: 3, sha256: OTHER }]} />);
+    const face = container.querySelector<HTMLElement>('.mix-art')!;
+    expect(face).toHaveAttribute('aria-hidden', 'true');
+    // the song without a picture is left out, so two real covers make the face
+    await waitFor(() => expect(face).toHaveAttribute('data-collage', '2'));
+    expect(face.querySelectorAll('.cover-art')).toHaveLength(2);
+    await waitFor(() => expect(face.querySelectorAll('img')).toHaveLength(2));
+    expect(face.querySelector('img')).toHaveAttribute('alt', '');
+  });
+
+  it('keeps the generated tile when fewer than two songs have a real cover', async () => {
     await putArt(SHA, { small: new Blob(['s'], { type: 'image/webp' }), large: new Blob(['l'], { type: 'image/webp' }), hue: 10 });
     const { container } = render(<MixArt seed="mix-1" songs={songs} />);
     const face = container.querySelector<HTMLElement>('.mix-art')!;
-    expect(face).toHaveAttribute('aria-hidden', 'true');
-    expect(face).toHaveAttribute('data-collage', '4');
-    expect(face.querySelectorAll('.cover-art')).toHaveLength(4);
-    await waitFor(() => expect(face.querySelectorAll('img')).toHaveLength(1));
-    expect(face.querySelector('img')).toHaveAttribute('alt', '');
+    // let the cover check finish, then the face is still the one generated tile
+    await new Promise((settle) => { setTimeout(settle, 20); });
+    expect(face).not.toHaveAttribute('data-collage');
+    expect(face.querySelectorAll('.cover-art')).toHaveLength(1);
+  });
+
+  it('asks for the mix\'s songs once its face is near the screen', async () => {
+    const want = vi.fn();
+    render(<MixArt seed="mix-1" want={want} />);
+    // jsdom has no IntersectionObserver, so the face counts as near at once
+    await waitFor(() => expect(want).toHaveBeenCalledTimes(1));
   });
 
   it('keeps the single tile until the mix\'s songs are known, or with art off', () => {

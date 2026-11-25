@@ -102,10 +102,22 @@ def _devices_and_rooms(conn: Connection, workspace_id: str) -> dict[str, Any]:
 
 def _lucy(conn: Connection, workspace_id: str, now: float) -> dict[str, Any]:
     turns = _table(conn, "lucy_cloud_turns")
-    if turns is None:
-        return {"turns_30d": 0}
-    return {"turns_30d": _count(conn, turns, turns.c.workspace_id == workspace_id,
-                                turns.c.created_at >= now - MONTH_S)}
+    out: dict[str, Any] = {"turns_30d": 0 if turns is None else _count(
+        conn, turns, turns.c.workspace_id == workspace_id, turns.c.created_at >= now - MONTH_S)}
+    state = _table(conn, "lucy_usage_state")
+    if state is not None:
+        # The account's own factor and its switch to the session and week allowance (ADR-0485,
+        # ADR-0487), so staff see what they are about to change.
+        row = conn.execute(sa.select(
+            state.c.override_multiplier_milli, state.c.cutover_at, state.c.enforced_since,
+        ).where(state.c.workspace_id == workspace_id)).first()
+        out["allowance"] = {
+            "factor_milli": None if row is None else row.override_multiplier_milli,
+            "cutover_at": None if row is None or row.cutover_at is None else float(row.cutover_at),
+            "enforced_since": None if row is None or row.enforced_since is None
+            else float(row.enforced_since),
+        }
+    return out
 
 
 def _jobs(conn: Connection, workspace_id: str) -> list[dict[str, Any]]:

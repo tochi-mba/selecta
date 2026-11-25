@@ -10,6 +10,7 @@ import { Meter } from '../ui/Meter';
 import { cancelImportSession, clearImportMarker, readImportMarker, startImportSession, useImportSession, type ImportRunner } from './importSession';
 import { preloadImportCode } from '../media/importer';
 import { deleteImportJournal } from '../media/importJournal';
+import { askReadAccess } from '../media/withTimeout';
 import { carryOnNow, dropResumeOffer, fingerprintOption, startImport } from './importResume';
 import { CancelImportButton, checkedOf, checkedWords, formatCount, ImportProgressLine, ResumeOfferNotice } from './ImportStatus';
 import { addVisitFolder, pickFolderToWatch, watchingFor } from './folderWatch';
@@ -208,7 +209,8 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
     chosen(event);
   };
   const keepChecking = async (handle: StoredFolderHandle) => {
-    const answer = handle.requestPermission ? await handle.requestPermission({ mode: 'read' }).catch(() => 'denied') : 'granted';
+    // a prompt the browser swallowed counts as not allowed, so the press can be offered again
+    const answer = await askReadAccess(handle);
     if (answer === 'granted') start(handle, handle.name);
     else setRefused(true);
   };

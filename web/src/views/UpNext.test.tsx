@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExportJob, MixItem } from '../api';
 import { SetPlayer } from '../player';
 import { fakeBackend, seam, songs, status } from '../test/backend';
+import { feelOff } from '../test/feel';
 import { ExportJobs, exportStage } from './ExportJobs';
 import { ExportPanel } from './ExportPanel';
 import { resetExports } from './exportStore';
@@ -112,6 +113,8 @@ describe('SF-0231 Export Studio', () => {
   });
 
   it('SF-0231-03 counts real transitions and never shows an invented percentage', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     fakeBackend({ 'GET /exports/jobs': { jobs: [job({ seams_total: 3, seams_ready: 1, seams: [] })] } });
     render(<ExportJobs always />);
     const row = await screen.findByText(/Preparing transitions, 1 of 3 ready/);

@@ -6,11 +6,13 @@ import {
   type FileHandleLike, type FolderState, type ImportSummary, type MediaStore, type StoredFolderHandle, type StoredSong, type WatchedFolder,
 } from '../media';
 import type { Request } from '../media/importer';
+import { askReadAccess } from '../media/withTimeout';
 import { showToast } from '../ui/toasts';
 import { countOf } from '../ui/format';
 import { registeredDeviceId } from './ConnectMusic';
 import { startImport, type WatchExtras } from './importResume';
-import { cancelImportSession, importSnapshot, readImportMarker, subscribeImport } from './importSession';
+import { breathe } from '../media/breathe';
+import { cancelImportSession, IMPORT_TAB_FREED, importSnapshot, readImportMarker, subscribeImport } from './importSession';
 
 // Watching music folders (`cloud.music_folders`).
 //
@@ -307,7 +309,14 @@ function runQueue(): Promise<void> {
   const work = async () => {
     if (!manager || !workspaceId) { await drain(); return; }
     await manager.request(`selecta-folder-check:${workspaceId}`, { ifAvailable: true }, async (lock) => {
-      if (!lock) { queue = []; publish({ waiting: 'tab' }); return; }
+      if (!lock) {
+        queue = [];
+        publish({ waiting: 'tab' });
+        // "Another tab is checking" stayed up after that tab finished; it goes once the lock is free
+        void manager.request(`selecta-folder-check:${workspaceId}`, {}, () => undefined)
+          .then(() => { if (state.waiting === 'tab' && parts?.workspaceId === workspaceId) publish({ waiting: null }); }, () => undefined);
+        return;
+      }
       publish({ waiting: null });
       await drain();
     });
@@ -351,6 +360,9 @@ function later(run: () => void, ms: number): void {
 }
 
 function whenIdle(run: () => void): void {
+  // A hidden tab has no idle periods (the callback waited out its timeout, itself held back), and
+  // nobody is using the page then, so the check simply starts.
+  if (document.visibilityState === 'hidden') { void breathe().then(run); return; }
   const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
   if (typeof idle === 'function') idle(() => run(), { timeout: 10_000 });
   else later(run, 1_000);
@@ -395,9 +407,18 @@ export function bindWatch(mine: Parts, given?: { extras?: WatchExtras; firstChec
     if (queue.length) void runQueue();
     else whenIdle(() => autoCheck('due'));
   });
+  // EDGE CASE (two tabs open): the tab that was importing a watched folder closed part way. Its
+  // marker stays, and this tab carries the folder on at once, skipping what the journal holds.
+  const freed = () => {
+    if (parts !== mine) return;
+    const marker = readImportMarker(mine.workspaceId);
+    if (marker?.folderId && state.rows?.some((row) => row.id === marker.folderId && row.handle)) void checkFolders([marker.folderId]);
+  };
   document.addEventListener('visibilitychange', visible);
+  window.addEventListener(IMPORT_TAB_FREED, freed);
   return () => {
     document.removeEventListener('visibilitychange', visible);
+    window.removeEventListener(IMPORT_TAB_FREED, freed);
     unhear();
     if (parts === mine) endWatch();
   };
@@ -527,8 +548,11 @@ export function importLooseHandles(handles: FileHandleLike[]): void {
 export async function allowFolder(id: string): Promise<boolean> {
   const row = state.rows?.find((one) => one.id === id);
   if (!row?.handle) return false;
-  let answer = 'granted';
-  try { if (row.handle.requestPermission) answer = await row.handle.requestPermission({ mode: 'read' }); } catch { answer = 'denied'; }
+  // A browser can swallow the prompt (the press did not count as the person's own, or the prompt
+  // was dismissed without an answer) and then never settles the request. Without a limit the button
+  // said "Asking" for ever with no way to ask again, so an unanswered request counts as not allowed
+  // and the row offers Allow again.
+  const answer = await askReadAccess(row.handle);
   if (answer !== 'granted') return false;
   const next = setRow(id, { state: row.checkedAt ? 'watching' : 'unchecked' });
   if (next) await persist(next);

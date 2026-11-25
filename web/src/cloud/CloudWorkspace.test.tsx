@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { setTonalActivity } from './tonalActivity';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setFlags } from '../flags';
 import type { MediaStore, StoredFolderHandle } from '../media';
@@ -54,8 +55,12 @@ beforeEach(() => {
   });
 });
 
-/** The figure in an overview tile, found by the tile's label. */
-const tile = (label: string) => screen.getByText(label).closest('a')?.querySelector('strong')?.textContent;
+/** The figure in an overview tile, found by the tile's label: the words a screen reader hears, which
+ * under motion are the rolled figure's own visually hidden copy (ADR-0477 NumberRoll). */
+const tile = (label: string) => {
+  const figure = screen.getByText(label).closest('a')?.querySelector('strong');
+  return (figure?.querySelector('.number-roll > .visually-hidden') ?? figure)?.textContent;
+};
 
 describe('the tabs of the browser Workspace', () => {
   it('offers Overview, Sources, Storage and Diagnostics, each at its own address', () => {
@@ -109,15 +114,23 @@ describe('Workspace overview in the browser', () => {
     const background = screen.getByRole('region', { name: 'Activity' });
     // nothing is being added, so nothing says it is
     expect(background).not.toHaveTextContent(/Adding your music/);
-    expect(background).toHaveTextContent('Songs not checked yet this visit.');
+    expect(background).toHaveTextContent('Songs are checked in the background while SelectaDJ is open.');
     expect(background).not.toHaveTextContent(/Harmonic matches/);
     expect(background).not.toHaveTextContent(/Stem splitting/);
     unmount();
+    // Harmonic matches on but every song measured: nothing is said about keys
+    const measured = show('overview', { measuringKeys: true });
+    expect(screen.getByRole('region', { name: 'Activity' })).not.toHaveTextContent(/song keys/);
+    measured.unmount();
+    setTonalActivity('measuring');
     show('overview', { measuringKeys: true, stemsShown: true, fileCheck: { running: true, at: null } });
     const busy = screen.getByRole('region', { name: 'Activity' });
     expect(busy).toHaveTextContent('Checking which songs can play here.');
     expect(busy).toHaveTextContent('Measuring song keys for Harmonic matches.');
     expect(busy).toHaveTextContent('Stem splitting is under Storage.');
+    act(() => setTonalActivity('waiting_music'));
+    expect(busy).toHaveTextContent('Measuring song keys carries on when the music stops.');
+    act(() => setTonalActivity('idle'));
   });
 
   it('says when the file check last ran', () => {

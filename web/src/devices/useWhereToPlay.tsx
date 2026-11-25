@@ -29,10 +29,16 @@ export function onceOnly(key: string): boolean {
   } catch { return true; }
 }
 
+/** T-20261125-45b5: whether "none of your devices with music is open" contradicts this device,
+ * which can play its own music or is already the one playing. */
+export function nobodyOpenWrong(playableHere: boolean, speakingHere: boolean): boolean {
+  return playableHere || speakingHere;
+}
+
 /** A5: after this long unseen, the default speaker's note offers to forget it. */
 export const GHOST_AFTER_SECONDS = 30 * 24 * 3600;
 
-export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told, playingOn = null, playHereInstead }: {
+export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told, playingOn = null, playHereInstead, playableHere = false, speakingHere = false }: {
   enabled: boolean;
   /** null until the holdings are read (then the press plays here, as before) */
   situation: Situation | null;
@@ -48,6 +54,11 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   playingOn?: string | null;
   /** "Play here instead": take the music from whichever device is starting or playing it. */
   playHereInstead?: () => void;
+  /** This device has music it can play now, by its own count, which may be ahead of the report the
+   * server holds (an import in progress, or a report not refreshed yet). */
+  playableHere?: boolean;
+  /** This device is the session's speaker: its own tab makes the sound. */
+  speakingHere?: boolean;
 }): { decide: () => boolean; picker: ReactNode; choice: Choice | null; notice: PlayNotice | null; clearNotice: () => void; say: (deviceId: string | null, text: string) => void } {
   const [asking, setAsking] = useState<Extract<Choice, { kind: 'ask' }> | null>(null);
   // D30: closing the room while the picker is open closes the picker
@@ -59,8 +70,8 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   // one state, one message: the latest replaces any earlier one (shown on Listen's status line)
   const [notice, setNotice] = useState<PlayNotice | null>(null);
   const choice = enabled && situation ? whereToPlay(situation) : null;
-  const latest = useRef({ choice, situation });
-  latest.current = { choice, situation };
+  const latest = useRef({ choice, situation, playableHere });
+  latest.current = { choice, situation, playableHere };
 
   const saveDefault = useCallback(async (deviceId: string) => {
     try {
@@ -118,6 +129,8 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
       return true;
     }
     if (now.kind === 'ask') { setAsking(now); return true; }
+    // the server's report can lag this device's own music: never say none is open from here
+    if (nobodyOpenWrong(latest.current.playableHere, false)) return false;
     setNotice({ deviceId: null, text: NOBODY_OPEN, actions: [{ label: 'Connect music here', run: () => navigate('/library') }] });
     return true;
   }, [forgetGhost, startOn]);
@@ -141,6 +154,10 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
       actions: [{ label: 'Try again', run: () => { setNotice(null); silent.current.delete(toldId); const again = latest.current.situation?.devices.find((one) => one.device_id === toldId); if (again) startOn(again); } }, ...choose],
     });
   }, [phase, toldId, startOn]);
+
+  // "none of your devices with music is open" is wrong once this tab can play or is playing
+  const nobodyWrong = notice?.text === NOBODY_OPEN && nobodyOpenWrong(playableHere, speakingHere);
+  useEffect(() => { if (nobodyWrong) setNotice(null); }, [nobodyWrong]);
 
   // the device named started playing: the session says so now, so the notice has done its job
   const playingThere = playingOn;

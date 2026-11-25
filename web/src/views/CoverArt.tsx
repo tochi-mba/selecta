@@ -2,6 +2,8 @@ import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useFlag } from '../flags';
 import { getArtHue, getArtUrl, peekArtUrl, songKeyFor, subscribeArt } from '../media/artStore';
+import { useCatalogArt } from '../media/catalogArt';
+import { useServerArt } from '../media/serverArt';
 import { Icon } from '../ui/Icon';
 import { SongMotif } from '../ui/MusicObjects';
 import { artHash } from '../feel/hue';
@@ -30,10 +32,15 @@ export function CoverArt({ seed, songId, size = 'row', songKey, artUrl, artHue }
   const hash = artHash(seed);
   const hero = size === 'hero';
   const own = useSongArt(artUrl ? null : songKey ?? songId ?? null, { large: hero });
-  const full = artUrl ?? (hero ? own.large : own.small);
+  // the rungs below the device's own copy, each asked only while everything above has no picture:
+  // the local app's server reading the file (FL-0478-02), then Cloud's catalogue (FL-0478-04)
+  const ownAny = own.small ?? own.large;
+  const served = useServerArt(artUrl || ownAny ? null : songId);
+  const catalog = useCatalogArt(artUrl || ownAny || served ? null : songId);
+  const full = artUrl ?? (hero ? own.large : own.small) ?? served ?? catalog?.url ?? null;
   // blur-up: on the hero, the small picture stretched (soft by nature) shows while the large decodes
   const preview = !artUrl && hero ? own.small : null;
-  const palette = artUrl ? artHue ?? null : own.hue;
+  const palette = artUrl ? artHue ?? null : catalog && full === catalog.url ? catalog.hue : own.hue;
   const style = {
     '--art-hue': String(hash % 360),
     '--art-turn': `${100 + ((hash >>> 9) % 160)}deg`,

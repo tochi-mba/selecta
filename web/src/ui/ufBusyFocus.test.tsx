@@ -27,4 +27,22 @@ describe('busy controls keep focus', () => {
     fireEvent.click(button);
     expect(run).toHaveBeenCalledTimes(2);
   });
+
+  it('work that never answers hands the button back, focused, after the limit', () => {
+    vi.useFakeTimers();
+    try {
+      const run = vi.fn(() => new Promise<void>(() => {}));
+      render(<Action run={run} working="Saving…" limit={1000}>Save</Action>);
+      const button = screen.getByRole('button', { name: 'Save' });
+      button.focus();
+      fireEvent.click(button);
+      act(() => { vi.advanceTimersByTime(1000); });
+      expect(document.activeElement).toBe(button);
+      expect(button).not.toHaveAttribute('aria-busy');
+      fireEvent.click(button);
+      expect(run).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

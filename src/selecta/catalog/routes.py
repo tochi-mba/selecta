@@ -50,7 +50,9 @@ ROUTES = (
     "PUT /api/catalog/settings",
     "POST /api/admin/catalog/art/{art_id}/{command}",
 )
-CACHE_CONTROL = "private, max-age=604800, immutable"
+# An hour, not a week and never immutable: a hidden (taken down) image stops being served at
+# once, and a browser that already holds it asks again within the hour and is then refused.
+CACHE_CONTROL = "private, max-age=3600"
 
 
 class SongRef(BaseModel):

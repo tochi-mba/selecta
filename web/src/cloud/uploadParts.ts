@@ -1,4 +1,5 @@
 import type { Api } from './api';
+import { fileSha256 as identitySha256 } from '../media/identity';
 
 // Uploads, the parts that aren't drawing (docs/saas/05-storage-uploads-playback.md §5.2).
 //
@@ -16,15 +17,11 @@ export type UploadStatus = { upload: { id: string; name: string; size: number; s
 /** Session states that can still take parts. */
 export const RESUMABLE = new Set(['planned', 'uploading']);
 
+/** The upload's SHA-256, the same digest the import uses (media/identity.ts): WebCrypto off the page
+ * for a file that fits, and otherwise a streamed hash that yields between small slices, so hashing
+ * an upload never holds the page for a third of a second at a time. */
 export async function fileSha256(file: Blob) {
-  // r8c: the streaming hash is only needed once someone uploads, so it isn't in the first download.
-  const { sha256 } = await import('@noble/hashes/sha2.js');
-  const hash = sha256.create();
-  const chunkSize = 8 * 1024 * 1024;
-  for (let offset = 0; offset < file.size; offset += chunkSize) {
-    hash.update(new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer()));
-  }
-  return Array.from(hash.digest(), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return identitySha256(file);
 }
 
 /** The server's unfinished sessions, newest first. */
@@ -36,6 +33,12 @@ export async function unfinishedUploads(api: Api, workspaceId: string): Promise<
 /** An unfinished session this file can carry on. */
 export function resumableFor(sessions: UploadSession[], file: { size: number; sha256: string }) {
   return sessions.find((session) => session.size === file.size && session.sha256 === file.sha256) ?? null;
+}
+
+/** How long one part may take to send: two minutes, or the time at about 25 KB a second for a big
+ * part, whichever is longer. */
+export function partLimitMs(bytes: number): number {
+  return Math.max(120_000, Math.ceil(bytes / 25_000) * 1000);
 }
 
 /** Send the parts the server doesn't have yet, then ask it to finish. `onPart` hears each part
@@ -57,7 +60,21 @@ export async function sendParts(
     if (finished.has(number)) continue;
     const urls = await api<{ part_urls: Record<string, string> }>(`/uploads/${session.id}/parts`, { method: 'POST', body: JSON.stringify({ part_numbers: [number] }) }, workspaceId);
     const start = (number - 1) * session.part_size;
-    const response = await fetchImpl(urls.part_urls[String(number)], { method: 'PUT', body: file.slice(start, Math.min(start + session.part_size, file.size)) });
+    const body = file.slice(start, Math.min(start + session.part_size, file.size));
+    // A connection that goes silent mid-part (no reset, just nothing) left "Uploading" on screen
+    // for ever. Past a limit generous for a slow line the part counts as not sent; the parts
+    // already sent stay sent, so choosing the file again carries on from here.
+    const controller = typeof AbortController === 'undefined' ? null : new AbortController();
+    const limit = controller ? setTimeout(() => controller.abort(), partLimitMs(body.size)) : undefined;
+    let response: Response;
+    try {
+      response = await fetchImpl(urls.part_urls[String(number)], { method: 'PUT', body, ...(controller ? { signal: controller.signal } : {}) });
+    } catch (problem) {
+      if (controller?.signal.aborted) throw new Error(`Part ${number} didn’t upload. Choose the file again to carry on.`);
+      throw problem;
+    } finally {
+      if (limit !== undefined) clearTimeout(limit);
+    }
     if (!response.ok) throw new Error(`Part ${number} didn’t upload. Choose the file again to carry on.`);
     done += 1;
     onPart(done, session.part_count, resumedFrom);

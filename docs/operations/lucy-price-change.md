@@ -5,7 +5,8 @@ What to do when something that decides how far a Lucy allowance goes is about to
 change re-runs the measurement on recent data before it ships. This is a procedure, not an
 alert runbook.
 
-State on 2026-11-25: the check below is in place. No measurement has been run yet, and the
+State on 2026-11-25: the check below is in place, and so is the guard on a price changed in a
+running database (see the known gap). No measurement has been run yet, and the
 recorded baseline says so (`"measured_on": null`).
 
 ## When this applies
@@ -96,10 +97,56 @@ change what an existing database charges. After a price change in the code, the 
 must be changed too, or the baseline and production disagree.
 
 On 2026-11-25 no admin page or route changes a deployment's prices or the routing map; only
-code and operator commands can. A guard in that path is **not built yet**.
+code and operator commands can.
 
-**The manual step that covers it for now.** Before any change to a deployment row or to the
-active routing, and again after it, an operator:
+### The guard on a stored price
+
+`registry.save_deployment` is the one place a stored price is written (a test,
+`tests/test_cloud_lucy_price_guard.py`, fails if another writer appears). Whenever it would
+replace the input or output price of a row that is already there, it runs
+`src/selecta/ai/price_guard.py`:
+
+- **Any change needs a reason.** Pass `reason="..."` (and `actor_id` when a person is known).
+  Without one the save is refused with `RegistryError` and nothing is written.
+- **A change of more than 20% needs the marker.** If either price moves by more than 20% of its
+  stored value, up or down, the reason must also carry `[lm-price-change]`. The marker is your
+  word that the procedure above was followed: the measurement run again, the code and the
+  baseline changed to match. No code can know that, which is why a person says it. Exactly 20%
+  passes without the marker. A cut is held to the same rule as a rise, because it makes the
+  recorded baseline untrue just the same. The 20% figure is a judgement, set as
+  `THRESHOLD_PERCENT` in the guard: small enough that a provider's routine repricing of one
+  model is caught, large enough that correcting a rounding slip is not.
+- **Every change that goes ahead is audited.** One `audit_events` row with the action
+  `models.deployments.price_change`, the deployment as the resource, the reason, and in its
+  metadata the old and new input and output prices and whether the marker was given. It is
+  written in the same transaction as the change.
+
+For example, from an operator shell:
+
+```python
+registry.save_deployment(
+    conn, replace(stored, prices=Prices(2.2, 11.0)),
+    reason="provider list price up 10% from 2027-02-01, report 2027-02-03", actor_id=me,
+)
+```
+
+A save that leaves both prices alone (the staged rollout's share, a status, a limit) needs no
+reason. A small change still needs the procedure above; the guard only makes sure it is
+deliberate and recorded.
+
+### What the guard does not cover
+
+- **A new deployment.** Adding a row is not checked: there is no stored price to compare with,
+  and a new deployment answers no turn until routing or a staged rollout sends it some.
+- **Routing and the staged rollout.** Activating a routing version, or advancing a candidate
+  deployment's share, can move a plan onto a deployment with a different price. Neither is
+  guarded yet.
+- **The model, the per-turn cost cap and the fallback** of a stored row.
+- **A change made with SQL directly**, past the application.
+- **The reason is free text.** The guard cannot check that the measurement named in it exists.
+
+**The manual step that covers these.** Before any change to a deployment row or to the active
+routing, and again after it, an operator:
 
 1. Reads the stored figures with a read-only role:
 
@@ -118,16 +165,19 @@ active routing, and again after it, an operator:
 Do the same comparison once before each rollout step in the
 [rollout runbook](lucy-usage-rollout-runbook.md).
 
-**Where the guard should go when it is built.**
+To see what was changed and why:
 
-- In `registry.save_deployment`, or in the one admin command that is allowed to call it: compare
-  the new row with the stored one. If the model, either price, the per-turn cost cap or the
-  fallback differs (or the deployment is new and not one of the code's defaults), refuse unless
-  the caller passes the date and the report of a measurement, checked the same way as the
-  `--write` command checks them, and write both into the audit record of the change. A change to
-  the rollout percentage, the status or the evaluation date alone needs no measurement.
+```sql
+SELECT created_at, actor_id, resource_id, reason, metadata
+FROM audit_events WHERE action = 'models.deployments.price_change' ORDER BY created_at;
+```
+
+**What is still to build.**
+
 - In `registry.activate_routing_version`: if the first-choice deployment of any plan differs
-  from the active map's, require the same.
+  from the active map's, require a reason and the marker in the same way.
+- The same for a stored row's model, per-turn cost cap and fallback, and for a new deployment
+  that is not one of the code's defaults.
 - A read-only drift check that builds the same snapshot from the database (`load_deployments`
   and `active_routing`) and runs `lucy_price_baseline.diff` against the committed baseline, shown
   on the admin AI routing page and run before each rollout step, so that a database that has
@@ -140,3 +190,5 @@ Do the same comparison once before each rollout step in the
 - [Rollout runbook](lucy-usage-rollout-runbook.md)
 - [Spend ceiling hit](spend-ceiling.md), for a cost that is already running away
 - The check: `src/selecta/audit/lucy_price_baseline.py`, `tests/test_lucy_price_baseline.py`
+- The guard on a stored price: `src/selecta/ai/price_guard.py`,
+  `tests/test_cloud_lucy_price_guard.py`

@@ -68,8 +68,10 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   const [dragging, setDragging] = useState(false);
   const carriesFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes('Files');
   const dragOver = (event: DragEvent<HTMLLabelElement>) => {
-    if (blocked || !carriesFiles(event)) return;
+    if (!carriesFiles(event)) return;
+    // taken even while blocked, or the drop never reaches this zone and the browser opens the file
     event.preventDefault();
+    if (blocked) { event.dataTransfer.dropEffect = 'none'; return; }
     if (feeling && !dragging) setDragging(true);
   };
   const dragLeave = (event: DragEvent<HTMLLabelElement>) => {
