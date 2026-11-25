@@ -109,6 +109,23 @@
       "kind": "release",
       "owner": "storage"
     },
+    "cloud.hosted_render": {
+      "label": "Hosted processing",
+      "about": "For a hosted account, the server runs the local app's engine on uploaded songs: analysis at upload, the local planner's order, rendered transitions placed the local app's way, a lossless playback file per song and a rendered export (selecta.hosted_render). Off: uploads are stored and play as before, unprocessed.",
+      "routes": [
+        "GET /api/hosted/songs",
+        "POST /api/hosted/songs/prepare",
+        "POST /api/hosted/mixes/plan",
+        "POST /api/hosted/mixes/render",
+        "POST /api/hosted/mixes/export",
+        "GET /api/hosted/exports/{job_id}"
+      ],
+      "requires": ["cloud.hosted_media", "cloud.stored_media"],
+      "surfaces": ["cloud.library", "cloud.listen"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.local_first": {
       "label": "Browser-first personal Cloud",
       "about": "Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455).",
@@ -429,7 +446,8 @@
         "POST /api/playback/start-asks",
         "PUT /api/devices/default-speaker",
         "POST /api/playback/start-asks/{ask_id}/answer",
-        "POST /api/playback/commands/{command_id}/ack"
+        "POST /api/playback/commands/{command_id}/ack",
+        "GET /api/playback/commands/{command_id}"
       ],
       "requires": ["devices"],
       "surfaces": ["cloud.listen"],
@@ -656,6 +674,14 @@
           "PUT /api/admin/customers/{user_id}/storage-mode",
           "GET /api/admin/customers/{user_id}/flags",
           "PUT /api/admin/customers/{user_id}/flags/{flag_id}",
+          "GET /api/admin/customers/{user_id}/stripe",
+          "POST /api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-at-period-end",
+          "POST /api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-now",
+          "POST /api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/retry",
+          "POST /api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/refund",
+          "POST /api/admin/customers/{user_id}/portal-link",
+          "GET /api/admin/customers/{user_id}/sign-ins",
+          "POST /api/admin/customers/{user_id}/sign-ins/{session_id}/revoke",
           "POST /api/admin/customers/{user_id}/{command}",
           "POST /api/admin/overrides/mass/dry-run",
           "GET /api/admin/billing",

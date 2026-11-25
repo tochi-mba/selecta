@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { MixData, Request } from '../api';
+import { MOVE_NOW_EVENT, MOVE_OFFER_EVENT, moveWords, type MoveOffer } from '../devices/controller';
 import { showToast } from '../ui/toasts';
 import { onReconnect } from './connection';
 import { conflictWords, CURRENT_MIX_CONFLICT, CURRENT_MIX_EVENT, type AccountCurrent } from './currentMix';
@@ -15,10 +16,13 @@ import type { RecipeStore } from './recipeStore';
 // - The device that made a mix while another device plays is asked whether to play it there now
 //   ("Play on {speaker} now") or later.
 // - A choice that lost to another device's at the same moment says so once.
+// - I85: a Library song the speaker lacks but another open device holds asks "Move the music
+//   there?": Move and play puts it first in the current mix and asks that device to play it;
+//   Add it later puts it at the end of the current mix, for when the music is there.
 
 type Device = { device_id: string; name: string };
 
-export function useAccountMix({ recipes, request, refreshMix, setMixData, audibleHere, playHere, askToPlay }: {
+export function useAccountMix({ recipes, request, refreshMix, setMixData, audibleHere, playHere, askToPlay, devices }: {
   recipes: RecipeStore;
   request: Request;
   refreshMix: () => void;
@@ -28,10 +32,49 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
   /** Start this device's current mix from the top, here. */
   playHere: () => void;
   /** Ask another device to play a saved mix (ADR-0475 R2). */
-  askToPlay: (device: Device, mixId: string | null) => void;
+  askToPlay: (device: Device, mixId: string | null, move?: boolean) => void;
+  /** The person's devices, to find the one an offer names. */
+  devices?: () => readonly Device[];
 }): { banner: ReactNode; offerLater: (device: Device) => void; clearOffers: () => void } {
   const [arrived, setArrived] = useState<{ mixId: string; by: string | null } | null>(null);
   const [later, setLater] = useState<{ device: Device; mixId: string | null } | null>(null);
+  const [move, setMove] = useState<MoveOffer | null>(null);
+  useEffect(() => {
+    const offered = (event: Event) => { const offer = (event as CustomEvent<MoveOffer>).detail; if (offer) setMove(offer); };
+    window.addEventListener(MOVE_OFFER_EVENT, offered);
+    return () => window.removeEventListener(MOVE_OFFER_EVENT, offered);
+  }, []);
+  const moveOn = useCallback(async (offer: MoveOffer, play: boolean) => {
+    setMove(null);
+    try {
+      if (play) {
+        // the song first, then the speaker's song and what followed it, as a mix of its own
+        const songs = [offer.songId, ...offer.programme.filter((id) => id !== offer.songId)];
+        const made = await recipes.create(`Moved to ${offer.device}`, songs);
+        const device = devices?.().find((one) => one.name === offer.device);
+        if (!device) { showToast(`${offer.device} isn’t open right now. Open SelectaDJ on it.`, { tone: 'problem' }); return; }
+        recipes.setCurrent(made.mix_id);
+        askToPlay(device, made.mix_id, true);
+        return;
+      }
+      // at the end of the current mix, for when the music is on that device
+      const current = recipes.current();
+      const read = current ? await recipes.read(current) : null;
+      if (read) await recipes.edit(read.mix_id, read.revision, { songIds: [...read.songs.map((one) => one.song_id), offer.songId] });
+      else recipes.setCurrent((await recipes.create(`For ${offer.device}`, [offer.songId])).mix_id);
+      refresh.current();
+      showToast(`${offer.title} is in your mix for when the music is on ${offer.device}.`);
+    } catch {
+      showToast(`${offer.title} couldn’t be added. Try again.`, { tone: 'problem' });
+    }
+  }, [askToPlay, devices, recipes]);
+  const moveNow = useRef(moveOn);
+  moveNow.current = moveOn;
+  useEffect(() => {
+    const chosen = (event: Event) => { const offer = (event as CustomEvent<MoveOffer>).detail; if (offer) void moveNow.current(offer, true); };
+    window.addEventListener(MOVE_NOW_EVENT, chosen);
+    return () => window.removeEventListener(MOVE_NOW_EVENT, chosen);
+  }, []);
   const audible = useRef(audibleHere);
   audible.current = audibleHere;
   const refresh = useRef(refreshMix);
@@ -43,6 +86,11 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
     let live = true;
     const take = (value: AccountCurrent) => {
       if (!live) return;
+      // An older value than the one already seen (the event stream replays its history to a
+      // device that has just connected) is not the account's now: taking it would make this
+      // browser tell the account an old mix is current, and the speaker hear "made a new mix"
+      const known = account.seen();
+      if (known && value.revision < known.revision) return;
       account.heard(value);
       if (value.mix_id === recipes.current()) return;
       if (audible.current) {
@@ -91,6 +139,13 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
           <span className="asked-to-play-words">{arrived.by ?? 'Another device'} made a new mix.</span>
           <button className="primary" onClick={() => void playArrived()}>Play it now</button>
           <button onClick={() => setArrived(null)}>Keep playing</button>
+        </p>
+      )}
+      {move && (
+        <p className="asked-to-play" role="status" data-testid="move-offer">
+          <span className="asked-to-play-words">{moveWords(move)}</span>
+          <button className="primary" onClick={() => void moveOn(move, true)}>Move and play</button>
+          <button onClick={() => void moveOn(move, false)}>Add it later</button>
         </p>
       )}
       {later && (

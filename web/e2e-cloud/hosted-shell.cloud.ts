@@ -3,7 +3,7 @@ import { rewriteJson } from '../e2e/helpers';
 import { accessible, listener, signedIn } from './cloud';
 
 // `cloud.hosted_shell` (one shell): with it on, a hosted account's pages render inside the shared
-// shell (Main navigation, More, the page in its own Section) with no browser engine loaded; with
+// shell (Main navigation, the account menu, the page in its own Section) with no browser engine loaded; with
 // it off, the legacy rail is exactly the markup it was before the flag existed.
 //
 // The build ships the flag dark and a per-user rule can never grant past the build (ADR-0414), so
@@ -50,7 +50,7 @@ test('with cloud.hosted_shell off, the legacy rail is byte for byte what it was'
   await page.getByRole('button', { name: 'Delete account', exact: true }).click();
   const dialog = page.getByRole('alertdialog', { name: 'Delete your SelectaDJ Cloud account?' });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText('Final erasure happens after the 30 day recovery window');
+  await expect(dialog).toContainText('It is erased for good after 30 days');
   await dialog.getByRole('button', { name: 'Keep my account' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('aside.cloud-rail')).toBeVisible();
@@ -72,17 +72,20 @@ test('with cloud.hosted_shell on, the hosted pages render in the shared shell, e
   await expect(page.locator('aside.cloud-rail')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 
-  // a hosted page through the shared navigation, then an account place through More
+  // a hosted page through the shared navigation, then an account place through the account menu
   await nav.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(page).toHaveURL(/\/library$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
-  await nav.getByRole('button', { name: 'More' }).first().click();
-  const more = page.getByRole('navigation', { name: 'More' });
-  for (const name of ['Account', 'Plan & billing', 'Add music']) await expect(more.getByRole('link', { name })).toBeVisible();
-  await more.getByRole('link', { name: 'Account' }).click();
+  // on a computer the account places sit in the account menu at the rail's foot (cb8404dc); More
+  // is the phone's
+  await expect(nav.getByRole('link', { name: 'Add music', exact: true })).toBeVisible();
+  await nav.getByRole('button', { name: /^Account:/ }).click();
+  const menu = page.getByRole('menu', { name: 'Account' });
+  for (const name of ['Account', 'Plan & billing']) await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible();
+  await menu.getByRole('menuitem', { name: 'Account', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Signed in as' })).toContainText(`${user}@example.test`);
-  await expect(page.getByRole('button', { name: 'Delete account…' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Delete account', exact: true })).toBeVisible();
 
   // the bundle boundary on the real build: every page and place visited has drawn, so every chunk
   // it needed has loaded; none of them carries the engine (the live stream keeps the network busy,

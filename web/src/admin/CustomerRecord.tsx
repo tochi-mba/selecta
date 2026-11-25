@@ -5,6 +5,8 @@ import { useLoad } from './parts';
 import { adminPath, go } from './route';
 import { ActionButton, careful, REASONS, useConsole, write } from './safety';
 import { StorageMode } from './StorageMode';
+import { SignInsPanel } from './SignIns';
+import { StripeLive } from './StripeLive';
 import { AdminTable, Badge, CopyId, Empty, Problem, Section, Skeleton, Time, words } from './ui';
 
 type Customer = {
@@ -20,12 +22,12 @@ type Customer = {
   devices?: { id: string; name: string | null; kind: string | null; last_seen_at: number | null; signed_out_at: number | null }[];
   rooms?: { open: number; total: number };
   lucy?: { turns_30d: number };
-  jobs?: { id: string; type: string; state: string; error_class: string | null; created_at: number }[];
+  jobs?: { id: string; type: string; state: string; error_class: string | null; created_at: number; waiting_reason?: string | null }[];
   activity: { id: string; created_at: number; actor_email: string | null; actor_id: string; action: string; result: string; reason: string | null }[];
   notes: { id: string; author: string; body: string; created_at: number }[];
 };
 
-const TABS = [['overview', 'Overview'], ['configuration', 'Configuration'], ['billing', 'Billing'], ['devices', 'Devices and rooms'], ['activity', 'Staff activity'], ['notes', 'Notes']] as const;
+const TABS = [['overview', 'Overview'], ['configuration', 'Configuration'], ['billing', 'Billing'], ['devices', 'Devices and rooms'], ['sign-ins', 'Sign-ins'], ['activity', 'Staff activity'], ['notes', 'Notes']] as const;
 const SOURCE: Record<string, string> = { stripe: 'a paid subscription', override: 'a staff override', grace: 'payment grace', default: 'the free plan', free: 'the free plan' };
 
 /** One customer (Stripe's customer page shape): identity and the main actions on top, the
@@ -74,10 +76,11 @@ export function CustomerRecord({ userId, tab }: { userId: string; tab: string })
       </nav>
       <div className="admin-record-body">
         <div className="admin-record-main">
-          {tab === 'overview' && <Overview r={r} userId={userId} onChange={reload} />}
+          {tab === 'overview' && <><Overview r={r} userId={userId} onChange={reload} /><Jobs r={r} /></>}
           {tab === 'configuration' && <StorageMode api={ctx.api} userId={userId} canChange={ctx.can('accounts.configure') && ctx.changesUntil !== null} />}
-          {tab === 'billing' && <Billing r={r} />}
+          {tab === 'billing' && <><StripeLive userId={userId} email={email} /><Billing r={r} /></>}
           {tab === 'devices' && <Devices r={r} />}
+          {tab === 'sign-ins' && <SignInsPanel userId={userId} />}
           {tab === 'activity' && <Activity r={r} />}
           {tab === 'notes' && <Notes r={r} userId={userId} onChange={reload} />}
         </div>
@@ -138,9 +141,19 @@ function Overview({ r, userId, onChange }: { r: Customer; userId: string; onChan
   );
 }
 
+function Jobs({ r }: { r: Customer }) {
+  return (
+    <Section title="Recent jobs" help="Background work for this customer: analysis, renders, exports.">
+      <AdminTable caption="Recent jobs" rows={r.jobs ?? []} rowKey={(j) => j.id} empty={<Empty title="No jobs.">Browser accounts mostly do their work in the browser.</Empty>}
+        cols={[{ key: 'type', label: 'Job', render: (j) => words(j.type) }, { key: 'state', label: 'State', render: (j) => <>{words(j.state)}{j.waiting_reason && <> <small className="admin-warning">{j.waiting_reason}</small></>}</> },
+          { key: 'error_class', label: 'Error', render: (j) => j.error_class ?? '' }, { key: 'created_at', label: 'Started', render: (j) => <Time at={j.created_at} /> }]} />
+    </Section>
+  );
+}
+
 function Billing({ r }: { r: Customer }) {
   return (
-    <Section title="Subscriptions" help="Our copy of Stripe. Refunds, invoices and card details are in Stripe: use Open in Stripe.">
+    <Section title="Our copy of Stripe" help="What our database has from Stripe's webhooks. If it disagrees with Stripe, live, above, Stripe is right.">
       <AdminTable caption="Subscriptions" rows={r.subscriptions ?? []} rowKey={(s) => s.stripe_subscription_id} empty={<Empty title="No subscription.">This customer has never paid; they are on the free plan or a staff override.</Empty>}
         cols={[{ key: 'stripe_subscription_id', label: 'Subscription', render: (s) => <CopyId id={s.stripe_subscription_id} label="subscription id" /> }, { key: 'status', label: 'Status', render: (s) => <Badge tone={s.status === 'active' ? 'ok' : 'warn'}>{words(s.status)}</Badge> },
           { key: 'current_period_end', label: 'Renews', render: (s) => s.cancel_at_period_end ? <>Ends <Time at={s.current_period_end} /></> : <Time at={s.current_period_end} /> },

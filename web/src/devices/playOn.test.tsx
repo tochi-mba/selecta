@@ -32,7 +32,7 @@ describe('asking another device to play', () => {
     expect(hook.result.current.state).toMatchObject({ phase: 'asking', device: 'Laptop' });
     hear(START_ANSWER_EVENT, answer('needs_gesture'));
     expect(hook.result.current.state?.phase).toBe('needs_gesture');
-    expect(askWords('needs_gesture', 'Laptop')).toBe('Laptop needs one press of Play. Press Play on Laptop to allow sound.');
+    expect(askWords('needs_gesture', 'Laptop')).toBe('Waiting for a tap on Laptop. Press Play there to allow sound.');
     // the press happens there, and the same ask is answered again
     hear(START_ANSWER_EVENT, answer('starting'));
     expect(hook.result.current.state?.phase).toBe('starting');
@@ -113,7 +113,7 @@ describe('Listen on a device with no music while nothing plays', () => {
 
   it('shows what the other device said while it is being asked', () => {
     render(<ControllerListen mixName="Friday mix" mixSongs={12} devices={[device('laptop', 'Laptop', 12, true)]} thisDeviceId="phone" now={1_000} asking={{ phase: 'needs_gesture', device: 'Laptop', deviceId: 'laptop' }} onPlayOn={vi.fn()} />);
-    expect(screen.getByTestId('play-on-status')).toHaveTextContent('Laptop needs one press of Play. Press Play on Laptop to allow sound.');
+    expect(screen.getByTestId('play-on-status')).toHaveTextContent('Waiting for a tap on Laptop. Press Play there to allow sound.');
     expect(screen.getByTestId('play-on')).toBeEnabled();
   });
 });

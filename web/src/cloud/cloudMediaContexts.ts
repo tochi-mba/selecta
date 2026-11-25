@@ -42,6 +42,10 @@ export const CLOUD_MEDIA_CONTEXTS: MediaContext[] = [
     owner: 'Harmonic matches preview: plays a short excerpt of each side of a match on a press, then stops. Never plays alongside the mix by itself.',
   },
   {
+    file: 'cloud/hosted/timelinePlayer.ts', count: 1, kind: 'audio context',
+    owner: 'The hosted mix player (cloud.hosted_render): made on Play, stopped on Stop, closed when the card goes. Plays only when the person presses Play on a server-rendered mix.',
+  },
+  {
     file: 'cloud/BrowserDiagnostics.tsx', count: 1, kind: 'audio context',
     owner: 'Workspace > Diagnostics capability check: made inside the press, probed and closed at once. Silent; never takes focus.',
   },

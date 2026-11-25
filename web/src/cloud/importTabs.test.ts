@@ -4,7 +4,7 @@ import {
   cancelImportSession, clearImportSession, IDLE_IMPORT, importMarkerKey, importSnapshot, readImportMarker, startImportSession,
 } from './importSession';
 import type { ImportRunner } from './importSession';
-import { askImportCancel, claimImport, followImport } from './importTabs';
+import { askImportCancel, claimImport, followImport, importingElsewhere } from './importTabs';
 
 // One import per workspace across tabs (cloud.resilient_import): a Web Lock makes one tab the
 // importer; any other follows over a BroadcastChannel and never deletes the first one's record.
@@ -90,6 +90,17 @@ describe('importTabs', () => {
     expect(await claimImport('ws-2')).not.toBeNull();
     first!.release();
     await flush();
+    expect(await claimImport('ws-1')).not.toBeNull();
+  });
+
+  it('says whether another tab is importing for this workspace, without taking the claim', async () => {
+    expect(await importingElsewhere('ws-1')).toBe(false);
+    const claim = (await claimImport('ws-1'))!;
+    expect(await importingElsewhere('ws-1')).toBe(true);
+    expect(await importingElsewhere('ws-2')).toBe(false);
+    claim.release();
+    await flush();
+    expect(await importingElsewhere('ws-1')).toBe(false);
     expect(await claimImport('ws-1')).not.toBeNull();
   });
 

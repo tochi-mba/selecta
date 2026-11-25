@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { endRooms, hostWithRoom } from './helpers';
+import { endRooms, hostWithRoom, refused, roomOption, said } from './helpers';
 
 // SC-0416-05: a TV shows a pairing code; once the host types it, the TV shows the room's QR
 // code, what's playing and the requests coming up, and it keeps working when the host makes a
@@ -19,18 +19,19 @@ test('a paired display shows the room and survives a new code', async ({ browser
   // A wrong code is refused and the screen stays unpaired.
   await host.getByLabel('Code on the screen').fill('AAA-AAA');
   await host.getByRole('button', { name: 'Pair screen' }).click();
-  await expect(host.locator('.room-error')).toHaveText("That display code isn't showing anywhere. Check the screen.");
+  await expect(refused(host, "That display code isn't showing anywhere. Check the screen.")).toBeVisible();
 
   await host.getByLabel('Code on the screen').fill(pairing);
   await host.getByRole('button', { name: 'Pair screen' }).click();
-  await expect(host.locator('.room-said')).toHaveText('Screen paired.');
+  await expect(said(host, 'Screen paired.')).toBeVisible();
 
   const qr = screen.locator('#d-qr');
   await expect(qr).toHaveAttribute('data-link', `${baseURL}${joinPath}`, { timeout: 15_000 });
   await expect(qr.locator('svg')).toBeVisible();
   await expect(screen.getByRole('heading', { name: 'Garden party' })).toBeVisible();
   await expect(screen.getByText('Scan to request a song')).toBeVisible();
-  await expect(screen.getByText("The music's paused.")).toBeVisible();
+  // no device is playing yet: the screen is led by what's playing, and says nothing is (f3ee73dc)
+  await expect(screen.locator('#d-now')).toContainText('Nothing playing yet');
   await expect(screen.locator('#d-upcoming')).toContainText('No requests yet');
 
   // A guest's request shows up on the big screen.
@@ -38,17 +39,20 @@ test('a paired display shows the room and survives a new code', async ({ browser
   const guest = await phone.newPage();
   await guest.goto(joinPath);
   await guest.getByRole('button', { name: 'Join the room' }).click();
-  await guest.getByLabel("Search the host's songs").fill('Song 7');
-  await guest.getByRole('button', { name: 'Choose Song 7 - Artist 0' }).click();
+  await guest.getByRole('searchbox', { name: 'Request a song' }).fill('Song 7');
+  await guest.getByRole('button', { name: 'Add Song 7 - Artist 0' }).click();
   await guest.getByRole('button', { name: 'Send request', exact: true }).click();
-  await expect(screen.locator('#d-upcoming')).toContainText('Song 7 - Artist 0', { timeout: 15_000 });
+  // the title and the artist on their own lines
+  const asked = screen.locator('#d-upcoming li', { hasText: 'Song 7' });
+  await expect(asked).toBeVisible({ timeout: 15_000 });
+  await expect(asked).toContainText('Artist 0');
 
   // A new code: the old one stops working, and the paired screen shows the new QR by itself.
-  await host.getByRole('button', { name: 'Make a new code' }).click();
+  await roomOption(host, 'Make a new code');
   const ask = host.getByRole('alertdialog', { name: 'Make a new code?' });
   await expect(ask).toContainText('The old QR code stops working the moment the new one exists.');
   await ask.getByRole('button', { name: 'Make a new code', exact: true }).click();
-  await expect(host.locator('.room-said')).toContainText('New code made');
+  await expect(said(host, 'New code made')).toBeVisible();
   const fresh = (await host.getByTestId('room-code').textContent()) ?? '';
   const freshPath = `/r/${fresh.replace('-', '')}`;
   expect(freshPath).not.toBe(joinPath);
@@ -62,7 +66,7 @@ test('a paired display shows the room and survives a new code', async ({ browser
   expect(viaDisplay.status()).toBe(401);
 
   // Ending the room ends the display.
-  await host.getByRole('button', { name: 'Close room' }).click();
+  await roomOption(host, 'Close room');
   await host.getByRole('alertdialog', { name: 'Close Garden party?' }).getByRole('button', { name: 'Close room' }).click();
   await expect(screen.getByRole('heading', { name: /has ended/ })).toBeVisible({ timeout: 15_000 });
   await Promise.all([phone.close(), tv.close(), hostContext.close()]);

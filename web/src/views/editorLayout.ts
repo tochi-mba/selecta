@@ -6,8 +6,9 @@ import { above, below } from '../styles/breakpoints';
  *  - `sheet`: one column; an opened song or transition rises from the bottom (a phone, up to 640px)
  *  - `panes`: the list and the opened song or transition side by side (wider than 640px, or a phone
  *    on its side, under 500px tall)
- *  - `classic`: the editor as it was (the flag is off, or a wide window with the transition inspector,
- *    whose Arrange, Story and Detail views already fit it)
+ *  - `classic`: the editor as it was: the flag is off, or the transition inspector is on (the local
+ *    app, which renders every transition and keeps its Arrange, Story and Detail views, its inspector,
+ *    Studio and their small-screen promises at every size)
  * Decided by the window's size alone, never by which device it is (window size classes). */
 export type EditorLayout = 'sheet' | 'panes' | 'classic';
 
@@ -22,11 +23,11 @@ function matches(query: string): boolean {
 }
 
 export function layoutFor(inspector: boolean): EditorLayout {
+  if (inspector) return 'classic';
   // Each layout needs its own query to say yes, so no answer at all (a test page, an old browser, a
   // stub that answers no to everything) keeps the editor as it was.
   if (matches(COMPACT)) return 'sheet';
-  if (matches(SHORT) || matches(NARROWER)) return 'panes';
-  if (matches(WIDE) && !inspector) return 'panes';
+  if (matches(SHORT) || matches(NARROWER) || matches(WIDE)) return 'panes';
   return 'classic';
 }
 

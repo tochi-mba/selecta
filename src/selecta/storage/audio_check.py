@@ -132,6 +132,27 @@ def _skip_id3(head: bytes) -> bytes:
     return head
 
 
+def read_head(handle, size: int) -> bytes:
+    """The first `SNIFF_BYTES` of the audio itself: any ID3v2 tags at the start are skipped by
+    their declared size, because embedded cover art often makes a tag longer than the sniff
+    window, which would otherwise leave no audio bytes to recognise (a real MP3 refused)."""
+    offset = 0
+    for _ in range(4):  # a few stacked tags at most
+        handle.seek(offset)
+        tag = handle.read(10)
+        if len(tag) < 10 or tag[:3] != b"ID3":
+            break
+        length = 0
+        for byte in tag[6:10]:
+            length = (length << 7) | (byte & 0x7F)
+        end = offset + 10 + length + (10 if tag[5] & 0x10 else 0)
+        if end >= size:
+            break
+        offset = end
+    handle.seek(offset)
+    return handle.read(SNIFF_BYTES)
+
+
 def sniff(head: bytes) -> str | None:
     """The audio format the first bytes say, or None. Names and extensions are never used."""
     if len(head) >= 12 and head[:4] == b"RIFF" and head[8:12] == b"WAVE":
@@ -334,7 +355,7 @@ def inspect(path: str, limits: Limits) -> dict[str, Any]:
     if size > limits.max_file_bytes:
         raise Rejected(TOO_LARGE)
     with open(path, "rb") as handle:
-        head = handle.read(SNIFF_BYTES)
+        head = read_head(handle, size)
     sniffed = sniff(head)
     if sniffed is None:
         raise Rejected(NOT_AUDIO)

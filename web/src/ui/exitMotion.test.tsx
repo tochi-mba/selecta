@@ -101,7 +101,7 @@ describe('overlays, menus, tooltips, popovers and toasts on their way out', () =
   it('an overlay fades as an inert copy while focus is already back on the page', async () => {
     withKeyframes();
     render(<DialogHarness />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close Details' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close' })); });
     expect(screen.queryByRole('dialog')).toBeNull();
     const ghost = document.querySelector<HTMLElement>('.overlay[data-closing]')!;
     expect(ghost).toBeTruthy();
@@ -115,7 +115,7 @@ describe('overlays, menus, tooltips, popovers and toasts on their way out', () =
 
   it('an overlay leaves no copy at all when nothing animates', async () => {
     render(<DialogHarness />);
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close Details' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close' })); });
     expect(document.querySelector('.overlay')).toBeNull();
   });
 

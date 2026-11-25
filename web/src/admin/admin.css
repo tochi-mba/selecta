@@ -108,7 +108,8 @@
 .admin-irreversible { border-left: var(--radius-hair) solid var(--danger); padding-left: var(--space-2); color: var(--danger); }
 .admin-id { display: inline-flex; gap: var(--space-1); align-items: center; }
 .admin-id code { font-family: var(--mono); font-size: var(--text-sm); }
-.admin-icon-button { min-height: auto; padding: 0 var(--space-1); font-size: var(--text-xs); }
+/* the "What is this?" button: small, but at least the 24px target WCAG 2.5.8 asks for */
+.admin-icon-button { min-height: 24px; min-width: 24px; padding: 0 var(--space-1); font-size: var(--text-xs); }
 .admin-whats { display: inline-flex; gap: var(--space-1); align-items: baseline; font-weight: var(--weight-body); }
 .admin-whats-text { font-size: var(--text-sm); color: var(--text-soft); max-width: var(--content-reading); }
 .admin-empty { padding: var(--space-3) 0; }
@@ -203,10 +204,11 @@
 @media (max-width: 900px) {
   .admin-record-body { grid-template-columns: 1fr; }
 }
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .admin-shell { grid-template-columns: 1fr; }
-  .admin-nav { flex-direction: row; overflow-x: auto; padding: var(--space-2) var(--gutter); border-right: 0; border-bottom: var(--separator) solid var(--edge-decorative); }
-  .admin-nav a { white-space: nowrap; }
+  .admin-nav { flex-direction: row; flex-wrap: wrap; overflow-x: visible; padding: var(--space-2) var(--gutter); border-right: 0; border-bottom: var(--separator) solid var(--edge-decorative); }
+  /* a row of page links on a phone: each a 44px target, as the shell's own touch targets */
+  .admin-nav a { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; }
   .admin-brand { display: none; }
   .admin-nav button { margin-top: 0; white-space: nowrap; }
   .admin-top { flex-direction: column; align-items: start; }
@@ -214,3 +216,22 @@
 }
 .admin-role-card input { justify-self: start; min-height: auto; }
 .admin-inline-form > button, .admin-inline-form > .admin-action { align-self: end; }
+/* The sidebar stays in view and Leave console never scrolls away (sticky at its bottom). */
+.admin-nav { position: sticky; top: var(--space-5); align-self: start; max-height: calc(100vh - var(--space-5)); overflow-y: auto; }
+.admin-leave { position: sticky; bottom: 0; margin-top: auto; background: var(--surface-panel); }
+@media (max-width: 768px) {
+  .admin-nav { position: static; max-height: none; }
+  .admin-leave { position: sticky; right: 0; bottom: auto; }
+}
+.admin-dry-run { display: grid; gap: var(--space-2); padding: var(--space-3); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); }
+/* Nothing may push the page wider than the screen: the content column can shrink to zero. */
+.admin-shell { grid-template-columns: minmax(180px, 220px) minmax(0, 1fr); }
+.data-table-wrap { max-width: 100%; overflow-x: auto; }
+@media (max-width: 768px) {
+  .admin-shell { grid-template-columns: minmax(0, 1fr); }
+}
+.admin-kpi strong { font: inherit; font-size: var(--text-xl); font-weight: var(--weight-strong); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.admin-role-card p { margin: 0; }
+.admin-headline { font-size: var(--text-lg); }
+.admin-nav { height: calc(100vh - var(--space-5)); max-height: none; }
+@media (max-width: 768px) { .admin-nav { height: auto; } }

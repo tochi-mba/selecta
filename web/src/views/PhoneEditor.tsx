@@ -12,7 +12,7 @@ import { TransitionsWorkedOutLive } from './editorMode';
 import { MixMap } from './MixMap';
 import { HEAR_LEAD, LiveTransitionPanel, SongPanel } from './PhonePanels';
 import { PhoneSheet } from './PhoneSheet';
-import { PhoneStory } from './PhoneStory';
+import { PhoneStory, takeFocus } from './PhoneStory';
 import './phoneEditor.css';
 
 export type PhoneEditorProps = {
@@ -182,7 +182,7 @@ export function PhoneEditor(props: PhoneEditorProps) {
         <div className="pe-actions">
           {primary}
           {undo}
-          <button type="button" className="pe-more" aria-haspopup="dialog" onClick={() => setShowMore(true)}><Icon name="more" /> Mix actions</button>
+          <button type="button" className="pe-more" aria-haspopup="dialog" onClick={(event) => { takeFocus(event); setShowMore(true); }}><Icon name="more" /> Mix actions</button>
         </div>
       </header>
       {below}
@@ -217,7 +217,7 @@ export function PhoneEditor(props: PhoneEditorProps) {
             list={list}
             requests={!inDraft}
           />
-          <button type="button" className="pe-add" onClick={() => setAdding(keys[keys.length - 1])}><Icon name="plus" /> Add songs</button>
+          <button type="button" className="pe-add" onClick={(event) => { takeFocus(event); setAdding(keys[keys.length - 1]); }}><Icon name="plus" /> Add songs</button>
         </section>
         {layout === 'panes' && (
           <aside className="pe-pane" aria-label={panel ? panelTitle : 'Nothing open'}>
@@ -225,7 +225,7 @@ export function PhoneEditor(props: PhoneEditorProps) {
               <>
                 <div className="pe-pane-head">
                   <h2 dir="auto">{panelTitle}</h2>
-                  <button type="button" className="pe-icon-button" aria-label={`Close ${panelTitle}`} title="Close" onClick={close}><Icon name="close" /></button>
+                  <button type="button" className="pe-icon-button" aria-label="Close" title="Close" onClick={close}><Icon name="close" /></button>
                 </div>
                 {panel}
               </>

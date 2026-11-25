@@ -24,13 +24,13 @@ const tv = (id: string, label: string, online: boolean, lastSeen: number | null)
 let current: Answer;
 let calls: { path: string; method: string }[];
 
-function mount() {
+function mount(locked?: string) {
   const api = vi.fn(async (path: string, init: RequestInit = {}) => {
     calls.push({ path, method: init.method ?? 'GET' });
     if (path === '/rooms/current') return { room: current };
     return current;
   }) as never;
-  return render(<><RoomPanel api={api} workspaceId="ws-1" origin="https://app.test" /><Toaster /></>);
+  return render(<><RoomPanel api={api} workspaceId="ws-1" origin="https://app.test" locked={locked} /><Toaster /></>);
 }
 // the Guests card heads its list with "N here" and, when anyone is away, "· N away"
 const guestCount = () => screen.getByTestId('room-guests-heading').nextElementSibling as HTMLElement;
@@ -215,5 +215,18 @@ describe('room panel actions', () => {
     await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await vi.advanceTimersByTimeAsync(0); });
     expect(reads()).toBe(before + 1);
     hidden.mockRestore();
+  });
+});
+
+describe('a host who downgraded mid-party', () => {
+  it('keeps the open room, says why no new one can open, and shows the offer only once it ends', async () => {
+    current = panel();
+    mount('premium');
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole('heading', { name: 'Garden party' })).toBeInTheDocument();
+    expect(screen.getByTestId('room-after-downgrade')).toHaveTextContent('Your plan no longer includes Rooms. This room stays open until it ends; opening a new one needs Premium.');
+    current = null as unknown as Answer;
+    await poll();
+    expect(screen.getByText(/Rooms are part of Premium/)).toBeInTheDocument();
   });
 });

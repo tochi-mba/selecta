@@ -9,6 +9,7 @@ import zipfile
 from cloud_world import HEADERS, add_asset, signed_up
 
 from selecta.persistence import db_now, new_id, transaction
+from selecta.playback.default_speaker_schema import playback_default_speakers
 from selecta.playback.schema import devices, playback_sessions
 
 SONG = b"an original, byte for byte" * 40
@@ -44,11 +45,12 @@ def test_the_settings_json_carries_plan_lucy_choices_and_devices(tmp_path, monke
             json={"enabled": False, "phases": {"voice": True}, "privacy": {"share_lyrics": True}},
         )
         assert saved.status_code == 200, saved.text
+        laptop_id = new_id()
         with transaction(world.engine, world.workspace_id) as conn:
             now = db_now(conn)
             conn.execute(
                 devices.insert().values(
-                    id=new_id(),
+                    id=laptop_id,
                     workspace_id=world.workspace_id,
                     user_id=world.user_id,
                     name="Kitchen laptop",
@@ -58,8 +60,15 @@ def test_the_settings_json_carries_plan_lucy_choices_and_devices(tmp_path, monke
                     last_seen_at=now,
                 )
             )
+            # ADR-0475 C20: the default speaker is part of the export
+            conn.execute(
+                playback_default_speakers.insert().values(
+                    workspace_id=world.workspace_id, device_id=laptop_id, set_at=now
+                )
+            )
         with _archive(world) as archive:
             settings = json.loads(archive.read("settings.json"))
+        assert settings["devices"][0]["default_speaker"] is True
         assert settings["account"]["timezone"] == "Europe/London"
         assert settings["plan"]["id"] == "free"
         assert settings["lucy"]["enabled"] is False

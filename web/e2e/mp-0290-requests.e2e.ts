@@ -67,7 +67,7 @@ test('MP-0290-01 title, search, close and the request list fit phone and desktop
     const panel = await rect(drawer);
     expect(panel.left).toBeGreaterThanOrEqual(-1);
     expect(panel.right).toBeLessThanOrEqual(width + 1);
-    const close = drawer.getByRole('button', { name: 'Close Requests', exact: true });
+    const close = drawer.getByRole('button', { name: 'Close', exact: true });
     const title = drawer.locator('.overlay-head h2, .overlay-title, h2').first();
     const search = drawer.getByRole('combobox', { name: 'Request a song' });
     for (const [name, part] of [['title', title], ['close', close], ['search', search], ['list', drawer.locator('.request-list')]] as const) {
@@ -273,7 +273,7 @@ test('MP-0290-07 (automated part) the player and toasts never cover the drawerâ€
       drawer.getByRole('button', { name: 'No, keep waiting' }),
       drawer.getByRole('button', { name: 'Add to mix anyway' }),
       ...rows.map((row) => drawer.getByRole('button', { name: `Cancel request for ${row.title}` })),
-      drawer.getByRole('button', { name: 'Close Requests', exact: true }),
+      drawer.getByRole('button', { name: 'Close', exact: true }),
     ];
     for (const action of actions) {
       await action.scrollIntoViewIfNeeded();

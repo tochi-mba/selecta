@@ -47,6 +47,7 @@ from selecta.playback.model import (
 from selecta.playback.ports import NO_EVENTS, PlaybackEvents
 from selecta.playback.schema import COMMAND_ACK_RESULTS, playback_commands
 from selecta.playback.store import (
+    load_session,
     lock_session,
     require_signed_in,
     resolve_now,
@@ -221,7 +222,65 @@ def ack_command(
         )
 
 
+@dataclass(frozen=True)
+class CommandOutcome:
+    """What became of one press, as the device that sent it may read it (ADR-0475 G3, 68)."""
+
+    command_id: str
+    command: str
+    status: str
+    applied_seq: int | None
+    ack_result: str | None
+    acked_at: float | None
+    # The speaker has reported where it is since this press, at this press's state: it followed
+    # the session even if its ack has not arrived (the ack rides the event stream)
+    followed: bool = False
+
+
+def command_outcome(
+    engine: Engine, workspace_id: str, device_id: str, command_id: str
+) -> CommandOutcome:
+    """The press's status and whether the speaker has said it carried it out. Only the device
+    that sent the press may read it; anyone else's looks exactly like one that never existed."""
+    with transaction(engine, workspace_id) as conn:
+        row = (
+            conn.execute(
+                sa.select(
+                    playback_commands.c.command,
+                    playback_commands.c.status,
+                    playback_commands.c.applied_seq,
+                    playback_commands.c.ack_result,
+                    playback_commands.c.acked_at,
+                    playback_commands.c.zone_id,
+                    playback_commands.c.created_at,
+                ).where(
+                    playback_commands.c.workspace_id == workspace_id,
+                    playback_commands.c.id == command_id,
+                    playback_commands.c.device_id == device_id,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            raise UnknownCommand("No such command here")
+        session = load_session(conn, workspace_id, row["zone_id"])
+    followed = (
+        session is not None
+        and row["applied_seq"] is not None
+        and session.seq == row["applied_seq"]
+        and session.anchor_at is not None
+        and session.anchor_at > row["created_at"]
+    )
+    return CommandOutcome(
+        command_id, row["command"], row["status"], row["applied_seq"], row["ack_result"],
+        row["acked_at"], followed,
+    )
+
+
 __all__ = [
+    "CommandOutcome",
+    "command_outcome",
     "ACK_APPLIED",
     "ACK_CLAIMS",
     "ACK_EXPIRED",

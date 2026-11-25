@@ -18,6 +18,14 @@ type View = {
   state: 'waiting' | 'paired' | 'expired' | 'ended' | 'unpaired';
   room_name: string | null; code: string | null; join_path: string | null;
   now_playing: Song | null; up_next: Song[]; upcoming: Item[]; music_paused: boolean;
+  /** ADR-0475 D29: the speaker's state, said as the guest page says it; absent is ready. */
+  music?: 'ready' | 'choosing' | 'reconnecting' | 'none' | null;
+};
+/** The second screen says what guests are told while the room has no device playing. */
+const MUSIC_WORDS: Record<string, { title: string; more: string }> = {
+  choosing: { title: 'The host is choosing where the music plays.', more: 'Scan the code to ask for a song.' },
+  reconnecting: { title: 'The music is paused while the host’s device reconnects.', more: 'Requests are kept.' },
+  none: { title: 'The host hasn’t connected any music yet.', more: 'Scan the code to ask for a song.' },
 };
 
 const POLL_MS = 3000;
@@ -88,7 +96,8 @@ function drawPairing(): void {
         step('2', 'Find Big screen'),
         step('3', 'Type this code')),
       // one box a letter, so it reads from the sofa; the label says it letter by letter
-      h('p', { className: 'd-code', id: 'd-pairing', 'aria-label': `Pairing code ${pairingCode.split('').join(' ')}` }, ...pairingCode.split('').map((letter) => h('span', { 'aria-hidden': 'true' }, letter))),
+      h('p', { className: 'd-sr' }, `Pairing code ${pairingCode.split('').join(' ')}`),
+      h('p', { className: 'd-code', id: 'd-pairing', 'aria-hidden': 'true' }, ...pairingCode.split('').map((letter) => h('span', {}, letter))),
       h('p', { className: 'd-muted' }, 'The code works once and lasts ten minutes.')));
 }
 
@@ -122,14 +131,15 @@ function drawRoom(view: View): void {
     h('span', { className: 'd-url' }, `No camera? Open ${location.host}${view.join_path ?? ''}`));
   // Patched in place and keyed by song, so the screen stays still between looks and only a line
   // that is new (the next song, a new request) arrives.
-  const now = view.now_playing;
+  const waitingOn = view.music ? MUSIC_WORDS[view.music] : undefined;
+  const now = waitingOn ? null : view.now_playing;
   const playing = Boolean(now) && !view.music_paused;
   const next = view.up_next.slice(0, 3);
   patch(document.getElementById('d-info') as HTMLElement,
     h('header', { className: 'd-top', 'data-key': 'top' }, brand(), h('h1', {}, view.room_name ?? 'Room')),
     h('div', { className: 'd-playing', 'data-key': 'playing', 'data-on': playing },
-      h('h2', { 'data-key': 'now-title' }, h('span', { className: 'd-eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), now && view.music_paused ? 'Paused' : 'Now playing'),
-      h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? 'none'}` }, now ? now.title : 'Nothing playing yet', h('span', { className: 'd-by' }, now ? now.artist : 'Scan the code and pick the first song.'))),
+      h('h2', { 'data-key': 'now-title' }, h('span', { className: 'd-eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), waitingOn ? (view.music === 'reconnecting' ? 'Paused' : 'Waiting') : now && view.music_paused ? 'Paused' : 'Now playing'),
+      h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? view.music ?? 'none'}` }, now ? now.title : waitingOn ? waitingOn.title : 'Nothing playing yet', h('span', { className: 'd-by' }, now ? now.artist : waitingOn ? waitingOn.more : 'Scan the code and pick the first song.'))),
     h('div', { className: 'd-lists', 'data-key': 'lists' },
       next.length ? h('div', { 'data-key': 'next-col' },
         h('h2', { 'data-key': 'next-title' }, 'Up next'),

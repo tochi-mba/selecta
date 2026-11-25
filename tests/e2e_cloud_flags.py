@@ -36,6 +36,18 @@ def _mine(rule: Rule, user_id: str) -> bool:
             and list(params.get("ids") or ()) == [user_id])
 
 
+def grant_everyone(engine: Engine, flag_id: str) -> None:
+    """End `flag_id`'s rules with "on for everyone" (a 100% rollout): a grant the build ships on
+    with no matching rule meaning off (`rules_default: false`, such as `cloud.hosted_media` since
+    57acb155). Earlier rules, such as a test person's "Off for these users", still win."""
+    last = Rule(RuleKind.PERCENTAGE, {"percent": 100, "salt": "e2e", "note": "e2e grant"})
+    with transaction(engine) as conn:
+        current = list(flag_rules.load_snapshot(conn).for_flag(flag_id))
+        if not current or current[-1].to_dict() != last.to_dict():
+            flag_rules.save(conn, flag_id, [*current, last], author="e2e",
+                            reason="browser tests: every person is grandfathered")
+
+
 def install(app: FastAPI, engine: Engine, user_of: Callable[[str], str]) -> None:
     """`user_of(name)` gives the user id of the test person `name`."""
 

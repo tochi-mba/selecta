@@ -89,7 +89,10 @@ def test_account_reports_every_meter_with_its_reset(tmp_path, monkeypatch):
             }
         ]
         # no Stripe key or prices here, so the page is told an upgrade cannot be started
-        assert body["billing"] == {"consent_version": "terms-2026-11", "checkout_available": False}
+        # and a free account with nothing owed is in no billing moment (billing.standing, a425ae24)
+        assert body["billing"] == {
+            "consent_version": "terms-2026-11", "checkout_available": False, "standing": None,
+        }
         assert body["lucy"] == {"tier": "Lucy Basic"}
         assert body["entitlement"]["plan_label"] == "Free"
 

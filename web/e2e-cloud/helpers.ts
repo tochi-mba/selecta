@@ -24,13 +24,23 @@ export async function hostWithRoom(browser: Browser, as = 'alice', name = 'Garde
   await host.goto(`/harness?as=${as}`);
   const current = host.getByTestId('room-code');
   if (!(await current.isVisible().catch(() => false))) {
-    await host.getByLabel('Room name guests will see').fill(name);
+    await host.getByLabel('Room name', { exact: true }).fill(name);
     await host.getByRole('button', { name: 'Open room' }).click();
   }
   await expect(host.getByTestId('room-code')).toHaveText(/^[2-9A-Z]{4}-[2-9A-Z]{4}$/);
   const code = (await host.getByTestId('room-code').textContent()) ?? '';
   return { context, host, code, joinPath: `/r/${code.replace('-', '')}` };
 }
+
+/** Press one of the room's options (Lock, a new code, Close), kept in the Room options menu. */
+export async function roomOption(host: Page, name: string): Promise<void> {
+  await host.getByRole('button', { name: 'Room options' }).click();
+  await host.getByRole('menuitem', { name, exact: true }).click();
+}
+
+/** What a press said: the room panel says it in a toast (a problem as an alert), never a line. */
+export const said = (host: Page, words: string | RegExp) => host.getByRole('status').filter({ hasText: words });
+export const refused = (host: Page, words: string | RegExp) => host.getByRole('alert').filter({ hasText: words });
 
 /** End whatever room this person has open, through the API, so tests start clean. */
 export async function endRooms(page: Page, as = 'alice'): Promise<void> {

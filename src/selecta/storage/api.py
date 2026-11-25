@@ -22,6 +22,7 @@ from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 from selecta.storage.artifacts import Buckets
 from selecta.storage.audio_check import Rejected
+from selecta.storage.failures import storage_failure
 from selecta.storage.ids import require_id
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.storage.ports import (
@@ -258,9 +259,7 @@ def install_routes(
                 status_code=400, detail={"code": "invalid_upload", "message": str(error)}
             )
         if isinstance(error, R2Error):
-            return HTTPException(
-                status_code=503, detail={"code": "storage_temporarily_unavailable"}
-            )
+            return storage_failure(engine, error)
         return HTTPException(status_code=500, detail={"code": "upload_failed"})
 
     @app.post("/api/uploads/plan", status_code=201)
@@ -436,7 +435,28 @@ def install_routes(
                             )
         except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
             raise map_error(error) from error
+        if outcome.asset_id:
+            _analyse_upload(workspace_id, outcome.asset_id)
         return _outcome_json(outcome)
+
+    def _analyse_upload(workspace_id: str, asset_id: str) -> None:
+        """Hosted processing starts at upload (`selecta.hosted_render`, cloud.hosted_render)."""
+        from selecta import flags, hosted_render
+
+        if not flags.on(hosted_render.FLAG):
+            return
+        if not hosted_work:
+            from selecta.admin.state import DbWorkControls
+            from selecta.business.weight import business_policy
+            from selecta.work.cloud_ports import CloudJobEntitlements
+            from selecta.work.store import JobStore
+
+            hosted_work.append(hosted_render.Work(JobStore(
+                engine, business_policy(), entitlements=CloudJobEntitlements(engine),
+                controls=DbWorkControls())))
+        hosted_render.on_upload_accepted(engine, hosted_work[0], workspace_id, asset_id)
+
+    hosted_work: list = []
 
     @app.delete("/api/uploads/{session_id}")
     def cancel_upload(

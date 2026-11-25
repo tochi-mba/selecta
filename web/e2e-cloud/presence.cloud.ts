@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { endRooms, hostWithRoom } from './helpers';
+import { endRooms, hostWithRoom, said } from './helpers';
 
 // ADR-0416 presence fix: the host's panel shows who is really here. A guest who leaves and a
 // screen that disconnects drop off the panel on its next 3 s poll with no refresh; a screen the
@@ -15,18 +15,25 @@ test('a guest leaving and a screen disconnecting update the host panel by themse
   const guest = await phone.newPage();
   await guest.goto(joinPath);
   await guest.getByRole('button', { name: 'Join the room' }).click();
-  const nickname = ((await guest.locator('#g-head .g-muted').textContent()) ?? '').replace(/^You're (.+?)\. .*$/, '$1');
+  // the guest's nickname is the button that changes it ("You're Fox. Change nickname")
+  const nickname = ((await guest.getByRole('button', { name: /^You're / }).locator('.g-name-text').textContent()) ?? '').trim();
+  expect(nickname).not.toBe('');
   const row = host.getByTestId('room-guest').filter({ hasText: nickname });
   await expect(row).toContainText('Here now', { timeout: 5_000 });
-  await expect(host.getByTestId('room-guests-heading')).toHaveText('Guests (1 here)');
+  // the Guests card counts who is here beside its heading
+  await expect(host.getByRole('region', { name: 'Guests' }).locator('.room-count')).toHaveText('1 here');
 
   // The phone loses the server for a moment: a calm note, then back by itself.
   await phone.setOffline(true);
-  await expect(guest.locator('#g-notice')).toHaveText('Reconnecting...', { timeout: 15_000 });
+  // said in the connection banner at the top, which no screen change removes
+  const net = guest.locator('#g-net-text');
+  await expect(net).toHaveText("You're offline. Reconnecting...", { timeout: 15_000 });
   await phone.setOffline(false);
-  await expect(guest.locator('#g-notice')).toHaveText('Back in the room.', { timeout: 20_000 });
+  await expect(net).toHaveText('Back in the room', { timeout: 20_000 });
 
-  const tv = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  // the screen drifts its picture very slowly against burn-in (display.css), so a pointer never
+  // finds its button still; asked for reduced motion, it holds still to be pressed
+  const tv = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: 'reduce' });
   const screen = await tv.newPage();
   await screen.goto('/display');
   const pairing = (await screen.locator('#d-pairing').textContent()) ?? '';
@@ -51,7 +58,7 @@ test('a guest leaving and a screen disconnecting update the host panel by themse
   await host.getByRole('button', { name: 'Pair screen' }).click();
   await expect(screen.locator('#d-qr')).toBeVisible({ timeout: 15_000 });
   await host.getByRole('button', { name: 'Disconnect Screen 1' }).click();
-  await expect(host.locator('.room-said')).toHaveText('Screen 1 disconnected.');
+  await expect(said(host, 'Screen 1 disconnected.')).toBeVisible();
   await expect(screen.getByRole('heading', { name: 'Pair this screen' })).toBeVisible({ timeout: 4_000 });
   await expect(screen.locator('#d-pairing')).not.toHaveText(again);
 

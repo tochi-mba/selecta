@@ -408,6 +408,7 @@ def install_routes(
             "up_next": [song_json(song) for song in shown.up_next],
             "upcoming": [item_json(item) for item in shown.upcoming],
             "music_paused": shown.music_paused,
+            "music": shown.music,
         }
 
 

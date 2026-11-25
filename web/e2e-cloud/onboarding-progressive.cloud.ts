@@ -63,7 +63,8 @@ test('a new member carries on while the import finishes, and verify still settle
   // a running import's chip is a title, its count and a meter (ImportChip)
   const chip = page.locator('.cloud-import-chip');
   await expect(chip).toContainText('Adding your music');
-  await expect(chip).toContainText('5 of 30 checked');
+  // the count is files read on this device, which runs ahead of the held registrations
+  await expect(chip).toContainText(/\d+ of 30 checked/);
   await page.getByRole('button', { name: 'Finish later' }).click();
   await expect(songCount(page, 5)).toBeVisible();
   await expect(chip).toContainText('Adding your music');
@@ -86,7 +87,7 @@ test('an import abandoned by a reload offers to carry on, and picking again dupl
   const music = files(12);
   await page.getByLabel('Choose music files').setInputFiles(music);
   await expect(page.locator('.cloud-import-chip')).toContainText('Adding your music');
-  await expect(page.locator('.cloud-import-chip')).toContainText('5 of 12 checked');
+  await expect(page.locator('.cloud-import-chip')).toContainText(/\d+ of 12 checked/);
   await expect.poll(() => held.batches()).toBe(2);
 
   await page.reload();
@@ -96,9 +97,11 @@ test('an import abandoned by a reload offers to carry on, and picking again dupl
   await expect(page.getByRole('note').filter({ hasText: 'stopped part way' })).toContainText('SelectaDJ carries on from there');
   await expect(songCount(page, 5)).toBeVisible();
   await page.locator('.connect-music input[accept="audio/*"]').setInputFiles(music);
-  await expect(page.locator('.connect-music').getByText(/songs connected/)).toBeVisible({ timeout: 60_000 });
+  // the finish is said once, by the import's one voice (importAnnouncer), with the reuse words
+  await expect(page.getByRole('status').filter({ hasText: /Checking your music finished\. \d+ songs? connected/ })).toBeVisible({ timeout: 60_000 });
   // each file once: the five registered before the reload were recognised, not added again
-  await expect(songCount(page, 12)).toBeVisible();});
+  await expect(songCount(page, 12)).toBeVisible();
+});
 
 test('an interrupted folder import carries on by itself over the remembered folder', async ({ page, request }) => {
   const user = listener('onb-folder');
@@ -135,6 +138,6 @@ test('an interrupted folder import carries on by itself over the remembered fold
 
   await page.goto('/library');
   // cloud.resilient_import: the folder's permission is still granted, so it carries on with no press
-  await expect(page.getByText('6 songs connected.', { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('status').filter({ hasText: 'Checking your music finished. 6 songs connected.' })).toBeVisible({ timeout: 60_000 });
   await expect(songCount(page, 7)).toBeVisible();
 });

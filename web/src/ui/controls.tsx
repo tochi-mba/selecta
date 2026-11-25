@@ -306,7 +306,7 @@ function Overlay({
         {grabber}
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
-          <button className="overlay-close" aria-label={`Close ${title}`} title={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
+          <button className="overlay-close" aria-label="Close" title="Close" onClick={onClose}><Icon name="close" /></button>
         </header>
         <div className="overlay-body">{children}</div>
         {footer && <footer className="overlay-foot">{footer}</footer>}

@@ -50,6 +50,7 @@ Every remaining sheet loads with its own component or entry. All of them take th
 | Sheet | Loaded by | Owns |
 | --- | --- | --- |
 | `cloud/makeCloudMix.css` | `cloud/MakeCloudMix.tsx` | Make a Mix in the hosted Cloud (type steps and edge roles since `58eb3de6`). |
+| `cloud/hosted/hostedMix.css` | `cloud/hosted/HostedMix.tsx` | The server-rendered hosted mix card on Make a Mix (cloud.hosted_render). |
 | `views/mixIntent.css` | `views/MixIntent.tsx` | The two mix intents, setting scopes and what plays next on Make a Mix (surface, edge and type roles since `33e85a48`). |
 | `admin/admin.css` | `admin/AdminArea.tsx` | The staff console's layout and tables, on token meanings only (`3c9cfa00`). One `!important`: `.admin-check` keeps its flex row against the generic label rule. |
 | `business/business.css` | `business/BusinessApp.tsx`, `cloud/CloudApp.tsx`, the business harness | SelectaDJ for Business shared pieces; its reduced-motion and Still resets use `!important` (meaning roles since `9872fbb7`). |

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { endRooms, hostWithRoom, slowPhone } from './helpers';
+import { endRooms, hostWithRoom, roomOption, slowPhone } from './helpers';
 
 // SC-0416-02: the guest page on a 320 px phone over a slow network: join, search, request,
 // vote, the honest status states, paused music, leaving and the room ending. It loads under
@@ -45,26 +45,32 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await expect(page.getByRole('heading', { name: 'Request a song' })).toBeVisible();
   expect(scriptBytes).toBeGreaterThan(0);
   expect(scriptBytes).toBeLessThan(100 * 1024);
-  await expect(page.getByText('deletes them 30 days after the room closes')).toBeVisible();
+  // what SelectaDJ keeps about a guest sits folded under its own heading, one press away
+  await page.getByText('What SelectaDJ keeps').click();
+  await expect(page.getByText('They are deleted 30 days after the room closes. No tracking.')).toBeVisible();
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
 
   await page.getByRole('button', { name: 'Join the room' }).click();
   await expect(page.getByRole('heading', { name: 'Garden party' })).toBeVisible({ timeout: 30_000 });
-  // No speaker device is playing yet, and the page says so.
-  await expect(page.getByText('Nothing is playing right now. You can still ask for songs')).toBeVisible();
+  // No speaker device is playing yet, and the page says so, and that asking still works.
+  const playingNow = page.getByRole('region', { name: 'Now playing' });
+  await expect(playingNow).toContainText('Nothing playing yet');
+  await expect(playingNow).toContainText('Ask for a song and the host adds it to the mix.');
   // The host's identity never reaches a guest.
   await expect(page.locator('body')).not.toContainText('alice@example.test');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 
-  // Songs are chosen into a basket, then sent together.
-  await page.getByLabel("Search the host's songs").fill('Song 12');
-  await page.getByRole('button', { name: 'Choose Song 12 - Artist 5' }).click();
-  await expect(page.getByRole('button', { name: 'Chosen, press to take out Song 12 - Artist 5' })).toHaveAttribute('aria-pressed', 'true');
+  // Songs are chosen into a basket, then sent together (a tap adds, a second tap takes out).
+  await page.getByRole('searchbox', { name: 'Request a song' }).fill('Song 12');
+  await page.getByRole('button', { name: 'Add Song 12 - Artist 5' }).click();
+  await expect(page.getByRole('button', { name: 'Added: Song 12 - Artist 5. Press to remove' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Send request', exact: true }).click();
-  await expect(page.locator('#g-notice')).toContainText('Sent 1 song.', { timeout: 30_000 });
-  await expect(page.getByRole('button', { name: 'Requested Song 12 - Artist 5' })).toBeVisible();
-  const mine = page.getByRole('region', { name: 'My requests' });
+  await expect(page.getByRole('status').filter({ hasText: 'Sent. The host will add it to the mix.' })).toBeVisible({ timeout: 30_000 });
+  // sending clears the search; found again, the song says it is already requested
+  await page.getByRole('searchbox', { name: 'Request a song' }).fill('Song 12');
+  await expect(page.getByRole('button', { name: 'Requested: Song 12 - Artist 5' })).toBeVisible();
+  const mine = page.getByRole('region', { name: 'Your requests' });
   await expect(mine).toContainText('Song 12');
   await expect(mine).toContainText('Accepted');
 
@@ -83,37 +89,39 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await second.page.waitForResponse((response) => /^\/api\/guest\/rooms\/[^/]+$/.test(new URL(response.url()).pathname), { timeout: 30_000 });
   await second.page.waitForTimeout(500);
   await expect(unvote).toBeFocused();
-  await second.page.getByLabel("Search the host's songs").fill('Song 12');
-  await second.page.getByRole('button', { name: 'Choose Song 12 - Artist 5' }).click();
+  await second.page.getByRole('searchbox', { name: 'Request a song' }).fill('Song 12');
+  await second.page.getByRole('button', { name: 'Add Song 12 - Artist 5' }).click();
   await second.page.getByRole('button', { name: 'Send request', exact: true }).click();
-  await expect(second.page.locator('#g-notice')).toContainText('counts as your vote', { timeout: 30_000 });
+  await expect(second.page.getByRole('status').filter({ hasText: 'Someone asked for it already, so it counts as your vote.' })).toBeVisible({ timeout: 30_000 });
 
   // The host asks to approve each request and passes on one: the guest is told honestly.
   await host.getByLabel('When a guest asks for a song').selectOption('approve');
   await expect(host.locator('.room-saved', { hasText: 'Saved' })).toBeVisible();
-  await second.page.getByLabel("Search the host's songs").fill('Song 20');
-  await second.page.getByRole('button', { name: 'Choose Song 20 - Artist 6' }).click();
+  await second.page.getByRole('searchbox', { name: 'Request a song' }).fill('Song 20');
+  await second.page.getByRole('button', { name: 'Add Song 20 - Artist 6' }).click();
   await second.page.getByRole('button', { name: 'Send request', exact: true }).click();
-  await expect(second.page.getByRole('region', { name: 'My requests' })).toContainText('Waiting for the host to approve it', { timeout: 30_000 });
-  await host.getByRole('button', { name: 'Pass on Song 20 - Artist 6' }).click();
-  await expect(second.page.getByRole('region', { name: 'My requests' })).toContainText('The host passed on this one', { timeout: 30_000 });
+  const theirs = second.page.getByRole('region', { name: 'Your requests' });
+  await expect(theirs.locator('li', { hasText: 'Song 20' })).toContainText('Waiting for the host', { timeout: 30_000 });
+  await host.getByRole('button', { name: 'Pass on Song 20' }).click();
+  await expect(theirs.locator('li', { hasText: 'Song 20' })).toContainText('Not this time', { timeout: 30_000 });
+  await expect(theirs.locator('li', { hasText: 'Song 20' })).toContainText('The host passed on this one');
 
   // Leaving clears the guest's cookie; the page offers to join again.
   await second.page.getByRole('button', { name: 'Leave room' }).click();
   await expect(second.page.getByRole('heading', { name: 'You left the room' })).toBeVisible({ timeout: 30_000 });
 
   // The host closes the room and the first guest's page says so by itself.
-  await host.getByRole('button', { name: 'Close room' }).click();
+  await roomOption(host, 'Close room');
   await host.getByRole('alertdialog', { name: 'Close Garden party?' }).getByRole('button', { name: 'Close room' }).click();
-  await expect(page.getByRole('heading', { name: 'This room has ended' })).toBeVisible({ timeout: 40_000 });
+  await expect(page.getByRole('heading', { name: 'This room has closed' })).toBeVisible({ timeout: 40_000 });
 
   await Promise.all([context.close(), second.context.close(), hostContext.close()]);
 });
 
 test('a locked room and a wrong code are refused in plain words', async ({ browser }) => {
   const { context: hostContext, host, joinPath } = await hostWithRoom(browser);
-  await host.getByRole('button', { name: 'Lock room' }).click();
-  await expect(host.getByTestId('room-status')).toHaveText('Locked: no new guests');
+  await roomOption(host, 'Lock room');
+  await expect(host.getByTestId('room-status')).toHaveText('Locked');
   const { context, page } = await slowPhone(browser);
   await page.goto(joinPath);
   await page.getByRole('button', { name: 'Join the room' }).click();

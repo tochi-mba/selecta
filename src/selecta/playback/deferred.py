@@ -221,6 +221,9 @@ def report(conn: Connection, session: Session, now: float) -> dict[str, list[dic
                 *_this_session(session),
                 playback_commands.c.ack_result == fencing.ACK_UNAVAILABLE_HERE,
                 playback_commands.c.acked_at >= since,
+                # only while nothing newer has happened: once the music moved on (another
+                # press, a take-over), an old "couldn't play that song" is not true any more
+                playback_commands.c.applied_seq == session.seq,
             )
             .order_by(playback_commands.c.acked_at.desc())
             .limit(REPORT_LIMIT)

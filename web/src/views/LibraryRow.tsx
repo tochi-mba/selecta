@@ -1,5 +1,6 @@
-import { memo, useContext } from 'react';
-import { HolderContext, type MusicHolder } from '../devices/controller';
+import { memo, useContext, useState } from 'react';
+import { HolderContext, openToPlay, type MusicHolder } from '../devices/controller';
+import { relativeTime } from '../ui/format';
 import { LibrarySong } from '../api';
 import { clock, etaWords } from '../lib';
 import { availabilityFacts } from '../state/availability';
@@ -15,7 +16,8 @@ export type LibraryRowActions = {
   open: (id: number) => void;
   start: (song: LibrarySong) => void | Promise<void>;
   analyse: (song: LibrarySong) => Promise<void>;
-  add: (song: LibrarySong, playNext: boolean) => Promise<void>;
+  /** false: nothing was added (I85: an offer to move the music is showing instead) */
+  add: (song: LibrarySong, playNext: boolean) => Promise<boolean | void>;
   priority: (song: LibrarySong) => Promise<void>;
   never: (song: LibrarySong) => Promise<void>;
 };
@@ -41,6 +43,8 @@ export type LibraryRowProps = {
   searched: boolean;
   /** something is playing, so "Play next" makes sense */
   playing: boolean;
+  /** I89: this row's song is the one playing now */
+  current?: boolean;
   /** where this song stands in the analysis line: -1 when it isn't in it */
   linePlace: number;
   eta: number | undefined;
@@ -64,17 +68,22 @@ const HERE: Record<string, { kind: StatusKind; words: string }> = {
 };
 
 /** ADR-0475 R6 row status, when the person has another device with music: "This device", "On
- * {device}" (open, has the file), "Needs its folder again on {device}" (had it, not open now), or
+ * {device}" (open, has the file), "On {device}, open {when}" (had it, not open now, with "Open SelectaDJ on {device} to play this."), or
  * "No device right now". Null leaves the plain availability words. */
-export function deviceChip(songId: number, availability: string, holder: MusicHolder | null): { kind: StatusKind; words: string; why: string } | null {
+export function deviceChip(songId: number, availability: string, holder: MusicHolder | null): { kind: StatusKind; words: string; why: string; hint?: boolean } | null {
   if (!holder) return null;
   if (availability === 'here' || availability === 'hosted') return { kind: 'ready', words: 'This device', why: 'This device has the file, so it can play here.' };
   if (availability !== 'elsewhere' && availability !== 'nowhere') return null;
   const places = holder.places?.(songId);
   const open = places ? places.online[0] : holder.online && (holder.ids ? holder.ids.has(songId) : true) ? holder.name : undefined;
-  if (open) return { kind: 'unavailable', words: `On ${open}`, why: `${open} has this song’s file and makes the sound. Connect music here only if you want this device to play it.` };
+  // I83: one plain line; a song an open device holds plays from here, on that device
+  if (open) return { kind: 'ready', words: `Plays on ${open}`, why: `${open} has this song’s file and makes the sound.` };
   const away = places ? places.before[0] : holder.ids?.has(songId) ? holder.name : undefined;
-  if (away) return { kind: 'needs-action', words: `Needs its folder again on ${away}`, why: `${away} had this song’s file but isn’t open now. Open SelectaDJ there, and choose its music folder again if it asks.` };
+  // I86: which device has it and when it was last open, with one hint and nothing to press
+  if (away) {
+    const age = holder.lastOpen?.(away);
+    return { kind: 'paused', words: age == null ? `On ${away}` : `On ${away}, open ${relativeTime(age)}`, why: openToPlay(away), hint: true };
+  }
   if (!places && availability === 'elsewhere') return null;
   return { kind: 'failed', words: 'No device right now', why: 'None of your devices has this song’s file right now.' };
 }
@@ -83,17 +92,21 @@ const lineWords = (place: number) => place < 0 ? 'Analyse now' : place === 0 ? '
 
 export const LibraryRow = memo(function LibraryRow({
   song, page, actions, selectable, selected, selectionFull, searching, failed, building, duplicate, sharedTitle,
-  inMix, searched, playing, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true, browser = false,
+  inMix, searched, playing, current = false, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true, browser = false,
 }: LibraryRowProps) {
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
   const holder = useContext(HolderContext);
+  const [added, setAdded] = useState(false);
   const title = song.title ?? 'Untitled';
   const name = duplicate ? `${title} (song ${song.id})` : title;
   const spoken = duplicate || !sharedTitle ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
   const queued = linePlace >= 0;
   if (browser) {
     const artist = song.artist ?? 'Unknown artist';
+    const remoteNext = !!holder?.speaking && playing && facts.canAdd && song.availability !== 'here' && song.availability !== 'hosted';
+    // I85: the speaker lacks it and another open device has it: the tap offers to move there
+    const movesTo = remoteNext && holder?.ids && !holder.ids.has(song.id) ? holder.places?.(song.id).online.find((name) => name !== holder.name) ?? null : null;
     const chip = facts.setAside || song.never
       ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
       : song.availability && HERE[song.availability]
@@ -108,20 +121,29 @@ export const LibraryRow = memo(function LibraryRow({
             aria-disabled={failed || undefined}
             onChange={(event) => { if (!failed) actions.toggle(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
         </label>}
-        <button className="link song-open lw-open" onClick={() => actions.open(song.id)} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
+        <button className="link song-open lw-open" onClick={() => actions.open(song.id)} aria-label={`Details for ${name} ${artist}${searched && song.match ? ` · ${song.match}` : ''}`} data-focus-key={`song-details-${song.id}`}>
           <SongMotif songId={song.id} />
           <span className="lw-song">
-            <b dir="auto" title={title}>{title}</b>
+            {/* the name holds every word the row shows (WCAG 2.5.3), so title and artist are two words apart */}
+            <b dir="auto" title={title}>{title}</b>{' '}
             <span dir="auto" title={artist}>{artist}{searched && song.match ? ` · ${song.match}` : ''}</span>
           </span>
         </button>
         <span className="lw-length">{clock(song.duration)}</span>
         <span className="lw-state">
           <Status kind={chip.kind} title={chip.why || undefined}>{chip.words}</Status>
-          {chip.why && chip.kind !== 'ready' && <small className="lw-why">{chip.why}</small>}
+          {chip.why && chip.kind !== 'ready' && <small className="lw-why" data-hint={'hint' in chip && chip.hint ? '' : undefined}>{chip.why}</small>}
+          {/* I84: what the row's tap did, said in the row itself for a moment */}
+          {remoteNext && <span className={added || (current && holder?.speaking) ? 'lw-added' : 'lw-added lw-in-mix'} role="status">{added ? `Added to ${holder?.name}’s mix` : current && holder?.speaking ? `Playing now on ${holder.name}` : inMix ? 'In the mix' : ''}</span>}
         </span>
         <div className="song-actions lw-actions">
-          {facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
+          {/* I84: on a remote while another device plays, the row's one tap puts the song next
+              there, says so for a screen reader, and confirms in the row */}
+          {remoteNext
+            ? movesTo
+              ? <Action className="lw-start small" title={`Play on ${movesTo}`} aria-label={`Play ${spoken} on ${movesTo}`} disabled={searching} run={() => actions.add(song, true)}><Icon name="play" size="compact" /><span>Play on {movesTo}</span></Action>
+              : !inMix && <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={searching} run={async () => { if (await actions.add(song, true) === false) return; setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
+            : facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
           {((!facts.setAside && neverFlag) || facts.canAdd) && (
             <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
               <Action role="menuitem" run={() => actions.open(song.id)}>Song details</Action>

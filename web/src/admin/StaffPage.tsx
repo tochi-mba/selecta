@@ -97,6 +97,7 @@ function AddStaff({ onDone }: { onDone: () => void }) {
         <button>Find</button>
       </form>
       {error && <p className="admin-error" role="alert">{error}</p>}
+      <p className="admin-soft">To enter the console they must also be a member of the WorkOS staff organization. Until the console does it for you: WorkOS dashboard, Organizations, the staff organization, Members, Add member, their email. Check there that the organization requires MFA.</p>
       {found && <>
         <p>Found <strong>{found.label}</strong>. Choose a role:</p>
         <div className="admin-role-cards" role="radiogroup" aria-label="Role">
@@ -162,12 +163,14 @@ function Actions() {
   const data = useLoad(() => ctx.api<{ actions: Action[] }>('/admin/actions'), [ctx.api]);
   const cancel = (a: Action) => careful(ctx, () => write(ctx.api, { path: `/admin/actions/${a.id}/cancel`, body: { reason: 'Cancelled from the console' } }).then(() => data.reload()), `Cancelled: ${a.description}`);
   const run = (a: Action) => careful(ctx, () => write(ctx.api, { path: `/admin/actions/${a.id}/execute`, body: {} }).then(() => data.reload()), `Ran: ${a.description}`);
+  // A second staff member approves; nobody approves their own (the server refuses it too).
+  const approve = (a: Action) => careful(ctx, () => write(ctx.api, { path: `/admin/actions/${a.id}/approve`, body: { payload_hash: a.payload_hash } }).then(() => data.reload()), `Approved: ${a.description}. Run it now or let it run when due.`);
   return (
     <Section title="Waiting dangerous actions" help="The most dangerous actions wait 15 minutes, alert every Owner, and can be cancelled. When due they run on their own, or here.">
       <AdminTable caption="Waiting actions" rows={data.data?.actions ?? []} rowKey={(a) => a.id} loading={!data.data}
         empty={<Empty title="Nothing is waiting.">Owner assignments, account deletions, mass overrides and releases of emergency controls wait here for 15 minutes.</Empty>}
         cols={[{ key: 'description', label: 'Action' }, { key: 'reason', label: 'Why' }, { key: 'execute_after', label: 'Runs', render: (a) => <Time at={a.execute_after} /> },
-          { key: 'do', label: '', render: (a) => <span className="admin-actions"><ActionButton permission="platform.dashboard.read" onPress={() => void cancel(a)}>Cancel</ActionButton>{a.execute_after <= Date.now() / 1000 && <ActionButton permission="platform.dashboard.read" onPress={() => void run(a)}>Run now</ActionButton>}</span> }]} />
+          { key: 'do', label: '', render: (a) => <span className="admin-actions"><ActionButton permission="platform.dashboard.read" onPress={() => void cancel(a)}>Cancel</ActionButton>{a.proposer_id !== ctx.me.user_id && <ActionButton permission="platform.dashboard.read" onPress={() => void approve(a)}>Approve</ActionButton>}<ActionButton permission="platform.dashboard.read" onPress={() => void run(a)}>Run now</ActionButton></span> }]} />
     </Section>
   );
 }

@@ -105,7 +105,11 @@ def open_room(
     settings = settings.within(entitlement)
     name = clean_room_name(name)
     if ctx.catalog.count_requestable(workspace_id, settings.crate) <= 0:
-        raise RoomError(Refusal.NO_SONGS)
+        # ADR-0475 D30: no device open yet, but the account has songs: the room opens and its
+        # guests are told the host is choosing where the music plays
+        waiting = getattr(ctx.catalog, "songs_waiting_for_a_speaker", None)
+        if not (callable(waiting) and waiting(workspace_id, settings.crate) > 0):
+            raise RoomError(Refusal.NO_SONGS)
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         if current_room_row(conn, workspace_id) is not None:

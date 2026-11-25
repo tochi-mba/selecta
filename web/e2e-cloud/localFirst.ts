@@ -31,7 +31,9 @@ export async function asLocalFirst(page: Page, user: string, { hosted = false }:
       const answer = await route.fetch();
       const account = await answer.json();
       account.experience = { ...(account.experience ?? {}), local_first: true, hosted };
-      account.features = { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true, 'cloud.progressive_import': true };
+      // and the flags that need cloud.local_first, which the server decides off for that reason
+      // alone (the offline shell, the workspace and the mix outbox, dd62cd5a, came after this)
+      account.features = { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true, 'cloud.progressive_import': true, 'cloud.offline_shell': true, 'cloud.workspace': true, 'cloud.mix_outbox': true };
       await route.fulfill({ response: answer, json: account });
     } catch {
       // the test ended while an account refresh was in flight: nothing is waiting for it
@@ -86,14 +88,18 @@ export async function connectOnThisDevice(page: Page, workspaceId: string, songs
       const name = `song-${song.songId}.wav`;
       const handle = await root.getFileHandle(name, { create: true });
       const writing = await handle.createWritable();
-      await writing.write(song.audio ? wav(12, 220 + 60 * index) : new Uint8Array([1, 2, 3, 4]));
+      const bytes = song.audio ? wav(12, 220 + 60 * index) : new Uint8Array([1, 2, 3, 4]).buffer;
+      await writing.write(bytes);
       await writing.close();
+      // the file's real fingerprint: SelectaDJ checks the bytes against it before they play, and
+      // a file whose bytes differ is a changed file, not this song (media/resolve.ts)
+      const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map((byte) => byte.toString(16).padStart(2, '0')).join('');
       if (song.gone) await root.removeEntry(name);
       await new Promise<void>((resolve, reject) => {
         const tx = db.transaction('songs', 'readwrite');
         tx.objectStore('songs').put({
           songId: song.songId,
-          identity: { content_sha256: String(song.songId).padStart(64, '0'), title: song.title, artist: song.artist ?? 'E2E Local' },
+          identity: { content_sha256: digest, title: song.title, artist: song.artist ?? 'E2E Local' },
           ref: { kind: 'handle', handle },
           importedAt: Date.now(),
         });

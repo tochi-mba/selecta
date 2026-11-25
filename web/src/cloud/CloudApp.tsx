@@ -7,7 +7,7 @@ import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
 import { START_ANSWER_EVENT, START_ASK_EVENT } from '../devices/playOn';
 import { CURRENT_MIX_EVENT } from './currentMix';
-import { DEFAULT_SPEAKER_EVENT } from '../devices/useHoldings';
+import { DEFAULT_SPEAKER_EVENT, HOLDINGS_EVENT } from '../devices/useHoldings';
 import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
@@ -41,6 +41,7 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
+import { LIBRARY_CHANGED_EVENT } from './hostedMedia';
 import { WorkspaceNameOffer } from './WorkspaceNameOffer';
 import { setProblemReporter, SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
@@ -434,12 +435,13 @@ export function CloudApp() {
     if (event.topic === 'mix.current') window.dispatchEvent(new CustomEvent(CURRENT_MIX_EVENT, { detail: event.payload }));
     if (event.topic === 'lucy.turns') window.dispatchEvent(new Event(LUCY_TURNS_EVENT));
     if (event.topic === 'devices.default_speaker') window.dispatchEvent(new Event(DEFAULT_SPEAKER_EVENT));
+    if (event.topic === 'devices.holdings') window.dispatchEvent(new Event(HOLDINGS_EVENT));
     // a room request the host accepted, waiting for (or gone from) the browser mix's Requests
     if (event.topic === 'requests.room') window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: event.payload }));
     // anything about the open room (a request, a guest, its settings, its end) reaches the shell's
     // room session, which reads the room again on whichever page the host is (useRoomSession)
     if (event.topic === 'requests.room' || event.topic.startsWith('room.')) window.dispatchEvent(new Event(ROOM_EVENT));
-    if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); }
+    if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }
     // the browser-first catalogue is kept until the library changes (localFirstRequest.ts)
     if (/^(upload|asset|library|local_media)\./.test(event.topic)) window.dispatchEvent(new Event(CATALOGUE_CHANGED_EVENT));
   }, [refreshAccount]);
@@ -733,7 +735,7 @@ export function CloudApp() {
     danger={[(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={signOutEverywhere} onDelete={deleteAccount} />]}
   /> : null;
   const billing = account && <SettingsLayout current="billing" places={places}><Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} error={checkoutError} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} /></SettingsLayout>;
-  const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
+  const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => { void refreshAccount(); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
   // The account places behind More, one drawing for both shared shells.
   const morePanel = (id: MoreDestinationId): ReactNode => {
     if (!account) return null;

@@ -40,6 +40,8 @@ CONSENT = "terms-2026-11"
 # Routes anyone may call: health checks, and webhooks that prove themselves by signature.
 PUBLIC = {
     ("GET", "/api/status"),
+    # the status banner every signed-in customer sees; it holds nothing private
+    ("GET", "/api/status-banner"),
     ("GET", "/api/ready"),
     ("POST", "/api/webhooks/stripe"),
     ("POST", "/api/webhooks/workos"),
@@ -154,6 +156,43 @@ STAFF_ONLY = {
     ("GET", "/api/admin/economics/lucy-ceiling"),
     # The business release-gate readout reads repository records and flag rules only.
     ("GET", "/api/admin/business/rollout"),
+    # The redesigned staff console (admin/routes_console.py): every route runs through the
+    # privileged staff session; a customer is named by user id in the path, never by header
+    ("DELETE", "/api/admin/session/changes"),
+    ("GET", "/api/admin/banners"),
+    ("GET", "/api/admin/billing"),
+    ("GET", "/api/admin/checklist"),
+    ("GET", "/api/admin/customers/{user_id}"),
+    ("GET", "/api/admin/customers/{user_id}/flags"),
+    ("GET", "/api/admin/customers/{user_id}/sign-ins"),
+    ("GET", "/api/admin/customers/{user_id}/storage-mode"),
+    ("GET", "/api/admin/customers/{user_id}/stripe"),
+    ("GET", "/api/admin/lookup"),
+    ("GET", "/api/admin/staff"),
+    ("GET", "/api/admin/system"),
+    ("POST", "/api/admin/alerts/{alert_id}/acknowledge"),
+    ("POST", "/api/admin/audit-export"),
+    ("POST", "/api/admin/banners"),
+    ("POST", "/api/admin/banners/{banner_id}/end"),
+    ("POST", "/api/admin/customers/{user_id}/delete"),
+    ("POST", "/api/admin/customers/{user_id}/notes"),
+    ("POST", "/api/admin/customers/{user_id}/portal-link"),
+    ("POST", "/api/admin/customers/{user_id}/sign-ins/{session_id}/revoke"),
+    ("POST", "/api/admin/customers/{user_id}/sign-out"),
+    ("POST", "/api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/refund"),
+    ("POST", "/api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/retry"),
+    ("POST", "/api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-at-period-end"),
+    ("POST", "/api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-now"),
+    ("POST", "/api/admin/customers/{user_id}/{command}"),
+    ("POST", "/api/admin/overrides/mass/dry-run"),
+    ("POST", "/api/admin/session/changes"),
+    ("POST", "/api/admin/staff/owners"),
+    ("POST", "/api/admin/staff/roles"),
+    ("POST", "/api/admin/staff/roles/{assignment_id}/revoke"),
+    ("POST", "/api/admin/staff/sessions/{session_id}/end"),
+    ("PUT", "/api/admin/customers/{user_id}/flags/{flag_id}"),
+    ("PUT", "/api/admin/customers/{user_id}/storage-mode"),
+    ("PUT", "/api/admin/me/preferences/{key}"),
 }
 # Business routes require an organisation workspace and membership, not merely a
 # personal library workspace. The dedicated Business tests exercise their tenant
@@ -420,6 +459,14 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/assets/{asset_id}/playback-proxy"): None,
     ("GET", "/api/assets/{asset_id}/playback-proxy"): None,
     ("POST", "/api/storage/derived-playback-url"): None,  # body built per test: Alice's key
+    # Hosted processing (cloud.hosted_render): each names the caller's workspace first, and
+    # `test_hosted_processing_never_reaches_another_accounts_songs` checks the songs themselves.
+    ("GET", "/api/hosted/songs"): None,
+    ("POST", "/api/hosted/songs/prepare"): {},
+    ("POST", "/api/hosted/mixes/plan"): {"count": 4},
+    ("POST", "/api/hosted/mixes/render"): {"songs": [{"asset_id": "tenant-a"}]},
+    ("POST", "/api/hosted/mixes/export"): {"songs": [{"asset_id": "tenant-a"}]},
+    ("GET", "/api/hosted/exports/{job_id}"): None,
     ("POST", "/api/devices"): {"name": "Browser", "kind": "laptop"},
     ("GET", "/api/devices"): None,
     ("PATCH", "/api/devices/{device_id}"): {"name": "Kitchen"},
@@ -443,6 +490,8 @@ SCOPED: dict[tuple[str, str], dict | None] = {
         "device_id": "missing",
         "result": "applied",
     },
+    # ADR-0475 G3: the sender reads whether the speaker carried out its press
+    ("GET", "/api/playback/commands/{command_id}"): None,
     # One device asks another of the same person's devices to start (ADR-0475 R2), held to the
     # same principal as a press (playback/start_asks.py)
     ("POST", "/api/playback/start-asks"): {
@@ -658,6 +707,7 @@ def world(tmp_path, monkeypatch):
                 "device_id": new_id(),
                 "room_id": new_id(),
                 "mix_id": new_id(),
+                "job_id": new_id(),
                 "display_id": new_id(),
                 "request_id": new_id(),
                 "guest_id": new_id(),
@@ -846,3 +896,44 @@ def test_onboarding_twice_never_joins_another_workspace(world):
     )
     assert again.status_code in {200, 201}, again.text
     assert again.json()["workspace_id"] == world["bob_ws"]
+
+
+def test_hosted_processing_never_reaches_another_accounts_songs(world):
+    """Bob, in his own workspace, names Alice's song and her job: every hosted route answers as
+    it does for made-up ids, queues nothing for her and touches none of her files."""
+    from selecta.work.schema import jobs
+
+    client, alice_song = world["client"], world["ids"]["asset_id"]
+    made_up = new_id()
+
+    def jobs_of(workspace_id):
+        with world["engine"].connect() as conn:
+            return conn.execute(
+                sa.select(jobs.c.id).where(jobs.c.workspace_id == workspace_id)
+            ).all()
+
+    ready = client.post("/api/hosted/songs/prepare", headers=_auth(ALICE), json={})
+    assert ready.status_code == 200, ready.text
+    assert [song["asset_id"] for song in ready.json()["songs"]] == [alice_song]
+    alice_jobs = jobs_of(world["alice_ws"])
+    assert alice_jobs, "Alice's own song is queued for analysis (the positive control)"
+    before = _rows_of(world["engine"], world["alice_ws"])
+    world["objects"].touched.clear()
+
+    listed = client.get("/api/hosted/songs", headers=_auth(BOB)).json()
+    assert (listed["songs"], listed["total"]) == ([], 0)
+    for path in ("/api/hosted/mixes/render", "/api/hosted/mixes/export"):
+        theirs = client.post(path, headers=_auth(BOB), json={"songs": [
+            {"asset_id": alice_song}, {"asset_id": alice_song}]})
+        missing = client.post(path, headers=_auth(BOB), json={"songs": [
+            {"asset_id": made_up}, {"asset_id": made_up}]})
+        assert (theirs.status_code, theirs.json()) == (missing.status_code, missing.json()), path
+    planned = client.post("/api/hosted/mixes/plan", headers=_auth(BOB), json={"count": 4})
+    assert planned.json() == {"songs": []}
+    theirs = client.get(f"/api/hosted/exports/{alice_jobs[0].id}", headers=_auth(BOB))
+    missing = client.get(f"/api/hosted/exports/{made_up}", headers=_auth(BOB))
+    assert theirs.status_code == 404
+    assert theirs.json() == missing.json()
+    assert jobs_of(world["bob_ws"]) == []
+    assert _rows_of(world["engine"], world["alice_ws"]) == before
+    assert not set(world["objects"].touched) & world["alice_keys"]

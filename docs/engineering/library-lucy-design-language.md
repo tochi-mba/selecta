@@ -9,7 +9,7 @@ where each is allowed. `web/src/styles/lx-design-language.test.tsx` keeps it tru
 
 | Role | Tokens | Where they apply |
 |---|---|---|
-| Type | `--type-section`, `--type-counter`, `--text-md`, `--text-sm`, `--text-xs`, `--body`, `--mono` | Section and thread titles use `--type-section`; counts use `--type-counter` (tabular figures); song facts and hints use `--text-sm`/`--text-xs`. Display headings come from the shared `.display` classes, never from Lucy's own CSS. |
+| Type | `--type-section`, `--type-counter`, `--type-label`, `--type-caption`, `--text-md`, `--text-sm`, `--text-xs`, `--body`, `--mono` | Section and thread titles use `--type-section`; counts use `--type-counter` (tabular figures); who said a message uses `--type-label` and its time `--type-caption`; song facts and hints use `--text-sm`/`--text-xs`. Display headings come from the shared `.display` classes, never from Lucy's own CSS. |
 | Spacing | `--space-hair`, `--space-dense`, `--space-snug`, `--space-1`, `--space-2`, `--space-3`, `--space-4`, `--space-5`, `--space-6`, `--icon-gap`, `--grid-bar-gap` | As in `docs/engineering/spacing-token-map.md`. Lucy adds no raw lengths for gaps or padding. |
 | Surfaces | `--surface`, `--surface-raised`, `--surface-control`, `--surface-selected`, `--surface-overlay`, `--surface-scrim` | Page, cards and messages, controls, the selected song or seam, sheets and dialogs. |
 | Ink and depth | `--text`, `--text-soft`, `--marker`, `--primary-ink`, `--primary-fill`, `--primary-edge`, `--shadow-raised`, `--shadow-overlay` | Body text and quieter hints; list markers; the one filled "Playing" pill; raised cards and overlays only. |
@@ -45,4 +45,4 @@ Lucy has one animation: the indeterminate bar on a step that is running with no 
 appears only for real running work, never for decoration, and both the app's Still setting
 (`:root[data-motion='still']`) and the system's reduced-motion setting remove it. The step keeps its
 words ("Working"). The slide's length is `--motion-loop-slide`. Progress bars resize with `--motion-reveal` and `--motion-ease`; the duration is 0 ms under Still and reduced
-motion. Nothing else in Lucy or the Library moves on its own.
+motion. A message's time fades in over `--motion-fast` when it is pointed at or focused, with no transition under Still and reduced motion. Nothing else in Lucy or the Library moves on its own.

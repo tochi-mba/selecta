@@ -1,4 +1,5 @@
 import { flagOn } from '../flags';
+import { SongPlaces } from './SongPlaces';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { LibrarySong } from '../api';
 import { useApi } from '../requestContext';
@@ -9,6 +10,7 @@ import { Action, Sheet, Status } from '../ui/controls';
 import { Field } from '../ui/primitives';
 import { SongMotif } from '../ui/MusicObjects';
 import { SongRelated } from './SongRelated';
+import { SongVersions } from './SongVersions';
 import { ViewProps } from './shared';
 
 const LOWEST_TEMPO = 40;
@@ -61,7 +63,7 @@ const lyricWords = (status: string | null) => (status === 'synced' ? 'Timed' : s
 /** Everything about one song, and the only place its details are worked out. The badge and the buttons
  * come from the same answer, and what was measured stays separate from what's in use, so a correction
  * can always be seen for what it is and taken back. */
-export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNever, measured = true }: {
+export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNever, measured = true, onPlayNext }: {
   song: LibrarySong;
   /** songs here are analysed (local mode); a browser library has no tempo, key or stems to show */
   measured?: boolean;
@@ -70,6 +72,8 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
   notify: ViewProps['notify'];
   onPriority: (song: LibrarySong) => Promise<void>;
   onNever: (song: LibrarySong) => Promise<void>;
+  /** ADR-0475 I90: on a remote while another device plays */
+  onPlayNext?: (song: LibrarySong) => Promise<unknown>;
 }) {
   const { post } = useApi();
   const savedBpm = song.override_bpm ? localDecimal(song.override_bpm) : '';
@@ -147,6 +151,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       </div>
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       {facts.reason && <p className="hint">{facts.reason}</p>}
+      <SongPlaces song={song} onPlayNext={onPlayNext} />
       {measured && nextStep(song.readiness?.status) && <p className="hint song-next-step">{nextStep(song.readiness?.status)}</p>}
       {flagOn('library.capability_readiness') && (
         <dl className="song-facts song-capabilities" aria-label="What it’s ready for">
@@ -167,6 +172,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
         )}
         {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>}
       </dl>
+      <SongVersions song={song} onChanged={onChanged} notify={notify} />
       {flagOn('library.related_links') && <SongRelated song={song} />}
       {flagOn('library.corrections') && (
       <section className="stack">

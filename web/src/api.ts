@@ -393,7 +393,14 @@ export type LibrarySong = {
   /** Where this song can play from, in a shell whose music lives on the member's devices
    * (local-first Cloud, BF-0462-04). The local server never sends it: its files are on this computer. */
   availability?: SongAvailability;
+  /** ADR-0469 amendment 2: the files of this one song, when the person has more than one (two
+   * folders with the same song, an MP3 and a FLAC). Shown in the song's details; never as rows. */
+  versions?: SongVersion[];
 };
+
+/** One file of a song: its own catalogue id, length and format, whether this device holds it,
+ * and whether it is the id the song is known by (its mixes and requests use that one). */
+export type SongVersion = { id: number; length: number; format: string | null; here: boolean; primary: boolean };
 
 /** here: a file on this device that opens; reauth: on this device, but the browser needs the
  * member's permission again; hosted: a hosted copy in SelectaDJ Cloud plays it; elsewhere: on

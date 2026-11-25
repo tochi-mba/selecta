@@ -120,7 +120,11 @@ class ClaimSession:
 
     def standing(self, workspace_id: str) -> AccountStanding:
         if workspace_id not in self._standings:
-            self._standings[workspace_id] = self.store.entitlements.standing(workspace_id)
+            port = self.store.entitlements
+            inside = getattr(port, "standing_in", None)
+            self._standings[workspace_id] = (
+                inside(self.connection, workspace_id) if inside else port.standing(workspace_id)
+            )
         return self._standings[workspace_id]
 
     def cap(self, standing: AccountStanding, lane: str) -> int:
@@ -133,7 +137,12 @@ class ClaimSession:
             return True
         key = (workspace_id, flag_id)
         if key not in self._flags:
-            self._flags[key] = self.store.flags.is_on(workspace_id, flag_id)
+            port = self.store.flags
+            inside = getattr(port, "is_on_in", None)
+            self._flags[key] = (
+                inside(self.connection, workspace_id, flag_id) if inside
+                else port.is_on(workspace_id, flag_id)
+            )
         return self._flags[key]
 
     def _context(self, head: Row, standing: AccountStanding, job: Row | None = None):

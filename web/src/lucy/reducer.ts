@@ -358,7 +358,8 @@ function applyEvent(view: LucyView, event: LucyEvent, payload: Record<string, un
     case 'commit.updated': {
       const key = text(payload.key);
       if (!key) return view;
-      return { ...view, commits: { ...view.commits, [key]: { status: text(payload.status), draft_id: typeof payload.draft_id === 'number' ? payload.draft_id : null, name: typeof payload.name === 'string' ? payload.name : null } } };
+      // the current revision is read again, so the pane's pill says it was saved (Cloud)
+      return { ...view, revisionTick: view.revisionTick + 1, commits: { ...view.commits, [key]: { status: text(payload.status), draft_id: typeof payload.draft_id === 'number' ? payload.draft_id : null, name: typeof payload.name === 'string' ? payload.name : null } } };
     }
     case 'job.update':
       return { ...view, readinessTick: view.readinessTick + 1 };

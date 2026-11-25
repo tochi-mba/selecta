@@ -2,6 +2,7 @@ import type { MixData, MixItem, Request, Status } from '../api';
 import { BROWSER_MOVE_WORDS, browserMovesOn, defaultBrowserMove, type BrowserMove } from './browserMoves';
 import { withOutbox, type KnownSong, type RecipeChange } from './outbox';
 import { accountCurrent } from './currentMix';
+import { currentGrouping } from './songVersions';
 
 /** The local-first recipe store (ADR-0458 portable recipes, BF-0462-05).
  *
@@ -155,9 +156,12 @@ export function seamPlan(recipe: Recipe, position: number): { move: string; labe
 /** A recipe as the shared views' current mix. Songs carry no tempo or key (nothing is analysed
  * on the server), and each seam carries its move, worked out in the browser as it plays. */
 export function asMixData(recipe: Recipe): MixData {
+  // a mix made before songs were grouped may hold another version's id: it is shown as the song
+  // (ADR-0469 amendment 2), and any of its versions plays it
+  const songOf = currentGrouping().primaryOf;
   const mix: MixItem[] = recipe.songs.map((song, position) => ({
     position,
-    song_id: song.song_id,
+    song_id: songOf(song.song_id),
     artist: song.artist ?? '',
     title: song.title,
     duration: song.duration ?? 0,

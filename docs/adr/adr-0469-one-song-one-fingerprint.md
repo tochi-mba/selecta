@@ -107,11 +107,39 @@ The memo is a hint, never proof.
 
 `ImportSummary.reuse` counts songs recognised from this browser and songs analysed. The summary line adds, for example: "2,918 recognised from this browser, so nothing had to be analysed again.", or "2,900 recognised from this browser, 18 new songs analysed.", or, for a browser that has never seen them, "None of these songs had been seen in this browser before, so each one was analysed. Next time, they'll be recognised."
 
+### Measured (local Cloud stack, Edge, one browser profile, 2026-11-24)
+
+A folder of 103 MP3s (783 MB). Account A imported it first: 103 files hashed, 783.2 MB read, 202.9 s from pick to finished. Account B then picked the same folder in the same profile: 103 recognised, 0 hashed, 0 bytes read, every duration reused, 15.6 s from pick to finished (the rest is tag reading and registration); the background sample check hashed 3 files and all matched. With one file changed (7 bytes appended), B's next import recognised 102, hashed 1 (9.7 MB read) and said "102 recognised from this browser, 1 new song analysed."
+
 ### How to watch the fingerprint log
 
-1. Settings, card "What this browser keeps" (`cloud.local_media`), section "Fingerprint log (for developers)" (`cloud.content_cache`). Open it before or during an import in the same tab. Totals sit at the top (files, recognised, hashed, bytes read and not read, time spent, an estimate of time saved at this run's own hashing speed, the sample check); below, one line per file, newest first: name, hash prefix, how the hash was found and how long it took, tags, duration, tonal profile, waveform, registration.
+1. Workshop, Storage tab (`/workshop/storage`; on Account settings instead where `cloud.workspace` is off), card "What this browser keeps" (`cloud.local_media`), section "Fingerprint log (for developers)" (`cloud.content_cache`). A new account sees the Workshop once it leaves the welcome steps ("Finish later"). Open it before or during an import in the same tab. Totals sit at the top (files, recognised, hashed, bytes read and not read, time spent, an estimate of time saved at this run's own hashing speed, the sample check); below, one line per file, newest first: name, hash prefix, how the hash was found and how long it took, tags, duration, tonal profile, waveform, registration.
 2. In the browser console: `localStorage.setItem('selecta.debug.fingerprint', '1')`, then import. Each line is logged under `[fingerprint]`, with a summary line at the end.
 3. The log lives in memory for this tab and this workspace only. It holds only the signed-in account's own file names and hash prefixes; another account's import is never shown.
+
+## Amendment 2 (2026-11-24): one song, however many files of it
+
+The owner's library on staging held several chart folders with the same songs. Searching Requests for "Agora" showed "Agora Hills, Doja Cat" three times (ids 2447, 3271, 3296), one marked "In your mix" and the other two still offering "Request", and the Library count (2,919) counted every copy.
+
+**Cause.** `local_media/store.py` `register_songs` registered a different file with the same normalised title and artist as its own row, marked `duplicate_of` the earlier one and "never merged". The local app hides such rows everywhere (`duplicate_of IS NULL` in every listing), but the Cloud browser-first catalogue never did: `/api/local-media/songs`, the browser's catalogue (`localFirstRequest.ts`), Requests search, mix picking, rooms' catalogue (`local_media/catalog.py`) and the counts all listed every copy. Identical bytes were never the problem: `(workspace_id, content_sha256)` is unique, so the same file under two names or in two folders was already one row, and the fingerprint memo cannot change that (a memo hit is the same hash, so the same row).
+
+**Rule.** A different file is a VERSION of a song when its normalised title and artist match AND its length is within 3 seconds of the song's (either length unknown counts as a match). Its `duplicate_of` points at the group's PRIMARY: the earliest live row, whose id mixes, requests and rooms already use. Same name with a clearly different length (a remix, a live take, an extended mix) is a different song with its own title and length. Rows are grouped, never merged, and no id changes.
+
+**Server** (`src/selecta/local_media/versions.py`):
+- `register_songs` chooses a new file's group with the length rule.
+- `listed_songs()` is the one query for what a person sees: live primaries only. Lucy's song list uses it; rooms' catalogue offers primaries only, a song being requestable when the speaker holds any of its versions; `is_requestable` reads an older id as its song.
+- `regroup_versions()` re-evaluates every live row in id order and writes only what changed: rows grouped by name alone before lengths counted, rows pointing at a removed primary, chains. It is idempotent and logs what it changed. It runs after every registration and removal (where groups can change), and once per workspace per grouping rule (`RULE_VERSION`, kept in `local_song_versions_state`, migration `bf0469vers01`) on the first full catalogue read by a member who may change the library, so existing data is repaired on the first load after a deploy and never again until the rule changes. A viewer's read never writes.
+- The catalogue route still lists every file, each with `duplicate_of`, because a browser must know which file it holds.
+
+**Browser** (`web/src/cloud/songVersions.ts`):
+- `groupVersions` is the one place the catalogue becomes songs: one row per song under its primary id, with every version's id. The request adapter reads only that, so Library, search, Requests, Make a Mix, the editor's suggestions, the queue and the counts all see songs.
+- A song is on this device when any version is; the device resolver (`withVersions`) plays the best version this device can open (lossless first, then the longer file).
+- "In your mix", requests, votes and the speaker's holdings are compared by song: mix ids, the speaker's programme and holdings are read through `primaryOf`. "Never play" is set on every version of the song.
+- An old mix or request holding a version's id is read as its song; nothing is rewritten.
+- The song's details list its versions (length, format, whether this device holds it) with "Remove the extra copy from my library", which removes the catalogue row only and never touches a file.
+- The import summary counts extra copies apart from songs: "2,405 songs connected, 514 extra copies of songs you already have."
+
+**File names.** A file whose artist tag is missing or a placeholder ("Unknown Artist", "<unknown>", "Various Artists") and whose title tag or file name reads "Artist - Title" is split into artist and title. Songs registered before this keep their old names until the folder is connected again (the fingerprint memo makes that quick); registering the same bytes again updates the names.
 
 ## Checklist
 
@@ -137,5 +165,9 @@ The memo is a hint, never proof.
 - [x] Amendment 1: tonal profiles, waveforms and durations produced into and read from the shared store through the workspace's proven hashes; older per-workspace profiles migrated lazily and kept. Implemented (amendment 1 commits)
 - [x] Amendment 1: fingerprint memo with the memo rule (hint for listing, proven before play or shared reads, background sample check). Implemented (amendment 1 commits)
 - [x] Amendment 1: import summary says what was recognised; fingerprint log in Settings and under `[fingerprint]` in the console. Implemented (amendment 1 commits)
-- [ ] Amendment 1: Vitest for the derived store, the memo rule and the reuse words. Needs follow-up (features first; tests in a later pass)
+- [x] Amendment 2: versions grouped by name and length on the server, primaries only in rooms and Lucy, idempotent repair of existing groups. Implemented (amendment 2 commits)
+- [x] Amendment 2: one grouped catalogue in the browser, any version plays, old ids read as their song, versions in the song's details with removing an extra copy, import words count extra copies. Implemented (amendment 2 commits)
+- [x] Amendment 2: pytest `tests/test_local_media_versions.py` (length rule, identical bytes, repair once per rule, removed primary, rooms by song, and the guard that a module reading `local_songs` is a known by-id or by-hash reader or goes through `listed_songs`); Vitest `web/src/cloud/songVersions.test.ts`. Implemented (amendment 2 test commit)
+- [x] Amendment 2: checked in a browser on a local stack (the same song in two folders and a longer remix): Library 13 songs from 14 files, two Ocean rows told apart by length, "2 versions" in details, Requests by song with lengths, the editor playing the held version. Owner-delegated check, not owner-verified
+- [x] Amendment 1: Vitest `web/src/media/fingerprints.test.ts` for the derived store, the memo rule, the sample check, the reuse words and the file-name split. Implemented (amendment 2 test commit)
 - [x] Pytest `tests/test_shared_derivations.py`: possession-gated reads, claimed hashes refused, refusal equals absence, verified writes only, user data refused, flag off, reference count, erasure drops rows. Implemented (8af7c9cf; PostgreSQL variants run where a PostgreSQL test database is configured)

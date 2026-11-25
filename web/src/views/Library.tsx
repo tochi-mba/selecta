@@ -1,5 +1,7 @@
 import { words } from '../copy';
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { HolderContext } from '../devices/controller';
+import { RemoteSelection } from './RemoteSelection';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
 import { useApi } from '../requestContext';
@@ -56,7 +58,7 @@ const pagesFrom = (text: string | null) => {
 /** `lead`: what a shell puts first under the header, such as connecting music again in a browser.
  * `tail`: what it puts after the songs, inside the same page column.
  * `browser`: browser-first Cloud's frame (header, toolbar, selection bar); local mode never sets it. */
-export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead, tail, browser }: ViewProps & { lead?: ReactNode; tail?: ReactNode; browser?: LibraryBrowserChrome }) {
+export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead, tail, browser, playOn }: ViewProps & { lead?: ReactNode; tail?: ReactNode; browser?: LibraryBrowserChrome }) {
   // ADR-0462: every read and write on this page goes through the injected request.
   const { get, post } = useApi(request);
   const query = useQueryParam('q') ?? '';
@@ -373,12 +375,24 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     return () => window.clearTimeout(wait);
   }, [typed, query]);
 
+  const holder = useContext(HolderContext);
   const inMix = new Set(mix.map((item) => item.song_id));
   const add = async (song: LibrarySong, position?: number) => {
     // "play next" means next in what's on screen, so it stops if that's changed
     const guard = position === undefined ? undefined : { 'x-mix-order': orderOf(mix) };
-    setMixData(await post<MixData>('/mix/songs', { song_id: song.id, position }, guard));
+    // ADR-0475 I85: the song lives on another open device; the offer to move there is showing
+    const added = await post<MixData>('/mix/songs', { song_id: song.id, position }, guard)
+      .catch((error: unknown) => { if (error instanceof ApiError && error.code === 'move_offered') return null; throw error; });
+    if (!added) return false;
+    setMixData(added);
     notify(position !== undefined ? `${song.title} plays next.` : `Added ${song.title}.`, true);
+    return true;
+  };
+  // I88: chosen songs next on the speaker, in the order shown (each goes in after the last)
+  const playSelectedNext = async (chosen: readonly LibrarySong[]) => {
+    if (!chosen.length) return;
+    setMixData(await post<MixData>('/mix/songs', { song_ids: chosen.map((song) => song.id), position: now.position + 1 }));
+    notify(chosen.length === 1 ? `${chosen[0].title} plays next.` : `${chosen.length} songs play next.`, true);
   };
   const never = async (song: LibrarySong) => {
     await post(`/songs/${song.id}/never`);
@@ -426,7 +440,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const requestStart = (song: LibrarySong) => {
     // A new mix takes over the current one. Ask consistently with Explore
     // rather than replacing live music directly from a Library row.
-    if (mix.length > 0 && now.phase !== 'idle') {
+    // ADR-0475: with another device playing, a new mix replaces nothing there; that device is asked
+    // (I87: on a remote whose speaker has gone, nothing is playing, so nothing is replaced)
+    if (mix.length > 0 && now.phase !== 'idle' && !(playOn && !playOn.now) && holder?.speaking !== false) {
       setConfirmStart({ song, order: orderOf(mix) });
       return;
     }
@@ -661,6 +677,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           canSelect={batch && !!committedRows?.length && filter !== 'set_aside'}
           onSelectAll={() => { if (committedRows && !searching && !failed) setBatchSelection({ identity: selectionIdentity, ids: committedRows.slice(0, 200).map((song) => song.id) }); }}
           onClear={() => { setBatchSelection({ identity: selectionIdentity, ids: [] }); selectionEntryRef.current?.focus(); }}>
+          {holder?.speaking && now.phase !== 'idle' && <RemoteSelection songs={visibleSelected} holder={holder} disabled={searching || failed} playNext={playSelectedNext} />}
           {on('library.never_play') && (
             <>
               <button type="button" disabled={searching || failed} onClick={() => askBatch('never')}>Never play</button>
@@ -755,6 +772,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             selectionFull={selectedIdSet.size >= 200} searching={searching} failed={failed} building={building}
             duplicate={duplicateIds.has(song.id)} sharedTitle={sharedTitles.has(song.title ?? 'Untitled')}
             inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}
+            current={now.phase !== 'idle' && mix[now.position]?.song_id === song.id}
             linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
             lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} browser={!!browser} />
         ))}
@@ -772,7 +790,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </p>
       )}
       {tail}
-      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable} />}
+      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable}
+        onPlayNext={holder?.speaking && now.phase !== 'idle' ? (song) => add(song, now.position + 1) : undefined} />}
       {confirmBatch && <Dialog title={batchWords(confirmBatch.action, confirmBatch.songs.length).title} onClose={() => setConfirmBatch(null)}
         footer={<>
           <button onClick={() => setConfirmBatch(null)}>Cancel</button>

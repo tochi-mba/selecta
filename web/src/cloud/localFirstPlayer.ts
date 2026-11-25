@@ -232,6 +232,9 @@ export class LocalFirstPlayer implements PlayerLike {
   /** Asked by another device to play: the next start happens only while no other device is
    * the speaker, so a "Play here instead" pressed there meanwhile is never overturned. */
   startFreeOnce = false;
+  /** ADR-0475 I85: asked to take the music over ("Move and play"): the next start moves it here
+   * from the device that is playing, as Play here instead does, from the asked position. */
+  startMovingOnce = false;
 
   async playHereInstead(): Promise<void> {
     if (!this.facts.mix.length) return this.publish(NOTHING_TO_PLAY);
@@ -245,8 +248,10 @@ export class LocalFirstPlayer implements PlayerLike {
       // A new speaker starts where this press asked (the first play of a visit used to carry on
       // from wherever the last mix was left); its heartbeat then tells the session (ADR-0415).
       const free = this.startFreeOnce;
+      const moving = this.startMovingOnce;
       this.startFreeOnce = false;
-      const problem = await this.actions.playHere({ song_index: position, offset_ms: Math.max(0, Math.round(offset * 1000)) }, free ? 'free' : undefined);
+      this.startMovingOnce = false;
+      const problem = await this.actions.playHere({ song_index: position, offset_ms: Math.max(0, Math.round(offset * 1000)) }, moving ? true : free ? 'free' : undefined);
       return this.publish(problem);
     }
     await this.seekTo(position, offset);
@@ -473,6 +478,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   const songs = useRef(mix);
   songs.current = mix;
   const owner = useRef<string | null | undefined>(undefined);
+  // the person chose this device over whichever plays (Play here instead)
+  const insisting = useRef(false);
   // State, not a ref: the speaker usually lands (and this effect runs) before the session refresh
   // decides the lease is wanted, so the decision itself must re-run the effect.
   const [wantHere, setWantHere] = useState(false);
@@ -561,7 +568,9 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     setWantHere(false);
     const at = startAt.current;
     startAt.current = undefined;
-    void pb.playHere(owner.current, at);
+    // 'Play here instead': take over from whoever plays by then, with no condition on who that is
+    void pb.playHere(insisting.current ? undefined : owner.current, at);
+    insisting.current = false;
   }, [speaker, wantHere, pb.device, pb.playHere]);
 
   const playHere = useCallback(async (at?: StartAt, insist: boolean | 'free' = false): Promise<string> => {
@@ -614,7 +623,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     // another tab of this same browser is the speaker: the press here is the answer (ADR-0475 F)
     const sameDevice = !!latest.speaker_device_id && latest.speaker_device_id === pb.device?.id;
     // the person chose here over the device that is starting or playing: take over from it
-    if (insist === true) owner.current = latest.speaker_device_id ?? null;
+    insisting.current = insist === true;
     // asked from elsewhere: only while nobody plays; the take-over then requires that still
     if (insist === 'free') {
       if (latest.speaker === 'elsewhere') return '';
@@ -631,7 +640,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
       return '';
     }
     startAt.current = undefined;
-    await pb.playHere(owner.current, at);
+    await pb.playHere(insist === true ? undefined : owner.current, at);
     return '';
   }, [pb, refusal, resolve, speaker, starter, wiring]);
 

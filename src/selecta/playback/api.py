@@ -57,6 +57,7 @@ from selecta.playback.model import (
     IdempotencyConflict,
     InvalidCommand,
     NotTheSpeaker,
+    NotYourMusic,
     OutputReport,
     OwnershipChanged,
     PersonSpeakerOff,
@@ -278,6 +279,14 @@ def install_routes(
             return HTTPException(
                 status_code=403,
                 detail={"code": error.code, "message": str(error)},
+            )
+        if isinstance(error, NotYourMusic):
+            return HTTPException(
+                status_code=403,
+                detail={
+                    "code": error.code,
+                    "message": "That music is playing on someone else's device.",
+                },
             )
         if isinstance(error, DeviceSignedOut):
             return HTTPException(
@@ -569,6 +578,31 @@ def install_routes(
         app, engine=engine, current_claims=current_claims, principal=principal, mine=mine,
         events=events,
     )
+
+    @app.get("/api/playback/commands/{command_id}")
+    def playback_command_outcome(
+        command_id: str,
+        request: Request,
+        device_id: str | None = None,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """ADR-0475 G3 (68): has the speaker carried out this press? Read by the device that
+        sent it, so a remote shows a change only once the speaker confirms it."""
+        found = principal(request, claims, "devices.remote_control")
+        here = mine(found, device_id, request)
+        try:
+            outcome = fencing.command_outcome(engine, found.workspace.id, here, command_id)
+        except PlaybackError as error:
+            raise refused(error) from error
+        return {
+            "command_id": outcome.command_id,
+            "command": outcome.command,
+            "status": outcome.status,
+            "applied_seq": outcome.applied_seq,
+            "ack_result": outcome.ack_result,
+            "acked_at": outcome.acked_at,
+            "followed": outcome.followed,
+        }
 
     @app.post("/api/playback/commands/{command_id}/ack")
     def playback_command_ack(

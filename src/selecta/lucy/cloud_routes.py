@@ -111,24 +111,33 @@ def suggestions(conn, workspace_id: str) -> list[str]:
     current mix, so the empty conversation starts from music they have."""
     import sqlalchemy as sa
 
-    from selecta.local_media import current_mix
-    from selecta.local_media.schema import local_songs
+    from selecta.local_media import versions
+    from selecta.local_media.schema import local_song_availability, local_songs
+    from selecta.lucy.cloud_tools import _current_mix_id, music_artists
 
+    # one line per song, never its extra copies (ADR-0469 amendment 2)
     rows = conn.execute(
-        sa.select(local_songs.c.artist, sa.func.count().label("n"))
-        .where(local_songs.c.workspace_id == workspace_id)
-        .where(local_songs.c.deleted_at.is_(None))
-        .group_by(local_songs.c.artist)
-        .order_by(sa.func.count().desc(), local_songs.c.artist)
-        .limit(2)
+        versions.listed_songs(workspace_id, local_songs.c.id, local_songs.c.title,
+                              local_songs.c.artist, local_songs.c.album, local_songs.c.duration_s,
+                              local_songs.c.never_play)
     ).all()
-    artists = [row.artist for row in rows if row.artist]
+    held = dict(conn.execute(
+        sa.select(local_song_availability.c.song_id, sa.func.count())
+        .where(local_song_availability.c.workspace_id == workspace_id)
+        .where(local_song_availability.c.present.is_(True))
+        .group_by(local_song_availability.c.song_id)
+    ).all())
+    songs = [{"id": int(r.id), "title": r.title, "artist": r.artist, "album": r.album,
+              "duration_s": r.duration_s, "never": bool(r.never_play)} for r in rows]
+    # music only, most held first: an author or a podcast is never a suggested mix
+    artists = [name for name, _count in music_artists(songs, held, limit=2)]
     asks = []
     if len(artists) >= 2:
         asks.append(f"An hour of {artists[0]} and {artists[1]}")
     elif artists:
         asks.append(f"A short mix of {artists[0]}")
-    if current_mix.read(conn, workspace_id).get("mix_id"):
+    # the mix Lucy's tools read: the account's current one, else the newest saved one
+    if _current_mix_id(conn, workspace_id):
         asks += ["What's in my current mix?", "Take the slowest songs out of my mix"]
     elif artists:
         asks.append("Make a 30 minute mix to dance to")
@@ -167,6 +176,27 @@ def status_of(choices: dict[str, Any], tier_label: str,
     }
 
 
+def _check_at_startup(app: FastAPI, engine: Engine) -> None:
+    """Once the app has started (staging and production, or SELECTA_LUCY_SELF_CHECK=1): say
+    whether Lucy can reach her models, on a thread, so start-up never waits on Anthropic."""
+    import threading
+    from contextlib import asynccontextmanager
+
+    from selecta.lucy import cloud_health
+
+    started = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def with_check(application):
+        async with started(application) as state:
+            if cloud_health.wanted():
+                threading.Thread(target=cloud_health.boot_check, args=(engine,), daemon=True,
+                                 name="lucy-self-check").start()
+            yield state
+
+    app.router.lifespan_context = with_check
+
+
 def install_routes(
     app: FastAPI,
     *,
@@ -176,6 +206,7 @@ def install_routes(
     runner: cloud_agent.Runner | None = None,
 ) -> None:
     runner = runner or cloud_agent.RUNNER
+    _check_at_startup(app, engine)
 
     def who(request: Request, claims: Claims, action=WorkspaceAction.MIXES_READ):
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))

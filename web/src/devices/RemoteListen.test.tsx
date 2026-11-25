@@ -39,7 +39,8 @@ function open(seen: SessionView | null, options: { remoteControl?: boolean; mix?
 describe('the remote on Listen', () => {
   it('shows what is playing on the other device, where it has got to and what is next', async () => {
     open(view());
-    expect(await screen.findByTestId('remote-title')).toHaveTextContent('Bravo');
+    // the title arrives with the library read, which a busy machine may take a moment over
+    await waitFor(() => expect(screen.getByTestId('remote-title')).toHaveTextContent('Bravo'));
     expect(screen.getByTestId('remote-where')).toHaveTextContent('Playing on Laptop');
     expect(screen.getByTestId('remote-artist')).toHaveTextContent('Tochi');
     expect(screen.getByText('Song 2 of 3')).toBeInTheDocument();
@@ -71,8 +72,8 @@ describe('the remote on Listen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Play' }));
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith('play', undefined);
-    // the press shows at once, until the speaker answers
-    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+    // G3: the press shows as done only once the speaker has carried it out (the session says so)
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
   });
 
   it('takes a refused press back', async () => {
@@ -94,13 +95,13 @@ describe('the remote on Listen', () => {
     open(view({}, { state_confidence: 'uncertain', output_status: 'interrupted' }));
     expect(await screen.findByTestId('remote-state')).toHaveTextContent(/has not checked in recently/);
     // the speaker's sound is said about the speaker, by name, with nothing this device is asked to do
-    expect(screen.getByTestId('remote-sound')).toHaveTextContent('Sound on Laptop was interrupted, so you may not hear it.');
+    expect(screen.getByTestId('remote-sound')).toHaveTextContent('Laptop can’t make sound right now. Press Play on Laptop to carry on.');
   });
 
-  it('a speaker whose sound nobody has confirmed is named, and the remote is not told to play a check tone', async () => {
+  it('a playing speaker whose check tone nobody has confirmed says nothing about its sound', async () => {
     open(view({}, { output_status: 'output_unverified' }));
-    expect(await screen.findByTestId('remote-sound')).toHaveTextContent('Laptop hasn’t confirmed its sound yet.');
-    expect(screen.getByTestId('remote-sound')).not.toHaveTextContent(/check tone|this device/);
+    expect(await screen.findByTestId('remote-where')).toHaveTextContent('Playing on Laptop');
+    expect(screen.queryByTestId('remote-sound')).toBeNull();
     expect(screen.queryByTestId('remote-state')).toBeNull();
   });
 
@@ -191,21 +192,23 @@ describe('each press is one command', () => {
     expect(send.mock.calls).toEqual([['seek', { song_index: 1, offset_ms: 31_000 }]]);
   });
 
-  it('the volume slider shows when the session carries a volume, and sends once on release', async () => {
+  // ADR-0475 G1 (83e056d4): a dragged slider follows about ten times a second, and the final value
+  // always goes on release
+  it('the volume slider shows the session volume, follows a drag and sends the final value on release', async () => {
     const { send } = open(view());
     const slider = await screen.findByRole('slider', { name: 'Volume' });
     expect(slider).toHaveValue('60');
     fireEvent.change(slider, { target: { value: '45' } });
     fireEvent.change(slider, { target: { value: '30' } });
-    expect(send).not.toHaveBeenCalled();
+    expect(send.mock.calls).toEqual([['set_volume', { volume: 45 }]]);
     fireEvent.pointerUp(slider);
-    expect(send.mock.calls).toEqual([['set_volume', { volume: 30 }]]);
+    expect(send.mock.calls).toEqual([['set_volume', { volume: 45 }], ['set_volume', { volume: 30 }]]);
   });
 
-  it('there is no volume slider when the session carries none', async () => {
+  it('a session nobody has set a volume on shows the slider at the comfortable default', async () => {
     open(view({}, { volume: null }));
     await screen.findByTestId('remote-title');
-    expect(screen.queryByRole('slider', { name: 'Volume' })).toBeNull();
+    expect(screen.getByRole('slider', { name: 'Volume' })).toHaveValue('80');
   });
 });
 

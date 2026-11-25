@@ -21,8 +21,7 @@ const ALWAYS = new Set(['0px', '1px', '-1px']);
 /** Documented exceptions: file, selector, property and the raw value, each with a reason. */
 const EXCEPTIONS = [
   { file: 'styles/creation.css', selector: '.story-seam', property: 'margin-inline-start', value: '17px', reason: 'centres the seam line under the 36px story number on phones (36 / 2 - 1)' },
-  { file: 'styles/lucy.css', selector: '.lucy-msg.is-user article', property: 'margin-left', value: '80px', reason: 'clamp ceiling for the conversation indent, proportional to the viewport' },
-  { file: 'styles/lucy.css', selector: '.lucy-msg.is-assistant article', property: 'margin-right', value: '60px', reason: 'clamp ceiling for the conversation indent, proportional to the viewport' },
+  { file: 'styles/lucy.css', selector: '.lucy-msg.is-assistant article', property: 'padding-inline-end', value: '60px', reason: 'clamp ceiling for the conversation indent, proportional to the viewport' },
   { file: 'styles/music-objects.css', selector: '.energy-overview button', property: 'padding', value: '3px', reason: 'musical geometry: the energy bar inset matches --grid-beat-gap so bars read as one grid' },
 ] as const;
 

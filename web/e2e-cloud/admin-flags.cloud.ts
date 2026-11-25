@@ -75,13 +75,13 @@ test('an Owner applies each kind of flag change on the Flags page, and each show
   const them = await theirs.newPage();
   await signedIn(them, request, customer, { path: '/listen' });
   await them.evaluate(() => { (window as unknown as { stayed: boolean }).stayed = true; });
-  const bigScreen = them.locator('.room-panel').getByRole('heading', { name: 'Big screen' });
+  const bigScreen = them.locator('.room-panel').getByRole('heading', { name: 'Display screens' });
   await expect(bigScreen).toBeVisible();
   const customerId = (await accountOf(request, customer)).user.id;
 
   const owner = await asStaff(page, request);
   const nav = await enterConsole(page);
-  await nav.getByRole('button', { name: 'Flags' }).click();
+  await nav.getByRole('link', { name: 'Flags' }).click();
 
   // Off for these users: one account is a per-workspace override, so it applies at once, and the
   // customer's open page closes up around it over the event stream, with no reload.
@@ -143,18 +143,22 @@ test('an Owner applies each kind of flag change on the Flags page, and each show
   expect((await accountOf(request, customer)).features[LABS]).toBe(false);
 
   // The kill switch's alert is on the Overview.
-  await nav.getByRole('button', { name: 'Overview' }).click();
-  await expect(page.getByRole('table', { name: 'Recent alerts' }).getByText(`Kill switch on ${LABS}: ${why('kill switch')}`)).toBeVisible();
+  await nav.getByRole('link', { name: 'Overview' }).click();
+  await expect(page.getByRole('region', { name: 'Recent alerts' }).getByText(`Kill switch on ${LABS}: ${why('kill switch')}`)).toBeVisible();
 
   // Both broad changes wait on the Security page. The tier switch-off is cancelled.
-  await nav.getByRole('button', { name: 'Security' }).click();
-  const waiting = page.getByRole('table', { name: 'Dangerous actions' });
+  await page.goto('/admin/security/actions');
+  // a reload starts a new staff session, which opens in view mode (AdminArea enter())
+  await page.getByRole('button', { name: 'Make changes' }).click();
+  await expect(page.getByRole('button', { name: 'Stop making changes' })).toBeVisible();
+  const waiting = page.getByRole('region', { name: 'Waiting actions' });
   const tierRow = waiting.getByRole('row').filter({ hasText: why('tier off') });
   await expect(tierRow).toBeVisible();
+  // a console button newly enabled by Make changes ignores presses for its first 500 ms, so one
+  // that appears under the pointer is never pressed by accident (doc 07b 7B.7)
+  await page.waitForTimeout(600);
   await tierRow.getByRole('button', { name: 'Cancel' }).click();
-  await tierRow.getByLabel(/^Reason for/).fill(why('cancel tier off'));
-  await tierRow.getByRole('form', { name: 'Cancel' }).locator('button[type="submit"], button:not([type])').first().click();
-  await expect(page.getByRole('status').filter({ hasText: 'cancel: done.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /^Cancelled: / })).toBeVisible();
   await expect(waiting.getByRole('row').filter({ hasText: why('tier off') })).toHaveCount(0);
   // The Owner can't approve their own rollback.
   const rollbackRow = waiting.getByRole('row').filter({ hasText: why('rollback') });
@@ -166,17 +170,21 @@ test('an Owner applies each kind of flag change on the Flags page, and each show
   const approver = await second.newPage();
   await asStaff(approver, request);
   const theirNav = await enterConsole(approver);
-  await theirNav.getByRole('button', { name: 'Security' }).click();
-  const toApprove = approver.getByRole('table', { name: 'Dangerous actions' }).getByRole('row').filter({ hasText: why('rollback') });
+  await expect(theirNav).toBeVisible();
+  await approver.goto('/admin/security/actions');
+  await approver.getByRole('button', { name: 'Make changes' }).click();
+  const toApprove = approver.getByRole('region', { name: 'Waiting actions' }).getByRole('row').filter({ hasText: why('rollback') });
+  await approver.waitForTimeout(600);
   await toApprove.getByRole('button', { name: 'Approve' }).click();
-  await expect(approver.getByRole('status').filter({ hasText: 'approve: done.' })).toBeVisible();
-  await toApprove.getByRole('button', { name: 'Run now if due' }).click();
-  await expect(approver.getByRole('status').filter({ hasText: 'execute: done.' })).toBeVisible();
+  await expect(approver.getByRole('status').filter({ hasText: /^Approved: / })).toBeVisible();
+  await approver.waitForTimeout(600);
+  await toApprove.getByRole('button', { name: 'Run now' }).click();
+  await expect(approver.getByRole('status').filter({ hasText: /^Ran: / })).toBeVisible();
   await expect.poll(async () => (await accountOf(request, customer)).features[LABS], { timeout: 10_000 }).toBe(true);
   await second.close();
 
   // History: the rollback is a new version restoring the schedule and the rollout.
-  await nav.getByRole('button', { name: 'Flags' }).click();
+  await nav.getByRole('link', { name: 'Flags' }).click();
   panel = await openFlag(page, LABS, 'Labs');
   const restored = panel.getByRole('table', { name: 'Rule versions' }).getByRole('row').filter({ hasText: `rollback to version ${scheduleVersion}: ${why('rollback')}` });
   await expect(restored).toBeVisible();
@@ -184,17 +192,19 @@ test('an Owner applies each kind of flag change on the Flags page, and each show
   await expect(restored).toContainText('100% rollout of premium');
 
   // The audit log has every change, with its reason, including the cancelled one.
-  await nav.getByRole('button', { name: 'Security' }).click();
+  await page.goto('/admin/security/audit');
   await page.getByLabel('Action starts with').fill('flags.rules');
-  await page.getByRole('form', { name: 'Audit search' }).getByRole('button', { name: 'Search' }).click();
-  const audit = page.getByRole('table', { name: 'Audit events' });
+  await page.getByRole('button', { name: 'Filter' }).click();
+  const audit = page.getByRole('region', { name: 'Audit events' });
   for (const step of ['off for one customer', 'rollout', 'schedule', 'tier off', 'kill switch']) {
     await expect(audit.getByRole('row').filter({ hasText: why(step) }).first()).toBeVisible();
   }
   await expect(audit.getByRole('row').filter({ hasText: `rollback to version ${scheduleVersion}: ${why('rollback')}` }).first()).toBeVisible();
   await page.getByLabel('Action starts with').fill('dangerous_action');
-  await page.getByRole('form', { name: 'Audit search' }).getByRole('button', { name: 'Search' }).click();
-  await expect(audit.getByRole('row').filter({ hasText: why('cancel tier off') }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Filter' }).click();
+  // Cancelling makes things safer, so the console asks no reason for it (doc 07b 7B.7, Careful)
+  // and records its own: the cancel is in the log against the flag it would have changed
+  await expect(audit.getByRole('row').filter({ hasText: 'dangerous_action.cancelled' }).filter({ hasText: LABS }).filter({ hasText: 'Cancelled from the console' }).first()).toBeVisible();
   expect(owner).toBeTruthy();
   await theirs.close();
 });

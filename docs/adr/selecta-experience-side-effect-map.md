@@ -63,6 +63,14 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta-mix-outbox-alias:<workspace>` | local | `web/src/cloud/outbox.ts` | Local mix ids matched to the server's once a queued create or edit lands, so later queued changes and a reloaded tab find the right mix (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-mix-outbox-notices:<workspace>` | local | `web/src/cloud/outbox.ts` | The last few plain notices about queued mix changes the server turned down, shown once and then removed (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
+| `selecta.account.message` | local | `web/src/cloud/accountTabs.ts` | The last sign-in or sign-out message for this browser's other tabs, only where BroadcastChannel is missing (the storage event carries it) | Account |
+| `selecta.admin.prodNotice` | session | `web/src/admin/AdminArea.tsx` | That the staff member dismissed the production notice for this tab | Staff console |
+| `selecta.debug.fingerprint` | local | set by a developer; read by `web/src/media/fingerprintLog.ts` | `1` prints each fingerprint log line to the console too | This device (developers) |
+| `selecta.debug.tabs` | local | set by a developer; read by `web/src/devices/audioTab.ts` | Any value logs each step of an audio-tab hand-over to the console | This device (developers) |
+| `selecta.derived.migrated.tonal.<workspace>` | local | `web/src/cloud/tonalProfiles.ts` | That this workspace's tonal profiles were copied into the device-wide derived store (ADR-0469) | This device |
+| `selecta.availability.reported` | local | `web/src/media/availability.ts` | A short fingerprint of the last holdings report and when it was sent, so another tab of this browser skips an identical report within a minute (ADR-0475 F42); no song ids or names | This device |
+| `selecta.once.<offer>` | local | `web/src/devices/useWhereToPlay.tsx` | `1` once a one-time offer or note (for example "Make {device} your usual speaker?") has been shown on this device, so it is never shown again (ADR-0475 B16) | This device |
+| `selecta.fingerprint.bytesPerMs` | local | `web/src/media/fingerprintLog.ts` | This browser's hashing speed from its last import that read files, a number only, for the time-saved estimate | This device |
 | `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
 
 IndexedDB databases added for interruption-safe Cloud (not localStorage keys, so not rows above): `selecta-mix-outbox` (`web/src/cloud/outbox.ts`, mix creates and edits made offline, sent on reconnect, `cloud.mix_outbox`), `selecta-media-catalogue-<workspace>` (`web/src/cloud/offlineCache.ts`, the last catalogue answer for the offline Library, `cloud.offline_shell`) and the import journal `selecta-media-journal-ws-<workspace>` (`web/src/media/importJournal.ts`, files already checked by an import, `cloud.resilient_import`).
@@ -256,6 +264,17 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `DELETE /api/assets/{asset_id}` | Deletes an uploaded asset |
 | `POST /api/assets/{asset_id}/playback-proxy` | Asks for a playback proxy to be made |
 
+### Hosted processing (`src/selecta/routes/hosted_render.py`) - `cloud.hosted_render`
+
+Each makes worker jobs only for the caller's own workspace; nothing is stored in the browser. Jobs are idempotent by input hash, so repeating a call never duplicates work.
+
+| Route | Side effect |
+|---|---|
+| `POST /api/hosted/songs/prepare` | Queues `analyse.song` for stored songs with no analysis (and, with `retry`, failed ones) |
+| `POST /api/hosted/mixes/plan` | None stored: reads analyses and returns the local planner's order and moves |
+| `POST /api/hosted/mixes/render` | Queues `play.proxy` and `seam.render` jobs the mix still needs, then returns its timeline with signed links |
+| `POST /api/hosted/mixes/export` | Queues one `export.render` job for the mix's songs |
+
 ### Local media catalogue (`src/selecta/local_media/api.py`) - Cloud library (ADR-0458)
 
 Metadata only: no audio leaves the member's devices. Dark in the build until `cloud.local_media` ships.
@@ -318,6 +337,30 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/admin/actions/{action_id}/{command}` | Approves or rejects a two-person action |
 | `POST /api/admin/emergency/{control}/{command}` | Turns an emergency control on or off |
 | `POST /api/admin/flags/rollback` | Rolls back a flag change |
+| `POST /api/admin/session/changes` | Opens the caller's change window (the console is read-only until then) |
+| `DELETE /api/admin/session/changes` | Closes the caller's change window, back to view mode |
+| `PUT /api/admin/me/preferences/{key}` | Saves one of the caller's own console preferences |
+| `POST /api/admin/customers/{user_id}/sign-out` | Signs a customer out everywhere (audited, with a reason) |
+| `POST /api/admin/customers/{user_id}/notes` | Adds a staff note to a customer record |
+| `POST /api/admin/customers/{user_id}/delete` | Proposes deleting a customer's account as a delayed two-person action |
+| `POST /api/admin/customers/{user_id}/{command}` | Suspends or restores a customer's account |
+| `PUT /api/admin/customers/{user_id}/storage-mode` | Sets a customer's storage mode (local-first or hosted) and refreshes flag rules |
+| `PUT /api/admin/customers/{user_id}/flags/{flag_id}` | Sets one flag for one customer's account and refreshes flag rules |
+| `POST /api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-at-period-end` | Sets or clears cancel at period end on the customer's Stripe subscription |
+| `POST /api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-now` | Cancels the customer's Stripe subscription now |
+| `POST /api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/retry` | Asks Stripe to collect an open invoice again |
+| `POST /api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/refund` | Refunds an invoice at Stripe (idempotent by action and target) |
+| `POST /api/admin/customers/{user_id}/portal-link` | Creates a Stripe billing portal link to send the customer |
+| `POST /api/admin/customers/{user_id}/sign-ins/{session_id}/revoke` | Revokes one of the customer's WorkOS sessions |
+| `POST /api/admin/overrides/mass/dry-run` | Changes nothing: counts what a mass override would do (audited) |
+| `POST /api/admin/staff/roles` | Assigns a staff role (raises an escalation alert) |
+| `POST /api/admin/staff/roles/{assignment_id}/revoke` | Revokes a staff role |
+| `POST /api/admin/staff/owners` | Proposes a new Owner as a delayed two-person action |
+| `POST /api/admin/staff/sessions/{session_id}/end` | Ends a staff member's console session |
+| `POST /api/admin/alerts/{alert_id}/acknowledge` | Marks a platform alert acknowledged |
+| `POST /api/admin/audit-export` | Returns the audit log as CSV; the export itself is audited |
+| `POST /api/admin/banners` | Publishes a status banner customers see |
+| `POST /api/admin/banners/{banner_id}/end` | Ends a status banner |
 | `POST /api/admin/flags/{flag_id}/impact` | Estimates a flag change's impact |
 | `POST /api/admin/flags/{flag_id}/change` | Changes a flag |
 | `POST /api/admin/flags/{flag_id}/preview` | Previews a flag change |

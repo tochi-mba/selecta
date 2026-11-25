@@ -26,7 +26,7 @@ describe('the speaker picker', () => {
     expect(radios[0]).toHaveAccessibleName('Laptop: All 3 songs');
     expect(radios[1]).toHaveAccessibleName('Phone: This device · 1 of 3 songs');
     expect(radios[2]).toBeDisabled();
-    expect(radios[2]).toHaveAccessibleName('Tablet: Tablet needs its music folder allowed again.');
+    expect(radios[2]).toHaveAccessibleName('Tablet: Needs its music folder allowed again.');
     expect(screen.getAllByText('Suggested')).toHaveLength(1);
   });
 

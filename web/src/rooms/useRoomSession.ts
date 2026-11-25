@@ -68,10 +68,16 @@ let liveRoom: RoomLive | null = null;
 const watchers = new Set<() => void>();
 const watch = (listener: () => void) => { watchers.add(listener); return () => { watchers.delete(listener); }; };
 
+const roomClosers = new Set<() => void>();
+/** Hear the open room close (ended here, elsewhere or by time). Returns the unsubscribe. */
+export function onRoomClosed(listener: () => void): () => void { roomClosers.add(listener); return () => { roomClosers.delete(listener); }; }
+
 /** Take in a read of the open room (or null: no room is open). The shell's session and the
  * Rooms page both read the room; whichever read is newest is what every list shows. */
 export function noteRoom(panel: RoomRead | null) {
   let next: RoomLive | null = null;
+  // ADR-0475 D30: the room closing closes what was opened for it (the speaker picker)
+  if (!panel && openRoom) for (const closed of roomClosers) closed();
   if (!panel) {
     openRoom = null;
     askers.clear();

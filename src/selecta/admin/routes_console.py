@@ -28,6 +28,8 @@ from selecta.admin import (
     customers,
     http,
     safety,
+    stripe_admin,
+    workos_admin,
 )
 from selecta.admin import staff_console as staff
 from selecta.authz.check import Actor
@@ -43,12 +45,13 @@ EXEMPT = re.compile(
 
 class Guarded(BaseModel):
     reason: str = Field(default="", max_length=2000)
-    version: str | None = Field(default=None, max_length=64)
+    version: str | int | None = Field(default=None)
     read_at: float | None = None
     confirm: str | None = Field(default=None, max_length=320)
 
     def intent(self) -> safety.Intent:
-        return safety.Intent(version=self.version, read_at=self.read_at, confirm=self.confirm)
+        return safety.Intent(version=str(self.version)[:64] if self.version else None,
+                             read_at=self.read_at, confirm=self.confirm)
 
 
 class NoteBody(Guarded):
@@ -81,6 +84,20 @@ class ExportBody(Guarded):
     since: float | None = None
 
 
+class CancelBody(Guarded):
+    cancel: bool = True
+
+
+class RefundBody(Guarded):
+    amount: int | None = Field(default=None, ge=1, le=10_000_000)
+    why: str = Field(default="requested_by_customer", max_length=32)
+
+
+class PortalBody(Guarded):
+    return_url: str = Field(default="https://app.selectadj.app/account/billing", max_length=300,
+                            pattern=r"^https://")
+
+
 class ModeBody(Guarded):
     mode: str = Field(min_length=1, max_length=16)
 
@@ -106,8 +123,22 @@ def _change_window_check(engine: Engine, app: FastAPI, request: Request) -> JSON
     session_id = (request.headers.get(http.HEADER) or "").strip()
     if not session_id:
         return None  # the route answers "enter the admin console" itself
+    from selecta.authz import permissions
+    from selecta.authz.check import active_assignments
+    from selecta.authz.roles import ROLE_PERMISSIONS
+    from selecta.identity.schema import privileged_sessions as s
+
     with transaction(engine) as conn:
         if safety.change_window(conn, session_id) is not None:
+            return None
+        owner = conn.execute(s.select().with_only_columns(s.c.user_id)
+                             .where(s.c.id == session_id)).scalar()
+        if owner is None:
+            return None  # no such session: the route refuses it in its own words
+        held = {p for a in active_assignments(conn, owner) for p in ROLE_PERMISSIONS[a.role]}
+        if not any(permissions.get(p).danger > permissions.Danger.READ for p in held):
+            # A person who can change nothing is refused by the route's permission check, which
+            # names the permission, rather than told to press a button they don't have.
             return None
     return JSONResponse(status_code=403, content={"detail": {
         "code": "view_mode",
@@ -187,7 +218,7 @@ def install_routes(app: FastAPI, *, engine: Engine,
     # --- search ------------------------------------------------------------------------------
 
     @app.get("/api/admin/lookup")
-    def admin_lookup(request: Request, claims: SignedIn, q: str = Query(min_length=1,
+    def admin_lookup(request: Request, claims: SignedIn, q: str = Query(default="",
                                                                         max_length=200)):
         return run(request, claims, lambda conn, actor: console_reads.lookup(conn, actor, q))
 
@@ -240,6 +271,57 @@ def install_routes(app: FastAPI, *, engine: Engine,
             intent=body.intent()))
         _invalidate_rules(app)
         return out
+
+    # --- Stripe, live (admin.stripe_admin) ---------------------------------------------------
+
+    @app.get("/api/admin/customers/{user_id}/stripe")
+    def admin_customer_stripe(user_id: str, request: Request, claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.live(conn, actor, user_id))
+
+    @app.post("/api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-at-period-end")
+    def admin_sub_cancel_later(user_id: str, sub_id: str, body: CancelBody, request: Request,
+                               claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.set_cancel_at_period_end(
+            conn, actor, user_id, sub_id, cancel=body.cancel, reason=body.reason,
+            intent=body.intent()))
+
+    @app.post("/api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-now")
+    def admin_sub_cancel_now(user_id: str, sub_id: str, body: Guarded, request: Request,
+                             claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.cancel_now(
+            conn, actor, user_id, sub_id, reason=body.reason, intent=body.intent()))
+
+    @app.post("/api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/retry")
+    def admin_invoice_retry(user_id: str, invoice_id: str, body: Guarded, request: Request,
+                            claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.retry_invoice(
+            conn, actor, user_id, invoice_id, reason=body.reason, intent=body.intent()))
+
+    @app.post("/api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/refund")
+    def admin_invoice_refund(user_id: str, invoice_id: str, body: RefundBody, request: Request,
+                             claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.refund(
+            conn, actor, user_id, invoice_id, amount=body.amount, why=body.why,
+            reason=body.reason, intent=body.intent()))
+
+    @app.get("/api/admin/customers/{user_id}/sign-ins")
+    def admin_sign_ins(user_id: str, request: Request, claims: SignedIn):
+        workos = getattr(app.state, "workos", None)
+        return run(request, claims,
+                   lambda conn, actor: workos_admin.sign_ins(conn, actor, user_id, workos))
+
+    @app.post("/api/admin/customers/{user_id}/sign-ins/{session_id}/revoke")
+    def admin_revoke_sign_in(user_id: str, session_id: str, body: Guarded, request: Request,
+                             claims: SignedIn):
+        workos = getattr(app.state, "workos", None)
+        return run(request, claims, lambda conn, actor: workos_admin.revoke_sign_in(
+            conn, actor, user_id, session_id, workos, reason=body.reason, intent=body.intent()))
+
+    @app.post("/api/admin/customers/{user_id}/portal-link")
+    def admin_portal_link(user_id: str, body: PortalBody, request: Request, claims: SignedIn):
+        return run(request, claims, lambda conn, actor: stripe_admin.portal_link(
+            conn, actor, user_id, return_url=body.return_url, reason=body.reason,
+            intent=body.intent()))
 
     @app.post("/api/admin/customers/{user_id}/{command}")
     def admin_customer_command(user_id: str, command: str, body: Guarded, request: Request,

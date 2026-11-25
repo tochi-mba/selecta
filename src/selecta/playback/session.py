@@ -34,6 +34,7 @@ from selecta.playback.model import (
     Device,
     IdempotencyConflict,
     InvalidCommand,
+    NotYourMusic,
     OwnershipChanged,
     PlayState,
     Position,
@@ -245,7 +246,12 @@ def heartbeat_in(
                 device_id, position.output.status, position.output.verified_at
             ),
         )
-    session = replace(session, lease_expires_at=now + LEASE_SECONDS, updated_at=now)
+    lease = now + LEASE_SECONDS
+    if session.state is PlayState.STOPPED and not accepted and session.lease_expires_at:
+        # stopped from another device (G2) before this speaker heard: its check-in keeps the
+        # lease only as long as the stop allowed, so the speaker is freed
+        lease = session.lease_expires_at
+    session = replace(session, lease_expires_at=lease, updated_at=now)
     save_session(conn, session)
     if previous is not None:
         _announce_move(conn, session, previous, device_id, events)
@@ -321,9 +327,14 @@ def take_over_in(
         state = PlayState.PAUSED
     else:
         state = session.state
+    # ADR-0475 B7: a speaker that went away stopped being heard when its lease ran out, so the
+    # music carries on from its last known place, not from time run on since
+    until = now
+    if session.lease_expires_at is not None and not session.lease_live(now) and session.anchor_at:
+        until = session.anchor_at
     session = replace(
         session,
-        offset_ms=position_at(session, now).offset_ms,
+        offset_ms=position_at(session, until).offset_ms,
         anchor_at=now,
         state=state,
         active_device_id=device_id,
@@ -368,10 +379,12 @@ def submit_command(
     key = _clean_key(idempotency_key)
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        require_signed_in(conn, workspace_id, device_id)
+        caller = require_signed_in(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
         # Locking the session first means two presses with one key can't both get past here.
         session = lock_session(conn, workspace_id, now, zone_id)
+        if zone_id is None:
+            _require_own_music(conn, session, caller)
         return submit_command_in(
             conn,
             session,
@@ -387,6 +400,18 @@ def submit_command(
             mix=mix,
             volume_cap=volume_cap,
         )
+
+
+def _require_own_music(conn: Connection, session: Session, caller: Device) -> None:
+    """ADR-0475 G3 (69): a press steers only music playing on the caller's own devices. In a
+    workspace with several members the personal session may be another member's; their speaker
+    is theirs to steer. A zone has its own permission model (zone_session)."""
+    speaker_id = session.active_device_id
+    if speaker_id is None or speaker_id == caller.id:
+        return
+    speaker = load_device(conn, session.workspace_id, speaker_id)
+    if speaker is not None and speaker.user_id != caller.user_id:
+        raise NotYourMusic("That music is playing on someone else's device")
 
 
 def _clean_key(idempotency_key: str) -> str:
@@ -483,7 +508,11 @@ def submit_command_in(
         and not session.lease_live(now)
     ):
         status = CommandStatus.NO_SPEAKER
-    elif speaker_away and name in commands.SPEAKER_COMMANDS:
+    elif (
+        speaker_away
+        and name in commands.SPEAKER_COMMANDS
+        and name is not commands.Command.STOP  # an away speaker is simply stopped and freed
+    ):
         status = CommandStatus.DEFERRED
     else:
         session = commands.apply(
@@ -687,6 +716,13 @@ def session_view_in(
         )
     active = session.active_device_id
     name = device_names(conn, workspace_id, [active]).get(active)
+    if session.state is PlayState.STOPPED and not session.lease_live(now):
+        # stopped and let go (G2 Stop, or a speaker that stopped and went): nobody is the
+        # speaker, so any device may start the music
+        return SessionView(
+            session, position_at(session, now), SpeakerStatus.NONE, None, None, False,
+            notices=notices,
+        )
     if active == device_id:
         speaker = SpeakerStatus.HERE
     elif session.lease_live(now):

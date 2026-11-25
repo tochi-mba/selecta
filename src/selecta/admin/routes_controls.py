@@ -27,12 +27,13 @@ from selecta.persistence import db_now
 class Intended(BaseModel):
     """What the console knew when the button was pressed (`admin.safety.Intent`)."""
 
-    version: str | None = Field(default=None, max_length=64)
+    version: str | int | None = Field(default=None)
     read_at: float | None = None
     confirm: str | None = Field(default=None, max_length=320)
 
     def intent(self) -> safety.Intent:
-        return safety.Intent(version=self.version, read_at=self.read_at, confirm=self.confirm)
+        return safety.Intent(version=str(self.version)[:64] if self.version else None,
+                             read_at=self.read_at, confirm=self.confirm)
 
 
 class ControlRequest(Intended):
@@ -264,8 +265,10 @@ def install_routes(
         if command == "act":
 
             def act(conn: Connection, actor: Actor):
+                # Named with its workspace: this runs as that workspace, and on PostgreSQL the
+                # allow's audit row must carry it or row-level security refuses the insert.
                 authorize(conn, actor, "legal.takedowns.manage",
-                          ResourceRef("takedown_notice", notice_id))
+                          ResourceRef("takedown_notice", notice_id, workspace_id))
                 safety.guard(conn, actor, "takedown.act", body.intent(), target=notice_id[:8])
                 done = takedowns.act_on_notice(conn, actor, notice_id, reason=body.reason)
                 safety.record(conn, actor, "takedown.act", resource_type="takedown_notice",

@@ -95,7 +95,7 @@ export function DangerDialog({ request, environment, onClose }: { request: Dange
     // Enter never confirms a dangerous dialog: only a click (or Space) on its button does.
     if (event.key === 'Enter' && (event.target as HTMLElement).tagName !== 'BUTTON') event.preventDefault();
   };
-  const confirm = async () => {
+  const proceed = async () => {
     if (!ok || busy || Date.now() - armedAt < 500) return;
     setBusy(true); setError('');
     try { await request.run(reason.trim(), typed.trim()); onClose(); }
@@ -123,7 +123,7 @@ export function DangerDialog({ request, environment, onClose }: { request: Dange
         {error && <p className="admin-error" role="alert">{error}</p>}
         <div className="admin-dialog-buttons">
           <button ref={cancel} type="button" onClick={onClose}>Cancel</button>
-          <button type="button" className="admin-danger" disabled={!ok || busy} onClick={() => void confirm()}>{busy ? 'Working…' : request.button}</button>
+          <button type="button" className="admin-danger" disabled={!ok || busy} onClick={() => void proceed()}>{busy ? 'Working…' : request.button}</button>
         </div>
       </div>
     </div>

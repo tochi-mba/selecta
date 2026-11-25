@@ -7,6 +7,15 @@ import type { ReactNode } from 'react';
 
 const KEY = 'selecta-e2e-user';
 
+/** The same name AuthKit exports, so the app's `instanceof` checks build and run here too. The
+ * fake never throws it: a test signs out by clearing the stored name. */
+export class LoginRequiredError extends Error {
+  constructor(message = 'No access token available') {
+    super(message);
+    this.name = 'LoginRequiredError';
+  }
+}
+
 export function AuthKitProvider({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
@@ -22,11 +31,21 @@ const signOut = ({ returnTo }: { returnTo?: string } = {}) => {
   window.location.assign(returnTo ?? '/');
 };
 
+// The same user object for as long as the name stays the same, as AuthKit keeps its user in state:
+// a new object on every render made every hook that depends on the user run again, and CloudApp
+// read /api/account in a loop until the rate limits (cloud.rate_limits) answered 429.
+type User = { id: string; email: string; emailVerified: boolean };
+let kept: { who: string; user: User } | null = null;
+function userOf(who: string | null): User | null {
+  if (!who) return null;
+  if (kept?.who !== who) kept = { who, user: { id: `user_${who}`, email: `${who}@example.test`, emailVerified: true } };
+  return kept.user;
+}
+
 export function useAuth() {
-  const who = name();
   return {
     isLoading: false,
-    user: who ? { id: `user_${who}`, email: `${who}@example.test`, emailVerified: true } : null,
+    user: userOf(name()),
     getAccessToken,
     signIn,
     signUp,

@@ -62,6 +62,12 @@ class Intent:
         )
 
 
+# A command called from code (tests, maintenance), not from a console request: the tier rules
+# are for people at the console, so only the blast limit applies. Routes always build a fresh
+# `Intent` from the request body, so every HTTP write gets the full rules.
+CODE = Intent()
+
+
 def version_of(*parts: Any) -> str:
     """A short digest of the fields an action depends on: the record's version."""
     text = json.dumps(parts, sort_keys=True, default=str, separators=(",", ":"))
@@ -145,9 +151,12 @@ def guard(conn: Connection, actor: Actor, action_id: str, intent: Intent, *,
     """Refuse the write unless the action's tier allows it now (module notes)."""
     action = spec(action_id)
     now = db_now(conn)
-    if action.tier is not Tier.SAFE or action_id == "account.note":
-        require_change_window(conn, actor.staff_session_id)
+    # View mode is enforced for every admin write by the middleware in `admin.routes_console`.
     if action.tier is Tier.SAFE:
+        return
+    if intent is CODE:
+        if action.per_hour is not None:
+            _blast(conn, actor, action_id, action.per_hour)
         return
     if current_version is not None and intent.version:
         stale = intent.read_at is not None and now - intent.read_at > READ_FRESH_S
@@ -162,7 +171,8 @@ def guard(conn: Connection, actor: Actor, action_id: str, intent: Intent, *,
                 raise CommandRefused(400, "confirm_mismatch",
                                      "Type exactly what the dialog asks for to confirm.")
         started = actor.session_issued_at or 0.0
-        if now - started > STEP_UP_S:
+        # A delayed action already waits 15 minutes; step-up is for the instant ones.
+        if action.tier is Tier.DANGEROUS and now - started > STEP_UP_S:
             raise CommandRefused(403, "step_up_required",
                                  "Sign in again to do this: it needs a sign-in from the last "
                                  "5 minutes.", max_age=STEP_UP_S)

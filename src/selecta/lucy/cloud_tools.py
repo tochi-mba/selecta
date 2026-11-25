@@ -21,7 +21,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.local_media import current_mix, recipes, store
+from selecta.local_media import current_mix, recipes, store, versions
 from selecta.local_media.schema import local_song_availability, local_songs
 from selecta.lucy import cloud_proposals
 from selecta.mix_contract import MAX_SONGS, NAME_LIMIT
@@ -59,14 +59,13 @@ class CloudCtx:
         """The whole catalogue, read once per turn."""
         if self._songs is None:
             with transaction(self.engine, self.workspace_id) as conn:
+                # one line per song, never its extra copies (ADR-0469 amendment 2)
                 rows = conn.execute(
-                    sa.select(local_songs.c.id, local_songs.c.title, local_songs.c.artist,
-                              local_songs.c.album, local_songs.c.duration_s,
-                              local_songs.c.never_play)
-                    .where(local_songs.c.workspace_id == self.workspace_id)
-                    .where(local_songs.c.deleted_at.is_(None))
-                    .where(local_songs.c.duplicate_of.is_(None))
-                    .order_by(local_songs.c.id)
+                    versions.listed_songs(
+                        self.workspace_id, local_songs.c.id, local_songs.c.title,
+                        local_songs.c.artist, local_songs.c.album, local_songs.c.duration_s,
+                        local_songs.c.never_play,
+                    ).order_by(local_songs.c.id)
                 ).all()
             self._songs = [
                 {"id": int(r.id), "title": r.title, "artist": r.artist, "album": r.album,
@@ -88,7 +87,11 @@ class CloudCtx:
             ).first()
             if reporting is None:
                 return
-            counts = store.availability_counts(conn, self.workspace_id, ids)
+            # a song is on a device when any of its versions is
+            groups = versions.groups_of(conn, self.workspace_id, ids)
+            members = {member for group in groups.values() for member in group}
+            held = store.availability_counts(conn, self.workspace_id, members)
+            counts = {song: sum(held.get(m, 0) for m in groups.get(song, [song])) for song in ids}
         for line in lines:
             if not counts.get(line["id"]):
                 line["not_on_an_open_device"] = True
@@ -108,6 +111,46 @@ def song_line(song: dict[str, Any]) -> dict[str, Any]:
     return line
 
 
+SPOKEN = re.compile(
+    r"\b(chapter|audiobook|audio book|unabridged|abridged|podcast|episode|ep\.? ?\d|lecture|"
+    r"sermon|interview|part \d+ of|disc \d+ track|narrated|read by|talk|meditation)\b",
+    re.IGNORECASE,
+)
+MUSIC_SECONDS = (45, 900)
+"""A song runs between 45 seconds and 15 minutes; a chapter or an episode usually doesn't."""
+
+
+def looks_spoken(song: dict[str, Any]) -> bool:
+    """No measured is-music signal reaches Cloud, so: an audiobook, podcast or talk by its
+    words or its length."""
+    words = f"{song.get('title') or ''} {song.get('album') or ''}"
+    seconds = song.get("duration_s")
+    too_long_or_short = seconds is not None and not (
+        MUSIC_SECONDS[0] <= float(seconds) <= MUSIC_SECONDS[1])
+    return bool(SPOKEN.search(words)) or too_long_or_short
+
+
+def music_artists(songs: list[dict[str, Any]], held: dict[int, int] | None = None,
+                  limit: int = 12) -> list[tuple[str, int]]:
+    """Artists of music only, most held first (songs a device of the person holds now),
+    then most songs. An artist whose songs are mostly spoken word (an author, a podcast)
+    is left out altogether."""
+    total: Counter[str] = Counter()
+    music: Counter[str] = Counter()
+    holding: Counter[str] = Counter()
+    for song in songs:
+        artist = song.get("artist")
+        if not artist or song.get("never"):
+            continue
+        total[artist] += 1
+        if not looks_spoken(song):
+            music[artist] += 1
+            holding[artist] += 1 if (held or {}).get(song["id"]) else 0
+    kept = [a for a in music if music[a] >= max(1, 0.6 * total[a])]
+    kept.sort(key=lambda a: (-holding[a], -music[a], fold(a)))
+    return [(a, music[a]) for a in kept[:limit]]
+
+
 def library_summary(ctx: CloudCtx) -> dict[str, Any]:
     songs = ctx.songs()
     artists = Counter(song["artist"] for song in songs if song["artist"])
@@ -116,7 +159,7 @@ def library_summary(ctx: CloudCtx) -> dict[str, Any]:
         "songs": len(songs),
         "artists": len(artists),
         "hours": round(total / 3600, 1),
-        "top_artists": [f"{name} ({count})" for name, count in artists.most_common(12)],
+        "top_artists": [f"{name} ({count})" for name, count in music_artists(songs)],
     }
 
 

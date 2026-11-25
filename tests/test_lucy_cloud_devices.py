@@ -397,7 +397,7 @@ def test_a_long_conversation_opens_on_its_newest_page(lucy, monkeypatch):
 def test_follow_ups_come_only_after_work_they_continue(lucy):
     ids = [entry["song_id"] for entry in lucy.client.post(
         "/api/local-media/songs", headers=auth(CAROL),
-        json={"songs": [{"content_sha256": f"{n + 21:x}" * 64, "title": f"F{n}", "artist": "A"}
+        json={"songs": [{"content_sha256": f"{n + 21:064x}", "title": f"F{n}", "artist": "A"}
                         for n in range(2)]}).json()["songs"]]
     provider = gated(lucy, calls=[{"name": "propose_new_mix",
                                    "input": {"name": "Two", "song_ids": ids, "summary": "x"}}])
@@ -410,7 +410,7 @@ def test_follow_ups_come_only_after_work_they_continue(lucy):
     gated(lucy).gate.set()
     send(lucy, conversation, "thanks", "f2")
     cloud_agent.RUNNER.wait()
-    assert not snapshot(lucy, conversation)["messages"][-1]["meta"]["followups"]
+    assert not snapshot(lucy, conversation)["messages"][-1]["meta"].get("followups")
 
 
 def test_each_settled_turn_tells_every_device_to_read_its_turns(lucy):

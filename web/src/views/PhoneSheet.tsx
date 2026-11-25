@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { pushHistoryMark } from '../router';
 import { Sheet } from '../ui/controls';
 
 export type Detent = 'half' | 'full' | 'fit';
@@ -19,7 +20,7 @@ function useBackCloses(close: () => void) {
   useEffect(() => {
     openSheets.push(close);
     try {
-      if (!isSheetEntry()) window.history.pushState({ ...(window.history.state ?? {}), editorSheet: true }, '');
+      if (!isSheetEntry()) pushHistoryMark({ editorSheet: true });
     } catch { /* history is not writable here; Close and Escape still work */ }
     if (!listening) {
       window.addEventListener('popstate', onBack);
@@ -140,7 +141,7 @@ export function PhoneSheet(props: {
       <button
         type="button"
         className="pe-grabber"
-        aria-label={tall ? `Close ${title}` : detent === 'half' ? 'Make the sheet taller' : 'Make the sheet shorter'}
+        aria-label={tall ? 'Close' : detent === 'half' ? 'Make the sheet taller' : 'Make the sheet shorter'}
         onClick={() => {
           if (swallowClick.current) return;
           if (tall) onClose();

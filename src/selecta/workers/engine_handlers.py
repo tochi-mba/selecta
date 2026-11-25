@@ -221,6 +221,9 @@ def analyse(
         "keys": artifact.keys,
         "bpm": summary["bpm"],
         "camelot": summary["camelot"],
+        # what a player needs to play the song at its mix level (SongInfo.gain_db)
+        "lufs": summary["lufs"],
+        "peak_db": summary["peak_db"],
         "checksum": artifact.checksum,
     }
 
@@ -287,7 +290,7 @@ def _versions() -> dict[str, int]:
 
 
 def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
-    from selecta.planner.choose import choose_transition
+    from selecta.workers.engine_seams import ENGINE, best_seam
 
     ref = job.input_ref
     if not isinstance(ref, Mapping):
@@ -299,33 +302,48 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
     a = _song(ctx, ref.get("a"), "a", 1, ffmpeg)
     b = _song(ctx, ref.get("b"), "b", 2, ffmpeg)
     ctx.progress(1, 2)
-    choice = choose_transition(a, b, style)
+    # The local app's own move choice (engine_seams): blends and effects placed and
+    # beat-tightened as the local app places them, falling back to a clean cut.
+    take = best_seam(a, b, style)
     ctx.check_in()
     output = ctx.scratch / "seam.flac"
-    sf.write(output, choice.rendered.audio, SAMPLE_RATE, subtype="PCM_24")
+    sf.write(output, take.rendered.audio, SAMPLE_RATE, subtype="PCM_24")
     hashes = {"a": ref["a"]["source_sha256"], "b": ref["b"]["source_sha256"]}
     input_hash = _hash({**hashes, "style": style, **_versions()})
     # Where native playback of A hands over to the clip and of B takes over after it, so a
     # player that plays the songs and the clip as separate files can join them (ADR-0446).
     cues = {
-        "a_source_start": round(choice.rendered.script.a_source_start, 4),
-        "b_source_end": round(choice.rendered.script.b_source_end, 4),
-        "seconds": round(choice.rendered.seconds, 4),
+        "a_source_start": round(take.rendered.script.a_source_start, 4),
+        "b_source_end": round(take.rendered.script.b_source_end, 4),
+        "seconds": round(take.rendered.seconds, 4),
     }
     provenance = build_provenance(
         inputs=hashes,
         versions=_versions(),
-        settings={"style": style or "auto", "cues": cues},
+        settings={
+            "style": style or "auto", "cues": cues, "engine": ENGINE, "move": take.move,
+            "passed": bool(take.report.passed), "fell_back": take.fell_back,
+        },
     )
     artifact = ctx.publish("seam", input_hash, output, "seam.flac", provenance=provenance)
     ctx.progress(2, 2)
-    script = choice.rendered.script
     return {
         "input_hash": input_hash,
         "keys": artifact.keys,
-        "style": script.style,
-        "audit_passed": bool(choice.report and choice.report.passed),
-        "seconds": round(choice.rendered.seconds, 3),
+        "style": take.rendered.script.style,
+        "move": take.move,
+        "engine": ENGINE,
+        "why": take.why[:300],
+        "audit_passed": bool(take.report.passed),
+        "fell_back": take.fell_back,
+        "checks": [
+            {"name": c.name, "passed": bool(c.passed), "value": round(float(c.value), 3),
+             "limit": round(float(c.limit), 3)}
+            for c in take.report.checks
+        ],
+        "tried": take.tried[:8],
+        "not_on_server": take.skipped,
+        "seconds": round(take.rendered.seconds, 3),
         "checksum": artifact.checksum,
     }
 

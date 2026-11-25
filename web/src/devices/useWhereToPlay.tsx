@@ -1,3 +1,5 @@
+import { isOnline } from '../cloud/connection';
+import { onRoomClosed } from '../rooms/useRoomSession';
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { AskState } from './playOn';
 import { tabLog } from './audioTab';
@@ -17,6 +19,19 @@ type Device = { device_id: string; name: string };
 /** The one message about where the music is going, with its choices inline. */
 export type PlayNotice = { deviceId: string | null; text: string; actions: { label: string; run: () => void }[] };
 
+/** B16: a one-time offer or note is shown once on this device, then never again. */
+export function onceOnly(key: string): boolean {
+  try {
+    const name = `selecta.once.${key}`;
+    if (localStorage.getItem(name)) return false;
+    localStorage.setItem(name, '1');
+    return true;
+  } catch { return true; }
+}
+
+/** A5: after this long unseen, the default speaker's note offers to forget it. */
+export const GHOST_AFTER_SECONDS = 30 * 24 * 3600;
+
 export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay, refreshHoldings, asking: told, playingOn = null, playHereInstead }: {
   enabled: boolean;
   /** null until the holdings are read (then the press plays here, as before) */
@@ -33,8 +48,10 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
   playingOn?: string | null;
   /** "Play here instead": take the music from whichever device is starting or playing it. */
   playHereInstead?: () => void;
-}): { decide: () => boolean; picker: ReactNode; choice: Choice | null; notice: PlayNotice | null; clearNotice: () => void } {
+}): { decide: () => boolean; picker: ReactNode; choice: Choice | null; notice: PlayNotice | null; clearNotice: () => void; say: (deviceId: string | null, text: string) => void } {
   const [asking, setAsking] = useState<Extract<Choice, { kind: 'ask' }> | null>(null);
+  // D30: closing the room while the picker is open closes the picker
+  useEffect(() => onRoomClosed(() => setAsking(null)), []);
   const said = useRef(new Set<string>());
   // A1: devices that did not answer an ask this visit, left out until the next press
   const silent = useRef(new Set<string>());
@@ -54,7 +71,18 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     }
   }, [cloud, refreshHoldings]);
 
-  const startOn = useCallback((device: DeviceHolding, note?: string) => {
+  // A5: a default speaker not seen for 30 days is likely a ghost (its browser's storage was
+  // cleared and it came back as a new device): the note about it offers to forget it
+  const forgetGhost = useCallback((away: DeviceHolding | null): { label: string; run: () => void }[] => {
+    const now = Date.now() / 1000;
+    if (!away || now - away.last_seen_at < GHOST_AFTER_SECONDS) return [];
+    return [{ label: `Forget ${away.name}`, run: () => {
+      setNotice(null);
+      void cloud(`/devices/${encodeURIComponent(away.device_id)}/sign-out`, { method: 'POST' }).then(refreshHoldings, () => showToast(`Couldn’t forget ${away.name}. Try again from Devices.`, { tone: 'problem' }));
+    } }];
+  }, [cloud, refreshHoldings]);
+
+  const startOn = useCallback((device: DeviceHolding, note?: string, extra: { label: string; run: () => void }[] = []) => {
     const here = latest.current.situation?.thisDeviceId;
     if (device.device_id === here) {
       setNotice(note ? { deviceId: device.device_id, text: note, actions: [] } : null);
@@ -66,7 +94,7 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     navigate('/listen');
     // the person is holding this device while the sound starts elsewhere: one way back
     const thisHolds = latest.current.situation?.devices.some((one) => one.device_id === here && one.online && one.songs > 0);
-    setNotice({ deviceId: device.device_id, text: note ?? `Starting on ${device.name}.`, actions: thisHolds ? [{ label: 'Play here instead', run: () => { setNotice(null); (playHereInstead ?? playHere)(); } }] : [] });
+    setNotice({ deviceId: device.device_id, text: note ?? `Starting on ${device.name}.`, actions: [...(thisHolds ? [{ label: 'Play here instead', run: () => { setNotice(null); (playHereInstead ?? playHere)(); } }] : []), ...extra] });
   }, [askToPlay, playHere]);
 
   /** True when the press was handled here (asked elsewhere, picker opened, or nothing to do). */
@@ -74,21 +102,25 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     const now = latest.current.choice;
     tabLog('decide', now?.kind ?? 'no rule', latest.current.situation ? latest.current.situation.devices.map((one) => `${one.name}:${one.online ? 'open' : 'away'}:${one.songs}`).join(',') : 'no holdings');
     if (!now || now.kind === 'speaker') return false;
+    // E34: with no connection the other devices can't be asked and what they hold may be stale:
+    // no picker and no ask; this device plays if it can, under the usual offline words
+    if (!isOnline()) return false;
     if (now.kind === 'default') {
       if (now.device.device_id === latest.current.situation?.thisDeviceId) return false;
       startOn(now.device);
       return true;
     }
     if (now.kind === 'only') {
-      const note = now.defaultAway ? becauseWords(now.device.name, now.defaultAway.name) : undefined;
+      // B16: "Playing on X because Y isn't open." is said once per default and device, not every press
+      const note = now.defaultAway && onceOnly(`because.${now.defaultAway.device_id}.${now.device.device_id}`) ? becauseWords(now.device.name, now.defaultAway.name) : undefined;
       if (now.device.device_id === latest.current.situation?.thisDeviceId && !note) return false;
-      startOn(now.device, note);
+      startOn(now.device, note, forgetGhost(now.defaultAway));
       return true;
     }
     if (now.kind === 'ask') { setAsking(now); return true; }
     setNotice({ deviceId: null, text: NOBODY_OPEN, actions: [{ label: 'Connect music here', run: () => navigate('/library') }] });
     return true;
-  }, [startOn]);
+  }, [forgetGhost, startOn]);
 
   // A1: the device asked did not answer: say so once, with Try again and Choose another device
   const phase = told?.phase;
@@ -126,8 +158,17 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
         setAsking(null);
         if (makeDefault) void saveDefault(device.device_id);
         startOn(device);
+        // B16: with no default yet, once on this device: offer to make the chosen one usual
+        if (!makeDefault && !latest.current.situation?.defaultId && onceOnly('usual-speaker')) {
+          setNotice({ deviceId: null, text: `Make ${device.name} your usual speaker?`, actions: [
+            { label: 'Make it usual', run: () => { setNotice(null); void saveDefault(device.device_id); } },
+            { label: 'Not now', run: () => setNotice(null) },
+          ] });
+        }
       }}
     />
   ) : null;
-  return { decide, picker, choice, notice, clearNotice: useCallback(() => setNotice(null), []) };
+  /** B7: one line from elsewhere on the page ("Carrying on from {old} on {new}."), replacing any other. */
+  const say = useCallback((deviceId: string | null, text: string) => setNotice({ deviceId, text, actions: [] }), []);
+  return { decide, picker, choice, notice, say, clearNotice: useCallback(() => setNotice(null), []) };
 }

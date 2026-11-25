@@ -27,14 +27,47 @@ function remember(accountId: string) {
   }
 }
 
-export function CutoverNotice({ accountId }: { accountId: string }) {
+/** Which note this account gets, decided once and kept: an account that already held hosted
+ * music is grandfathered ("Nothing has changed"); one granted Cloud storage with nothing stored
+ * yet is new to it ("Cloud storage is on"). Kept so an upload never swaps the note it was shown. */
+function noteKind(accountId: string, storedBytes: number): 'grandfathered' | 'granted' {
+  const kindKey = `${key(accountId)}.kind`;
+  try {
+    const kept = localStorage.getItem(kindKey);
+    if (kept === 'grandfathered' || kept === 'granted') return kept;
+    const decided = storedBytes > 0 ? 'grandfathered' : 'granted';
+    localStorage.setItem(kindKey, decided);
+    return decided;
+  } catch {
+    return storedBytes > 0 ? 'grandfathered' : 'granted';
+  }
+}
+
+export function CutoverNotice({ accountId, storedBytes = 1 }: { accountId: string; storedBytes?: number }) {
   const id = useId();
   const [hidden, setHidden] = useState(() => wasDismissed(accountId));
+  const [kind] = useState(() => noteKind(accountId, storedBytes));
   if (hidden) return null;
   const dismiss = () => {
     remember(accountId);
     setHidden(true);
   };
+  if (kind === 'granted') return (
+    <section className="cloud-card cloud-cutover" aria-labelledby={`${id}-title`}>
+      <div className="cloud-card-heading">
+        <div>
+          <p className="cloud-eyebrow">A note from SelectaDJ</p>
+          <h2 id={`${id}-title`}>Cloud storage is on for your account</h2>
+        </div>
+        <IconButton icon="close" label="Dismiss this note" onClick={dismiss} />
+      </div>
+      <p>Upload songs in Add music. They are stored privately for your account and play on any of your devices.</p>
+      <p>The songs in your music folder stay on this device, as before. Your Library shows both, and says which is which.</p>
+      <div className="cloud-actions">
+        <button type="button" className="primary" onClick={dismiss}>Got it</button>
+      </div>
+    </section>
+  );
   return (
     <section className="cloud-card cloud-cutover" aria-labelledby={`${id}-title`}>
       <div className="cloud-card-heading">

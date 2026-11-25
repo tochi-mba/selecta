@@ -91,6 +91,13 @@ class NotTheSpeaker(PlaybackError):
     code = "not_the_speaker"
 
 
+class NotYourMusic(PlaybackError):
+    """ADR-0475 G3 (69): the music is playing on another member's device. Only the person whose
+    device is the speaker steers it from their own devices; no permission grants more today."""
+
+    code = "not_your_music"
+
+
 class UnknownCommand(PlaybackError):
     """No such command in this workspace. Another account's looks exactly the same."""
 

@@ -50,7 +50,9 @@ describe('which device to name as where the music is (R6)', () => {
 
   it('is the speaker when one is playing, else the open device with the most songs, else the one with the most that is away', () => {
     const all = [device('phone', 3, true), device('laptop', 2864, true), device('tablet', 5000, false)];
-    expect(musicHolder(all, 'phone', 'tablet')?.device_id).toBe('tablet');
+    expect(musicHolder([device('phone', 3, true), device('laptop', 2864, true), device('tablet', 5000, true)], 'phone', 'laptop')?.device_id).toBe('laptop');
+    // I87: a speaker that has gone away is not where the music is
+    expect(musicHolder(all, 'phone', 'tablet')?.device_id).toBe('laptop');
     expect(musicHolder(all, 'phone', null)?.device_id).toBe('laptop');
     expect(musicHolder([device('tablet', 5000, false), device('old', 10, false)], 'phone', null)?.device_id).toBe('tablet');
   });

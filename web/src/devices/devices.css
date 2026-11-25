@@ -10,6 +10,9 @@
 .playing-bar-notices { display: grid; gap: var(--space-1); }
 .playing-bar-notices p { margin: 0; min-width: 0; }
 .playing-bar-notices button { margin-left: var(--space-2); }
+.notice-missed { display: flex; align-items: center; gap: var(--space-2); }
+.notice-missed .notice-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.playing-bar-notices .notice-missed > button { flex: none; margin-left: 0; }
 /* A song the speaker could not play: one line and two small actions; the alternatives open in a
    sheet, so the notice never pushes the page down. */
 .notice-unavailable { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
@@ -145,13 +148,14 @@
 .remote-transport button { display: grid; place-items: center; flex: none; padding: 0; border-radius: var(--radius-pill); }
 .remote-transport .remote-step { inline-size: 56px; block-size: 56px; min-height: 56px; }
 .remote-transport .remote-play { inline-size: 72px; block-size: 72px; min-height: 72px; }
+.remote-transport[aria-busy='true'] button { opacity: 0.6; }
 .remote-transport button:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
 .remote-volume { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-3); color: var(--text-soft); }
 .remote-side { display: grid; gap: var(--space-4); min-width: 0; }
 .remote-next { display: grid; gap: var(--space-2); min-width: 0; }
 .remote-next h2 { margin: 0; font: var(--type-song); }
 .remote-next ol { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-hair); }
-.remote-next li button {
+.remote-next .remote-next-play, .remote-next-row {
   display: grid;
   grid-template-columns: var(--space-6) minmax(0, 1fr);
   align-items: center;
@@ -164,8 +168,8 @@
   background: none;
   text-align: start;
 }
-.remote-next li button:hover { background: var(--surface-control); }
-.remote-next li button:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
+.remote-next .remote-next-play:hover { background: var(--surface-control); }
+.remote-next .remote-next-play:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
 .remote-next-place { color: var(--text-soft); font: var(--type-meta); font-variant-numeric: tabular-nums; text-align: center; }
 .remote-next-words { display: grid; min-width: 0; }
 .remote-next-words > * { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -203,7 +207,7 @@
   .remote-transport { gap: var(--space-2); }
   .remote-transport .remote-step { inline-size: 48px; block-size: 48px; min-height: 48px; }
   .remote-transport .remote-play { inline-size: 56px; block-size: 56px; min-height: 56px; }
-  .remote-next li button { min-height: 48px; }
+  .remote-next .remote-next-play, .remote-next-row { min-height: 48px; }
 }
 
 /* ADR-0475 R1, R2: Listen on a device with no music while nothing plays. One action, "Play on
@@ -258,3 +262,18 @@
 .remote-hint { margin: 0; color: var(--text-soft); font: var(--type-caption); }
 /* G70: what another device changed, said briefly on the speaker */
 .changed-from { margin: 0; padding: var(--space-1) var(--space-3); color: var(--text-soft); font: var(--type-caption); }
+
+/* ADR-0475 G2: Up next edits and Stop on a remote */
+.remote-next-head { display: flex; align-items: center; gap: var(--space-2); }
+.remote-next-head h2 { flex: 1; }
+.remote-next-row { grid-template-columns: var(--space-6) minmax(0, 1fr) auto; }
+.remote-next-edit { display: flex; gap: var(--space-hair); }
+.remote-next-edit button { display: grid; place-items: center; inline-size: 44px; block-size: 44px; min-height: 44px; padding: 0; border-radius: var(--radius-pill); }
+.remote-next-head button, .remote-next-more { min-height: 44px; }
+.remote-next-more { justify-self: start; }
+.remote-stop { justify-self: center; min-height: 44px; }
+.remote-move { display: grid; gap: var(--space-2); min-width: 0; }
+.remote-move-toggle { justify-self: center; min-height: 44px; }
+.remote-ways-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.remote-ways-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); min-height: var(--control-height); padding: var(--space-2) 0; border-bottom: var(--separator) solid var(--edge-decorative); min-width: 0; }
+.remote-ways-list li button { flex: none; display: inline-flex; align-items: center; gap: var(--icon-gap); min-height: var(--control-height); white-space: nowrap; }

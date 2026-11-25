@@ -49,6 +49,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `cloud/cloudMusic.css` | the Cloud shell's music pages: Make a Mix, Listen, My Mixes and their guided empty pages | `cloud/LocalFirstEmpty.tsx`, `cloud/QuickMix.tsx`, `cloud/SavedBrowserMixes.tsx`, `cloud/SoundCheck.tsx` |
 | `cloud/libraryWorkspace.css` | the Cloud Library and Workspace: connect music, import progress, the song list toolbar and the storage card | `cloud/CloudLibrary.tsx`, `cloud/CloudWorkspace.tsx`, `cloud/ConnectMusic.tsx`, `cloud/ImportChip.tsx`, `cloud/StorageCard.tsx` |
 | `cloud/makeCloudMix.css` | Cloud mix creation interface layout and controls | `cloud/MakeCloudMix.tsx` |
+| `cloud/hosted/hostedMix.css` | The server-rendered hosted mix card on Make a Mix (cloud.hosted_render) | `cloud/hosted/HostedMix.tsx` |
 | `cloud/connection.css` | the connection banner and the buttons that wait for the server while offline | `cloud/ConnectionBanner.tsx`, `rooms/RoomPanel.tsx` |
 | `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
 | `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
@@ -132,6 +133,7 @@ wins, and the row says which.
 | `max-width: 560px` | `styles/polish.css` | skeleton rows stack their name and details at phone widths |
 | `max-width: 560px` | `styles/shell.css` | job list one column, phone seam indent |
 | `max-width: 480px` | `styles/boot.css` | runtime, welcome and onboarding actions stack full width on a phone |
+| `max-width: 480px` | `styles/lucy.css` | a compact Lucy song list puts the actions under the title on a small phone |
 | `max-width: 520px` | `style.css` | steering, destination and energy-arc stops one column; request rows |
 | `max-width: 520px` | `styles/foundation.css` | setup steps: a finished step shows only its tick, so the steps take one line (MP-0282-07) |
 | `max-width: 520px` | `styles/listening.css` | energy-arc stop labels |
@@ -145,6 +147,7 @@ wins, and the row says which.
 | `max-height: 450px` | `styles/cloud-shell.css` | very short windows: the Cloud rail's list fades above its account foot |
 | `max-height: 450px` | `styles/shell.css` | very short windows: context bar enters normal flow and phone navigation stops covering content |
 | `max-height: 520px` | `styles/shell.css` | short landscape: dialogs scroll inside, title and actions stay |
+| `max-height: 500px` | `styles/lucy.css` | a phone on its side: Lucy's heading gives its room to the conversation |
 | `max-height: 420px` | `styles/typography.css` | 400% zoom: the editor scope bar stops sticking |
 
 The Studio never changes structure by width; it scrolls with sticky lane labels, so Library rules

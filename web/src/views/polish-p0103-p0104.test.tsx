@@ -104,7 +104,7 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
 
     // the way back: the sheet closes, focus returns to the song that opened it, and the search,
     // the filter and the address are exactly as they were
-    await userEvent.click(within(details).getByRole('button', { name: /^Close / }));
+    await userEvent.click(within(details).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Details for Night Two' })).toHaveFocus();
     expect(screen.getByRole('searchbox', { name: 'Search your library' })).toHaveValue('Night');

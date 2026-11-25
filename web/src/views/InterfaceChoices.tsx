@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { words } from '../copy';
 import { flagOn } from '../flags';
 import { listed } from '../shell/manifest';
 import { changedPrefs, DEFAULT_PREFS, type Prefs, resetPrefs, setPrefs, usePrefs } from '../state/prefs';
@@ -11,7 +12,7 @@ import { ThemeChoices } from '../ui/ThemeChoice';
  * `classicNav` is false where the older navigation has no pages to lead to (browser-first Cloud). */
 /** What each setting is called, and its default in words, for the reset confirmation. */
 const SETTING_WORDS: Record<keyof Prefs, (value: Prefs[keyof Prefs]) => string> = {
-  theme: (value) => `Theme: ${value === 'system' ? 'follow this computer' : value}`,
+  theme: (value) => (value === 'system' ? words().themeCommand : `Theme: ${value}`),
   motion: (value) => `Motion: ${String(value)[0].toUpperCase()}${String(value).slice(1)}`,
   railCollapsed: (value) => `Side menu: ${value ? 'collapsed' : 'open'}`,
   density: (value) => `Rows: ${value}`,

@@ -12,6 +12,8 @@ type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 export const HOLDINGS_EVERY_MS = 15_000;
 /** Fired on window by the Cloud event stream when the default speaker changed (ADR-0475 C19). */
 export const DEFAULT_SPEAKER_EVENT = 'selecta:default-speaker';
+/** ADR-0475 I92: a device reported its songs (`devices.holdings`): read the holdings again now. */
+export const HOLDINGS_EVENT = 'selecta:holdings';
 
 export type HoldingsView = {
   /** null until the first answer (or while the route is refused: an older server, the flag off) */
@@ -76,9 +78,18 @@ export function useHoldings(cloud: Request, enabled: boolean, speakerId: string 
   useEffect(() => {
     if (!enabled) return undefined;
     const again = () => setAsked((count) => count + 1);
+    // (I92: and when a device reports its songs, or this page is looked at again)
+    const looked = () => { if (document.visibilityState === 'visible') again(); };
     window.addEventListener(DEFAULT_SPEAKER_EVENT, again);
+    window.addEventListener(HOLDINGS_EVENT, again);
+    document.addEventListener('visibilitychange', looked);
     const off = onReconnect(again);
-    return () => { window.removeEventListener(DEFAULT_SPEAKER_EVENT, again); off(); };
+    return () => {
+      window.removeEventListener(DEFAULT_SPEAKER_EVENT, again);
+      window.removeEventListener(HOLDINGS_EVENT, again);
+      document.removeEventListener('visibilitychange', looked);
+      off();
+    };
   }, [enabled]);
   return { devices, speakerSongs, ids, defaultId, refresh: useCallback(() => setAsked((count) => count + 1), []) };
 }

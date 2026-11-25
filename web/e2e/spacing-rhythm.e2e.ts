@@ -241,6 +241,8 @@ test('MP-0273-04 headings keep a 12-48px rhythm to what they introduce and to th
 
     // a group label to its cards is related text: 12px; groups are 24px apart
     await open(page, '/mixes');
+    // the idea cards arrive after the page; measure them once they are there (a missing group still fails below)
+    await page.locator('.vibe-group').nth(1).waitFor({ timeout: 15_000 });
     const groups = await page.locator('.vibe-group').evaluateAll((elements) => elements.map((group) => {
       const label = group.querySelector(':scope > .eyebrow')!.getBoundingClientRect();
       const cards = group.querySelector(':scope > .cards')!.getBoundingClientRect();

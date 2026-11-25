@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { houseTab } from './audioTab';
+import { extrapolate, type SessionState } from './playbackWire';
 
 // ADR-0475 R2, "Play on {device}": one device asks another of the same person's devices to
 // become the speaker and start. It is an ask, not a remote take-over: the asked device decides
@@ -10,7 +11,8 @@ import { houseTab } from './audioTab';
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 /** The ask as the workspace event stream delivers it (`playback.start_ask`). */
-export type StartAsk = { ask_id: string; target_device_id: string; target_name: string; asker_device_id: string; asker_name: string; mix_id: string | null; expires_at: number };
+/** `move`: ADR-0475 I85, take the music over from the device playing, not only start when free. */
+export type StartAsk = { ask_id: string; target_device_id: string; target_name: string; asker_device_id: string; asker_name: string; mix_id: string | null; move?: boolean; expires_at: number };
 /** What the asked device said (`playback.start_answer`). */
 export type StartResult = 'starting' | 'needs_music' | 'needs_gesture' | 'no_mix' | 'declined';
 export type StartAnswer = { ask_id: string; asker_device_id: string; target_device_id: string; target_name: string; result: StartResult };
@@ -24,6 +26,8 @@ export const START_ANSWER_EVENT = 'selecta-start-answer';
 export const START_ASK_WAIT_MS = 8_000;
 /** How long "Starting on {device}" may stand before the asker stops claiming even that. */
 export const STARTING_WAIT_MS = 20_000;
+/** B14: how long the asker waits for that tap before saying the device didn't answer. */
+export const TAP_WAIT_MS = 60_000;
 
 export type AskPhase = 'asking' | StartResult | 'no_answer' | 'offline' | 'failed';
 export type AskState = { phase: AskPhase; device: string; deviceId: string } | null;
@@ -34,7 +38,8 @@ export function askWords(phase: AskPhase, device: string): string {
     case 'asking': return `Asking ${device}…`;
     case 'starting': return `Starting on ${device}…`;
     case 'needs_music': return `${device} needs its music folder again. Choose it on ${device}.`;
-    case 'needs_gesture': return `${device} needs one press of Play. Press Play on ${device} to allow sound.`;
+    // B14: the browser there needs a tap before it may make sound; never "Playing" before that
+    case 'needs_gesture': return `Waiting for a tap on ${device}. Press Play there to allow sound.`;
     case 'no_mix': return `${device} has no mix to play. Make a mix first.`;
     case 'declined': return `Not started on ${device}.`;
     case 'offline': return `${device} isn’t open right now. Open SelectaDJ on it.`;
@@ -77,7 +82,7 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
   }, [cloud, deviceId]);
 
   /** Ask `target` to start. `mixId`: the saved mix to play, or null for the one it already has. */
-  const ask = useCallback(async (target: { device_id: string; name: string }, mixId: string | null) => {
+  const ask = useCallback(async (target: { device_id: string; name: string }, mixId: string | null, move = false) => {
     if (!deviceId || !enabled) return;
     stopWaiting();
     const told = (phase: AskPhase) => setState({ phase, device: target.name, deviceId: target.device_id });
@@ -85,7 +90,7 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
     try {
       const made = await cloud<StartAsk>('/playback/start-asks', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ device_id: deviceId, target_device_id: target.device_id, ...(mixId ? { mix_id: mixId } : {}) }),
+        body: JSON.stringify({ device_id: deviceId, target_device_id: target.device_id, ...(mixId ? { mix_id: mixId } : {}), ...(move ? { move: true } : {}) }),
       });
       waiting.current = { askId: made.ask_id, timer: window.setTimeout(() => { waiting.current = { askId: null, timer: 0 }; told('no_answer'); }, START_ASK_WAIT_MS) };
     } catch (problem) {
@@ -114,7 +119,7 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
       const told = (phase: AskPhase) => setState({ phase, device: one.target_name, deviceId: one.target_device_id });
       told(one.result);
       // waiting on a press there, or on its start: the ask stays the one being answered
-      if (one.result === 'needs_gesture') { waiting.current = { askId: one.ask_id, timer: 0 }; return; }
+      if (one.result === 'needs_gesture') { waiting.current = { askId: one.ask_id, timer: window.setTimeout(() => { waiting.current = { askId: null, timer: 0 }; told('no_answer'); }, TAP_WAIT_MS) }; return; }
       if (one.result === 'starting') {
         waiting.current = { askId: one.ask_id, timer: window.setTimeout(() => { waiting.current = { askId: null, timer: 0 }; told('no_answer'); }, STARTING_WAIT_MS) };
         return;
@@ -134,4 +139,14 @@ export function usePlayOn({ cloud, deviceId, enabled, serverNow, onAsk }: {
 export function soundAllowedHere(): boolean {
   const activation = (typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { userActivation?: { hasBeenActive?: boolean } }).userActivation);
   return activation?.hasBeenActive === true;
+}
+
+/** ADR-0475 G2 (58): where an asked device starts when it takes over the programme that is
+ * playing: the session's song and place when this mix is that programme, else null (its start). */
+export function movedFrom(session: SessionState | null | undefined, mix: readonly { song_id: number }[], serverNow: number): { song_index: number; offset_ms: number } | null {
+  const playing = session?.programme?.[session.song_index]?.song_id;
+  if (!session || playing === undefined) return null;
+  // the song playing now, wherever it sits in this device's copy of the mix (it may lack some)
+  const at = mix.findIndex((item) => item.song_id === playing);
+  return at < 0 ? null : { song_index: at, offset_ms: extrapolate(session, serverNow) };
 }

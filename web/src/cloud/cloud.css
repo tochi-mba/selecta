@@ -482,14 +482,16 @@
   flex: 1;
   block-size: var(--space-1);
   border-radius: var(--radius-pill);
-  background: var(--surface-control);
   overflow: hidden;
 }
+/* On a phone each step is a short bar. The bar is drawn by ::before, not the item's background, so
+   the step's words (kept for screen readers) never sit on a coloured fill they cannot contrast with. */
+.cloud-spine-steps li::before { content: ''; position: absolute; inset: 0; background: var(--step-fill, var(--surface-control)); }
 .cloud-spine-steps li > * { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.cloud-spine-steps li[aria-current='step'] { background: var(--text); }
-.cloud-spine-steps li[data-outcome='done'] { background: var(--status-ready); }
-.cloud-spine-steps li[data-outcome='unverified'] { background: var(--status-warning); }
-.cloud-spine-steps li:is([data-outcome='skipped'], [data-outcome='not_here']) { background: var(--edge-interactive); }
+.cloud-spine-steps li[aria-current='step'] { --step-fill: var(--text); }
+.cloud-spine-steps li[data-outcome='done'] { --step-fill: var(--status-ready); }
+.cloud-spine-steps li[data-outcome='unverified'] { --step-fill: var(--status-warning); }
+.cloud-spine-steps li:is([data-outcome='skipped'], [data-outcome='not_here']) { --step-fill: var(--edge-interactive); }
 @media (min-width: 901px) {
   .cloud-spine { grid-template-columns: 14rem minmax(0, 1fr); column-gap: var(--space-6); }
   .cloud-spine > * { grid-column: 2; }
@@ -505,6 +507,7 @@
     background: none;
     overflow: visible;
   }
+  .cloud-spine-steps li::before { content: none; }
   .cloud-spine-steps li > * { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; white-space: normal; }
   .cloud-spine-steps li > .visually-hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
   .cloud-spine-steps li[aria-current='step'] { background: var(--surface-control); color: var(--text); font-weight: var(--weight-label); }

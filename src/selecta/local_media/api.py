@@ -18,16 +18,21 @@ from sqlalchemy.engine import Engine
 
 from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
-from selecta.local_media import store
+from selecta.local_media import store, versions
 from selecta.persistence import db_now, transaction
 from selecta.playback import default_speaker
 from selecta.playback.schema import devices as playback_devices
+from selecta.work import outbox
 
-_MAX_PAGE_SIZE = 100
+# A library of 20,000 songs is 20 pages: the Library is waiting on the whole list (staging
+# walkthrough item 5, 30 s at 100 a page on staging). A row is a few hundred bytes.
+_MAX_PAGE_SIZE = 1000
 _MAX_AVAILABILITY_SNAPSHOT_IDS = 20_000
 # ADR-0475: a device counts as online when it was seen this recently. A device with the app
 # open reads its playback session every second or two, which keeps its last-seen time fresh.
 ONLINE_WITHIN_SECONDS = 30.0
+
+HOLDINGS_TOPIC = "devices.holdings"
 
 
 class SongRegistration(BaseModel):
@@ -116,6 +121,8 @@ def install_routes(
             answers = store.register_songs(
                 conn, workspace_id, [song.model_dump() for song in body.songs]
             )
+            # a re-registered file may carry new tags, which can change its song
+            versions.regroup_versions(conn, workspace_id)
         return {"songs": answers}
 
     @app.post("/api/local-media/songs/never")
@@ -159,8 +166,16 @@ def install_routes(
         after: int = Query(default=0, ge=0),
         limit: int = Query(default=50, ge=1, le=_MAX_PAGE_SIZE),
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_READ)
+        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        if not principal.can(WorkspaceAction.LIBRARY_READ):
+            raise HTTPException(status_code=403, detail={"code": "not_allowed"})
+        workspace_id = principal.workspace.id
         with transaction(engine, workspace_id) as conn:
+            if after == 0 and principal.can(WorkspaceAction.LIBRARY_WRITE):
+                # once per workspace per grouping rule: existing songs and their versions are
+                # put right on the first load after a deploy (ADR-0469 amendment 2); a viewer's
+                # read never writes
+                versions.ensure_regrouped(conn, workspace_id)
             songs, next_after = store.list_songs(conn, workspace_id, after=after, limit=limit)
             counts = store.availability_counts(conn, workspace_id, [s["id"] for s in songs])
         for song in songs:
@@ -196,6 +211,9 @@ def install_routes(
             if not store.exists(conn, workspace_id, song_id):
                 raise HTTPException(status_code=404, detail={"code": "song_not_found"})
             deleted = store.soft_delete(conn, workspace_id, song_id)
+            # a removed song's other versions find their primary again
+            if deleted:
+                versions.regroup_versions(conn, workspace_id)
         return {"id": song_id, "deleted": True, "already_deleted": not deleted}
 
     @app.get("/api/local-media/holdings")
@@ -279,7 +297,13 @@ def install_routes(
             written = report(
                 conn, workspace_id, body.device_id, body.present, body.absent
             )
+            # ADR-0475 I92: the person's other devices read this device's songs again now,
+            # instead of on their next 15-second look
+            now = db_now(conn)
+            outbox.emit(
+                conn, HOLDINGS_TOPIC, workspace_id, {"device_id": body.device_id, "at": now}, now
+            )
         return {"device_id": body.device_id, **written}
 
 
-__all__ = ["install_routes"]
+__all__ = ["HOLDINGS_TOPIC", "install_routes"]

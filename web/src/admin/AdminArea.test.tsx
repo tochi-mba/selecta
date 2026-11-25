@@ -143,7 +143,7 @@ describe('the Overview', () => {
     expect(screen.getByText('Workers (Modal)')).toBeInTheDocument();
     expect(screen.getByText('Database')).toBeInTheDocument();
     expect(screen.queryByText('health.postgres')).toBeNull();
-    expect(screen.getByText(/Reported by the autoscaler/)).toBeInTheDocument();
+    expect(screen.getByText(/Reported by the worker autoscaler/)).toBeInTheDocument();
     expect(await screen.findByText('Turn on two-factor sign-in')).toBeInTheDocument();
   });
 });

@@ -96,6 +96,12 @@ function rememberScroll() {
   }
 }
 
+/** A history entry at the same address whose state carries `mark`, so Back closes what the mark
+ * stands for (the phone editor's sheets) instead of leaving the page. History stays owned here. */
+export function pushHistoryMark(mark: Record<string, unknown>) {
+  window.history.pushState({ ...(window.history.state ?? {}), ...mark }, '');
+}
+
 /** Go somewhere. Going where you already are doesn't add to the history. */
 export function navigate(to: string | Route, options: { replace?: boolean } = {}) {
   const path = typeof to === 'string' ? to : pathOf(to);

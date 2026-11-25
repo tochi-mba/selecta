@@ -1,4 +1,4 @@
-import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
+import { act, cleanup, render, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clearToasts, Toaster } from '../ui/toasts';
 import type { AskState } from './playOn';
@@ -23,8 +23,10 @@ describe('Play by the rule', () => {
     expect(handled).toBe(true);
     expect(askToPlay).toHaveBeenCalledWith(expect.objectContaining({ device_id: 'laptop' }));
     act(() => { hook.rerender({ ...args, asking: { phase: 'no_answer', device: 'laptop', deviceId: 'laptop' } }); });
-    expect(screen.getByText('laptop didn’t answer.')).toBeInTheDocument();
-    act(() => { screen.getByRole('button', { name: 'Try again' }).click(); });
+    // one line on Listen, not a toast (9bdbd8f7): the hook hands the notice to the page
+    const notice = hook.result.current.notice!;
+    expect(notice.text).toBe('laptop didn’t answer. It may be asleep; try again, or play somewhere else.');
+    act(() => { notice.actions.find((action) => action.label === 'Try again')!.run(); });
     expect(askToPlay).toHaveBeenCalledTimes(2);
   });
 
@@ -36,5 +38,54 @@ describe('Play by the rule', () => {
   it('with the flag off, decides nothing (plays here as before)', () => {
     const hook = renderHook(() => useWhereToPlay({ enabled: false, situation: situation(), cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn() }));
     expect(hook.result.current.decide()).toBe(false);
+  });
+});
+
+describe('A5 and E34', () => {
+  it('offers to forget a default speaker not seen for 30 days, and signs it out', async () => {
+    const cloud = vi.fn(async () => ({}));
+    const refreshHoldings = vi.fn();
+    const ghost = device('old-laptop', { online: false, last_seen_at: Date.now() / 1000 - 31 * 24 * 3600 });
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: situation({ devices: [ghost, device('laptop'), device('phone', { songs: 0 })], defaultId: 'old-laptop' }), cloud: cloud as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings }));
+    act(() => { hook.result.current.decide(); });
+    const forget = hook.result.current.notice!.actions.find((action) => action.label === 'Forget old-laptop');
+    expect(forget).toBeDefined();
+    await act(async () => { forget!.run(); });
+    expect(cloud).toHaveBeenCalledWith('/devices/old-laptop/sign-out', { method: 'POST' });
+    expect(refreshHoldings).toHaveBeenCalled();
+  });
+
+  it('offline, opens no picker and asks no device: this device plays if it can', () => {
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const askToPlay = vi.fn();
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: situation(), cloud: vi.fn() as never, playHere: vi.fn(), askToPlay, refreshHoldings: vi.fn() }));
+    expect(hook.result.current.decide()).toBe(false);
+    expect(askToPlay).not.toHaveBeenCalled();
+    online.mockRestore();
+  });
+});
+
+describe('D30', () => {
+  it('closing the room while the picker is open closes the picker', async () => {
+    const { noteRoom } = await import('../rooms/useRoomSession');
+    noteRoom({ room: { id: 'r1', name: 'Party' }, code: null, inbox: [], coming_up: [] });
+    const two = situation({ devices: [device('laptop'), device('tablet'), device('phone', { songs: 0 })] });
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: two, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn() }));
+    act(() => { hook.result.current.decide(); });
+    expect(hook.result.current.picker).toBeTruthy();
+    act(() => { noteRoom(null); });
+    expect(hook.result.current.picker).toBeFalsy();
+  });
+});
+
+describe('B16', () => {
+  it('says "because the default isn\'t open" once, not on every press', () => {
+    localStorage.clear();
+    const away = situation({ devices: [device('desk', { online: false }), device('laptop'), device('phone', { songs: 0 })], defaultId: 'desk' });
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: away, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn() }));
+    act(() => { hook.result.current.decide(); });
+    expect(hook.result.current.notice?.text).toMatch(/because desk isn’t open/);
+    act(() => { hook.result.current.clearNotice(); hook.result.current.decide(); });
+    expect(hook.result.current.notice?.text).toBe('Starting on laptop.');
   });
 });

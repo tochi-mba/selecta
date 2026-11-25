@@ -26,7 +26,8 @@ const LIFECYCLE_WORDS: Record<Lifecycle, string> = {
 
 export function LifecyclePill({ stage }: { stage: Lifecycle }) {
   // in Cloud a proposal is saved into the mix, never built
-  const words = stage === 'proposed' && lucyTransport() ? 'Proposed - not saved' : LIFECYCLE_WORDS[stage];
+  const cloud = !!lucyTransport();
+  const words = cloud && stage === 'proposed' ? 'Proposed - not saved' : cloud && stage === 'draft' ? 'Saved' : LIFECYCLE_WORDS[stage];
   return <span className={`lucy-stage is-${stage}`}>{words}</span>;
 }
 
@@ -198,7 +199,7 @@ export function ProposalPane({ proposal, revision, phases, selection, onAsk, ado
         <p className="eyebrow">Your mix</p>
         <h2 id={headingId} dir="auto">{snap.title || 'Untitled mix'}</h2>
         <div className="row wrap">
-          <LifecyclePill stage="proposed" />
+          <LifecyclePill stage={live && snap.versions?.played === true ? 'playing' : live && snap.versions?.saved === true ? 'draft' : 'proposed'} />
           <Menu className="lucy-revisions" label={<>Revision {shown.number}{isCurrent ? '' : ' (not the current one)'} <Icon name="down" size="compact" /></>}>
             {[...proposal.history].reverse().map((item) => (
               <button key={item.id} type="button" role="menuitemradio" aria-checked={item.id === shown.id} onClick={() => setViewing(item.id === currentId ? null : item.id)}>
