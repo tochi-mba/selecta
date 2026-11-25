@@ -77,6 +77,19 @@ describe('ImportChip', () => {
     expect(screen.queryByRole('button', { name: 'Try now' })).toBeNull();
   });
 
+  it('an import that resumed after a reload says it is carrying on, with real counts', async () => {
+    const runner = manualRunner();
+    void startImportSession({ source: [], run: runner.run, workspaceId: 'ws-1', folder: 'Music', kind: 'folder' });
+    await vi.waitFor(() => expect(importSnapshot().phase).toBe('running'));
+    render(<ImportChip onView={() => undefined} workspaceId="ws-1" />);
+    await flush();
+    runner.emit({ kind: 'collected', total: 3, skipped: 0 });
+    expect(screen.getByText('Adding your music')).toBeInTheDocument();
+    runner.emit({ kind: 'checked', name: 'a.mp3', resumed: true });
+    expect(screen.getByText('Carrying on your import')).toBeInTheDocument();
+    expect(screen.getAllByText('1 of 3 checked').length).toBeGreaterThan(0);
+  });
+
   it('the service not answering: counts down and offers Try now', async () => {
     const runner = manualRunner();
     void startImportSession({ source: [], run: runner.run, workspaceId: 'ws-1', kind: 'files' });

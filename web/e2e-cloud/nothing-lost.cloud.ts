@@ -46,6 +46,9 @@ async function holdBatches(page: Page, free: number) {
 /** The Library's own song count, from the shell status the import refreshes. */
 const songCount = (page: Page, count: number) => page.locator('span').filter({ hasText: new RegExp(`^\\s*${count} songs\\s*$`) });
 const chip = (page: Page) => page.locator('.cloud-import-chip');
+/** A new member's getting-started spine stands in for the page they opened until it is put off
+ * (77a9a91d); Finish later shows the Library, whose own count proves the import landed. */
+const finishLater = (page: Page) => page.getByRole('button', { name: 'Finish later' }).click();
 
 /** Put a real folder in the origin-private file system and remember it where a folder pick does,
  * so a reload can carry the import on over it without a picker. */
@@ -117,6 +120,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     }, { timeout: 30_000 }).toBe(20);
 
     await context.setOffline(false);
+    await finishLater(page);
     await expect(songCount(page, 20)).toBeVisible({ timeout: 60_000 });
     await expect(chip(page)).toHaveCount(0);
   });
@@ -138,6 +142,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await expect(page.getByText(/Failed to fetch|Request failed \(503\)/)).toHaveCount(0);
     failing = false;
     await chip(page).getByRole('button', { name: 'Try now' }).click();
+    await finishLater(page);
     await expect(songCount(page, 6)).toBeVisible({ timeout: 60_000 });
   });
 
@@ -156,7 +161,9 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
 
     await page.reload();
     held.release();
-    await expect(chip(page)).toContainText(/Carrying on your import: \d+ of 12 checked\./, { timeout: 30_000 });
+    // the chip names an import that resumed, with its real count
+    await expect(chip(page)).toContainText('Carrying on your import', { timeout: 30_000 });
+    await expect(chip(page)).toContainText(/\d+ of 12 checked/);
     await expect(songCount(page, 12)).toBeVisible({ timeout: 60_000 });
     // the journal is cleared once the import really finished
     await expect.poll(async () => Object.keys(await journal(page, workspace)).length, { timeout: 30_000 }).toBe(0);
@@ -172,8 +179,10 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await expect.poll(() => held.batches()).toBe(2);
     await page.reload();
     held.release();
-    const offer = page.getByRole('note').filter({ hasText: 'Your import stopped part way' });
-    await expect(offer).toContainText('choose the same files again');
+    // the offer's words since 4ad97ad4: what stopped, with its count, and the one step
+    const offer = page.getByRole('note').filter({ hasText: 'stopped part way' });
+    await expect(offer).toContainText(/\d+ of 10 checked/);
+    await expect(offer).toContainText('Choose the same songs again');
     await expect(offer).toContainText('SelectaDJ carries on from there');
     await page.locator('.connect-music input[accept="audio/*"]').setInputFiles(music);
     await expect(songCount(page, 10)).toBeVisible({ timeout: 60_000 });
@@ -206,7 +215,8 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await asLocalFirst(second, user);
     await second.route('**/api/local-media/songs', (route) => (route.request().method() === 'POST' ? route.abort() : route.fallback()));
     await second.goto('/workshop');
-    await expect(second.getByText(/Another tab is importing\. Progress shows here too/)).toBeVisible({ timeout: 30_000 });
+    // said by the chip, and by Workspace's import card when that page is open
+    await expect(second.locator('.cloud-import-chip')).toContainText(/Another tab is importing\. Progress shows here too/, { timeout: 30_000 });
     held.release();
     await expect(songCount(page, 15)).toBeVisible({ timeout: 60_000 });
     expect(await second.evaluate((key) => localStorage.getItem(key), `selecta.import.${workspace}`)).toBeNull();

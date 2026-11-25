@@ -50,7 +50,7 @@ function expectOurClient(query: Record<string, string>) {
 
 async function welcome(page: Page, path = '/') {
   await page.goto(`${site}${path}`);
-  await expect(page.getByRole('heading', { name: 'Your music, ready to move.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Your music, mixed seamlessly.' })).toBeVisible();
 }
 
 async function hostedForm(page: Page, address: string, button: string) {
@@ -72,7 +72,7 @@ async function signInWithPassword(page: Page, address: string, path = '/') {
 async function signUpVerified(context: BrowserContext, address: string) {
   const page = await browserWithAuthDomain(context);
   await welcome(page);
-  await page.getByRole('button', { name: 'Create your account' }).click();
+  await page.getByRole('button', { name: 'Create account' }).click();
   await hostedForm(page, address, 'Create account');
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible();
   await page.request.post(`${server}/test/authkit/verify`, { data: { email: address } });
@@ -88,7 +88,7 @@ test('Create account goes to the hosted sign-up page and an unverified email get
   const address = email('new');
   await welcome(page);
 
-  await page.getByRole('button', { name: 'Create your account' }).click();
+  await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByRole('heading', { name: 'Create your SelectaDJ account' })).toBeVisible();
   const query = authorizeQuery(page);
   expectOurClient(query);
@@ -99,7 +99,8 @@ test('Create account goes to the hosted sign-up page and an unverified email get
   // Back on our site, signed in by the code exchange, but the email isn't verified yet.
   expect(new URL(page.url()).origin).toBe(site);
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible();
-  await expect(page.getByText(`Open the verification email for ${address}`)).toBeVisible();
+  // the verify screen names the address the email went to (0ffe3aa3's card frame)
+  await expect(page.getByRole('main')).toContainText(`Open the email sent to ${address}`);
   await expect(page).not.toHaveURL(/[?&]code=/);
 });
 

@@ -1,7 +1,7 @@
 /** Gapless playback of a server-rendered timeline (cloud.hosted_render).
  *
  * The server cuts each song at its rendered seam's cue points and hands over the seam clips
- * between them (`selecta.hosted_render`): every part is a lossless file and a stretch of it
+ * between them (hosted_render.py on the server): every part is a lossless file and a stretch of it
  * (`from_s`, `seconds`). Parts are decoded a little ahead and scheduled back to back on one
  * AudioContext clock, so the joins are sample-exact: no browser mixing, no crossfade of its own.
  * Each signed link is short-lived, so `refresh()` asks the server again for links when a part

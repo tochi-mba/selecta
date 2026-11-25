@@ -61,6 +61,20 @@ def test_flags_follow_the_owner_and_the_plan(cloud_engine):
     assert flags.is_on("nobody", "core.analysis") is False
 
 
+def test_standing_and_flags_read_inside_a_write_transaction_use_that_connection(cloud_engine):
+    # The claim and completion paths hold a write transaction; on SQLite (dev.cmd cloud) a
+    # second connection waited 30 s and failed, so the dev worker never claimed a Cloud job.
+    from selecta.work.ports import standing_in
+
+    account(cloud_engine)
+    plans = cloud_ports.CloudJobEntitlements(cloud_engine)
+    flags = cloud_ports.CloudJobFlags(cloud_engine, RulesCache(cloud_engine))
+    with transaction(cloud_engine) as connection:
+        connection.execute(users.update().where(users.c.id == "u1").values(timezone="UTC"))
+        assert standing_in(plans, connection, "ws1").tier == "free"
+        assert flags.is_on_in(connection, "ws1", "core.analysis") is True
+
+
 # --- Outputs in R2 ------------------------------------------------------------------------------
 
 
