@@ -181,18 +181,25 @@ def render(
     dry_b, tails_b = _apply_moves(script.b, placed_b)
 
     mixed = dry_a + dry_b + tails_a + tails_b
+    # a stem seam's lanes are each a part, so the audit hears each side as all its lanes together
+    lanes = bool(script.meta.get("stem_lanes"))
+    side_a, side_b = dry_a, dry_b
     for extra in script.extras:
         placed, _ = _part_audio(extra, _part_source(extra, resolver, cache), count)
         if extra.follows_b:
             placed = _slide(script, placed, nudge)
         dry, tails = _apply_moves(extra, placed)
         mixed = mixed + dry + tails
+        if lanes and extra.follows_b:
+            side_b = side_b + dry
+        elif lanes:
+            side_a = side_a + dry
     mixed = dsp.limit(mixed)
     return Rendered(
         script,
         mixed,
-        dry_a,
-        dry_b,
+        side_a,
+        side_b,
         {
             "a": round(drift_a * 1000, 2),
             "b": round(drift_b * 1000, 2),

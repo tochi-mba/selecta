@@ -8,6 +8,7 @@ from pathlib import Path
 
 from selecta import flags
 from selecta.analysis.song import Cue, SongInfo
+from selecta.analysis.vocal_sense import sense_on
 from selecta.arrange import (
     TAKES,
     WontWork,
@@ -19,7 +20,7 @@ from selecta.arrange import (
     taste_from,
     why_it_cant,
 )
-from selecta.audit.checks import AuditReport, audit, beat_offset
+from selecta.audit.checks import AuditReport, VocalSpans, audit, beat_offset
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner
 from selecta.lyrics.match import LyricLink, SongFacts, discover
@@ -37,6 +38,7 @@ from selecta.planner.wordreel import (
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.render.intertwine import can_intertwine, intertwine_windows, render_intertwined
 from selecta.render.script import Part, TransitionScript, Warp
+from selecta.render.stem_seam import vocal_spans
 from selecta.seam_kinds import (
     NOT_IN_THE_CHOOSER,
     PLACEMENTS_TO_TRY,
@@ -174,10 +176,17 @@ def _closer(report: AuditReport, than: AuditReport) -> bool:
     return miss(report) < miss(than)
 
 
-def tighten_beats(rendered: Rendered, cache: SongCache) -> tuple[Rendered, AuditReport]:
+def tighten_beats(
+    rendered: Rendered, cache: SongCache, vocal_spans: VocalSpans | None = None
+) -> tuple[Rendered, AuditReport]:
     """The render measures exactly how far apart the beats landed, so a steady gap can be closed
-    with a second take rather than warned about. A live DJ only gets the one."""
-    report = audit(rendered)
+    with a second take rather than warned about. A live DJ only gets the one. A stem seam passes
+    the singing it measured from its own voice stems, and both takes are heard with it."""
+
+    def hear(take: Rendered) -> AuditReport:
+        return audit(take) if vocal_spans is None else audit(take, vocal_spans=vocal_spans)
+
+    report = hear(rendered)
     if not any(check.name == "beat alignment" for check in report.failures):
         return rendered, report
     offset = beat_offset(rendered)
@@ -194,8 +203,17 @@ def tighten_beats(rendered: Rendered, cache: SongCache) -> tuple[Rendered, Audit
     second = render(
         replace(script, b=later(script.b), extras=[later(part) for part in script.extras]), cache
     )
-    second_report = audit(second)
+    second_report = hear(second)
     return (second, second_report) if _closer(second_report, report) else (rendered, report)
+
+
+def _stem_audit(rendered: Rendered, cache: SongCache) -> tuple[Rendered, AuditReport]:
+    """Check a stem seam. One played through the engine (`render.one_engine`) is checked like any
+    other seam: its beats tightened, and its voices heard from the stems it already holds."""
+    if not rendered.script.meta.get("stem_lanes"):
+        return rendered, audit(rendered)
+    spans = vocal_spans(rendered.script) if sense_on() else None
+    return tighten_beats(rendered, cache, spans)
 
 
 def _exits_after(a: SongInfo, leave_after: float | None) -> list | None:
@@ -315,7 +333,12 @@ def _session_for(
 
 
 def _arranged(
-    settings: Settings, request: SeamRequest, a: SongInfo, b: SongInfo, memory: SeamMemory
+    settings: Settings,
+    request: SeamRequest,
+    a: SongInfo,
+    b: SongInfo,
+    memory: SeamMemory,
+    cache: SongCache | None = None,
 ) -> tuple[Rendered, AuditReport, str]:
     """Listen to both songs' stems, make the best arrangement it can, render it, check it, and go
     again with a specific fix for anything that didn't pass."""
@@ -331,6 +354,7 @@ def _arranged(
     except WontWork as problem:
         raise CannotRender(str(problem)) from problem
     why = f"{a.title} strips down to its melody, then {b.title} lands."
+    cache = cache or SongCache()
     best = None
     tried: list[dict] = []
     while to_try and len(tried) < TAKES:
@@ -338,9 +362,11 @@ def _arranged(
         if shape in tried:
             continue
         tried.append(shape)
-        rendered = render_shape(a, b, folder, session, shape, style="stem_arrange")
+        rendered = render_shape(
+            a, b, folder, session, shape, style="stem_arrange", settings=settings, cache=cache
+        )
         rendered.script.meta["arc"] = [round(float(v), 1) for v in arc_of(as_array(shape), hearing)]
-        report = audit(rendered)
+        rendered, report = _stem_audit(rendered, cache)
         if report.passed:
             return rendered, report, why
         if best is None or _closer(report, best[1]):
@@ -373,15 +399,21 @@ def _stem_render(
     if request.move == "stem_studio":
         folder, session = _session_for(settings, request, a, b)
         shape = clean_shape(request.shape)
-        rendered = render_shape(a, b, folder, session, shape)
+        rendered = render_shape(a, b, folder, session, shape, settings=settings, cache=cache)
         heard = listen(folder, float(session["seconds"]))
         rendered.script.meta["arc"] = [round(float(v), 1) for v in arc_of(as_array(shape), heard)]
-        return rendered, audit(rendered), "You chose which stems play when."
+        rendered, report = _stem_audit(rendered, cache)
+        return rendered, report, "You chose which stems play when."
     if request.move == "stem_intertwine":
         try:
-            transition = render_intertwined(settings, a, b)
+            transition = render_intertwined(settings, a, b, cache)
         except (ValueError, OSError, RuntimeError) as problem:
             raise CannotRender(str(problem)) from problem
+        why = "Drums and harmonic beds cross; bass swaps once; vocals take turns."
+        if getattr(transition, "rendered", None) is not None:
+            rendered, report = _stem_audit(transition.rendered, cache)
+            return rendered, report, why
+        # the old private mix, kept for render.one_engine off; it goes once the owner has listened
         duration = transition.audio.shape[0] / SAMPLE_RATE
         output_beats = a.beats[
             a.beat_index_of_bar(transition.exit_cue.bar - 8) : a.beat_index_of_bar(
@@ -413,11 +445,7 @@ def _stem_render(
             },
         )
         rendered = Rendered(script, transition.audio, transition.a_dry, transition.b_dry)
-        return (
-            rendered,
-            audit(rendered),
-            "Drums and harmonic beds cross; bass swaps once; vocals take turns.",
-        )
+        return rendered, audit(rendered), why
     if request.move == "vocal_ride":
         lines = ride_lines(a, b, request.leave_after)
         if lines is None:

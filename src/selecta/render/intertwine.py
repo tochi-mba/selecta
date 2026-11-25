@@ -8,11 +8,14 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from selecta import flags
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.render import dsp
-from selecta.render.script import Curve
+from selecta.render.engine import Rendered, SongCache, render
+from selecta.render.script import Curve, TransitionScript
+from selecta.render.stem_seam import LANES, Lane, stem_script
 from selecta.stems import StemWindow, separate_window
 
 TRANSITION_SECONDS = 28.0
@@ -32,6 +35,8 @@ class Intertwined:
     b_vocal: Curve
     a_drums: Curve
     b_drums: Curve
+    rendered: Rendered | None = None
+    """The engine's render, with `render.one_engine` on, which the seam is audited and kept from."""
 
 
 def _read(path: Path) -> np.ndarray:
@@ -111,7 +116,63 @@ def intertwine_windows(
     return (float(a_points[0]), window), (entry_cue.time, window * (a.bpm / b.bpm))
 
 
-def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwined:
+_POINTS = {
+    "drums": ([(0, 1), (12, 1), (16, 0)], [(0, 0), (4, 0), (12, 1)]),
+    "bass": ([(0, 1), (12, 1), (14, 0)], [(0, 0), (12, 0), (14, 1)]),
+    "other": ([(0, 1), (8, 1), (20, 0)], [(0, 0), (8, 0), (20, 1)]),
+    "vocals": ([(0, 1), (14, 1), (16, 0)], [(0, 0), (16, 0), (18, 1)]),
+}
+"""Each lane's automation for A and for B, on the nominal 28 s timeline: one bass owner, handed
+over once, and the voices taking turns."""
+
+
+def _lane_curve(count: int, points: list[tuple[float, float]]) -> Curve:
+    """`_curve`'s automation as a curve the engine reads, scaled the same way."""
+    scale = count / SAMPLE_RATE / TRANSITION_SECONDS
+    return Curve([(point * scale, float(value)) for point, value in points])
+
+
+def intertwine_script(
+    a: SongInfo,
+    b: SongInfo,
+    a_points: np.ndarray,
+    b_points: np.ndarray,
+    stems_a: StemWindow,
+    stems_b: StemWindow,
+    windows: tuple[tuple[float, float], tuple[float, float]],
+) -> TransitionScript:
+    """The same seam as a script: each stem a part with its own automation, and B pinned to A's
+    downbeats exactly as the old mix stretched it."""
+    a_start = float(a_points[0])
+    duration = float(a_points[-1] - a_start)
+    count = int(round(duration * SAMPLE_RATE))
+    keep = np.arange(0, 16 * a.beats_per_bar + 1, a.beats_per_bar)
+    lanes = {}
+    for side, stems, (origin, length) in (("a", stems_a, windows[0]), ("b", stems_b, windows[1])):
+        for name in LANES:
+            points = _POINTS[name][0 if side == "a" else 1]
+            lanes[(side, name)] = Lane(
+                str(getattr(stems, name)), origin, length, _lane_curve(count, points)
+            )
+    return stem_script(
+        "stem_intertwine",
+        a,
+        b,
+        duration,
+        a_start,
+        a_points[keep] - a_start,
+        b_points[keep],
+        lanes,
+        {
+            "bars": 16,
+            "vocal_gains": {side: lanes[(side, "vocals")].gain for side in ("a", "b")},
+        },
+    )
+
+
+def render_intertwined(
+    settings: Settings, a: SongInfo, b: SongInfo, cache: SongCache | None = None
+) -> Intertwined:
     cues = _pair_that_fits(a, b)
     if cues is None:
         raise ValueError("these tracks don't meet the tempo, grid, key, or phrase checks")
@@ -128,6 +189,26 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
     stems_a = separate_window(settings, Path(a.path), a_start, window)
     speed = a.bpm / b.bpm
     stems_b = separate_window(settings, Path(b.path), b_start, window * speed)
+    if flags.on("render.one_engine"):
+        windows = ((a_start, window), (b_start, window * speed))
+        script = intertwine_script(a, b, a_points, b_points, stems_a, stems_b, windows)
+        rendered = render(script, cache)
+        return Intertwined(
+            rendered.audio,
+            a_start,
+            script.b_source_end,
+            exit_cue,
+            entry_cue,
+            rendered.a_dry,
+            rendered.b_dry,
+            b_points,
+            script.meta["vocal_gains"]["a"],
+            script.meta["vocal_gains"]["b"],
+            script.a.gain,
+            script.b.gain,
+            rendered,
+        )
+    # the old private mix, kept for render.one_engine off; it goes once the owner has listened
     layers_a = _layers(stems_a, duration)
     layers_b = {}
     # Pin every downbeat to A's actual grid, including source-window offsets.
@@ -139,14 +220,10 @@ def render_intertwined(settings: Settings, a: SongInfo, b: SongInfo) -> Intertwi
         layers_b[name] = _fit(aligned, duration)
     count = int(round(duration * SAMPLE_RATE))
 
-    a_drums = _curve(count, [(0, 1), (12, 1), (16, 0)])
-    b_drums = _curve(count, [(0, 0), (4, 0), (12, 1)])
-    a_bass = _curve(count, [(0, 1), (12, 1), (14, 0)])
-    b_bass = _curve(count, [(0, 0), (12, 0), (14, 1)])
-    a_other = _curve(count, [(0, 1), (8, 1), (20, 0)])
-    b_other = _curve(count, [(0, 0), (8, 0), (20, 1)])
-    a_vocal = _curve(count, [(0, 1), (14, 1), (16, 0)])
-    b_vocal = _curve(count, [(0, 0), (16, 0), (18, 1)])
+    a_drums, b_drums = (_curve(count, points) for points in _POINTS["drums"])
+    a_bass, b_bass = (_curve(count, points) for points in _POINTS["bass"])
+    a_other, b_other = (_curve(count, points) for points in _POINTS["other"])
+    a_vocal, b_vocal = (_curve(count, points) for points in _POINTS["vocals"])
 
     gain_a = 10.0 ** (a.gain_db / 20.0)
     gain_b = 10.0 ** (b.gain_db / 20.0)

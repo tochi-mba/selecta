@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from selecta import flags
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo, load_song
 from selecta.audit.checks import AuditReport, audit
@@ -25,7 +26,7 @@ from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner, Word, settle_edges
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import LyricLink, normalise
-from selecta.planner.fit import ROLL_MAX_KEYS, STEADY_GRID, TimbreSpace, level_step
+from selecta.planner.fit import ROLL_MAX_KEYS, STEADY_GRID, TimbreSpace, folded_gap, level_step
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.stems import band_of, separate_window
 from selecta.styles.wordplay import (
@@ -346,6 +347,9 @@ def modes_for(a: SongInfo, b: SongInfo, space: TimbreSpace | None = None) -> tup
             return ()
     modes: list[str] = []
     gap = abs(a.bpm / b.bpm - 1.0)
+    if flags.on("render.one_engine"):
+        # rides lock half and double time to one pulse now, so the same limits read the folded gap
+        gap = folded_gap(a, b)
     if (
         gap <= BLEND_MAX_GAP
         and camelot_distance(a.camelot, b.camelot) <= BLEND_MAX_KEY_DISTANCE

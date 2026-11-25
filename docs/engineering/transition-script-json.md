@@ -70,7 +70,10 @@ drums, bass and other summed (`stems.band_of`). `window.start` equals the part's
 
 Stem parts are made in `styles/wordplay.py` from a `Stem` that `planner/wordreel.py` builds
 after `stems.separate_window`; the `Stem` carries its name and window length so the part can
-be named. Studio and stem intertwine render outside the engine today (phase 2b moves them in).
+be named. With `render.one_engine` on (phase 2b, 2026-11-25), the Seam Studio, strip and land
+and intertwined stems are scripts too (`src/selecta/render/stem_seam.py`): one stem part per
+lane, named `vocals`, `drums`, `bass` or `other`, plus a full mix part for B after the overlap.
+With the flag off they still mix their own stems and have no JSON form.
 
 ## What the renderer needs from song facts
 
@@ -110,10 +113,12 @@ lists and text-keyed objects are written as they are; numpy numbers become plain
 | `echo_wet`, `echo_feedback`, `echo_room_beats`, `wash_wet`, `wash_decay_seconds`, `beat_limit_ms` | exits, wordplay | number |
 | `energy_lift`, `source_density`, `acceleration`, `bass_midpoint`, `bass_mid_level` | wordplay `phrase_roll` | number |
 | `wordplay` | wordplay | true or false |
+| `stem_lanes` | studio, strip and land, stem intertwine (`render.one_engine` on) | true: every extra joins its side's dry signal (`follows_b` says which side), so the audit hears all of a side's lanes, and the seam pipeline tightens its beats and passes vocal spans from its own voice stems |
 | `shape` | `phrase_roll` (text), studio (object of side to lane to list of 0 or 1) | as is |
 | `arc` | seam_making | list of numbers |
 | `vocal_gains` | studio, stem intertwine | `{"a": curve, "b": curve}`, each curve written `{"$type": "curve", "points": [[t, v], ...]}` |
 
-The audit reads `period`, `beat_limit_ms`, `cut`, `wordplay`, `vocal_gains` and `bars`. Any
+The audit reads `period`, `beat_limit_ms`, `cut`, `wordplay`, `vocal_gains` and `bars`; the
+renderer reads `stem_lanes`. Any
 other value with no JSON form (a numpy array, an object) makes `to_json` raise
 `ScriptJsonError` naming the key, rather than drop it. `$type` is reserved as a meta key.

@@ -81,11 +81,20 @@ The ratings backup these came from: `C:\Users\tochi\selecta-ratings-backup-2026-
 
 ## Known deferrals
 
-- **Studio / strip-and-land / intertwine still bypass `render/engine.py`** (no pocket nudge, no
-  tighten_beats; the audit reads lane gains as approximations). Intertwine's gates are already
-  the strictest. Routing them through the engine is a real refactor and was left out of this
-  branch on purpose.
-- Word and ride moves do not fold half/double time yet; bar-cue blends do.
+- **Studio / strip-and-land / intertwine through `render/engine.py`: done behind
+  `render.one_engine` (2026-11-25, on by default, waiting on the owner's ears).** With it on,
+  each shape or intertwine is a script of eight stem parts (`render/stem_seam.py`), so B gets
+  the pocket nudge, `tighten_beats` takes a second take when the beats sit apart, and the audit
+  hears vocal spans measured from the voice stems, a muted lane counting as silent. The clip
+  now runs 2 s of B's full mix past the overlap so the nudge can fade out; the hand-over to
+  B's full mix stays at the end of the overlap. With it off, the old private mixes play exactly
+  as before. Still not done: the old mixes are not deleted (that waits for the listening stop),
+  seams already rendered keep their old audio until rendered again, and B's stems are now
+  stretched on every take rather than once per session, so strip and land renders more slowly.
+- **Word and ride moves fold half/double time: done behind `render.one_engine`.** `word_blend`,
+  `vocal_ride` and `word_exchange` lock with `fold_ratio` and the folded `beat_lock`, and
+  `modes_for` reads its unchanged tempo limits off the folded gap. `phrase_roll` and `word_cut`
+  never lock beats, so they have nothing to fold; the roll's 15% and 3 key limits are unchanged.
 - Audit thresholds remain uncalibrated against ratings; the per-seam `pair` block now stored
   with every render is what future calibration will read.
 
