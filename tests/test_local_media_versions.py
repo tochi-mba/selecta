@@ -210,6 +210,9 @@ READS_BY_ID_OR_HASH = {
     "src/selecta/business/rooms/ports.py": "by id",
     "src/selecta/business/upload_rights.py": "by id",
     "src/selecta/business/workspace_routes.py": "by content hash",
+    "src/selecta/engine_store/schema.py": "foreign key from a song's facts",
+    "src/selecta/engine_store/songs.py": "one song's facts, by id",
+    "src/selecta/engine_store/song_hashes.py": "mentions the table in a comment",
 }
 
 

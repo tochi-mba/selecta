@@ -420,7 +420,11 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
     ).fetchone()
     if row is None:
         raise KeyError(f"song {song_id} hasn't been analysed")
-    features = dict(load_features(settings, song_id, SONG_ARRAYS, from_file=True))
+    if flags.on("core.engine_store"):
+        # reached with writes pending on `conn`: read this file, not the store, as the rows are
+        features = dict(load_features(settings, song_id, SONG_ARRAYS, from_file=True))
+    else:
+        features = dict(load_features(settings, song_id, SONG_ARRAYS))
     lyric = conn.execute("SELECT * FROM lyrics WHERE song_id = ?", (song_id,)).fetchone()
     corrected = conn.execute(
         "SELECT bpm, camelot FROM song_overrides WHERE song_id = ?", (song_id,)

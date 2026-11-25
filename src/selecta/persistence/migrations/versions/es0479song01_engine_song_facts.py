@@ -13,9 +13,9 @@ with a workspace-scoped foreign key, so no fact can point at another workspace's
 removing a song from the catalogue removes its facts. No audio, path, folder or file handle is
 stored: those stay on the member's device.
 
-A Desktop library file never runs this chain: its own hand-made `analysis` and `song_overrides`
-are adopted in place by the library chain (`lib0003songs`). If one is pointed here by mistake,
-this stops rather than touching them.
+A Desktop library file can meet this chain (the Cloud API's default database is the library
+file). Its own tables of these names are left untouched, on the way up and on the way down;
+the library chain (`engine_store/library_migrations`) is what adopts them.
 
 `COLUMNS` pins what this revision creates, so a column added to the module later must arrive in
 its own migration.
@@ -71,14 +71,14 @@ def _tables():
 
 def upgrade() -> None:
     bind = op.get_bind()
-    if "songs" in sa.inspect(bind).get_table_names():
-        raise RuntimeError(
-            "This is a Desktop library file; its engine tables move with the library chain."
-        )
-    for table in _tables():
+    # A table of this name already here is a Desktop library's own (the Cloud chain may run on
+    # the library file): it is left exactly as it is, and the library chain adopts it.
+    there = set(sa.inspect(bind).get_table_names())
+    made = [table for table in _tables() if table.name not in there]
+    for table in made:
         table.create(bind)
     if bind.dialect.name == "postgresql":
-        for name in TABLES:
+        for name in (table.name for table in made):
             op.execute(f'ALTER TABLE "{name}" ENABLE ROW LEVEL SECURITY')
             op.execute(f'ALTER TABLE "{name}" FORCE ROW LEVEL SECURITY')
             op.execute(f'CREATE POLICY {POLICY} ON "{name}" USING {RULE} WITH CHECK {RULE}')
@@ -88,5 +88,9 @@ def downgrade() -> None:
     if op.get_bind().dialect.name == "postgresql":
         for name in TABLES:
             op.execute(f'DROP POLICY IF EXISTS {POLICY} ON "{name}"')
+    bind = op.get_bind()
+    if "songs" in sa.inspect(bind).get_table_names():
+        # a Desktop library file: these tables may be the library's own, so none is dropped
+        return
     for table in reversed(_tables()):
-        table.drop(op.get_bind())
+        table.drop(bind)
