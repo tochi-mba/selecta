@@ -426,8 +426,7 @@ def settle_due(
         else:
             won = rules.winner(current.id, current.options, playable)
             if won is None:
-                reason = "no_votes" if current.total <= 0 else "no_song"
-                values = {"status": rules.VOID, "outcome": reason}
+                values = {"status": rules.VOID, "outcome": rules.void_reason(current.total)}
             else:
                 values = {
                     "status": rules.CLOSED,
@@ -464,10 +463,12 @@ def forget_vote(conn: Connection, room: Room, guest_id: str) -> None:
 
 def timer_due(conn: Connection, room: Room, now: float, guests_here: int) -> bool:
     """Should the room start a vote by itself on this look? Only when the host set "every N
-    songs", someone is here to vote, nothing is open, the last winner is not still waiting,
+    songs", two guests are here to vote, nothing is open, the last winner is not still waiting,
     this song has only just started, and it is the Nth since the last round."""
     every = room.settings.round_every_songs
-    if not room.live or not room.settings.rounds or every <= 0 or guests_here <= 0:
+    if not room.live or not room.settings.rounds or every <= 0:
+        return False
+    if guests_here < rules.MIN_VOTERS:
         return False
     last = (
         conn.execute(

@@ -180,10 +180,10 @@ class VotesMixin:
 
     def maybe_want_round(self, conn: Connection, room, now: float, online: int,
                          chosen: dict[str, Any]) -> None:
-        """Start a vote by itself: the zone set "every N songs", someone is here, nothing is
+        """Start a vote by itself: the zone set "every N songs", two guests are here, nothing is
         open or still waiting to play, this song has just started and it is the Nth."""
         every = int(chosen["round_every_songs"])
-        if every <= 0 or online <= 0:
+        if every <= 0 or online < rules.MIN_VOTERS:
             return
         last = self._latest_round(conn, room)
         since = 0.0
@@ -287,8 +287,8 @@ class VotesMixin:
                 tables.round_options.c.round_id == current["id"])).mappings()]
         playable = [o.song_id for o in options if self._fits_now(conn, room, o.song_id, now)]
         won = rules.winner(current["id"], options, playable)
-        values: dict[str, Any] = {"status": rules.VOID, "outcome": "no_votes" if not sum(
-            o.votes for o in options) else "no_song"}
+        values: dict[str, Any] = {"status": rules.VOID, "outcome": rules.void_reason(
+            sum(o.votes for o in options))}
         if won is not None:
             waiting = conn.execute(sa.select(requests_t).where(
                 requests_t.c.room_id == room["id"], requests_t.c.song_id == won.song_id,

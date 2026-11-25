@@ -150,7 +150,7 @@ export function RoomSocial({ api, workspaceId, base, settings, on, screens, save
       )}
       {on.rounds && (
         <SettingsSection title="Pick the next song" saved={saved === 'rounds'}>
-          <Check label="The room can vote for the next song" help="Guests choose between songs that are not in the mix. The winner plays after the current song." checked={settings.rounds} change={(rounds) => save({ rounds }, 'rounds')} />
+          <Check label="The room can vote for the next song" help="Guests choose between songs that are not in the mix. The winner plays after the current song. A pick needs at least two voters." checked={settings.rounds} change={(rounds) => save({ rounds }, 'rounds')} />
           {settings.rounds && (
             <>
               <div className="room-setting-row">
@@ -170,7 +170,7 @@ export function RoomSocial({ api, workspaceId, base, settings, on, screens, save
                   ))}
                 </ul>
               )}
-              <Field label="A vote by itself" help={settings.round_every_songs ? `A vote starts every ${settings.round_every_songs} songs while guests are here.` : 'Votes start only when you press the button.'}>
+              <Field label="A vote by itself" help={settings.round_every_songs ? `A vote starts every ${settings.round_every_songs} songs while at least two guests are here.` : 'Votes start only when you press the button.'}>
                 {(field) => (
                   <select {...field} value={settings.round_every_songs} onChange={(event) => save({ round_every_songs: Number(event.target.value) }, 'rounds')}>
                     {EVERY.map((songs) => <option key={songs} value={songs}>{songs ? `Every ${songs} songs` : 'Only when I start one'}</option>)}

@@ -68,6 +68,7 @@ const RESULT_WORDS: Record<string, string> = {
   in_mix: 'It plays next.',
   not_placed: 'It couldn’t go into the mix this time.',
   no_votes: 'Nobody voted, so the DJ carries on.',
+  too_few: 'Only one vote came in, so the DJ carries on. A pick needs two.',
   no_song: 'None of those songs can be played right now, so the DJ carries on.',
   called_off: 'The host called off the vote.',
 };

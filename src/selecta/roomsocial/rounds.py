@@ -3,7 +3,8 @@
 A round offers two to four songs. Each guest has one vote. The song with the most votes wins.
 A tie is broken the same way on every app instance and for every reader, by a hash of the
 round and the song: no clock, no randomness that two readers could disagree on, and no
-advantage to the song that happened to be listed first. A round nobody voted in has no winner.
+advantage to the song that happened to be listed first. A round needs two voters to have a winner:
+one tap is one person's wish, not the room's, so it never plays a song by itself.
 
 Where a round stands with its winner is read from the request that carries the winner into the
 mix, so it is never written twice: waiting for the mix, in the mix, or not placed.
@@ -17,6 +18,7 @@ from dataclasses import dataclass
 
 MIN_OPTIONS = 2
 MAX_OPTIONS = 4
+MIN_VOTERS = 2  # each guest has one vote, so votes cast is voters
 
 OPEN = "open"
 CLOSED = "closed"
@@ -62,11 +64,12 @@ def ranked(round_id: str, options: Sequence[Option]) -> list[Option]:
 def winner(
     round_id: str, options: Sequence[Option], still_playable: Iterable[int] | None = None
 ) -> Option | None:
-    """The winning option, or None when nobody voted or no voted-for song can still be played.
+    """The winning option, or None when fewer than two guests voted or no voted-for song can
+    still be played.
 
     `still_playable` is the song ids that can still go into the mix; an option that has dropped
     out (its file gone, the speaker moved) is passed over for the next highest."""
-    if sum(option.votes for option in options) <= 0:
+    if sum(option.votes for option in options) < MIN_VOTERS:
         return None
     playable = None if still_playable is None else set(still_playable)
     for option in ranked(round_id, options):
@@ -75,6 +78,13 @@ def winner(
         if playable is None or option.song_id in playable:
             return option
     return None
+
+
+def void_reason(total_votes: int) -> str:
+    """Why a round with no winner has none."""
+    if total_votes <= 0:
+        return "no_votes"
+    return "too_few" if total_votes < MIN_VOTERS else "no_song"
 
 
 def outcome_of(request_status: str | None) -> str | None:
@@ -94,6 +104,7 @@ __all__ = [
     "IN_MIX",
     "MAX_OPTIONS",
     "MIN_OPTIONS",
+    "MIN_VOTERS",
     "NOT_PLACED",
     "OPEN",
     "VOID",
@@ -102,5 +113,6 @@ __all__ = [
     "clean_options",
     "outcome_of",
     "ranked",
+    "void_reason",
     "winner",
 ]
