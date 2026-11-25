@@ -280,7 +280,7 @@ function voteButton(item: Item): HTMLElement | null {
   const label = voted ? `Remove your vote for ${songLine(item.song)}` : `Vote for ${songLine(item.song)}`;
   return h('button', {
     type: 'button', className: 'g-vote', 'aria-pressed': String(voted), 'aria-label': label, 'aria-busy': choice === undefined ? undefined : 'true',
-    onclick: () => void vote(item),
+    onclick: () => { buzz(8); void vote(item); },
   }, String(count));
 }
 
@@ -526,6 +526,12 @@ function tell(song: Song, text: string): void {
   drawResults();
 }
 
+/** A short buzz that answers a press, on a phone that can (in practice Android). Called only
+ * inside the press itself, so browsers allow it; anywhere it can't, it does nothing. */
+function buzz(ms: number): void {
+  try { if (window.matchMedia?.('(pointer: coarse)').matches) navigator.vibrate?.(ms); } catch { /* a browser that throws cannot buzz */ }
+}
+
 /** One tap on a song's row: add it, or take it back out, or say why it can't be added now. */
 function tap(song: Song): void {
   if (sending) return;
@@ -537,6 +543,7 @@ function tap(song: Song): void {
     return;
   }
   told = null;
+  buzz(8);
   choose(song);
 }
 
@@ -628,7 +635,7 @@ function drawBar(): void {
         h('span', { className: 'g-badge', 'data-key': `count-${count}` }, String(count)),
         h('span', { className: 'g-count-text' }, h('strong', {}, count === 1 ? 'song chosen' : 'songs chosen'), h('span', { className: left <= 0 ? 'g-count-sub g-error' : 'g-count-sub' }, words)),
         icon('up')),
-      h('button', { type: 'button', className: 'g-primary g-send', id: 'g-send', 'aria-busy': sending ? 'true' : undefined, disabled: sending || left <= 0 || basket.every(waitingOn), onclick: () => void sendBasket() },
+      h('button', { type: 'button', className: 'g-primary g-send', id: 'g-send', 'aria-busy': sending ? 'true' : undefined, disabled: sending || left <= 0 || basket.every(waitingOn), onclick: () => { buzz(12); void sendBasket(); } },
         sending ? 'Sending...' : count === 1 ? 'Send request' : 'Send requests'))
     : sent ? h('div', { className: 'g-sent', 'data-key': 'sent', role: 'status' },
       h('span', { className: 'g-tick', 'aria-hidden': 'true' }, icon('check')),

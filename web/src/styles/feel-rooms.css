@@ -1,3 +1,116 @@
 /* The feel system (ADR-0477): the feel system applied to hosting a room, requests, the devices list and the remote.
  * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
  * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md. */
+
+/* ---------- Opening a room (rooms/RoomShare.tsx, rooms/RoomPanel.tsx) ---------- */
+
+/* The QR code comes in as a diagonal wave: rooms/qr.ts draws it in ten bands, top-left first, each
+   with its place in --i. Only opacity moves, so every module is where it will be from the start and
+   the finished code scans exactly as the plain one. The delay stops growing after the tenth band. */
+:where(:root[data-feel~='moments']) .room-qr[data-qr-wave] path {
+  animation: feel-qr-wave var(--motion-spring-snappy) var(--motion-ease) both;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--motion-stagger) * 2);
+}
+
+/* The room code's characters arrive one after another (data-stagger in feel.css); an inline
+   character cannot move, so each is a small box of its own. */
+:where(:root[data-feel]) .room-code-chars > span {
+  display: inline-block;
+}
+
+/* A beacon: a ring leaves the status once and fades, when a room has just opened here and on the
+   "This device" mark as it arrives. It never repeats; nothing is waiting. */
+:where(:root[data-feel~='moments']) .room-pill[data-ping],
+:where(:root[data-feel~='motion']) .devices-this {
+  position: relative;
+}
+:where(:root[data-feel~='moments']) .room-pill[data-ping]::after,
+:where(:root[data-feel~='motion']) .devices-this::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--separator));
+  border: var(--marker) solid var(--status-ready);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  animation: feel-beacon calc(var(--motion-spring-release) * 2) var(--motion-ease) both;
+}
+:where(:root[data-feel~='motion']) .devices-this::after {
+  border-color: var(--edge-selected);
+}
+
+/* ---------- Requests (rooms/RoomRequests.tsx) ---------- */
+
+/* .ask carries its own arrival (ask-in), which outranks feel.css's zero-weight fold: a row that
+   leaves folds instead. */
+:where(:root[data-feel~='motion']) .ask.feel-collapse-out {
+  animation: feel-collapse var(--motion-handoff) var(--motion-ease) forwards;
+}
+
+/* The tick an approved request draws in its mark when it reaches Ready to add, and the one beside
+   a speaker just chosen. */
+:where(:root[data-feel~='motion']) :is(.room-tick, .speaker-picker-tick) {
+  flex: none;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: calc(var(--icon-stroke) * 1.2);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+:where(:root[data-feel~='motion']) .ask-mark:has(> .room-tick) {
+  color: var(--status-ready);
+}
+:where(:root[data-feel~='motion']) .speaker-picker-tick {
+  color: var(--status-ready);
+}
+
+/* ---------- Devices (devices/DevicesPanel.tsx) ---------- */
+
+/* "3 of 10 signed in" with a small meter beside it. Hidden until depth is on; --fill is the share
+   of places used, 0 to 1, and the words always say the number. */
+.devices-meter { display: none; }
+:where(:root[data-feel~='depth']) .devices-meter {
+  display: inline-block;
+  vertical-align: middle;
+  inline-size: var(--space-6);
+  block-size: var(--marker);
+  margin-inline-start: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 0 / calc(var(--fill, 0) * 100%) 100%, var(--surface-control);
+}
+@media (forced-colors: active) {
+  :where(:root[data-feel]) .devices-meter { display: none; }
+}
+
+/* ---------- The remote (devices/RemoteListen.tsx, devices/PlayingBar.tsx) ---------- */
+
+/* the playing song's cover beside its words; the words keep their own column */
+:where(:root[data-feel~='depth']) .remote-song:has(> .cover-art) {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: center;
+}
+:where(:root[data-feel~='depth']) .remote-song:has(> .cover-art) > :not(.cover-art) {
+  grid-column: 2;
+}
+:where(:root[data-feel~='depth']) .remote-listen .remote-song > .cover-art[data-size] {
+  grid-row: 1 / span 3;
+  inline-size: calc(var(--control-height) * 1.5);
+}
+:where(:root[data-feel~='depth']) .playing-bar-where:has(> .cover-art) {
+  align-items: center;
+}
+/* the play and pause morph (feel-listen.css) fills the round button, with no gap after it */
+:where(:root[data-feel]) .remote-play .play-morph {
+  margin: 0;
+}
+
+@keyframes feel-qr-wave {
+  from { opacity: 0; }
+}
+@keyframes feel-beacon {
+  from { opacity: 0.8; scale: 1; }
+  to { opacity: 0; scale: 1.25; }
+}

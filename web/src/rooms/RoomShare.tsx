@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Action, Workspace } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { useFeelPart } from './feelHooks';
 import { qrSvg } from './qr';
 
 // How guests get in: the QR code, the room code in large type, and the link with Copy. The same
@@ -29,9 +30,27 @@ export function CopyWords({ copied, children }: { copied: boolean; children: str
   return copied ? <><Icon name="check" size="compact" /> Copied</> : <>{children}</>;
 }
 
-export function RoomShare({ name, code, link, copied, copy, onFullScreen }: {
+/** The room code. When it has just arrived (a room opened here, with moments on) its characters
+ * come in one after another; a screen reader hears the code once, whole, either way. */
+function RoomCode({ code, arriving, testId }: { code: string | null; arriving: boolean; testId?: string }) {
+  if (!arriving || !code) return <p className="room-code" data-testid={testId}>{code}</p>;
+  return (
+    <p className="room-code" data-testid={testId}>
+      <span className="visually-hidden">{code}</span>
+      <span className="room-code-chars" data-stagger="" aria-hidden="true">
+        {[...code].map((char, index) => <span key={index} style={{ '--i': index } as CSSProperties}>{char}</span>)}
+      </span>
+    </p>
+  );
+}
+
+export function RoomShare({ name, code, link, copied, copy, onFullScreen, arriving = false }: {
   name: string; code: string | null; link: string; copied: boolean; copy: () => Promise<void>; onFullScreen: () => void;
+  /** the room was just opened on this page: the code and the QR arrive as a moment (ADR-0477) */
+  arriving?: boolean;
 }) {
+  const moments = useFeelPart('moments');
+  const wave = arriving && moments;
   return (
     <section className="room-card room-share" aria-labelledby="share-title">
       <header className="room-card-head">
@@ -40,11 +59,11 @@ export function RoomShare({ name, code, link, copied, copy, onFullScreen }: {
       {link && (
         <div className="room-share-body">
           <button type="button" className="room-qr-button" onClick={onFullScreen} aria-label="Show QR code full screen" title="Show full screen">
-            <span className="room-qr" data-testid="room-qr" data-link={link} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${name}`) }} />
+            <span className="room-qr" data-testid="room-qr" data-link={link} data-qr-wave={wave || undefined} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${name}`, wave) }} />
           </button>
           <div className="room-share-words">
             <p className="room-eyebrow">Room code</p>
-            <p className="room-code" data-testid="room-code">{code}</p>
+            <RoomCode code={code} arriving={wave} testId="room-code" />
             <div className="room-link">
               <a href={link} target="_blank" rel="noreferrer" title={link}>{link.replace(/^https?:\/\//, '')}</a>
               <Action type="button" className="room-copy" run={copy} aria-label="Copy link"><CopyWords copied={copied}>Copy</CopyWords></Action>
@@ -63,6 +82,8 @@ export function RoomShare({ name, code, link, copied, copy, onFullScreen }: {
 export function RoomQrScreen({ name, code, link, onClose }: { name: string; code: string | null; link: string; onClose: () => void }) {
   const stage = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
+  // shown to a room full of guests on purpose: the code comes in as a moment each time it is opened
+  const wave = useFeelPart('moments');
   useEffect(() => {
     const changed = () => setFull(document.fullscreenElement === stage.current);
     document.addEventListener('fullscreenchange', changed);
@@ -80,11 +101,11 @@ export function RoomQrScreen({ name, code, link, onClose }: { name: string; code
   return (
     <Workspace title={`Join ${name}`} onClose={onClose}>
       <div className="room-qr-screen" ref={stage} data-testid="room-qr-screen">
-        <div className="room-qr room-qr-large" dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${name}`) }} />
+        <div className="room-qr room-qr-large" data-qr-wave={wave || undefined} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${name}`, wave) }} />
         <div className="room-qr-words">
           <p className="room-eyebrow">Scan to ask for songs</p>
           <p className="room-qr-name">{name}</p>
-          <p className="room-code">{code}</p>
+          <RoomCode code={code} arriving={wave} />
           <p className="room-qr-link">{link.replace(/^https?:\/\//, '')}</p>
           {typeof document !== 'undefined' && document.fullscreenEnabled && (
             <button type="button" className="room-qr-full" onClick={() => void toggle()}><Icon name="expand" size="toolbar" /> {full ? 'Leave full screen' : 'Fill the screen'}</button>
