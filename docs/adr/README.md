@@ -28,6 +28,12 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 ---
 
+# Selecta Room Social ADR (2026-11-25)
+
+**Proposed; the owner approved the build plan on 2026-11-25:** [ADR-0488](adr-0488-room-social-features.md), programme prefix RS. Five things a room can do together, in party rooms and venue rooms: pick the next song, keep the songs you liked, reactions that teach the DJ, dedications from a fixed list, and tonight in numbers. Phones send only taps, votes and picks from a list (ADR-0416's no-free-text rule holds), and every feature works with phones alone; a paired screen only adds a shared view. 0 of 12 tasks implemented; 0 independently Verified. Baseline main `ae460274`.
+
+---
+
 # Selecta Lucy Usage ADR set (2026-11-25)
 
 **Accepted by the owner on 2026-11-25, building on ADR-0402, ADR-0404, ADR-0464 and ADR-0476:** 8 ADRs, [ADR-0480](adr-0480-lucy-usage-goal-evidence-and-boundaries.md) to [ADR-0487](adr-0487-lucy-usage-measurement-migration-and-rollout.md), programme prefix LM, baseline `main` at `f5b6a4a`. They replace Lucy's turns per class per calendar month, and the hidden monthly dollar ceiling beneath them, with one cost-weighted allowance on a rolling five-hour session under a weekly limit, shown by one meter that reads what the gateway enforces. Prices and the 40% rule are unchanged, every size is a hypothesis until beta costs are measured, and it is being built behind flags that are off for everyone: 52 tasks in the [Lucy Usage checklist](selecta-lucy-usage-implementation-checklist.md), research in [docs/research/ai-chat-usage-limits.md](../research/ai-chat-usage-limits.md).
