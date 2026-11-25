@@ -94,6 +94,8 @@ QUICK_WORDS = 8
 
 BUSY_WORDS = ("Lucy is busy right now. Try again in a moment; this didn't use one of your "
               "turns, and your mixes and music are unaffected.")
+DOWN_WORDS = ("Lucy can't answer right now because of a problem on SelectaDJ's side. Your "
+              "mixes and music are safe, and this didn't use one of your turns.")
 ProviderFactory = Callable[[gateway.ProviderSettings, gateway.TurnPlan], Any]
 
 
@@ -507,9 +509,9 @@ async def run_turn(job: Job) -> None:
         said = bool(writer.text())
         outcome = Outcome.INCOMPLETE if said else Outcome.FAILED
         final, error_code, error = "failed", problem.code, str(problem)
-        words = (BUSY_WORDS if problem.recoverable else
-                 "Lucy can't answer right now because of a problem on SelectaDJ's side. Your "
-                 "mixes and music are safe, and this didn't use one of your turns.")
+        words = BUSY_WORDS if problem.recoverable else DOWN_WORDS
+        if plan.enforced:  # no turns on the session and week allowance (ADR-0481 rule 5)
+            words = words.replace("one of your turns", "any of your allowance")
         events.emit("error", {"code": problem.code, "message": words,
                               "recoverable": problem.recoverable})
         await _say(writer, words)
