@@ -108,6 +108,16 @@ class GuestView:
     coming_up: tuple[UpcomingItem, ...] = ()  # accepted, in the order they'll reach the mix
     waiting: tuple[UpcomingItem, ...] = ()  # sent, waiting for the host
     my_requests: tuple[MyRequest, ...] = ()
+    # ADR-0488: a paired big screen is showing now. The page works the same without one; this
+    # only changes what it says about where else to look.
+    screen: bool = False
+    # Who this is and when they joined, for the routes that add this guest's own taps and vote
+    # to the view. Never sent to the page.
+    guest_id: str = ""
+    room_id: str = ""
+    workspace_id: str = ""
+    joined_at: float = 0.0
+    settings: RoomSettings | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +169,41 @@ def is_online(
 
 def now_playing_for(ctx: RoomContext, workspace_id: str) -> NowPlaying:
     return ctx.now_playing.now_playing(workspace_id)
+
+
+def screens_live(conn: Connection, ctx: RoomContext, room: Room, now: float) -> int:
+    """How many paired big screens are showing this room right now (ADR-0488).
+
+    A screen counts while its pairing stands and it has looked within `DISPLAY_ONLINE_SECONDS`.
+    A television that was switched off, lost its connection or was unpaired stops counting, so
+    nothing a room does ever waits for a screen that is not there.
+    """
+    rows = conn.execute(
+        sa.select(display_pairings.c.last_seen_at).where(
+            display_pairings.c.workspace_id == room.workspace_id,
+            display_pairings.c.room_id == room.id,
+            display_pairings.c.expires_at > now,
+        )
+    )
+    return sum(
+        1
+        for row in rows
+        if is_online(row.last_seen_at, now, DISPLAY_ONLINE_SECONDS, ctx.started_at)
+    )
+
+
+def screens_paired(conn: Connection, room: Room, now: float) -> int:
+    """How many screens are paired with the room, showing or not: the host is offered the
+    big-screen settings while this is above zero."""
+    return conn.execute(
+        sa.select(sa.func.count())
+        .select_from(display_pairings)
+        .where(
+            display_pairings.c.workspace_id == room.workspace_id,
+            display_pairings.c.room_id == room.id,
+            display_pairings.c.expires_at > now,
+        )
+    ).scalar_one()
 
 
 def nickname_map(conn: Connection, room: Room) -> dict[str, str]:
@@ -241,8 +286,15 @@ def guest_view(ctx: RoomContext, guest_token: str, *, now: float | None = None) 
             if room.live and guest.status is GuestStatus.ACTIVE
             else Allowance(0)
         )
+        screen = room.live and screens_live(conn, ctx, room, now) > 0
     settings = room.settings
     base = GuestView(
+        screen=screen,
+        guest_id=guest.id,
+        room_id=room.id,
+        workspace_id=workspace_id,
+        joined_at=guest.joined_at,
+        settings=settings,
         room_name=room.name,
         room_status=room.status,
         nickname=guest.nickname,
@@ -269,6 +321,8 @@ def guest_view(ctx: RoomContext, guest_token: str, *, now: float | None = None) 
         base,
         now_playing=playing.current,
         up_next=playing.up_next,
+        # A loaded song the host paused is named and said to be paused, never "nothing".
+        music_paused=base.music_paused or playing.paused,
         coming_up=as_items(coming_up, songs, names, show_names=show, voted=voted, me=guest.id),
         waiting=as_items(waiting, songs, names, show_names=show, voted=voted, me=guest.id),
         my_requests=my_requests,

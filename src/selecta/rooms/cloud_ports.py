@@ -191,6 +191,28 @@ class RoomPorts:
     now_playing: NowPlayingPort = field(default_factory=NothingPlaying)
 
 
+def browser_first_ports(engine: Engine) -> RoomPorts:
+    """The ports the cloud app gives Rooms when the caller passes none.
+
+    Rooms read the metadata-only local media catalogue (ADR-0458), so a local-first account can
+    host a Room from its device-available tracks. The planner is the host's browser mix:
+    accepted room requests wait for it (`BrowserPlanner`). What is playing comes from the
+    account's playback session (ADR-0488), which the speaker already keeps up to date. The
+    pepper still comes from `rooms.wiring.pepper_from_environment`, as these ports carry none.
+
+    Imported here, not at the top: both modules read `rooms.ports`, and this keeps `cloud_ports`
+    loadable on its own.
+    """
+    from selecta.local_media.catalog import LocalMediaCatalog
+    from selecta.rooms.session_now_playing import SessionNowPlaying
+
+    return RoomPorts(
+        catalog=LocalMediaCatalog(engine),
+        planner=BrowserPlanner(engine),
+        now_playing=SessionNowPlaying(engine),
+    )
+
+
 __all__ = [
     "BROWSER_REQUEST_PREFIX",
     "ROOM_REQUEST_TOPIC",
@@ -202,4 +224,5 @@ __all__ = [
     "OutboxPlaybackEvents",
     "OutboxRoomEvents",
     "RoomPorts",
+    "browser_first_ports",
 ]

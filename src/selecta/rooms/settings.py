@@ -21,6 +21,8 @@ from dataclasses import asdict, dataclass, fields, replace
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from selecta.roomsocial import dedications
+
 if TYPE_CHECKING:
     from selecta.rooms.ports import RoomEntitlement
 
@@ -49,7 +51,25 @@ BOUNDS: dict[str, tuple[float, float]] = {
     "no_speaker_minutes": (5, 12 * 60),
     "renders_per_hour": (1, 600),
     "max_guests": (1, 1000),
+    "round_seconds": (30, 120),
+    "round_every_songs": (0, 10),  # 0: only when the host starts one
 }
+# Settings that are simply on or off.
+SWITCHES = (
+    "votes",
+    "names_shown",
+    "display",
+    "keeps",
+    "reactions",
+    "rounds",
+    "round_auto_add",
+    "dedications",
+    "recap",
+    "screen_rounds",
+    "screen_reactions",
+    "screen_dedications",
+    "screen_recap",
+)
 
 
 @dataclass(frozen=True)
@@ -68,6 +88,22 @@ class RoomSettings:
     no_speaker_minutes: int = 60
     renders_per_hour: int = 60
     max_guests: int = 100
+    # What the room does together (ADR-0488). Each one also needs its flag on for the host.
+    keeps: bool = True  # a heart keeps the playing song on the guest's own phone
+    reactions: bool = True  # love and blend taps, shown as counts
+    rounds: bool = True  # the room votes for the next song
+    round_seconds: int = 45  # how long a vote stays open
+    round_every_songs: int = 0  # a vote by itself every so many songs; 0: only when started
+    round_auto_add: bool = True  # the winner goes into the mix without a tap from the host
+    dedications: bool = True  # a line from the fixed list on a guest's own request
+    dedications_hidden: tuple[str, ...] = ()  # lines this host has switched off
+    recap: bool = True  # tonight in numbers, when the room ends
+    # What a paired big screen adds. Every feature works on phones alone, so these only say
+    # whether the screen joins in; they are offered to the host only while a screen is paired.
+    screen_rounds: bool = True
+    screen_reactions: bool = True
+    screen_dedications: bool = True
+    screen_recap: bool = True
 
     @property
     def crate(self) -> frozenset[int] | None:
@@ -78,6 +114,7 @@ class RoomSettings:
         raw["join_mode"] = self.join_mode.value
         raw["request_mode"] = self.request_mode.value
         raw["crate_song_ids"] = None if self.crate_song_ids is None else list(self.crate_song_ids)
+        raw["dedications_hidden"] = list(self.dedications_hidden)
         return raw
 
     @classmethod
@@ -96,10 +133,16 @@ class RoomSettings:
                 values[field.name] = RequestMode(value)
             elif field.name == "crate_song_ids":
                 values[field.name] = _crate(value)
-            elif field.name in ("votes", "names_shown", "display"):
+            elif field.name in SWITCHES:
                 if not isinstance(value, bool):
                     raise ValueError(f"{field.name} must be true or false")
                 values[field.name] = value
+            elif field.name == "dedications_hidden":
+                if not isinstance(value, (list, tuple)):
+                    raise ValueError("dedications_hidden must be a list of dedication lines")
+                # Ids this list does not have are dropped, so a line retired later never
+                # leaves a setting nobody can clear.
+                values[field.name] = dedications.known_ids(value)
             else:
                 values[field.name] = _number(field.name, value, float_ok=field.name == "max_hours")
         return cls(**values).checked()
@@ -112,6 +155,9 @@ class RoomSettings:
             clamped = min(max(value, low), high)
             if clamped != value:
                 changes[name] = type(value)(clamped)
+        if changes.get("round_every_songs", self.round_every_songs) == 1:
+            # A vote after every single song would leave no song the room did not vote on.
+            changes["round_every_songs"] = 2
         return replace(self, **changes) if changes else self
 
     def within(self, entitlement: RoomEntitlement) -> RoomSettings:

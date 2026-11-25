@@ -22,7 +22,6 @@ and opt-outs, as `flags.cloud_gate` decides it for the host's site).
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from types import SimpleNamespace
 from typing import Any
 
 import sqlalchemy as sa
@@ -30,12 +29,9 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from selecta import flags
-from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
-from selecta.identity.accounts import get_user
-from selecta.identity.schema import workspaces
 from selecta.persistence import transaction
-from selecta.rooms import guessing, limits
+from selecta.rooms import api_social, guessing, limits
 from selecta.rooms.api_common import (
     check_origin,
     client_ip,
@@ -47,6 +43,7 @@ from selecta.rooms.api_common import (
     too_many,
 )
 from selecta.rooms.errors import Refusal, RoomError
+from selecta.rooms.host_features import HostFeatures, offered
 from selecta.rooms.requesting import BATCH_MAX
 from selecta.rooms.schema import room_guests
 from selecta.rooms.service import Rooms
@@ -94,6 +91,8 @@ def guest_json(
         "votes_on": view.votes_on and allowed,
         "requests_open": view.requests_open,
         "music_paused": view.music_paused,
+        # ADR-0488: a paired big screen is showing now; the page never needs one
+        "screen": view.screen,
         # how many more songs this guest can ask for now; at 0, `limit_text` says which limit
         # and when it frees up
         "requests_left": view.requests_left,
@@ -119,6 +118,11 @@ def install_routes(
     origins = tuple(allowed_origins)
     guard = guessing.JoinGuard(limiter, lambda: rooms().engine)
     app.state.rooms_join_guard = guard
+    # ADR-0488: what the host's account has on, decided together and remembered for 5 s, and
+    # the room's once-a-second pulse
+    features = HostFeatures(lambda: rooms().engine, rules)
+    social = api_social.Social(rooms, features)
+    app.state.rooms_social = social
 
     def hit(name: str, key: str, window: limits.Window) -> None:
         try:
@@ -172,19 +176,9 @@ def install_routes(
             ).scalar_one()
 
     def host_allows(ref: GuestRef, flag_id: str) -> bool:
-        """Whether the host's account has `flag_id` on now, as the host's own site decides it."""
-        if rules is None:
-            return flags.on(flag_id)
-        with transaction(rooms().engine, ref.workspace_id) as conn:
-            owner = conn.execute(
-                sa.select(workspaces.c.owner_user_id).where(workspaces.c.id == ref.workspace_id)
-            ).scalar()
-            user = get_user(conn, owner) if owner else None
-            if user is None:
-                return False
-            host = SimpleNamespace(workspace=SimpleNamespace(id=ref.workspace_id), user=user,
-                                   staff_roles=frozenset())
-            return cloud_gate.decide(conn, host, flag_id, rules).on
+        """Whether the host's account has `flag_id` on now, as the host's own site decides it
+        (`host_features`: every guest-facing flag decided together, remembered for 5 s)."""
+        return features.on(ref.workspace_id, flag_id)
 
     def voting(ref: GuestRef) -> None:
         if not host_allows(ref, "rooms.votes"):
@@ -195,11 +189,20 @@ def install_routes(
 
     def view(token: str, ref: GuestRef) -> dict[str, Any]:
         try:
-            answer = guest_json(rooms().guest_view(token), guest_status(ref),
+            seen = rooms().guest_view(token)
+            answer = guest_json(seen, guest_status(ref),
                                 host_allows(ref, "rooms.votes"),
                                 host_allows(ref, "rooms.nickname_confirm"))
         except RoomError as error:
             raise refusal(error) from error
+        # ADR-0488: which of the five the room offers, and this guest's own taps and vote. A
+        # screen only counts while the host's account may pair one.
+        answer["screen"] = seen.screen and host_allows(ref, "rooms.display")
+        live = seen.settings is not None and seen.room_status.value != "ended"
+        answer["social"] = (
+            offered(seen.settings, features.of(ref.workspace_id)) if live else {}
+        )
+        answer.update(social.mine(seen, answer["social"]))
         # ADR-0475: a browser-first room offers only the speaker's songs, so the guest page says
         # when there is no speaker yet, or it is reconnecting
         music = getattr(rooms().catalog, "music_state", None)
@@ -399,7 +402,7 @@ def install_routes(
             shown = rooms().display_view(token)
         except RoomError as error:
             raise refusal(error) from error
-        return {
+        answer = {
             "state": shown.state.value,
             "room_name": shown.room_name,
             "code": shown.code,
@@ -410,6 +413,13 @@ def install_routes(
             "music_paused": shown.music_paused,
             "music": shown.music,
         }
+        # ADR-0488: the same pulse the phones read, and the recap once the room has ended
+        answer.update(social.for_screen(shown))
+        return answer
+
+    api_social.install_guest_routes(
+        app, social=social, guest=guest, hit=hit, ip_hash=ip_hash, origins=origins
+    )
 
 
 def unavailable() -> HTTPException:
