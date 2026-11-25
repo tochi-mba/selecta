@@ -1,7 +1,7 @@
 import { ChangeEvent, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { Request } from '../api';
 import { flagOn, useFlag } from '../flags';
-import { dirPicker, directoryInput, findLapsed, forgetFolder, recallFolder, refreshDeviceAvailability, rememberFolder, runImport } from '../media';
+import { dirPicker, directoryInput, findLapsed, forgetFolder, listWatchedFolders, recallFolder, refreshDeviceAvailability, rememberFolder, runImport } from '../media';
 import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome, StoredFolderHandle } from '../media';
 import { importSummaryWords, useImportAnnouncer } from './importAnnouncer';
 import { countOf } from '../ui/format';
@@ -12,6 +12,7 @@ import { preloadImportCode } from '../media/importer';
 import { deleteImportJournal } from '../media/importJournal';
 import { carryOnNow, dropResumeOffer, fingerprintOption, startImport } from './importResume';
 import { CancelImportButton, checkedOf, checkedWords, formatCount, ImportProgressLine, ResumeOfferNotice } from './ImportStatus';
+import { addVisitFolder, pickFolderToWatch, watchingFor } from './folderWatch';
 import './libraryWorkspace.css';
 
 /** Connect Music in the local-first Library (ADR-0458 import, ADR-0463 surfaces).
@@ -119,7 +120,11 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   // the resume offer: an import that stopped part way last visit, and the folder it read if the
   // browser kept a handle to it
   // (with `cloud.resilient_import` the shell's carry-on check owns this offer instead)
-  const [marker, setMarker] = useState(() => (progressive && !flagOn('cloud.resilient_import') ? readImportMarker(workspaceId) : null));
+  // (a watched folder's interrupted import is carried on by that folder's own check: cloud.music_folders)
+  const [marker, setMarker] = useState(() => {
+    const kept = progressive && !flagOn('cloud.resilient_import') ? readImportMarker(workspaceId) : null;
+    return kept?.folderId && flagOn('cloud.music_folders') ? null : kept;
+  });
   // undefined until the folder store has answered, so the offer never flickers between its forms
   const [recalled, setRecalled] = useState<StoredFolderHandle | null | undefined>(undefined);
   const [refused, setRefused] = useState(false);
@@ -131,9 +136,19 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
     try {
       const store = await openStore();
       setDegraded(store.degraded);
-      setLapsed(await findLapsed(store));
+      const found = await findLapsed(store);
+      if (!flagOn('cloud.music_folders')) { setLapsed(found); return; }
+      // a song from a watched folder is allowed again by its folder's one Allow; only songs added
+      // as loose files are listed one by one
+      const watched = new Set((await listWatchedFolders(workspaceId) ?? []).map((folder) => folder.id));
+      const loose: LapsedItem[] = [];
+      for (const item of found) {
+        const row = await store.get(item.songId);
+        if (!row?.sources?.some((source) => watched.has(source.folderId))) loose.push(item);
+      }
+      setLapsed(loose);
     } catch { setLapsed([]); }
-  }, [openStore]);
+  }, [openStore, workspaceId]);
   useEffect(() => { void checkLapsed(); }, [checkLapsed]);
   // load the fingerprinting code now, so going offline later never fails every file
   useEffect(() => { if (flagOn('cloud.resilient_import')) preloadImportCode(); }, []);
@@ -166,6 +181,8 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   };
 
   const chooseFolder = async () => {
+    // cloud.music_folders: the folder joins Your music folders, which reads it and keeps checking it
+    if (watchingFor(workspaceId)) { await pickFolderToWatch(); return; }
     try {
       const handle = await (window as unknown as { showDirectoryPicker(options?: { mode: 'read' }): Promise<DirectoryHandleLike> }).showDirectoryPicker({ mode: 'read' });
       void rememberFolder(workspaceId, handle);
@@ -181,6 +198,13 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
     const files = event.target.files;
     if (files?.length) start(Array.from(files));
     event.target.value = '';
+  };
+  // a whole folder through the directory input: with cloud.music_folders it is listed as chosen
+  // this visit (the browser cannot keep it), else it is read as files, as before
+  const chosenFolder = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files?.length && watchingFor(workspaceId)) { setProblem(''); addVisitFolder(Array.from(files)); event.target.value = ''; return; }
+    chosen(event);
   };
   const keepChecking = async (handle: StoredFolderHandle) => {
     const answer = handle.requestPermission ? await handle.requestPermission({ mode: 'read' }).catch(() => 'denied') : 'granted';
@@ -233,7 +257,7 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   // the pickers are always in the page, so a header button (or a test) can reach them
   const inputs = (
     <>
-      {!picker.supported && folderInput.supported && <input ref={folderPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple {...{ webkitdirectory: '' }} onChange={chosen} />}
+      {!picker.supported && folderInput.supported && <input ref={folderPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple {...{ webkitdirectory: '' }} onChange={chosenFolder} />}
       <input ref={songsPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple accept="audio/*" onChange={chosen} />
     </>
   );

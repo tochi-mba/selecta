@@ -842,7 +842,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const spineDeps = useMemo(() => ({
     importMusic: importRunnerFor({ request: media, openStore, workspaceId }),
   }), [media, openStore, workspaceId]);
-  useImportCarryOn({ request: media, openStore, workspaceId });
+  useImportCarryOn({ request: media, openStore, workspaceId, watch: { onAvailabilityChanged: () => sweepLapsed(true), playing: () => playingNow.current() } });
   const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {
