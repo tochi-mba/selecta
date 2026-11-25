@@ -45,6 +45,7 @@ from selecta.work.schema import artifacts, jobs
 FLAG = "cloud.hosted_render"
 ANALYSE, SEAM, EXPORT = "analyse.song", "seam.render", "export.render"
 MAX_PLAN_SONGS = 60
+WORKER_SEEN_S = 180.0
 URL_TTL_S = 900
 # Until a workspace has finished jobs of its own, the estimate uses these (seconds per job),
 # measured on the dev worker with real 3 to 4 minute songs
@@ -199,6 +200,15 @@ def _measured(conn: Connection, workspace_id: str, kind: str) -> float:
     return took[len(took) // 2] if took else FIRST_GUESS_S[kind]
 
 
+def _worker_seen(conn: Connection, pool: str) -> bool:
+    """Whether a worker of this pool checked in within `WORKER_SEEN_S`. Queued work has no time
+    limit (it waits for a worker however long that takes), so with none seen an estimate would
+    be a promise nobody keeps: the page says it is waiting for a worker instead."""
+    from selecta.work import fleet
+
+    return fleet.pool_slots(conn, pool, db_now(conn) - WORKER_SEEN_S) > 0
+
+
 def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
     with transaction(engine, workspace_id) as conn:
         songs = _songs(conn, workspace_id)
@@ -214,11 +224,13 @@ def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
             out.append({"asset_id": song["id"], "name": song["display_name"] or "Untitled",
                         "duration_s": song["duration_s"], "analysis": state})
         each = _measured(conn, workspace_id, ANALYSE)
+        worker = _worker_seen(conn, "cpu-heavy")
     counts = {name: sum(1 for s in out if s["analysis"]["state"] == name)
               for name in ("ready", "running", "queued", "failed", "not_started")}
     left = counts["running"] + counts["queued"]
     return {"songs": out, "counts": counts, "seconds_each": round(each, 1),
-            "estimate_s": round(left * each), "total": len(out)}
+            "estimate_s": round(left * each) if worker else None, "worker_seen": worker,
+            "total": len(out)}
 
 
 # --- server mixes --------------------------------------------------------------------------------
@@ -346,13 +358,17 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
                           "fell_back": result.get("fell_back"), "checks": result.get("checks")})
         each_seam = _measured(conn, workspace_id, SEAM)
         each_analysis = _measured(conn, workspace_id, ANALYSE)
+        worker = _worker_seen(conn, "cpu-heavy")
     for index, a, b, move in wanted:
         lane = Lane.INTERACTIVE if index < 2 else Lane.STANDARD
         _job, refused = work.submit(_seam_spec(workspace_id, a, b, move, lane, created_by))
         if refused:
             seams[index].update(state="refused", why=refused)
-    return _timeline(workspace_id, songs, seams, playback, client, buckets,
-                     each_seam, each_analysis)
+    timeline = _timeline(workspace_id, songs, seams, playback, client, buckets,
+                         each_seam, each_analysis)
+    if not worker:
+        timeline["estimate_s"] = None
+    return {**timeline, "worker_seen": worker}
 
 
 def _timeline(workspace_id, songs, seams, playback, client, buckets, each_seam, each_analysis):
