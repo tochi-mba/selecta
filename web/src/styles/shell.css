@@ -722,11 +722,13 @@ dl.keys > div { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap
 dl.keys dt { min-width: 0; }
 dl.keys dd { overflow-wrap: anywhere; }
 
-/* Narrow screens: one row of tabs that scrolls sideways, never a stranded second row. */
+/* Narrow screens: tabs in even columns whose words may wrap, never a stranded second row. Three
+   share one row; Workspace's six make two even rows of three. Nothing scrolls sideways, so no tab
+   sits off the screen and no focus ring is cut by a scroller (MP-0274-05, MP-0298-02; this
+   replaces the sideways-scrolling row of c0df4e4d). */
 @media (max-width: 520px) {
-  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tabs a { flex: 0 0 auto; white-space: nowrap; }
+  .tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); column-gap: var(--space-1); }
+  .tabs a { display: flex; align-items: center; justify-content: center; text-align: center; padding-inline: var(--space-2); overflow-wrap: anywhere; }
 }
 
 /* The Cloud frame's own look (side bar groups, account menu, top bar, phone bar, More sheet, mini

@@ -152,7 +152,8 @@ test('MP-0278-07 audio, API, data, routing and stored preferences are what they 
     expect([...knownKeys].some((known) => key === known || (known.endsWith('.') && key.startsWith(known)) || key.startsWith(`${known}.`)), `unexpected stored key ${key}`).toBe(true);
   }
   const prefs = JSON.parse(stored['selecta.prefs'] ?? '{}');
-  expect(Object.keys(prefs).sort(), 'preference fields').toEqual(prefFields);
+  // only what the person chose is stored, never the defaults around it (51d86c31)
+  for (const field of Object.keys(prefs)) expect(prefFields, 'preference fields').toContain(field);
   expect(prefs.theme).toBe('dark');
   expect(prefs.railCollapsed).toBe(false);
   // and the current mix on the server is untouched by any of it
