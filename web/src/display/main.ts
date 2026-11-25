@@ -96,7 +96,8 @@ function drawPairing(): void {
         step('2', 'Find Big screen'),
         step('3', 'Type this code')),
       // one box a letter, so it reads from the sofa; the label says it letter by letter
-      h('p', { className: 'd-code', id: 'd-pairing', 'aria-label': `Pairing code ${pairingCode.split('').join(' ')}` }, ...pairingCode.split('').map((letter) => h('span', { 'aria-hidden': 'true' }, letter))),
+      h('p', { className: 'd-sr' }, `Pairing code ${pairingCode.split('').join(' ')}`),
+      h('p', { className: 'd-code', id: 'd-pairing', 'aria-hidden': 'true' }, ...pairingCode.split('').map((letter) => h('span', {}, letter))),
       h('p', { className: 'd-muted' }, 'The code works once and lasts ten minutes.')));
 }
 
