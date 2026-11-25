@@ -140,7 +140,7 @@ class ProviderSettings:
 
     def lucy_config(self, user_config: Mapping[str, Any]) -> dict[str, Any]:
         """The person's Lucy settings (phases, privacy) with provider and budgets from server
-        policy in place of theirs, the way cloud mode hides them (§9.5)."""
+        policy in place of theirs, the way cloud mode hides them (�9.5)."""
         config = copy.deepcopy(dict(user_config))
         config["provider"] = dict(self.provider)
         config["budgets"] = dict(self.budgets)
@@ -314,6 +314,15 @@ def plan_turn(
         allowance_class=bucket, fallback_used=chosen.fallback_used, limited=limited,
         lease_id=lease_id, spend_day=spend_day, reserved_usd=reserved,
     )
+    from selecta.ai import usage_mode, usage_units
+    from selecta.billing.stripe_sync import effective_entitlement
+
+    if usage_mode.mode_for(conn, workspace_id, None, now) == usage_mode.SHADOW:
+        entitlement = effective_entitlement(conn, workspace_id, now)
+        usage_units.record_shadow(
+            conn, workspace_id=workspace_id, run_id=run_id,
+            plan_id=entitlement.plan_id, tier=tier.value, now=now,
+        )
     return TurnPlan(
         run_id=run_id, workspace_id=workspace_id, conversation_id=conversation_id, tier=tier,
         request_class=chosen.request_class, requested_class=requested, allowance_class=bucket,
@@ -409,6 +418,13 @@ def _close(
         alerts = reconcile(conn, run.spend_day, run.reserved_usd, platform_cost, policy)
     if run.lease_id is not None:
         release_lease(conn, run.lease_id)
+    from selecta.ai import usage_units
+
+    usage_units.settle(
+        conn, run_id=run.id, outcome=outcome.value,
+        charged_units=usage_units.charge_for(outcome.value, account_cost),
+        answered_deployment_id=answered_id, now=db_now(conn),
+    )
     return TurnSummary(run.id, outcome, platform_cost, alerts, False, account_cost, answered_id)
 
 
