@@ -85,7 +85,7 @@ function ChoiceCards({ kind }: { kind: 'theme' | 'motion' }) {
     <div className="ic-cards" role="radiogroup" aria-label="Motion">
       {(['still', 'subtle', 'expressive'] as const).map((motion) => (
         <label className="ic-card" key={motion} data-lift="">
-          <span className="ic-motion-demo" data-level={motion} aria-hidden="true"><i /></span>
+          <span className="ic-motion-demo" data-level={motion} data-motion-preview={motion} aria-hidden="true"><i /></span>
           <span className="ic-card-name">
             <input type="radio" name="selecta-motion" aria-label={MOTION_NAMES[motion]} aria-describedby={`${id}-${motion}`} checked={preferences.motion === motion} onChange={() => setPrefs({ motion })} />
             {MOTION_NAMES[motion]}
