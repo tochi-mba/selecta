@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { answerWithin, ApiError, MixData, VibeCard } from '../api';
 import { useApi, useRequest } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
-import { useLocationText } from '../router';
+import { navigate, useLocationText } from '../router';
+import { sceneTransitionsSupported, sceneTransitionsWanted } from '../shell/sceneTransition';
 import { orderOf } from '../state/readiness';
 import { operationId } from '../state/async';
 import { exploreTabs, listed } from '../shell/manifest';
@@ -118,7 +120,12 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         } else {
           // the real plan, handed to Listen's build moment; it draws over Listen and waits for nothing
           announceBuilt(data.mix);
-          setView('Now');
+          // ADR-0477: the current mix card is redrawn with the new mix at once, so its face is the
+          // one that travels into Listen's cover; without page transitions the page changes at once
+          const face = sceneTransitionsSupported() && sceneTransitionsWanted() ? builtFace(data) : null;
+          if (face) navigate('/listen', { share: [[face, 'player-art']] });
+          else setView('Now');
+          // the music never waits for the page's animation
           void player.playFrom(0);
         }
       }
@@ -131,6 +138,12 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       buildingNow.current = false;
       setBuilding('');
     }
+  };
+
+  /** The current mix card's face, drawn with the mix just built. */
+  const builtFace = (data: MixData): Element | null => {
+    flushSync(() => setMixData(data));
+    return document.querySelector('main#main .carry-on .mix-art');
   };
 
   const keepAsDraft = async (key: string) => {

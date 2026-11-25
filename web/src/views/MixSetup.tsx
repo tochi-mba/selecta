@@ -7,6 +7,7 @@ import { Action, Dialog, Problem } from '../ui/controls';
 import { EnergyHorizon, FeelDiagram, HORIZON_STOPS, measuredHorizon } from '../ui/MusicObjects';
 import { SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
+import { useArcTrail } from './arcTrail';
 
 const ARC_STOPS = HORIZON_STOPS;
 const DEFAULT_ARC = [62, 72, 100, 85, 68];
@@ -254,6 +255,11 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
     updateStop(stop, energy);
   };
 
+  const arcTrail = useArcTrail(arcPreview);
+  // Escape takes a drawing back without a pointer event, so the trail goes with it
+  const abandonTrail = arcTrail.abandon;
+  useEffect(() => { if (!drawingNow) abandonTrail(); }, [drawingNow, abandonTrail]);
+
   const on = useFlags();
   const feel = on('mixes.shaping.feel');
   const stems = on('mixes.shaping.stem_moves');
@@ -327,6 +333,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
           values={arcPreview}
           source="intention"
           provisional={drawingNow}
+          trail={arcTrail.trail}
           onPointerDown={(event) => {
             // Ignore explicitly secondary pointers; legacy/synthetic pointer events
             // may omit isPrimary or button, but still provide usable coordinates.
@@ -335,25 +342,33 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
             setDrawingNow(true);
             event.currentTarget.setPointerCapture?.(event.pointerId);
             drawArcAt(event);
+            arcTrail.start(event);
           }}
           onPointerMove={(event) => {
-            if (drawing.current?.id === event.pointerId && (event.buttons & 1)) drawArcAt(event);
+            if (drawing.current?.id === event.pointerId && (event.buttons & 1)) {
+              drawArcAt(event);
+              arcTrail.add(event);
+            }
           }}
           onPointerUp={(event) => {
             if (drawing.current?.id !== event.pointerId) return;
             drawArcAt(event);
+            arcTrail.add(event);
+            arcTrail.end();
             drawing.current = null;
             setDrawingNow(false);
             if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
           }}
           onPointerCancel={(event) => {
             if (drawing.current?.id !== event.pointerId) return;
+            arcTrail.clear();
             setEnergyArc(drawing.current.previous);
             drawing.current = null;
             setDrawingNow(false);
           }}
           onLostPointerCapture={(event) => {
             if (drawing.current?.id !== event.pointerId) return;
+            arcTrail.clear();
             setEnergyArc(drawing.current.previous);
             drawing.current = null;
             setDrawingNow(false);

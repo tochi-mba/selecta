@@ -37,6 +37,7 @@ import { MissingArt } from './views/feelLocal';
 import { MixScope } from './views/mixScope';
 import { prefetchLibrary } from './views/libraryPrefetch';
 import { takeStartupStatus } from './startupStatus';
+import { bindServerArt } from './media/serverArt';
 import { draftMovesWaiting } from './views/optimisticMove';
 import type { Undo, View } from './views/shared';
 
@@ -117,6 +118,9 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
   // SF-0235-08: lower decorative motion on a device that can't keep up (not under unit tests,
   // where a frame loop would only spin).
   useEffect(() => (import.meta.env.MODE === 'test' ? undefined : watchLowPower()), []);
+  // ADR-0478 FL-0478-02: this computer reads each song's own cover from its file and serves it, so
+  // the cover ladder asks here (only while library.art_embedded is on). Unit tests draw the tile.
+  useEffect(() => (import.meta.env.MODE === 'test' ? undefined : bindServerArt((songId) => `/api/songs/${songId}/art`)), []);
   const mix = data.mix;
   const mixRef = useRef<MixItem[]>([]);
   mixRef.current = mix;
