@@ -46,7 +46,20 @@ describe('SF-0245-05 shared primitives keep one hover, focus and active language
   it('shows whatever hovering reveals on keyboard focus too', () => {
     const reveals = rules.filter((rule) => /:hover/.test(rule.selector) && /opacity\s*:\s*1\b|visibility\s*:\s*visible/.test(rule.body));
     expect(reveals.length).toBeGreaterThan(0);
-    for (const rule of reveals) expect(rule.selector, `${rule.file} ${rule.selector}`).toMatch(/:focus-visible|:focus-within/);
+    // either the hover rule names focus itself, or (ADR-0477: hover-only rules live inside
+    // `(hover: hover) and (pointer: fine)`, where every selector must hover) a twin outside it in the
+    // same sheet reveals the same thing for the same element on focus
+    const focus = /:focus-visible|:focus-within/;
+    for (const rule of reveals) {
+      if (focus.test(rule.selector)) continue;
+      const twins = parts(rule.selector).map((part) => {
+        const [head, tail] = [part.slice(0, part.indexOf(':hover')), part.slice(part.indexOf(':hover') + ':hover'.length)];
+        return rules.some((other) => other.file === rule.file && !/:hover/.test(other.selector) && focus.test(other.selector)
+          && parts(other.selector).some((candidate) => candidate.startsWith(head) && candidate.endsWith(tail) && focus.test(candidate))
+          && /opacity\s*:\s*1\b|visibility\s*:\s*visible/.test(other.body));
+      });
+      expect(twins.every(Boolean), `${rule.file} ${rule.selector} has no focus twin`).toBe(true);
+    }
   });
 
   it('never lights up a disabled button on hover, and marks a pressed button the same way everywhere', () => {

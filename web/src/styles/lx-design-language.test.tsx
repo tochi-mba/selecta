@@ -79,9 +79,16 @@ describe('LX-0364-04 states in words and marks', () => {
 });
 
 describe('LX-0364-06 motion only for real work', () => {
-  it('the only animation is the running-step bar, and Still and reduced motion both remove it', () => {
-    const animated = lucyCss.match(/[^{}]+\{[^}]*animation:[^}]*\}/g) ?? [];
-    expect(animated.map((rule) => rule.split('{')[0].trim())).toEqual(['.lucy-indeterminate i']);
+  it('the only loop is the running-step bar; every other animation waits for the feel, and Still and reduced motion both remove the bar', () => {
+    const css = lucyCss;
+    const animated = (css.match(/[^{}]+\{[^}]*animation:[^}]*\}/g) ?? []).map((rule) => ({ selector: rule.split('{')[0].trim(), body: rule }));
+    expect(animated.map((rule) => rule.selector)).toContain('.lucy-indeterminate i');
+    // ADR-0477: each feel animation runs once, after real work, and only with <html data-feel~='motion'>
+    for (const rule of animated.filter((found) => found.selector !== '.lucy-indeterminate i')) {
+      for (const selector of rule.selector.split(/,\s*(?![^()]*\))/)) expect(selector.trim(), 'a feel animation is scoped to the motion feel').toMatch(/^:where\(:root\[data-feel~='motion'\]\)/);
+    }
+    const looping = (css.match(/[^{}]+\{[^}]*\}/g) ?? []).filter((rule) => /\binfinite\b/.test(rule)).map((rule) => rule.split('{')[0].trim());
+    expect(looping).toEqual(['.lucy-indeterminate i']);
     expect(lucyCss).toMatch(/:root\[data-motion='still'\] \.lucy-indeterminate \{ display: none; \}/);
     expect(lucyCss).toMatch(/@media \(prefers-reduced-motion: reduce\) \{ \.lucy-indeterminate \{ display: none; \} \}/);
     expect(tokens).toMatch(/:root\[data-motion='still'\] \*,[\s\S]*?animation: none !important/);
