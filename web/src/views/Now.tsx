@@ -719,7 +719,9 @@ export function Now(props: ViewProps) {
         : now.phase === 'paused'
           ? `Paused · ${mixName}`
           : mixName;
-  const shown = detail && detail.id === item?.song_id ? detail : null;
+  // a song the catalogue has no length for takes the one the engine decoded (T-20261125-8ab8)
+  const known = detail && detail.id === item?.song_id ? detail : null;
+  const shown = useMemo(() => (known && !(known.duration > 0) && now.duration > 0 ? { ...known, duration: now.duration } : known), [known, now.duration]);
   useEffect(() => { setBeatGrid(gridOf(shown)); return () => setBeatGrid(null); }, [shown]);
   const waiting = waitingRequestCount(requests?.requests);
 

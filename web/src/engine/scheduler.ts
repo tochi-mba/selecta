@@ -118,7 +118,21 @@ export type Scheduler = {
   playing(): boolean;
   /** The most recently planned transition, or null. */
   lastTransition(): Transition | null;
+  /** What the playing song's hand-overs really are, read only (see SchedulerClock). */
+  clock?(): SchedulerClock | null;
   dispose(): void;
+};
+
+/** Read only, for surfaces: what the audio graph was really given, so a screen can follow the
+ * hand-over that plays rather than the one that was asked for. All times are seconds. `length` is
+ * the playing song's decoded length. `next` is when the next song becomes audible, in the playing
+ * song's time, and that song's decoded length. `entered` is set when the playing song came in over
+ * a transition: the song it came out of, the point in that song where it entered, that song's
+ * decoded length, and how long the playing song has been audible since. */
+export type SchedulerClock = {
+  length: number;
+  next: { index: number; at: number; length: number } | null;
+  entered: { fromIndex: number; fromAt: number; fromLength: number; heard: number } | null;
 };
 
 /** B's stretched entry clip, its fader, and `hand`, which brings native B in at the handover. */
@@ -131,7 +145,9 @@ type Layer = { source: AudioBufferSourceNode; gain: GainNode; moves?: MovesChain
 /** While a stretched clip plays, where in the song the listener is; native B's own clock
  * (`startedAt`, `offset`) is exact from `until` on. */
 type Entering = { until: number; position(now: number): number };
-type Current = Layer & { index: number; startedAt: number; offset: number; duration: number; entering?: Entering };
+/** `came` is noted when the song entered over a transition, only so clock() can report it. */
+type Came = { fromIndex: number; fromAt: number; fromLength: number; heardAt: number };
+type Current = Layer & { index: number; startedAt: number; offset: number; duration: number; entering?: Entering; came?: Came };
 /** `at` is when the song becomes audible; `startedAt`/`offset` are native B's own clock. */
 type Planned = Layer & { index: number; at: number; startedAt: number; offset: number; duration: number; entering?: Entering };
 type Entered = { at: number; startedAt: number; offset: number; entering?: Entering };
@@ -710,7 +726,10 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     if (!current || deps.store.get().phase !== 'playing') return;
     const now = context.currentTime;
     if (planned && now >= planned.at) {
+      // noted for clock() only: where in the outgoing song the next one came in
+      const came: Came = { fromIndex: current.index, fromAt: planned.at - (current.startedAt - current.offset), fromLength: current.duration, heardAt: planned.at };
       current = {
+        came,
         source: planned.source,
         gain: planned.gain,
         moves: planned.moves,
@@ -871,6 +890,16 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     },
     lastTransition() {
       return transition ? { ...transition } : null;
+    },
+    clock() {
+      if (disposed || !current) return null;
+      const base = current.startedAt - current.offset;
+      const came = current.came;
+      return {
+        length: current.duration,
+        next: planned ? { index: planned.index, at: planned.at - base, length: planned.duration } : null,
+        entered: came ? { fromIndex: came.fromIndex, fromAt: came.fromAt, fromLength: came.fromLength, heard: Math.max(0, context.currentTime - came.heardAt) } : null,
+      };
     },
     dispose() {
       if (disposed) return;

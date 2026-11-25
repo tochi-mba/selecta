@@ -24,6 +24,11 @@ export type NowState = {
    * still entering, so the handoff names it, not the song after it. */
   seamTail?: boolean;
   seamAt: number | null;
+  /** Cloud's browser engine only: the hand-over it really scheduled, which a mix item there does
+   * not carry. `window` is how long the next song takes to come in (seconds); `nextLength` is that
+   * song's decoded length, 0 when it is not known; `nextFrom` is where in it the hand-over enters
+   * (0 until it has). Absent in local mode. */
+  blend?: { window: number; nextLength: number; nextFrom: number } | null;
   notice: string;
   nextReady: boolean;
   lastSeamKey: string | null;

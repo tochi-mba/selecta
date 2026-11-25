@@ -53,7 +53,8 @@ export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
   // useId's colons are not valid in a url(#...) reference
   const clip = `live-blend-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const tail = now.inSeam && !!now.seamTail;
-  const switchAt = entering?.seam?.state?.switch_at;
+  // Cloud's mix items carry no switch point: there the engine's own hand-over length is the span
+  const switchAt = entering?.seam?.state?.switch_at ?? now.blend?.window;
   const handing = now.inSeam && !tail && now.seamAt !== null && !!switchAt && switchAt > 0;
   const wanted = on && !!entering && (handing || nearSeam(now)) ? entering.song_id : null;
 
@@ -81,9 +82,12 @@ export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
     [detail, handing, seamAt, span],
   );
   const inPeaks = incoming && entering && incoming.id === entering.song_id ? incoming.peaks : null;
+  // a length the catalogue lacks is the one the engine decoded; where the song came in, likewise
+  const inLength = entering?.duration || now.blend?.nextLength || 0;
+  const inFrom = now.blend?.nextFrom ?? 0;
   const inShape = useMemo(
-    () => (inPeaks && entering && handing ? lane(stretch(inPeaks, entering.duration, 0, span), 36, 10) : ''),
-    [inPeaks, entering, handing, span],
+    () => (inPeaks && entering && handing ? lane(stretch(inPeaks, inLength, inFrom, span), 36, 10) : ''),
+    [inPeaks, entering, handing, inLength, inFrom, span],
   );
 
   if (!on || !handing || !leaving || !entering || !detail || detail.id !== leaving.song_id || !outShape) return null;

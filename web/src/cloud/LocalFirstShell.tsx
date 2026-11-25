@@ -432,7 +432,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // cloud.offline_playback: said once when playing offline ended because another device took over
   const [takeoverSeen, setTakeoverSeen] = useState('');
   const { player, refusal, device: playback, seams: scheduled, prefetch, output } = useLocalFirstPlayer({
-    api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver,
+    api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver, request,
   });
   // what each transition really played on this device this visit, for the editor (cloud.browser_moves)
   const played = useMemo(() => (on('cloud.browser_moves') ? playedByPair(scheduled) : {}), [scheduled]);
@@ -724,7 +724,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     cloud, refreshHoldings: holdings.refresh,
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
     askToPlay: (device) => void playOn.ask(device, recipes.current()),
-    asking: playOn.state, playHereInstead: () => { playOn.reset(); void player.playHereInstead(); }, playingOn: playback.view?.speaker === 'elsewhere' ? playback.view.speaker_device_id : null,
+    asking: playOn.state, playHereInstead: () => { playOn.reset(); void player.playHereInstead(); }, playingOn: playback.view?.speaker === 'elsewhere' ? playback.view.speaker_device_id : null, playableHere: followsHere, speakingHere: playback.view?.speaker === 'here',
   });
   soundElsewhere.current = !on('devices.remote_control') ? null
     : speakerElsewhere ? () => { accountMix.offerLater(speakerElsewhere); return true; }

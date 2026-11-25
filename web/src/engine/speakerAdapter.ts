@@ -4,7 +4,7 @@ import { buildGraph, EngineGraph } from './graph';
 import { installLimiter, InstallLimiterOptions, LimiterInstall } from './limiter';
 import { createLoader, Loader } from './loader';
 import type { ProbeResult } from './probe';
-import { createScheduler, LoadedTrack, Scheduler, SchedulerTimers, SeamProvider, Transition } from './scheduler';
+import { createScheduler, LoadedTrack, Scheduler, SchedulerClock, SchedulerTimers, SeamProvider, Transition } from './scheduler';
 import { BACKGROUND_TAB_NOTICE, createEngineStore, downgradeDeviceOutput, EngineState, EngineStore, noticeWhilePlaying, OUTPUT_CHANGED_NOTICE, UnsupportedHere } from './state';
 
 /** The browser engine as an ADR-0415 playback device (ADR-0457, BF-0457-05).
@@ -136,6 +136,17 @@ export class BrowserSpeaker implements Speaker {
   /** The transition the scheduler planned last, so surfaces can name it (ADR-0459). */
   lastTransition(): Transition | null {
     return this.scheduler.lastTransition();
+  }
+
+  /** The hand-overs the scheduler really scheduled, read only, for Listen (engine/scheduler.ts
+   * SchedulerClock). Time heard is reported as it comes out, after the limiter's lookahead, to
+   * match position(). */
+  clock(): SchedulerClock | null {
+    if (this.disposed) return null;
+    const clock = this.scheduler.clock?.() ?? null;
+    if (!clock?.entered) return clock;
+    const latency = this.limiterInstalled?.latencySeconds ?? 0;
+    return { ...clock, entered: { ...clock.entered, heard: Math.max(0, clock.entered.heard - latency) } };
   }
 
   /** Why this device may not play, or null when the probe passed. */
