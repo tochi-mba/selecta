@@ -4,7 +4,7 @@ import { feelParts, onFeelChange } from '../feel/root';
 import { SongMotif } from '../ui/MusicObjects';
 import { CoverArt } from './CoverArt';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, Link, LinkList, MixData, SeamState } from '../api';
+import { answerWithin, ApiError, Link, LinkList, MixData, SeamState } from '../api';
 import { useApi } from '../requestContext';
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
@@ -376,7 +376,10 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, l
     setCardError('');
     setRendering(true);
     try {
-      const result = await post<SeamState>('/seams', { a: link.a, b: link.b, move: name, phrase: link.phrase });
+      // no answer frees the move buttons after the limit; a late answer still lands if nothing newer was asked
+      const result = await answerWithin(post<SeamState>('/seams', { a: link.a, b: link.b, move: name, phrase: link.phrase }), undefined, (late) => {
+        if (request === renderRequest.current) setOverride(late);
+      });
       if (request === renderRequest.current) { setOverride(result); setPlaying(true); }
     } catch (error) { if (request === renderRequest.current) setCardError((error as Error).message); return false; }
     finally { if (request === renderRequest.current) setRendering(false); }

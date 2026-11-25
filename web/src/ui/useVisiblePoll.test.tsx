@@ -1,6 +1,6 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { useVisiblePoll } from './useVisiblePoll';
+import { STALLED_READ_MS, useVisiblePoll } from './useVisiblePoll';
 
 function Observer({ tick, interval = 1000 }: { tick: () => void; interval?: number }) {
   useVisiblePoll(tick, interval);
@@ -90,6 +90,22 @@ describe('slow visibility-aware refreshes', () => {
       expect(tick).toHaveBeenCalledTimes(1);
       await act(async () => { finish[0](new Error('offline')); await Promise.resolve(); });
       act(() => { vi.advanceTimersByTime(1000); });
+      expect(tick).toHaveBeenCalledTimes(2);
+    } finally {
+      unmount();
+    }
+  });
+
+  it('gives up on a read that never answers, so a server that comes back is noticed', () => {
+    vi.useFakeTimers();
+    const tick = vi.fn(() => new Promise<void>(() => {}));
+    const { unmount } = render(<Observer tick={tick} />);
+    try {
+      act(() => { vi.advanceTimersByTime(1000); });
+      expect(tick).toHaveBeenCalledTimes(1);
+      act(() => { vi.advanceTimersByTime(STALLED_READ_MS - 1000); });
+      expect(tick).toHaveBeenCalledTimes(1);
+      act(() => { vi.advanceTimersByTime(2000); });
       expect(tick).toHaveBeenCalledTimes(2);
     } finally {
       unmount();

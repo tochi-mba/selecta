@@ -1,5 +1,5 @@
 import { ReactNode, Suspense, useEffect, useState } from 'react';
-import { lazyPage as lazy } from './ui/staleBuild';
+import { lazyPage as lazy, SlowToArrive } from './ui/staleBuild';
 import { App } from './App';
 import type { MixData } from './api';
 import { setCopyMode } from './copy';
@@ -102,7 +102,7 @@ export function RuntimeApp() {
   }
   if (mode === 'local') {
     if (/^\/venue\/staff\/[A-Za-z0-9_-]+$/.test(window.location.pathname)) {
-      return <Suspense fallback={<RuntimeMessage title="Starting venue staff dashboard" detail="Connecting to the venue…" />}><VenueStaffRoot /></Suspense>;
+      return <Suspense fallback={<RuntimeMessage title="Starting venue staff dashboard" detail="Connecting to the venue…"><SlowToArrive /></RuntimeMessage>}><VenueStaffRoot /></Suspense>;
     }
     return <App initialMix={startupMix} />;
   }
@@ -111,7 +111,7 @@ export function RuntimeApp() {
   if (!clientId) {
     return <RuntimeMessage title="Cloud sign-in needs configuration" detail="Set VITE_WORKOS_CLIENT_ID for this Cloud web build." />;
   }
-  return <Suspense fallback={<main className="gate gate-loading" aria-busy="true"><div className="gate-wait"><BrandMark className="gate-pulse" /><p role="status">Starting SelectaDJ…</p><span className="gate-line" aria-hidden="true"><i /></span></div></main>}><CloudRoot clientId={clientId} /></Suspense>;
+  return <Suspense fallback={<main className="gate gate-loading" aria-busy="true"><div className="gate-wait"><BrandMark className="gate-pulse" /><p role="status">Starting SelectaDJ…</p><span className="gate-line" aria-hidden="true"><i /></span><SlowToArrive /></div></main>}><CloudRoot clientId={clientId} /></Suspense>;
 }
 
 /** `arrive`: rises in once (ADR-0477). Only the problem screen asks for it: the waiting screen follows

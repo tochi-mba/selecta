@@ -15,6 +15,7 @@ import { PlayNoticeLine } from './PlayNoticeLine';
 import type { PlayNotice } from './useWhereToPlay';
 import { CoverArt } from '../views/CoverArt';
 import { useFeelPart } from '../rooms/feelHooks';
+import { SpeakerMoved, useSpeakerMove } from './SpeakerMoved';
 import './devices.css';
 
 // Listen on a device that is not the speaker (flag `devices.remote_control`): what is playing on
@@ -78,6 +79,8 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
   // device makes no sound and has nothing to measure
   const covers = useFeelPart('depth');
   const morph = useFeelPart('motion');
+  // the session now names a different speaker than it did: the sound really moved
+  const moved = useSpeakerMove(view.speaker_device_id, view.speaker_name);
   // the position moves from the session's anchor; no request is made for it
   const [, tick] = useState(0);
   useEffect(() => {
@@ -139,6 +142,7 @@ export function RemoteListen({ remote, playableHere, ways, refusal, speakerSongs
         <section className="remote-card" aria-label="Remote control">
           {/* a notice about the speaker itself is the one message about it: no second line above */}
           {!(notice && notice.deviceId === view.speaker_device_id) && <p className="remote-where" data-testid="remote-where"><Icon name={view.speaker === 'offline' ? 'warning' : 'music'} size="compact" />{whereWords(view)}</p>}
+          <SpeakerMoved move={moved} />
           <div className="remote-song">
             {covers && <CoverArt seed={current.songId} songId={current.songId} size="row" />}
             <h2 dir="auto" data-testid="remote-title">{current.title}</h2>

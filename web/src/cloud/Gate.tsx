@@ -6,6 +6,7 @@ import { ACCOUNT_PROBLEMS, AccountProblem, blockedMessage } from './accountState
 import type { BlockedCode } from './authConfig';
 import { ConnectionBanner } from './ConnectionBanner';
 import { supportHref } from '../support';
+import { SlowToArrive } from '../ui/staleBuild';
 
 // Every screen a person can meet before they are inside SelectaDJ Cloud, other than the landing
 // page (Welcome.tsx): checking the sign-in, signing in again, verifying an email, the one-question
@@ -127,6 +128,7 @@ export function GateLoading({ label }: { label: string }) {
         <BrandMark className="gate-pulse" />
         <p role="status">{label}</p>
         <span className="gate-line" aria-hidden="true"><i /></span>
+        <SlowToArrive />
       </div>
     </main>
   );

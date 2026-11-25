@@ -83,6 +83,13 @@
   block-size: var(--icon-size);
   justify-content: center;
 }
+/* The rail sizes the elements inside a place, which made each bar as wide as the whole icon, so the
+   three lay flat and spilled out to the left. Each bar is a narrow upright again. */
+:where(:root[data-feel~='music']) .shell .nav .nav-bars > i {
+  flex: none;
+  inline-size: var(--space-1);
+  min-inline-size: 0;
+}
 
 /* The account menu grows out of its button (it opens upward, or to the right when collapsed). */
 :root[data-feel~='motion'] .shell .nav-account-menu[data-motion='pop'] {

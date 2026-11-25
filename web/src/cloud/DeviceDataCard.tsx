@@ -25,11 +25,17 @@ export function DeviceDataCard({ workspaceId, onCleared }: { workspaceId: string
     last.current = asking ?? last.current;
   }, [asking]);
   const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !working) { event.stopPropagation(); setAsking(null); } };
+  const [problem, setProblem] = useState('');
   const run = async (what: Exclude<Asking, null>) => {
     setWorking(true);
+    setProblem('');
     try {
       if (what === 'forget') await forgetWorkspaceOnDevice(workspaceId);
       else await clearEverythingOnDevice([workspaceId]);
+    } catch {
+      // a failure used to close the question with nothing said and nothing reloaded
+      setProblem('SelectaDJ could not clear all of it. Close any other SelectaDJ tabs, then try again.');
+      return;
     } finally {
       setWorking(false);
       setAsking(null);
@@ -62,6 +68,7 @@ export function DeviceDataCard({ workspaceId, onCleared }: { workspaceId: string
           <div className="cloud-actions"><button ref={keep} disabled={working} onClick={() => setAsking(null)}>Keep it</button><button className="destructive" disabled={working} aria-busy={working || undefined} onClick={() => void run('everything')}>{working ? 'Clearing…' : 'Clear everything'}</button></div>
         </div>
       )}
+      {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
       {flagOn('cloud.content_cache') && <FingerprintLog workspaceId={workspaceId} />}
     </SettingsCard>
   );

@@ -15,6 +15,9 @@ export function Fresh({ reading, format = String }: { reading: Reading; format?:
   );
 }
 
+export const COMMAND_LIMIT_MS = 60_000;
+const COMMAND_TOO_LONG = 'SelectaDJ didn’t answer in time. The change may still have been made: reload this page to check before trying again.';
+
 /**
  * A command button that asks for a reason first. Every admin command is audited with one, so the
  * button stays disabled until a reason is typed.
@@ -27,9 +30,13 @@ export function Command({ label, run, danger, note }: { label: string; run: (rea
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true); setError('');
-    try { await run(reason.trim()); setOpen(false); setReason(''); }
-    catch (problem) { setError((problem as Error).message); }
-    finally { setBusy(false); }
+    // A command that never answers must not hold Working... for ever. After the limit the button is
+    // free again and the words say the change may still have landed, so staff check before repeating.
+    let over = false;
+    const slow = window.setTimeout(() => { over = true; setBusy(false); setError(COMMAND_TOO_LONG); }, COMMAND_LIMIT_MS);
+    try { await run(reason.trim()); setOpen(false); setReason(''); setError(''); }
+    catch (problem) { if (!over) setError((problem as Error).message); }
+    finally { window.clearTimeout(slow); setBusy(false); }
   };
   if (!open) return <button className={danger ? 'admin-danger' : undefined} onClick={() => setOpen(true)}>{label}</button>;
   return (
@@ -43,6 +50,9 @@ export function Command({ label, run, danger, note }: { label: string; run: (rea
   );
 }
 
+const READ_LIMIT_MS = 20_000;
+const READ_TOO_LONG = 'SelectaDJ is taking too long to respond. Try again.';
+
 /** Load something once and on demand, keeping a refusal's words for the page. */
 export function useLoad<T>(load: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
@@ -53,8 +63,12 @@ export function useLoad<T>(load: () => Promise<T>, deps: unknown[]) {
   const reload = useCallback(async () => {
     const mine = ++latest.current;
     setError('');
-    try { const next = await load(); if (mine === latest.current) setData(next); }
+    // A read that never answers must not leave a skeleton for ever: after the limit it says so and
+    // offers Try again. An answer that comes later still lands.
+    const slow = window.setTimeout(() => { if (mine === latest.current) setError(READ_TOO_LONG); }, READ_LIMIT_MS);
+    try { const next = await load(); if (mine === latest.current) { setData(next); setError(''); } }
     catch (problem) { if (mine === latest.current) setError(problem instanceof AdminError ? problem.message : (problem as Error).message); }
+    finally { window.clearTimeout(slow); }
   }, deps);
   useEffect(() => { void reload(); }, [reload]);
   return { data, error, reload };

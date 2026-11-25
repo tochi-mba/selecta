@@ -463,3 +463,26 @@ describe('pause truth across awaits', () => {
     expect(context.state).toBe('running');
   });
 });
+
+describe('the clock Listen reads (read only)', () => {
+  it('reports the decoded length, when the next song really comes in, and how long it has been heard', async () => {
+    const { context, scheduler, timers } = rig([60, 50], { seam: () => null });
+    await scheduler.start(0, 0, true);
+    expect(scheduler.clock?.()).toMatchObject({ length: 60, next: null, entered: null });
+    context.advance(20);
+    timers.tick();
+    await settle();
+    // no seam was prepared, so the engine fades in at the end: that is when the next song comes in
+    const before = scheduler.clock?.();
+    expect(before?.next).toMatchObject({ index: 1, length: 50 });
+    expect(before?.next?.at).toBeCloseTo(60 - END_FADE, 6);
+    context.advance(38);
+    timers.tick();
+    expect(scheduler.position()?.index).toBe(1);
+    const after = scheduler.clock?.();
+    expect(after?.length).toBe(50);
+    expect(after?.entered).toMatchObject({ fromIndex: 0, fromLength: 60 });
+    expect(after?.entered?.fromAt).toBeCloseTo(60 - END_FADE, 6);
+    expect(after?.entered?.heard).toBeCloseTo(context.currentTime - context.madeSources[1].started[0].when, 6);
+  });
+});

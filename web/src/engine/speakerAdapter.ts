@@ -4,7 +4,7 @@ import { buildGraph, EngineGraph } from './graph';
 import { installLimiter, InstallLimiterOptions, LimiterInstall } from './limiter';
 import { createLoader, Loader } from './loader';
 import type { ProbeResult } from './probe';
-import { createScheduler, LoadedTrack, Scheduler, SchedulerTimers, SeamProvider, Transition } from './scheduler';
+import { createScheduler, LoadedTrack, Scheduler, SchedulerClock, SchedulerTimers, SeamProvider, Transition } from './scheduler';
 import { BACKGROUND_TAB_NOTICE, createEngineStore, downgradeDeviceOutput, EngineState, EngineStore, noticeWhilePlaying, OUTPUT_CHANGED_NOTICE, UnsupportedHere } from './state';
 
 /** The browser engine as an ADR-0415 playback device (ADR-0457, BF-0457-05).
@@ -52,6 +52,10 @@ export type BrowserSpeakerOptions = {
   /** cloud.seam_lead (scheduler.ts SchedulerDeps). */
   planAhead?: () => boolean;
   level?: (buffer: AudioBuffer) => Promise<number>;
+  /** Told each time a song's audio is ready to play, read only, so a surface can draw it without
+   * decoding the file again. Called synchronously on the way to the scheduler: it must only start
+   * its own work for later, and whatever it throws is ignored. */
+  decoded?: (id: TrackSource['id'], buffer: AudioBuffer) => void;
   store?: EngineStore;
   /** How many decoded songs to keep in memory (loader.ts, default 3). */
   keep?: number;
@@ -72,6 +76,7 @@ export class BrowserSpeaker implements Speaker {
   private readonly resolve: ResolveTrack;
   private readonly disposeOwner?: () => void;
   private readonly queueLength: (() => number) | null;
+  private readonly decoded: BrowserSpeakerOptions['decoded'];
   private readonly limiterReady: Promise<LimiterInstall>;
   private limiterInstalled: LimiterInstall | null = null;
   private visualTaps: { left: AnalyserNode; right: AnalyserNode } | null = null;
@@ -98,6 +103,7 @@ export class BrowserSpeaker implements Speaker {
     this.resolve = options.resolve;
     this.disposeOwner = options.disposeOwner;
     this.queueLength = options.queueLength ?? null;
+    this.decoded = options.decoded;
     this.graph = options.graph ?? buildGraph(options.audio.context);
     const context = options.audio.context;
     this.loader = createLoader((bytes) => context.decodeAudioData(bytes), { keep: options.keep });
@@ -136,6 +142,17 @@ export class BrowserSpeaker implements Speaker {
   /** The transition the scheduler planned last, so surfaces can name it (ADR-0459). */
   lastTransition(): Transition | null {
     return this.scheduler.lastTransition();
+  }
+
+  /** The hand-overs the scheduler really scheduled, read only, for Listen (engine/scheduler.ts
+   * SchedulerClock). Time heard is reported as it comes out, after the limiter's lookahead, to
+   * match position(). */
+  clock(): SchedulerClock | null {
+    if (this.disposed) return null;
+    const clock = this.scheduler.clock?.() ?? null;
+    if (!clock?.entered) return clock;
+    const latency = this.limiterInstalled?.latencySeconds ?? 0;
+    return { ...clock, entered: { ...clock.entered, heard: Math.max(0, clock.entered.heard - latency) } };
   }
 
   /** Why this device may not play, or null when the probe passed. */
@@ -177,6 +194,13 @@ export class BrowserSpeaker implements Speaker {
       return { kind: 'missing' };
     }
     const result = await this.loader.load(source.id, source.data);
+    if (result.ok && this.decoded) {
+      try {
+        this.decoded(source.id, result.buffer);
+      } catch {
+        // a picture of the song never stands in the way of playing it
+      }
+    }
     return result.ok ? { kind: 'buffer', buffer: result.buffer } : { kind: 'failed', error: result.error };
   }
 

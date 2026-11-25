@@ -9,6 +9,7 @@ import { countOf } from '../ui/format';
 import { Icon } from '../ui/Icon';
 import { CoverArt } from '../views/CoverArt';
 import { useFeelPart } from '../views/feelBits';
+import { sendCoverToHero } from '../views/coverToHero';
 
 /** How many later songs show before "Show all". */
 const SHORT = 4;
@@ -58,7 +59,7 @@ export function ListenQueue({ mix, now, player }: { mix: readonly MixItem[]; now
           const place = first + offset;
           return (
             <li key={`${place}-${item.song_id}`}>
-              <button type="button" className="queue-row" data-lift="row" aria-label={`Play from ${item.title}`} aria-busy={starting === place || undefined} onClick={() => void play(place)}>
+              <button type="button" className="queue-row" data-lift="row" aria-label={`Play from ${item.title}`} aria-busy={starting === place || undefined} onClick={(event) => { sendCoverToHero(event.currentTarget.querySelector('.cover-art'), item.song_id); void play(place); }}>
                 <span className="queue-place" aria-hidden="true">{place + 1}</span>
                 <CoverArt seed={item.song_id} songId={item.song_id} size="small" />
                 <span className="queue-words"><b dir="auto">{item.title}</b><span dir="auto">{item.artist}</span></span>

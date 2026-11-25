@@ -71,6 +71,9 @@ describe('P0048 the library and progress stay open while songs are prepared', ()
     expect(screen.getByRole('link', { name: 'See progress' })).toHaveAttribute('href', '/workshop');
     expect(screen.queryByRole('link', { name: 'Make my first mix' })).toBeNull();
     expect(screen.getByText('Analysing now')).toBeInTheDocument();
-    expect(screen.getByText(/Still reading your folder/)).toBeInTheDocument();
+    // the status line says it; under the feel the Music found meter carries the same words (ADR-0477)
+    const reading = screen.getAllByText(/Still reading your folder/);
+    expect(reading.some((node) => node.closest('p[role="status"]'))).toBe(true);
+    expect(screen.getByRole('progressbar', { name: 'Music found' })).toHaveAttribute('aria-valuetext', 'Still reading your folder');
   });
 });

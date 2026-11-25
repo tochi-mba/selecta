@@ -2,7 +2,7 @@
 // by the other BZ-6 builders and read everything they need from useBusiness().
 
 import { Suspense } from 'react';
-import { lazyPage as lazy } from '../../ui/staleBuild';
+import { lazyPage as lazy, SlowToArrive } from '../../ui/staleBuild';
 import { Problem } from '../../ui/controls';
 import type { BusinessRoute } from '../context';
 import { SHELL_COPY } from '../copy/shell';
@@ -24,7 +24,7 @@ const OrgLibrary = lazy(() => import('../library/OrgLibrary').then((m) => ({ def
 const SettingsPage = lazy(() => import('../settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 
 export function PageFallback() {
-  return <p className="biz-quiet biz-page-loading" role="status">{SHELL_COPY.loadingPage}</p>;
+  return <><p className="biz-quiet biz-page-loading" role="status">{SHELL_COPY.loadingPage}</p><SlowToArrive /></>;
 }
 
 /** A page the person can't open says why in plain words, with its own h1. */

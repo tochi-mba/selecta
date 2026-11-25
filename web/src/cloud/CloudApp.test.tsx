@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloudAccount } from '../test/cloudAccount';
+import { feelOff } from '../test/feel';
 import type { Account } from './api';
 
 const SIGNED_IN = { id: 'user-1', email: 'listener@example.test', emailVerified: true };
@@ -227,6 +228,8 @@ describe('the Cloud app', () => {
   const LEGACY_RAIL = '<aside class="cloud-rail"><button class="cloud-brand" title="Return to Cloud home"><span class="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ <span class="cloud-brand-sub">REX Technologies</span></span></button><nav aria-label="Cloud workspace"><button aria-current="page">Overview</button><button>Listen</button><button>Library</button><button>Add music</button><button>Plan &amp; billing</button><button>Settings</button></nav><div class="cloud-rail-bottom"><span>listener@example.test</span><button>Sign out</button><button>Sign out everywhere</button><button class="cloud-delete-account">Delete account</button></div></aside>';
 
   it('keeps the legacy rail byte for byte with cloud.hosted_shell off, decided or unmentioned', async () => {
+    // byte for byte means the feel off too: with motion on the rail gains its sliding indicator (ADR-0477)
+    feelOff();
     for (const features of [{ 'cloud.account_states': true }, { 'cloud.account_states': true, 'cloud.hosted_shell': false }] as Record<string, boolean>[]) {
       account = { ...cloudAccount(), features };
       const { container, unmount } = render(<CloudApp />);
