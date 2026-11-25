@@ -191,12 +191,11 @@ def on_upload_accepted(engine: Engine, work: Work, workspace_id: str, asset_id: 
 
 
 def _measured(conn: Connection, workspace_id: str, kind: str) -> float:
-    """Median seconds a finished job of this type took here, or the first guess."""
-    rows = conn.execute(sa.select(jobs.c.started_at, jobs.c.finished_at).where(
+    """Median seconds the last finished jobs of this type really ran here (`actual_cost_s`, the
+    successful attempt alone, so a retried job's lost time doesn't count), or the first guess."""
+    took = sorted(float(value) for value in conn.execute(sa.select(jobs.c.actual_cost_s).where(
         jobs.c.workspace_id == workspace_id, jobs.c.type == kind, jobs.c.state == "succeeded",
-        jobs.c.started_at.is_not(None), jobs.c.finished_at.is_not(None))
-        .order_by(jobs.c.finished_at.desc()).limit(25)).all()
-    took = sorted(float(r.finished_at - r.started_at) for r in rows if r.finished_at > r.started_at)
+        jobs.c.actual_cost_s > 0).order_by(jobs.c.finished_at.desc()).limit(25)).scalars())
     return took[len(took) // 2] if took else FIRST_GUESS_S[kind]
 
 
