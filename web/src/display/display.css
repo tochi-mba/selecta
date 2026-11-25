@@ -107,6 +107,7 @@ p { margin: 0.4em 0; }
 .d-social { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em 1.2em; margin: 0.8em 0 0; font-size: 0.95em; font-weight: var(--weight-strong); }
 .d-loves { display: inline-flex; align-items: center; gap: 0.4em; font-variant-numeric: tabular-nums; }
 .d-heart { width: 1em; height: 1em; fill: var(--selected); }
+.d-dedication { flex-basis: 100%; font-family: var(--display); font-weight: var(--weight-display); font-size: 1.5em; line-height: 1.15; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
 .d-loved { animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
 /* The vote for the next song, in place of the lists: each song with its votes and a bar */
 .d-round { margin-top: 1.3em; padding-top: 1.1em; border-top: 1px solid var(--line); animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }

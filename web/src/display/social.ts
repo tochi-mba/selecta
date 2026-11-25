@@ -31,14 +31,19 @@ function heart(className: string): SVGElement {
 
 const lovesWord = (count: number) => (count === 1 ? '1 love' : `${count} loves`);
 
-/** The line under the playing song: the room's hearts, and a word when it loved the blend. */
+/** The line under the playing song: the dedication a guest chose for it, the room's hearts,
+ * and a word when it loved the blend. Each only while the host shows it on the screen. */
 export function line(pulse: Pulse | undefined): HTMLElement | null {
   const play = pulse?.play;
-  if (!pulse || !play || !pulse.shows.reactions) return null;
-  if (!play.loves && !pulse.blend_loved) return null;
+  if (!pulse || !play) return null;
+  const said = pulse.shows.dedications ? pulse.dedication : null;
+  const loves = pulse.shows.reactions ? play.loves : 0;
+  const loved = Boolean(pulse.shows.reactions && pulse.blend_loved);
+  if (!said && !loves && !loved) return null;
   return h('p', { className: 'd-social', 'data-key': 'social' },
-    play.loves ? h('span', { className: 'd-loves', 'data-key': 'loves' }, heart('d-heart'), lovesWord(play.loves)) : null,
-    pulse.blend_loved ? h('span', { className: 'd-loved', 'data-key': `loved-${play.play_id}` }, 'The room loved that blend') : null);
+    said ? h('span', { className: 'd-dedication', 'data-key': `dedication-${said.request_id}` }, said.from ? `${said.words} From ${said.from}.` : said.words) : null,
+    loves ? h('span', { className: 'd-loves', 'data-key': 'loves' }, heart('d-heart'), lovesWord(loves)) : null,
+    loved ? h('span', { className: 'd-loved', 'data-key': `loved-${play.play_id}` }, 'The room loved that blend') : null);
 }
 
 // --- Pick the next song -------------------------------------------------------------------

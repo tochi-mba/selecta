@@ -664,6 +664,11 @@
     "rooms.dedications": {
       "label": "Room dedications",
       "about": "A guest adds one line from a fixed list to their own request, shown while the song plays.",
+      "routes": [
+        "PUT /api/guest/rooms/{room_id}/requests/{request_id}/dedication",
+        "DELETE /api/guest/rooms/{room_id}/requests/{request_id}/dedication",
+        "DELETE /api/rooms/{room_id}/requests/{request_id}/dedication"
+      ],
       "requires": ["rooms"],
       "surfaces": ["cloud.listen"],
       "words": ["Add a dedication", "Dedications"],

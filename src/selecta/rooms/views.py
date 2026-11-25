@@ -77,6 +77,8 @@ class UpcomingItem:
     nickname: str | None  # None when names are hidden from this viewer
     voted: bool = False  # this guest has voted for it
     mine: bool = False
+    dedication: str | None = None  # ADR-0488: the id of the line on it; the host's lists show it
+    room_pick: bool = False  # the room voted it in; nobody asked for it
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,7 @@ class MyRequest:
     text: str
     votes: int
     minutes_until: float | None = None
+    dedication: str | None = None  # ADR-0488: the id of the line on this request, if any
 
 
 @dataclass(frozen=True)
@@ -238,7 +241,9 @@ def as_items(
             votes=request.votes,
             nickname=names.get(request.guest_id) if show_names else None,
             voted=request.id in voted,
-            mine=request.guest_id == me,
+            mine=me is not None and request.guest_id == me,
+            dedication=request.dedication,
+            room_pick=request.source == "round",
         )
         for request in requests
     )
@@ -343,7 +348,13 @@ def _mine(
         if minutes is not None:
             text = f"Accepted, playing in about {max(1, round(minutes))} min"
     return MyRequest(
-        request.id, songs.get(request.song_id), request.status, text, request.votes, minutes
+        request.id,
+        songs.get(request.song_id),
+        request.status,
+        text,
+        request.votes,
+        minutes,
+        request.dedication,
     )
 
 

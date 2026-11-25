@@ -16,6 +16,7 @@ from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.limits import Limited
 from selecta.rooms.ports import SongSummary
 from selecta.rooms.views import MyRequest, UpcomingItem
+from selecta.roomsocial import dedications as dedication_lines
 
 STATUS = {
     Refusal.NOT_PREMIUM: 403,
@@ -123,6 +124,9 @@ def item_json(item: UpcomingItem) -> dict[str, Any]:
         "nickname": item.nickname,
         "voted": item.voted,
         "mine": item.mine,
+        # ADR-0488: the listed line on this request, in words, and whether the room voted it in
+        "dedication": dedication_lines.words_of(item.dedication),
+        "room_pick": item.room_pick,
     }
 
 
@@ -134,6 +138,8 @@ def mine_json(item: MyRequest) -> dict[str, Any]:
         "text": item.text,
         "votes": item.votes,
         "minutes_until": item.minutes_until,
+        "dedication": item.dedication,
+        "dedication_words": dedication_lines.words_of(item.dedication),
     }
 
 

@@ -470,7 +470,8 @@ function myRequests(v: View): HTMLElement {
         art(item.song),
         songText(item.song,
           h('span', { className: 'g-status' }, chip(status.kind, status.label)),
-          status.detail ? h('span', { className: 'g-detail' }, status.detail) : null),
+          status.detail ? h('span', { className: 'g-detail' }, status.detail) : null,
+          social.dedication(v, item)),
         PENDING.includes(item.status) && v.room_status !== 'ended'
           ? h('button', { type: 'button', className: 'g-quiet g-small-button', ...working(leaving), 'aria-label': `Withdraw ${songLine(item.song)}`, onclick: () => void withdraw(item.request_id) }, leaving ? 'Withdrawing...' : 'Withdraw')
           : null);
@@ -845,7 +846,7 @@ if (new URLSearchParams(location.search).get('at') === 'venue') {
   void import('./venue').then((venue) => venue.startVenue(root, code));
 } else {
   // ADR-0488: kept songs are filed under the room's id, which stays the same through a new code
-  social.init({ base, shelf: () => roomId ?? code, redraw: draw, say, buzz });
+  social.init({ base, shelf: () => roomId ?? code, redraw: draw, reread: () => void refresh(), say, buzz });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && roomId) void refresh(); });
   window.addEventListener('online', () => { if (roomId) void refresh(); });
   // the phone says it lost its signal: say so at once, without waiting for the next read to fail

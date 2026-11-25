@@ -29,7 +29,7 @@ from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
-from selecta.rooms import limits, reactions, rounds
+from selecta.rooms import dedications, limits, reactions, rounds
 from selecta.rooms import pulse as pulses
 from selecta.rooms.api_common import check_origin, refusal, song_json
 from selecta.rooms.display import DisplayState, DisplayView
@@ -40,6 +40,7 @@ from selecta.rooms.service import Rooms
 from selecta.rooms.social_schema import room_plays
 from selecta.rooms.store import GuestRef, GuestStatus, load_room
 from selecta.rooms.views import GuestView
+from selecta.roomsocial import dedications as dedication_lines
 from selecta.roomsocial import reactions as tap_rules
 from selecta.roomsocial import rounds as round_rules
 
@@ -57,6 +58,10 @@ class TapBody(BaseModel):
 
 class VoteBody(BaseModel):
     position: int = Field(ge=0, le=round_rules.MAX_OPTIONS - 1)
+
+
+class LineBody(BaseModel):
+    line: str = Field(min_length=1, max_length=dedication_lines.MAX_ID_LENGTH)
 
 
 class RoundBody(BaseModel):
@@ -221,6 +226,30 @@ def install_guest_routes(
             "pulse": social.pulse(ref.workspace_id, ref.room_id),
         }
 
+    # Dedications (rooms.dedications): one listed line on the guest's own waiting request.
+    social.extras.append(_dedication_extra)
+    social.guest_parts.append(_lines_offered)
+
+    def dedicate(room_id: str, request_id: str, request: Request, line: str | None) -> dict:
+        token, ref = tap(request, room_id)
+        social.offered(ref, "dedications")
+        try:
+            dedications.set_line(social.rooms(), token, request_id, line)
+        except RoomError as error:
+            raise refusal(error) from error
+        social.changed(ref.room_id)
+        return {"request_id": request_id, "dedication": line}
+
+    @app.put("/api/guest/rooms/{room_id}/requests/{request_id}/dedication")
+    def guest_dedicate(
+        room_id: str, request_id: str, body: LineBody, request: Request
+    ) -> dict[str, Any]:
+        return dedicate(room_id, request_id, request, body.line)
+
+    @app.delete("/api/guest/rooms/{room_id}/requests/{request_id}/dedication")
+    def guest_undedicate(room_id: str, request_id: str, request: Request) -> dict[str, Any]:
+        return dedicate(room_id, request_id, request, None)
+
     # Reactions (rooms.reactions): a love for the playing song, or for the blend into it.
     social.extras.append(_reactions_extra)
 
@@ -255,6 +284,27 @@ def install_guest_routes(
     def guest_unreact(room_id: str, body: TapBody, request: Request) -> dict[str, Any]:
         token, ref = tap(request, room_id)
         return tapped(token, ref, body, on=False)
+
+
+def _dedication_extra(conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str, Any]:
+    """The dedication on the song that is on, for every phone and a screen that shows them."""
+    if not pulse.features.get("dedications", False):
+        return {}
+    return {"dedication": dedications.showing(conn, room, pulse.play)}
+
+
+def _lines_offered(seen: GuestView, on: Mapping[str, bool]) -> Mapping[str, Any]:
+    """The lines this room lets a guest pick, without the ones the host hid."""
+    if not on.get("dedications", False) or seen.settings is None:
+        return {}
+    return {
+        "dedication_lines": [
+            {"id": line.id, "words": line.words}
+            for line in dedication_lines.lines_for(
+                dedications.KIND, seen.settings.dedications_hidden
+            )
+        ]
+    }
 
 
 def _reactions_extra(conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str, Any]:
@@ -409,6 +459,22 @@ def install_host_routes(
         except RoomError as error:
             raise refusal(error) from error
         return {"pulse": pulse(workspace_id, room_id)}
+
+    @app.delete("/api/rooms/{room_id}/requests/{request_id}/dedication")
+    def clear_dedication(
+        room_id: str,
+        request_id: str,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """The host takes a dedication off a request; the request itself stays."""
+        workspace_id = workspace(request, claims)
+        try:
+            dedications.host_clear(social.rooms(), workspace_id, room_id, request_id)
+        except RoomError as error:
+            raise refusal(error) from error
+        social.changed(room_id)
+        return {"request_id": request_id, "dedication": None}
 
     @app.post("/api/rooms/{room_id}/rounds/{round_id}/cancel")
     def cancel_round(

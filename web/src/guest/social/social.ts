@@ -24,7 +24,12 @@ export type Pulse = {
   online?: number; blend_loved?: boolean;
   /** The vote for the next song the room is looking at: open, or just finished. */
   round?: Round | null;
+  /** The listed line a guest put on the song that is on, and their nickname when names show. */
+  dedication?: { request_id: string; line: string; words: string; from: string | null } | null;
 };
+export type Line = { id: string; words: string };
+/** One of this guest's requests, as far as a dedication needs to know it. */
+export type Asked = { request_id: string; status: string; dedication?: string | null; dedication_words?: string | null };
 export type Kind = 'love' | 'blend';
 export type RoundOption = { position: number; song_id: number; votes: number; song?: Song | null };
 export type Round = {
@@ -38,6 +43,8 @@ export type RoomView = {
   my_taps?: Record<string, Kind[]>;
   /** This guest's vote in the open round, and whether they were here when it opened. */
   my_vote?: { round_id: string; position: number | null; can_vote: boolean };
+  /** The lines this room lets a guest put on a request. */
+  dedication_lines?: Line[];
 };
 
 export type Host = {
@@ -46,6 +53,8 @@ export type Host = {
   /** Where this guest's kept songs for this room are filed. */
   shelf: () => string;
   redraw: () => void;
+  /** Read the room again now, after something of this guest's own changed. */
+  reread: () => void;
   say: (text: string) => void;
   buzz: (ms: number) => void;
 };
@@ -234,10 +243,13 @@ export function hero(view: RoomView): HTMLElement | null {
   const on = features(view);
   const song = view.now_playing;
   // with only reactions on, the heart needs a play to belong to; until the pulse has one, wait
-  if (!song || !(on.keeps || (on.reactions && playFor(song)))) return null;
+  const hearts = Boolean(song) && Boolean(on.keeps || (on.reactions && song && playFor(song)));
+  const said = song ? dedicationLine(view) : null;
+  if (!song || !(hearts || said)) return null;
   const play = playFor(song);
   return h('div', { className: 'g-hero-acts', 'data-key': 'hero-acts' },
-    heart(view, song),
+    said,
+    hearts ? heart(view, song) : null,
     blend(view, song),
     // said on every phone, so a room with no big screen hears it too
     on.reactions && play && pulse?.blend_loved ? h('span', { className: 'g-loved', 'data-key': 'loved', role: 'status' }, 'The room loved that blend') : null);
@@ -350,6 +362,52 @@ export function round(view: RoomView): HTMLElement | null {
       : h('p', { className: 'g-round-result', role: 'status', 'data-key': 'round-result' }, result),
     h('ul', { className: 'g-list g-round-list', role: open ? 'radiogroup' : undefined, 'aria-label': 'Songs to choose from' }, ...found.options.map((option) => optionRow(view, found, option, mine, open))),
     open && screenOn(view) ? h('p', { className: 'g-small', 'data-key': 'round-screen' }, 'The tally is on the big screen too.') : null);
+}
+
+// --- Dedications --------------------------------------------------------------------------
+
+// the request whose list of lines is open, and the one being saved
+let choosingFor = '';
+let dedicating = '';
+
+/** Under the playing song: the line a guest chose for it. Said on every phone. */
+function dedicationLine(view: RoomView): HTMLElement | null {
+  const shown = features(view).dedications ? pulse?.dedication : null;
+  if (!shown) return null;
+  return h('p', { className: 'g-dedication', 'data-key': `dedication-${shown.request_id}`, role: 'status' }, shown.from ? `${shown.words} From ${shown.from}.` : shown.words);
+}
+
+async function dedicate(item: Asked, line: Line | null): Promise<void> {
+  if (!host || dedicating) return;
+  dedicating = item.request_id;
+  host.redraw();
+  try {
+    await call(`${host.base()}/requests/${encodeURIComponent(item.request_id)}/dedication`, line ? { method: 'PUT', body: JSON.stringify({ line: line.id }) } : { method: 'DELETE' });
+    host.say(line ? `Dedication added: ${line.words}` : 'Dedication taken off.');
+    choosingFor = '';
+    host.reread();
+  } catch (error) {
+    host.say((error as Error).message);
+  }
+  dedicating = '';
+  host.redraw();
+}
+
+/** On one of this guest's waiting requests: its dedication, and the way to add or change one.
+ * Nothing is typed: the guest picks a line from the room's list. */
+export function dedication(view: RoomView, item: Asked): HTMLElement | null {
+  const lines = features(view).dedications ? view.dedication_lines ?? [] : [];
+  if (!lines.length) return item.dedication_words ? h('span', { className: 'g-detail', 'data-key': 'dedication' }, item.dedication_words) : null;
+  const waiting = item.status === 'sent' || item.status === 'accepted';
+  if (!waiting) return item.dedication_words ? h('span', { className: 'g-detail', 'data-key': 'dedication' }, item.dedication_words) : null;
+  const open = choosingFor === item.request_id;
+  const busy = dedicating === item.request_id;
+  return h('span', { className: 'g-dedicate', 'data-key': 'dedication' },
+    item.dedication_words ? h('span', { className: 'g-detail' }, item.dedication_words) : null,
+    h('button', { type: 'button', className: 'g-link', 'aria-expanded': String(open), 'aria-busy': busy ? 'true' : undefined, onclick: () => { choosingFor = open ? '' : item.request_id; host?.redraw(); } }, item.dedication ? 'Change dedication' : 'Add a dedication'),
+    open ? h('span', { className: 'g-lines', role: 'group', 'aria-label': 'Dedications to choose from' },
+      ...lines.map((line) => h('button', { type: 'button', className: 'g-quiet g-small-button', 'aria-pressed': String(item.dedication === line.id), onclick: () => void dedicate(item, line) }, line.words)),
+      item.dedication ? h('button', { type: 'button', className: 'g-link', onclick: () => void dedicate(item, null) }, 'Take it off') : null) : null);
 }
 
 async function copy(text: string): Promise<boolean> {
