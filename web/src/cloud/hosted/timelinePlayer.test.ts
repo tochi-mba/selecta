@@ -339,6 +339,12 @@ describe('a jump reads only what it needs (T-20261125-3985 part 4)', () => {
     expect(player.state.playing).toBe(false);
   });
 
+  it('a browser with no Web Audio is told so plainly when Play is pressed', async () => {
+    const player = new TimelinePlayer(PARTS, async () => PARTS, () => undefined, { ...quietTimers, context: () => { throw new Error('this browser cannot play audio from a web page.'); }, readUrl, aheadS: 3 });
+    await player.play();
+    expect(player.state).toMatchObject({ playing: false, error: 'this browser cannot play audio from a web page.' });
+  });
+
   it('a decoder that never answers does not hang the player', async () => {
     vi.useFakeTimers();
     try {
