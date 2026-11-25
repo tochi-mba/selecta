@@ -83,5 +83,7 @@ test('a grandfathered account mixes a device song with a hosted one, and the que
   await expect(page).toHaveURL(/\/listen$/);
   const queue = page.getByTestId('queue-sources');
   await expect(queue.locator('li', { hasText: 'Device song' })).toContainText('From this device', { timeout: 20_000 });
-  await expect(queue.locator('li', { hasText: 'Song 1' })).toContainText('From your SelectaDJ Cloud library', { timeout: 20_000 });
+  // the hosted song is looked up as the engine reaches for it, which locally can take some
+  // seconds after the first press of a visit (T-20261125-b2cd)
+  await expect(queue.locator('li', { hasText: 'Song 1' })).toContainText('From your SelectaDJ Cloud library', { timeout: 40_000 });
 });

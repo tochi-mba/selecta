@@ -31,7 +31,9 @@ test('a guest leaving and a screen disconnecting update the host panel by themse
   await phone.setOffline(false);
   await expect(net).toHaveText('Back in the room', { timeout: 20_000 });
 
-  const tv = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  // the screen drifts its picture very slowly against burn-in (display.css), so a pointer never
+  // finds its button still; asked for reduced motion, it holds still to be pressed
+  const tv = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: 'reduce' });
   const screen = await tv.newPage();
   await screen.goto('/display');
   const pairing = (await screen.locator('#d-pairing').textContent()) ?? '';
