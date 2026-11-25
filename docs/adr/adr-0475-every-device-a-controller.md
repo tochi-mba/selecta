@@ -157,7 +157,9 @@ Built (I88): on a remote with music playing, the selection bar offers "Play next
 
 Built (I90): a song's details on a device that is one of several have "Where it lives": this device when it holds the file, each open device ("Open now", or "Open now, playing the music" for the speaker) and each closed one ("Last open 4 minutes ago"), its versions when there are several (format, length, whether on this device, the one mixes use), and one line naming the device where changes that need the file are made. While another device plays it offers "Play next on {speaker}" when the speaker has the file, or "Play on {device}" (the I85 move) when only another open device has it. Proved (`ctl11.js`, phone at 390x844): Calm Down's details listed the laptop as open and playing, with Play next on Edge on Windows; As It Was listed Chrome on Mac, last open 4 minutes ago, with the file line.
 
-Not built yet (to-do items): opening from the cached catalogue (I92).
+Built (I92): the Library opens from the catalogue kept in this browser and replaces it with the server's list when that arrives. A device reporting its songs now publishes `devices.holdings`, and every other open device reads the holdings again at once (also when its page is looked at again), instead of on its next 15-second look; a device that closes drops out when it stops being seen for 30 seconds. Proved (`ctl13.js`, phone at 390x844): five rows of a Mac's songs read "Plays on Chrome on Mac" 3 seconds after the Mac added them, they went back 30 seconds after the Mac closed, and a reload showed the first row in 1.7 seconds.
+
+Section I is built.
 
 ### R12. One account per browser profile, and every tab agrees
 

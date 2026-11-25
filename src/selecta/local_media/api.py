@@ -22,6 +22,7 @@ from selecta.local_media import store, versions
 from selecta.persistence import db_now, transaction
 from selecta.playback import default_speaker
 from selecta.playback.schema import devices as playback_devices
+from selecta.work import outbox
 
 # A library of 20,000 songs is 20 pages: the Library is waiting on the whole list (staging
 # walkthrough item 5, 30 s at 100 a page on staging). A row is a few hundred bytes.
@@ -30,6 +31,8 @@ _MAX_AVAILABILITY_SNAPSHOT_IDS = 20_000
 # ADR-0475: a device counts as online when it was seen this recently. A device with the app
 # open reads its playback session every second or two, which keeps its last-seen time fresh.
 ONLINE_WITHIN_SECONDS = 30.0
+
+HOLDINGS_TOPIC = "devices.holdings"
 
 
 class SongRegistration(BaseModel):
@@ -294,7 +297,13 @@ def install_routes(
             written = report(
                 conn, workspace_id, body.device_id, body.present, body.absent
             )
+            # ADR-0475 I92: the person's other devices read this device's songs again now,
+            # instead of on their next 15-second look
+            now = db_now(conn)
+            outbox.emit(
+                conn, HOLDINGS_TOPIC, workspace_id, {"device_id": body.device_id, "at": now}, now
+            )
         return {"device_id": body.device_id, **written}
 
 
-__all__ = ["install_routes"]
+__all__ = ["HOLDINGS_TOPIC", "install_routes"]

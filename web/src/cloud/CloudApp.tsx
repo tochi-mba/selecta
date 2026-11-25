@@ -7,7 +7,7 @@ import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
 import { START_ANSWER_EVENT, START_ASK_EVENT } from '../devices/playOn';
 import { CURRENT_MIX_EVENT } from './currentMix';
-import { DEFAULT_SPEAKER_EVENT } from '../devices/useHoldings';
+import { DEFAULT_SPEAKER_EVENT, HOLDINGS_EVENT } from '../devices/useHoldings';
 import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
@@ -435,6 +435,7 @@ export function CloudApp() {
     if (event.topic === 'mix.current') window.dispatchEvent(new CustomEvent(CURRENT_MIX_EVENT, { detail: event.payload }));
     if (event.topic === 'lucy.turns') window.dispatchEvent(new Event(LUCY_TURNS_EVENT));
     if (event.topic === 'devices.default_speaker') window.dispatchEvent(new Event(DEFAULT_SPEAKER_EVENT));
+    if (event.topic === 'devices.holdings') window.dispatchEvent(new Event(HOLDINGS_EVENT));
     // a room request the host accepted, waiting for (or gone from) the browser mix's Requests
     if (event.topic === 'requests.room') window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: event.payload }));
     // anything about the open room (a request, a guest, its settings, its end) reaches the shell's
