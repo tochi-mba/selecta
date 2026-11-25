@@ -3,7 +3,7 @@ import { flagOn } from '../flags';
 import {
   assertNoPath, dropFolderSources, factsOf, listWatchedFolders, newFolderId, planCheck, rebaseSources, refreshDeviceAvailability, relationOf,
   rememberFolder, removeWatchedFolder, saveWatchedFolder, songsIn, songsOnlyIn, walkFolder,
-  type FolderState, type ImportSummary, type MediaStore, type StoredFolderHandle, type StoredSong, type WatchedFolder,
+  type FileHandleLike, type FolderState, type ImportSummary, type MediaStore, type StoredFolderHandle, type StoredSong, type WatchedFolder,
 } from '../media';
 import type { Request } from '../media/importer';
 import { showToast } from '../ui/toasts';
@@ -79,7 +79,8 @@ const listeners = new Set<() => void>();
 let parts: Parts | null = null;
 let extras: WatchExtras = {};
 /** Folders waiting their turn, in order; one runs at a time. */
-let queue: { id: string; relink?: boolean }[] = [];
+type Turn = { id: string; relink?: boolean; whole?: boolean };
+let queue: Turn[] = [];
 let running: { id: string; controller: AbortController } | null = null;
 let loop: Promise<void> | null = null;
 /** An automatic check deferred because an import was running. */
@@ -168,12 +169,14 @@ const isNamed = (error: unknown, name: string) => (error as { name?: string } | 
 
 /** One folder's check. Stops cleanly when `signal` fires (EDGE CASE: the member stopped watching
  * the folder while it was being checked): nothing is written back for a folder that is gone. */
-async function checkOne(id: string, signal: AbortSignal, relink: boolean): Promise<void> {
+async function checkOne(id: string, signal: AbortSignal, turn: Turn): Promise<void> {
+  const relink = turn.relink === true;
   const own = parts;
   const row = state.rows?.find((one) => one.id === id);
   if (!own || !row?.handle) return;
   const gone = () => signal.aborted || !state.rows?.some((one) => one.id === id);
   if (await permissionOf(row.handle) === 'ask') { setRow(id, { state: 'permission' }); return; }
+  if (turn.whole) { await readWhole(own, row, signal); return; }
   publish({ checking: { folderId: id, stage: 'looking', done: 0, total: null } });
   let files;
   try {
@@ -210,7 +213,7 @@ async function checkOne(id: string, signal: AbortSignal, relink: boolean): Promi
   if (plan.fresh.length) {
     // never two imports at once: one started meanwhile (by the member) goes first, and this
     // folder waits its turn again
-    if (importSnapshot().phase === 'running') { queue.unshift({ id, relink }); deferred = true; publish({ checking: null }); throw new DeferredCheck(); }
+    if (importSnapshot().phase === 'running') waitTurn(turn);
     publish({ checking: { folderId: id, stage: 'adding', done: 0, total: plan.fresh.length } });
     const marker = readImportMarker(own.workspaceId);
     const summary: ImportSummary | null = await startImport(own, { kind: 'walked', name: row.name, files: plan.fresh.map(({ handle, path }) => ({ handle, path })) }, {
@@ -243,6 +246,34 @@ async function checkOne(id: string, signal: AbortSignal, relink: boolean): Promi
 
 class DeferredCheck extends Error {}
 
+/** Never two imports at once: one the member started meanwhile goes first, and this folder
+ * waits its turn again once it ends. */
+function waitTurn(turn: Turn): never {
+  queue.unshift(turn);
+  deferred = true;
+  publish({ checking: null });
+  throw new DeferredCheck();
+}
+
+/** A folder just added is read whole by the importer, so its progress shows at once (the walk
+ * and the size check would only find that every file is new). */
+async function readWhole(own: Parts, row: FolderRow, signal: AbortSignal): Promise<void> {
+  if (importSnapshot().phase === 'running') waitTurn({ id: row.id, whole: true });
+  const store = await own.openStore();
+  const knownIds = new Set((await store.all()).map((song) => song.songId));
+  publish({ checking: { folderId: row.id, stage: 'adding', done: 0, total: null } });
+  const summary = await startImport(own, row.handle!, { folder: row.name, kind: 'folder', folderId: row.id }).catch(() => null);
+  if (signal.aborted || !state.rows?.some((one) => one.id === row.id)) return;
+  const after = await store.all();
+  const added = after.filter((song) => !knownIds.has(song.songId) && song.sources?.some((one) => one.folderId === row.id)).length;
+  // a stopped or failed first read is not a check: the folder is checked again next time
+  const finished = summary !== null && !summary.cancelled;
+  const next = setRow(row.id, { state: 'watching', checkedAt: finished ? Date.now() : row.checkedAt, songs: songsIn(row.id, after), lastNew: added, missing: 0 });
+  if (next) await persist(next);
+  publish({ checking: null });
+  if (added > 0) showToast(`${countOf(added, 'new song')} from ${row.name}`);
+}
+
 /** Web Locks where the browser has them: EDGE CASE (two tabs open) a folder check never runs in
  * two tabs of this browser at once; the other tab simply does not check this time. */
 type LockManagerLike = { request(name: string, options: { ifAvailable?: boolean }, callback: (lock: unknown) => unknown): Promise<unknown> };
@@ -257,7 +288,7 @@ async function drain(): Promise<void> {
     const controller = new AbortController();
     running = { id: next.id, controller };
     try {
-      await checkOne(next.id, controller.signal, next.relink === true);
+      await checkOne(next.id, controller.signal, next);
     } catch (error) {
       if (error instanceof DeferredCheck) return;
       // a check that fails says so on its row; the next folder still gets its turn
@@ -286,10 +317,10 @@ function runQueue(): Promise<void> {
 }
 
 /** Check these folders now (Check now, Check all, Allow, Choose it again), in order. */
-export function checkFolders(ids: readonly string[], options: { relink?: boolean } = {}): Promise<void> {
+export function checkFolders(ids: readonly string[], options: { relink?: boolean; whole?: boolean } = {}): Promise<void> {
   for (const id of ids) {
     if (running?.id === id || queue.some((item) => item.id === id)) continue;
-    queue.push({ id, ...(options.relink ? { relink: true } : {}) });
+    queue.push({ id, ...(options.relink ? { relink: true } : {}), ...(options.whole ? { whole: true } : {}) });
   }
   return runQueue();
 }
@@ -433,7 +464,7 @@ async function watchNew(handle: StoredFolderHandle): Promise<string> {
   await persist(row);
   // the folder an interrupted import carries on with, as before (and if this flag is turned off)
   if (parts) void rememberFolder(parts.workspaceId, handle);
-  void checkFolders([row.id]);
+  void checkFolders([row.id], { whole: true });
   return row.id;
 }
 
@@ -466,7 +497,8 @@ export function addVisitFolder(files: File[]): void {
   const first = (files[0] as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
   const name = first.split('/')[0] || 'Chosen folder';
   const row: FolderRow = { id: newFolderId(), name, addedAt: Date.now(), checkedAt: Date.now(), songs: null, lastNew: 0, missing: 0, state: 'visit', handle: null, kept: false };
-  publish({ rows: [...(state.rows ?? []), row] });
+  // the same folder chosen again this visit takes its own earlier row's place
+  publish({ rows: [...(state.rows ?? []).filter((one) => !(one.state === 'visit' && one.name === name)), row] });
   void own.openStore().then(async (store) => {
     const before = new Set((await store.all()).map((song) => song.songId));
     const summary = await startImport(own, files, { folder: name, kind: 'files', folderId: row.id }).catch(() => null);
@@ -475,6 +507,14 @@ export function addVisitFolder(files: File[]): void {
     setRow(row.id, { songs: songsIn(row.id, after), lastNew: added, checkedAt: Date.now() });
     if (summary && added > 0) showToast(`${countOf(added, 'new song')} from ${name}`);
   });
+}
+
+/** Songs (or folders) dropped onto the page as files, through the same one import. */
+export function importLooseHandles(handles: FileHandleLike[]): void {
+  const own = parts;
+  if (!own || !handles.length) return;
+  const marker = readImportMarker(own.workspaceId);
+  void startImport(own, handles, { kind: 'files', resume: marker && !marker.folderId ? marker : null });
 }
 
 /** Allow, from the member's press: one prompt restores every song in the folder at once, then

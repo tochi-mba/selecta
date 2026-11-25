@@ -1,6 +1,6 @@
 import { cloneElement, isValidElement, ReactElement, ReactNode, Ref, useEffect, useRef, useState } from 'react';
 import type { Status as AppStatus } from '../api';
-import { useFlags } from '../flags';
+import { useFlag, useFlags } from '../flags';
 import { forgetFolder, recallFolder, storageSpace, type ImportSummary, type MediaStore, type StorageSpace, type StoredFolderHandle } from '../media';
 import type { WorkshopTab } from '../router';
 import { PageLink } from '../shell/PageLink';
@@ -18,6 +18,7 @@ import { bytes } from './api';
 import { OnlyOnYourComputer } from './LocalFirstEmpty';
 import { readPersistState, subscribePersist, type PersistState } from './persistence';
 import { StorageCard } from './StorageCard';
+import { MusicFolders } from './MusicFolders';
 import './libraryWorkspace.css';
 
 /** Workspace in browser-first Cloud (`cloud.workspace`).
@@ -248,6 +249,28 @@ function Sources({ status, workspaceId, connect }: { status: AppStatus; workspac
   }, [workspaceId, live.phase]);
   const songs = status.counts.music ?? 0;
   const playable = status.counts.ready ?? 0;
+  const watching = useFlag('cloud.music_folders');
+  const openHere = songs > 0 && (
+    <li>
+      <span className="lw-source-mark" aria-hidden="true"><Icon name="music" /></span>
+      <div>
+        <b>{`${formatCount(playable)} of ${formatCount(songs)} songs open here`}</b>
+        <span>{playable < songs ? 'The rest are on your other devices, or need choosing again in this browser.' : 'Every song in your library can play in this browser.'}</span>
+      </div>
+      <div className="lw-source-actions"><PageLink to="/library" className="button">Open Library</PageLink></div>
+    </li>
+  );
+  if (watching) {
+    // cloud.music_folders: Your music folders is how music is connected here; Connect music keeps
+    // its progress, results and pickers above it
+    return (
+      <div className="lw-stack">
+        {connectAs(connect, 'status', handle, status)}
+        <MusicFolders workspaceId={workspaceId} variant="full" onAddFolder={() => handle.current?.chooseFolder()} onChooseSongs={() => handle.current?.chooseSongs()} />
+        {openHere && <section className="ui-card" aria-label="Songs open here"><ul className="lw-sources">{openHere}</ul></section>}
+      </div>
+    );
+  }
   return (
     <div className="lw-stack">
       {connectAs(connect, 'card', handle, status)}
@@ -268,16 +291,7 @@ function Sources({ status, workspaceId, connect }: { status: AppStatus; workspac
                 </div>
               </li>
             )}
-            {songs > 0 && (
-              <li>
-                <span className="lw-source-mark" aria-hidden="true"><Icon name="music" /></span>
-                <div>
-                  <b>{`${formatCount(playable)} of ${formatCount(songs)} songs open here`}</b>
-                  <span>{playable < songs ? 'The rest are on your other devices, or need choosing again in this browser.' : 'Every song in your library can play in this browser.'}</span>
-                </div>
-                <div className="lw-source-actions"><PageLink to="/library" className="button">Open Library</PageLink></div>
-              </li>
-            )}
+            {openHere}
             {!folder && songs === 0 && (
               <li className="lw-sources-empty">
                 <span className="lw-source-mark" aria-hidden="true"><Icon name="folder" /></span>

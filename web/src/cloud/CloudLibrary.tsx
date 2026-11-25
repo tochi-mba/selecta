@@ -9,6 +9,7 @@ import type { ViewProps } from '../views/shared';
 import { ConnectMusic, summaryWords, type ConnectMusicHandle } from './ConnectMusic';
 import { formatCount } from './ImportStatus';
 import { useImportSession } from './importSession';
+import { MusicFolders } from './MusicFolders';
 import './libraryWorkspace.css';
 
 const KEEP_SAID = 'selecta.library.keep-said';
@@ -149,6 +150,8 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
           </p>
         )}
         <ConnectMusic {...connectProps} ref={handle} variant="status" />
+        {/* cloud.music_folders: the folders this browser watches, folded away unless one needs you */}
+        <MusicFolders workspaceId={connect.workspaceId} variant="compact" onAddFolder={() => handle.current?.chooseFolder()} onChooseSongs={() => handle.current?.chooseSongs()} />
       </div>
     )} />
   );

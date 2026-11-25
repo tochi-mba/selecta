@@ -47,7 +47,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `business/switcher/switcher.css` | workspace switcher menu and context display band | `business/switcher/WorkspaceSwitcher.tsx` |
 | `cloud/account.css` | the settings area: the section list, titled cards, plan and usage rows | `cloud/AccountLayout.tsx` |
 | `cloud/cloudMusic.css` | the Cloud shell's music pages: Make a Mix, Listen, My Mixes and their guided empty pages | `cloud/LocalFirstEmpty.tsx`, `cloud/QuickMix.tsx`, `cloud/SavedBrowserMixes.tsx`, `cloud/SoundCheck.tsx` |
-| `cloud/libraryWorkspace.css` | the Cloud Library and Workspace: connect music, import progress, the song list toolbar and the storage card | `cloud/CloudLibrary.tsx`, `cloud/CloudWorkspace.tsx`, `cloud/ConnectMusic.tsx`, `cloud/ImportChip.tsx`, `cloud/StorageCard.tsx` |
+| `cloud/libraryWorkspace.css` | the Cloud Library and Workspace: connect music, import progress, the song list toolbar and the storage card | `cloud/CloudLibrary.tsx`, `cloud/CloudWorkspace.tsx`, `cloud/ConnectMusic.tsx`, `cloud/ImportChip.tsx`, `cloud/MusicFolders.tsx`, `cloud/StorageCard.tsx` |
 | `cloud/makeCloudMix.css` | Cloud mix creation interface layout and controls | `cloud/MakeCloudMix.tsx` |
 | `cloud/hosted/hostedMix.css` | The server-rendered hosted mix card on Make a Mix (cloud.hosted_render) | `cloud/hosted/HostedMix.tsx` |
 | `cloud/connection.css` | the connection banner and the buttons that wait for the server while offline | `cloud/ConnectionBanner.tsx`, `rooms/RoomPanel.tsx` |
