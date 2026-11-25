@@ -404,7 +404,11 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
       ? { calibration: seams.workerCalibration, deviceId: seams.deviceId, atFloor: false, deadlineMisses: 0 }
       : null;
     const stretch = await engine.stretchEvidence();
-    let roster = engine.roster({ probe, workerBudget: budgetEvidence, stretch });
+    // the limiter that really went in, once the speaker has installed it: without it the roster
+    // named the compressor fallback even when the worklet limiter was running
+    let limiter: Awaited<ReturnType<BrowserSpeaker['limiter']>> | null = null;
+    const rosterNow = () => engine.roster({ probe, limiter, workerBudget: budgetEvidence, stretch });
+    let roster = rosterNow();
     const seam = seams ? provider.makeWorkerSeamProvider({
       ...seams,
       calibration: seams.workerCalibration,
@@ -419,7 +423,7 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
             atFloor: !state.supported,
             deadlineMisses: state.deadlineMisses,
           };
-          roster = engine.roster({ probe, workerBudget: budgetEvidence, stretch });
+          roster = rosterNow();
         }
       },
     }) : undefined;
@@ -431,6 +435,7 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
       planAhead: seamLeadOn,
       level: (buffer) => (seamLeadOn() ? songLevels().of(buffer) : Promise.resolve(1)),
     });
+    void speaker.limiter().then((installed) => { limiter = installed; roster = rosterNow(); }, () => undefined);
     return { speaker, refusal: probe.ok ? null : probe.reason };
   } catch (problem) {
     engine.dispose();

@@ -2,6 +2,8 @@ import type { MediaResolver, MediaStore, StoredSong } from '../media';
 import { TONAL_PROFILE_IMPLEMENTATION, type TonalProfile } from '../dsp/analysis/tonalProfile';
 import { derivedStore, withHashLock, type DerivedStore } from '../media/derived';
 import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
+import { seamWorkIdle } from '../dsp/seamWork';
+import { flagOn } from '../flags';
 
 /** Browser tonal profiles and harmonic-match answers (cloud.browser_harmonic).
  *
@@ -287,6 +289,8 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
         const waiting = (await media.all()).filter((song) => !known.has(song.identity.content_sha256) && !unreachable.has(song.songId));
         for (const song of waiting) {
           await spareTime(options.playing() ? PLAYING_GAP_MS : IDLE_GAP_MS, isStopped);
+          // a transition being prepared comes first: wait for it before reading the next song
+          if (flagOn('cloud.seam_lead')) await seamWorkIdle();
           if (stopped) break;
           try {
             await measure(song.songId, song.identity.content_sha256);
