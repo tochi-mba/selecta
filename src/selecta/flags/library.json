@@ -103,7 +103,8 @@
       "label": "Covers from your own files",
       "about": "Shows the cover picture stored inside a song's own file. In Cloud it is read on your device and never uploaded (ADR-0478). Off: the generated colour tile, as before.",
       "kind": "release",
-      "owner": "library"
+      "owner": "library",
+      "routes": ["GET /api/songs/{song_id}/art"]
     },
     "library.art_lookup": {
       "label": "Covers and song details from the web",
