@@ -55,6 +55,7 @@ from selecta.business import start_routes as business_start_routes
 from selecta.business import workspace_routes as business_workspace_routes
 from selecta.business import zone_speaker_routes as business_zone_speaker_routes
 from selecta.business.people import routes as business_people_routes
+from selecta.catalog import routes as catalog_routes
 from selecta.devstack import guard as dev_guard
 from selecta.flags import cloud_gate, targeting
 from selecta.flags import guard as flag_guard
@@ -920,12 +921,10 @@ def create_cloud_app(
         buckets=storage_api.buckets(),
     )
 
-    lucy_cloud_settings.install_routes(
-        app, engine=engine, current_claims=current_claims, principal_for=_principal
-    )
-    lucy_cloud_routes.install_routes(
-        app, engine=engine, current_claims=current_claims, principal_for=_principal
-    )
+    for cloud_routes in (lucy_cloud_settings, lucy_cloud_routes, catalog_routes):  # +ADR-0478
+        cloud_routes.install_routes(
+            app, engine=engine, current_claims=current_claims, principal_for=_principal
+        )
     # Autopilot venue mode and venue policy (ADR-0424, ADR-0425); refused while the flags are off.
     autopilot_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal

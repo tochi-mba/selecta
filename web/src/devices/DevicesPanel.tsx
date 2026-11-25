@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { CSSProperties, FormEvent, KeyboardEvent, ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Badge, Notice, SettingsCard } from '../cloud/AccountLayout';
 import { Action } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -8,6 +8,8 @@ import { showToast } from '../ui/toasts';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { Api, Device, DEVICE_REGISTERED } from './usePlaybackDevice';
 import { flagOn } from '../flags';
+import { feelOn } from '../feel/root';
+import { FOLD_FALLBACK_MS } from '../rooms/feelHooks';
 import './devices.css';
 
 // Account > Devices: every browser signed in to this account, this one first and then the most
@@ -44,6 +46,32 @@ function exactWords(epochSeconds: number) {
   return new Date(epochSeconds * 1000).toLocaleString(userLocale(), { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+/** A device that was just signed out and is no longer listed, drawn where it was only while its
+ * row folds away (ADR-0477). `order` staggers a group signed out together into a cascade. */
+type Folding = { device: Listed; index: number; order: number };
+
+function FoldingRow({ folding, onGone }: { folding: Folding; onGone: () => void }) {
+  const row = useRef<HTMLLIElement>(null);
+  const gone = useRef(onGone);
+  gone.current = onGone;
+  useEffect(() => {
+    const element = row.current;
+    // only the row's own fold counts; with no animation (calm) the timer ends it
+    const ended = (event?: Event) => { if (!event || event.target === element) gone.current(); };
+    element?.addEventListener('animationend', ended);
+    const timer = window.setTimeout(ended, FOLD_FALLBACK_MS + folding.order * 60);
+    return () => { element?.removeEventListener('animationend', ended); window.clearTimeout(timer); };
+  }, [folding.order]);
+  const { device } = folding;
+  return (
+    <li ref={row} className="devices-row feel-collapse-out" aria-hidden="true" inert
+      style={{ animationDelay: `calc(${Math.min(folding.order, 8)} * var(--motion-stagger))` } as CSSProperties}>
+      <span className="devices-icon"><Icon name={KIND_ICONS[device.kind] ?? 'system'} /></span>
+      <div className="devices-main"><span className="devices-name"><strong dir="auto">{device.name}</strong></span></div>
+    </li>
+  );
+}
+
 export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
   api: Api;
   workspaceId: string;
@@ -64,6 +92,12 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
   const [songs, setSongs] = useState<Map<string, number> | null>(null);
   const speakerChoice = flagOn('devices.remote_control');
   const [thisDevice, setThisDevice] = useState<string | null>(() => { try { return localStorage.getItem(`selecta.device.${workspaceId}`); } catch { return null; } });
+  // ADR-0477: the row just renamed shows its new name arriving in place
+  const [renamedNow, setRenamedNow] = useState<string | null>(null);
+  // devices signed out from here, until the next read says whether they are still listed; and those
+  // that are not, folding away where they were
+  const signingOut = useRef(new Map<string, Folding>());
+  const [folding, setFolding] = useState<Folding[]>([]);
   // after a rename ends (saved or cancelled), focus goes back to that row's Rename button
   const renamed = useRef<string | null>(null);
   const list = useRef<HTMLUListElement>(null);
@@ -105,6 +139,7 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
       await api(`/devices/${encodeURIComponent(device.id)}`, { method: 'PATCH', body: JSON.stringify({ name: next }) }, workspaceId);
       // the row shows its new name at once; the list is read again behind it
       setDevices((was) => was && was.map((row) => (row.id === device.id ? { ...row, name: next } : row)));
+      setRenamedNow(device.id);
       stopEditing(device);
       showToast(`Renamed to ${next}.`);
       await load();
@@ -118,9 +153,35 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
       showToast(device ? `${device.name} is your default speaker. Used the next time nothing is playing.` : 'No default speaker. SelectaDJ asks where to play when more than one device could.');
     } catch (problem) { showToast((problem as Error).message || 'Couldn’t change the default speaker.', { tone: 'problem' }); }
   };
+  /** Kept before the list is read again, so a device the server stops listing folds away. */
+  const noteSignedOut = (device: Device, order: number) => {
+    if (!feelOn('motion')) return;
+    const index = ordered.findIndex((one) => one.id === device.id);
+    if (index >= 0) signingOut.current.set(device.id, { device: ordered[index], index, order });
+  };
+  // before the new list is painted: a device signed out here that is no longer listed folds away
+  useLayoutEffect(() => {
+    if (!devices || !signingOut.current.size) return;
+    const gone: Folding[] = [];
+    for (const [id, was] of signingOut.current) if (!devices.some((device) => device.id === id)) gone.push(was);
+    signingOut.current.clear();
+    if (gone.length) setFolding((now) => [...now, ...gone]);
+  }, [devices]);
+  const dropFolding = (id: string) => setFolding((now) => now.filter((one) => one.device.id !== id));
+  /** The rows that stay, with each folding row back in the place it had (earliest place first,
+   * so each insert counts the folding rows already put back). */
+  const withFolding = (rows: ReactNode[]): ReactNode[] => {
+    const all = [...rows];
+    for (const one of [...folding].sort((a, b) => a.index - b.index)) {
+      all.splice(Math.min(one.index, all.length), 0, <FoldingRow key={`gone-${one.device.id}`} folding={one} onGone={() => dropFolding(one.device.id)} />);
+    }
+    return all;
+  };
+
   // Throws on refusal, so the confirmation stays open and says what went wrong.
   const signOut = async (device: Device) => {
     await api(`/devices/${encodeURIComponent(device.id)}/sign-out`, { method: 'POST' }, workspaceId);
+    noteSignedOut(device, 0);
     showToast(`${device.name} was signed out.`);
     setError('');
     await load();
@@ -140,9 +201,13 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
   // One at a time, so a refusal part-way says how many are still signed in.
   const signOutOthers = async () => {
     let failed = 0;
+    let order = 0;
     for (const device of others) {
-      try { await api(`/devices/${encodeURIComponent(device.id)}/sign-out`, { method: 'POST' }, workspaceId); }
-      catch { failed += 1; }
+      try {
+        await api(`/devices/${encodeURIComponent(device.id)}/sign-out`, { method: 'POST' }, workspaceId);
+        noteSignedOut(device, order);
+        order += 1;
+      } catch { failed += 1; }
     }
     await load();
     const done = others.length - failed;
@@ -161,7 +226,7 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
       id="devices"
       className="devices-panel"
       title={titled ? 'Devices' : 'Signed-in devices'}
-      badge={devices && devices.length > 0 ? <Badge tone={full ? 'warn' : undefined}><span className="devices-count">{`${signedIn} of ${limit} signed in`}</span></Badge> : undefined}
+      badge={devices && devices.length > 0 ? <Badge tone={full ? 'warn' : undefined}><span className="devices-count">{`${signedIn} of ${limit} signed in`}</span><i className="devices-meter" aria-hidden="true" style={{ '--fill': String(Math.min(1, signedIn / Math.max(1, limit))) } as CSSProperties} /></Badge> : undefined}
       about={`Sign in on up to ${limit} devices. One plays the music at a time; the others work as remotes.`}
       actions={full ? undefined : bulk}
       busy={!devices && !error}
@@ -195,11 +260,11 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
         </div>
       )}
       {sameNames && <p className="acct-help">Some devices share a name. Rename them, for example “Kitchen laptop”, to tell them apart.</p>}
-      {ordered.length > 0 && (
+      {(ordered.length > 0 || folding.length > 0) && (
         <ul className="devices-list" ref={list}>
-          {ordered.map((device) => {
+          {withFolding(ordered.map((device) => {
             const out = device.signed_in === false;
-            return (
+            const row = (
               <li key={device.id} className="devices-row" data-testid="device-row" data-this={device.this_device || undefined} data-out={out || undefined}>
                 <span className="devices-icon" aria-hidden="true"><Icon name={KIND_ICONS[device.kind] ?? 'system'} /></span>
                 {editing === device.id ? (
@@ -229,7 +294,8 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
                   <>
                     <div className="devices-main">
                       <span className="devices-name">
-                        <strong dir="auto">{device.name}</strong>
+                        {/* keyed by the name, so a rename arrives as a new name in place */}
+                        <strong dir="auto" key={device.name} data-arrive={renamedNow === device.id ? '' : undefined}>{device.name}</strong>
                         {device.this_device && <span className="devices-this"><Icon name="check" size="compact" />This device</span>}
                       </span>
                       <span className="devices-seen">
@@ -255,7 +321,8 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
                 )}
               </li>
             );
-          })}
+            return row;
+          }))}
         </ul>
       )}
       {forgetting && (

@@ -11,7 +11,9 @@ import { supportHref } from '../support';
 // page (Welcome.tsx): checking the sign-in, signing in again, verifying an email, the one-question
 // workspace set-up, an account that is blocked or could not be read, and waiting offline. They
 // share one frame: the brand, one card with one clear action, who is signed in, and the credit.
-// Styles: styles/boot.css (.gate).
+// Styles: styles/boot.css (.gate). With the feel system on (ADR-0477) the card arrives on the
+// spring and the brand is named "brand-mark", so a page change that can travel carries it into the
+// rail's mark (styles/feel-entry.css, styles/feel-scene.css).
 
 /** Who makes SelectaDJ, at the foot of every screen outside the app. */
 export function GateFoot() {
@@ -102,8 +104,8 @@ export function GateScreen({ eyebrow, icon, tone, title, children, actions, acco
   return (
     <main className="gate" data-gate={kind}>
       <div className="gate-body">
-        <p className="gate-brand"><BrandMark className="small" /><span>SelectaDJ</span></p>
-        <section className="gate-card" data-tone={tone} role={alert ? 'alert' : undefined}>
+        <p className="gate-brand" data-vt="brand-mark"><BrandMark className="small" /><span>SelectaDJ</span></p>
+        <section className="gate-card" data-tone={tone} role={alert ? 'alert' : undefined} data-arrive="">
           {eyebrow && <p className="gate-eyebrow">{icon && <Icon name={icon} size="compact" />}{eyebrow}</p>}
           <h1>{title}</h1>
           {children}
@@ -205,8 +207,8 @@ export function AccountProblemPage({ kind, onRetry, onSignOut, retrying, email }
   return (
     <main className="gate" data-gate="account-problem" data-account-problem={kind}>
       <div className="gate-body">
-        <p className="gate-brand"><BrandMark className="small" /><span>SelectaDJ</span></p>
-        <section className="gate-card" data-tone="problem">
+        <p className="gate-brand" data-vt="brand-mark"><BrandMark className="small" /><span>SelectaDJ</span></p>
+        <section className="gate-card" data-tone="problem" data-arrive="">
           <p className="gate-eyebrow"><Icon name="warning" size="compact" />{PROBLEM_EYEBROW[kind]}</p>
           <h1>{words.title}</h1>
           <p role="alert">{words.detail}</p>

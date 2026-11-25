@@ -31,8 +31,8 @@ import { tabLog } from '../devices/audioTab';
  *   is and its lease is fresh. A lapsed lease (`state_confidence` uncertain) is never 'playing'.
  * - `notice` carries the one status vocabulary (copy.ts); a passing probe or a running graph never
  *   claims audible sound, only a person's sound-check confirmation does.
- * - What the engine cannot do yet is an honest no-op with a reason, never a silent success:
- *   the spectrum (no analyser is exposed).
+ * - The spectrum and the visualizer taps come from the engine's analyser as a read-only side
+ *   branch (ADR-0477), and only while this device makes the sound; otherwise they are null.
  * - Planned transitions (BF-0459-04): the speaker gets a seam provider (dsp/seamProvider.ts) that
  *   scripts each seam from the mix's seam settings and this device's capability record; the
  *   state's `nextReady`/`seamAt`/`inSeam` come from the schedule actually handed to the
@@ -353,12 +353,14 @@ export class LocalFirstPlayer implements PlayerLike {
     this.publish('');
   }
 
+  /** The engine's own analyser, read only (ADR-0477), and only while the music is made on this
+   * device. Playing on another device there is nothing here to measure, so this stays null. */
   getSpectrum(): Uint8Array | null {
-    return null;
+    return this.speaking ? this.actions.speaker?.spectrum() ?? null : null;
   }
 
   getVisualTaps(): { left: AnalyserNode; right: AnalyserNode } | null {
-    return null;
+    return this.speaking ? this.actions.speaker?.spectrumTaps() ?? null : null;
   }
 }
 

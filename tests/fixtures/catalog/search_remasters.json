@@ -1,0 +1,37 @@
+{
+  "created": "2026-11-25T12:00:00.000Z",
+  "count": 3,
+  "offset": 0,
+  "recordings": [
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000001",
+      "score": 100,
+      "title": "Lanterns Over the Water",
+      "length": 241000,
+      "artist-credit": [{"name": "Night Harbour", "joinphrase": "", "artist": {"id": "eeeeeeee-0000-4000-8000-000000000001", "name": "Night Harbour"}}],
+      "releases": [
+        {"id": "bbbbbbbb-0000-4000-8000-000000000002", "title": "Low Tide", "status": "Official", "date": "2024-05-10", "country": "GB",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000002", "primary-type": "Album", "secondary-types": []}}
+      ]
+    },
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000002",
+      "score": 100,
+      "title": "Lanterns Over the Water",
+      "length": 242400,
+      "artist-credit": [{"name": "Night Harbour", "joinphrase": "", "artist": {"id": "eeeeeeee-0000-4000-8000-000000000001", "name": "Night Harbour"}}],
+      "releases": [
+        {"id": "bbbbbbbb-0000-4000-8000-000000000004", "title": "Low Tide (10th Anniversary Remaster)", "status": "Official", "date": "2034-05-10", "country": "GB",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000002", "primary-type": "Album", "secondary-types": []}}
+      ]
+    },
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000009",
+      "score": 61,
+      "title": "Harbour",
+      "length": 199000,
+      "artist-credit": [{"name": "Night Harbour", "joinphrase": "", "artist": {"id": "eeeeeeee-0000-4000-8000-000000000001", "name": "Night Harbour"}}],
+      "releases": []
+    }
+  ]
+}

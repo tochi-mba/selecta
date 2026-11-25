@@ -6,6 +6,8 @@ import { DraftNames, getDraftNames } from '../state/draftNames';
 import { MixReadiness, orderOf } from '../state/readiness';
 import { Status, StatusKind } from '../ui/controls';
 import { TransitionsWorkedOutLive } from './liveTransitions';
+import { useFeelOn } from './feelPieces';
+import { MixArt } from './MixArt';
 
 /** A short name for this exact order of songs, so "the mix I was looking at" and "the mix now" can be
  * told apart at a glance. It's a label, not a security check: the x-mix-order header is what guards a
@@ -80,6 +82,9 @@ export function EditorHeader(props: {
   const live = useContext(TransitionsWorkedOutLive);
   const facts = readinessWords(readiness, live);
   const { seams, ready } = readiness;
+  // the feel (ADR-0477): the mix's face, the destination a saved mix's tile travels to on Edit.
+  // With every feel part off nothing is drawn here.
+  const feel = useFeelOn();
   return (
     <header className="editor-head">
       <div className={`editor-scope ${inDraft ? 'is-draft' : 'is-current'}`} role="group" aria-label="What you’re editing">
@@ -97,6 +102,7 @@ export function EditorHeader(props: {
       <div className="mix-head">
         <div>
           {switcher}
+          {feel && <MixArt seed={mixName} songs={mix} travels />}
           <p className="eyebrow">{inDraft ? 'Draft · saved as you edit' : 'Current mix'}</p>
           <h1 className="display small">{mixName}</h1>
           <p className="lede">

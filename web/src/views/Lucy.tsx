@@ -389,7 +389,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
       {convo.load.state === 'loading' && !pending && <Skeleton lines={4} label="Opening this conversation" />}
       {convo.load.state === 'failed' && <Problem retry={convo.reload}>Couldn’t open this conversation{convo.load.message ? `: ${convo.load.message}` : '.'}</Problem>}
       {convo.load.state === 'missing' ? (
-        <div className="lucy-gate">
+        <div className="lucy-gate" data-glow data-arrive>
           <p><b>This conversation isn’t here any more.</b> It may have been deleted. Drafts saved from it are still in My Mixes.</p>
           <PageLink to="/mixes/lucy" className="button primary">Start a new conversation</PageLink>
         </div>
@@ -419,7 +419,7 @@ export function Lucy({ conversation, setMixData, player, request, settingsPanel 
         </p>
       )}
       <div className="lucy-dock">
-        {sticky.fresh > 0 && <button type="button" className="lucy-new" onClick={sticky.jump}>New messages ({sticky.fresh})</button>}
+        {sticky.fresh > 0 && <button type="button" className="lucy-new feel-pop" onClick={sticky.jump}>New messages ({sticky.fresh})</button>}
         <Composer
           value={unsent.text}
           onChange={unsent.change}

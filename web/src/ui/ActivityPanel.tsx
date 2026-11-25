@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { CSSProperties, useEffect, useState } from 'react';
 import { ActivityEntry, blockedBy, clearFinishedActivity, markActivitySeen, runUndo, useActivity } from '../state/activity';
 import { Action, Status } from './controls';
 import { LinkIfThere } from '../shell/PageLink';
@@ -10,10 +10,10 @@ function when(at: number, now: number): string {
   return minutes < 60 ? `${minutes} min ago` : `${Math.round(minutes / 60)} hr ago`;
 }
 
-function Row({ entry, all, now }: { entry: ActivityEntry; all: ActivityEntry[]; now: number }) {
+function Row({ entry, all, now, index }: { entry: ActivityEntry; all: ActivityEntry[]; now: number; index: number }) {
   const newer = blockedBy(entry, all);
   return (
-    <li className={`activity-row ${entry.tone}`}>
+    <li className={`activity-row ${entry.tone}`} style={{ '--i': index } as CSSProperties}>
       <div>
         <p>{entry.message}</p>
         <small className="soft">{when(entry.at, now)}</small>
@@ -72,8 +72,9 @@ export function ActivityPanel() {
   const finished = entries.some((entry) => entry.undoState === 'undone');
   return (
     <section className="activity" aria-label="Recent activity">
-      <ul className="activity-list">
-        {entries.map((entry) => <Row key={entry.id} entry={entry} all={entries} now={now} />)}
+      {/* ADR-0477: rows slide in one after another when the panel opens, and a new one as it arrives */}
+      <ul className="activity-list" data-stagger="">
+        {entries.map((entry, index) => <Row key={entry.id} entry={entry} all={entries} now={now} index={index} />)}
       </ul>
       {finished && <button onClick={clearFinishedActivity}>Clear finished</button>}
     </section>

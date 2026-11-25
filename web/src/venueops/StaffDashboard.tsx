@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { useLiveFlash } from '../business/feelBits';
 import { FlagId, useFlag } from '../flags';
 import { CommandKind, DashboardState, STEERING, StaffCommand } from './staffApi';
 import './staffDashboard.css';
@@ -36,7 +37,7 @@ const NAV_WORDS: Record<DashboardState['nav'], string> = {
 
 function CommandRow({ command }: { command: StaffCommand }) {
   return (
-    <li className={`staff-command is-${command.state}`} data-state={command.state}>
+    <li className={`staff-command is-${command.state}`} data-state={command.state} data-live-key={`${command.id}:${command.state}`}>
       <span className="staff-command-state">{command.state === 'pending' ? 'Waiting' : command.state === 'applied' ? 'Done' : command.state === 'superseded' ? 'Replaced' : 'Not done'}</span>
       <span>{command.words}</span>
     </li>
@@ -51,6 +52,10 @@ export function StaffDashboard(props: StaffDashboardProps) {
 
 function Dashboard({ state, onCommand, onStop, genres = [], link }: StaffDashboardProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // A change that lands while the page is open glows once (ADR-0477, calm profile); the first state
+  // the page draws stays still.
+  const changes = useRef<HTMLElement>(null);
+  useLiveFlash(changes, state ? [...state.pending, ...state.applied].map((command) => `${command.id}:${command.state}`) : null);
   // The page arrives after async flag and session checks. Orient keyboard and screen reader
   // visitors at its title; the -1 target stays out of the ordinary Tab sequence.
   useEffect(() => { headingRef.current?.focus(); }, []);
@@ -119,7 +124,7 @@ function Dashboard({ state, onCommand, onStop, genres = [], link }: StaffDashboa
         </div>
       </section>
 
-      <section className="staff-changes" aria-labelledby="staff-changes-title">
+      <section ref={changes} className="staff-changes" aria-labelledby="staff-changes-title">
         <h2 id="staff-changes-title">Changes</h2>
         <p className="staff-live" role="status" aria-live="polite" aria-atomic="true" data-testid="staff-announcement">{state?.announcement ?? ''}</p>
         <h3>Waiting</h3>

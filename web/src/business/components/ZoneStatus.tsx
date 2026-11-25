@@ -2,6 +2,7 @@
 
 import { Status, StatusKind } from '../../ui/controls';
 import { MANAGER_COPY } from '../copy/states';
+import { useChangePing } from '../feelBits';
 import { duration, venueTime, weekdayTime } from '../time';
 import type { Venue, Zone, ZonePlayState } from '../types';
 
@@ -31,7 +32,12 @@ export function zoneWords(state: ZonePlayState, zone: Zone, venue: Venue, now: n
 }
 
 export function ZoneStatus({ state, zone, venue, now }: { state: ZonePlayState; zone: Zone; venue: Venue; now: number }) {
-  return <Status kind={MARK[state]}>{zoneWords(state, zone, venue, now)}</Status>;
+  // The mark is a still beacon that pings once when the zone's state really changes (ADR-0477,
+  // calm profile): the wrapper is keyed anew, so its mark replays .feel-pop. Until the first change,
+  // and always with motion off, the status is drawn exactly as before with no wrapper.
+  const pings = useChangePing(state);
+  const status = <Status kind={MARK[state]}>{zoneWords(state, zone, venue, now)}</Status>;
+  return pings ? <span key={pings} className="biz-beacon">{status}</span> : status;
 }
 
 /** Song and artist, two lines each at most, full text in the accessible name and tooltip (D5). */

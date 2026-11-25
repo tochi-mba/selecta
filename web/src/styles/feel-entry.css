@@ -1,0 +1,217 @@
+/* The feel system (ADR-0477): the feel system applied to boot, Welcome, the sign-in screens and onboarding.
+ * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
+ * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md.
+ *
+ * Where boot.css or cloud.css already give an element its own arrival (rise-in, with a class
+ * selector), the shared data-arrive and data-stagger rules (zero specificity) cannot win, so the
+ * rules below name the element to replace that arrival with the spring. Without the data-feel word
+ * they match nothing and the old arrival stays.
+ *
+ * Keyframes added here, none of which loop:
+ *   feel-sweep            arrives       a band of lime light crosses "seamlessly." once
+ *   feel-line-down        arrives       the Welcome step line draws down as it scrolls in (phone)
+ *   feel-line-across      arrives       the same line drawn across (wide pages)
+ *   feel-arrive-forward   arrives       an onboarding step card coming in from the side ahead
+ *   feel-arrive-back      arrives       an onboarding step card coming back in from the side behind */
+
+/* ---------- Welcome: the lit word ---------- */
+
+/* The sweep is painted under the word's letters and over its own fill, and ends off the word, so
+   Still (no time) and an old browser show the word exactly as it rests. It starts once the word
+   has risen into place. */
+:where(:root[data-feel~='motion']) .welcome-word.lit { position: relative; isolation: isolate; }
+:where(:root[data-feel~='motion']) .welcome-word.lit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, color-mix(in srgb, var(--motif) 45%, transparent) 50%, transparent 62%) no-repeat;
+  background-size: 300% 100%;
+  background-position: 0 0;
+  animation: feel-sweep calc(var(--motion-spring-glide) * 3) var(--motion-ease) both;
+  animation-delay: calc(var(--i, 0) * var(--motion-feedback) + var(--motion-slow));
+}
+@keyframes feel-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+/* ---------- Welcome: benefit cards ---------- */
+
+/* The cards carry data-lift and data-glow (feel.css); the icon inside answers the hand with a small
+   turn on the release spring. The icon is not a control, so it may move. */
+:where(:root[data-feel~='motion']) .welcome-benefit-icon > svg {
+  transition: scale var(--motion-spring-release) var(--spring-bouncy), rotate var(--motion-spring-release) var(--spring-bouncy);
+}
+:where(:root[data-feel~='depth']) .welcome-benefit-icon {
+  transition: border-color var(--motion-fast) var(--motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='motion']) .welcome-benefits li:hover .welcome-benefit-icon > svg { scale: 1.15; rotate: -8deg; }
+  :where(:root[data-feel~='depth']) .welcome-benefits li:hover .welcome-benefit-icon { border-color: var(--primary-edge); }
+}
+:where(:root[data-feel~='motion']) .welcome-benefits li:focus-within .welcome-benefit-icon > svg { scale: 1.15; rotate: -8deg; }
+:where(:root[data-feel~='depth']) .welcome-benefits li:focus-within .welcome-benefit-icon { border-color: var(--primary-edge); }
+
+/* ---------- Welcome: the three steps ---------- */
+
+/* They count in one after another on the spring; where the browser ties an animation to scrolling,
+   each arrives as it comes into view (as boot.css already does), and the line from one number to
+   the next draws itself as the step scrolls in. */
+:root[data-feel~='motion'] .welcome-steps ol[data-stagger] > li {
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) both;
+  animation-delay: calc((min(var(--i, 0), 8) + 9) * var(--motion-feedback));
+}
+@supports (animation-timeline: view()) {
+  :root[data-feel~='motion'] .welcome-steps ol[data-stagger] > li {
+    view-timeline: --feel-step block;
+    animation-timeline: view();
+    animation-range: entry 0% entry 80%;
+    animation-delay: 0s;
+  }
+  :root[data-feel~='motion'] .welcome-steps ol[data-stagger] > li:not(:last-child)::before {
+    transform-origin: 0 0;
+    animation: feel-line-down linear both;
+    animation-timeline: --feel-step;
+    animation-range: entry 60% cover 55%;
+  }
+  @media (min-width: 769px) {
+    :root[data-feel~='motion'] .welcome-steps ol[data-stagger] > li:not(:last-child)::before { animation-name: feel-line-across; }
+  }
+  :root[data-feel~='motion'] .welcome-steps ol[data-stagger] > li:not(:last-child):dir(rtl)::before { transform-origin: 100% 0; }
+}
+@keyframes feel-line-down { from { scale: 1 0; } }
+@keyframes feel-line-across { from { scale: 0 1; } }
+
+/* ---------- Welcome: the phone's call-to-action bar ---------- */
+
+/* Welcome.tsx draws it only after the hero's own buttons have scrolled away, and only with motion
+   on. It is a phone thing: wider pages keep the buttons in reach anyway. */
+:where(:root[data-feel~='motion']) .welcome-dock { display: none; }
+@media (max-width: 768px) {
+  :where(:root[data-feel~='motion']) .welcome-dock {
+    display: block;
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 1;
+    padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    border-block-start: var(--separator) solid var(--edge-decorative);
+    background: var(--surface-panel);
+    box-shadow: var(--shadow-float);
+  }
+  :root[data-feel~='motion'] .welcome-dock .gate-actions { flex-direction: row; margin-top: 0; }
+  :root[data-feel~='motion'] .welcome-dock .gate-button { flex: 1 1 0; }
+  /* the credit at the foot of the page stays above the bar */
+  :root[data-feel~='motion'] .welcome:has(> .welcome-dock) { padding-block-end: calc(var(--space-7) * 2); }
+}
+
+/* ---------- The blend drawing, scrubbable (cloud/BlendArt.tsx) ---------- */
+
+/* The handle covers the whole card, so a drag can start anywhere on the drawing. A vertical swipe on
+   a phone still scrolls the page; only a sideways one moves the playhead. */
+:where(:root[data-feel~='motion']) .welcome-art-scrub {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  cursor: grab;
+  touch-action: pan-y;
+}
+:where(:root[data-feel~='motion']) .welcome-art[data-scrub='held'] .welcome-art-scrub { cursor: grabbing; }
+:where(:root[data-feel~='motion']) .welcome-art-scrub:focus-visible { outline: 2px solid var(--focus); outline-offset: calc(-1 * var(--space-1)); }
+/* while the person holds it, the playhead is drawn at full strength: it is theirs */
+:where(:root[data-feel~='motion']) .welcome-art[data-scrub] .welcome-art-head { transition: opacity var(--motion-fast) var(--motion-ease); }
+:where(:root[data-feel~='motion']) .welcome-art[data-scrub='held'] .welcome-art-head { opacity: 1; }
+
+/* ---------- The sign-in screens (cloud/Gate.tsx) ---------- */
+
+/* The card arrives on the spring instead of boot.css's rise-in. */
+:root[data-feel~='motion'] .gate-card[data-arrive] {
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+/* The gate's buttons have no hover of their own; with depth the shared button lift (feel.css)
+   gives the shadow, and the edge firms up the way the quiet button's already does. */
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='depth']) .gate-button:not(.quiet):hover:not(:disabled, [aria-disabled='true']) { border-color: var(--text); }
+}
+:where(:root[data-feel~='depth']) .gate-button:not(.quiet):focus-visible:not(:disabled, [aria-disabled='true']) { border-color: var(--text); }
+
+/* ---------- Onboarding (cloud/onboarding/OnboardingSpine.tsx) ---------- */
+
+/* On a phone each step is a short bar. With motion the bar's track is the item and its fill is the
+   ::before, which springs across when the step is reached; ahead of the person it is empty. At rest
+   it looks exactly as before. */
+@media (max-width: 900px) {
+  :root[data-feel~='motion'] .cloud-spine-steps li { background: var(--surface-control); }
+  :root[data-feel~='motion'] .cloud-spine-steps li::before {
+    transform-origin: 0 50%;
+    transition: scale var(--motion-spring-snappy) var(--spring-snappy), background-color var(--motion-fast) var(--motion-ease);
+  }
+  :root[data-feel~='motion'] .cloud-spine-steps li:dir(rtl)::before { transform-origin: 100% 50%; }
+  :root[data-feel~='motion'] .cloud-spine-steps li[data-outcome='ahead']::before { scale: 0 1; }
+}
+/* A done step's mark is a tick that draws itself (.feel-tick in feel.css), drawn like the icon it
+   replaces. */
+:where(:root[data-feel~='motion']) .cloud-spine-tick {
+  flex: none;
+  inline-size: var(--icon-compact);
+  block-size: var(--icon-compact);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke-compact);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Each step's card comes in from the side the person is travelling toward: forward from ahead,
+   Back from behind. In a right-to-left page the sides swap. */
+:root[data-feel~='motion'] .cloud-spine-step[data-arrive][data-dir='forward'] {
+  animation: feel-arrive-forward var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+:root[data-feel~='motion'] .cloud-spine-step[data-arrive][data-dir='back'] {
+  animation: feel-arrive-back var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+:where(:root[data-feel~='motion']) .cloud-spine-step:dir(rtl) { --feel-side: -1; }
+@keyframes feel-arrive-forward {
+  from { opacity: 0; translate: calc(var(--feel-side, 1) * var(--space-5)) 0; }
+}
+@keyframes feel-arrive-back {
+  from { opacity: 0; translate: calc(var(--feel-side, 1) * -1 * var(--space-5)) 0; }
+}
+
+/* The finish: the one celebration of the blend over the card (feel/moment.tsx), and Open SelectaDJ
+   as the one glowing action on it. */
+:where(:root[data-feel]) .cloud-spine[data-spine='finished']:has(> .cloud-spine-moment) { position: relative; }
+:where(:root[data-feel]) .cloud-spine-moment { position: absolute; inset: 0; pointer-events: none; }
+:root[data-feel~='depth'] .cloud-spine[data-spine='finished'] > .cloud-actions > .primary {
+  box-shadow: var(--shadow-lift), var(--edge-light), var(--glow-accent);
+}
+
+/* ---------- Empty and missing pages (cloud/LocalFirstEmpty.tsx, cloud/CloudStates.tsx) ---------- */
+
+/* The step the person is on in the three-step strip is lit, and pops in once the card has
+   arrived. */
+:root[data-feel~='depth'] .music-empty .setup-steps li[aria-current='step']::before {
+  box-shadow: var(--glow-accent);
+}
+:root[data-feel~='motion'] .music-empty .setup-steps li[aria-current='step']::before {
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both;
+  animation-delay: var(--motion-spring-snappy);
+}
+
+/* ---------- The install offer (cloud/InstallOffer.tsx) ---------- */
+
+/* An install that just happened is confirmed with a drawn tick before the words. */
+:where(:root[data-feel~='motion']) .cloud-install-tick {
+  inline-size: var(--icon-toolbar);
+  block-size: var(--icon-toolbar);
+  margin-inline-end: var(--icon-gap);
+  vertical-align: text-bottom;
+  fill: none;
+  stroke: var(--status-ready);
+  stroke-width: var(--icon-stroke-toolbar);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

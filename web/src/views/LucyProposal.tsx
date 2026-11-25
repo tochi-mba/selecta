@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useId, useState } from 'react';
+import { CSSProperties, ReactNode, useEffect, useId, useState } from 'react';
 import { ApiError } from '../api';
 import { length } from '../lib';
 import { lucy, lucyTransport } from '../lucy/client';
@@ -36,9 +36,9 @@ export function LifecyclePill({ stage }: { stage: Lifecycle }) {
 export function ExamplePrompts({ onPick, prompts }: { onPick: (text: string) => void; prompts?: string[] }) {
   const shown = prompts?.length ? prompts : EXAMPLE_PROMPTS;
   return (
-    <div className="lucy-examples" role="group" aria-label="Example requests">
-      {shown.map((prompt) => (
-        <button key={prompt} type="button" onClick={() => onPick(prompt)}>{prompt}</button>
+    <div className="lucy-examples" role="group" aria-label="Example requests" data-stagger>
+      {shown.map((prompt, index) => (
+        <button key={prompt} type="button" data-lift style={{ '--i': index } as CSSProperties} onClick={() => onPick(prompt)}>{prompt}</button>
       ))}
     </div>
   );

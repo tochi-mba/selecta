@@ -9,7 +9,7 @@ import { ACCOUNT_PROBLEMS, AccountProblem, SUSPENDED_STATE } from './accountStat
 /** An address no page answers to. The menu stays, so every page is one step away. */
 export function NotFound({ path, go }: { path: string; go: (page: Page) => void }) {
   return (
-    <section className="cloud-card cloud-not-found" aria-labelledby="cloud-not-found-title">
+    <section className="cloud-card cloud-not-found" aria-labelledby="cloud-not-found-title" data-glow="" data-arrive="">
       <div className="lost-words">
         <p className="cloud-eyebrow">Page not found</p>
         <h2 id="cloud-not-found-title">There’s nothing at {path}</h2>

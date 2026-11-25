@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, ReactElement, ReactNode, Ref, useEffect, useRef, useState } from 'react';
+import { cloneElement, CSSProperties, isValidElement, ReactElement, ReactNode, Ref, useEffect, useRef, useState } from 'react';
 import type { Status as AppStatus } from '../api';
 import { useFlags } from '../flags';
 import { forgetFolder, recallFolder, storageSpace, type ImportSummary, type MediaStore, type StorageSpace, type StoredFolderHandle } from '../media';
@@ -18,6 +18,9 @@ import { bytes } from './api';
 import { OnlyOnYourComputer } from './LocalFirstEmpty';
 import { readPersistState, subscribePersist, type PersistState } from './persistence';
 import { StorageCard } from './StorageCard';
+import { NumberRoll } from '../feel/numberRoll';
+import { feelOn } from '../feel/root';
+import { motionMs } from '../ui/exitMotion';
 import './libraryWorkspace.css';
 
 /** Workspace in browser-first Cloud (`cloud.workspace`).
@@ -115,7 +118,7 @@ const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numer
 
 function Tile({ to, label, value, detail }: { to: string; label: string; value: ReactNode; detail?: string }) {
   return (
-    <PageLink to={to} className="lw-tile">
+    <PageLink to={to} className="lw-tile" data-lift="" data-glow="">
       <span className="lw-tile-label">{label}</span>
       <strong>{value ?? <i className="lw-tile-wait" aria-label="Loading" />}</strong>
       <span className="lw-tile-detail">{detail}</span>
@@ -124,6 +127,33 @@ function Tile({ to, label, value, detail }: { to: string; label: string; value: 
 }
 
 type Need = { key: string; icon: IconName; title: string; words: string; action: ReactNode };
+
+/** The needs that were just fixed, kept on screen while they fold away (.feel-collapse-out), so a
+ * fixed row visibly leaves instead of vanishing. Only with the feel's motion on; otherwise a fixed
+ * row goes at once, exactly as before. A leaving row is inert and hidden from assistive technology,
+ * because it is no longer something to do. */
+function useFixedNeeds(needs: Need[]) {
+  const [fixed, setFixed] = useState<Need[]>([]);
+  const before = useRef<Need[]>(needs);
+  const signature = needs.map((need) => need.key).join('|');
+  useEffect(() => {
+    const was = before.current;
+    before.current = needs;
+    if (!feelOn('motion')) return;
+    const still = new Set(needs.map((need) => need.key));
+    const left = was.filter((need) => !still.has(need.key));
+    if (left.length === 0) return;
+    const leaving = new Set(left.map((need) => need.key));
+    setFixed((list) => [...list.filter((need) => !still.has(need.key) && !leaving.has(need.key)), ...left]);
+    // the fallback for when no animationend arrives (calm, or the row was hidden)
+    const timer = window.setTimeout(() => setFixed((list) => list.filter((need) => !leaving.has(need.key))), motionMs('--motion-handoff', 400) + 120);
+    return () => window.clearTimeout(timer);
+    // the keys say whether anything changed; the list itself is rebuilt on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
+  const gone = (key: string) => setFixed((list) => list.filter((need) => need.key !== key));
+  return { fixed: fixed.filter((need) => !needs.some((now) => now.key === need.key)), gone };
+}
 
 function Overview({ status, workspaceId, connect, degraded, savedMixes, fileCheck, stemsShown, measuringKeys }: {
   status: AppStatus;
@@ -173,6 +203,8 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
     needs.push({ key: 'persist', icon: 'lock', title: 'The browser may clear SelectaDJ’s details', words: 'If this device runs short of space. Your music files are never affected.', action: <PageLink to="/workshop/storage" className="button">Review storage</PageLink> });
   }
 
+  const { fixed, gone } = useFixedNeeds(needs);
+
   const activity: ReactNode[] = [];
   if ((importing.phase === 'finished' || importing.phase === 'paused') && importing.summary) {
     activity.push(<Status key="import" kind={importing.phase === 'paused' ? 'paused' : 'ready'}>{`Last added: ${summaryWords(importing.summary)}`}</Status>);
@@ -188,25 +220,32 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
   return (
     <div className="lw-stack">
       <div className="lw-tiles">
-        <Tile to="/library" label="Songs" value={formatCount(songs)} detail="in your library" />
-        <Tile to="/library?show=ready" label="Playable here" value={formatCount(playable)} detail={songs ? `of ${formatCount(songs)} in this browser` : 'in this browser'} />
-        <Tile to="/workshop/storage" label="Storage used" value={space === null ? null : space.supported ? bytes(space.usage ?? 0) : 'Not known'} detail={space?.supported ? `of ${bytes(space.quota ?? 0)} allowed` : 'in this browser'} />
-        <Tile to="/mixes/mine" label="Saved mixes" value={savedMixes === null ? null : formatCount(savedMixes)} detail="in My Mixes" />
+        {/* the figures roll to their values; the words read out are the same as before */}
+        <Tile to="/library" label="Songs" value={<NumberRoll value={songs} format={formatCount} />} detail="in your library" />
+        <Tile to="/library?show=ready" label="Playable here" value={<NumberRoll value={playable} format={formatCount} />} detail={songs ? `of ${formatCount(songs)} in this browser` : 'in this browser'} />
+        <Tile to="/workshop/storage" label="Storage used" value={space === null ? null : space.supported ? <NumberRoll value={space.usage ?? 0} format={bytes} /> : 'Not known'} detail={space?.supported ? `of ${bytes(space.quota ?? 0)} allowed` : 'in this browser'} />
+        <Tile to="/mixes/mine" label="Saved mixes" value={savedMixes === null ? null : <NumberRoll value={savedMixes} format={formatCount} />} detail="in My Mixes" />
       </div>
       {/* progress, an interrupted import and results show here too, and own the pickers */}
       {connectAs(connect, 'status', handle, status)}
       <div className="lw-columns">
         <section className="ui-card" aria-labelledby="cloud-needs-title">
           <h2 className="section-title" id="cloud-needs-title">Needs attention</h2>
-          {needs.length === 0 ? (
+          {needs.length === 0 && fixed.length === 0 ? (
             <p className="lw-clear"><span className="lw-clear-mark" aria-hidden="true"><Icon name="check" size="toolbar" /></span>Nothing needs you. Your music is ready.</p>
           ) : (
-            <ul className="lw-needs">
-              {needs.map((need) => (
-                <li key={need.key}>
+            <ul className="lw-needs" data-stagger="">
+              {needs.map((need, index) => (
+                <li key={need.key} style={{ '--i': index } as CSSProperties}>
                   <span className="lw-need-mark" aria-hidden="true"><Icon name={need.icon} size="toolbar" /></span>
                   <div><b>{need.title}</b><span>{need.words}</span></div>
                   {need.action}
+                </li>
+              ))}
+              {fixed.map((need) => (
+                <li key={need.key} className="feel-collapse-out" aria-hidden="true" inert onAnimationEnd={(event) => { if (event.target === event.currentTarget) gone(need.key); }}>
+                  <span className="lw-need-mark" aria-hidden="true"><Icon name="check" size="toolbar" /></span>
+                  <div><b>{need.title}</b><span>{need.words}</span></div>
                 </li>
               ))}
             </ul>

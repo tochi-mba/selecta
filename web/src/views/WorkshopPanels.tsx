@@ -12,6 +12,9 @@ import { ViewProps } from './shared';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
 import { words } from '../copy';
 import { WhatWentWrong } from './WhatWentWrong';
+import { Meter } from '../ui/Meter';
+import { RollingCount, useFeelOn } from './feelPieces';
+import { plainCount, useFlashOn } from './feelLocal';
 
 const GB = 1024 ** 3;
 
@@ -260,6 +263,13 @@ export function NeedsYou({ jobs, readySongs, folders }: { jobs: Jobs; readySongs
 /** What's actually going on in the background, from what's actually there. */
 export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJobs?: (jobs: Jobs) => void }) {
   const { jobs, stale: failed, unsupported } = useJobsStatus();
+  // ADR-0477: rows that finish glow once; with the feel on, work that reports how far it is gets a bar
+  const feel = useFeelOn();
+  const renderRow = useRef<HTMLLIElement>(null);
+  const analysisRow = useRef<HTMLLIElement>(null);
+  const mixLeft = jobs ? jobs.mix.queued + jobs.mix.rendering + jobs.mix.none : 0;
+  useFlashOn(renderRow, jobs ? jobs.worker.running && !jobs.storage_full && !jobs.mix.rendering && !jobs.worker.rendering_the_mix && !mixLeft : null);
+  useFlashOn(analysisRow, jobs ? jobs.analysis.left === 0 : null);
   useEffect(() => {
     if (jobs) onJobs?.(jobs);
   }, [jobs, onJobs]);
@@ -277,7 +287,7 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
       <h2>What’s happening now</h2>
       {failed && <p className="warn" role="status">Can’t check right now, so this may be out of date.</p>}
       <ul className="job-list">
-        <li>
+        <li ref={renderRow} data-lift="row">
           <b>Rendering</b>
           {!jobs.worker.running
             ? <Status kind="unavailable">Not started. It starts by itself when there’s something to do.</Status>
@@ -286,25 +296,32 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
               : jobs.mix.rendering || jobs.worker.rendering_the_mix
                 ? <Status kind="working">Working through your current mix</Status>
                 : left
-                  ? <Status kind="queued">{left} transition{left === 1 ? '' : 's'} in line</Status>
+                  ? <Status kind="queued"><RollingCount value={left} format={plainCount} /> transition{left === 1 ? '' : 's'} in line</Status>
                   : <Status kind="ready">Your current mix is done</Status>}
+          {/* the current mix's transitions really made, of all it has; failed ones count as settled */}
+          {feel && jobs.worker.running && left > 0 && (
+            <Meter className="job-meter" label="Current mix transitions made" showLabel={false} value={jobs.mix.ready} max={jobs.mix.ready + jobs.mix.failed + left} valueText={`${jobs.mix.ready} of ${jobs.mix.ready + jobs.mix.failed + left} made`} />
+          )}
         </li>
-        {flagOn('render_line') && <li>
+        {flagOn('render_line') && <li data-lift="row">
           <b>Drafts in the render line</b>
           {jobs.drafts_in_line ? <Status kind="queued">{jobs.drafts_in_line} waiting</Status> : <Status kind="planned">None</Status>}
           {jobs.drafts_in_line > 0 && <PageLink to="/mixes/mine">Change the order</PageLink>}
         </li>}
-        <li>
+        <li ref={analysisRow} data-lift="row">
           <b>Analysis</b>
           {jobs.analysis.left === 0
             ? <Status kind="ready">All done</Status>
             : jobs.analysis.running
-              ? <Status kind={status.mix_rendering ? 'queued' : 'working'}>{status.mix_rendering ? 'Waiting while your mix renders' : `${jobs.analysis.left} to go`}</Status>
+              ? <Status kind={status.mix_rendering ? 'queued' : 'working'}>{status.mix_rendering ? 'Waiting while your mix renders' : <><RollingCount value={jobs.analysis.left} format={plainCount} /> to go</>}</Status>
               : jobs.analysis.paused
                 ? <Status kind="paused">Paused, {jobs.analysis.left} to go</Status>
                 : <Status kind="planned">{jobs.analysis.left} waiting</Status>}
+          {feel && jobs.analysis.left > 0 && (status.counts.music ?? 0) > 0 && (
+            <Meter className="job-meter" label="Songs analysed" showLabel={false} value={status.counts.analysed ?? 0} max={status.counts.music ?? 0} valueText={`${status.counts.analysed ?? 0} of ${status.counts.music ?? 0} songs`} />
+          )}
         </li>
-        {flagOn('render.spare_time') && <li>
+        {flagOn('render.spare_time') && <li data-lift="row">
           <b>Spare time</b>
           <Status kind="planned">Trying out the best transitions across your library, once everything above is done{status.transitions_ready ? `. ${status.transitions_ready} clean so far` : ''}</Status>
         </li>}
@@ -401,6 +418,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
       }));
     } catch (error) {
       setRelinkProblem((error as Error).message);
+      return false;
     } finally {
       setCheckingRelink(false);
     }
@@ -417,6 +435,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     } catch (error) {
       setRelocation(null);
       setRelinkProblem((error as Error).message);
+      return false; // said here, so the button draws no tick
     }
   };
   const scanPending = useRef(false);

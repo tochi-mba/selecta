@@ -219,8 +219,10 @@ export const VISUALS: Partial<Record<Family, Renderer>> = {
   history: Items,
 };
 
-export function CardVisual({ card }: { card: Card }) {
+/** `drawn`: the step was seen running and has really finished just now, so its result draws in once
+ * (lucy.css, only while the feel's motion is on). */
+export function CardVisual({ card, drawn = false }: { card: Card; drawn?: boolean }) {
   const Draw = VISUALS[card.family] ?? Generic;
   const visual = card.visual && typeof card.visual === 'object' ? card.visual : {};
-  return <div className="lucy-visual"><Draw visual={visual} card={card} /></div>;
+  return <div className={`lucy-visual${drawn ? ' is-drawn' : ''}`}><Draw visual={visual} card={card} /></div>;
 }

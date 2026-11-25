@@ -3,11 +3,15 @@ import { lazyPage as lazy } from './ui/staleBuild';
 import { App } from './App';
 import type { MixData } from './api';
 import { setCopyMode } from './copy';
+import { startFeel } from './feel/root';
+import { startPointerLight } from './feel/pointerLight';
 import { setFlags } from './flags';
 import { handOnStartupStatus } from './startupStatus';
 import { BrandMark } from './ui/BrandMark';
 import { cloudShellOpened } from './cloud/offlineShell';
 import { prefetchLibrary } from './views/libraryPrefetch';
+import { changeScene } from './shell/sceneTransition';
+import { useFeelOn } from './views/feelPieces';
 
 const CloudRoot = lazy(() => import('./cloud/CloudRoot').then((module) => ({ default: module.CloudRoot })));
 const VenueStaffRoot = lazy(() => import('./venueops/VenueStaffRoot').then((module) => ({ default: module.VenueStaffRoot })));
@@ -24,6 +28,14 @@ export function RuntimeApp() {
   const [mode, setMode] = useState<Mode>('loading');
   const [attempt, setAttempt] = useState(0);
   const [startupMix, setStartupMix] = useState<MixData | null>(null);
+  // a press of Try now that has not been answered yet (shown only with the feel on, ADR-0477)
+  const [trying, setTrying] = useState(false);
+  const feel = useFeelOn();
+
+  // ADR-0477: keep <html data-feel> right from the very first screen, so the local app, Welcome,
+  // every sign-in screen and both Cloud frames get the feel sheets, not only pages inside the Shell
+  useEffect(() => startFeel(), []);
+  useEffect(() => startPointerLight(), []);
 
   useEffect(() => {
     let current = true;
@@ -55,10 +67,18 @@ export function RuntimeApp() {
             setStartupMix(mix);
           }
         }
-        setMode(next);
+        setTrying(false);
+        // ADR-0477: the waiting screen hands over to the app as a scene change, so the brand mark
+        // can travel; changeScene changes at once, exactly as before, whenever it cannot animate
+        const mark = document.querySelector('main.cloud-runtime-message > .brand-mark-badge');
+        changeScene(() => setMode(next), document, window, {
+          share: mark ? [[mark, 'brand-mark']] : [],
+          ready: () => (next === 'cloud' && !CloudRoot.loaded() ? CloudRoot.preload() : null),
+        });
       })
       .catch(() => {
         if (!current) return;
+        setTrying(false);
         // cloud.offline_shell: a page Cloud's app-shell worker opened is Cloud, so with no
         // connection it opens from this device (CloudApp says so) instead of this message
         if (cloudBuild && cloudShellOpened()) { setCopyMode('cloud'); setMode('cloud'); return; }
@@ -78,8 +98,10 @@ export function RuntimeApp() {
   if (mode === 'loading') return <RuntimeMessage title="Starting SelectaDJ" detail="Connecting to your SelectaDJ service…" />;
   if (mode === 'unavailable') {
     return (
-      <RuntimeMessage title="Can’t reach SelectaDJ." detail="It may have stopped running. Start it again, and this page will pick up by itself.">
-        <button className="primary" onClick={() => setAttempt((count) => count + 1)}>Try now</button>
+      <RuntimeMessage arrive title="Can’t reach SelectaDJ." detail="It may have stopped running. Start it again, and this page will pick up by itself.">
+        {feel
+          ? <button className="primary" aria-busy={trying || undefined} data-working={trying || undefined} onClick={() => { if (trying) return; setTrying(true); setAttempt((count) => count + 1); }}>{trying ? 'Trying…' : 'Try now'}</button>
+          : <button className="primary" onClick={() => setAttempt((count) => count + 1)}>Try now</button>}
       </RuntimeMessage>
     );
   }
@@ -97,6 +119,8 @@ export function RuntimeApp() {
   return <Suspense fallback={<main className="gate gate-loading" aria-busy="true"><div className="gate-wait"><BrandMark className="gate-pulse" /><p role="status">Starting SelectaDJ…</p><span className="gate-line" aria-hidden="true"><i /></span></div></main>}><CloudRoot clientId={clientId} /></Suspense>;
 }
 
-function RuntimeMessage({ title, detail, children }: { title: string; detail: string; children?: ReactNode }) {
-  return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>{title}</h1><p>{detail}</p>{children}</main>;
+/** `arrive`: rises in once (ADR-0477). Only the problem screen asks for it: the waiting screen follows
+ * the first-paint splash, and fading it in would only flicker. */
+function RuntimeMessage({ title, detail, arrive, children }: { title: string; detail: string; arrive?: boolean; children?: ReactNode }) {
+  return <main className="cloud-runtime-message" data-arrive={arrive ? '' : undefined}><BrandMark className="cloud-mark" /><h1>{title}</h1><p>{detail}</p>{children}</main>;
 }

@@ -5,6 +5,7 @@ import { PageLink } from '../shell/PageLink';
 import { mixReadiness } from '../state/readiness';
 import { Action, Status } from '../ui/controls';
 import { ViewProps } from './shared';
+import { PlayingBars } from './feelBits';
 
 /** The one mix that's really yours to hear right now. Its transitions being ready is a different thing
  * from its songs being saved, so it says which. */
@@ -18,7 +19,11 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent, lead
   return (
     <section className={`carry-on ${prominent ? 'prominent' : ''}`} aria-label="Current mix">
       <div className="carry-on-words">
-        <p className="eyebrow">{now.phase === 'idle' ? 'Current mix' : now.phase === 'paused' ? 'Paused' : 'Playing now'}</p>
+        <p className="eyebrow">
+          {now.phase === 'idle' ? 'Current mix' : now.phase === 'paused' ? 'Paused' : 'Playing now'}
+          {/* ADR-0477: this is the mix playing, so its bars answer the measured music (hidden with the feel off) */}
+          {now.phase === 'playing' && <PlayingBars />}
+        </p>
         <h2>{mixName}</h2>
         <div className="mix-identity">
           <MixSignature items={mix} />

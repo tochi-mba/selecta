@@ -722,6 +722,7 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
     } catch (error) {
       setWanted('');
       setProblem((error as Error).message);
+      return false; // said here, so the button draws no tick
     }
   };
 

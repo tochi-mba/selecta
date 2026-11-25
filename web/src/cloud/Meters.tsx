@@ -1,5 +1,6 @@
 import { accountFlagOn } from '../flags';
 import { Meter as Bar } from '../ui/Meter';
+import { NumberRoll } from '../feel/numberRoll';
 import { Account, Allowance, bytes, holdsHostedStorage, isOverQuota, resetWords } from './api';
 
 // The usage meters on Plan & billing (docs/saas/11-ui-ux.md §11.1): storage used of the limit,
@@ -18,9 +19,10 @@ function Meter({ label, used, limit, figure, rest, note, reset, warn }: { label:
   const words = `${figure} ${rest}`;
   const under = [note, reset].filter(Boolean).join(' · ');
   return (
-    <section className={`cloud-card cloud-meter-card${warn ? ' warn' : ''}`} aria-label={label}>
+    <section className={`cloud-card cloud-meter-card${warn ? ' warn' : ''}`} aria-label={label} data-glow="">
       <p className="cloud-meter-name">{label}</p>
-      <h3><span className="cloud-meter-figure">{figure}</span> {rest}</h3>
+      {/* the figure rolls to a new value; what is read out and copied is always the same words */}
+      <h3><span className="cloud-meter-figure"><NumberRoll value={used} format={() => figure} /></span> {rest}</h3>
       {limit !== null
         ? <Bar kind="meter" label={label} showLabel={false} value={Math.round(percent)} max={100} valueText={words} warnAt={0.8} dangerAt={1} tone={warn ? 'danger' : undefined} />
         : <p className="cloud-meter-free">Fair use: counted, never cut off.</p>}

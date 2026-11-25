@@ -10,7 +10,9 @@ import { EMPTY_MIX } from './localFirstRequest';
 import { copyName, MIX_NAME_LIMIT, type RecipeStore, type RecipeSummary } from './recipeStore';
 import { flagOn } from '../flags';
 import { length } from '../lib';
-import { CoverArt } from '../views/CoverArt';
+import { MixArt, useMixFaces } from '../views/MixArt';
+import { foldAway, PlayingBars, unfoldIfKept, useFeelOn, useMotionOn } from '../views/feelPieces';
+import type { NavigateOptions } from '../router';
 import './cloudMusic.css';
 import { MIX_OUTBOX_EVENT, takeOutboxNotices, WAITING_TO_SYNC } from './outbox';
 
@@ -38,6 +40,24 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
   const [deleting, setDeleting] = useState<RecipeSummary | null>(null);
   const latest = useRef({ recipes, request, setMixData, refreshStatus });
   latest.current = { recipes, request, setMixData, refreshStatus };
+  // the feel (ADR-0477): each row's tile, so Play and Edit can carry it to the next page; the row a
+  // copy just made, which glows once; and each row, so a deleted one can fold away
+  const tiles = useRef(new Map<string, HTMLSpanElement>());
+  const rows = useRef(new Map<string, HTMLLIElement>());
+  const [flashed, setFlashed] = useState<string | null>(null);
+  const moving = useMotionOn();
+  const feel = useFeelOn();
+  const faces = useMixFaces(list, (mixId) => latest.current.recipes.read(mixId));
+  const travel = (recipe: RecipeSummary): NavigateOptions | undefined => {
+    const tile = tiles.current.get(recipe.mix_id);
+    return tile ? { share: [[tile, 'mix-art']] } : undefined;
+  };
+  const flash = (mixId: string) => {
+    if (!moving) return;
+    setFlashed(mixId);
+    // the glow lasts four slow beats (feel.css .feel-flash); the class goes once it has played
+    window.setTimeout(() => setFlashed((was) => (was === mixId ? null : was)), 1200);
+  };
 
   const load = useCallback(() => {
     setProblem('');
@@ -80,16 +100,17 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
   };
   const edit = async (recipe: RecipeSummary) => {
     await makeCurrent(recipe);
-    navigate('/mix/current/edit');
+    navigate('/mix/current/edit', travel(recipe));
   };
   const play = async (recipe: RecipeSummary) => {
     await makeCurrent(recipe);
-    navigate('/listen');
+    navigate('/listen', travel(recipe));
     await player.playFrom(0);
   };
   const copy = async (recipe: RecipeSummary) => {
     const made = await recipes.duplicate(recipe.mix_id, copyName(recipe.name));
     await load();
+    flash(made.mix_id);
     notify(`Saved a copy: ${made.name}.`);
   };
   const saveCurrent = async () => {
@@ -101,6 +122,7 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
       ?? await recipes.read(current).then((mix) => mix.name, () => undefined);
     const made = await recipes.duplicate(current, known ? copyName(known) : undefined);
     await load();
+    flash(made.mix_id);
     notify(`Saved a copy: ${made.name}.`);
   };
   const rename = async (recipe: RecipeSummary, name: string) => {
@@ -120,7 +142,12 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
       refreshStatus();
     }
     setDeleting(null);
+    // the row folds away before the list is read again; one still there afterwards comes back
+    const row = rows.current.get(recipe.mix_id);
+    const folding = foldAway(row);
+    if (folding) await folding;
     await load();
+    if (folding) unfoldIfKept(row);
     // cloud.mix_outbox: deleted while offline, it is sent on reconnect and can be taken back until then
     if (queued && recipes.restore) {
       notify(`Deleted ${recipe.name}. This reaches your account when the connection is back.`, async () => {
@@ -161,8 +188,11 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
             const current = recipe.mix_id === currentId;
             const waiting = outbox && recipe.pending;
             return (
-              <li className="mix-row" key={recipe.mix_id} data-current={current || undefined}>
-                <CoverArt seed={recipe.mix_id} />
+              <li className={flashed === recipe.mix_id ? 'mix-row feel-flash' : 'mix-row'} key={recipe.mix_id} data-current={current || undefined}
+                data-lift={feel ? 'row' : undefined}
+                ref={(row) => { if (row) rows.current.set(recipe.mix_id, row); else rows.current.delete(recipe.mix_id); }}>
+                <MixArt seed={recipe.mix_id} songs={faces.get(recipe.mix_id)} travels={current}
+                  tileRef={(tile) => { if (tile) tiles.current.set(recipe.mix_id, tile); else tiles.current.delete(recipe.mix_id); }} />
                 <div className="mix-row-words">
                   {renaming === recipe.mix_id ? (
                     <RenameMix name={recipe.name} onCancel={() => setRenaming(null)} onSave={(name) => rename(recipe, name)} />
@@ -170,7 +200,7 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
                     <b className="mix-row-name" dir="auto" title={recipe.name}>{recipe.name}</b>
                   )}
                   <span className="mix-row-meta">
-                    {current && <span className="badge" data-tone="accent">{live ? 'Playing now' : phase === 'paused' ? 'Paused' : 'Current mix'}</span>}
+                    {current && <span className="badge" data-tone="accent">{live ? 'Playing now' : phase === 'paused' ? 'Paused' : 'Current mix'}{live && feel && <PlayingBars />}</span>}
                     <span>{countOf(recipe.songs, 'song')}</span>
                     {current && !!currentSeconds && <span>About {length(currentSeconds)}</span>}
                     <span>{waiting ? 'Saved on this device' : `Saved ${relativeTime(now - recipe.updated_at)}`}</span>
