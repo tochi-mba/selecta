@@ -128,7 +128,7 @@ class RoomRequest:
     id: str
     room_id: str
     workspace_id: str
-    guest_id: str
+    guest_id: str | None  # None for a song the room voted in (ADR-0488): nobody asked for it
     song_id: int
     song_request_id: str | None
     status: RequestStatus
@@ -138,6 +138,9 @@ class RoomRequest:
     approved_at: float | None
     submitted_at: float | None
     resolved_at: float | None
+    source: str = "guest"  # guest, or round for the winner of a vote
+    dedication: str | None = None  # a line from the fixed list, by its id
+    dedication_play_id: str | None = None  # the play it was shown on
 
 
 @dataclass(frozen=True)
@@ -196,6 +199,9 @@ def request_from_row(row: Mapping[str, Any]) -> RoomRequest:
         approved_at=row["approved_at"],
         submitted_at=row["submitted_at"],
         resolved_at=row["resolved_at"],
+        source=row.get("source") or "guest",
+        dedication=row.get("dedication"),
+        dedication_play_id=row.get("dedication_play_id"),
     )
 
 

@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 import sqlalchemy as sa
 
 from selecta.persistence import new_id, transaction
-from selecta.rooms import codes, nicknames, reactions
+from selecta.rooms import codes, nicknames, reactions, rounds
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.planning import pump, withdraw_from_planner
 from selecta.rooms.schema import room_bans, room_guests, room_votes
@@ -170,6 +170,8 @@ def _move_guest(
         conn.execute(
             sa.update(room_guests).where(room_guests.c.id == guest.id).values(status=status.value)
         )
+        if status is GuestStatus.REMOVED:
+            rounds.forget_vote(conn, room, guest.id)  # ADR-0488: no say in the open vote
         ctx.publish(conn, room, "room.guest", {"guest_id": guest.id, "status": status.value})
         return load_guest(conn, room, guest_id)
 
@@ -220,8 +222,10 @@ def ban_guest(
             voted_on = list(voted_on)
             conn.execute(sa.delete(room_votes).where(room_votes.c.guest_id == guest.id))
             recount_votes(conn, voted_on)
-            # ADR-0488: their hearts and blend taps go too, and the plays are counted again
+            # ADR-0488: their hearts and blend taps go too, and the plays are counted again;
+            # so does their say in a vote for the next song that is still open
             reactions.forget_guest(conn, room, guest.id)
+            rounds.forget_vote(conn, room, guest.id)
             ctx.publish(conn, room, "room.guest", {"guest_id": guest.id, "status": "banned"})
         guest = load_guest(conn, room, guest_id)
     withdraw_from_planner(ctx, workspace_id, withdrawn)
@@ -241,6 +245,7 @@ def leave(ctx: RoomContext, guest_token: str) -> None:
                 .where(room_guests.c.id == guest.id)
                 .values(status=GuestStatus.REMOVED.value)
             )
+            rounds.forget_vote(conn, room, guest.id)  # ADR-0488: no say in the open vote
 
 
 def nickname_choices(ctx: RoomContext, guest_token: str, count: int = 6) -> list[str]:

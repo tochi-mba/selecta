@@ -96,6 +96,7 @@ def install(
         current_claims=current_claims,
         principal_for=principal_for,
         rules=rules,
+        social=app.state.rooms_social,
     )
     # the queue the host's browser mix reads when the planner is `BrowserPlanner`
     browser_requests.install_routes(

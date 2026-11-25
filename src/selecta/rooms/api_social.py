@@ -29,18 +29,19 @@ from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
-from selecta.rooms import limits, reactions
+from selecta.rooms import limits, reactions, rounds
 from selecta.rooms import pulse as pulses
-from selecta.rooms.api_common import check_origin, refusal
+from selecta.rooms.api_common import check_origin, refusal, song_json
 from selecta.rooms.display import DisplayState, DisplayView
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.host_features import SOCIAL, HostFeatures
 from selecta.rooms.schema import room_guests
 from selecta.rooms.service import Rooms
 from selecta.rooms.social_schema import room_plays
-from selecta.rooms.store import GuestRef, GuestStatus
+from selecta.rooms.store import GuestRef, GuestStatus, load_room
 from selecta.rooms.views import GuestView
 from selecta.roomsocial import reactions as tap_rules
+from selecta.roomsocial import rounds as round_rules
 
 STANDING_SECONDS = 5.0  # how long a guest's standing is remembered between pulse reads
 MAX_STANDINGS = 50_000
@@ -52,6 +53,16 @@ Hit = Callable[[str, str, limits.Window], None]
 class TapBody(BaseModel):
     kind: Literal["love", "blend"]
     play_id: str = Field(min_length=1, max_length=36)
+
+
+class VoteBody(BaseModel):
+    position: int = Field(ge=0, le=round_rules.MAX_OPTIONS - 1)
+
+
+class RoundBody(BaseModel):
+    # The songs to vote on, from the speaker's browser. None: ask the speaker to offer some.
+    song_ids: list[int] | None = Field(default=None, max_length=8)
+    opened_by: Literal["host", "timer"] = "host"
 
 
 class Social:
@@ -68,10 +79,23 @@ class Social:
 
     def pulse(self, workspace_id: str, room_id: str) -> dict[str, Any]:
         def make() -> dict[str, Any]:
+            service = self.rooms()
+            # a vote whose time is up is closed by whoever looks first, and this is that look
+            rounds.settle_due(service, workspace_id, room_id)
             built = pulses.build(
-                self.rooms(), self.features, workspace_id, room_id, extras=tuple(self.extras)
+                service, self.features, workspace_id, room_id, extras=tuple(self.extras)
             )
-            return pulses.pulse_json(built)
+            answer = pulses.pulse_json(built)
+            # Songs are named here, after the pulse's own transaction: the catalogue opens a
+            # connection of its own.
+            voting = answer.get("round")
+            if voting:
+                named = service.catalog.describe(
+                    workspace_id, [option["song_id"] for option in voting["options"]]
+                )
+                for option in voting["options"]:
+                    option["song"] = song_json(named.get(option["song_id"]))
+            return answer
 
         try:
             return self.pulses.get(room_id, make)
@@ -174,9 +198,31 @@ def install_guest_routes(
         social.active(ref)
         return social.pulse(ref.workspace_id, ref.room_id)
 
+    social.guest_parts.append(lambda seen, on: _mine(social, seen, on))
+
+    # Pick the next song (rooms.rounds): one vote each between the songs the room was offered.
+    social.extras.append(lambda conn, room, pulse: _round_extra(social, conn, room, pulse))
+
+    @app.post("/api/guest/rooms/{room_id}/rounds/{round_id}/vote")
+    def guest_round_vote(
+        room_id: str, round_id: str, body: VoteBody, request: Request
+    ) -> dict[str, Any]:
+        token, ref = tap(request, room_id)
+        social.offered(ref, "rounds")
+        try:
+            rounds.cast(social.rooms(), token, round_id, body.position)
+        except RoomError as error:
+            social.changed(ref.room_id)  # the round closed under the vote: show what stands
+            raise refusal(error) from error
+        social.changed(ref.room_id)
+        return {
+            "round_id": round_id,
+            "position": body.position,
+            "pulse": social.pulse(ref.workspace_id, ref.room_id),
+        }
+
     # Reactions (rooms.reactions): a love for the playing song, or for the blend into it.
     social.extras.append(_reactions_extra)
-    social.guest_parts.append(lambda seen, on: _my_taps(social, seen, on))
 
     def tapped(token: str, ref: GuestRef, body: TapBody, *, on: bool) -> dict[str, Any]:
         social.offered(ref, "reactions")
@@ -224,24 +270,74 @@ def _reactions_extra(conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str, 
     }
 
 
-def _my_taps(social: Social, seen: GuestView, on: Mapping[str, bool]) -> Mapping[str, Any]:
-    """This guest's own taps on the song that is on and the one before it, by play id."""
-    if not on.get("reactions", False) or not seen.guest_id:
+def _mine(social: Social, seen: GuestView, on: Mapping[str, bool]) -> Mapping[str, Any]:
+    """What only this guest sees, read in one go: their taps on the song that is on and the one
+    before it (by play id), and their vote in the open round."""
+    taps_on = on.get("reactions", False)
+    rounds_on = on.get("rounds", False)
+    if not seen.guest_id or not (taps_on or rounds_on):
         return {}
+    answer: dict[str, Any] = {}
     with transaction(social.rooms().engine, seen.workspace_id) as conn:
-        recent = list(
-            conn.execute(
-                sa.select(room_plays.c.id)
-                .where(
-                    room_plays.c.workspace_id == seen.workspace_id,
-                    room_plays.c.room_id == seen.room_id,
-                )
-                .order_by(room_plays.c.started_at.desc(), room_plays.c.id.desc())
-                .limit(2)
-            ).scalars()
-        )
-        mine = reactions.mine(conn, seen.room_id, seen.guest_id, recent)
-    return {"my_taps": {play_id: sorted(kinds) for play_id, kinds in mine.items()}}
+        if taps_on:
+            recent = list(
+                conn.execute(
+                    sa.select(room_plays.c.id)
+                    .where(
+                        room_plays.c.workspace_id == seen.workspace_id,
+                        room_plays.c.room_id == seen.room_id,
+                    )
+                    .order_by(room_plays.c.started_at.desc(), room_plays.c.id.desc())
+                    .limit(2)
+                ).scalars()
+            )
+            mine = reactions.mine(conn, seen.room_id, seen.guest_id, recent)
+            answer["my_taps"] = {play_id: sorted(kinds) for play_id, kinds in mine.items()}
+        if rounds_on:
+            room = load_room(conn, seen.workspace_id, seen.room_id)
+            current = rounds.open_round_of(conn, room)
+            if current is not None:
+                answer["my_vote"] = {
+                    "round_id": current.id,
+                    "position": rounds.my_vote(conn, current.id, seen.guest_id),
+                    # a guest who joined after it opened watches this one and votes in the next
+                    "can_vote": seen.joined_at <= current.opened_at,
+                }
+    return answer
+
+
+def round_json(found: rounds.Round) -> dict[str, Any]:
+    """A round as the pulse carries it. Songs are named afterwards, outside the transaction."""
+    winner = next(
+        (o.position for o in found.options if o.song_id == found.winner_song_id), None
+    )
+    return {
+        "round_id": found.id,
+        "state": found.status,
+        "opened_by": found.opened_by,
+        "opened_at": found.opened_at,
+        "closes_at": found.closes_at,
+        "closed_at": found.closed_at,
+        "total": found.total,
+        "options": [
+            {"position": o.position, "song_id": o.song_id, "votes": o.votes}
+            for o in found.options
+        ],
+        "winner": winner,
+        "outcome": found.outcome,
+    }
+
+
+def _round_extra(social: Social, conn: Any, room: Any, pulse: pulses.Pulse) -> Mapping[str, Any]:
+    """The round the room should be looking at. On the first look at a song that is due one,
+    with the host's "every N songs" set, this also tells the speaker the room wants a vote."""
+    if not pulse.features.get("rounds", False):
+        return {}
+    here = reactions.guests_online(conn, room, pulse.now)
+    if rounds.timer_due(conn, room, pulse.now, here):
+        social.rooms().publish(conn, room, rounds.EVENT, {"state": "wanted", "opened_by": "timer"})
+    found = rounds.showing(conn, room, pulse.now)
+    return {"round": None if found is None else round_json(found)}
 
 
 def install_host_routes(
@@ -251,14 +347,82 @@ def install_host_routes(
     current_claims: Callable[..., Claims],
     principal_for: Callable[..., Any],
     rules: RulesCache,
+    social: Social,
 ) -> None:
-    """What the host's own account reads: signed in, and gated by the feature's flag."""
+    """What the host's own account does: signed in, and gated by the feature's flag. Reads of
+    an open room are not gated again, as with the rest of the room panel: the room carries what
+    it opened with, so a host who downgrades mid-party keeps the room they have."""
 
-    def workspace(request: Request, claims: Claims, gate: str) -> str:
+    def workspace(request: Request, claims: Claims, gate: str | None = None) -> str:
         found = principal_for(engine, claims, request.headers.get("x-workspace-id"))
-        with transaction(engine, found.workspace.id) as conn:
-            cloud_gate.require(conn, found, gate, rules)
+        if gate is not None:
+            with transaction(engine, found.workspace.id) as conn:
+                cloud_gate.require(conn, found, gate, rules)
         return found.workspace.id
+
+    def pulse(workspace_id: str, room_id: str) -> dict[str, Any]:
+        social.changed(room_id)
+        return social.pulse(workspace_id, room_id)
+
+    @app.get("/api/rooms/{room_id}/pulse")
+    def host_pulse(
+        room_id: str, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
+    ) -> dict[str, Any]:
+        """The pulse the phones read, for the host's panel and the speaker's browser."""
+        return social.pulse(workspace(request, claims), room_id)
+
+    @app.post("/api/rooms/{room_id}/rounds", status_code=201)
+    def start_round(
+        room_id: str,
+        body: RoundBody,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """Open a vote for the next song. With `song_ids` (from the speaker's browser, which
+        knows what blends) the vote opens now. Without, the speaker is asked to offer songs:
+        `wanted` is true and the vote opens when it answers."""
+        workspace_id = workspace(request, claims, "rooms.rounds")
+        service = social.rooms()
+        try:
+            if body.song_ids:
+                rounds.open_round(
+                    service, workspace_id, room_id, body.song_ids, opened_by=body.opened_by
+                )
+            else:
+                rounds.want_round(service, workspace_id, room_id, opened_by=body.opened_by)
+        except RoomError as error:
+            raise refusal(error) from error
+        return {"wanted": not body.song_ids, "pulse": pulse(workspace_id, room_id)}
+
+    @app.post("/api/rooms/{room_id}/rounds/{round_id}/close")
+    def close_round(
+        room_id: str,
+        round_id: str,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """The speaker asks for the result once the vote's time is up. Before then nothing
+        changes; after, whoever asks first closes it and everyone gets the same answer."""
+        workspace_id = workspace(request, claims)
+        try:
+            rounds.settle_due(social.rooms(), workspace_id, room_id)
+        except RoomError as error:
+            raise refusal(error) from error
+        return {"pulse": pulse(workspace_id, room_id)}
+
+    @app.post("/api/rooms/{room_id}/rounds/{round_id}/cancel")
+    def cancel_round(
+        room_id: str,
+        round_id: str,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        workspace_id = workspace(request, claims)
+        try:
+            rounds.cancel(social.rooms(), workspace_id, room_id, round_id)
+        except RoomError as error:
+            raise refusal(error) from error
+        return {"pulse": pulse(workspace_id, room_id)}
 
     @app.get("/api/crowd-marks")
     def crowd_marks(
