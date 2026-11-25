@@ -2,7 +2,7 @@
 id: T-20261125-37fe
 title: Listen keeps the old title and 0:00 until the hand-off for many seconds after a blend ends
 area: shell
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25
