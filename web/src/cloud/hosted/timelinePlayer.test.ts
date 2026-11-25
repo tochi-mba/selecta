@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { framesIn, readStreamInfo, windowFile } from './flacFrames';
-import { PartReader } from './partReader';
-import { LinkExpired, TimelinePlayer, type TimelinePart } from './timelinePlayer';
+import { forgetFiles, PartReader } from './partReader';
+import { CANNOT_DECODE, LinkExpired, TimelinePlayer, type TimelinePart } from './timelinePlayer';
 
 // A tiny FLAC writer and reader (16-bit, VERBATIM subframes), so the tests build real files whose
 // every sample is known: sample n of channel c is (n * 7 + c * 1000) % 30000, plus a file tag.
@@ -281,3 +281,81 @@ describe('TimelinePlayer', () => {
     expect(player.stats.heldFrames).toBe(0);
   });
 });
+
+describe('a jump reads only what it needs (T-20261125-3985 part 4)', () => {
+  const quietTimers = { every: () => () => undefined, sleep: async () => undefined };
+
+  it('reads a file’s header once per session, and starts a jump from frames already seen', async () => {
+    forgetFiles();
+    const file = files.get('b.flac')!;
+    const reads: Array<[number, number]> = [];
+    const read = async (start: number, end: number) => { reads.push([start, end]); return file.slice(start, end); };
+    const first = new PartReader(read, 9.25, 5, 'b.flac');
+    await first.open();
+    await first.next();
+    const headReads = () => reads.filter(([start]) => start === 0).length;
+    expect(headReads()).toBe(1);
+    const before = reads.length;
+    const again = new PartReader(read, 9.5, 5, 'b.flac');
+    await again.open();
+    expect(headReads()).toBe(1); // the header came from this session's copy
+    expect(reads.length - before).toBeLessThanOrEqual(2); // a seek near frames already seen
+    const window = await again.next();
+    expect(window!.sample + window!.skip).toBe(Math.round(9.5 * 44100));
+  });
+
+  it('a jump aborts the reads of the place it left, and never schedules them', async () => {
+    forgetFiles();
+    const signals: AbortSignal[] = [];
+    let hold = true;
+    const slowRead = async (url: string, start: number, end: number, signal?: AbortSignal) => {
+      if (signal) signals.push(signal);
+      while (hold && url.startsWith('b.flac') && !signal?.aborted) await new Promise((done) => setTimeout(done, 1));
+      if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
+      return readUrl(url, start, end);
+    };
+    const { context, started } = fakeContext();
+    const player = new TimelinePlayer(PARTS, async () => PARTS, () => undefined, { ...quietTimers, context: () => context as never, readUrl: slowRead, aheadS: 3 });
+    const leaving = player.play(2, 1);
+    await new Promise((done) => setTimeout(done, 5));
+    const abandoned = signals.slice();
+    expect(abandoned.length).toBeGreaterThan(0);
+    hold = false;
+    await player.play(0, 0);
+    await leaving;
+    expect(abandoned.every((signal) => signal.aborted)).toBe(true);
+    expect(started.length).toBeGreaterThan(0);
+    expect(player.state.error).toBeNull();
+  });
+
+  it('a window the browser cannot decode stops the mix with plain words, without trying four times', async () => {
+    const { context } = fakeContext();
+    let tries = 0;
+    const refusing = { ...context, decodeAudioData: async () => { tries += 1; throw new DOMException('Unable to decode audio data', 'EncodingError'); } };
+    const player = new TimelinePlayer(PARTS, async () => PARTS, () => undefined, { ...quietTimers, context: () => refusing as never, readUrl, aheadS: 3 });
+    await player.play();
+    expect(player.state.error).toBe(CANNOT_DECODE);
+    expect(tries).toBe(1);
+    expect(player.state.playing).toBe(false);
+  });
+
+  it('a browser with no Web Audio is told so plainly when Play is pressed', async () => {
+    const player = new TimelinePlayer(PARTS, async () => PARTS, () => undefined, { ...quietTimers, context: () => { throw new Error('this browser cannot play audio from a web page.'); }, readUrl, aheadS: 3 });
+    await player.play();
+    expect(player.state).toMatchObject({ playing: false, error: 'this browser cannot play audio from a web page.' });
+  });
+
+  it('a decoder that never answers does not hang the player', async () => {
+    vi.useFakeTimers();
+    try {
+      const { context } = fakeContext();
+      const silent = { ...context, decodeAudioData: () => new Promise<never>(() => undefined) };
+      const player = new TimelinePlayer(PARTS, async () => PARTS, () => undefined, { ...quietTimers, context: () => silent as never, readUrl, aheadS: 3 });
+      const playing = player.play();
+      await vi.advanceTimersByTimeAsync(21_000);
+      await playing;
+      expect(player.state.error).toBe(CANNOT_DECODE);
+    } finally { vi.useRealTimers(); }
+  });
+});
+

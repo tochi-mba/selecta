@@ -30,7 +30,7 @@ export function holdingWords(device: DeviceHolding, now: number, mix?: { held: n
   return device.online ? has : `${has}. Not open right now, last open ${ago(now - device.last_seen_at)}`;
 }
 
-export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices, thisDeviceId, now, asking, onPlayOn, notice, onDismissNotice }: {
+export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices, thisDeviceId, now, asking, onPlayOn, notice, onDismissNotice, hosted = false }: {
   /** The current mix on this device's account view; empty when there is none. */
   mixName: string;
   mixSongs: number;
@@ -47,6 +47,9 @@ export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices,
   /** The one message about where the music is going; replaces the asking line. */
   notice?: PlayNotice | null;
   onDismissNotice?: () => void;
+  /** A hosted account (cloud.hosted_render): its uploaded songs play from SelectaDJ's storage in
+   * this browser through Make a Mix, so "open a device with music" is not the only way to listen. */
+  hosted?: boolean;
 }) {
   const others = devices.filter((device) => device.device_id !== thisDeviceId);
   const known = ids ?? new Map<string, ReadonlySet<number>>();
@@ -80,8 +83,15 @@ export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices,
               </button>
               {preflight && <p className="remote-state" data-testid="preflight">{preflight}</p>}
               {whole && <button type="button" disabled={busy} data-testid="play-on-whole" onClick={() => onPlayOn(whole)}>Play on {whole.name}, which has all {mixIds.length}</button>}
-              <p className="remote-sound">This device has no music on it, so {best.name} makes the sound and this one is its remote.</p>
+              <p className="remote-sound">{hosted
+                ? <>{best.name} makes the sound for the music kept on it, and this one is its remote. Your uploaded songs play right here: <PageLink to="/mixes">Make a mix from them</PageLink>.</>
+                : <>This device has no music on it, so {best.name} makes the sound and this one is its remote.</>}</p>
             </>
+          ) : hosted ? (
+            <div className="controller-hosted" role="status" data-testid="controller-hosted">
+              <p>Your uploaded songs are kept in your SelectaDJ storage and play right here in this browser.</p>
+              <PageLink to="/mixes" className="button primary">Make a mix from them</PageLink>
+            </div>
           ) : (
             <p className="remote-state" role="status" data-testid="controller-none">
               {away.length ? 'None of your devices with music is open right now. Open SelectaDJ on one of them.' : 'None of your devices has music connected yet.'}

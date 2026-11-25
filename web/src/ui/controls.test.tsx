@@ -20,6 +20,19 @@ describe('a button that takes time', () => {
     expect(button).not.toHaveAttribute('aria-busy');
   });
 
+  it('never carries its busy words in its name or text while idle, and only them while busy', async () => {
+    let finish: () => void = () => {};
+    render(<Action run={() => new Promise<void>((done) => { finish = done; })} working="Planning…">Make another mix</Action>);
+    const button = screen.getByRole('button');
+    expect(button).toHaveAccessibleName('Make another mix');
+    expect(button.textContent).toBe('Make another mix');
+    fireEvent.click(button);
+    expect(button).toHaveAccessibleName('Planning…');
+    expect(button.textContent).toBe('Planning…');
+    await act(async () => finish());
+    expect(button).toHaveAccessibleName('Make another mix');
+  });
+
   it('can’t be pressed twice while it’s going', () => {
     const run = vi.fn(() => new Promise<void>(() => {}));
     render(<Action run={run}>Save</Action>);

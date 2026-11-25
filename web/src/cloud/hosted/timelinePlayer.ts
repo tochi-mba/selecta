@@ -1,4 +1,4 @@
-import { PartReader, type ReadBytes } from './partReader';
+import { fileKey, PartReader, type ReadBytes } from './partReader';
 
 /** Gapless playback of a server-rendered timeline (cloud.hosted_render).
  *
@@ -46,13 +46,20 @@ export type PlayerState = {
 /** A read the storage refused because the signed link ran out (or never was valid). */
 export class LinkExpired extends Error {}
 
+/** The browser could not decode a window (or took far too long): trying again would not help. */
+export class CannotDecode extends Error {}
+export const CANNOT_DECODE = 'this browser could not play the mix’s lossless audio. Try it in another browser, or export the mix and play the download.';
+/** A window is a few seconds of audio; a decode that takes this long is not going to finish. */
+const DECODE_LIMIT_MS = 20000;
+
 type Context = BaseAudioContext & { close?: () => Promise<void>; resume?: () => Promise<void>; suspend?: () => Promise<void> };
 type Scheduled = { source: AudioBufferSourceNode; level: GainNode; when: number; end: number; part: number; partAt: number; samples: number };
 
 export type PlayerDeps = {
   context?: () => Context;
-  /** Bytes `start` to `end` (exclusive) of a signed link; fewer at the end of the file. */
-  readUrl?: (url: string, start: number, end: number) => Promise<Uint8Array>;
+  /** Bytes `start` to `end` (exclusive) of a signed link; fewer at the end of the file. `signal`
+   * aborts it when the player stops or jumps elsewhere. */
+  readUrl?: (url: string, start: number, end: number, signal?: AbortSignal) => Promise<Uint8Array>;
   every?: (ms: number, run: () => void) => () => void;
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
@@ -70,14 +77,14 @@ const RATE = 44100;
 /** Set when the store's CORS rules refused a ranged read: from then on whole-body reads, cut here. */
 let rangesRefused = false;
 
-async function readSignedUrl(url: string, start: number, end: number): Promise<Uint8Array> {
+async function readSignedUrl(url: string, start: number, end: number, signal?: AbortSignal): Promise<Uint8Array> {
   let answer: Response;
   try {
-    answer = await fetch(url, rangesRefused ? { cache: 'no-store' } : { headers: { Range: `bytes=${start}-${end - 1}` }, cache: 'no-store' });
+    answer = await fetch(url, rangesRefused ? { cache: 'no-store', signal } : { headers: { Range: `bytes=${start}-${end - 1}` }, cache: 'no-store', signal });
   } catch (problem) {
-    if (rangesRefused || !(problem instanceof TypeError)) throw problem;
+    if (rangesRefused || !(problem instanceof TypeError) || signal?.aborted) throw problem;
     rangesRefused = true; // a refused preflight looks like a network error; try once without
-    answer = await fetch(url, { cache: 'no-store' });
+    answer = await fetch(url, { cache: 'no-store', signal });
   }
   if (answer.status === 403 || answer.status === 400 || answer.status === 401) throw new LinkExpired('The link to this part ran out.');
   if (answer.status === 416) return new Uint8Array(0);
@@ -102,7 +109,11 @@ async function readSignedUrl(url: string, start: number, end: number): Promise<U
 }
 
 function newContext(): Context {
-  const make = (options?: AudioContextOptions) => new AudioContext(options);
+  // an older Safari (before 14.1) has only the prefixed constructor
+  const Made = (globalThis as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
+    ?? (globalThis as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Made) throw new CannotDecode('this browser cannot play audio from a web page. Try it in another browser, or export the mix and play the download.');
+  const make = (options?: AudioContextOptions) => new Made(options);
   try { return make({ sampleRate: RATE, latencyHint: 'playback' }); } catch { return make(); }
 }
 
@@ -118,6 +129,8 @@ export class TimelinePlayer {
   private live = false;
   private generation = 0;
   private cancelTimer: (() => void) | null = null;
+  /** Aborts every read of the current position when the player stops or jumps elsewhere. */
+  private reads = new AbortController();
   private linksAt: number;
   private refreshing: Promise<void> | null = null;
   private readonly deps: Required<PlayerDeps>;
@@ -161,16 +174,21 @@ export class TimelinePlayer {
   /** Start from part `from`, `at` seconds in (default: the beginning). Call it inside the press:
    * the audio context is made before anything is awaited, so the browser lets it sound. */
   async play(from = 0, at = 0) {
-    this.halt();
+    this.halt('keep');
     const generation = this.generation;
-    const context = this.context ?? this.deps.context();
+    let context: Context;
+    try { context = this.context ?? this.deps.context(); } catch (problem) {
+      // no Web Audio here at all: said plainly, never a silent press
+      this.emit({ playing: false, waiting: false, error: problem instanceof Error && problem.message ? problem.message : CANNOT_DECODE });
+      return;
+    }
     this.context = context;
     this.live = true;
     this.nextPart = Math.max(0, Math.min(from, this.parts.length - 1));
     this.nextAt = Math.max(0, at);
     this.ending = false;
     this.emit({ playing: true, part: this.nextPart, at: this.nextAt, elapsed: this.elapsedAt(this.nextPart, this.nextAt), total: this.total(), waiting: true, error: null });
-    if (context.state === 'suspended') await context.resume?.().catch(() => undefined);
+    if (context.state !== 'running') await context.resume?.().catch(() => undefined);
     if (generation !== this.generation) return;
     this.nextFrame = Math.ceil((context.currentTime + LEAD_S) * context.sampleRate);
     this.cancelTimer = this.deps.every(TICK_MS, () => this.tick());
@@ -205,14 +223,19 @@ export class TimelinePlayer {
   }
 
   private bytesOf(index: number): ReadBytes {
+    const signal = this.reads.signal;
+    const stale = () => { if (signal.aborted) throw new DOMException('The player moved on.', 'AbortError'); };
     return async (start, end) => {
+      stale();
       await this.links();
+      stale();
       try {
-        return await this.deps.readUrl(this.urlOf(index), start, end);
+        return await this.deps.readUrl(this.urlOf(index), start, end, signal);
       } catch (problem) {
         if (!(problem instanceof LinkExpired)) throw problem;
         await this.links(true);
-        return this.deps.readUrl(this.urlOf(index), start, end);
+        stale();
+        return this.deps.readUrl(this.urlOf(index), start, end, signal);
       }
     };
   }
@@ -222,7 +245,7 @@ export class TimelinePlayer {
     let wait = 1000;
     for (let tried = 1; ; tried += 1) {
       try { return await step(); } catch (problem) {
-        if (tried >= TRIES || generation !== this.generation || problem instanceof LinkExpired) throw problem;
+        if (tried >= TRIES || generation !== this.generation || problem instanceof LinkExpired || (problem as Error | null)?.name === 'AbortError') throw problem;
         if (this.ahead() < 2) this.emit({ waiting: true });
         await this.deps.sleep(wait);
         wait *= 2;
@@ -239,7 +262,7 @@ export class TimelinePlayer {
         if (!this.reader) {
           if (this.nextPart >= this.parts.length) { this.ending = true; break; }
           const part = this.parts[this.nextPart];
-          const reader = new PartReader(this.bytesOf(this.nextPart), part.from_s, part.seconds);
+          const reader = new PartReader(this.bytesOf(this.nextPart), part.from_s, part.seconds, part.url ? fileKey(part.url) : null);
           const skip = Math.min(this.nextAt, Math.max(0, part.seconds - 0.01));
           await this.patiently(generation, () => reader.open(skip));
           if (generation !== this.generation) return;
@@ -250,7 +273,7 @@ export class TimelinePlayer {
         const window = await this.patiently(generation, () => current.reader.next());
         if (generation !== this.generation || !this.context) return;
         if (!window) { this.reader = null; this.nextPart = current.part + 1; continue; }
-        const decoded = await this.patiently(generation, () => this.context!.decodeAudioData(window.file.buffer.byteLength === window.file.length ? window.file.buffer as ArrayBuffer : window.file.slice().buffer));
+        const decoded = await this.decode(window.file);
         if (generation !== this.generation || !this.context) return;
         this.schedule(decoded, current, window.skip, window.keep);
         if (window.last) { this.reader = null; this.nextPart = current.part + 1; }
@@ -260,6 +283,24 @@ export class TimelinePlayer {
     } finally {
       if (generation === this.generation) this.pumping = false;
     }
+  }
+
+  /** Decode one window. Callbacks as well as the promise (an older Safari returns no promise), a
+   * time limit (a decoder that never answers must not hang the player) and a plain failure. */
+  private async decode(file: Uint8Array): Promise<AudioBuffer> {
+    const context = this.context!;
+    const bytes = file.buffer.byteLength === file.length && file.byteOffset === 0 ? file.buffer as ArrayBuffer : file.slice().buffer;
+    const decoded = new Promise<AudioBuffer>((done, refused) => {
+      try {
+        const promised = context.decodeAudioData(bytes, done, () => refused(new CannotDecode(CANNOT_DECODE)));
+        void promised?.then?.(done, () => refused(new CannotDecode(CANNOT_DECODE)));
+      } catch { refused(new CannotDecode(CANNOT_DECODE)); }
+    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<never>((_done, refused) => { timer = globalThis.setTimeout(() => refused(new CannotDecode(CANNOT_DECODE)), DECODE_LIMIT_MS); });
+    const audio = await Promise.race([decoded, late]).finally(() => globalThis.clearTimeout(timer));
+    if (!audio || typeof audio.getChannelData !== 'function' || audio.length === 0) throw new CannotDecode(CANNOT_DECODE);
+    return audio;
   }
 
   private schedule(audio: AudioBuffer, current: { part: number; reader: PartReader; at: number }, skipIn: number, keepIn: number) {
@@ -345,10 +386,14 @@ export class TimelinePlayer {
     this.emit({ playing: false, waiting: false, error: message, part, at });
   }
 
-  /** Silence everything, let every decoded window go and close the audio context. */
-  private halt(close = false) {
+  /** Silence everything and let every decoded window go; abandoned reads are aborted. The context
+   * is suspended (`suspend`, a stop), left running for the next start (`keep`, a jump: suspending
+   * here would land after the new start's resume and freeze it), or closed (`close`). */
+  private halt(context_: 'suspend' | 'keep' | 'close' = 'suspend') {
     this.generation += 1;
     this.live = false;
+    this.reads.abort();
+    this.reads = new AbortController();
     this.cancelTimer?.();
     this.cancelTimer = null;
     for (const item of this.scheduled) {
@@ -360,10 +405,10 @@ export class TimelinePlayer {
     this.reader = null;
     this.pumping = false;
     const context = this.context;
-    if (close) {
+    if (context_ === 'close') {
       this.context = null;
       void context?.close?.().catch(() => undefined);
-    } else {
+    } else if (context_ === 'suspend') {
       // kept, silent, for the next Play: making a context can hold the page for most of a second
       void context?.suspend?.().catch(() => undefined);
     }
@@ -380,7 +425,7 @@ export class TimelinePlayer {
   /** Stop and close the audio context (leaving the page). */
   close() {
     const was = this.state.playing;
-    this.halt(true);
+    this.halt('close');
     if (was) this.emit({ playing: false, waiting: false });
   }
 }

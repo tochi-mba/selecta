@@ -63,6 +63,10 @@
 .hosted-player-now span { color: var(--text-soft); font-size: var(--text-sm); }
 .hosted-player-time { grid-area: time; color: var(--text-soft); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .hosted-player-bar { grid-area: bar; }
+/* the bar's track sits on the player's control surface, the same colour as the shared track: it
+   is drawn from the strong edge instead, at least 3:1 against the panel in both themes (4.5:1
+   dark, 3.3:1 light), with the fill a further 3:1 from the track */
+.hosted-player-bar .meter-track { background: color-mix(in srgb, var(--border-strong) 75%, var(--border)); }
 .hosted-player[data-playing] { border-color: var(--edge-selected); }
 
 .hosted-mix-tracks { list-style: none; margin: 0 calc(var(--space-2) * -1); padding: 0; display: grid; }
@@ -76,10 +80,19 @@
   font-size: var(--text-xs);
 }
 .hosted-mix-seam[data-tone='problem'] { color: var(--warn); }
+.hosted-mix-export { display: grid; gap: var(--space-3); }
+.hosted-mix-hint[data-tone='problem'] { color: var(--warn); }
 .hosted-mix-foot { color: var(--text-soft); font-size: var(--text-sm); }
 .hosted-mix-foot button.link { min-height: 0; padding: 0; border: 0; background: none; color: var(--link); font: inherit; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; }
 
+/* a touch screen: every press is at least 44px tall (WCAG 2.5.5), the inline foot link too */
+@media (pointer: coarse) {
+  .hosted-mix-foot button.link { min-height: var(--control-height); }
+  .hosted-mix .hosted-mix-actions :is(button, a.button) { min-height: var(--control-height); }
+}
+
 @media (max-width: 640px) {
+  .hosted-mix-actions > :is(button, a.button) { flex: 1 1 100%; justify-content: center; }
   .hosted-player { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'play now' 'time time' 'bar bar'; }
   .hosted-mix-problem { grid-template-columns: auto minmax(0, 1fr); }
   .hosted-mix-problem > button { grid-column: 2; justify-self: start; }

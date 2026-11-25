@@ -23,6 +23,10 @@ export function tabLog(...words: unknown[]): void {
   try { if (localStorage.getItem('selecta.debug.tabs')) console.info('[tabs]', ...words); } catch { /* no storage: no log */ }
 }
 
+/** This page, among the tabs of this browser: a take from this same page (the hosted mix taking
+ * the sound from the browser mix beside it) is not "another tab". */
+const PAGE = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 export type AudioTab = {
   /** Make this the audio tab. `takeOver`: the person pressed here, so another tab is asked to
    * stop first; otherwise only a free lock is taken. True when this tab may make sound. */
@@ -33,25 +37,29 @@ export type AudioTab = {
   /** Wait until no tab holds the sound (the audio tab closed, crashed or was discarded), then
    * hold it here. Resolves false if `signal` is aborted first. */
   waitFree: (signal: AbortSignal) => Promise<boolean>;
-  /** Called when another tab of this browser took the sound: stop now, synchronously. */
-  onTaken: (stop: () => void) => void;
+  /** Called when another player took the sound: stop now, synchronously. `here` is true when the
+   * player that took it is on this same page (not another tab). */
+  onTaken: (stop: (here: boolean) => void) => void;
   close: () => void;
 };
 
-export function audioTab(workspaceId: string, deps: { locks?: Locks | null; channel?: Channel | null; lock?: string } = {}): AudioTab {
-  // `lock`: another player that keeps the same one-tab rule for its own sound (the hosted mix)
+export function audioTab(workspaceId: string, deps: { locks?: Locks | null; channel?: Channel | null; lock?: string; page?: string } = {}): AudioTab {
+  // `lock`: a player with a one-tab rule of its own. The hosted mix uses the default: it and the
+  // browser mix are one sound, so starting either anywhere stops the other everywhere.
   const name = `${deps.lock ?? 'selecta-audio'}:${workspaceId}`;
   const locks: Locks | null = deps.locks !== undefined ? deps.locks : (typeof navigator !== 'undefined' && 'locks' in navigator ? (navigator as unknown as { locks: Locks }).locks : null);
   const channel: Channel | null = deps.channel !== undefined ? deps.channel : (typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(name) : null);
+  const page = deps.page ?? PAGE;
   let letGo: (() => void) | null = null;
-  let stopHere: () => void = () => undefined;
+  let stopHere: (here: boolean) => void = () => undefined;
 
   const release = () => { const free = letGo; letGo = null; free?.(); };
   channel?.addEventListener('message', (event) => {
     tabLog('message received', JSON.stringify(event.data), 'holding:', !!letGo);
-    if ((event.data as { kind?: string } | null)?.kind !== 'take' || !letGo) return;
+    const data = event.data as { kind?: string; from?: string } | null;
+    if (data?.kind !== 'take' || !letGo) return;
     // stop the sound before the lock is free, so the new tab can never overlap this one
-    stopHere();
+    stopHere(data.from === page);
     tabLog('stopped; releasing');
     release();
   });
@@ -71,7 +79,7 @@ export function audioTab(workspaceId: string, deps: { locks?: Locks | null; chan
       if (await hold(true)) return true;
       if (!takeOver) return false;
       tabLog('asking the audio tab to let go');
-      channel?.postMessage({ kind: 'take' });
+      channel?.postMessage({ kind: 'take', from: page });
       return hold(false);
     },
     release,
