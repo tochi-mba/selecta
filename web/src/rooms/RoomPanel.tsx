@@ -114,10 +114,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
       noteRoom(answer.room);
     } catch (problem) { setLoadError((problem as Error).message || 'Check your connection.'); setLoaded(true); }
   }, [api, workspaceId, freshOnly]);
-  useEffect(() => {
-    if (!locked) void load();
-  }, [load, locked]);
-  useVisiblePoll(load, POLL_MS, !locked);
+  // A plan without Rooms still reads the current room: a host who downgraded mid-party keeps the
+  // room that is open until it ends (the server lets every route after opening through)
+  useEffect(() => { void load(); }, [load]);
+  useVisiblePoll(load, POLL_MS, !locked || !!panel);
 
   const act = async (path: string, init: RequestInit = { method: 'POST' }, success = '') => {
     hostChanges.current += 1;
@@ -137,7 +137,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const link = panel?.join_path ? `${origin}${panel.join_path}` : '';
   const { copied, copy } = useCopyLink(link, showProblem);
 
-  if (locked) {
+  if (locked && !panel) {
     const plan = `${locked[0]?.toUpperCase()}${locked.slice(1)}`;
     return (
       <section className="room-panel room-card room-invite" aria-labelledby="room-title">
@@ -248,6 +248,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   return (
     <section className="room-panel room-live" aria-labelledby="room-title">
       {offline && <p className="needs-connection">{offline}</p>}
+      {locked && <p className="room-lede" data-testid="room-after-downgrade">Your plan no longer includes Rooms. This room stays open until it ends; opening a new one needs {`${locked[0]?.toUpperCase()}${locked.slice(1)}`}.</p>}
       <fieldset className="offline-fieldset" disabled={!!offline}>
       <div className="room-page">
       <header className="room-head">

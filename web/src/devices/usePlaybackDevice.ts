@@ -22,6 +22,10 @@ import { soundAllowedHere } from './playOn';
 //   /playback/reconnect; if another device took over meanwhile it stops here and says so.
 
 export * from './playbackWire';
+/** Said on a speaker whose page reloaded (or was discarded and came back) while it played. */
+/** The browser says this page has had no press since it loaded (where it can say at all). */
+const soundKnownBlocked = () => typeof navigator !== 'undefined' && 'userActivation' in navigator && !soundAllowedHere();
+export const RELOADED_WORDS = 'The music paused when this page reloaded. Press Play to carry on.';
 import { couldNotReach, extrapolate, LOCAL_PRESSES, MAX_PROGRAMME, MOVES_TRACK, neverReached, newKey, NO_SPEAKER_WORDS, offlinePlaybackOn, openEnvelope, outputReport, RETRY_CODES, SPEAKER_COMMANDS, commandStillValid, DEVICE_REGISTERED, HEARTBEAT_MS, SPEAKER_POLL_MS, REMOTE_POLL_MS, FADE_MS, DEFAULT_VOLUME, VOLUME_RISE_MS, levelOf, START_DELAY_MS, TAKEN_OVER_WHILE_OFFLINE, PLAYBACK_COMMAND_EVENT } from './playbackWire';
 import { changeWords } from './ChangedFromLine';
 import { awaitSpeaker, CONFIRMED_PRESSES, LATE_MS, pressFailedWords, unansweredWords, type Unconfirmed } from './pressConfirm';
@@ -440,6 +444,17 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         if (verified?.speaker === 'here' && verified.session) {
           // another tab of this browser is already making the sound: this one stays quiet
           if (!(await tab.claim(false))) { setOtherTab(true); return; }
+          // audit (a discarded or reloaded tab): the browser lets a page make sound only after a
+          // press since it loaded, so the music is said to be paused here rather than claimed
+          // while silent, and one press of Play carries on from where it was
+          if (verified.session.state === 'playing' && soundKnownBlocked()) {
+            tab.release();
+            void api('/playback/heartbeat', {
+              method: 'POST', body: JSON.stringify({ device_id: deviceId, song_index: verified.session.song_index, offset_ms: Math.max(0, Math.round(extrapolate(verified.session, serverNow()))), state: 'paused', seq: verified.session.seq, ...(typeof verified.session.fence === 'number' ? { fence: verified.session.fence } : {}) }),
+            }, workspaceId).catch(() => undefined);
+            setMessage(RELOADED_WORDS);
+            return;
+          }
           await startSpeaking(verified.session);
         } else if (!verified) {
           // Reconnect succeeded but verification could not reach the server.

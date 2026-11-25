@@ -8,7 +8,7 @@ These two belong together: a Room needs one device that is *the speaker*, and a 
 
 **Model** (similar in spirit to Spotify Connect: one active output device, every other device is a remote that sees shared state).
 
-- **Device**: every signed-in browser registers once (`device_id` random, kept in a cookie and `localStorage`; name like "Chrome on Windows", renameable; kind laptop/phone/tablet/TV; capabilities: can play audio, supports wake lock, is an iOS home-screen app; last seen). Account → Devices lists them with "sign out this device". Limit 10 signed-in devices; the oldest is signed out with a notice.
+- **Device**: every signed-in browser registers once (`device_id` random, kept in a cookie and `localStorage`; name like "Chrome on Windows", renameable; kind laptop/phone/tablet/TV; capabilities: can play audio, supports wake lock, is an iOS home-screen app; last seen). Account → Devices lists them with "sign out this device". A second device with the same default name is numbered ("Edge on Windows 2"). Limit 10 signed-in devices; the least recently seen is signed out with a notice, never the device making the sound, and the default speaker only when nothing else can go.
 - **One playback session per account.** Server-held state: current mix revision, position anchor `(song index, offset ms, server time)`, playing/paused, volume is local only, `active_device_id`, lease expiry, sequence number. One session per account also limits account sharing.
 - **Active device lease.** The playing device heartbeats every 5 s with its position (lease 20 s). Everyone else is a remote: "Playing on Living-room laptop", with play/pause, skip, steering (Bigger/Calmer/Something else), reorder, request approval, and a live position bar extrapolated from the anchor using a server-clock offset measured over SSE.
 - **Where the state lives.** The session is one Postgres row per account; a position heartbeat is a small update to that row. Commands and state changes go out through the outbox and each device's SSE stream ([§4A.6](04-queue-and-scheduling.md#4a6-workers-and-the-claim-protocol), [§11.3](11-ui-ux.md#113-real-time-updates)), so any API instance can serve any device.
@@ -35,6 +35,8 @@ These two belong together: a Room needs one device that is *the speaker*, and a 
 
 **A remote's press is honest (ADR-0475 G3).** Each press carries the session state it was based on and one key, so a retried press happens once and two people pressing Next together skip once. A remote shows a change only once the speaker has carried it out; if the speaker does not within seven seconds the remote says "{Speaker} didn't answer. Nothing changed there." and shows things as they were. Only the person whose device is playing can steer it; another member of a shared workspace is told "That music is playing on someone else's device." The speaker's own screen says briefly what was changed and from which device.
 
+**A reloaded speaker.** A speaker page that reloads (or comes back after the browser discarded it) and has had no press says "The music paused when this page reloaded. Press Play to carry on." and tells the account it is paused, rather than holding the music in silence.
+
 **One tab per browser.** Two tabs of one browser are one device: a Web Lock picks the tab that makes the sound; the others say "Playing in another tab." with "Play in this tab instead", and carry on by themselves if that tab closes.
 
 **The Library on a remote.** A phone without the music shows the whole account's library; each song an open device holds says "Plays on Laptop" and can be started as a mix, added or played next from the phone, on the device that holds it. On a phone the page is compact: one line says where the music lives, search and filters stay at the top, and while another device plays each row's button reads "Play next" and confirms "Added to Laptop's mix" in the row. A song the playing device does not have but another open device does says "Play on Tablet"; pressing it asks "This song is on Tablet. Move the music there?" with Move and play (the music moves to the tablet, starting with that song) and Add it later. Choosing several songs on a remote says first what will happen: "9 of 12 can play on Laptop. 3 are only on Tablet." with Play the 9 and Choose another device. A song's details say where its file lives (each device, open now or when it was last open) and list its versions. The list opens from what this browser kept and follows devices live: songs a device adds show where they play within seconds.
@@ -60,7 +62,7 @@ These two belong together: a Room needs one device that is *the speaker*, and a 
 | Who can join | Anyone with the code · host approves each new guest · locked (no new guests) |
 | Requests | Auto-accept · host approves each · off (watch-only room) |
 | Requestable songs | All mix-ready songs · a chosen crate · (set-aside, never-play and unanalysed songs are always excluded) |
-| Limits | 1 pending request per guest, 3 per hour; a played song can't be requested again for 60 min; at most 20 pending in the room |
+| Limits | 3 waiting requests per guest and 20 an hour (the host sets 1 to 20 waiting, and 1 to 60 an hour or no hourly limit); a played song can't be requested again for 20 min; at most 50 waiting in the room |
 | Votes | On: guests upvote pending requests, which raises their priority but never forces a song that doesn't fit · off |
 | Guest names | Hidden: generated nicknames ("Blue Fox") visible to the host only · shown to everyone |
 | Big screen | Off · pair a TV or projector as a display |
@@ -82,7 +84,7 @@ Moderation: approve/pass requests, remove a guest, ban a guest for the room's li
 - Each accepted request creates interactive-lane seam jobs in the host's workspace at Premium weight. A per-room cap (e.g. 60 request renders an hour) stops a busy room from running away with compute.
 - With no speaker device online, the room says "The music's paused"; requests wait.
 
-**Plan and limits.** Premium: one open room at a time, up to 100 guests in beta (admin-tunable per plan), 12-hour maximum. Standard and Free see Rooms as a locked Premium feature (the `teaser` behaviour in [§11B.3](11b-feature-flags.md#11b3-targeting-rules)). If a host downgrades mid-party, the open room continues to its end; new rooms are blocked.
+**Plan and limits.** Premium: one open room at a time, up to 100 guests in beta (admin-tunable per plan), 12-hour maximum. Standard and Free see Rooms as a locked Premium feature (the `teaser` behaviour in [§11B.3](11b-feature-flags.md#11b3-targeting-rules)). If a host downgrades mid-party, the open room continues to its end and stays on the host's Rooms page with a line saying so; new rooms are blocked.
 
 **Legal points specific to Rooms** (part of the Phase 0 legal review):
 - **No audio to guests** keeps Selecta clear of sending the host's music to other people's devices.

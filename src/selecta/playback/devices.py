@@ -19,6 +19,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
 from selecta.persistence import new_id, transaction
+from selecta.playback.default_speaker_schema import playback_default_speakers
 from selecta.playback.model import (
     DEVICE_NAME_MAX,
     MAX_SIGNED_IN_DEVICES,
@@ -28,7 +29,7 @@ from selecta.playback.model import (
     PlaybackError,
 )
 from selecta.playback.ports import NO_EVENTS, PlaybackEvents
-from selecta.playback.schema import devices
+from selecta.playback.schema import devices, playback_sessions
 from selecta.playback.store import (
     device_from_row,
     load_device,
@@ -146,7 +147,7 @@ def register(
                     id=this_id,
                     workspace_id=workspace_id,
                     user_id=user_id,
-                    name=clean_name(name, kind),
+                    name=_distinct_name(clean_name(name, kind), mine),
                     kind=kind.value,
                     capabilities=capabilities.to_json(),
                     created_at=now,
@@ -171,11 +172,53 @@ def register(
         )
         signed_out = None
         if len(others) + 1 > MAX_SIGNED_IN_DEVICES:
-            oldest = min(others, key=lambda row: (row["last_seen_at"], row["created_at"]))
+            # the least recently seen goes, but never the device making the sound, and the
+            # default speaker only when nothing else can (ADR-0475 audit: over the limit)
+            keep = _keep_signed_in(conn, workspace_id, now)
+            oldest = min(
+                others,
+                key=lambda row: (
+                    keep.get(row["id"], 0), row["last_seen_at"], row["created_at"]
+                ),
+            )
             sign_out_devices(conn, workspace_id, [oldest["id"]], now, "device_limit", events)
             signed_out = load_device(conn, workspace_id, oldest["id"])
         device = require_device(conn, workspace_id, this_id)
     return RegisterResult(device, signed_out, speaker_warnings(device))
+
+
+def _distinct_name(name: str, mine) -> str:
+    """ADR-0475 audit: a new device named like one of this person's signed-in devices ("Edge on
+    Windows" twice) gets the next free number ("Edge on Windows 2"), so every list, picker and
+    "Playing on" line tells them apart. A name the person chose is never changed later."""
+    taken = {row["name"] for row in mine if row["signed_out_at"] is None}
+    if name not in taken:
+        return name
+    number = 2
+    while f"{name} {number}" in taken:
+        number += 1
+    return f"{name} {number}"
+
+
+def _keep_signed_in(conn, workspace_id: str, now: float) -> dict[str, int]:
+    """Devices to sign out last when the limit is passed: the live speaker of any session (2)
+    and the default speaker (1)."""
+    keep: dict[str, int] = {}
+    default = conn.execute(
+        sa.select(playback_default_speakers.c.device_id).where(
+            playback_default_speakers.c.workspace_id == workspace_id
+        )
+    ).scalar()
+    if default:
+        keep[default] = 1
+    for row in conn.execute(
+        sa.select(
+            playback_sessions.c.active_device_id, playback_sessions.c.lease_expires_at
+        ).where(playback_sessions.c.workspace_id == workspace_id)
+    ):
+        if row.active_device_id and row.lease_expires_at and row.lease_expires_at > now:
+            keep[row.active_device_id] = 2
+    return keep
 
 
 def rename(

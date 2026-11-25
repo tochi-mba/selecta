@@ -14,15 +14,18 @@ import pytest
 from cloud_party import ALICE, auth, party  # noqa: F401
 from test_cloud_playback_fakes import OTHER_USER, USER, WORKSPACE, follow_clock
 
-from selecta.playback import commands, devices, fencing, session
+from selecta.persistence import transaction
+from selecta.playback import commands, default_speaker, devices, fencing, session
 from selecta.playback.model import (
     LEASE_SECONDS,
+    MAX_SIGNED_IN_DEVICES,
     DeviceSignedOut,
     NotYourMusic,
     PlayState,
     Position,
     UnknownCommand,
 )
+from selecta.playback.schema import devices as devices_table
 from selecta.playback.session import CommandStatus
 
 
@@ -143,3 +146,42 @@ def test_stop_for_an_away_speaker_is_applied_not_held(engine, clock):
     stopped = _press(engine, phone, "stop", key="stop-away")
     assert stopped.status is CommandStatus.APPLIED
     assert session.session_view(engine, WORKSPACE, phone.id).speaker is session.SpeakerStatus.NONE
+
+
+# ---- audit: an eleventh device never signs out the speaker or, while others can go, the default
+
+
+def test_the_eleventh_device_never_signs_out_the_speaker_or_the_default(engine, clock):
+
+    first = _device(engine, "Old laptop")  # the least recently seen: it makes the sound
+    clock.advance(1)
+    second = _device(engine, "Old tablet")  # next least recently seen: the default speaker
+    for number in range(MAX_SIGNED_IN_DEVICES - 2):
+        clock.advance(1)
+        _device(engine, f"Phone {number}")
+    session.take_over(engine, WORKSPACE, first.id)
+    with transaction(engine, WORKSPACE) as conn:
+        default_speaker.choose(conn, WORKSPACE, second.id)
+        conn.execute(devices_table.update().where(devices_table.c.id == first.id).values(
+            last_seen_at=0
+        ))
+    clock.advance(1)
+    made = devices.register(engine, WORKSPACE, USER, name="New phone", kind="phone")
+    assert made.signed_out is not None
+    assert made.signed_out.id not in (first.id, second.id)
+
+
+def test_a_second_device_with_the_same_default_name_is_numbered(engine):
+    first = _device(engine, "Edge on Windows")
+    second = _device(engine, "Edge on Windows")
+    third = _device(engine, "Edge on Windows")
+    assert [first.name, second.name, third.name] == [
+        "Edge on Windows", "Edge on Windows 2", "Edge on Windows 3"
+    ]
+    # another person's devices are theirs: no number for them
+    assert _device(engine, "Edge on Windows", OTHER_USER).name == "Edge on Windows"
+    # signing the same browser back in keeps its name
+    again = devices.register(
+        engine, WORKSPACE, USER, name="Edge on Windows", kind="laptop", device_id=second.id
+    ).device
+    assert again.name == "Edge on Windows 2"

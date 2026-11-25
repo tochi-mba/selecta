@@ -16,6 +16,7 @@ from test_cloud_playback_fakes import (
 from selecta.playback import devices, ports, session
 from selecta.playback.devices import WARNING_TEXT, SpeakerWarning
 from selecta.playback.model import (
+    LEASE_SECONDS,
     MAX_SIGNED_IN_DEVICES,
     Capabilities,
     DeviceKind,
@@ -80,13 +81,15 @@ def test_the_eleventh_device_signs_out_the_least_recently_used_one_and_says_whic
 
 
 def test_signing_out_the_oldest_device_stops_playback_if_it_was_the_speaker(engine, clock):
+    # a speaker whose lease has lapsed (gone quiet) is the oldest and goes; a live speaker is
+    # kept (ADR-0475 audit, tests/test_bf_remote_rules.py)
     events = RecordingEvents()
     speaker = _register(engine, "Speaker").device
     session.take_over(engine, WORKSPACE, speaker.id)
     for number in range(MAX_SIGNED_IN_DEVICES - 1):
         clock.advance(1)
         _register(engine, f"Remote {number}")
-    clock.advance(1)
+    clock.advance(LEASE_SECONDS)
 
     eleventh = _register(engine, "Newest", events=events)
 
