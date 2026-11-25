@@ -53,6 +53,8 @@
 .number-roll-col,
 .number-roll-mark { display: inline-block; vertical-align: top; }
 .number-roll-col { block-size: 1.2em; overflow: hidden; }
+/* a mark can be the space before a unit ("0.6 MB"): alone in an inline block it would collapse */
+.number-roll-mark { white-space: pre; }
 .number-roll-strip {
   display: flex;
   flex-direction: column;
