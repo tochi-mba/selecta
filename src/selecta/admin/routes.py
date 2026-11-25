@@ -70,6 +70,14 @@ class MassOverrideRequest(Reason):
     expires_at: float
 
 
+class LucyMultiplierRequest(Reason):
+    multiplier_milli: int | None = Field(ge=0, le=100_000, strict=True)
+
+
+class LucyCutoverRequest(Reason):
+    when: str = Field(pattern="^(now|cancel)$")
+
+
 class RoleRequest(Reason):
     user_id: str = Field(min_length=1, max_length=64)
     role: str = Field(min_length=1, max_length=32)
@@ -93,6 +101,11 @@ def install_routes(
     from selecta.admin import routes_console
 
     routes_console.install_routes(app, engine=engine, current_claims=current_claims)
+    # The Workers page (hosted processing), behind its own flag, admin.workers.
+    from selecta.admin import routes_workers
+
+    routes_workers.install_routes(app, engine=engine, current_claims=current_claims,
+                                  emergency=emergency)
 
     def staff(request: Request, claims: Claims) -> Actor:
         return http.staff_actor(engine, request, claims)
@@ -230,6 +243,20 @@ def install_routes(
     @app.get("/api/admin/ai")
     def admin_ai(request: Request, claims: SignedIn):
         return run(request, claims, pages.ai_routing)
+
+    @app.put("/api/admin/ai/workspaces/{workspace_id}/multiplier")
+    def admin_lucy_multiplier(workspace_id: str, body: LucyMultiplierRequest,
+                              request: Request, claims: SignedIn):
+        return run(request, claims, lambda conn, actor: commands.set_lucy_multiplier(
+            conn, actor, workspace_id=workspace_id, reason=body.reason,
+            multiplier_milli=body.multiplier_milli), workspace_id=workspace_id)
+
+    @app.put("/api/admin/ai/workspaces/{workspace_id}/cutover")
+    def admin_lucy_cutover(workspace_id: str, body: LucyCutoverRequest,
+                           request: Request, claims: SignedIn):
+        return run(request, claims, lambda conn, actor: commands.set_lucy_cutover(
+            conn, actor, workspace_id=workspace_id, reason=body.reason, when=body.when),
+            workspace_id=workspace_id)
 
     @app.get("/api/admin/security")
     def admin_security(request: Request, claims: SignedIn):

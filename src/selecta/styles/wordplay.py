@@ -27,6 +27,7 @@ import numpy as np
 from selecta import flags
 from selecta.analysis.song import SongInfo
 from selecta.lyrics.align import Word
+from selecta.planner.fit import fold_ratio
 from selecta.render.script import Curve, Echo, Part, TransitionScript, Warp, fade_in, sweep
 from selecta.styles.blend import _low_curves
 from selecta.styles.timing import beat_lock
@@ -68,6 +69,19 @@ class Stem:
 
     path: str
     origin: float
+    name: str | None = None
+    """Which stem this is (`render.sources.STEM_NAMES`), so a script can name it without a path."""
+    duration: float = 0.0
+    """How long the separated window is."""
+
+    def part_source(self) -> dict:
+        """The `Part` fields that say where this stem's audio comes from."""
+        return {
+            "source_path": self.path,
+            "window_origin": self.origin,
+            "stem": self.name,
+            "stem_seconds": self.duration,
+        }
 
 
 def pulse(song: SongInfo) -> float:
@@ -113,8 +127,7 @@ def word_cut(
             Part(
                 song=b,
                 warp=Warp.identity(begin, enter_b - swell, swell + _DECLICK),
-                source_path=band_b.path,
-                window_origin=band_b.origin,
+                **band_b.part_source(),
                 gain=Curve([(begin, 0.0), (lead - _DECLICK, 0.75), (lead, 0.0)]),
                 low=Curve.constant(0.0),
                 highpass=sweep(begin, lead, 2500.0, 250.0),
@@ -135,17 +148,35 @@ def word_cut(
     )
 
 
-def _handoff_shift(a: SongInfo, b: SongInfo, a_end: float, b_start: float) -> tuple[int, float]:
+def _fold(a: SongInfo, b: SongInfo) -> float:
+    """B's beats per A beat for a ride's lock: 2 or 0.5 for a double- or half-time pair, so an 87
+    and a 174 BPM song share one pulse as bar-cue blends do. 1 with `render.one_engine` off."""
+    return fold_ratio(a, b) if flags.on("render.one_engine") else 1.0
+
+
+def _handoff_shift(
+    a: SongInfo, b: SongInfo, a_end: float, b_start: float, fold: float = 1.0
+) -> tuple[float, float]:
     """How many beats B must sit ahead of A so bars line up and B's phrase follows A's.
 
     Returns the shift and the fractional A beat where B's phrase begins. Of the shifts that keep
     downbeats together, this takes the smallest wait, so there's at most about a bar between voices.
+    With `fold`, B's beat for A's beat `x` is `fold * x + shift`.
     """
     bar = a.beats_per_bar
     a_beat = float(np.interp(a_end, a.beats, np.arange(a.beats.size)))
     b_beat = float(np.interp(b_start, b.beats, np.arange(b.beats.size)))
     a_downbeat = int(a.bar_starts[a.bar_at(a_end)])
     b_downbeat = int(b.bar_starts[b.bar_at(b_start)])
+    if fold != 1.0:
+        # a half-time B puts a downbeat on every other A downbeat, so it can shift by half a bar
+        base = b_downbeat - fold * a_downbeat
+        shifts = [base + k * bar * min(fold, 1.0) for k in range(-128, 129)]
+        best = min(
+            (shift for shift in shifts if (b_beat - shift) / fold - a_beat >= -0.25),
+            key=lambda shift: (b_beat - shift) / fold - a_beat,
+        )
+        return best, (b_beat - best) / fold
     base = b_downbeat - a_downbeat
     best = min(
         (base + k * bar for k in range(-64, 65) if (b_beat - (base + k * bar)) - a_beat >= -0.25),
@@ -203,7 +234,8 @@ def _ride(
     bar = a.beats_per_bar
     enter_b = first_word_b.start - _PAD
     word_end = last_word_a.end
-    shift, handoff_beat = _handoff_shift(a, b, word_end, first_word_b.start)
+    fold = _fold(a, b)
+    shift, handoff_beat = _handoff_shift(a, b, word_end, first_word_b.start, fold)
     a_word_beat = float(np.interp(word_end, a.beats, np.arange(a.beats.size)))
     latest = max(handoff_beat, a_word_beat) + 0.5
     later_bars = a.bar_starts[a.bar_starts >= latest]
@@ -211,7 +243,11 @@ def _ride(
         return None
     a_end = int(later_bars[0])
     a_start = a_end - bars * bar
-    timing = beat_lock(a, b, a_start, a_end, a_start + shift)
+    if fold == 1.0:
+        timing = beat_lock(a, b, a_start, a_end, a_start + shift)
+    else:
+        # B walks `fold` of its beats for each of A's, the folded lock bar-cue blends use
+        timing = beat_lock(a, b, a_start, a_end, fold * a_start + shift, fold=fold)
     if timing is None:
         return None
     if not _reaches(band_b, float(timing.b_warp.source[0])):
@@ -266,8 +302,7 @@ def _ride(
     voice = Part(
         song=a,
         warp=timing.a_warp.trimmed(start - _CROSSFADE - 0.02, voice_end + 0.1),
-        source_path=voice_a.path,
-        window_origin=voice_a.origin,
+        **voice_a.part_source(),
         gain=Curve(
             [
                 (start - _CROSSFADE, 0.0),
@@ -309,8 +344,7 @@ def _ride(
         a=Part(
             song=a,
             warp=timing.a_warp,
-            source_path=band_a.path,
-            window_origin=band_a.origin,
+            **band_a.part_source(),
             render_from=start - _CROSSFADE - 0.02,
             render_until=band_gone + 0.1,
             gain=Curve(
@@ -326,8 +360,7 @@ def _ride(
         b=Part(
             song=b,
             warp=timing.b_warp,
-            source_path=band_b.path,
-            window_origin=band_b.origin,
+            **band_b.part_source(),
             render_until=handoff + 0.1,
             gain=band_gain,
             low=b_low,
@@ -368,8 +401,7 @@ def _hit(
             np.array([at, at + length + _DECLICK]),
             np.array([source, source + (length + _DECLICK) * speed]),
         ),
-        source_path=stem.path,
-        window_origin=stem.origin,
+        **stem.part_source(),
         gain=Curve(
             [
                 (at - 1e-6, 0.0),
@@ -575,8 +607,7 @@ def phrase_roll(
         warp=Warp.identity(
             phrase_end - _CROSSFADE, end_song - _CROSSFADE, band_a_gone - phrase_end + _CROSSFADE
         ),
-        source_path=band_a.path,
-        window_origin=band_a.origin,
+        **band_a.part_source(),
         gain=Curve(
             [
                 (phrase_end - _CROSSFADE, 0.0),
@@ -591,8 +622,7 @@ def phrase_roll(
     rises = Part(
         song=b,
         warp=Warp.identity(word_stage, enter_b - bed, bed + _DECLICK),
-        source_path=band_b.path,
-        window_origin=band_b.origin,
+        **band_b.part_source(),
         gain=Curve(
             [
                 (word_stage, 0.0),
@@ -684,7 +714,8 @@ def word_exchange(
     """
     start_a = phrase_a[0].start - _PAD
     length = phrase_a[-1].end + _PAD - start_a
-    speed = a.bpm / b.bpm
+    # B plays on at its own tempo after the hand-over, so A's calls match B's folded pulse
+    speed = a.bpm * _fold(a, b) / b.bpm
     call = length / speed
     gaps = _answer_gaps(b, phrase_b[-1].end, call)
     if not gaps:

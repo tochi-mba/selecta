@@ -467,7 +467,9 @@ def figures(raw: dict, now: float) -> dict:
                    raw["session_ends_at"])
     session["open"] = raw["session_ends_at"] is not None
     week = line(raw["week_used"] + raw["week_reserved"], raw["week_limit"], raw["week_ends_at"])
-    return {"session": session, "week": week, "time_zone": zone}
+    lighter = (session is not None and session["state"] == "spent"
+               and week["state"] != "spent" and raw["plan_id"] != "free")
+    return {"session": session, "week": week, "time_zone": zone, "lighter": lighter}
 
 
 @pytest.mark.parametrize("seed", [1, 2, 3])

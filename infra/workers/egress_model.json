@@ -5,10 +5,14 @@
     "play.proxy": null,
     "analyse.song": null,
     "lyrics.fetch": null,
+    "catalog.lookup": null,
     "lyrics.align": null,
     "stems.window": null,
     "seam.render": null,
     "export.render": null,
     "discover.sweep": null
+  },
+  "notes": {
+    "catalog.lookup": "Downloads, not uploads, are most of it: MusicBrainz JSON (musicbrainz.org) and one front cover per release from the Cover Art Archive (coverartarchive.org, which redirects to archive.org image hosts). It uploads at most one cover image (the 500 px size; not measured yet) per release not already stored, to the derived bucket under catalog/v1/art/, through the server's own R2 client rather than a signed slot, so it publishes no job artifact and selecta.work.egress counts none of it. It needs SELECTA_DATABASE_URL, so it runs only on the dev stack's worker today; a Modal worker has no handler for it (to-do T-20261125-cf58)."
   }
 }

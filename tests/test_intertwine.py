@@ -4,6 +4,7 @@ import soundfile as sf
 from helpers import song_from_track
 from synth import make_track
 
+from selecta import flags
 from selecta.analysis.song import Cue
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.render.intertwine import (
@@ -123,6 +124,8 @@ def test_intertwined_render_rejects_an_ineligible_pair_before_separating(tmp_pat
 
 
 def test_intertwined_render_swaps_layers_and_vocals_in_the_audio(tmp_path, monkeypatch):
+    # the old private mix; with render.one_engine on, tests/test_one_engine_stems.py covers it
+    flags.use("-render.one_engine")
     a = song_from_track(tmp_path, "render-intertwine-a", make_track(bpm=120, bars=64, seed=3))
     b = song_from_track(tmp_path, "render-intertwine-b", make_track(bpm=120, bars=64, seed=4))
     a.lufs = -16.0

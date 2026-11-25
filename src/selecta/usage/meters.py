@@ -20,6 +20,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.ai import allowance as lucy_allowance
+from selecta.ai import usage_mode, usage_units
 from selecta.billing.plans import Plan
 from selecta.persistence import db_now
 from selecta.usage import allowances, quota
@@ -108,6 +109,8 @@ def meters(
     timezone: str | None,
     *,
     hosted_media_granted: bool | None = None,
+    flag_rules: usage_mode.Rules | None = None,
+    now: float | None = None,
 ) -> dict[str, Any]:
     """Every meter for one workspace, ready for `/api/account`.
 
@@ -128,7 +131,7 @@ def meters(
             )
         )
 
-    return {
+    result = {
         # "hosted" or "none"; top-level, beside the storage block, so the exact shape of
         # `storage` stays what the Plan & billing page and its tests already pin.
         "storage_mode": storage_mode(hosted_media_granted, storage.used_bytes),
@@ -150,6 +153,11 @@ def meters(
         "lucy_turns_month": lucy_turns(connection, workspace_id, plan, timezone),
         "library": library_size(connection, workspace_id, plan),
     }
+    if flag_rules is not None:
+        now = db_now(connection) if now is None else now
+        if usage_mode.mode_for(connection, workspace_id, flag_rules, now) == usage_mode.ENFORCED:
+            result["lucy_windows"] = usage_units.read_model(connection, workspace_id, now=now)
+    return result
 
 
 def library_size(connection: Connection, workspace_id: str, plan: Plan) -> dict[str, int]:

@@ -69,10 +69,36 @@ describe('the Lucy usage meter (ADR-0484)', () => {
   it('shows an extra usage line only when the account has one', () => {
     const without = render(<LucyUsageMeter windows={LUCY_WINDOWS} />);
     expect(without.container).not.toHaveTextContent('Extra usage');
+    expect(without.container.querySelector('.lucy-usage-extra')).toBeNull();
+    expect(screen.getAllByRole('meter')).toHaveLength(2);
     without.unmount();
     const { container } = render(<LucyUsageMeter windows={{ ...LUCY_WINDOWS, extra: { left: 40 } }} />);
     expect(container.querySelector('.lucy-usage-extra')).toHaveTextContent('Extra usage40% left');
+    expect(screen.getByRole('meter', { name: 'Extra usage' })).toHaveAttribute('aria-valuenow', '40');
+    expect(screen.getByRole('meter', { name: 'Extra usage' })).toHaveAttribute('aria-valuetext', '40% left');
+    // it is the third line, under the session and the week
+    expect([...container.querySelectorAll('.lucy-usage-words b')].map((name) => name.textContent)).toEqual(['This session', 'This week', 'Extra usage']);
     expect(container.textContent).not.toMatch(NEVER_SHOWN);
+  });
+
+  it('says when the extra usage runs out, and marks it when that is soon', () => {
+    const day = 86_400;
+    const now = Math.floor(Date.now() / 1000);
+    const far = render(<LucyUsageMeter windows={{ ...LUCY_WINDOWS, extra: { left: 40, expires_at: now + 200 * day } }} />);
+    const farLine = far.container.querySelector('.lucy-usage-extra') as HTMLElement;
+    expect(farLine).toHaveTextContent(/^Extra usage40% left · expires .*\d{4}/);
+    expect(farLine).toHaveAttribute('data-state', 'ok');
+    expect(within(farLine).queryByText('Expires soon')).toBeNull();
+    expect(far.container.textContent).not.toMatch(NEVER_SHOWN);
+    far.unmount();
+    const soon = render(<LucyUsageMeter windows={{ ...LUCY_WINDOWS, extra: { left: 12, expires_at: now + 5 * day + 3600 } }} />);
+    const soonLine = soon.container.querySelector('.lucy-usage-extra') as HTMLElement;
+    expect(soonLine).toHaveTextContent('Extra usage12% left · expires in 5 days');
+    expect(soonLine).toHaveAttribute('data-state', 'near');
+    expect(within(soonLine).getByText('Expires soon')).toBeInTheDocument();
+    expect(soonLine.querySelector('.ui-icon')).toHaveAttribute('data-icon', 'warning');
+    expect(screen.getByRole('meter', { name: 'Extra usage' })).toHaveAttribute('aria-valuetext', '12% left, expires in 5 days');
+    expect(soon.container.textContent).not.toMatch(NEVER_SHOWN);
   });
 
   it('announces a change of state once, politely, and stays quiet when only the figure moves', async () => {

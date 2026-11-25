@@ -15,12 +15,14 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from selecta import flags
 from selecta.analysis.song import Cue, SongInfo
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.render import dsp
-from selecta.render.engine import Rendered
+from selecta.render.engine import Rendered, SongCache, render
 from selecta.render.intertwine import _fit, _read
 from selecta.render.script import Curve, Part, TransitionScript, Warp
+from selecta.render.stem_seam import Lane, stem_script
 from selecta.stems import separate_window, window_is_ready
 
 LANES = ("vocals", "drums", "bass", "other")
@@ -109,7 +111,12 @@ def _points(a: SongInfo, b: SongInfo, place: Placement) -> tuple[np.ndarray, np.
 def _windows(
     a: SongInfo, b: SongInfo, place: Placement
 ) -> tuple[tuple[float, float], tuple[float, float]]:
-    a_points, b_points = _points(a, b, place)
+    return _windows_from(a, b, *_points(a, b, place))
+
+
+def _windows_from(
+    a: SongInfo, b: SongInfo, a_points: np.ndarray, b_points: np.ndarray
+) -> tuple[tuple[float, float], tuple[float, float]]:
     window = float(a_points[-1] - a_points[0]) + WINDOW_MARGIN
     return (float(a_points[0]), window), (float(b_points[0]), window * a.bpm / b.bpm)
 
@@ -196,8 +203,7 @@ def clean_shape(raw: str | dict | None) -> Shape:
     return shape
 
 
-def _lane_gain(cells: list[int], seconds: float, count: int) -> np.ndarray:
-    """A lane's level over the overlap, with short edges so nothing clicks where it changes."""
+def _lane_points(cells: list[int], seconds: float) -> tuple[list[float], list[float]]:
     step = seconds / CELLS
     times: list[float] = [0.0]
     values: list[float] = [float(cells[0])]
@@ -208,8 +214,66 @@ def _lane_gain(cells: list[int], seconds: float, count: int) -> np.ndarray:
             values += [float(cells[index - 1]), float(cells[index])]
     times.append(seconds)
     values.append(float(cells[-1]))
+    return times, values
+
+
+def _lane_gain(cells: list[int], seconds: float, count: int) -> np.ndarray:
+    """A lane's level over the overlap, with short edges so nothing clicks where it changes."""
+    times, values = _lane_points(cells, seconds)
     positions = np.arange(count) / SAMPLE_RATE
     return np.interp(positions, times, values).astype(np.float32)[:, None]
+
+
+def lane_curve(cells: list[int], seconds: float) -> Curve:
+    """`_lane_gain` as a curve the engine reads: the same points, so the same level."""
+    return Curve(list(zip(*_lane_points(cells, seconds), strict=True)))
+
+
+def session_stems(settings: Settings, a: SongInfo, b: SongInfo, session: dict) -> dict:
+    """The separated windows a session was laid out from. They're cached, so this is instant
+    unless the cache has cleared them since."""
+    a_points = np.asarray(session["a_points"], dtype=float)
+    b_points = np.asarray(session["b_points"], dtype=float)
+    a_window, b_window = _windows_from(a, b, a_points, b_points)
+    return {
+        "a": (separate_window(settings, Path(a.path), *a_window), a_window),
+        "b": (separate_window(settings, Path(b.path), *b_window), b_window),
+    }
+
+
+def shape_script(
+    a: SongInfo, b: SongInfo, session: dict, shape: Shape, stems: dict, style: str = "stem_studio"
+) -> TransitionScript:
+    """A shape as a script: every lane its own stem part, at the level the grid gives it, with B
+    pinned onto A's bars at the same half-bar points the session's own B stems were."""
+    seconds = float(session["seconds"])
+    a_points = np.asarray(session["a_points"], dtype=float)
+    b_points = np.asarray(session["b_points"], dtype=float)
+    a_start = float(session["a_start"])
+    beats = int(session["bars"]) * a.beats_per_bar
+    keep = np.arange(0, beats + 1, max(a.beats_per_bar // 2, 1))
+    lanes = {}
+    for side in SIDES:
+        window, (origin, length) = stems[side]
+        for lane in LANES:
+            lanes[(side, lane)] = Lane(
+                str(getattr(window, lane)), origin, length, lane_curve(shape[side][lane], seconds)
+            )
+    return stem_script(
+        style,
+        a,
+        b,
+        seconds,
+        a_start,
+        a_points[keep] - a_start,
+        b_points[keep],
+        lanes,
+        {
+            "bars": int(session["bars"]),
+            "shape": shape,
+            "vocal_gains": {side: lanes[(side, "vocals")].gain for side in SIDES},
+        },
+    )
 
 
 def _curve(cells: list[int], seconds: float) -> Curve:
@@ -229,8 +293,18 @@ def render_shape(
     session: dict,
     shape: Shape,
     style: str = "stem_studio",
+    settings: Settings | None = None,
+    cache: SongCache | None = None,
 ) -> Rendered:
-    """Play the chosen shape into a finished seam that the mix can use like any other."""
+    """Play the chosen shape into a finished seam that the mix can use like any other.
+
+    With `render.one_engine` on, the shape plays through the engine from the separated windows,
+    which `settings` finds. Without settings there's no stem cache to read, so it mixes as before.
+    """
+    if flags.on("render.one_engine") and settings is not None:
+        stems = session_stems(settings, a, b, session)
+        return render(shape_script(a, b, session, shape, stems, style), cache)
+    # the old private mix, kept for render.one_engine off; it goes once the owner has listened
     seconds = float(session["seconds"])
     count = int(round(seconds * SAMPLE_RATE))
     dry = {}

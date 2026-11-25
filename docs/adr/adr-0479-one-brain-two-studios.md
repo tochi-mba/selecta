@@ -171,3 +171,7 @@ Each audio phase ends at a listening stop. Only the owner can judge sound.
 
 - 2026-11-25, `feat/one-brain`: this ADR, [glossary.md](../glossary.md), the two research notes,
   and the other programmes' Not started tasks filed to `docs/todo`.
+- 2026-11-25, phase 2b, behind `render.one_engine`: the Seam Studio, strip and land and
+  intertwined stems are scripts rendered by `render()` and audited with vocal spans from their
+  own voice stems, with the pocket nudge and beat tightening; word and ride moves fold half and
+  double time. The old stem mixes stay for flag off until the owner's listening stop.

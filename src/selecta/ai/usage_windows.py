@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import datetime as dt
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -169,6 +170,18 @@ def segments_lit(used: int, limit: int, segments: int = 5) -> int:
     if used <= 0:
         return segments
     return max(1, min(segments - 1, (limit - used) * segments // limit))
+
+
+def estimated_messages(remaining_units: int, recent_charges: Sequence[int]) -> int | None:
+    """Estimate from the latest settled turns, with no estimate until five have settled."""
+    charges = sorted(recent_charges[:20])
+    if len(charges) < 5:
+        return None
+    middle = len(charges) // 2
+    doubled_median = charges[(len(charges) - 1) // 2] + charges[middle]
+    if doubled_median <= 0:
+        return None
+    return max(0, remaining_units) * 2 // doubled_median
 
 
 def back_words(resets_at: float, time_zone: str | None, now: float) -> str:

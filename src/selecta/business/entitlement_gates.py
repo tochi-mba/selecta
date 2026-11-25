@@ -198,6 +198,23 @@ def lucy_start(conn: Connection, workspace_id: str, served: object, month: str):
     return TurnStart(decision.allowed, served_class, month, pool.used, pool.limit)
 
 
+def lucy_count(conn: Connection, workspace_id: str, served: object):
+    """Count one business turn in the month's venue pool without checking it, for a workspace on
+    the weekly allowance in units (ADR-0482 rule 7): the month's counts stay true, so going back
+    to them loses nothing. The class counted, or None for anyone the pool does not cover."""
+    if not enabled():
+        return None
+    org = org_for(conn, workspace_id)
+    if org is None:
+        return None
+    from selecta.ai.registry import RequestClass
+    from selecta.persistence import db_now
+
+    served_class = RequestClass(str(getattr(served, "value", served)))
+    ent.count_lucy_turn(conn, org, served_class.value, db_now(conn))
+    return served_class
+
+
 def lucy_refund(conn: Connection, workspace_id: str, bucket: object) -> bool:
     """Give a failed business turn back to the pool; False when the pool does not apply."""
     if not enabled() or bucket is None:

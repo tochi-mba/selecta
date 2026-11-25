@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -113,5 +113,72 @@ describe('the next step in the conversation', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Use extra usage' }));
     expect(onExtra).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('Message Lucy')).toHaveValue('half a thought more');
+  });
+});
+
+describe('use extra usage (ADR-0486 rule 3)', () => {
+  const WEEK: LimitNotice = { cause: 'week', back_words: 'Thursday 09:00', resets_at: 1_800_000_000, next: ['wait', 'extra'] };
+  const button = () => screen.queryByRole('button', { name: 'Use extra usage' });
+  /** A press whose answer the test gives when it chooses. */
+  function held() {
+    let settle: { yes: (answer: 'on' | 'none') => void; no: (error: Error) => void } = { yes: () => {}, no: () => {} };
+    const onExtra = vi.fn(() => new Promise<'on' | 'none'>((yes, no) => { settle = { yes, no }; }));
+    return { onExtra, yes: (answer: 'on' | 'none' = 'on') => settle.yes(answer), no: () => settle.no(new Error('503')) };
+  }
+
+  it('one press says yes, then tells the member to send again', async () => {
+    const press = held();
+    render(<LucyLimitStep limit={WEEK} onExtra={press.onExtra} />);
+    await userEvent.click(button()!);
+    expect(press.onExtra).toHaveBeenCalledTimes(1);
+    press.yes();
+    expect(await screen.findByRole('status')).toHaveTextContent('Extra usage is on for this week. Send your message again.');
+    expect(button()).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('cannot be pressed twice while the yes is on its way', async () => {
+    const press = held();
+    render(<LucyLimitStep limit={WEEK} onExtra={press.onExtra} />);
+    await userEvent.click(button()!);
+    expect(button()).toHaveAttribute('aria-disabled', 'true');
+    expect(button()).toHaveAttribute('aria-busy', 'true');
+    await userEvent.click(button()!);
+    await userEvent.click(button()!);
+    expect(press.onExtra).toHaveBeenCalledTimes(1);
+    press.yes();
+    await waitFor(() => expect(button()).toBeNull());
+  });
+
+  it('says a failure plainly and leaves the button to press again', async () => {
+    const press = held();
+    render(<LucyLimitStep limit={WEEK} onExtra={press.onExtra} />);
+    await userEvent.click(button()!);
+    press.no();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t turn on extra usage. Try again.');
+    expect(button()).not.toHaveAttribute('aria-disabled');
+    expect(button()).not.toHaveAttribute('aria-busy');
+    await userEvent.click(button()!);
+    expect(press.onExtra).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alert')).toBeNull();
+    press.yes();
+    expect(await screen.findByRole('status')).toHaveTextContent('Extra usage is on for this week.');
+  });
+
+  it('says so when the extra usage had gone by the time it was pressed', async () => {
+    const press = held();
+    render(<LucyLimitStep limit={WEEK} onExtra={press.onExtra} />);
+    await userEvent.click(button()!);
+    press.yes('none');
+    expect(await screen.findByRole('status')).toHaveTextContent('There’s no extra usage left to use.');
+    expect(button()).toBeNull();
+  });
+
+  it('is absent when the server does not offer it', () => {
+    const onExtra = vi.fn();
+    render(<LucyLimitStep limit={{ ...WEEK, next: ['wait', 'plans'] }} onExtra={onExtra} />);
+    expect(button()).toBeNull();
+    expect(screen.getByRole('link', { name: 'See plans' })).toBeInTheDocument();
+    expect(onExtra).not.toHaveBeenCalled();
   });
 });

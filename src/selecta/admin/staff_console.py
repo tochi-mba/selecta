@@ -88,6 +88,15 @@ def me(conn: Connection, actor: Actor) -> dict[str, Any]:
     return out
 
 
+def _flag_on(flag_id: str) -> bool:
+    from selecta import flags
+
+    try:
+        return flags.on(flag_id)
+    except KeyError:
+        return False
+
+
 def preferences(conn: Connection, actor: Actor) -> dict[str, Any]:
     rows = conn.execute(sa.select(staff_preferences.c.key, staff_preferences.c.value)
                         .where(staff_preferences.c.user_id == actor.user_id)).all()
@@ -131,6 +140,13 @@ def owner_checklist(conn: Connection, actor: Actor) -> list[dict[str, Any]]:
          narrower or None),
         ("runbook", "Read the incident runbook", "help:runbook", None),
     ]
+    if _flag_on("admin.workers"):
+        from selecta.work.schema import workers
+
+        seen = conn.execute(sa.select(sa.func.max(workers.c.last_seen_at))).scalar()
+        reporting = seen is not None and db_now(conn) - float(seen) < 600
+        items.append(("workers", "Hosted processing: workers reporting", "/admin/workers",
+                      reporting or None))
     return [{"id": i, "label": label, "link": link,
              "done": bool(auto) or i in marked, "checked_by": "server" if auto else "you"}
             for i, label, link, auto in items]
@@ -224,7 +240,7 @@ def propose_owner(conn: Connection, actor: Actor, *, user_id: str, reason: str,
                  target=_email(conn, user_id))
     action = assignments.propose_owner(conn, actor, user_id=user_id, reason=reason)
     safety.record(conn, actor, "owner.propose", resource_type="role_assignment",
-                  resource_id=user_id, workspace_id=None, reason=reason, action_id=action.id)
+                  resource_id=user_id, workspace_id=None, reason=reason, delayed_action=action.id)
     return action
 
 

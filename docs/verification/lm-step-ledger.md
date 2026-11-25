@@ -57,6 +57,33 @@ would be switched without the notice they were promised. The admin page's "rollo
 up a new salt when none is given, so the runbook saves the whole rule list with the salt written
 in.
 
+## What the code enforces, and what a person still checks
+
+A guard on every change to `lucy.usage_windows`'s rules
+(`src/selecta/flags/lucy_rollout_guard.py`, tested in `tests/test_cloud_lucy_rollout_guard.py`)
+refuses:
+
+- a percentage rule with any salt other than `lm-usage-windows`, and the "rollout" action;
+- a percentage rule with no named-accounts (WORKSPACES) rule in front of it;
+- a raise of the highest percentage whose reason does not carry `[lm-gates-green]`, the
+  operator's word that the gate register is green;
+- a raise less than 7 days after the last raise was saved.
+
+It never refuses going back. A person still checks what the guard cannot see: that the gate
+register really is green, that a full week has passed since the workspaces of the last step
+switched on their 1st (the guard counts from the day the rule was saved, which is earlier), that
+the step's comparison is recorded here, and that no raise is proposed while another waits as a
+delayed action.
+
+The other pieces the steps rely on are built too. The month-start job
+(`src/selecta/ai/usage_rollout.py`, in the maintenance service) gives each granted workspace
+its cutover time at least 7 days ahead, switches it when the time comes and clears it when the
+grant goes. Staff can cut one account over now or cancel its switch with
+`PUT /api/admin/ai/workspaces/{workspace_id}/cutover`. The member notice (a note on the Lucy
+card for everyone, and one email per switch to the owner of each paid workspace,
+`src/selecta/notify/lucy_usage_mail.py`) is built with draft wording; gate 7 stays NO-GO until
+the owner approves the words. The runbook says how each is used.
+
 ## When a step takes effect
 
 A workspace does not change the moment its rule is saved. It switches at the start of a calendar

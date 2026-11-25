@@ -200,4 +200,19 @@ def tool_specs(proposals_on: bool) -> list[dict[str, Any]]:
     return [spec for spec in TOOL_SPECS if not spec["name"].startswith("propose_")]
 
 
-__all__ = ["INSTRUCTIONS", "PROMPT_VERSION", "TOOL_SPECS", "dynamic", "tool_specs"]
+_TURN_FACTS = """Lucy is "Lucy Basic" \
+on Free (40 turns a month), "Lucy Standard" on Standard (400 everyday and 40 planning turns), \
+"Lucy Advanced" on Premium (150 everyday turns, 25 deep plans, quick turns on fair use). Turns \
+come back on the 1st of each month. Plans are changed in Account, Plan and billing."""
+_WINDOW_FACTS = """Lucy is "Lucy Basic" \
+on Free, "Lucy Standard" on Standard and "Lucy Advanced" on Premium; each higher plan gets more \
+of Lucy. Her allowance is a share for each five-hour session and a larger one for each week, \
+and both come back on their own; the message for this turn says what is left. Plans are changed \
+in Account, Plan and billing."""
+assert _TURN_FACTS in INSTRUCTIONS
+INSTRUCTIONS_WINDOWS = INSTRUCTIONS.replace(_TURN_FACTS, _WINDOW_FACTS)
+"""The fixed block for an account on the session and week allowance (ADR-0484 rule 9): the same
+instructions with the monthly turn counts taken out."""
+
+__all__ = ["INSTRUCTIONS", "INSTRUCTIONS_WINDOWS", "PROMPT_VERSION", "TOOL_SPECS", "dynamic",
+           "tool_specs"]

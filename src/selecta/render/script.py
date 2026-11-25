@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from selecta.analysis.song import SongInfo
+from selecta.render.sources import SongFacts, SourceRef
 
 
 class Curve:
@@ -126,7 +127,8 @@ class Wash:
 
 @dataclass
 class Part:
-    song: SongInfo
+    song: SongInfo | SongFacts
+    """A `SongFacts` when the script came from JSON; the audio then comes from a resolver."""
     warp: Warp
     source_path: str | None = None
     gain: Curve = field(default_factory=lambda: Curve.constant(1.0))
@@ -146,6 +148,30 @@ class Part:
     """Output times to read audio between. The warp still describes the whole song's timing."""
     follows_b: bool = False
     """An extra layer of song B, which has to take the same small timing nudge as B."""
+    stem: str | None = None
+    """Which stem `source_path` holds (`sources.STEM_NAMES`), so the part can be named in JSON."""
+    stem_seconds: float = 0.0
+    """How long the separated window is, from `window_origin`."""
+
+    @classmethod
+    def from_source(cls, ref: SourceRef, facts: SongFacts, warp: Warp, **moves: object) -> Part:
+        """A part known only by its source reference, as a script from JSON is."""
+        if ref.role == "stem":
+            moves = {**moves, "stem": ref.stem, "stem_seconds": ref.duration}
+            moves.setdefault("window_origin", ref.start)
+        return cls(song=facts, warp=warp, **moves)  # type: ignore[arg-type]
+
+    @property
+    def source(self) -> SourceRef:
+        """The part's audio, named without a path."""
+        if self.stem is None:
+            return SourceRef(self.song.id)
+        return SourceRef(self.song.id, "stem", self.stem, self.window_origin, self.stem_seconds)
+
+    @property
+    def local_path(self) -> str | None:
+        """The file this part was built with on this machine, if it was."""
+        return self.source_path or self.song.path
 
     @property
     def heard_warp(self) -> Warp:

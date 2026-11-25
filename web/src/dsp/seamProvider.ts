@@ -23,6 +23,7 @@ import { DEFAULT_HORIZON_S, WorkerBudget, workerCalibrationState, WORKER_CALIBRA
 import { estimateTempo } from './analysis/tempo';
 import type { AnalysisResponse } from './workers/analysisWorker';
 import { analyseInWorker, spawnAnalysisWorker } from './workers/spawn';
+import { seamWorkStarted } from './seamWork';
 import { fadeSchedule, type SeamSchedule, type StretchedClip, type TrackTiming } from './seams';
 import { scriptSeam, type Ability, type ScriptRequest, type SeamAbilities } from './seamScript';
 import { isStemMove, withStemMove, type StemReading, type StemStretcher } from './stemSchedule';
@@ -328,7 +329,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
     return worker;
   };
 
-  const provide = async (request: SeamRequestLike): Promise<SeamSchedule> => {
+  const prepare = async (request: SeamRequestLike): Promise<SeamSchedule> => {
     const sources = { a: options.sourceOf?.(request.fromIndex) ?? null, b: options.sourceOf?.(request.toIndex) ?? null };
     const settings = options.settingsFor(request.toIndex) ?? {};
     if (disposed) return fadeSchedule(Math.max(30, request.from.duration - 5), 0, 'seam preparation stopped');
@@ -464,6 +465,11 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
       return schedule;
     }
+  };
+  // background work (the key profiler) holds off while a transition is in hand (seamWork.ts)
+  const provide = async (request: SeamRequestLike): Promise<SeamSchedule> => {
+    const done = seamWorkStarted();
+    try { return await prepare(request); } finally { done(); }
   };
   return Object.assign(provide, {
     dispose() {
