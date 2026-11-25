@@ -26,8 +26,10 @@ export type Holdings = { devices: DeviceHolding[]; server_time: number; device_i
 
 /** ADR-0475 R6: another of the person's devices that holds music, for the pages that say where a
  * song is. `ids` are the catalogue ids it reported; null when it has not said which. */
-/** `lastOpen`: seconds since a named device was last open (I86), when known. */
-export type MusicHolder = { deviceId: string; name: string; songs: number; online: boolean; ids: ReadonlySet<number> | null; places?: WhereHeld | null; lastOpen?: (name: string) => number | null };
+/** `lastOpen`: seconds since a named device was last open (I86), when known. `speaking`: it is the
+ * session's speaker and open, so a row's tap goes into what it plays (I84, I87); set only on a
+ * remote, where false means the speaker has gone. */
+export type MusicHolder = { deviceId: string; name: string; songs: number; online: boolean; ids: ReadonlySet<number> | null; places?: WhereHeld | null; lastOpen?: (name: string) => number | null; speaking?: boolean };
 /** ADR-0475 I86: the one hint for a song whose only copies are on devices that are not open. */
 export const openToPlay = (device: string) => `Open SelectaDJ on ${device} to play this.`;
 export const HolderContext = createContext<MusicHolder | null>(null);
@@ -37,7 +39,8 @@ export const HolderContext = createContext<MusicHolder | null>(null);
 export function musicHolder(devices: readonly DeviceHolding[], thisDeviceId: string | null, speakerId: string | null): DeviceHolding | null {
   const others = devices.filter((device) => device.device_id !== thisDeviceId && device.songs > 0);
   const speaker = speakerId ? others.find((device) => device.device_id === speakerId) : undefined;
-  if (speaker) return speaker;
+  // a speaker that has gone away is not where the music is: the best open holder is (I87)
+  if (speaker?.online) return speaker;
   return bestHolder(others) ?? [...others].sort((one, other) => other.songs - one.songs || other.last_seen_at - one.last_seen_at)[0] ?? null;
 }
 
