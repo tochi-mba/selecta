@@ -47,10 +47,12 @@ RULE = "(workspace_id = current_setting('app.workspace_id', true))"
 
 
 def _tables():
-    declared = {table.name: tuple(table.c.keys()) for table in schema.ENGINE_TABLES}
+    # only this revision's tables: a later slice adds its own tables in its own migration
+    mine = tuple(table for table in schema.ENGINE_TABLES if table.name in COLUMNS)
+    declared = {table.name: tuple(table.c.keys()) for table in mine}
     if declared != COLUMNS or tuple(declared) != TABLES:
         raise RuntimeError("The engine store schema changed; add a new migration")
-    return schema.ENGINE_TABLES
+    return mine
 
 
 def upgrade() -> None:
