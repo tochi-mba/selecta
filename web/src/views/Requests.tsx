@@ -869,6 +869,8 @@ export function RequestsPanel() {
           {matches.map((song, index) => {
             const already = inMix.has(song.id) ? 'In your mix' : waitingIds.has(song.id) ? 'Requested' : asBridges.has(song.id) ? 'Coming as a bridge' : '';
             const duplicate = matches.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist);
+            // told apart by length (e582c7ba), and by song number when the lengths are the same too
+            const sameLength = matches.some((other) => other.id !== song.id && other.title === song.title && other.artist === song.artist && Math.floor(other.duration) === Math.floor(song.duration));
             const identity = `${song.title ?? 'Untitled'} - ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
             return (
               <li key={song.id} id={`request-option-${song.id}`} role="option" aria-selected={activeMatch === index}>
@@ -877,7 +879,7 @@ export function RequestsPanel() {
                 <button className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)} data-identity={identity}>
                   <span className="request-name">
                     <b>{song.title ?? 'Untitled'}</b>{' '}
-                    <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · ${song.duration > 0 ? `${Math.floor(song.duration / 60)}:${String(Math.floor(song.duration % 60)).padStart(2, '0')}` : `Song ${song.id}`}` : ''}{song.where ? ` · ${song.where}` : ''}</span>
+                    <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · ${song.duration > 0 && !sameLength ? `${Math.floor(song.duration / 60)}:${String(Math.floor(song.duration % 60)).padStart(2, '0')}` : `Song ${song.id}`}` : ''}{song.where ? ` · ${song.where}` : ''}</span>
                   </span>{' '}
                   <small>{already === 'Requested' ? <><Icon name="check" size="compact" /> Requested</> : already || <><Icon name="plus" size="compact" /> Request</>}</small>
                 </button>

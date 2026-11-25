@@ -288,7 +288,7 @@
    page; on a remote the intro, the count and where the music lives are one line; Connect music
    is a small second action; the search stays at the top while the list scrolls; the filters fade
    at the edge when there are more; sort and view sit on one compact row. */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .library-browser .page-header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .library-browser .page-header[data-remote] .page-lead { display: none; }
   .library-browser .page-header[data-remote] { gap: var(--space-2); }
@@ -300,7 +300,7 @@
   .library-browser:has(.page-header[data-remote]) { padding-top: var(--space-3); }
   .library-browser .page-header[data-remote] { margin-bottom: 0; }
   .library-browser .lw-toolbar { margin-bottom: var(--space-1); }
-  .library-browser .lw-toolbar { position: sticky; top: var(--header-block); z-index: var(--layer-sticky); padding-block: var(--space-2); background: var(--bg); }
+  .library-browser .lw-toolbar { position: sticky; top: var(--header-block); z-index: var(--layer-sticky); padding-block: var(--space-2); background: var(--surface); }
   .library-browser .lw-chips { mask-image: linear-gradient(to right, var(--text) 85%, transparent); }
   .library-browser .page-header[data-remote] { flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: space-between; }
   .library-browser .page-header[data-remote] .lw-total { display: none; }
