@@ -32,7 +32,27 @@ export const ROOM_ROUTES = {
   print: (venue: string) => `/venues/${enc(venue)}/room-print`,
   screenCode: (zone: string) => `/zones/${enc(zone)}/room/screen-code`,
   next: (zone: string) => `/zones/${enc(zone)}/requests/next`,
+  // ADR-0488: what the room does together
+  social: (zone: string) => `/zones/${enc(zone)}/room/social`,
+  rounds: (zone: string) => `/zones/${enc(zone)}/room/rounds`,
+  cancelRound: (zone: string, round: string) => `/zones/${enc(zone)}/room/rounds/${enc(round)}/cancel`,
+  recap: (zone: string) => `/zones/${enc(zone)}/room/recap`,
+  displays: (zone: string) => `/zones/${enc(zone)}/room/displays`,
+  display: (zone: string, display: string) => `/zones/${enc(zone)}/room/displays/${enc(display)}`,
+  dedication: (zone: string, request: string) => `/zones/${enc(zone)}/requests/${enc(request)}/dedication`,
 } as const;
+
+export type SocialSettings = {
+  keeps: boolean; reactions: boolean; rounds: boolean; round_seconds: number; round_every_songs: number;
+  dedications: boolean; dedications_hidden: string[]; recap: boolean;
+  screen_rounds: boolean; screen_reactions: boolean; screen_dedications: boolean; screen_recap: boolean;
+};
+export type SocialScreen = { id: string; label: string; online: boolean };
+export type SocialView = {
+  zone_id: string; settings: SocialSettings; on: Record<'keeps' | 'reactions' | 'rounds' | 'dedications' | 'recap', boolean>;
+  lines: { id: string; words: string }[]; screens: SocialScreen[]; display_on: boolean;
+};
+export type RoundView = { round_id: string; state: string };
 
 export function roomsClient(api: Api, workspaceId: string) {
   const call = <T,>(path: string, init?: RequestInit) => api<T>(path, init, workspaceId);
@@ -47,6 +67,14 @@ export function roomsClient(api: Api, workspaceId: string) {
     print: (venue: string) => call<PrintSheet>(ROOM_ROUTES.print(venue)),
     screenCode: (zone: string) => call<ScreenCode>(ROOM_ROUTES.screenCode(zone)),
     next: async (zone: string) => (await call<{ request: NextRequest | null }>(ROOM_ROUTES.next(zone))).request,
+    social: (zone: string) => call<SocialView>(ROOM_ROUTES.social(zone)),
+    changeSocial: (zone: string, change: Partial<SocialSettings>) => call<SocialView>(ROOM_ROUTES.social(zone), { method: 'PATCH', body: JSON.stringify(change) }),
+    startRound: (zone: string) => call<RoundView>(ROOM_ROUTES.rounds(zone), post()),
+    cancelRound: (zone: string, round: string) => call<RoundView>(ROOM_ROUTES.cancelRound(zone, round), post()),
+    recap: (zone: string) => call<{ lines: string[] }>(ROOM_ROUTES.recap(zone)),
+    pairScreen: (zone: string, code: string) => call<{ screens: SocialScreen[] }>(ROOM_ROUTES.displays(zone), post({ pairing_code: code })),
+    unpairScreen: (zone: string, display: string) => call<{ screens: SocialScreen[] }>(ROOM_ROUTES.display(zone, display), { method: 'DELETE' }),
+    clearDedication: (zone: string, request: string) => call<unknown>(ROOM_ROUTES.dedication(zone, request), { method: 'DELETE' }),
   };
 }
 

@@ -26,6 +26,8 @@ type View = {
   pulse?: Pulse;
   /** Tonight in numbers, in words, for ten minutes after the room ends; first line is its title. */
   recap_lines?: string[];
+  /** A venue zone's screen: the line staff wrote to welcome guests. */
+  branding?: { welcome?: string | null };
 };
 /** The second screen says what guests are told while the room has no device playing. */
 const MUSIC_WORDS: Record<string, { title: string; more: string }> = {
@@ -144,7 +146,7 @@ function drawRoom(view: View): void {
   // ADR-0488: while the room votes for the next song, the vote takes the place of the lists
   const voting = social.roundPanel(view.pulse);
   patch(document.getElementById('d-info') as HTMLElement,
-    h('header', { className: 'd-top', 'data-key': 'top' }, brand(), h('h1', {}, view.room_name ?? 'Room')),
+    h('header', { className: 'd-top', 'data-key': 'top' }, brand(), h('h1', {}, view.room_name ?? 'Room'), view.branding?.welcome ? h('p', { className: 'd-muted' }, view.branding.welcome) : null),
     h('div', { className: 'd-playing', 'data-key': 'playing', 'data-on': playing },
       h('h2', { 'data-key': 'now-title' }, h('span', { className: 'd-eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), waitingOn ? (view.music === 'reconnecting' ? 'Paused' : 'Waiting') : now && view.music_paused ? 'Paused' : 'Now playing'),
       h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? view.music ?? 'none'}` }, now ? now.title : waitingOn ? waitingOn.title : 'Nothing playing yet', h('span', { className: 'd-by' }, now ? now.artist : waitingOn ? waitingOn.more : 'Scan the code and pick the first song.')),
