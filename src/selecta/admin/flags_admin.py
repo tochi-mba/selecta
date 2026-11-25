@@ -35,7 +35,7 @@ from selecta.authz.errors import Forbidden
 from selecta.authz.roles import may_change_flag
 from selecta.authz.scopes import ResourceRef
 from selecta.billing import plans, stripe_sync
-from selecta.flags import flip_guard, targeting
+from selecta.flags import flip_guard, lucy_rollout_guard, targeting
 from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Context, Rule, RuleKind
 from selecta.identity.schema import users, workspaces
@@ -256,6 +256,11 @@ def change(
     if flag_id == flip_guard.LOCAL_FIRST:
         # Dashboards before percentage (BF-0467-04): raising the rollout waits for them.
         refusals = flip_guard.check_percentage_step_now(conn, proposed, reason=reason)
+        if refusals:
+            raise flag_rules.RuleError(refusals)
+    if flag_id == lucy_rollout_guard.FLAG:
+        # One salt, staff first, and a week and green gates before each raise (LM-0487-07).
+        refusals = lucy_rollout_guard.check_change_now(conn, action, proposed, reason=reason)
         if refusals:
             raise flag_rules.RuleError(refusals)
     if flag_id == "business.signups":

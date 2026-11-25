@@ -18,6 +18,11 @@ stream carries it; the outbox keeps rows seven days, longer than every look-back
 - **Business billing notices** (`business.billing_emails`): dunning reminders and stop
   warnings, a failed VAT recheck and Enterprise contract expiry, from `biz_notices`.
 
+- **Lucy usage notice** (ADR-0487 rule 11): a paid workspace's owner is told once before
+  Lucy's allowance changes, from `lucy_usage_mail`. It keeps its own lasting record
+  (`lucy_usage_state.notice_sent_at`), because a switch is set further ahead than the outbox
+  remembers.
+
 Storage deletion warnings and silent-zone alerts have their words (`templates`) and go through
 `send_once`, but nothing schedules them yet: the retention deletion they warn of and the silent
 zone detector are not built, and an email must never promise something the code won't do.
@@ -201,6 +206,12 @@ def run(engine: Engine, sender: Sender, site_url: str = "", fence=None) -> RunRe
             due += device_mail.due(conn, now, site_url)
     for message in due:
         send_once(engine, sender, message, already, result, fence)
+    from selecta.notify import lucy_usage_mail
+
+    told = lucy_usage_mail.run(engine, sender, site_url, fence)
+    result.sent += told.sent
+    result.refused += told.refused
+    result.deferred += told.deferred
     return result
 
 

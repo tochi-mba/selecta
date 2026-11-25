@@ -140,7 +140,9 @@ def install_routes(
             result["usage_windows"] = usage_units.read_model(
                 conn, workspace_id, now=now, estimate_for_user_id=principal.user.id
             )
-        elif mode == usage_mode.SHADOW and plan.id != plans.FREE_1.id:
+        elif mode == usage_mode.SHADOW:
+            # The note before a switch, for Free and paid alike (ADR-0487 rule 11). Paid owners
+            # are also told by email (`notify.lucy_usage_mail`).
             cutover = conn.execute(
                 sa.select(lucy_usage_state.c.cutover_at, lucy_usage_state.c.time_zone).where(
                     lucy_usage_state.c.workspace_id == workspace_id,

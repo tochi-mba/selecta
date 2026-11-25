@@ -5,7 +5,7 @@ import { PHASES } from './LucySettings';
 import '../styles/lucy.css';
 import { Badge, Notice, SettingsCard } from '../cloud/AccountLayout';
 import { Action, Skeleton } from '../ui/controls';
-import { userLocale } from '../ui/format';
+import { dateWords, userLocale } from '../ui/format';
 import { Meter } from '../ui/Meter';
 import { LUCY_USAGE_EVENT, windowsOf, type LucyWindows } from '../cloud/lucyUsage';
 import { LucyUsageMeter } from './LucyUsageMeter';
@@ -162,14 +162,16 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       badge={<Badge>{status.tier}</Badge>}
       about="Your plan sets how much Lucy can do. You choose whether to use it and what it may share."
     >
-      {windows ? <LucyUsageMeter windows={windows} /> : <LucyTurnsMeter usage={status.usage} />}
-      {status.usage_cutover && (
+      {/* ADR-0487 rule 11: said before the switch, to Free and paid alike, in the account’s own
+          time zone (the switch is a month start there). The words wait on the owner’s approval
+          (LM-0487-05) with the email’s. */}
+      {status.usage_cutover && !windows && (
         <Notice role="note">
-          Starting {new Date(status.usage_cutover.at * 1000).toLocaleDateString(userLocale(), {
-            dateStyle: 'long', timeZone: status.usage_cutover.time_zone,
-          })}, Lucy will use a session and weekly allowance in place of monthly turns. You’ll be able to see how much usage remains. Your plan price stays the same.
+          <strong>Lucy’s allowance changes on {dateWords(status.usage_cutover.at, { timeZone: status.usage_cutover.time_zone })}.</strong>{' '}
+          <span>In place of turns a month, you’ll have a share for each five-hour session and a share for each week. The price of your plan stays the same.</span>
         </Notice>
       )}
+      {windows ? <LucyUsageMeter windows={windows} /> : <LucyTurnsMeter usage={status.usage} />}
       {showEstimate && (
         <p className="hint">About {estimate} more {estimate === 1 ? 'message' : 'messages'} like your recent ones.</p>
       )}

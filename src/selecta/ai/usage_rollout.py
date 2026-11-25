@@ -12,6 +12,10 @@ a grant into a switch:
   month start. (`usage_mode.mode_for` already stops enforcing the moment the grant goes; this
   only tidies the row.)
 - `switch_now` is for staff and test accounts.
+- `due_notices` and `mark_noticed` are the notice before a switch (rule 11): which paid
+  workspaces have a switch ahead of them and have not been told, and the durable record
+  (`notice_sent_at`) that one has. `withdraw` and `cancel` clear that record with the switch, so
+  a switch that is set again is told again.
 
 The old monthly turn counts keep being written while a workspace is on the new allowance, so
 going back restores them (rule 7).
@@ -20,6 +24,7 @@ going back restores them (rule 7).
 from __future__ import annotations
 
 import datetime as dt
+from dataclasses import dataclass
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
@@ -27,7 +32,8 @@ from sqlalchemy.engine import Connection
 from selecta.ai import usage_mode, usage_units
 from selecta.ai import usage_windows as windows
 from selecta.ai.usage_schema import lucy_usage_state as _state
-from selecta.billing import stripe_sync
+from selecta.billing import plans, stripe_sync
+from selecta.billing.schema import entitlement_overrides, entitlement_snapshots
 
 NOTICE_DAYS = 7
 """A switch is never set for sooner than this, so the notice can go out first. A starting
@@ -118,7 +124,7 @@ def withdraw(conn: Connection, rules: usage_mode.Rules | None, now: float, *,
             continue
         done += _changed(conn, sa.update(_state).where(
             _state.c.workspace_id == row.workspace_id, _state.c.cutover_at.is_not(None),
-        ).values(cutover_at=None, enforced_since=None, updated_at=now))
+        ).values(cutover_at=None, enforced_since=None, notice_sent_at=None, updated_at=now))
     return done
 
 
@@ -139,7 +145,64 @@ def cancel(conn: Connection, workspace_id: str, now: float) -> bool:
     """Take one workspace's switch away; it is back on turns with its month's counts."""
     return _changed(conn, sa.update(_state).where(
         _state.c.workspace_id == workspace_id, _state.c.cutover_at.is_not(None),
-    ).values(cutover_at=None, enforced_since=None, updated_at=now))
+    ).values(cutover_at=None, enforced_since=None, notice_sent_at=None, updated_at=now))
+
+
+@dataclass(frozen=True)
+class Notice:
+    """One paid workspace that has a switch ahead of it and has not been told."""
+
+    workspace_id: str
+    cutover_at: float
+    time_zone: str
+    plan_id: str
+    plan_version: int | None
+
+
+def due_notices(conn: Connection, now: float, *, limit: int = 200) -> list[Notice]:
+    """Workspaces on a paid plan whose switch is set, still ahead, and not yet told (rule 11:
+    paid members are told by email; Free has the note in the product only). Soonest switch
+    first. A switch made with `switch_now` is never ahead, so it sends nothing."""
+    # Only a workspace with a paid snapshot or an override can be on a paid plan, so the many
+    # Free workspaces of a wide step are passed over without working out each one's plan.
+    may_be_paid = sa.or_(
+        sa.exists().where(entitlement_snapshots.c.workspace_id == _state.c.workspace_id,
+                          entitlement_snapshots.c.plan_id != plans.FREE_1.id),
+        sa.exists().where(entitlement_overrides.c.workspace_id == _state.c.workspace_id),
+    )
+    rows = conn.execute(
+        sa.select(_state.c.workspace_id, _state.c.cutover_at, _state.c.time_zone).where(
+            _state.c.cutover_at.is_not(None), _state.c.cutover_at > now,
+            _state.c.notice_sent_at.is_(None), may_be_paid,
+        ).order_by(_state.c.cutover_at, _state.c.workspace_id)
+    )
+    found: list[Notice] = []
+    for row in rows:
+        entitlement = stripe_sync.effective_entitlement(conn, row.workspace_id, now)
+        if entitlement.plan_id == plans.FREE_1.id:
+            continue
+        found.append(Notice(row.workspace_id, float(row.cutover_at), row.time_zone,
+                            entitlement.plan_id, entitlement.plan_version))
+        if len(found) >= limit:
+            break
+    return found
+
+
+def mark_noticed(conn: Connection, workspace_id: str, now: float) -> bool:
+    """Record that the workspace was told of the switch ahead of it. True for the one caller
+    that wins; False when it was already told or has no switch ahead."""
+    return _changed(conn, sa.update(_state).where(
+        _state.c.workspace_id == workspace_id, _state.c.notice_sent_at.is_(None),
+        _state.c.cutover_at.is_not(None), _state.c.cutover_at > now,
+    ).values(notice_sent_at=now))
+
+
+def unmark_noticed(conn: Connection, workspace_id: str, marked_at: float) -> bool:
+    """Take back the record made at `marked_at`, for a send the provider could not take yet, so
+    the next run tries again. It never clears a record another run made."""
+    return _changed(conn, sa.update(_state).where(
+        _state.c.workspace_id == workspace_id, _state.c.notice_sent_at == marked_at,
+    ).values(notice_sent_at=None))
 
 
 def maintain(conn: Connection, rules: usage_mode.Rules | None, now: float) -> int:
@@ -147,5 +210,6 @@ def maintain(conn: Connection, rules: usage_mode.Rules | None, now: float) -> in
     return withdraw(conn, rules, now) + schedule(conn, rules, now) + apply_due(conn, rules, now)
 
 
-__all__ = ["NOTICE_DAYS", "apply_due", "cancel", "maintain", "next_month_start", "schedule",
-           "switch_now", "withdraw"]
+__all__ = ["NOTICE_DAYS", "Notice", "apply_due", "cancel", "due_notices", "maintain",
+           "mark_noticed", "next_month_start", "schedule", "switch_now", "unmark_noticed",
+           "withdraw"]
