@@ -67,6 +67,8 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await expect(page.getByRole('button', { name: 'Added: Song 12 - Artist 5. Press to remove' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Send request', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Sent. The host will add it to the mix.' })).toBeVisible({ timeout: 30_000 });
+  // sending clears the search; found again, the song says it is already requested
+  await page.getByRole('searchbox', { name: 'Request a song' }).fill('Song 12');
   await expect(page.getByRole('button', { name: 'Requested: Song 12 - Artist 5' })).toBeVisible();
   const mine = page.getByRole('region', { name: 'Your requests' });
   await expect(mine).toContainText('Song 12');

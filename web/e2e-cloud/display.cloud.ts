@@ -42,7 +42,10 @@ test('a paired display shows the room and survives a new code', async ({ browser
   await guest.getByRole('searchbox', { name: 'Request a song' }).fill('Song 7');
   await guest.getByRole('button', { name: 'Add Song 7 - Artist 0' }).click();
   await guest.getByRole('button', { name: 'Send request', exact: true }).click();
-  await expect(screen.locator('#d-upcoming')).toContainText('Song 7 - Artist 0', { timeout: 15_000 });
+  // the title and the artist on their own lines
+  const asked = screen.locator('#d-upcoming li', { hasText: 'Song 7' });
+  await expect(asked).toBeVisible({ timeout: 15_000 });
+  await expect(asked).toContainText('Artist 0');
 
   // A new code: the old one stops working, and the paired screen shows the new QR by itself.
   await roomOption(host, 'Make a new code');

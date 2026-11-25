@@ -68,8 +68,9 @@ export function ControllerNotices({ notices, speakerName, session, send }: { not
         <p data-testid="presses-waiting">{`Waiting for ${who} to come back: ${waiting.map(label).join(', ')}`}</p>
       )}
       {missed.length > 0 && (
-        <p data-testid="presses-missed">
-          {`Not played while ${who} was offline: ${missed.map((press: HeldPress) => `${label(press)} (${WHY[press.reason] ?? press.reason})`).join(', ')}`}
+        <p data-testid="presses-missed" className="notice-missed">
+          {/* the words shorten on a phone; Dismiss stays in view beside them */}
+          <span className="notice-text">{`Not played while ${who} was offline: ${missed.map((press: HeldPress) => `${label(press)} (${WHY[press.reason] ?? press.reason})`).join(', ')}`}</span>
           <button type="button" onClick={() => dismiss(missed.map((press) => press.command_id))}>Dismiss</button>
         </p>
       )}

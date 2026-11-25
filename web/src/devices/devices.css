@@ -10,6 +10,9 @@
 .playing-bar-notices { display: grid; gap: var(--space-1); }
 .playing-bar-notices p { margin: 0; min-width: 0; }
 .playing-bar-notices button { margin-left: var(--space-2); }
+.notice-missed { display: flex; align-items: center; gap: var(--space-2); }
+.notice-missed .notice-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.playing-bar-notices .notice-missed > button { flex: none; margin-left: 0; }
 /* A song the speaker could not play: one line and two small actions; the alternatives open in a
    sheet, so the notice never pushes the page down. */
 .notice-unavailable { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
