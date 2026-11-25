@@ -42,7 +42,7 @@ export function KioskPlayers({ venue, disabled }: { venue: Venue; disabled: bool
   return <section aria-labelledby="kiosk-players-title" className="biz-stack">
     <h3 id="kiosk-players-title">Players</h3>
     {kiosks.length === 0 ? <p className="biz-quiet">No players are paired to this venue yet.</p> : <ul className="biz-list">
-      {kiosks.map((device) => <li key={device.id}>
+      {kiosks.map((device) => <li key={device.id} data-lift="row">
         <strong>{device.name}</strong> <span className="biz-quiet">{zoneName(device.zone_id)}</span>
         <p className="biz-quiet">{kioskLine(device, businessOn(ctx.org.features, 'business.offline'))}</p>
         {!disabled && <div className="biz-row">

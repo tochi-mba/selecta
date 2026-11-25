@@ -44,6 +44,8 @@ export type ImportSnapshot = {
   read?: boolean;
   /** Another tab of this browser is doing this import; this one follows its progress. */
   elsewhere?: boolean;
+  /** `cloud.music_folders`: the watched folder (a local id, never a path) this import reads. */
+  folderId?: string;
 };
 
 export const IDLE_IMPORT: ImportSnapshot = Object.freeze({
@@ -75,6 +77,8 @@ export type ImportMarker = {
   importId?: string;
   /** Set when the shell went away (sign-in ended, sign-out) and the import was kept. */
   kept?: boolean;
+  /** `cloud.music_folders`: the watched folder this import read; its own check carries it on. */
+  folderId?: string;
 };
 
 /** The abort reason of an import paused because the shell went away: its progress is kept. */
@@ -88,6 +92,7 @@ type Session = {
   startedAt: number;
   kind?: 'folder' | 'files';
   importId?: string;
+  folderId?: string;
   /** `cloud.resilient_import`: the claim that makes this tab the one doing the import. */
   claim?: ImportClaim;
   /** Set when the shell went away: the run stops but keeps its marker and journal. */
@@ -171,6 +176,7 @@ export function readImportMarker(workspaceId: string): ImportMarker | null {
       ...(typeof parsed.checked === 'number' ? { checked: parsed.checked } : {}),
       ...(typeof parsed.importId === 'string' ? { importId: parsed.importId } : {}),
       ...(parsed.kept === true ? { kept: true } : {}),
+      ...(typeof parsed.folderId === 'string' ? { folderId: parsed.folderId } : {}),
     };
   } catch {
     return null;
@@ -192,6 +198,7 @@ function markerFor(owner: Session, state: ImportSnapshot, kept = false): ImportM
     ...(state.checked !== undefined ? { checked: state.checked } : {}),
     ...(owner.importId ? { importId: owner.importId } : {}),
     ...(kept ? { kept: true } : {}),
+    ...(owner.folderId ? { folderId: owner.folderId } : {}),
   };
 }
 
@@ -276,6 +283,8 @@ export function startImportSession(options: {
   folder?: string | null;
   kind?: 'folder' | 'files';
   resume?: ImportMarker | null;
+  /** `cloud.music_folders`: the watched folder being read. */
+  folderId?: string;
 }): Promise<ImportSummary> {
   const resilient = flagOn('cloud.resilient_import');
   // a run this tab is stopping still holds the cross-tab claim until it settles
@@ -286,11 +295,12 @@ export function startImportSession(options: {
   const owner: Session = {
     controller: new AbortController(), workspaceId: options.workspaceId, startedAt: resume?.startedAt ?? Date.now(), cancelled: false, settled: false,
     ...(resilient ? { kind: options.kind ?? 'files', importId: resume?.importId ?? newImportId() } : {}),
+    ...(options.folderId ? { folderId: options.folderId } : {}),
   };
   session = owner;
   snapshotWorkspace = owner.workspaceId;
   const folder = options.folder ?? null;
-  publish({ ...IDLE_IMPORT, phase: 'running', folder, ...(resilient ? { checked: 0, resumed: 0, waiting: null, read: false } : {}) });
+  publish({ ...IDLE_IMPORT, phase: 'running', folder, ...(resilient ? { checked: 0, resumed: 0, waiting: null, read: false } : {}), ...(options.folderId ? { folderId: options.folderId } : {}) });
   const live = () => session === owner;
   const running = (async () => {
     let unhook = () => {};

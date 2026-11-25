@@ -2,13 +2,17 @@ import { useSyncExternalStore } from 'react';
 import { flagOn, onFlagsChange } from '../flags';
 import { onPrefsChange, prefs } from '../state/prefs';
 
-/** SF-0235-08: when this device can't keep up with decorative motion, lower it automatically.
+/** SF-0235-08 and ADR-0477: when this device can't keep up with decorative motion, lower it
+ * automatically, in two steps.
  *
  * A short frame sample runs while the page is visible. If most frames in two windows in a row take
- * longer than a struggling budget, the page switches to the same Still styling a person can choose,
- * which drops movement but keeps every value, label and control (Still never hides information).
- * Nothing about the music, the mix or the saved preference changes; "Use full motion here" in the
- * Workspace undoes it for this browser session. Feature flag: `app.auto_low_motion`. */
+ * longer than a struggling budget, the first step (`lite`) drops the costly parts: blur, glow, the
+ * pointer light, the beat and ambient travel, with gentler springs (styles/tokens.css and
+ * feel/root.ts read it). Sampling carries on, and if the device still struggles the second step
+ * (`auto`) switches to the same Still styling a person can choose, which drops movement but keeps
+ * every value, label and control (Still never hides information). Nothing about the music, the mix
+ * or the saved preference changes; "Use full motion here" in the Workspace undoes both steps for
+ * this browser session. Feature flag: `app.auto_low_motion`. */
 
 /** A frame slower than this is a struggling frame (under about 20 frames a second). */
 export const SLOW_FRAME_MS = 50;
@@ -32,35 +36,46 @@ export function struggling(deltas: readonly number[]): boolean {
   return slow / real.length >= SLOW_SHARE;
 }
 
-let lowered = false;
+export type LowPowerLevel = 'lite' | 'auto';
+
+let level: LowPowerLevel | null = null;
 const listeners = new Set<() => void>();
 
-function set(next: boolean) {
-  if (lowered === next) return;
-  lowered = next;
+function set(next: LowPowerLevel | null) {
+  if (level === next) return;
+  level = next;
   if (typeof document !== 'undefined') {
-    if (next) document.documentElement.dataset.lowPower = 'auto';
+    if (next) document.documentElement.dataset.lowPower = next;
     else delete document.documentElement.dataset.lowPower;
   }
   for (const listener of listeners) listener();
 }
 
-/** Whether motion is lowered automatically right now. */
+/** Which low-power step is on: `lite` (costly effects off), `auto` (as Still), or null. */
+export function lowPowerLevel(): LowPowerLevel | null {
+  return level;
+}
+
+/** Whether motion is lowered all the way (the second step, as Still). The first step keeps motion,
+ * so the callers that stop movement behave exactly as they did before there were two steps. */
 export function lowPowerActive(): boolean {
-  return lowered;
+  return level === 'auto';
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function useLowPower(): boolean {
-  return useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    () => lowered,
-    () => lowered,
-  );
+  return useSyncExternalStore(subscribe, lowPowerActive, lowPowerActive);
+}
+
+/** The low-power step, live, for the words in the Workspace. */
+export function useLowPowerLevel(): LowPowerLevel | null {
+  return useSyncExternalStore(subscribe, lowPowerLevel, lowPowerLevel);
 }
 
 function dismissed(): boolean {
@@ -79,10 +94,18 @@ export function keepFullMotion() {
     // private windows may refuse storage; the choice still holds until reload
   }
   stopped = true;
-  set(false);
+  set(null);
 }
 
 let stopped = false;
+/** Wakes the running sampler early from its rest, or does nothing. */
+let wakeEarly: (() => void) | null = null;
+
+/** Something heavier is about to happen (playback starting, a new page): if the sampler is resting,
+ * sample now instead of waiting out the rest, so a struggling device is noticed while it matters. */
+export function nudgeLowPower() {
+  wakeEarly?.();
+}
 
 type Clock = {
   frame: (callback: (time: number) => void) => number;
@@ -100,6 +123,11 @@ const browserClock = (): Clock => ({
   clear: (handle) => window.clearTimeout(handle),
 });
 
+/** The first step only drops feel effects, so with every feel flag off there is nothing for it to
+ * drop and the device goes straight to the second step, exactly as before ADR-0477. */
+const FEEL_FLAGS = ['app.feel_motion', 'app.feel_depth', 'app.feel_pointer_light', 'app.feel_music', 'app.feel_ambient', 'app.feel_moments'] as const;
+const liteHelps = () => FEEL_FLAGS.some(flagOn);
+
 /** Starts watching frames. Returns a stop function. Does nothing when the flag is off, the person
  * already chose Still, or they asked for full motion in this session. */
 export function watchLowPower(clock: Clock = browserClock()): () => void {
@@ -110,6 +138,7 @@ export function watchLowPower(clock: Clock = browserClock()): () => void {
   let strikes = 0;
   let calm = 0;
   let rest = 0;
+  let resting = false;
   // With the flag off or Still chosen there is nothing to watch, so no frames are asked for at all
   // until one of those changes back (a hidden tab gets no frames from the browser anyway).
   let parked = false;
@@ -136,14 +165,23 @@ export function watchLowPower(clock: Clock = browserClock()): () => void {
       calm = slow ? 0 : calm + 1;
       deltas = [];
       if (strikes >= 2) {
-        set(true);
-        stopped = true;
-        return;
+        strikes = 0;
+        calm = 0;
+        if (level === null && liteHelps()) {
+          // the first step drops only the costly effects; keep watching in case that was not enough
+          set('lite');
+        } else {
+          set('auto');
+          stopped = true;
+          return;
+        }
       }
       if (calm >= CALM_WINDOWS) {
         calm = 0;
         last = -1;
+        resting = true;
         rest = clock.later(() => {
+          resting = false;
           if (!stopped) handle = clock.frame(tick);
         }, REST_MS);
         return;
@@ -158,9 +196,18 @@ export function watchLowPower(clock: Clock = browserClock()): () => void {
   };
   const unwatchFlags = onFlagsChange(wake);
   const unwatchPrefs = onPrefsChange(wake);
+  const early = () => {
+    if (!resting || stopped || !wanted()) return;
+    clock.clear(rest);
+    resting = false;
+    last = -1;
+    handle = clock.frame(tick);
+  };
+  wakeEarly = early;
   if (!stopped) handle = clock.frame(tick);
   return () => {
     stopped = true;
+    if (wakeEarly === early) wakeEarly = null;
     unwatchFlags();
     unwatchPrefs();
     clock.cancel(handle);
@@ -171,7 +218,8 @@ export function watchLowPower(clock: Clock = browserClock()): () => void {
 /** For tests. */
 export function resetLowPower() {
   stopped = false;
-  set(false);
+  wakeEarly = null;
+  set(null);
   try {
     sessionStorage.removeItem(DISMISS_KEY);
   } catch {

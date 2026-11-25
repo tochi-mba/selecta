@@ -29,7 +29,7 @@ export function blockedWords(gate: Gate, status: LucyStatus | null, offline: boo
 export function LucyClosed({ gate, onTurnOn, onSettings }: { gate: 'old' | 'off'; onTurnOn: () => Promise<void>; onSettings: () => void }) {
   if (gate === 'old') {
     return (
-      <section className="lucy-gate">
+      <section className="lucy-gate" data-glow data-arrive>
         <h2>Lucy isn’t part of this version of SelectaDJ</h2>
         <p>Everything else works as usual. Make a Mix has every way to start a mix.</p>
         <PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink>
@@ -37,7 +37,7 @@ export function LucyClosed({ gate, onTurnOn, onSettings }: { gate: 'old' | 'off'
     );
   }
   return (
-    <section className="lucy-gate">
+    <section className="lucy-gate" data-glow data-arrive>
       <h2>Lucy is turned off</h2>
       <p>Lucy is optional. Make a Mix works exactly the same without it, and turning Lucy on or off never changes your mixes or your music.</p>
       <div className="row wrap">
@@ -52,7 +52,7 @@ export function LucyClosed({ gate, onTurnOn, onSettings }: { gate: 'old' | 'off'
 export function LucyNotice({ gate, status, onBuiltin, onSettings }: { gate: Gate; status: LucyStatus; onBuiltin: () => Promise<void>; onSettings: () => void }) {
   if (gate !== 'consent' && gate !== 'unavailable') return null;
   return (
-    <div className="lucy-notice" role="region" aria-label={gate === 'consent' ? 'Before Lucy can start' : 'Lucy’s planner isn’t available'}>
+    <div className="lucy-notice" data-arrive role="region" aria-label={gate === 'consent' ? 'Before Lucy can start' : 'Lucy’s planner isn’t available'}>
       {gate === 'consent' ? (
         <p><b>Lucy is set to use {status.provider.label}, {words().lucyRunsOutside}</b> Nothing is sent until you agree to exactly what would be sent.</p>
       ) : (

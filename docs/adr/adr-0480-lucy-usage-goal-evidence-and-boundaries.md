@@ -7,6 +7,7 @@
 - **Source touchpoints:** `src/selecta/ai/allowance.py`, `src/selecta/ai/spend.py`, `src/selecta/ai/gateway.py`, `src/selecta/billing/plans.py`, `src/selecta/usage/meters.py`, `src/selecta/lucy/cloud_agent.py`, `web/src/views/LucyCloudSettings.tsx`, `web/src/cloud/Meters.tsx`.
 - **Sibling LM ADRs:** [ADR-0481](adr-0481-one-cost-weighted-lucy-allowance.md) to [ADR-0487](adr-0487-lucy-usage-measurement-migration-and-rollout.md).
 - **Research:** [docs/research/ai-chat-usage-limits.md](../research/ai-chat-usage-limits.md).
+- **Numbering:** this set was first written as ADR-0477 to ADR-0484. It was renumbered to ADR-0480 to ADR-0487 on 2026-11-25, before any decision on it, because 0477 to 0479 were taken on `main` by the Feel system, real artwork and one-brain ADRs merged the same day. Commit messages from before the change name the old numbers.
 
 ## Context
 

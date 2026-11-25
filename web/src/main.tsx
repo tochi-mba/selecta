@@ -20,6 +20,18 @@ import './styles/glossary.css';
 import './styles/palette.css';
 import './styles/icons.css';
 import './styles/depth.css';
+import './styles/feel.css';
+import './styles/feel-scene.css';
+import './styles/feel-music.css';
+import './styles/feel-parts.css';
+import './styles/feel-components.css';
+import './styles/feel-shell.css';
+import './styles/feel-entry.css';
+import './styles/feel-listen.css';
+import './styles/feel-library.css';
+import './styles/feel-rooms.css';
+import './styles/feel-account.css';
+import './styles/feel-local.css';
 import './styles/typography.css';
 
 // The browser's install offer can arrive before any page has loaded, so it is kept from the start.

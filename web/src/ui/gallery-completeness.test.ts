@@ -119,7 +119,7 @@ describe('gallery completeness', () => {
     expect(shown).toMatch(/className="[^"]*\bdensity\b[^"]*" data-density="compact"/);
     for (const overlay of ['Dialog', 'Drawer', 'Sheet', 'Workspace', 'Menu', 'Tooltip', 'Popover']) expect(drawn(overlay), overlay).toBe(true);
     const gallery = readSource('ui/ControlGallery.tsx');
-    for (const part of ['GalleryFeedback', 'GalleryParts', 'GalleryMusic']) expect(gallery, part).toContain(`<${part} />`);
+    for (const part of ['GalleryFeedback', 'GalleryParts', 'GalleryMusic', 'GalleryMotion']) expect(gallery, part).toContain(`<${part} />`);
     expect(readSource('harness/main.tsx')).toMatch(/params\.get\('page'\) === 'gallery' \? <CloudGallery \/>/);
   });
 });

@@ -20,6 +20,11 @@ import { InterfaceChoices } from './InterfaceChoices';
 import { InterruptedWork } from './WorkshopInterrupted';
 import { Diagnostics, FoldersPanel, JobsPanel, MemoryPanel, NeedsYou, StoragePanel } from './WorkshopPanels';
 import { words } from '../copy';
+import { RollingCount } from './feelPieces';
+import { plainCount } from './feelLocal';
+
+/** A count in the metrics that rolls to a new value while motion is on (ADR-0477); plain otherwise. */
+const roll = (value: number | undefined) => (value === undefined ? value : <RollingCount value={value} format={plainCount} />);
 
 /** How much is ready, what's running, what's stuck and what needs someone, in that order. */
 function Overview({ status, request }: { status: ViewProps['status']; request?: Request }) {
@@ -48,11 +53,11 @@ function Overview({ status, request }: { status: ViewProps['status']; request?: 
       {/* S4 (2026-11-12): when the status can't be reached, saying so comes first, before the counts */}
       {unreachable && <JobsPanel status={status} />}
       <div className="metrics">
-        <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
-        <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
-        <div><strong>{left}</strong><span>still to analyse</span></div>
-        {flagOn('lyrics.lookup') && <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>}
-        <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
+        <div><strong>{roll(counts.ready ?? 0)}</strong><span>ready for mixes</span></div>
+        <div><strong>{roll(counts.analysed)}</strong><span>audio analysed</span></div>
+        <div><strong>{roll(left)}</strong><span>still to analyse</span></div>
+        {flagOn('lyrics.lookup') && <div><strong>{roll(counts.lyrics)}</strong><span>with timed lyrics</span></div>}
+        <div><strong>{roll(counts.set_aside)}</strong><span>set aside as not music</span></div>
       </div>
       {!unreachable && <JobsPanel status={status} />}
       {flagOn('export') && <ExportJobs always />}

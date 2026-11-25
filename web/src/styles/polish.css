@@ -1,9 +1,11 @@
 /* Shared finish: semantic tokens live only in tokens.css. Rules below refine legacy layouts
    without redefining global values in a later cascade layer. */
 body { text-rendering: optimizeLegibility; }
-/* Feedback stays inside the control: hit targets and keyboard focus never move. */
+/* Feedback stays inside the control: hit targets and keyboard focus never move. With the feel's
+   depth on, --press-depth (feel.css) keeps the resting shadow under the pressed control; without
+   it the second shadow is an empty one. */
 button:not(:disabled):not([aria-disabled='true']):active,
-a.button:active { box-shadow: inset 0 0 0 2px currentColor; }
+a.button:active { box-shadow: inset 0 0 0 2px currentColor, var(--press-depth, 0 0 transparent); }
 /* Pressed segmented toggles carry a bar along the bottom as well as the fill, so the state is never
    colour alone (EX-0130-01). */
 .chips button[aria-pressed='true'],
@@ -42,7 +44,11 @@ a.button:active { box-shadow: inset 0 0 0 2px currentColor; }
 button, a.button, input:not([type='checkbox']):not([type='radio']), select { min-height: var(--control-height); }
 .choice { min-height: var(--control-height); align-items: center; }
 .choice input[type='radio'], .choice input[type='checkbox'] { min-height: 0; }
-button, a.button { transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+/* scale is the feel's press (feel.css sets it and the two timings); with the feel off nothing sets
+   it, so it never moves. --lift-transition adds box-shadow only when the feel's depth is on, and
+   otherwise repeats the colour item, so the pressed ring stays instant. */
+button, a.button { transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), scale var(--press-dur, var(--motion-feedback)) var(--press-ease, var(--motion-ease)), var(--lift-transition, color var(--motion-fast) var(--motion-ease)); }
+/* transform only: the feel's press squash is the separate scale property, which this leaves alone */
 button:active:not(:disabled) { transform: none; }
 button[aria-disabled='true'] { cursor: progress; }
 .ui-icon { display: inline-block; flex: 0 0 auto; vertical-align: middle; }

@@ -15,16 +15,51 @@ const doc = fs.readFileSync(`${SOURCE}../../docs/engineering/css-ownership.md`, 
 const SHEETS = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css')).map((name) => `styles/${name}`)];
 const SYSTEM_COLOUR = /\b(Canvas|CanvasText|Highlight|HighlightText|ButtonText|ButtonFace|LinkText|GrayText|Mark|MarkText)\b/;
 
-type Rule = { sheet: string; selectors: string[]; declarations: string[] };
+type Rule = { sheet: string; selectors: string[]; declarations: string[]; forced: boolean };
+
+/** A selector list split at its top-level commas only: `:is(a, b) c` is one selector, not two. */
+function selectorList(head: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const char of head) {
+    if (char === '(' || char === '[') depth += 1;
+    if (char === ')' || char === ']') depth -= 1;
+    if (char === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+    } else current += char;
+  }
+  parts.push(current);
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+/** The [start, end) offsets of every `@media (forced-colors: active)` block, found by brace matching. */
+function forcedRanges(css: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  for (const match of css.matchAll(/@media[^{]*forced-colors:\s*active[^{]*\{/g)) {
+    let depth = 1;
+    let index = match.index! + match[0].length;
+    while (depth > 0 && index < css.length) {
+      if (css[index] === '{') depth += 1;
+      if (css[index] === '}') depth -= 1;
+      index += 1;
+    }
+    ranges.push([match.index!, index]);
+  }
+  return ranges;
+}
 
 function rules(sheet: string): Rule[] {
   const css = fs.readFileSync(SOURCE + sheet, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const forced = forcedRanges(css);
   const found: Rule[] = [];
   for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     const head = match[1].trim().replace(/\s+/g, ' ');
     // keyframe steps are not selectors
     if (head.startsWith('@') || /^(from|to|[\d.]+%)(\s*,\s*(from|to|[\d.]+%))*$/.test(head)) continue;
-    found.push({ sheet, selectors: head.split(',').map((part) => part.trim()).filter(Boolean), declarations: match[2].split(';').map((part) => part.trim()).filter(Boolean) });
+    const inForced = forced.some(([start, end]) => match.index! >= start && match.index! < end);
+    found.push({ sheet, selectors: selectorList(head), declarations: match[2].split(';').map((part) => part.trim()).filter(Boolean), forced: inForced });
   }
   return found;
 }
@@ -59,7 +94,8 @@ function brittleImportant(): string[] {
       const property = declaration.slice(0, declaration.indexOf(':')).trim();
       const motion = /^(animation|transition|scroll-behavior)/.test(property);
       const hidden = rule.selectors.some((selector) => selector.includes('[hidden]'));
-      const forced = SYSTEM_COLOUR.test(declaration);
+      // a system colour, or any rule that only applies under forced colours
+      const forced = SYSTEM_COLOUR.test(declaration) || rule.forced;
       if (!motion && !hidden && !forced) found.push(`${rule.sheet} ${rule.selectors.join(', ')} { ${declaration} }`);
     }
   }
@@ -67,6 +103,10 @@ function brittleImportant(): string[] {
 }
 
 describe('SF-0236-04 CSS consolidation ratchet', () => {
+  it('a selector list is split only at its top-level commas', () => {
+    expect(selectorList(":where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .card, a.button")).toEqual([":where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .card", 'a.button']);
+  });
+
   it('the count is real: a selector restated in two sheets is found', () => {
     const restated = restatedSelectors();
     // a known overlap at the baseline: element defaults restated by the polish layer

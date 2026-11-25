@@ -1,6 +1,7 @@
 import { cacheClearAll, deleteDatabase, forgetFolder, MEDIA_DB_PREFIX, MediaStore } from '../media';
 import { clearImportMarker } from './importSession';
 import { forgetCached } from './offlineCache';
+import { ART_DB } from '../media/artStore';
 import { DERIVED_DB } from '../media/derived';
 import { forgetFingerprintRun } from '../media/fingerprintLog';
 
@@ -74,6 +75,8 @@ export async function clearEverythingOnDevice(known: string[] = []): Promise<voi
   for (const name of await mediaDatabases()) await deleteDatabase(name);
   // named too, for a browser that cannot list its databases
   await deleteDatabase(DERIVED_DB);
+  // covers read from the person's own files (ADR-0478) go with everything else this browser keeps
+  await deleteDatabase(ART_DB);
   // The venue offline cache (business zones) is SelectaDJ data in this browser too.
   await deleteDatabase(ZONE_CACHE_DB);
   await cacheClearAll();

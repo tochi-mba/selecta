@@ -8,6 +8,7 @@
 - **Owner:** Unassigned.
 - **Related earlier ADRs:** ADR-0137/0182/0161; no historical status is changed.
 - **Existing source touchpoints:** web/src/styles/tokens.css; web/src/views/Now.tsx.
+- **Superseded in part by:** [ADR-0477](adr-0477-feel-system.md) (Proposed): a pulse driven by a measured kick or an analysed beat is allowed; a fake one still is not. Motion starts on Expressive.
 
 ## Context and evidence boundary
 

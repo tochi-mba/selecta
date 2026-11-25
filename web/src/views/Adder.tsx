@@ -1,4 +1,4 @@
-import { KeyboardEvent, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { CSSProperties, KeyboardEvent, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Suggestion } from '../api';
 import { useApi } from '../requestContext';
 import { analysingWords, askedToAnalyse } from '../lib';
@@ -74,7 +74,8 @@ export function Adder(props: {
   };
 
   return (
-    <div className="adder">
+    // the feel (ADR-0477): the gap opens with an arrival and the suggestions come in one after another
+    <div className="adder" data-arrive="">
       <div className="row">
         <input
           autoFocus
@@ -94,9 +95,9 @@ export function Adder(props: {
       {songs?.length === 0 && (
         <p className="hint">{query ? 'Nothing matches that.' : unranked ? 'Every song that plays on this device is already in the mix. Connect more music in Library to add others.' : 'Nothing to suggest here yet.'}</p>
       )}
-      <ul className="suggestions">
-        {songs?.map((song) => (
-          <li key={song.song_id}>
+      <ul className="suggestions" data-stagger="">
+        {songs?.map((song, index) => (
+          <li key={song.song_id} style={{ '--i': index } as CSSProperties}>
             <button className="suggestion" disabled={!song.analysed} aria-busy={adding?.song_id === song.song_id || undefined} onClick={() => void add(song)}>
               <b>{song.title}</b>
               <span>{song.artist}</span>

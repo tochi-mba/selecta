@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { CSSProperties, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { accountFlagOn, FlagId } from '../flags';
 import { Account, bytes, holdsHostedStorage, lockedTo, planName } from './api';
 import { Badge, Notice, SettingsCard } from './AccountLayout';
@@ -8,6 +8,12 @@ import { useNeedsConnection } from './connection';
 import { Icon } from '../ui/Icon';
 import { countOf } from '../ui/format';
 import { BillingStandingNotice } from './BillingStanding';
+import { ICON_SLOTS, ICON_STROKES } from '../ui/Icon';
+import { feelOn, onFeelChange } from '../feel/root';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
+import { NumberRoll } from '../feel/numberRoll';
+import { Moment } from '../feel/moment';
+import { success } from '../feel/haptics';
 
 // Plan & billing (docs/saas/11-ui-ux.md §11.1): the current plan, the usage meters, and the way
 // to change plan, each in its own titled card. A free account picks a plan, ticks the three UK
@@ -69,10 +75,35 @@ function shownAxes(plan: Paid, account: Account) {
   return LOCAL_FIRST_AXES[plan].axes.filter((axis) => axisShown(axis, account));
 }
 
-function AxisList({ axes, cols }: { axes: Axis[]; cols?: boolean }) {
+/** Whether the feel's motion is on, read live so turning it off mid-page puts the plain marks back. */
+function useFeelMotion() {
+  return useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
+}
+
+/** The check mark drawn as a stroke that draws itself (.feel-tick), the same size and weight as the
+ * Icon it stands in for. Only used while the feel's motion is on, so with it off the page keeps the
+ * plain Icon exactly as before. */
+function DrawnCheck() {
+  const box = ICON_SLOTS.compact;
   return (
-    <ul className="acct-includes cloud-plan-axes" data-cols={cols && axes.length > 1 ? '2' : undefined}>
-      {axes.map((axis) => <li key={axis.name}><Icon name="check" size="compact" /><span><b>{axis.name}</b> {axis.words}</span></li>)}
+    <svg className="ui-icon" data-icon="check" data-size="compact" viewBox="0 0 24 24" width={box} height={box} fill="none" stroke="currentColor" strokeWidth={ICON_STROKES.compact} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path className="feel-tick" pathLength={1} d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
+function AxisList({ axes, cols, draw }: { axes: Axis[]; cols?: boolean; draw?: boolean }) {
+  const moving = useFeelMotion();
+  // On the current plan the lines arrive one after another and their ticks draw, so what the plan
+  // includes reads as a list being checked off; elsewhere the list is as it always was.
+  const drawn = draw && moving;
+  return (
+    <ul className="acct-includes cloud-plan-axes" data-cols={cols && axes.length > 1 ? '2' : undefined} data-stagger={drawn || undefined}>
+      {axes.map((axis, index) => (
+        <li key={axis.name} style={drawn ? ({ '--i': index } as CSSProperties) : undefined}>
+          {drawn ? <DrawnCheck /> : <Icon name="check" size="compact" />}<span><b>{axis.name}</b> {axis.words}</span>
+        </li>
+      ))}
     </ul>
   );
 }
@@ -122,7 +153,9 @@ export function overSoftCap(account: Account): boolean {
 /** A price as its figure and its period ("£6.99" and "/ month"), so the figure can be read at a glance. */
 function Price({ words }: { words: string }) {
   const [figure, period] = words.split(' / ');
-  return <p className="cloud-price">{figure}{period && <small> / {period}</small>}</p>;
+  // the figure rolls to the new price when Monthly and Annual are swapped; it is the same words
+  const amount = amountOf(figure);
+  return <p className="cloud-price">{amount ? <NumberRoll value={amount.amount} format={() => figure} /> : figure}{period && <small> / {period}</small>}</p>;
 }
 
 /** The amount in a price ("£59 / year" is 59) with what is written before it ("£"), or null. */
@@ -215,19 +248,25 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   const choice = PLANS.find((plan) => plan.id === chosen)!;
   const price = (plan: (typeof PLANS)[number]) => (interval === 'month' ? plan.month : plan.year);
   const openPortal = (from: 'change' | 'invoices') => { setPressed(from); onPortal(); };
+  const intervalStrip = useRef<HTMLDivElement>(null);
+  useSlidingIndicator(intervalStrip, '[aria-pressed="true"]');
+  const upgraded = useUpgradeMoment(phase);
   const opening = (from: 'change' | 'invoices') => busy && pressed === from;
   return (
-    <div className="cloud-billing">
+    <div className="cloud-billing" data-stagger="auto">
       <CheckoutStatus phase={phase} account={account} />
       <BillingStandingNotice account={account} place="billing" busy={opening('change')} onPortal={() => openPortal('change')} />
       <SettingsCard
         id="cloud-plan"
+        className="acct-plan-current"
         title="Your plan"
         about="What you are on now, and what it includes."
         actions={paid && portal && <button type="button" className="primary" disabled={!!offline} aria-disabled={busy || undefined} aria-busy={opening('change') || undefined} onClick={() => { if (!busy) openPortal('change'); }}>{opening('change') ? 'Opening…' : 'Change plan'}</button>}
       >
         <div className="acct-card-titles"><p className="acct-plan-name">{planName(account)}</p><Badge tone="accent">Current plan</Badge></div>
-        {includes.length > 0 && <AxisList axes={includes} cols />}
+        {/* keyed by the upgrade, so the lines arrive and tick again when the new plan is confirmed */}
+        {includes.length > 0 && <AxisList key={upgraded.round} axes={includes} cols draw />}
+        {upgraded.playing && <Moment kind="equalizer" onDone={upgraded.done} />}
         {paid
           ? portal && <p className="acct-plan-foot">{local
             ? 'Upgrades start straight away and are prorated. Downgrades start at the end of the period, and your music and mixes stay exactly as they are.'
@@ -256,7 +295,9 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           title="Upgrade your plan"
           about={open ? 'Pick a plan, then continue to secure checkout.' : 'What each plan adds.'}
           actions={(
-            <div className="cloud-interval" role="group" aria-label="Billing interval">
+            <div className="cloud-interval" role="group" aria-label="Billing interval" ref={intervalStrip} data-indicator-shape="fill">
+              {/* first, so the moving fill is painted under the two words, not over them */}
+              <span className={INDICATOR_CLASS} aria-hidden="true" />
               <button type="button" aria-pressed={interval === 'month'} onClick={() => setInterval('month')}>Monthly</button>
               <button type="button" aria-pressed={interval === 'year'} onClick={() => setInterval('year')}>Annual</button>
             </div>
@@ -265,7 +306,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           {/* a site that cannot start a payment shows the plans to read, with nothing to choose */}
           <div className="cloud-plan-grid" role={open ? 'radiogroup' : 'group'} aria-label={open ? 'Plan' : 'Plans'} data-info={!open || undefined}>
             {PLANS.map((plan) => (
-              <label key={plan.id} className={`cloud-plan-card ${plan.featured ? 'featured' : ''}`} data-chosen={(open && chosen === plan.id) || undefined}>
+              <label key={plan.id} className={`cloud-plan-card ${plan.featured ? 'featured' : ''}`} data-chosen={(open && chosen === plan.id) || undefined} data-lift="" data-glow="">
                 <span className="cloud-plan-pick">
                   {open && <input type="radio" name="cloud-plan" value={plan.id} checked={chosen === plan.id} onChange={() => setChosen(plan.id)} />}
                   <span className="cloud-plan-title">{plan.name}</span>
@@ -297,4 +338,24 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
       {blocked && !local && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading lifts the pause on uploads and exports as soon as your new plan is confirmed.</p>}
     </div>
   );
+}
+
+// The upgrade moment plays once per page load, so coming back to Plan & billing later is calm.
+let upgradeCelebrated = false;
+
+/** The upgrade moment (ADR-0477): when the return from Stripe really reports the plan confirmed
+ * (useCheckoutReturn only says 'confirmed' after the server's entitlement changed), the current plan
+ * card gets one equalizer burst, its lines arrive and tick again, and a phone gets the success buzz.
+ * Nothing plays while the payment is still being confirmed or when it was cancelled. */
+function useUpgradeMoment(phase: CheckoutPhase) {
+  const [round, setRound] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => {
+    if (phase !== 'confirmed' || upgradeCelebrated) return;
+    upgradeCelebrated = true;
+    setRound((value) => value + 1);
+    setPlaying(true);
+    success();
+  }, [phase]);
+  return { round, playing, done: () => setPlaying(false) };
 }

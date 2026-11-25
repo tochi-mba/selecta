@@ -6,6 +6,7 @@ import { clock } from '../lib';
 import { transportClock } from '../audio/transportWords';
 import { announce, Tooltip } from '../ui/controls';
 import { useRevealed } from '../ui/Skeleton';
+import { useFeelPart } from './feelBits';
 
 const SECTION_WORDS: Record<string, string> = {
   intro: 'Intro',
@@ -95,7 +96,31 @@ export function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: S
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setSeekPreview(target);
   };
+  // The magnifier: where the mouse is, as a time and the section it falls in. Written straight on
+  // its element so following the mouse never re-renders the strip. It only repeats what the slider
+  // already says to the keyboard and a screen reader, so nothing depends on hovering.
+  const lensOn = useFeelPart('depth');
+  // A seek by key (5 seconds either way) answers with one small ring where it landed (feel motion).
+  const skipping = useFeelPart('motion');
+  const [skip, setSkip] = useState<{ n: number; at: number } | null>(null);
+  const lens = useRef<HTMLSpanElement>(null);
+  const showLens = (event: PointerEvent<HTMLDivElement>) => {
+    const element = lens.current;
+    if (!element || event.pointerType !== 'mouse') return;
+    const at = pointAt(event);
+    if (at === null) {
+      element.hidden = true;
+      return;
+    }
+    const section = sections.find((part) => part.start <= at && at < part.end);
+    const name = section ? SECTION_WORDS[section.label] ?? section.label : '';
+    element.textContent = name ? `${transportClock(at)} · ${name}` : transportClock(at);
+    element.style.left = `${percent(at)}%`;
+    element.hidden = false;
+  };
+  const hideLens = () => { if (lens.current) lens.current.hidden = true; };
   const moveSeek = (event: PointerEvent<HTMLDivElement>) => {
+    if (lensOn) showLens(event);
     if (dragging.current !== event.pointerId) return;
     const target = pointAt(event);
     if (target !== null) setSeekPreview(target);
@@ -125,6 +150,7 @@ export function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: S
       const target = Math.min(Math.max(moves[event.key], 0), duration);
       setHeldAt(target);
       onSeek(target);
+      if (skipping && event.key.startsWith('Arrow')) setSkip((was) => ({ n: (was?.n ?? 0) + 1, at: target }));
     }
   };
   return (
@@ -145,6 +171,7 @@ export function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: S
       onPointerUp={endSeek}
       onPointerCancel={cancelSeek}
       onLostPointerCapture={cancelSeek}
+      onPointerLeave={lensOn ? hideLens : undefined}
       onKeyDown={keys}
       onFocus={() => setHeldAt(safeTime)}
       onBlur={() => setHeldAt(null)}
@@ -177,6 +204,8 @@ export function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: S
       </div>
       {seamAt !== null && <b className="seam-mark" style={{ left: `${percent(seamAt)}%` }} title={`Seam at ${clock(seamAt)}`} />}
       <b className="playhead" style={{ left: `${percent(time)}%` }} aria-hidden="true" />
+      {lensOn && <span ref={lens} className="strip-lens" aria-hidden="true" hidden />}
+      {skipping && skip && <i key={skip.n} className="strip-skip" style={{ left: `${percent(skip.at)}%` }} aria-hidden="true" onAnimationEnd={() => setSkip(null)} />}
       {seekPreview !== null && (
         <b className="scrub-ghost" style={{ left: `${percent(seekPreview)}%` }} aria-hidden="true" />
       )}

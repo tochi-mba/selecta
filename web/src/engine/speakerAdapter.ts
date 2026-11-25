@@ -49,6 +49,9 @@ export type BrowserSpeakerOptions = {
   queueLength?: () => number;
   /** Builds dsp/seams.ts schedules for transitions; gapless boundaries without one. */
   seam?: SeamProvider;
+  /** cloud.seam_lead (scheduler.ts SchedulerDeps). */
+  planAhead?: () => boolean;
+  level?: (buffer: AudioBuffer) => Promise<number>;
   store?: EngineStore;
   /** How many decoded songs to keep in memory (loader.ts, default 3). */
   keep?: number;
@@ -71,6 +74,8 @@ export class BrowserSpeaker implements Speaker {
   private readonly queueLength: (() => number) | null;
   private readonly limiterReady: Promise<LimiterInstall>;
   private limiterInstalled: LimiterInstall | null = null;
+  private visualTaps: { left: AnalyserNode; right: AnalyserNode } | null = null;
+  private visualSplit: ChannelSplitterNode | null = null;
   private readonly watchedDocument: Document | null;
   private readonly watchedDevices: MediaDevices | null;
   private readonly onVisibilityChange = () => {
@@ -103,6 +108,8 @@ export class BrowserSpeaker implements Speaker {
       hold: () => options.audio.hold(),
       wake: () => options.audio.wake(),
       seam: options.seam,
+      planAhead: options.planAhead,
+      level: options.level,
       timers: options.timers,
     });
     this.watchedDocument = typeof document === 'undefined' ? null : document;
@@ -217,6 +224,34 @@ export class BrowserSpeaker implements Speaker {
     return { song_index: at.index, offset_ms: offsetMs, state: at.paused ? 'paused' : 'playing' };
   }
 
+  /** The mixed output's frequency bands from the graph's existing analyser, read only, for the
+   * visualizer and the beat bus (ADR-0477). Reading it changes nothing in the sound. */
+  spectrum(): Uint8Array | null {
+    if (this.disposed) return null;
+    return this.graph.spectrum();
+  }
+
+  /** Unsmoothed left and right analysers for the visualizer and the beat bus, like player.ts
+   * getVisualTaps. They hang off the graph's analyser as a dead-end side branch: the splitter feeds
+   * only these two analysers, which connect to nothing, so the path to the speakers is untouched.
+   * Made on first ask, so a device that never shows the music pays nothing. */
+  spectrumTaps(): { left: AnalyserNode; right: AnalyserNode } | null {
+    if (this.disposed) return null;
+    if (!this.visualTaps) {
+      const context = this.graph.context;
+      const split = context.createChannelSplitter(2);
+      const left = context.createAnalyser();
+      const right = context.createAnalyser();
+      for (const tap of [left, right]) { tap.fftSize = 1024; tap.smoothingTimeConstant = 0; }
+      this.graph.analyser.connect(split);
+      split.connect(left, 0);
+      split.connect(right, 1);
+      this.visualTaps = { left, right };
+      this.visualSplit = split;
+    }
+    return this.visualTaps;
+  }
+
   active(): boolean {
     return !this.disposed && this.scheduler.playing();
   }
@@ -228,6 +263,13 @@ export class BrowserSpeaker implements Speaker {
     this.watchedDevices?.removeEventListener('devicechange', this.onOutputDeviceChange);
     this.scheduler.dispose();
     this.loader.clear();
+    try {
+      this.visualSplit?.disconnect();
+    } catch {
+      // already gone with its context
+    }
+    this.visualTaps = null;
+    this.visualSplit = null;
     this.graph.dispose();
     this.disposeOwner?.();
   }

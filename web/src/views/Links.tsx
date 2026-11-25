@@ -1,5 +1,8 @@
 import { flagOn } from '../flags';
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { feelParts, onFeelChange } from '../feel/root';
+import { SongMotif } from '../ui/MusicObjects';
+import { CoverArt } from './CoverArt';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, Link, LinkList, MixData, SeamState } from '../api';
 import { useApi } from '../requestContext';
@@ -38,6 +41,7 @@ type Audition = { chords: string[]; bar_starts: number[]; seconds: number; semit
 export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => void; secondsToPrepare?: number }) {
   const { get, post } = useApi();
   const [items, setItems] = useState<HarmonicDiscovery[]>([]);
+  const alive = useFeelAlive();
   const [loaded, setLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState('');
@@ -189,6 +193,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     } catch {
       setError('Couldn’t save that. Try again.');
       setUnsaved({ target, verdict });
+      return false; // said here, so the button draws no tick
     } finally {
       reviewing.current = false;
       setSaving(false);
@@ -223,7 +228,10 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   }
   if (!loaded && error) return <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
   // UF-0384-06: nothing found yet points at what would find more, rather than a dead end
-  if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed. <LinkIfThere to="/workshop">See analysis progress</LinkIfThere></p>;
+  if (!items.length && !error) {
+    const words = <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed. <LinkIfThere to="/workshop">See analysis progress</LinkIfThere></p>;
+    return alive ? <div className="links-empty" data-glow=""><RestingPair />{words}</div> : words;
+  }
   const listening = step !== null || requestedStep !== null;
   return (
     <section className="next-up discoveries">
@@ -263,7 +271,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         }}
       />
       {item && (
-        <article className="discovery" data-pair={`${item.song_a}>${item.song_b}`}>
+        <article className="discovery" data-pair={`${item.song_a}>${item.song_b}`} data-glow={alive ? '' : undefined} data-arrive={alive ? '' : undefined}>
           <p className="link-kind">Chord match, a suggestion to check by ear, not a verified match</p>
           <h3>
             {item.title_a}{item.title_a === item.title_b && <small className="link-id"> (song {item.song_a})</small>} <span className="soft">and</span> {item.title_b}{item.title_a === item.title_b && <small className="link-id"> (song {item.song_b})</small>}
@@ -341,6 +349,7 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, l
   // what was asked for and what you'd really hear are kept apart, and neither says it sounds good
   const facts = seamFacts({ settings: { move }, state }, names);
   const sameName = link.title_a === link.title_b;
+  const alive = useFeelAlive();
   const nameA = sameName ? `${link.title_a} (song ${link.a})` : link.title_a;
   const nameB = sameName ? `${link.title_b} (song ${link.b})` : link.title_b;
   const addId = `link-add-${link.a}-${link.b}-${link.phrase.replace(/\W+/g, '-')}`;
@@ -369,7 +378,7 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, l
     try {
       const result = await post<SeamState>('/seams', { a: link.a, b: link.b, move: name, phrase: link.phrase });
       if (request === renderRequest.current) { setOverride(result); setPlaying(true); }
-    } catch (error) { if (request === renderRequest.current) setCardError((error as Error).message); }
+    } catch (error) { if (request === renderRequest.current) setCardError((error as Error).message); return false; }
     finally { if (request === renderRequest.current) setRendering(false); }
   };
   const rate = async (rating: string) => {
@@ -384,7 +393,7 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, l
   };
 
   return (
-    <article className={`link-card ${state.status}`}>
+    <article className={`link-card ${state.status}`} data-lift={alive ? '' : undefined} data-glow={alive ? '' : undefined}>
       {/* CI-0176-01: each shared phrase, title and lyric line sets its own direction, so a right-to-left
           or mixed-script line stays whole and readable beside a left-to-right one */}
       <p className="link-kind">Word connection, in playing order</p>
@@ -392,10 +401,12 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, l
       {/* MP-0292-01/06: which song ends the line and which opens the next is spelled out, and two songs
           with the same name are told apart by their exact recording IDs */}
       <p className="link-handoff" data-song={link.a}>
+        {alive && <CoverArt seed={link.a} songId={link.a} size="small" />}
         <small className="link-order">From</small> <b dir="auto">{link.title_a}</b>{sameName && <small className="link-id"> (song {link.a})</small>} <span dir="auto">{link.artist_a}</span>
         <q dir="auto">{link.line_a}</q>
       </p>
       <p className="link-handoff" data-song={link.b}>
+        {alive && <CoverArt seed={link.b} songId={link.b} size="small" />}
         <small className="link-order">Into</small> <b dir="auto">{link.title_b}</b>{sameName && <small className="link-id"> (song {link.b})</small>} <span dir="auto">{link.artist_b}</span>
         <q dir="auto">{link.line_b}</q>
       </p>
@@ -489,7 +500,7 @@ function LinksView({ mix, setMixData, setView, notify, status, analysisAvailable
         setData((before) => (before ? keepIfSame(before, { ...next, links: keepUnchangedItems(before.links, next.links) }) : next));
         setFailed(false);
       })
-      .catch(() => { if (mine === asked.current) setFailed(true); });
+      .catch(() => { if (mine === asked.current) setFailed(true); return false as const; });
   };
 
   useEffect(() => {
@@ -552,6 +563,7 @@ function LinksView({ mix, setMixData, setView, notify, status, analysisAvailable
   const onAdd = useCallback((link: Link, move: string, draft: number | null) => latest.current.add(link, move, draft), []);
   const onRated = useCallback(() => void latest.current.load(), []);
 
+  const alive = useFeelAlive();
   const worked = data?.links.filter((link) => link.worked) ?? [];
   const didnt = data?.links.filter((link) => !link.worked) ?? [];
   const card = (link: Link) => (
@@ -595,24 +607,47 @@ function LinksView({ mix, setMixData, setView, notify, status, analysisAvailable
           {data === null && !failed && (
             <Skeleton variant="pairs" lines={4} label="Searching your lyrics" retry={() => void load()} />
           )}
-          {data?.links.length === 0 && (
-            <p className="lede">
-              {query ? `No links on “${query}” yet. ` : analysisAvailable ? 'No links yet. Analysing more songs will find more. ' : 'No links yet. More appear as lyrics are found for more of your songs.'}
-              {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : analysisAvailable && <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
-            </p>
-          )}
+          {data?.links.length === 0 && (() => {
+            const words = (
+              <p className="lede">
+                {query ? `No links on “${query}” yet. ` : analysisAvailable ? 'No links yet. Analysing more songs will find more. ' : 'No links yet. More appear as lyrics are found for more of your songs.'}
+                {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : analysisAvailable && <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
+              </p>
+            );
+            // with the feel on, the same words rest beside two song marks waiting to be joined
+            return alive ? <div className="links-empty" data-glow=""><RestingPair />{words}</div> : words;
+          })()}
           {flagOn('discover.relationship_map') && data && <RelationshipMap links={data.links} />}
-          <div className="link-grid">{worked.map(card)}</div>
+          {/* the cards arrive one after another; feel-account.css numbers them (data-stagger='auto') */}
+          <div className="link-grid" data-stagger={alive ? 'auto' : undefined}>{worked.map(card)}</div>
           {didnt.length > 0 && (
             <details className="didnt">
               <summary>{didnt.length} didn’t work so well</summary>
               <p className="hint">Still here to hear or try again. Each one says what actually happened.</p>
-              <div className="link-grid">{didnt.map(card)}</div>
+              <div className="link-grid" data-stagger={alive ? 'auto' : undefined}>{didnt.map(card)}</div>
             </details>
           )}
         </>
       )}
     </main>
+  );
+}
+
+/** Whether any part of the feel is on; Discover's covers, lifts and resting drawing appear only
+ * then, so with every app.feel_* flag off the page is exactly as it was. */
+export function useFeelAlive(): boolean {
+  return useSyncExternalStore(onFeelChange, () => feelParts().length > 0, () => false);
+}
+
+/** Two song marks side by side with nothing joining them yet: Discover's empty state, at rest.
+ * Decoration only; the words beside it say what is going on. */
+export function RestingPair() {
+  return (
+    <span className="links-empty-pair" aria-hidden="true">
+      <SongMotif songId={7} large />
+      <span className="links-empty-gap" />
+      <SongMotif songId={12} large />
+    </span>
   );
 }
 

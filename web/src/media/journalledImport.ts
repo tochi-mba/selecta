@@ -1,10 +1,10 @@
 import { assertNoPath } from './identity';
 import {
-  BATCH_SIZE, collect, defaultTagReader, FIRST_BATCH, isAbort, postJson, registrationOf, settleFingerprints,
+  BATCH_SIZE, collect, defaultTagReader, FIRST_BATCH, isAbort, keptSources, noteSource, postJson, registrationOf, settleFingerprints, sourceOf,
   type Candidate, type ImportOptions, type ImportSummary, type ImportWait, type RegisteredSong, type RetryPolicy, type SongRegistration,
 } from './importer';
 import { fileKey, type ImportJournal, type JournalRow } from './importJournal';
-import { isQuotaError } from './store';
+import { isQuotaError, type SongSource } from './store';
 
 // The journalled import (flag `cloud.resilient_import`), the path `runImport` takes when given a
 // journal. Reading and sending run side by side: each file is fingerprinted and written to the
@@ -96,7 +96,7 @@ export const patientRetry: RetryPolicy = async (work, { signal, onWait } = {}) =
   }
 };
 
-type Pending = { name: string; key: string; ref: Candidate['ref']; entry: SongRegistration; sessionFile?: File };
+type Pending = { name: string; key: string; ref: Candidate['ref']; entry: SongRegistration; sessionFile?: File; source?: SongSource };
 
 function newImportId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -167,6 +167,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
       ref: item.ref,
       importedAt: Date.now(),
       ...(fingerprints?.isRemembered(item.entry.content_sha256) ? { fingerprint: 'remembered' as const } : {}),
+      ...(await keptSources(store, song.song_id, item.source)),
     });
     if (item.sessionFile) store.attachSessionFile(song.song_id, item.sessionFile);
   };
@@ -244,9 +245,9 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
 
   // Keys already queued this run, so a file listed twice is sent once.
   const owed = new Set<string>();
-  const queue = (key: string, name: string, entry: SongRegistration, candidate: Candidate) => {
+  const queue = (key: string, name: string, entry: SongRegistration, candidate: Candidate, source: SongSource | undefined) => {
     owed.add(key);
-    pending.push({ name, key, ref: candidate.ref, entry, ...(candidate.sessionFile ? { sessionFile: candidate.sessionFile } : {}) });
+    pending.push({ name, key, ref: candidate.ref, entry, ...(candidate.sessionFile ? { sessionFile: candidate.sessionFile } : {}), ...(source ? { source } : {}) });
   };
 
   try {
@@ -265,10 +266,12 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
         continue;
       }
       const key = fileKey(candidate.path, file.size, file.lastModified);
+      const source = sourceOf(options.folderId, candidate.path, file);
       const known = journal.get(key);
       if (known?.state === 'saved' && known.songId !== undefined && (await store.get(known.songId))) {
         // done by an earlier run: nothing to read or send; a re-picked file is reachable again
         if (candidate.sessionFile) store.attachSessionFile(known.songId, candidate.sessionFile);
+        await noteSource(store, known.songId, source);
         unreported.add(known.songId);
         emit({ kind: 'checked', name: candidate.name, resumed: true });
         done(candidate.name, { song_id: known.songId, ...(known.duplicateOf !== undefined ? { duplicate_of: known.duplicateOf } : {}) });
@@ -278,7 +281,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
       if (known) {
         // fingerprinted by an earlier run but not confirmed (Cloud's registration is idempotent
         // by fingerprint): send it again without reading the file again
-        queue(key, candidate.name, known.entry, candidate);
+        queue(key, candidate.name, known.entry, candidate, source);
         emit({ kind: 'checked', name: candidate.name, resumed: true });
         kick();
         continue;
@@ -295,7 +298,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
       }
       // written down before any network call: an interruption from here on loses nothing
       await journal.put([{ key, importId, name: candidate.name, state: 'fingerprinted', entry, at: Date.now() }]);
-      queue(key, candidate.name, entry, candidate);
+      queue(key, candidate.name, entry, candidate, source);
       emit({ kind: 'checked', name: candidate.name, resumed: false });
       kick();
     }

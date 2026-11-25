@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Action, Skeleton } from '../ui/controls';
 import { countOf, ELLIPSIS } from '../ui/format';
 import { Icon } from '../ui/Icon';
@@ -6,6 +6,8 @@ import { navigate } from '../router';
 import { showToast } from '../ui/toasts';
 import type { RequestRow, Stage } from '../views/Requests';
 import { useRoomLive, type RoomAsk, type RoomControl } from './useRoomSession';
+import { feelOn } from '../feel/root';
+import { FOLD_FALLBACK_MS, glideFrom, useFeelPart } from './feelHooks';
 import './rooms.css';
 
 // The open room's requests, one list drawn the same way on the Rooms page and in the Requests
@@ -54,13 +56,38 @@ export function held(request: RequestRow, stage: Stage): string {
 
 const firstArtist = (artist: string | null | undefined) => artist?.split(';')[0].trim() || 'Unknown artist';
 
-/** One request: the song, who asked, what can be done. */
-export function AskRow({ title, artist, who, extra, note, done, children, stage }: {
+/** How long an approved request shows its drawn tick after it reaches its new place. */
+const TICK_MS = 2400;
+
+/** One request: the song, who asked, what can be done. The feel props (ADR-0477) change nothing
+ * unless the screen passes them: `id` lets a row be found again after it moves to another list,
+ * `ticked` draws a tick in its mark, `extraPops` pops a vote count that changed, and `leaving` is a
+ * row already gone from the room, drawn only while it folds away. */
+export function AskRow({ title, artist, who, extra, note, done, children, stage, id, ticked, extraPops, leaving }: {
   title: string; artist: string | null | undefined; who?: string | null; extra?: string; note?: string; done?: boolean; stage?: string; children?: ReactNode;
+  id?: string; ticked?: boolean; extraPops?: boolean; leaving?: { onGone: () => void };
 }) {
+  const row = useRef<HTMLLIElement>(null);
+  const onGone = useRef(leaving?.onGone);
+  onGone.current = leaving?.onGone;
+  const isLeaving = !!leaving;
+  useEffect(() => {
+    if (!isLeaving) return undefined;
+    // the fold ends the row; with no animation (calm) the timer does
+    const element = row.current;
+    // only the row's own fold counts; a child's animation ending bubbles up too
+    const gone = (event?: Event) => { if (!event || event.target === element) onGone.current?.(); };
+    element?.addEventListener('animationend', gone);
+    const timer = window.setTimeout(gone, FOLD_FALLBACK_MS);
+    return () => { element?.removeEventListener('animationend', gone); window.clearTimeout(timer); };
+  }, [isLeaving]);
+  const classes = `ask ${done ? 'ask-done' : ''}${leaving ? ' feel-collapse-out' : ''}`;
   return (
-    <li className={`ask ${done ? 'ask-done' : ''}`} data-stage={stage} data-testid="room-ask">
-      <span className="ask-mark" aria-hidden="true"><Icon name={done ? 'check' : 'music'} size="toolbar" /></span>
+    <li ref={row} className={classes} data-stage={stage} data-testid={leaving ? undefined : 'room-ask'} data-request={id}
+      aria-hidden={leaving ? true : undefined} inert={leaving ? true : undefined}>
+      <span className="ask-mark" aria-hidden="true">{ticked ? (
+        <svg className="room-tick" viewBox="0 0 24 24"><path className="feel-tick" pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+      ) : <Icon name={done ? 'check' : 'music'} size="toolbar" />}</span>
       <span className="ask-song">
         <b>{title}</b>
         <span>{firstArtist(artist)}</span>
@@ -68,7 +95,8 @@ export function AskRow({ title, artist, who, extra, note, done, children, stage 
       {(who || extra) && (
         <span className="ask-who">
           {who && <><span className="ask-face" aria-hidden="true">{who.trim()[0]?.toUpperCase() ?? '?'}</span><span><span className="visually-hidden">Asked by </span>{who}</span></>}
-          {extra && <span className="ask-extra">{extra}</span>}
+          {/* keyed by its words, so a count that changed is a new node and pops once */}
+          {extra && <span key={extra} className={extraPops ? 'ask-extra feel-pop' : 'ask-extra'}>{extra}</span>}
         </span>
       )}
       {/* the reason first, then what can be done about it */}
@@ -111,6 +139,16 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
   empty?: ReactNode;
 }) {
   const room = useRoomLive();
+  const moving = useFeelPart('motion');
+  const list = useRef<HTMLDivElement>(null);
+  // ADR-0477: an approved request glides from where it was to its place under Ready to add, then
+  // shows a tick; one passed on folds away. Where each approved row was, by request id:
+  const glides = useRef(new Map<string, DOMRect>());
+  const [ticks, setTicks] = useState<ReadonlySet<string>>(() => new Set());
+  // requests passed on, kept (with their place) only so they can fold away once the room drops them
+  const [passing, setPassing] = useState<Record<string, { ask: RoomAsk; index: number }>>({});
+  // each request's vote count when first seen here, so only a count that changed pops
+  const firstVotes = useRef(new Map<string, number>());
   // rows being added or dismissed keep what they showed until the room has been read again
   const [going, setGoing] = useState<Record<string, RequestRow>>({});
   const rows = mix?.rows ?? null;
@@ -174,8 +212,53 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
   };
   const titleOf = (ask: RoomAsk) => ask.song?.title ?? 'A song';
   const voteWords = (ask: RoomAsk) => (votes && ask.votes > 1 ? countOf(ask.votes, 'vote') : undefined);
+  const votesMoved = (ask: RoomAsk) => {
+    const first = firstVotes.current.get(ask.request_id);
+    if (first === undefined) { firstVotes.current.set(ask.request_id, ask.votes); return false; }
+    return moving && first !== ask.votes;
+  };
+  /** Where a row is now, kept before it moves to another list. */
+  const noteGlide = (id: string) => {
+    if (!feelOn('motion')) return;
+    const element = list.current?.querySelector(`[data-request="${CSS.escape(id)}"]`);
+    if (element) glides.current.set(id, element.getBoundingClientRect());
+  };
+
+  // after each draw: a row approved here that now sits in another list glides there from where it was
+  useLayoutEffect(() => {
+    if (!glides.current.size) return;
+    const landed: string[] = [];
+    for (const [id, from] of glides.current) {
+      const element = list.current?.querySelector(`[data-request="${CSS.escape(id)}"]:not([data-stage="approve"])`);
+      if (!element) continue;
+      glides.current.delete(id);
+      glideFrom(element, from);
+      landed.push(id);
+    }
+    if (landed.length) setTicks((now) => new Set([...now, ...landed]));
+  });
+  useEffect(() => {
+    if (!ticks.size) return undefined;
+    const timer = window.setTimeout(() => setTicks(new Set()), TICK_MS);
+    return () => window.clearTimeout(timer);
+  }, [ticks]);
 
   const inbox = room?.inbox ?? [];
+  // a passed request the room no longer lists is drawn where it was, folding away
+  const folding = Object.entries(passing).filter(([id]) => !inbox.some((ask) => ask.request_id === id));
+  const inboxRows: { ask: RoomAsk; leaving: boolean }[] = inbox.map((ask) => ({ ask, leaving: false }));
+  for (const [, { ask, index }] of folding) inboxRows.splice(Math.min(index, inboxRows.length), 0, { ask, leaving: true });
+  const dropPassing = (id: string) => setPassing((now) => { const { [id]: _gone, ...rest } = now; return rest; });
+  const pass = async (ask: RoomAsk, index: number) => {
+    // kept before the answer, so the row folds in the same draw that drops it from the room
+    if (feelOn('motion')) setPassing((now) => ({ ...now, [ask.request_id]: { ask, index } }));
+    try {
+      await settle(ask.request_id, null, async () => { await control?.pass(ask.request_id); showToast(`You passed on ${titleOf(ask)}.`); }, 'inbox');
+    } catch (problem) {
+      dropPassing(ask.request_id);
+      throw problem;
+    }
+  };
   const done = variant === 'page' && mix ? (room?.done ?? []).filter((ask) => ask.song && mix.inMix(ask.song.song_id)) : [];
   const waiting = inbox.length + coming.length + loose.length;
   const noMix = roomRows.some((row) => row.stage === 'no_mix');
@@ -214,7 +297,7 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
   const comingRow = (ask: RoomAsk) => {
     const row = rowOf(ask);
     const { note, buttons } = acceptedActions(ask.request_id, titleOf(ask), row);
-    return <AskRow key={ask.request_id} title={titleOf(ask)} artist={ask.song?.artist} who={ask.nickname ?? row?.request.asked_by} extra={voteWords(ask)} note={note} stage={row?.stage}>{buttons}</AskRow>;
+    return <AskRow key={ask.request_id} id={ask.request_id} ticked={ticks.has(ask.request_id)} extraPops={votesMoved(ask)} title={titleOf(ask)} artist={ask.song?.artist} who={ask.nickname ?? row?.request.asked_by} extra={voteWords(ask)} note={note} stage={row?.stage}>{buttons}</AskRow>;
   };
   const looseRow = (row: Row) => {
     const id = row.request.room_request_id ?? `row-${row.request.id}`;
@@ -227,7 +310,7 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
   const nothing = !waiting && !done.length && !unfit.length;
 
   return (
-    <div className={`asks asks-${variant}`} data-testid="room-requests" aria-busy={Object.keys(going).length > 0 || undefined}>
+    <div ref={list} className={`asks asks-${variant}`} data-testid="room-requests" aria-busy={Object.keys(going).length > 0 || undefined}>
       {variant === 'drawer' && (
         <header className="asks-head">
           <h3>From your room</h3>
@@ -237,14 +320,17 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
       )}
       {nothing && variant === 'drawer' && <p className="asks-none">{off ? 'Requests are off for this room.' : 'No requests from guests yet.'}</p>}
       {nothing && variant === 'page' && (empty ?? null)}
-      {(inbox.length > 0 || (approving && !nothing)) && (
+      {(inbox.length > 0 || folding.length > 0 || (approving && !nothing)) && (
         <Group title="Needs your approval" count={inbox.length}>
-          {inbox.length === 0 && <li className="asks-none">Nothing to approve right now.</li>}
-          {inbox.map((ask) => (
-            <AskRow key={ask.request_id} title={titleOf(ask)} artist={ask.song?.artist} who={ask.nickname} extra={voteWords(ask)} stage="approve">
+          {inbox.length === 0 && !folding.length && <li className="asks-none">Nothing to approve right now.</li>}
+          {inboxRows.map(({ ask, leaving }, index) => leaving ? (
+            <AskRow key={`gone-${ask.request_id}`} title={titleOf(ask)} artist={ask.song?.artist} who={ask.nickname} extra={voteWords(ask)} stage="approve"
+              leaving={{ onGone: () => dropPassing(ask.request_id) }} />
+          ) : (
+            <AskRow key={ask.request_id} id={ask.request_id} title={titleOf(ask)} artist={ask.song?.artist} who={ask.nickname} extra={voteWords(ask)} extraPops={votesMoved(ask)} stage="approve">
               {control && <>
-                <Action className="primary" aria-label={`Approve ${titleOf(ask)}`} working={`Approving${ELLIPSIS}`} run={() => settle(ask.request_id, null, () => control.approve(ask.request_id), 'inbox')}>Approve</Action>
-                <Action className="quiet" aria-label={`Pass on ${titleOf(ask)}`} working={`Passing${ELLIPSIS}`} run={() => settle(ask.request_id, null, async () => { await control.pass(ask.request_id); showToast(`You passed on ${titleOf(ask)}.`); }, 'inbox')}>Pass</Action>
+                <Action className="primary" aria-label={`Approve ${titleOf(ask)}`} working={`Approving${ELLIPSIS}`} run={() => { noteGlide(ask.request_id); return settle(ask.request_id, null, () => control.approve(ask.request_id), 'inbox'); }}>Approve</Action>
+                <Action className="quiet" aria-label={`Pass on ${titleOf(ask)}`} working={`Passing${ELLIPSIS}`} run={() => pass(ask, index)}>Pass</Action>
               </>}
             </AskRow>
           ))}

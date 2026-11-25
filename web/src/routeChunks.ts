@@ -25,6 +25,26 @@ export const MyMixes = lazy(() => ROUTE_CHUNKS.myMixes().then((module) => ({ def
 export const Links = lazy(() => ROUTE_CHUNKS.links().then((module) => ({ default: module.Links })));
 export const Workshop = lazy(() => ROUTE_CHUNKS.workshop().then((module) => ({ default: module.Workshop })));
 
+/** The split page an address shows, if it is one of them. Aliases resolve the way router.ts does,
+ * which is repeated here in short so this file need not import the router. */
+function chunkFor(path: string) {
+  const bare = (path.split('?')[0].replace(/\/+$/, '') || '/').replace(/^\/workspace(?=\/|$)/, '/workshop');
+  if (bare === '/mix/current/edit' || /^\/mixes\/drafts\/\d+\/edit$/.test(bare)) return Mix;
+  if (bare === '/mixes/mine' || bare === '/my-mixes') return MyMixes;
+  if (bare === '/discover' || bare.startsWith('/discover/') || bare.startsWith('/explore/words') || bare.startsWith('/explore/harmonic')) return Links;
+  if (bare === '/workshop' || bare.startsWith('/workshop/')) return Workshop;
+  return null;
+}
+
+/** Null when the page at this address can be drawn at once; otherwise a promise that resolves when
+ * its code has arrived (never rejects). A page transition waits on it for a moment, so the new page
+ * is captured as itself and not as its loading skeleton. Pages only: nothing here loads audio. */
+export function routeReady(path: string): Promise<void> | null {
+  const page = chunkFor(path);
+  if (!page || page.loaded()) return null;
+  return page.preload();
+}
+
 let warmed = false;
 
 /** Fetch every split page in the background, once, after the first page has painted. */

@@ -10,6 +10,9 @@ import { cancelExport, isExportActive, startExport, useExports } from './exportS
 import { exportStage } from './ExportJobs';
 import { MixScope, useMixPath } from './mixScope';
 import { words } from '../copy';
+import { Meter } from '../ui/Meter';
+import { DrawnTick, RollingCount, useFeelOn } from './feelPieces';
+import { MomentLayer, plainCount, useReachedMoment } from './feelLocal';
 
 /** Is this job a file of the mix exactly as it is now? */
 function sameVersion(job: ExportJob, mix: MixItem[]): boolean {
@@ -54,6 +57,13 @@ export function ExportPanel(props: {
   const file = mine?.state === 'ready' ? mine : null;
   const changedSince = !!mine && !sameVersion(mine, mix);
   const stage = mine ? mine.state : null;
+  const feel = useFeelOn();
+  // the stage the job is really at: 0 preparing, 1 writing the file, 2 ready; other states (failed,
+  // cancelled and the rest) have passed nothing that can be ticked
+  const reached = stage === 'preparing' ? 0 : stage === 'encoding' ? 1 : stage === 'ready' ? 2 : -1;
+  const passed = (index: number) => feel && reached > index;
+  const [celebrating, celebrated] = useReachedMoment(!!file);
+  const [pressed, setPressed] = useState<string | null>(null);
 
   const start = async () => {
     if (starting.current) return;
@@ -77,6 +87,7 @@ export function ExportPanel(props: {
       } else {
         setProblem((error as Error).message);
       }
+      return false; // said here, so the button draws no tick
     } finally {
       starting.current = false;
     }
@@ -109,11 +120,22 @@ export function ExportPanel(props: {
           </ul>
         )}
       </details>
-      <ol className="export-stages" aria-label="Export progress">
-        <li aria-current={!stage || stage === 'preparing' ? 'step' : undefined}>
-          Prepare transitions{mine ? ` - ${mine.seams_ready} of ${mine.seams_total} ready` : ''}
+      {/* ADR-0477: with the feel on the list is a stepper: stages the job has really passed draw a
+          tick, and preparing shows the real count of transitions as a bar */}
+      <ol className="export-stages" aria-label="Export progress" data-stepper={feel ? '' : undefined}>
+        <li aria-current={!stage || stage === 'preparing' ? 'step' : undefined} data-done={passed(0) ? '' : undefined}>
+          {passed(0) && <DrawnTick size="compact" className="export-stage-tick" />}
+          Prepare transitions{mine ? <> - <RollingCount value={mine.seams_ready} format={plainCount} /> of {mine.seams_total} ready</> : ''}
+          {feel && mine && stage === 'preparing' && mine.seams_total > 0 && (
+            <Meter className="export-stage-meter" label="Transitions prepared" showLabel={false} value={mine.seams_ready} max={mine.seams_total} valueText={`Rendering ${mine.seams_ready} of ${mine.seams_total}`} />
+          )}
         </li>
-        <li aria-current={stage === 'encoding' ? 'step' : undefined}>Create the FLAC file</li>
+        <li aria-current={stage === 'encoding' ? 'step' : undefined} data-done={passed(1) ? '' : undefined}>
+          {passed(1) && <DrawnTick size="compact" className="export-stage-tick" />}
+          Create the FLAC file
+          {/* how long the file takes to write is not reported, so this bar only says it is going */}
+          {feel && stage === 'encoding' && <Meter className="export-stage-meter" label="Creating the FLAC file" showLabel={false} valueText="Creating the FLAC file" />}
+        </li>
         <li aria-current={file ? 'step' : undefined}>Download your mix</li>
       </ol>
       {mine && !file && <p role="status"><Status kind={exportStage(mine).kind}>{exportStage(mine).words}</Status></p>}
@@ -138,7 +160,12 @@ export function ExportPanel(props: {
         </p>
       )}
       {file && (
-        <p className="notice" role="status">Ready{file.seconds != null ? `, ${length(file.seconds)} long` : ''}: <a href={`/api/exports/${encodeURIComponent(file.name)}`} download>download {file.name}</a></p>
+        <p className="notice" role="status" data-export-ready={feel ? '' : undefined} data-arrive={feel ? '' : undefined}>
+          {celebrating && <MomentLayer kind="equalizer" onDone={celebrated} />}
+          Ready{file.seconds != null ? `, ${length(file.seconds)} long` : ''}: <a href={`/api/exports/${encodeURIComponent(file.name)}`} download className={feel ? 'button primary export-download' : undefined} onClick={() => { if (feel) setPressed(file.name); }}>download {file.name}</a>
+          {/* the press handed the file to the browser's own download; the tick says it was taken */}
+          {feel && pressed === file.name && <DrawnTick size="compact" className="export-download-tick" />}
+        </p>
       )}
       {(!file || changedSince) && (
         <Action className="primary" disabled={going || mix.length < 2 || blocked} working="Starting export…" run={start}>

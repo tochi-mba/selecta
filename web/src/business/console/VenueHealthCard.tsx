@@ -7,7 +7,7 @@ import './console.css';
 
 export function VenueHealthCard({ venue, now, offline, updatedAt, onOpen }: { venue: Venue; now: number; offline?: boolean; updatedAt?: number | null; onOpen?: (venueId: string) => void }) {
   const titleId = `hq-card-${venue.id}`;
-  return <article className="biz-card hq-card" aria-labelledby={titleId} data-venue={venue.id}>
+  return <article className="biz-card hq-card" aria-labelledby={titleId} data-venue={venue.id} data-lift>
     <div className="hq-card-head">
       <h3 id={titleId} className="biz-clamp" title={venue.name}>{venue.name}</h3>
       <NeedsYouMark venue={venue} now={now} />

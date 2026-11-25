@@ -7,6 +7,8 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ELLIPSIS } from '../ui/format';
 import { Api, extrapolate, HEARTBEAT_MS, REMOTE_POLL_MS, SessionState, Speaker, usePlaybackDevice } from './usePlaybackDevice';
 import { whereWords } from './remoteNow';
+import { CoverArt } from '../views/CoverArt';
+import { useFeelPart } from '../rooms/feelHooks';
 import './devices.css';
 
 // The "Playing on ..." bar (ADR-0415): every device sees where the music is and can steer it.
@@ -53,6 +55,9 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   // the speaker never applies lapses after OPTIMISTIC_MS, back to the reported state.
   const [wanted, setWanted] = useState<{ playing: boolean; seq: number } | null>(null);
   const [, tick] = useState(0);
+  // ADR-0477: with depth on, the playing song's cover sits beside its name; no beat effects, as
+  // this bar may be a remote with no sound to measure
+  const covers = useFeelPart('depth');
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 1000); return () => window.clearInterval(t); }, []);
 
   const view = pb.view;
@@ -61,6 +66,7 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   const warning = pb.device?.warnings.find((w) => w.code === 'ios_keep_screen_on' || w.code === 'no_audio');
   const name = session ? songName?.(session.song_index) ?? `Song ${session.song_index + 1}` : null;
   const position = session ? extrapolate(session, pb.serverNow()) : 0;
+  const songId = session ? session.track?.song_id ?? session.programme?.[session.song_index]?.song_id : undefined;
   const shownWanted = wanted && session && session.seq === wanted.seq ? wanted : null;
   const playing = shownWanted ? shownWanted.playing : session?.state === 'playing';
   useEffect(() => { if (wanted && session && session.seq !== wanted.seq) setWanted(null); }, [session, wanted]);
@@ -129,6 +135,7 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
       <audio ref={audio} data-testid="speaker-audio" preload="auto" />
       <div className="playing-bar-where">
         <strong data-testid="playing-where">{where}</strong>
+        {covers && name && session?.state !== 'stopped' && songId !== undefined && <CoverArt seed={songId} songId={songId} size="small" />}
         {name && session?.state !== 'stopped' && <span className="playing-bar-song">{name} · {clock(position)}</span>}
       </div>
       <div className="playing-bar-controls">
