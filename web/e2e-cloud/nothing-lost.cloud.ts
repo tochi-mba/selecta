@@ -215,7 +215,8 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await asLocalFirst(second, user);
     await second.route('**/api/local-media/songs', (route) => (route.request().method() === 'POST' ? route.abort() : route.fallback()));
     await second.goto('/workshop');
-    await expect(second.getByText(/Another tab is importing\. Progress shows here too/)).toBeVisible({ timeout: 30_000 });
+    // said by the chip, and by Workspace's import card when that page is open
+    await expect(second.locator('.cloud-import-chip')).toContainText(/Another tab is importing\. Progress shows here too/, { timeout: 30_000 });
     held.release();
     await expect(songCount(page, 15)).toBeVisible({ timeout: 60_000 });
     expect(await second.evaluate((key) => localStorage.getItem(key), `selecta.import.${workspace}`)).toBeNull();
