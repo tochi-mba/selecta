@@ -1,4 +1,4 @@
-import { memo, useContext } from 'react';
+import { memo, useContext, useState } from 'react';
 import { HolderContext, type MusicHolder } from '../devices/controller';
 import { LibrarySong } from '../api';
 import { clock, etaWords } from '../lib';
@@ -15,7 +15,8 @@ export type LibraryRowActions = {
   open: (id: number) => void;
   start: (song: LibrarySong) => void | Promise<void>;
   analyse: (song: LibrarySong) => Promise<void>;
-  add: (song: LibrarySong, playNext: boolean) => Promise<void>;
+  /** false: nothing was added (I85: an offer to move the music is showing instead) */
+  add: (song: LibrarySong, playNext: boolean) => Promise<boolean | void>;
   priority: (song: LibrarySong) => Promise<void>;
   never: (song: LibrarySong) => Promise<void>;
 };
@@ -89,12 +90,14 @@ export const LibraryRow = memo(function LibraryRow({
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
   const holder = useContext(HolderContext);
+  const [added, setAdded] = useState(false);
   const title = song.title ?? 'Untitled';
   const name = duplicate ? `${title} (song ${song.id})` : title;
   const spoken = duplicate || !sharedTitle ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
   const queued = linePlace >= 0;
   if (browser) {
     const artist = song.artist ?? 'Unknown artist';
+    const remoteNext = !!holder && playing && facts.canAdd && song.availability !== 'here' && song.availability !== 'hosted';
     const chip = facts.setAside || song.never
       ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
       : song.availability && HERE[song.availability]
@@ -120,9 +123,15 @@ export const LibraryRow = memo(function LibraryRow({
         <span className="lw-state">
           <Status kind={chip.kind} title={chip.why || undefined}>{chip.words}</Status>
           {chip.why && chip.kind !== 'ready' && <small className="lw-why">{chip.why}</small>}
+          {/* I84: what the row's tap did, said in the row itself for a moment */}
+          {remoteNext && <span className={added ? 'lw-added' : 'lw-added lw-in-mix'} role="status">{added ? `Added to ${holder?.name}’s mix` : inMix ? 'In the mix' : ''}</span>}
         </span>
         <div className="song-actions lw-actions">
-          {facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
+          {/* I84: on a remote while another device plays, the row's one tap puts the song next
+              there, says so for a screen reader, and confirms in the row */}
+          {remoteNext
+            ? !inMix && <Action className="lw-start small" title={`Play next on ${holder?.name}`} aria-label={`Play ${spoken} next on ${holder?.name}`} disabled={searching} run={async () => { if (await actions.add(song, true) === false) return; setAdded(true); window.setTimeout(() => setAdded(false), 3000); }}><Icon name="next" size="compact" /><span>Play next</span></Action>
+            : facts.canStartMix && <Action className="lw-start small" title="Build a mix that starts here" aria-label={`Start a mix from ${spoken}`} disabled={building || searching} run={() => actions.start(song)}><Icon name="play" size="compact" /><span>Start a mix</span></Action>}
           {((!facts.setAside && neverFlag) || facts.canAdd) && (
             <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
               <Action role="menuitem" run={() => actions.open(song.id)}>Song details</Action>
