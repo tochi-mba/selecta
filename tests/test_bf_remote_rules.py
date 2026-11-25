@@ -185,3 +185,13 @@ def test_a_second_device_with_the_same_default_name_is_numbered(engine):
         engine, WORKSPACE, USER, name="Edge on Windows", kind="laptop", device_id=second.id
     ).device
     assert again.name == "Edge on Windows 2"
+
+
+def test_a_take_over_after_the_speaker_went_away_carries_on_from_its_last_place(engine, clock):
+    # ADR-0475 B7: not from the time that ran on after the speaker stopped being heard
+    laptop, mac = _device(engine, "Laptop"), _device(engine, "Mac")
+    session.take_over(engine, WORKSPACE, laptop.id)
+    session.heartbeat(engine, WORKSPACE, laptop.id, Position(0, 56_000, state=PlayState.PLAYING))
+    clock.advance(LEASE_SECONDS + 15)
+    moved = session.take_over(engine, WORKSPACE, mac.id).session
+    assert moved.active_device_id == mac.id and moved.offset_ms == 56_000

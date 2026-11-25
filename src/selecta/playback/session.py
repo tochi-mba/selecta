@@ -327,9 +327,14 @@ def take_over_in(
         state = PlayState.PAUSED
     else:
         state = session.state
+    # ADR-0475 B7: a speaker that went away stopped being heard when its lease ran out, so the
+    # music carries on from its last known place, not from time run on since
+    until = now
+    if session.lease_expires_at is not None and not session.lease_live(now) and session.anchor_at:
+        until = session.anchor_at
     session = replace(
         session,
-        offset_ms=position_at(session, now).offset_ms,
+        offset_ms=position_at(session, until).offset_ms,
         anchor_at=now,
         state=state,
         active_device_id=device_id,

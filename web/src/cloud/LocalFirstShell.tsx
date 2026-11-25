@@ -46,6 +46,7 @@ import { useRemote } from '../devices/useRemote';
 import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { ControllerListen } from '../devices/ControllerListen';
+import { tabLog } from '../devices/audioTab';
 import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
@@ -623,8 +624,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     hereOnPurpose.current = true;
     // G2 (58): moving the programme that plays carries on from where it is
     // (B7: from a speaker that went away, its last known place, not time run on since)
-    const lastSeen = playback.view?.speaker === 'offline' ? playback.view.session?.anchor_at ?? undefined : undefined;
-    const from = ask.move ? movedFrom(playback.view?.session, mix.mix, lastSeen ?? playback.serverNow()) : null;
+    const seen = ask.move ? await playback.refreshSession() : null;
+    const lapsed = (seen?.session?.lease_expires_at ?? Infinity) <= playback.serverNow();
+    const lastSeen = seen?.speaker === 'offline' || lapsed ? seen?.session?.anchor_at ?? undefined : undefined;
+    tabLog('move from', { speaker: seen?.speaker, lapsed, lastSeen, offset: seen?.session?.offset_ms });
+    const from = seen ? movedFrom(seen.session, mix.mix, lastSeen ?? playback.serverNow()) : null;
     void shellPlayer.playFrom(from?.song_index ?? 0, from ? from.offset_ms / 1000 : 0);
     return 'starting';
   }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources]);
