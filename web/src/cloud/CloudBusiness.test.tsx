@@ -89,7 +89,8 @@ describe('business routes in the Cloud app', () => {
   it('/business/start shows the pilot contact form only with business.start on', async () => {
     window.history.replaceState({}, '', '/business/start');
     const { unmount } = render(<CloudApp />);
-    await waitFor(() => expect(requests).toContain('GET /api/account'));
+    // the first open of the app on a busy runner can take as long as the second render below allows
+    await waitFor(() => expect(requests).toContain('GET /api/account'), { timeout: 4000 });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByRole('heading', { name: 'SelectaDJ for Business' })).toBeNull();
     unmount();
