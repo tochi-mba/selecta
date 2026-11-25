@@ -248,7 +248,7 @@ describe('help, tours and the palette', () => {
       expect(TOURS[page.id].length, page.id).toBeGreaterThanOrEqual(3);
       expect(TOURS[page.id].length, page.id).toBeLessThanOrEqual(6);
     }
-    expect(PLAYBOOKS.map((p) => p.id)).toEqual(['refund', 'sign-in', 'payment', 'incident', 'takedown', 'add-staff', 'flag', 'undo']);
+    expect(PLAYBOOKS.map((p) => p.id)).toEqual(['refund', 'sign-in', 'payment', 'incident', 'takedown', 'add-staff', 'flag', 'no-worker', 'undo']);
   });
 
   it('opens help with the ? key and a tour from it', async () => {

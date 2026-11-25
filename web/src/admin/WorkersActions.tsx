@@ -16,6 +16,7 @@ export type Pool = {
   oldest_wait_s: number | null; recent: { outcome: string; error_class: string | null; at: number }[];
   paused: { target: string; since: number | null; reason: string; from_page: boolean } | null;
   autoscale_size: Reading; verdict: Verdict;
+  retry_scheduled?: number; retry_overdue?: number; oldest_job_type?: string | null; stuck?: boolean;
 };
 export type ScaleRequest = { pool: string; workers: number; until: number; by: string; at: number; reason: string };
 export type Autoscaler = { running: boolean; healthy: boolean; last_tick: Reading; token_on_api: boolean; settings: string[]; sizes: Record<string, Reading>; requests: ScaleRequest[] };
