@@ -66,7 +66,7 @@ def install_routes(
         try:
             client.get_object(buckets.derived, key, destination)
         finally:
-            client.close()
+            getattr(client, "close", lambda: None)()
         return destination
 
     @app.get("/api/hosted/songs")
@@ -108,7 +108,7 @@ def install_routes(
         except R2Error as error:
             raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
         finally:
-            client.close()
+            getattr(client, "close", lambda: None)()
 
     @app.post("/api/hosted/mixes/export", status_code=202)
     def hosted_export(request: Request, body: dict = Body(...),  # noqa: B008
@@ -129,7 +129,7 @@ def install_routes(
             state = hosted_render.export_status(engine, found.workspace.id, job_id,
                                                 client=client, buckets=buckets)
         finally:
-            client.close()
+            getattr(client, "close", lambda: None)()
         if state is None:
             raise HTTPException(404, detail={"code": "export_not_found"})
         return state
