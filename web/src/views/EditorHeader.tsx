@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useState } from 'react';
+import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { MixEta, MixItem } from '../api';
 import { flagOn, useFlag } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
@@ -6,8 +6,24 @@ import { DraftNames, getDraftNames } from '../state/draftNames';
 import { MixReadiness, orderOf } from '../state/readiness';
 import { Status, StatusKind } from '../ui/controls';
 import { TransitionsWorkedOutLive } from './liveTransitions';
-import { useFeelOn } from './feelPieces';
+import { DrawnTick, useFeelOn } from './feelPieces';
 import { MixArt } from './MixArt';
+import { feelOn } from '../feel/root';
+
+/** The feel (ADR-0477): a number that goes up each time a move finishes saving with the order really
+ * changed, so a drawn tick keyed by it draws once beside "saved as you edit". A refused move puts
+ * the order back as it was, so it draws nothing. Zero while motion is off, which draws nothing. */
+export function useSavedTicks(saving: boolean, order: string): number {
+  const resting = useRef(order);
+  const was = useRef(saving);
+  const [saves, setSaves] = useState(0);
+  useEffect(() => {
+    if (was.current && !saving && order !== resting.current && feelOn('motion')) setSaves((count) => count + 1);
+    was.current = saving;
+    if (!saving) resting.current = order;
+  }, [saving, order]);
+  return saves;
+}
 
 /** A short name for this exact order of songs, so "the mix I was looking at" and "the mix now" can be
  * told apart at a glance. It's a label, not a security check: the x-mix-order header is what guards a
@@ -76,8 +92,11 @@ export function EditorHeader(props: {
   view?: ReactNode;
   /** MP-0287-07: the chosen view's name, kept in the pinned scope bar so it stays in sight while scrolling */
   viewName?: string;
+  /** a moved song is on its way to the server */
+  saving?: boolean;
 }) {
-  const { draftId, mix, mixName, mixEta, draftPlace, currentMixName, readiness, totalSeconds, switcher, actions, view, viewName } = props;
+  const { draftId, mix, mixName, mixEta, draftPlace, currentMixName, readiness, totalSeconds, switcher, actions, view, viewName, saving = false } = props;
+  const saves = useSavedTicks(saving, orderOf(mix));
   const inDraft = draftId !== null;
   const live = useContext(TransitionsWorkedOutLive);
   const facts = readinessWords(readiness, live);
@@ -103,7 +122,7 @@ export function EditorHeader(props: {
         <div>
           {switcher}
           {feel && <MixArt seed={mixName} songs={mix} travels />}
-          <p className="eyebrow">{inDraft ? 'Draft · saved as you edit' : 'Current mix'}</p>
+          <p className="eyebrow">{inDraft ? 'Draft · saved as you edit' : 'Current mix'}{inDraft && saves > 0 && !saving && <DrawnTick key={saves} size="compact" className="editor-save-tick" />}</p>
           <h1 className="display small">{mixName}</h1>
           <p className="lede">
             {mix.length} {mix.length === 1 ? 'song' : 'songs'}, about {length(totalSeconds)}.

@@ -22,7 +22,14 @@ import { SongDetails } from './SongDetails';
 import { flushSync } from 'react-dom';
 import { flip } from '../feel/flip';
 import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
-import { RollingCount, useArrivalFlash, visibleRows } from './feelPieces';
+import { RollingCount, useArrivalFlash, useFeelOn, visibleRows } from './feelPieces';
+import { cascadeTicks, openFromRow, useRowSwipe } from './feelLibrary';
+
+/** How many songs the list shows, in the words the count line has always used. */
+const countWords = (shown: number, total: number, grouped: boolean) => {
+  const number = (value: number) => (grouped ? value.toLocaleString() : String(value));
+  return shown < total ? `Showing ${number(shown)} of ${number(total)} songs` : `${number(total)} song${total === 1 ? '' : 's'}`;
+};
 
 /** `measures`: only where SelectaDJ analyses songs; a browser library is never analysed.
  * `browserOnly`: only in browser-first Cloud, where songs live on several devices (ADR-0475 R6). */
@@ -85,6 +92,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const filterStrip = useRef<HTMLDivElement>(null);
   useSlidingIndicator(filterStrip, '[aria-pressed="true"]');
   const appending = useRef(false);
+  // a finger drawn across a phone row opens its actions or ticks it (one set of listeners on the list)
+  useRowSwipe(listRef);
+  // the search's words are marked in the rows only while some part of the feel is on
+  const marking = useFeelOn();
   const selectionEntryRef = useRef<HTMLButtonElement>(null);
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
@@ -589,7 +600,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     toggle: (id, range) => latest.current.toggleBatch(id, range),
     open: (id) => {
       if (latest.current.songAsked !== null) setAddressQuery({ song: null });
-      setOpened(id);
+      // the row's cover and title travel into the sheet when page transitions run
+      openFromRow(id, () => setOpened(id));
     },
     start: (song) => latest.current.requestStart(song),
     analyse: (song) => latest.current.analyse(song),
@@ -690,10 +702,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           count: a live region that is removed and added again is never announced (NVDA, 2026-11-12). */}
       {browser && (
         <BrowserLibraryMeta
-          countWords={committedRows === null ? '' : committedRows.length < total ? `Showing ${committedRows.length.toLocaleString()} of ${total.toLocaleString()} songs` : `${total.toLocaleString()} song${total === 1 ? '' : 's'}`}
+          countWords={committedRows === null ? '' : <RollingCount value={total} format={(all) => countWords(committedRows.length, all, true)} />}
           updating={searching} selected={visibleSelected.length} selectRef={selectionEntryRef}
           canSelect={batch && !!committedRows?.length && filter !== 'set_aside'}
-          onSelectAll={() => { if (committedRows && !searching && !failed) setBatchSelection({ identity: selectionIdentity, ids: committedRows.slice(0, 200).map((song) => song.id) }); }}
+          onSelectAll={() => {
+            if (!committedRows || searching || failed) return;
+            setBatchSelection({ identity: selectionIdentity, ids: committedRows.slice(0, 200).map((song) => song.id) });
+            cascadeTicks(listRef.current);
+          }}
           onClear={() => { setBatchSelection({ identity: selectionIdentity, ids: [] }); selectionEntryRef.current?.focus(); }}>
           {holder?.speaking && now.phase !== 'idle' && <RemoteSelection songs={visibleSelected} holder={holder} disabled={searching || failed} playNext={playSelectedNext} />}
           {on('library.never_play') && (
@@ -710,14 +726,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           )}
         </BrowserLibraryMeta>
       )}
-      {!browser && <p className="hint library-count" role="status">{committedRows === null ? '' : committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
+      {!browser && <p className="hint library-count" role="status">{committedRows === null ? '' : <RollingCount value={total} format={(all) => `${countWords(committedRows.length, all, false)}.`} />}</p>}
       {!browser && batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
-            <button ref={selectionEntryRef} disabled={searching || failed} onClick={() => setBatchSelection({
-              identity: selectionIdentity,
-              ids: committedRows.slice(0, 200).map((song) => song.id),
-            })}>Select up to 200 loaded songs</button>
+            <button ref={selectionEntryRef} disabled={searching || failed} onClick={() => {
+              setBatchSelection({ identity: selectionIdentity, ids: committedRows.slice(0, 200).map((song) => song.id) });
+              cascadeTicks(listRef.current);
+            }}>Select up to 200 loaded songs</button>
             {visibleSelected.length === 0 && <span className="hint">Or use the checkboxes beside recordings to select them individually. Shift selects a range.</span>}
           </div>
           {visibleSelected.length > 0 && (
@@ -793,7 +809,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             current={now.phase !== 'idle' && mix[now.position]?.song_id === song.id}
             linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
             lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} browser={!!browser}
-            art={on('library.art_embedded')} />
+            art={on('library.art_embedded')} mark={marking && query ? query : ''} />
         ))}
       </ul>
       {pageProblem && <p role="alert" className="warn">{pageProblem}</p>}

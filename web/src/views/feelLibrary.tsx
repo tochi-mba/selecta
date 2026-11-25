@@ -2,6 +2,7 @@ import { RefObject, useEffect } from 'react';
 import { tap, tick } from '../feel/haptics';
 import { feelCalm, feelOn } from '../feel/root';
 import { changeScene } from '../shell/sceneTransition';
+import { motionMs } from '../ui/exitMotion';
 import { visibleRows } from './feelPieces';
 
 /** The Library's own feel pieces (ADR-0477, plan 3.6). Each one does nothing, and draws nothing
@@ -116,10 +117,21 @@ export function useRowSwipe(list: RefObject<HTMLElement | null>) {
     if (!element) return undefined;
     let held: Held | null = null;
     let swallowClick = false;
+    // the row settles back on the gentle spring from wherever the finger left it
     const release = (row: HTMLElement) => {
+      const from = row.style.translate;
       delete row.dataset.swiping;
       delete row.dataset.swipe;
       row.style.translate = '';
+      const duration = motionMs('--motion-spring-snappy', 320);
+      if (!from || !duration || typeof row.animate !== 'function') return;
+      const curve = getComputedStyle(document.documentElement).getPropertyValue('--spring-gentle').trim() || 'ease-out';
+      const frames: Keyframe[] = [{ translate: from }, { translate: '0 0' }];
+      try {
+        row.animate(frames, { duration, easing: curve });
+      } catch {
+        row.animate(frames, { duration, easing: 'ease-out' });
+      }
     };
     const down = (event: PointerEvent) => {
       if (event.pointerType !== 'touch' || !event.isPrimary || !feelOn('motion') || feelCalm()) return;

@@ -9,7 +9,8 @@ import { Action, Menu, Status, type StatusKind } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SongMotif } from '../ui/MusicObjects';
 import { CoverArt } from './CoverArt';
-import { useReadyPop } from './feelPieces';
+import { DrawnTick, PlayingBars, useReadyPop } from './feelPieces';
+import { Matched } from './feelLibrary';
 
 /** What a Library row asks its page to do. The page passes one stable object, so a poll that leaves a
  * song's own facts alone does not re-render its row (MI-0162-04). */
@@ -60,13 +61,22 @@ export type LibraryRowProps = {
   /** library.art_embedded: the song's cover (its own picture, else its generated tile) in place of
    * the motif alone */
   art?: boolean;
+  /** the feel (ADR-0477): the search's words to mark in the title and artist; empty marks nothing */
+  mark?: string;
 };
 
-/** A status chip that pops once (.feel-pop) when it has just turned ready; drawn plainly otherwise. */
+/** A status chip that pops once (.feel-pop) when it has just turned ready, its colour fading over
+ * from the step before (feel-library.css) and its tick drawing itself in place of the plain check;
+ * drawn plainly otherwise. The words are the same either way. */
 function Chip({ kind, words, title }: { kind: StatusKind; words: ReactNode; title?: string }) {
   const pop = useReadyPop(kind);
-  const chip = <Status kind={kind} title={title}>{words}</Status>;
-  return pop ? <span key={pop} className="feel-pop feel-chip-pop">{chip}</span> : chip;
+  if (!pop) return <Status kind={kind} title={title}>{words}</Status>;
+  return (
+    <span key={pop} className="feel-pop feel-chip-pop">
+      {/* Status's own markup with the drawn tick where its check would be */}
+      <span className="status status-ready" title={title}><DrawnTick size="compact" />{words}</span>
+    </span>
+  );
 }
 
 /** The one chip a browser row shows: whether the song plays here, or the step that makes it. */
@@ -104,9 +114,13 @@ const lineWords = (place: number) => place < 0 ? 'Analyse now' : place === 0 ? '
 
 export const LibraryRow = memo(function LibraryRow({
   song, page, actions, selectable, selected, selectionFull, searching, failed, building, duplicate, sharedTitle,
-  inMix, searched, playing, current = false, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true, browser = false, art = false,
+  inMix, searched, playing, current = false, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true, browser = false, art = false, mark = '',
 }: LibraryRowProps) {
-  const face = art ? <CoverArt seed={song.id} songId={song.id} size="small" /> : <SongMotif songId={song.id} />;
+  // the playing song's cover carries bars the beat bus moves on measured beats (feel-music.css
+  // draws them only with data-feel~='music'); every other row's face is as it was
+  const face = art
+    ? <><CoverArt seed={song.id} songId={song.id} size="small" />{current && <span className="feel-row-bars" aria-hidden="true"><PlayingBars /></span>}</>
+    : <SongMotif songId={song.id} />;
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
   const holder = useContext(HolderContext);
@@ -138,8 +152,8 @@ export const LibraryRow = memo(function LibraryRow({
           {face}
           <span className="lw-song">
             {/* the name holds every word the row shows (WCAG 2.5.3), so title and artist are two words apart */}
-            <b dir="auto" title={title}>{title}</b>{' '}
-            <span dir="auto" title={artist}>{artist}{searched && song.match ? ` · ${song.match}` : ''}</span>
+            <b dir="auto" title={title}><Matched text={title} mark={mark} /></b>{' '}
+            <span dir="auto" title={artist}><Matched text={artist} mark={mark} />{searched && song.match ? ` · ${song.match}` : ''}</span>
           </span>
         </button>
         <span className="lw-length">{clock(song.duration)}</span>
@@ -182,9 +196,9 @@ export const LibraryRow = memo(function LibraryRow({
             onChange={(event) => { if (!failed) actions.toggle(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
         </label>}
         <button className="link song-open" onClick={() => actions.open(song.id)} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
-          {face}<b dir="auto" title={title}>{title}</b>
+          {face}<b dir="auto" title={title}><Matched text={title} mark={mark} /></b>
         </button>
-        <span dir="auto" title={song.artist ?? 'Unknown artist'}>{song.artist ?? 'Unknown artist'}</span>
+        <span dir="auto" title={song.artist ?? 'Unknown artist'}><Matched text={song.artist ?? 'Unknown artist'} mark={mark} /></span>
         {duplicate && <small className="library-recording-id">Recording {song.id}</small>}
         {searched && song.match && <small className="hint" aria-label={`Search match: ${song.match}`}>{song.match}</small>}
       </div>
