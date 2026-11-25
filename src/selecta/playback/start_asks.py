@@ -37,6 +37,8 @@ class StartAskBody(BaseModel):
     target_device_id: str = Field(min_length=1, max_length=64)
     # the saved mix to play; left out, the target plays the mix it already has
     mix_id: str | None = Field(default=None, max_length=64)
+    # ADR-0475 I85 "Move and play": the target takes the music over from the device playing
+    move: bool = False
 
 
 class StartAnswerBody(BaseModel):
@@ -88,6 +90,7 @@ def install_routes(
                 "asker_device_id": here,
                 "asker_name": asker.name if asker else "Another device",
                 "mix_id": body.mix_id,
+                "move": body.move,
                 "expires_at": now + START_ASK_SECONDS,
             }
             events.publish(conn, found.workspace.id, START_ASK, ask)
