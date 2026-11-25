@@ -61,7 +61,9 @@ resource "cloudflare_r2_bucket_lifecycle" "staging" {
 
 # Browsers talk to R2 only through signed URLs, and only from the app's own origin: GET and HEAD
 # for playback and downloads, PUT for upload parts. Multipart completion needs each part's ETag,
-# so it is exposed. The deletion ledger is never read from a browser and gets no CORS.
+# so it is exposed. The hosted mix player reads its lossless files a few seconds at a time with
+# Range requests (web/src/cloud/hosted/timelinePlayer.ts). The deletion ledger is never read from
+# a browser and gets no CORS.
 resource "cloudflare_r2_bucket_cors" "browser" {
   for_each     = toset(["originals", "derived", "exports", "staging"])
   account_id   = var.account_id
@@ -72,9 +74,9 @@ resource "cloudflare_r2_bucket_cors" "browser" {
     allowed = {
       origins = ["https://${var.web_hostname}"]
       methods = ["GET", "PUT", "HEAD"]
-      headers = ["content-type"]
+      headers = ["content-type", "range"]
     }
-    expose_headers  = ["ETag"]
+    expose_headers  = ["ETag", "Content-Range"]
     max_age_seconds = 3600
   }]
 }
