@@ -340,3 +340,36 @@ def test_a_job_with_no_declared_output_fails_as_it_did_on_staging_and_prepare_re
                             .order_by(jobs.c.created_at, jobs.c.id)).all()
     assert [row.state for row in rows if row.id != old.id] == ["succeeded"]
     assert [row.state for row in rows if row.id == old.id] in (["cancelled"], ["failed"])
+
+
+def test_the_dev_worker_keeps_the_gateways_output_rule(tmp_path):
+    """`dev.cmd cloud` publishes to disk, not through the gateway; it now refuses the same
+    uploads the gateway would, so a job without a declared output fails locally too."""
+    from selecta.devstack.worker import ContractBroken, LocalCloudStore
+
+    stored: list[str] = []
+
+    def keep(key, path):
+        stored.append(key)
+        return path.stat().st_size, hashlib.sha256(path.read_bytes()).hexdigest()
+
+    store = object.__new__(LocalCloudStore)
+    store.artifacts = SimpleNamespace(publish=keep)
+    source = tmp_path / "analysis.npz"
+    source.write_bytes(b"x")
+    workspace, digest, attempt = new_id(), "a" * 64, new_id()
+
+    def context(input_ref):
+        return SimpleNamespace(attempt_id=attempt, job=SimpleNamespace(
+            workspace_id=workspace, input_ref=input_ref))
+
+    with pytest.raises(ContractBroken, match="invalid_output_slots"):
+        store.publish_artifact(context({}), "analysis", digest, source, "analysis.npz")
+    with pytest.raises(ContractBroken):
+        store.publish_artifact(context({"output": {"kind": "analysis", "input_hash": "b" * 64}}),
+                               "analysis", digest, source, "analysis.npz")
+    assert stored == []
+    made = store.publish_artifact(
+        context({"output": {"kind": "analysis", "input_hash": digest}}), "analysis", digest,
+        source, "analysis.npz")
+    assert stored == made.keys

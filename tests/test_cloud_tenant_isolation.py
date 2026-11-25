@@ -110,6 +110,8 @@ STAFF_ONLY = {
     ("GET", "/api/admin/jobs/{job_id}"),
     ("POST", "/api/admin/jobs/{job_id}/{command}"),
     ("GET", "/api/admin/workers"),
+    # queue health per worker pool (routes/work_queue.py): platform counts, no workspace data
+    ("GET", "/api/admin/work/queue"),
     ("POST", "/api/admin/workers/{worker_id}/{command}"),
     ("GET", "/api/admin/accounts"),
     ("GET", "/api/admin/accounts/{user_id}"),
@@ -463,6 +465,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     # `test_hosted_processing_never_reaches_another_accounts_songs` checks the songs themselves.
     ("GET", "/api/hosted/songs"): None,
     ("POST", "/api/hosted/songs/prepare"): {},
+    ("POST", "/api/hosted/songs/{asset_id}/retry"): None,
     ("POST", "/api/hosted/mixes/plan"): {"count": 4},
     ("POST", "/api/hosted/mixes/render"): {"songs": [{"asset_id": "tenant-a"}]},
     ("POST", "/api/hosted/mixes/export"): {"songs": [{"asset_id": "tenant-a"}]},
@@ -928,6 +931,10 @@ def test_hosted_processing_never_reaches_another_accounts_songs(world):
         missing = client.post(path, headers=_auth(BOB), json={"songs": [
             {"asset_id": made_up}, {"asset_id": made_up}]})
         assert (theirs.status_code, theirs.json()) == (missing.status_code, missing.json()), path
+    theirs = client.post(f"/api/hosted/songs/{alice_song}/retry", headers=_auth(BOB))
+    missing = client.post(f"/api/hosted/songs/{made_up}/retry", headers=_auth(BOB))
+    assert theirs.status_code == 404
+    assert (theirs.status_code, theirs.json()) == (missing.status_code, missing.json())
     planned = client.post("/api/hosted/mixes/plan", headers=_auth(BOB), json={"count": 4})
     assert planned.json() == {"songs": []}
     theirs = client.get(f"/api/hosted/exports/{alice_jobs[0].id}", headers=_auth(BOB))
