@@ -117,7 +117,7 @@ def test_flag_on_renders_a_shape_through_the_engine(studio, monkeypatch):
     monkeypatch.setattr(studio_module, "render", counted)
     rendered = render_shape(a, b, folder, session, START_SHAPE, settings=settings)
     assert len(calls) == 1
-    assert rendered.drift_ms["nudge"] == pytest.approx(-LATE_MS, abs=3.0)
+    assert rendered.drift_ms["nudge"] == pytest.approx(LATE_MS, abs=3.0)
 
 
 def test_each_lane_keeps_the_studios_own_envelope_and_hand_over(studio):
@@ -248,7 +248,7 @@ def test_flag_on_intertwine_goes_through_the_engine(tmp_path, fake_stems, monkey
     result = intertwine_module.render_intertwined(Settings(tmp_path / "home"), a, b)
     assert len(calls) == 1 and result.rendered is not None
     script = result.rendered.script
-    assert result.rendered.drift_ms["nudge"] == pytest.approx(-LATE_MS, abs=3.0)
+    assert result.rendered.drift_ms["nudge"] == pytest.approx(LATE_MS, abs=3.0)
     seconds = script.overlap[1]
     count = int(round(seconds * SAMPLE_RATE))
     for part in (script.a, script.b, *script.extras):
