@@ -21,7 +21,8 @@ is not a file under `docs/verification/`. It reads the code and writes that one 
 database and no network. The procedure is `docs/operations/lucy-price-change.md`.
 
 It cannot see a price changed in a running database (a `model_deployments` row or an active
-routing version); that gap and the manual step covering it are in the same procedure.
+routing version). `ai.price_guard` checks a stored price where it is written; what that leaves
+open and the manual step covering it are in the same procedure.
 """
 
 from __future__ import annotations
