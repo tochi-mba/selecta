@@ -270,4 +270,29 @@ describe('importSession with cloud.resilient_import on', () => {
     expect(importSnapshot().error).not.toMatch(/failed to fetch/i);
     expect(readImportMarker('ws-r3')).not.toBeNull();
   });
+
+  // T-20261125-3985 part 3: a reload asks first only when something would really be lost
+  it('a reload asks first while picked files are read, never for a folder, which carries on by itself', async () => {
+    const asks = (): boolean => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const picked = manualRunner();
+    startImportSession({ source: [], run: picked.run, workspaceId: 'ws-u1', kind: 'files' });
+    await vi.waitFor(() => expect(picked.signal()).not.toBeNull());
+    expect(asks()).toBe(true);
+    picked.emit({ kind: 'read' });
+    expect(asks()).toBe(false); // every file read: the rest carries on from the journal
+    picked.resolve(summaryOf());
+    await flush();
+
+    const folder = manualRunner();
+    startImportSession({ source: [], run: folder.run, workspaceId: 'ws-u2', folder: 'Music', kind: 'folder' });
+    await vi.waitFor(() => expect(folder.signal()).not.toBeNull());
+    expect(asks()).toBe(false);
+    folder.resolve(summaryOf());
+    await flush();
+    expect(asks()).toBe(false);
+  });
 });

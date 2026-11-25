@@ -127,6 +127,9 @@
 .remote-song p.remote-place { font: var(--type-caption); font-variant-numeric: tabular-nums; }
 .remote-sound { margin: 0; color: var(--text-soft); font: var(--type-caption); }
 .remote-state { margin: 0; padding-inline-start: var(--space-2); border-inline-start: var(--marker) solid var(--status-warning); color: var(--text); font: var(--type-meta); }
+/* a hosted account's music plays from its SelectaDJ storage: where to go, not a warning */
+.controller-hosted { display: grid; justify-items: start; gap: var(--space-3); }
+.controller-hosted p { margin: 0; color: var(--text); }
 .remote-seek { display: grid; gap: var(--space-hair); min-width: 0; }
 .remote-seek input[type=range],
 .remote-volume input[type=range] {

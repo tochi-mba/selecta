@@ -3,11 +3,13 @@ import { CloudError, type Api } from '../api';
 import { Icon } from '../../ui/Icon';
 import { Meter } from '../../ui/Meter';
 import { Action } from '../../ui/controls';
+import { useMediaQuery } from '../../ui/useMediaQuery';
+import { below } from '../../styles/breakpoints';
 import { audioTab, type AudioTab } from '../../devices/audioTab';
 import { OtherTabLine } from '../../devices/OtherTabLine';
 import { TimelinePlayer, type PlayerState, type TimelinePart } from './timelinePlayer';
 import {
-  clock, exportWords, moveName, renderDetail, seamWords, songNames, songsMoving, songState, stillWords, timeLeft, totalsOf,
+  analysedWords, clock, downloadWords, exportWords, moveName, recordingsOf, renderDetail, seamWords, songNames, songsMoving, songState, stillWords, timeLeft, totalsOf,
   type ExportState, type HostedSong, type Seam, type SongsStatus,
 } from './hostedWords';
 import './hostedMix.css';
@@ -24,6 +26,8 @@ import './hostedMix.css';
 type Planned = { asset_id: string; move: string | null };
 type MixState = {
   parts: TimelinePart[]; seams: Seam[]; complete: boolean; estimate_s?: number | null; worker_seen?: boolean;
+  /** Why there is no estimate (a newer server): `no_worker`, `overrunning`, `busy`. */
+  estimate_why?: string | null;
   counts: { seams_ready: number; seams_failed?: number; seams: number; songs_analysed: number; songs: number; files_ready: number };
 };
 
@@ -55,6 +59,7 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
   const progress = useRef({ done: -1, at: Date.now() });
   const tab = useRef<AudioTab | null>(null);
   const [poke, setPoke] = useState(0);
+  const phone = useMediaQuery(below('tablet'));
 
   const call = useCallback(<T,>(path: string, body?: unknown) => api<T>(path, body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }, workspaceId), [api, workspaceId]);
 
@@ -210,12 +215,15 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
   const nowPart = playing?.playing && mix ? mix.parts[playing.part] : null;
   const nowSong = playing?.playing && mix ? songParts.filter((index) => index <= playing.part).length - 1 : -1;
   const nowNames = nowPart?.kind === 'song' ? songNames(byId.get(nowPart.asset_id ?? '') ?? { name: nowPart.name }) : null;
-  const ready = totals ? totals.done : 0;
+  const kept = recordingsOf(songs?.songs ?? []);
+  // a mix plays each recording once, so two copies of one song are not two songs to mix
+  const ready = totals ? Math.min(totals.done, kept.done > 0 ? kept.recordings : totals.done) : 0;
   const total = playing?.total ?? (mix ? mix.parts.reduce((sum, part) => sum + part.seconds, 0) : 0);
   const elapsed = playing?.elapsed ?? 0;
   const stoppedPartWay = !!playing && !playing.playing && !playing.error && (playing.part > 0 || playing.at > 0);
   const exporting = !!exported && !finished(exported);
   const exportLine = exported ? exportWords(exported) : null;
+  const download = exported?.state === 'ready' && exported.url ? downloadWords(exported, phone) : null;
   // the one polite status line: what the card is doing right now, said once
   const status = planning ? 'Planning your mix…' : exporting ? 'Exporting the mix on SelectaDJ’s servers.' : exported?.state === 'ready' ? 'The mix is ready to download.' : '';
 
@@ -248,7 +256,7 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
         />
       )}
       {songs && totals && totals.total > 0 && analysing === 0 && (
-        <p className="hosted-mix-note"><Icon name="check" size="compact" /> {totals.done === 1 ? '1 song analysed' : `${totals.done} songs analysed`}{totals.failed ? `; ${totals.failed} could not be` : ''}.</p>
+        <p className="hosted-mix-note"><Icon name="check" size="compact" /> {analysedWords(totals.done, kept.done === totals.done ? kept.recordings : totals.done, totals.failed)}</p>
       )}
 
       {failed.length > 0 && (
@@ -273,7 +281,7 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
         <Action className={mix ? undefined : 'primary'} disabled={ready < 2} busy={planning} working="Planning…" run={plan}>
           {order ? 'Make another mix' : 'Make a mix'}
         </Action>
-        {ready < 2 && songs && <span className="hosted-mix-hint">A mix needs at least two analysed songs.</span>}
+        {ready < 2 && songs && <span className="hosted-mix-hint">A mix needs at least two different analysed songs.</span>}
       </div>
 
       {mix && !mix.complete && (
@@ -340,10 +348,13 @@ export function HostedMix({ api, workspaceId, othersPlaying = false, stopOthers,
         <div className="hosted-mix-export">
           <div className="hosted-mix-actions">
             {(mix.counts.seams_failed ?? 0) > 0 && <Action className="small" run={retrySeams}>Try the straight changes again</Action>}
-            {exported?.state === 'ready' && exported.url
-              ? <a className="button" href={exported.url} download><Icon name="download" size="toolbar" /> Download the mix (lossless FLAC)</a>
+            {download && exported?.url
+              // a plain link to the stored file: the browser downloads it itself, and can carry on
+              // a download that stopped while the link is valid
+              ? <a className="button" href={exported.url} download><Icon name="download" size="toolbar" /> {download.label}</a>
               : <Action run={exportMix} busy={exporting} working="Exporting…">{exported && finished(exported) ? 'Try the export again' : 'Export the whole mix'}</Action>}
           </div>
+          {download?.note && <p className="hosted-mix-hint">{download.note}</p>}
           {exporting && exported && (
             <Meter label="Exporting the mix" value={exportLine?.fraction ?? undefined} max={1} valueText={exportLine?.value} detail={exportLine?.detail} />
           )}

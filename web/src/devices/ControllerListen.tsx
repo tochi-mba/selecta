@@ -88,7 +88,7 @@ export function ControllerListen({ mixName, mixSongs, mixIds = [], ids, devices,
                 : <>This device has no music on it, so {best.name} makes the sound and this one is its remote.</>}</p>
             </>
           ) : hosted ? (
-            <div className="remote-state" role="status" data-testid="controller-hosted">
+            <div className="controller-hosted" role="status" data-testid="controller-hosted">
               <p>Your uploaded songs are kept in your SelectaDJ storage and play right here in this browser.</p>
               <PageLink to="/mixes" className="button primary">Make a mix from them</PageLink>
             </div>

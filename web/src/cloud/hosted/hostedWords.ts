@@ -6,7 +6,11 @@ import { displayNames } from '../../media/importer';
 
 export type SongStatusNow = { state: 'waiting' | 'running' | 'done' | 'failed'; reason?: string | null; can_retry?: boolean; job_id?: string | null };
 export type Analysis = { state: string; bpm?: number | null; camelot?: string | null; why?: string };
-export type HostedSong = { asset_id: string; name: string; title?: string | null; artist?: string | null; duration_s?: number | null; analysis: Analysis; status?: SongStatusNow };
+export type HostedSong = {
+  asset_id: string; name: string; title?: string | null; artist?: string | null; duration_s?: number | null; analysis: Analysis; status?: SongStatusNow;
+  /** Other uploads of the same bytes, and of the same recording (the planner keeps one of each). */
+  same_file_as?: string[]; same_recording_as?: string[];
+};
 export type SongsStatus = {
   songs: HostedSong[];
   counts: Record<'ready' | 'running' | 'queued' | 'failed' | 'not_started', number>;
@@ -110,18 +114,83 @@ export function seamWords(seam: Seam): { words: string; tone: 'ok' | 'working' |
   }
 }
 
-/** An export as the server answers it. `fraction` (0 to 1) and `estimate_s` are there only when
- * the server really knows them; nothing here makes either up. */
-export type ExportState = { state: string; job_id?: string; url?: string | null; why?: string; fraction?: number | null; estimate_s?: number | null };
+/** An export as the server answers it (`/hosted/mixes/export`, `/hosted/exports/{id}`). Progress
+ * is parts written of the parts plus the upload, as `parts_done` and `parts_total` and as the pair
+ * `progress`; `estimate_s` comes only from the job's own pace. An older server sends less. Nothing
+ * here makes a number up. */
+export type ExportState = {
+  state: string; job_id?: string; url?: string | null; why?: string;
+  progress?: [number | null, number | null] | number | null; parts_done?: number | null; parts_total?: number | null;
+  estimate_s?: number | null; worker_seen?: boolean; size_bytes?: number | null; seconds?: number | null;
+};
 
-/** The export's line: how far (only with a real fraction), how long (only with a real estimate),
+/** Parts written and parts in all, when the server says (either shape). */
+function exportParts(state: ExportState): { done: number; total: number } | null {
+  const pair = Array.isArray(state.progress) ? state.progress : null;
+  const done = state.parts_done ?? pair?.[0] ?? null;
+  const total = state.parts_total ?? pair?.[1] ?? null;
+  if (typeof done !== 'number' || typeof total !== 'number' || !Number.isFinite(done) || !(total > 0)) return null;
+  return { done: Math.min(total, Math.max(0, done)), total };
+}
+
+/** The export's line: how far (only with real parts), how long (only with a real estimate),
  * or why it could not be made. */
 export function exportWords(state: ExportState): { fraction: number | null; value: string; detail: string | null } {
-  const fraction = typeof state.fraction === 'number' && Number.isFinite(state.fraction) ? Math.min(1, Math.max(0, state.fraction)) : null;
-  if (state.state === 'failed' || state.state === 'refused') return { fraction: null, value: 'Stopped', detail: `The export could not be made: ${state.why ?? 'it stopped part way'}.` };
+  // a refusal is the server's own sentence ("The mix isn't ready yet: export opens once ...")
+  if (state.state === 'refused') return { fraction: null, value: 'Not started', detail: state.why ?? 'The export could not be started. Try again in a moment.' };
+  if (state.state === 'failed') return { fraction: null, value: 'Stopped', detail: `The export could not be made: ${(state.why ?? 'it stopped part way').replace(/\.$/, '')}.` };
   if (state.state === 'ready') return { fraction: 1, value: 'Ready', detail: null };
-  const value = fraction !== null ? `${Math.round(fraction * 100)} percent` : state.state === 'queued' ? 'Waiting for a server' : 'Rendering';
+  const parts = exportParts(state);
+  const fraction = parts ? parts.done / parts.total : typeof state.progress === 'number' && Number.isFinite(state.progress) ? Math.min(1, Math.max(0, state.progress)) : null;
+  if (state.worker_seen === false) return { fraction, value: 'Waiting for a server', detail: stillWords('worker') };
+  const value = !parts || (state.state === 'queued' && parts.done === 0)
+    ? (state.state === 'queued' ? 'Waiting for a server' : 'Joining the mix')
+    // the last unit is the upload of the finished file
+    : parts.done >= parts.total - 1 ? 'Saving the file' : `Part ${parts.done + 1} of ${parts.total - 1}`;
   return { fraction, value, detail: leftWords(state.estimate_s) };
+}
+
+/** "107 MB", "1.2 GB". */
+export function sizeWords(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+  return `${Math.max(1, Math.round(bytes / 1e6))} MB`;
+}
+
+/** What the download is, and a word before a large one on a phone's data. */
+export function downloadWords(state: ExportState, phone: boolean): { label: string; note: string | null } {
+  const size = typeof state.size_bytes === 'number' && state.size_bytes > 0 ? sizeWords(state.size_bytes) : null;
+  const length = typeof state.seconds === 'number' && state.seconds > 0 ? clock(state.seconds) : null;
+  const label = size ? `Download the mix (lossless FLAC, ${size})` : 'Download the mix (lossless FLAC)';
+  const facts = [length && `${length} long`, size].filter(Boolean).join(', ');
+  const large = typeof state.size_bytes === 'number' && state.size_bytes >= LARGE_DOWNLOAD;
+  const note = large && phone
+    ? `A large file${facts ? ` (${facts})` : ''}: download it over Wi-Fi. If the download stops, the browser can carry it on for a while.`
+    : facts ? `One 24-bit file of the mix exactly as it plays: ${facts}.` : null;
+  return { label, note };
+}
+
+/** From this size a phone is told to use Wi-Fi first. */
+export const LARGE_DOWNLOAD = 100e6;
+
+/** Songs analysed, and how many different recordings they are: the planner keeps one copy of each
+ * recording (`same_recording_as`, `same_file_as`), so a mix can have fewer songs than uploads. */
+export function recordingsOf(songs: readonly HostedSong[]): { done: number; recordings: number } {
+  const done = songs.filter((song) => songState(song).state === 'done');
+  const seen = new Set<string>();
+  let recordings = 0;
+  for (const song of done) {
+    if (seen.has(song.asset_id)) continue;
+    recordings += 1;
+    for (const id of [song.asset_id, ...(song.same_recording_as ?? []), ...(song.same_file_as ?? [])]) seen.add(id);
+  }
+  return { done: done.length, recordings };
+}
+
+/** "5 songs analysed, 4 different recordings; 1 could not be." */
+export function analysedWords(done: number, recordings: number, failed: number): string {
+  const head = done === 1 ? '1 song analysed' : `${done} songs analysed`;
+  const copies = recordings < done ? `, ${recordings === 1 ? '1 recording' : `${recordings} different recordings`} (a mix plays each recording once)` : '';
+  return `${head}${copies}${failed ? `; ${failed} could not be` : ''}.`;
 }
 
 /** "About 3 minutes left.", only for a real estimate. */
@@ -131,11 +200,16 @@ function leftWords(estimate: number | null | undefined): string | null {
   return `${left[0].toUpperCase()}${left.slice(1)} left.`;
 }
 
-/** Under the transitions' bar while they render: a time only when the server gives one. */
-export function renderDetail(mix: { worker_seen?: boolean; estimate_s?: number | null }): string {
-  if (mix.worker_seen === false) return stillWords('worker');
+/** Under the transitions' bar while they render: a time only when the server gives one, and
+ * when it gives none, why (`estimate_why`: no worker, a job overrunning, servers busy). An older
+ * server sends only `worker_seen`. */
+export function renderDetail(mix: { worker_seen?: boolean; estimate_s?: number | null; estimate_why?: string | null }): string {
+  const opens = 'Play opens when every part is ready.';
+  if (mix.estimate_why === 'no_worker' || (mix.estimate_why === undefined && mix.worker_seen === false)) return stillWords('worker');
+  if (mix.estimate_why === 'overrunning') return `Taking longer than usual, and still going. ${opens}`;
+  if (mix.estimate_why === 'busy') return `SelectaDJ’s servers are busy with other mixes; yours is in line. ${opens}`;
   const left = leftWords(mix.estimate_s);
-  return left ? `${left} Play opens when every part is ready.` : 'Play opens when every part is ready.';
+  return left ? `${left} ${opens}` : opens;
 }
 
 /** The footer's promise about where music lives: a hosted account keeps its uploads with SelectaDJ. */
