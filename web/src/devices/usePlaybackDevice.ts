@@ -165,12 +165,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   }, [speaker, tab]);
   // another tab of this browser took the sound: stop here at once, before it starts
   useEffect(() => {
-    tab.onTaken(() => {
+    tab.onTaken((here) => {
       if (!speaking.current) return;
       speaking.current = false;
       expiredSpeaker.current = false;
       speaker?.stop(0);
-      setOtherTab(true);
+      // the hosted mix on this same page took the sound (it paused this mix first): no "another tab"
+      if (!here) setOtherTab(true);
     });
   }, [speaker, tab]);
 

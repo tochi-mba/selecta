@@ -47,7 +47,7 @@ export function songNames(song: { name?: string | null; title?: string | null; a
 }
 
 export function minutes(seconds: number): string {
-  if (seconds < 60) return 'under a minute';
+  if (seconds < 60) return 'less than a minute';
   const whole = Math.round(seconds / 60);
   return whole === 1 ? 'about 1 minute' : `about ${whole} minutes`;
 }
@@ -108,6 +108,34 @@ export function seamWords(seam: Seam): { words: string; tone: 'ok' | 'working' |
     case 'failed': return { words: `Plays as a straight change: ${seam.why ?? 'the transition could not be rendered'}`, tone: 'problem' };
     default: return { words: name, tone: 'working' };
   }
+}
+
+/** An export as the server answers it. `fraction` (0 to 1) and `estimate_s` are there only when
+ * the server really knows them; nothing here makes either up. */
+export type ExportState = { state: string; job_id?: string; url?: string | null; why?: string; fraction?: number | null; estimate_s?: number | null };
+
+/** The export's line: how far (only with a real fraction), how long (only with a real estimate),
+ * or why it could not be made. */
+export function exportWords(state: ExportState): { fraction: number | null; value: string; detail: string | null } {
+  const fraction = typeof state.fraction === 'number' && Number.isFinite(state.fraction) ? Math.min(1, Math.max(0, state.fraction)) : null;
+  if (state.state === 'failed' || state.state === 'refused') return { fraction: null, value: 'Stopped', detail: `The export could not be made: ${state.why ?? 'it stopped part way'}.` };
+  if (state.state === 'ready') return { fraction: 1, value: 'Ready', detail: null };
+  const value = fraction !== null ? `${Math.round(fraction * 100)} percent` : state.state === 'queued' ? 'Waiting for a server' : 'Rendering';
+  return { fraction, value, detail: leftWords(state.estimate_s) };
+}
+
+/** "About 3 minutes left.", only for a real estimate. */
+function leftWords(estimate: number | null | undefined): string | null {
+  if (typeof estimate !== 'number' || !Number.isFinite(estimate) || estimate <= 0) return null;
+  const left = minutes(estimate);
+  return `${left[0].toUpperCase()}${left.slice(1)} left.`;
+}
+
+/** Under the transitions' bar while they render: a time only when the server gives one. */
+export function renderDetail(mix: { worker_seen?: boolean; estimate_s?: number | null }): string {
+  if (mix.worker_seen === false) return stillWords('worker');
+  const left = leftWords(mix.estimate_s);
+  return left ? `${left} Play opens when every part is ready.` : 'Play opens when every part is ready.';
 }
 
 /** The footer's promise about where music lives: a hosted account keeps its uploads with SelectaDJ. */

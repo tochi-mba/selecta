@@ -82,7 +82,12 @@ export function Action({
     end(how);
   };
   const done = ending === 'done' && !busy;
-  const labels = working ? <span className="action-labels"><span aria-hidden={busy || undefined} style={{ visibility: busy ? 'hidden' : undefined }}>{children}</span><span aria-hidden={!busy || undefined} style={{ visibility: busy ? undefined : 'hidden' }}>{working}</span></span> : children;
+  // Both labels keep one slot so the width never changes, but only the one that is true is text:
+  // a words-only label that is not true is drawn by CSS from `data-label` (with empty alternative
+  // text), so no accessible name or page text ever carries "Saving…" while nothing is saving.
+  const idle = (text: ReactNode, shown: boolean) => (shown ? text : typeof text === 'string' ? '' : text);
+  const reserve = (text: ReactNode, shown: boolean) => (!shown && typeof text === 'string' ? text : undefined);
+  const labels = working ? <span className="action-labels"><span aria-hidden={busy || undefined} data-label={reserve(children, !busy)} style={{ visibility: busy ? 'hidden' : undefined }}>{idle(children, !busy)}</span><span aria-hidden={!busy || undefined} data-label={reserve(working, busy)} style={{ visibility: busy ? undefined : 'hidden' }}>{idle(working, busy)}</span></span> : children;
   return (
     <button {...rest} aria-disabled={busy || waiting || rest.disabled || undefined} aria-busy={busy || undefined} data-working={busy || undefined} data-done={done || undefined} data-failed={(ending === 'failed' && !busy) || undefined} onClick={() => void press()}>
       {done ? <span className="action-done"><span className="action-done-label">{labels}</span><svg className="action-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : labels}
