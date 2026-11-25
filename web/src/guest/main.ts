@@ -22,6 +22,7 @@
 import { ApiError, call, h, patch, replace, Song, songLine, store } from '../rooms/dom';
 import { art, bars, chip, empty, icon, IconName, outlineRow, songText, Tone } from './parts';
 import * as social from './social/social';
+import { placeLine, placeOf, rollPlace, sentMark, type Place } from './sent';
 import './guest.css';
 
 type Item = { request_id: string; song: Song | null; status: string; votes: number; nickname: string | null; voted: boolean; mine: boolean };
@@ -628,8 +629,10 @@ function drawResults(): void {
 // The bar fixed to the bottom of the screen, above the on-screen keyboard: how many songs are
 // chosen (press it to see them and take any out), and Send. After sending it says "Sent" for a
 // moment. `sent` is that message; `listOpen` is whether the chosen songs are showing.
-let sent: { title: string; text: string } | null = null;
+let sent: { title: string; text: string; place: Place | null } | null = null;
 let sentTimer = 0;
+// the place number rolls once, when "Sent" first shows; a later redraw writes it whole
+let sentRolled = true;
 let listOpen = false;
 
 function drawBar(): void {
@@ -658,9 +661,10 @@ function drawBar(): void {
       h('button', { type: 'button', className: 'g-primary g-send', id: 'g-send', 'aria-busy': sending ? 'true' : undefined, disabled: sending || left <= 0 || basket.every(waitingOn), onclick: () => { buzz(12); void sendBasket(); } },
         sending ? 'Sending...' : count === 1 ? 'Send request' : 'Send requests'))
     : sent ? h('div', { className: 'g-sent', 'data-key': 'sent', role: 'status' },
-      h('span', { className: 'g-tick', 'aria-hidden': 'true' }, icon('check')),
-      h('p', {}, h('strong', {}, sent.title), ' ', sent.text),
+      sentMark(icon('check')),
+      h('p', {}, h('strong', {}, sent.title), ' ', sent.text, sent.place ? ' ' : null, sent.place ? placeLine(sent.place) : null),
       h('button', { type: 'button', className: 'g-quiet g-small-button', onclick: () => { document.getElementById('g-requests')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); done(); } }, 'View')) : null);
+  if (sent && !count && !sentRolled) { sentRolled = true; rollPlace(bar.querySelector<HTMLElement>('.g-place-number')); }
   if (count || sent) bar.setAttribute('data-open', ''); else bar.removeAttribute('data-open');
   // the page ends above the bar and the notice floats above it, never under it
   document.documentElement.style.setProperty('--bar', `${count || sent ? bar.offsetHeight : 0}px`);
@@ -700,7 +704,10 @@ async function sendBasket(): Promise<void> {
       title: 'Sent.',
       text: votes === added.length ? (votes === 1 ? 'Someone asked for it already, so it counts as your vote.' : 'They were asked for already, so they count as your votes.')
         : `The host will add ${added.length === 1 ? 'it' : 'them'} to the mix.`,
+      // where it now stands, in the room's own answer
+      place: placeOf(answer.room, added.map((one) => one.song_id)),
     } : null;
+    sentRolled = !sent;
     if (sent) sentTimer = window.setTimeout(done, 6000);
     // everything went: the search is put away, so "Your requests" is what the guest sees next
     if (added.length && !basket.length) {

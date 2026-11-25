@@ -18,6 +18,10 @@ vi.mock('@workos-inc/authkit-react', () => ({
 }));
 
 const { CloudApp, businessShown } = await import('./CloudApp');
+// BusinessApp is its own chunk and has grown with the feel system (ADR-0477): load it once here so
+// transforming it is not counted against the four seconds below, which still go through CloudApp's
+// own lazy import.
+await import('../business/BusinessApp');
 
 let account: Account;
 let overview: Overview;

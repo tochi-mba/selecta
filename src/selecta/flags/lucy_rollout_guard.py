@@ -26,8 +26,9 @@ The week between raises is counted here from when the raise was saved. A workspa
 its next month start (rule 6), which is later, so this is the least the wait can be: the
 operator still holds each step for a full week after its switch (the step ledger).
 
-`check_change_now` is the same check against the stored rules and history, for the admin change
-path. Neither changes anything.
+`check_change_now` is the same check against the stored rules and history. The admin change
+path runs it when a change is proposed, and again when a change that waited as a delayed action
+is carried out, since another raise may have been saved meanwhile. Neither changes anything.
 """
 
 from __future__ import annotations

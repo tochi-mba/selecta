@@ -195,6 +195,19 @@ describe('planned transitions on the runtime (BF-0459-04)', () => {
     expect(elsewhere.nextReady).toBe(false);
     expect(elsewhere.seamAt).toBeNull();
   });
+
+  it('with the engine clock, shows the hand-over that really plays and its length (T-20261125-37fe)', () => {
+    // the engine already plays song 1, which came in 5 s ago over the planned 8 s seam
+    const blending = facts({
+      speaking: true, here: { song_index: 1, offset_ms: 5_000, state: 'playing' }, mix: [{ duration: 0 }, { duration: 0 }],
+      engine: { phase: 'playing', output: { status: 'output_unverified' }, notice: '' }, seam: record(0),
+      clock: { length: 180, next: null, entered: { fromIndex: 0, fromAt: 150, fromLength: 200, heard: 5 } },
+    });
+    const now = nowStateFrom(blending, SOUND);
+    expect(now).toMatchObject({ position: 0, songTime: 155, duration: 200, inSeam: true, seamAt: 150, blend: { window: 8, nextLength: 180 } });
+    const done = nowStateFrom({ ...blending, here: { song_index: 1, offset_ms: 9_000, state: 'playing' }, clock: { ...blending.clock!, entered: { ...blending.clock!.entered!, heard: 9 } } }, SOUND);
+    expect(done).toMatchObject({ position: 1, songTime: 9, duration: 180, inSeam: false });
+  });
 });
 
 describe('playing offline (cloud.offline_playback)', () => {

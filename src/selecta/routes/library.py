@@ -94,12 +94,27 @@ def add_routes(app, ctx) -> None:
                 # nobody should have to find a button to make the app start working
                 look_up_lyrics()
                 start_analysis()
+                warm_covers(report.fresh)
             except ScanStopped:
                 background.scan = {"status": "cancelled", "folder": str(folder)}
             except Exception as problem:  # noqa: BLE001 - shown to the person, not swallowed
                 background.scan = {"status": "failed", "error": str(problem)}
             finally:
                 conn.close()
+
+        def warm_covers(paths: list[str]) -> None:
+            """ADR-0478 FL-0478-02: the covers of the files just read, after the scan has said it
+            is done, so reading pictures never slows a scan or holds back analysis. Anything
+            missed is read the first time the page asks for it (song_art below)."""
+            if not paths:
+                return
+            try:
+                if flags.on("library.art_embedded"):
+                    from selecta.library import art
+
+                    art.warm(settings.home, paths, background.scan_stop.is_set)
+            except Exception:  # noqa: BLE001 - a cover is never worth a scan
+                return
 
         background.scan = {"status": "running", "folder": str(folder)}
         if resumed is not None:
@@ -761,6 +776,38 @@ def add_routes(app, ctx) -> None:
         if cached is not None:
             headers["Accept-Ranges"] = "bytes"
         return Response(data, media_type="audio/wav", headers=headers)
+
+    @app.get("/api/songs/{song_id}/art")
+    def song_art(song_id: int, request: Request) -> Response:
+        """The picture inside the song's own file (ADR-0478 FL-0478-02, library.art_embedded),
+        read on first ask and kept under the data home. A file with no picture answers 204, so the
+        page draws the generated tile without an error; the tag is the picture's own hash, so a
+        browser holding it gets a 304."""
+        from selecta.library import art
+        from selecta.routes.files import _matches
+
+        if not flags.on("library.art_embedded"):
+            raise HTTPException(404)
+        with connect() as conn:
+            row = db.song_by_id(conn, song_id)
+        if row is None:
+            raise HTTPException(404, "There's no such song.")
+        cover = art.cover_for(settings.home, row["path"])
+        none = Response(status_code=204, headers={"Cache-Control": art.CACHE_CONTROL})
+        if cover is None:
+            return none
+        headers = {
+            "ETag": f'"{cover.sha256[:32]}"',
+            "Cache-Control": art.CACHE_CONTROL,
+            "X-Content-Type-Options": "nosniff",
+        }
+        if _matches(request.headers.get("if-none-match"), headers["ETag"]):
+            return Response(status_code=304, headers=headers)
+        try:
+            data = cover.path.read_bytes()
+        except OSError:
+            return none
+        return Response(data, media_type=cover.mime, headers=headers)
 
     @app.post("/api/songs/{song_id}/analyse")
     def analyse_one(song_id: int) -> dict:

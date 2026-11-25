@@ -15,7 +15,7 @@ from test_lucy_cloud import converse, events, lucy, script, send, snapshot, song
 from test_lucy_cloud_limits import AI_LIMIT, spend_all
 from test_lucy_cloud_usage_enforced import limit_of, say, windows  # noqa: F401
 
-from selecta.ai import allowance
+from selecta.ai import allowance, usage_units
 from selecta.ai.registry import RequestClass, Tier
 from selecta.ai.schema import ai_runs, ai_usage
 from selecta.lucy import cloud_limits
@@ -159,3 +159,54 @@ def test_the_month_line_is_the_first_of_next_month_in_the_accounts_zone():
     line = cloud_limits.month_line("2026-11", "Europe/London", now)
     assert line["resets_at"] == allowance.month_resets_at("2026-11", "Europe/London")
     assert line["back_words"] == "Tuesday 1 December 00:00"
+
+
+# A failure on the provider's side ---------------------------------------------------------------
+
+NO_ALLOWANCE = "this didn't use any of your allowance"
+NO_TURN = "didn't use one of your turns"
+FAILURES = {
+    "one worth trying again": ({"error": "The provider took too long.", "code": "timeout"},
+                               "Lucy is busy right now"),
+    "one that is not": ({"error": "Bad request.", "code": "provider", "recoverable": False},
+                        "a problem on SelectaDJ's side"),
+}
+
+
+def failed(party, token: str, step: dict) -> dict:
+    script(party, [step])
+    conversation = converse(party, token)
+    assert send(party, token, conversation, "hello").status_code == 200
+    message = snapshot(party, token, conversation)["messages"][-1]
+    return {"message": message, "events": events(party, token, conversation)}
+
+
+def units_used(party, token: str) -> int:
+    workspace = party.workspaces[token]
+    with transaction(party.engine, workspace) as conn:
+        view = usage_units.units_view(conn, workspace, now=db_now(conn))
+    return sum(view[key] for key in ("week_used", "week_reserved", "session_used",
+                                     "session_reserved"))
+
+
+@pytest.mark.parametrize(("step", "opening"), FAILURES.values(), ids=FAILURES.keys())
+def test_a_provider_failure_on_the_new_allowance_speaks_of_the_allowance(
+    windows, step, opening,  # noqa: F811
+):
+    turn = failed(windows, CAROL, step)
+
+    words = turn["message"]["content"]
+    assert turn["message"]["status"] == "failed"
+    assert opening in words and NO_ALLOWANCE in words
+    assert "turn" not in words.lower()  # nothing about turns on the new allowance
+    said = [e["payload"]["message"] for e in turn["events"] if e["type"] == "error"]
+    assert said == [words]  # the live page is told the same
+    assert units_used(windows, CAROL) == 0  # and it is true: nothing was charged or held
+
+
+@pytest.mark.parametrize(("step", "opening"), FAILURES.values(), ids=FAILURES.keys())
+def test_on_turns_a_provider_failure_reads_as_it_always_did(lucy, step, opening):  # noqa: F811
+    words = failed(lucy, CAROL, step)["message"]["content"]
+
+    assert opening in words and NO_TURN in words
+    assert "allowance" not in words

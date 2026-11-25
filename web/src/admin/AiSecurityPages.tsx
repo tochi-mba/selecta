@@ -2,6 +2,7 @@ import { DataTable } from '../ui/DataTable';
 import { ELLIPSIS } from '../ui/format';
 import { AdminFetch } from './adminApi';
 import { EmergencyControls } from './EmergencyPage';
+import { LucyUsageReport } from './LucyUsage';
 import { Failure, Panel, useLoad } from './parts';
 
 type Deployment = { id: string; provider: string; model_id: string; min_tier: string; status: string; rollout_percent: number; fallback_id: string | null; per_turn_cost_cap_usd: number; emergency_disabled: boolean };
@@ -25,6 +26,7 @@ export function AiPage({ api, can }: { api: AdminFetch; can: (permission: string
             { key: 'rollout_percent', label: 'Rollout %', numeric: true }, { key: 'fallback_id', label: 'Falls back to', render: (d) => d.fallback_id ?? 'built-in' },
             { key: 'per_turn_cost_cap_usd', label: 'Cost cap per turn ($)', numeric: true }]} />
       </Panel></div>
+      {can('platform.dashboard.read') && <LucyUsageReport api={api} />}
       <div data-tour="ai-emergency"><EmergencyControls only={['lucy.disabled', 'lucy.deployment_disabled']} /></div>
     </div>
   );

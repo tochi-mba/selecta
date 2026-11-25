@@ -22,6 +22,10 @@ import type { MediaResolver } from '../media';
 import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
 import { tabLog } from '../devices/audioTab';
+import type { SchedulerClock } from '../engine/scheduler';
+import { seamShown } from './blendState';
+import { handoffWatcher, noteHandoffHeard, pageOnScreen } from '../audio/handoffHeard';
+import { saveSongLength } from './songLength';
 
 /** The shell player for local-first Cloud (ADR-0462 BF-0462-06): the browser engine's speaker
  * (ADR-0457 BrowserSpeaker) driven through the ADR-0415 playback session (usePlaybackDevice),
@@ -58,6 +62,11 @@ export type PlayerFacts = {
   said: string;
   /** The seam most recently scheduled on this device's engine, if any. */
   seam?: SeamRecord | null;
+  /** Every seam planned this visit, newest last, so a hand-over can be matched to its plan. */
+  seams?: readonly SeamRecord[];
+  /** The engine's own account of its hand-overs (engine/scheduler.ts clock()), while it plays
+   * here. With it, Listen follows the hand-over that really plays (blendState.ts). */
+  clock?: SchedulerClock | null;
   /** cloud.offline_playback: a volume (0 to 100) set here while offline, which wins over the
    * session's last word until it has been sent. */
   heldVolume?: number | null;
@@ -102,18 +111,30 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
   const seam = facts.speaking && facts.seam && facts.seam.fromIndex === position ? facts.seam.schedule : null;
   const songTime = offsetMs / 1000;
   const level = facts.heldVolume ?? facts.view?.session?.volume;
+  const shown = engineHere && facts.clock
+    ? seamShown({ position, songTime }, (index) => facts.mix[index]?.duration ?? 0, facts.seams ?? (facts.seam ? [facts.seam] : []), facts.clock)
+    : {
+      position,
+      songTime,
+      duration: facts.mix[position]?.duration ?? 0,
+      inSeam: !!seam && songTime >= seam.startSeconds && songTime < seam.startSeconds + seam.windowSeconds,
+      seamAt: seam ? seam.startSeconds : null,
+      nextReady: !!seam,
+      blend: null,
+    };
   return {
     phase,
-    position,
-    songTime,
-    duration: facts.mix[position]?.duration ?? 0,
-    inSeam: !!seam && songTime >= seam.startSeconds && songTime < seam.startSeconds + seam.windowSeconds,
-    seamAt: seam ? seam.startSeconds : null,
+    position: shown.position,
+    songTime: shown.songTime,
+    duration: shown.duration,
+    inSeam: shown.inSeam,
+    seamAt: shown.seamAt,
     notice: facts.said || facts.engine?.notice || words,
-    nextReady: !!seam,
+    nextReady: shown.nextReady,
     lastSeamKey: null,
     volume: level == null ? sound.volume : Math.max(0, Math.min(1, level / 100)),
     muted: level === 0 || sound.muted,
+    ...(shown.blend ? { blend: shown.blend } : {}),
   };
 }
 
@@ -197,8 +218,12 @@ export class LocalFirstPlayer implements PlayerLike {
     const timeless = (state: NowState) => JSON.stringify({ ...state, songTime: 0 });
     if (timeless(next) === timeless(this.state) && Math.abs(next.songTime - this.state.songTime) < 0.2) return;
     this.state = next;
+    // read only: says a hand-over played to its end here, on screen, once it has (T-20261125-ebda)
+    this.heard({ phase: this.facts.speaking ? next.phase : 'idle', position: next.position, inSeam: next.inSeam }, pageOnScreen());
     this.onChange(next);
   }
+
+  private heard = handoffWatcher(noteHandoffHeard);
 
   /** The facts with the level chosen here in place of the session's, until the session says it. */
   private shownFacts(): PlayerFacts {
@@ -314,7 +339,8 @@ export class LocalFirstPlayer implements PlayerLike {
       if (this.state.songTime < seam - JUMP_LEAD_SECONDS) return this.seekTo(this.state.position, seam - JUMP_LEAD_SECONDS);
       return this.next();
     }
-    const duration = this.facts.mix[this.state.position]?.duration ?? 0;
+    // the stored length, or the decoded one when the catalogue has none (nowStateFrom)
+    const duration = this.state.duration;
     const planFrom = Math.max(0, duration - LOAD_NEXT_WITHIN + 1);
     this.jumping = this.state.position;
     if (this.state.songTime < planFrom) await this.seekTo(this.state.position, planFrom);
@@ -387,11 +413,13 @@ export type EngineStarter = (
   resolve: (index: number) => Promise<{ id: number; data: () => Promise<ArrayBuffer> } | null>,
   queueLength?: () => number,
   seams?: SeamWiring,
+  /** Told each time the engine has decoded a song to play (engine/speakerAdapter.ts decoded). */
+  decoded?: (id: number | string, buffer: AudioBuffer) => void,
 ) => Promise<{ speaker: BrowserSpeaker; refusal: string | null } | { speaker: null; refusal: string }>;
 
 /** The real starter: AudioContext from the press, the measured probe, worker calibration, the
  * capability roster, then the speaker with its worker-backed seam provider. */
-export const startBrowserEngine: EngineStarter = async (resolve, queueLength, seams) => {
+export const startBrowserEngine: EngineStarter = async (resolve, queueLength, seams, decoded) => {
   const engine: Engine = createEngine();
   try {
     const opened = engine.openContext({ fromUserGesture: true });
@@ -431,7 +459,7 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
     // cloud.seam_lead (ADR-0479 phase 1): plan each transition as its song starts, and play every
     // song at one level; both read the flag as they run, so a change needs no new speaker
     const speaker = engine.createSpeaker({
-      audio: opened, probe, resolve, queueLength, seam,
+      audio: opened, probe, resolve, queueLength, seam, decoded,
       planAhead: seamLeadOn,
       level: (buffer) => (seamLeadOn() ? songLevels().of(buffer) : Promise.resolve(1)),
     });
@@ -482,7 +510,7 @@ export function rememberCalibration(made: WorkerCalibration): void {
   }
 }
 
-export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, resolver, starter = startBrowserEngine }: {
+export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, resolver, starter = startBrowserEngine, request, decoded: whenDecoded }: {
   api: Api;
   workspaceId: string;
   mix: readonly (Pick<MixItem, 'duration' | 'song_id'> & { seam?: Pick<NonNullable<MixItem['seam']>, 'settings'> | null })[];
@@ -490,7 +518,14 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   /** The media agent's resolver (media/makeResolver), opened lazily; null before it exists. */
   resolver: () => Promise<MediaResolver | null>;
   starter?: EngineStarter;
+  /** The catalogue's request, to save a length decoded here for a song that has none (songLength.ts). */
+  request?: <T>(path: string, init?: RequestInit) => Promise<T>;
+  /** Told, by song, each time the engine has decoded one to play (Listen's waveforms read it). */
+  decoded?: (songId: number, audio: AudioBuffer) => void;
 }) {
+  // read when a song decodes, so the speaker made from an earlier press reaches the latest one
+  const onDecoded = useRef(whenDecoded);
+  onDecoded.current = whenDecoded;
   const [speaker, setSpeaker] = useState<BrowserSpeaker | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [engine, setEngine] = useState<EngineState | null>(null);
@@ -609,7 +644,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
         ...wiring,
         workerCalibration: measured?.record ?? null,
         deviceId: measured?.deviceId ?? null,
-      });
+      }, (id, buffer) => { if (typeof id === 'number') onDecoded.current?.(id, buffer); });
       if (made.refusal) {
         made.speaker?.dispose();
         setRefusal(made.refusal);
@@ -666,9 +701,11 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   }, [pb, refusal, resolve, speaker, starter, wiring]);
 
   const actions: PlayerActions = { playHere, command: pb.command, remoteControl, speaker };
+  const here = speaker?.position() ?? null;
+  const clock = speaker?.clock?.() ?? null;
   const facts: PlayerFacts = {
-    mix, view: pb.view, speaking: pb.isSpeaker(), here: speaker?.position() ?? null, engine, refusal,
-    serverNow: pb.serverNow(), said: '', seam: seams[seams.length - 1] ?? null,
+    mix, view: pb.view, speaking: pb.isSpeaker(), here, engine, refusal,
+    serverNow: pb.serverNow(), said: '', seam: seams[seams.length - 1] ?? null, seams, clock,
     heldVolume: offlinePlaybackOn() ? pb.heldVolume() : null,
   };
   const player = useMemo(() => new LocalFirstPlayer(facts, actions), []);
@@ -691,6 +728,13 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     prefetcher?.plan(mix.map((item) => ({ songId: item.song_id, durationS: item.duration })), position);
   }, [prefetcher, position, mix]);
   const prefetch: Observable<PrefetchState> | null = prefetcher?.state ?? null;
+  // T-20261125-8ab8: the song the engine decoded has a length the catalogue lacks; keep it there
+  const playingSong = here ? mix[here.song_index] : undefined;
+  const decoded = clock?.length ?? 0;
+  useEffect(() => {
+    if (!request || !playingSong || playingSong.duration > 0 || !(decoded > 0)) return;
+    void saveSongLength(request, playingSong.song_id, decoded, workspaceId);
+  }, [request, playingSong?.song_id, playingSong?.duration, decoded > 0, workspaceId]);
   // what this device's sound output can truthfully be called now, for the sound check on Listen
   return { player, device: pb, refusal, seams, prefetch, output: statusOf(facts) };
 }

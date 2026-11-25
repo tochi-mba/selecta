@@ -170,11 +170,13 @@ export function RouteDiagram({ songs, requestedId, state, compact = false }: {
 
 /** Reusable five-stop intention or separately normalized measured energy. These are never
  * superimposed: user intentions and measured relative track energies use different scales. */
-export function EnergyHorizon({ values, source, provisional = false, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onLostPointerCapture }: {
+export function EnergyHorizon({ values, source, provisional = false, trail, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onLostPointerCapture }: {
   values: number[];
   source: 'intention' | 'measured';
   /** SF-0243-02: being drawn right now, so not yet the saved shape. */
   provisional?: boolean;
+  /** ADR-0477: the glowing stroke left while drawing (views/arcTrail.tsx), drawn under the curve. */
+  trail?: import('react').ReactNode;
   onPointerDown?: import('react').PointerEventHandler<SVGSVGElement>;
   onPointerMove?: import('react').PointerEventHandler<SVGSVGElement>;
   onPointerUp?: import('react').PointerEventHandler<SVGSVGElement>;
@@ -190,6 +192,7 @@ export function EnergyHorizon({ values, source, provisional = false, onPointerDo
       data-provisional={provisional || undefined}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel} onLostPointerCapture={onLostPointerCapture}>
+      {trail}
       <polyline className={source === 'measured' ? 'achieved' : undefined} points={points} />
       {source === 'intention' && values.map((energy, index) => (
         <circle key={index} cx={index * 25} cy={38 - energy * 0.34} r="2.2" />

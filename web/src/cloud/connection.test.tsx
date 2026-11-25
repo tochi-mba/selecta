@@ -55,6 +55,23 @@ describe('connection store', () => {
     expect(getConnection().nextTryAt).toBe(1_004_000);
   });
 
+  it('offline with no `online` event: a slow probe still looks, and an answer brings it back', async () => {
+    vi.useFakeTimers({ now: 2_000_000 });
+    const browser = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+    try {
+      reportOffline();
+      expect(isOnline()).toBe(false);
+      answers = [true];
+      await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+      expect(probe).toHaveBeenCalled();
+      expect(getConnection().status).toBe('online');
+      // the browser still says offline, but SelectaDJ answered: requests may go again
+      expect(isOnline()).toBe(true);
+    } finally {
+      browser.mockRestore();
+    }
+  });
+
   it('signed out is said apart from the connection, and cleared by the next answer', () => {
     reportSignedOut();
     expect(getConnection()).toMatchObject({ status: 'online', signedOut: true });

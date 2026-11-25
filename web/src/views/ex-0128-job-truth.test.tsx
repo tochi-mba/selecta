@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { SetPlayer } from '../player';
 import { refreshJobs } from '../state/jobs';
 import { fakeBackend, Reply, status } from '../test/backend';
+import { feelOff } from '../test/feel';
 import { Workshop } from './Workshop';
 
 /**
@@ -46,6 +47,8 @@ const words = (selector: string) => [...document.querySelectorAll(`.job-list ${s
 
 describe('EX-0128-03 job state labels', () => {
   it('queued, paused and failed each have their own words and status kind', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     fakeBackend({ 'GET /jobs': base });
     show();
     expect(await screen.findByText('3 transitions in line')).toHaveClass('status-queued');
@@ -65,6 +68,8 @@ describe('EX-0128-03 job state labels', () => {
   });
 
   it('a malformed or failed refresh keeps the last answer but says it may be out of date', async () => {
+    // pins the sentence with the feel off; with motion on the count rolls in its own element (ADR-0477)
+    feelOff();
     fakeBackend({ 'GET /jobs': base });
     show();
     await screen.findByText('3 transitions in line');

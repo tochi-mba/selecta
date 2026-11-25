@@ -8,7 +8,7 @@ import { Library } from '../views/Library';
 import type { ViewProps } from '../views/shared';
 import { ConnectMusic, summaryWords, type ConnectMusicHandle } from './ConnectMusic';
 import { formatCount } from './ImportStatus';
-import { useImportSession } from './importSession';
+import { useImportShellView } from './importSession';
 import { MusicFolders } from './MusicFolders';
 import { foldAway } from '../views/feelPieces';
 import './libraryWorkspace.css';
@@ -57,7 +57,8 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
   cloudStorage?: boolean;
 }) {
   const handle = useRef<ConnectMusicHandle>(null);
-  const session = useImportSession(connect.workspaceId);
+  // only the phase and the result: the whole Library re-rendered on every file of an import
+  const session = useImportShellView(connect.workspaceId, { counts: false });
   const importing = session.phase === 'running';
   const [dismissed, setDismissed] = useState(false);
   // the feel (ADR-0477): the "can play here" banner folds shut when dismissed; at once without motion

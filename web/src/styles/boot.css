@@ -303,18 +303,18 @@
 .welcome-art[data-variant='missing'] .welcome-art-tag { animation: none; }
 .welcome-art[data-variant='missing'] .welcome-art-tag { color: var(--text); }
 .welcome-art[data-variant='missing'] .welcome-art-tag.next { border-style: dashed; border-color: var(--edge-interactive); color: var(--text-soft); }
-/* Expressive only: each bar lifts as the playhead reaches it. Its place in the row (--i of 46) sets
-   when, so the lift travels with the line. */
-:root[data-motion='expressive'] .welcome-art rect:not(.spent) {
+/* Expressive only: while the person drags the playhead, the bars under it lift (cloud/BlendArt.tsx
+   marks them .lift). Never on the loop's own timer: bars that pulse by themselves read as music,
+   and only measured music may move by itself (ADR-0477 rule 4). */
+:root[data-motion='expressive'] .welcome-art rect {
   transform-box: fill-box;
   transform-origin: center;
-  animation: blend-kick var(--motion-loop-blend) linear infinite;
-  animation-delay: calc(var(--motion-loop-blend) * (var(--i) - 46) / 46);
+  transition: transform var(--motion-fast) var(--motion-ease);
 }
+:root[data-motion='expressive'] .welcome-art rect.lift { transform: scaleY(1.32); }
 @keyframes blend-head { from { transform: translateX(-228px); } to { transform: translateX(232px); } }
 @keyframes blend-skip { 0% { transform: translateX(-228px); } 50%, 60%, 70%, 80%, 100% { transform: translateX(0); } 55%, 65%, 75% { transform: translateX(-34px); } }
 @keyframes blend-ring { 0%, 49% { opacity: 0; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1); } 64%, 100% { opacity: 0; transform: scale(5); } }
-@keyframes blend-kick { 0%, 7%, 100% { transform: scaleY(1); } 2.5% { transform: scaleY(1.32); } }
 @keyframes blend-tag { 0%, 44% { border-color: var(--edge-interactive); color: var(--text); } 56%, 100% { border-color: var(--edge-decorative); color: var(--text-soft); } }
 .welcome-benefits {
   list-style: none;

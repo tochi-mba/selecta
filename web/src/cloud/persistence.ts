@@ -1,3 +1,4 @@
+import { PROMPT_WAIT_MS, withTimeout } from '../media/withTimeout';
 import { importSnapshot, subscribeImport } from './importSession';
 
 // Asking the browser to keep SelectaDJ's details (plan W5b). Browser storage is "best effort" by
@@ -38,7 +39,8 @@ export async function requestPersist(storage: PersistStorage = browserStorage())
   if (!storage || typeof storage.persist !== 'function') return 'unsupported';
   let answer: PersistState;
   try {
-    answer = (await storage.persist()) ? 'granted' : 'refused';
+    // a prompt left unanswered (Firefox asks) counts as not granted: the button stays to ask again
+    answer = await withTimeout(storage.persist().then((kept): PersistState => (kept ? 'granted' : 'refused')), PROMPT_WAIT_MS, 'not_granted');
   } catch {
     answer = 'refused';
   }

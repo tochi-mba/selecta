@@ -24,13 +24,15 @@ export function Time({ at }: { at: number | null | undefined }) {
 /** An id with a copy button; never an unlabelled id. */
 export function CopyId({ id, label = 'id' }: { id: string | null | undefined; label?: string }) {
   const [copied, setCopied] = useState(false);
+  const [refused, setRefused] = useState(false);
   if (!id) return <span className="admin-soft">none</span>;
   const copy = async () => {
-    try { await navigator.clipboard.writeText(id); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* the id is still visible to select */ }
+    // a refused copy shows the whole id, so it can be selected by hand
+    try { await navigator.clipboard.writeText(id); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { setRefused(true); }
   };
   return (
     <span className="admin-id">
-      <code title={id}>{id.length > 14 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id}</code>
+      <code title={id}>{id.length > 14 && !refused ? `${id.slice(0, 8)}…${id.slice(-4)}` : id}</code>
       <button type="button" className="admin-icon-button" aria-label={`Copy ${label} ${id}`} onClick={() => void copy()}>{copied ? 'Copied' : 'Copy'}</button>
     </span>
   );

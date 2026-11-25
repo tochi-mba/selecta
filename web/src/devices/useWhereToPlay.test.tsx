@@ -89,3 +89,27 @@ describe('B16', () => {
     expect(hook.result.current.notice?.text).toBe('Starting on laptop.');
   });
 });
+
+describe('T-20261125-45b5: never "none open" from a device that can play', () => {
+  const away = situation({ devices: [device('laptop', { online: false }), device('phone', { songs: 0 })] });
+  it('says none is open only when this device has no music of its own either', () => {
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: away, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn() }));
+    act(() => { expect(hook.result.current.decide()).toBe(true); });
+    expect(hook.result.current.notice?.text).toBe('None of your devices with music is open right now.');
+  });
+
+  it('plays here when this device has music the server has not counted yet', () => {
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: away, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn(), playableHere: true }));
+    act(() => { expect(hook.result.current.decide()).toBe(false); });
+    expect(hook.result.current.notice).toBeNull();
+  });
+
+  it('takes the line down once this tab is the one playing', () => {
+    const args = { enabled: true, situation: away, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn(), speakingHere: false };
+    const hook = renderHook((props) => useWhereToPlay(props), { initialProps: args });
+    act(() => { hook.result.current.decide(); });
+    expect(hook.result.current.notice).not.toBeNull();
+    act(() => { hook.rerender({ ...args, speakingHere: true }); });
+    expect(hook.result.current.notice).toBeNull();
+  });
+});

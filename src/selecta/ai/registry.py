@@ -422,22 +422,52 @@ def get_deployment(conn: Connection, deployment_id: str) -> Deployment | None:
     return load_deployments(conn).get(deployment_id)
 
 
-def save_deployment(conn: Connection, deployment: Deployment) -> None:
-    """Add or replace a deployment. New runs see it at once; running ones keep their pin."""
+def save_deployment(
+    conn: Connection, deployment: Deployment, *, reason: str = "", actor_id: str | None = None
+) -> None:
+    """Add or replace a deployment. New runs see it at once; running ones keep their pin.
+
+    Replacing a stored price is a change to how fast every Lucy allowance is spent, so it needs
+    a `reason` and, when large, a person's marker in it (`ai.price_guard`), and it is written to
+    the audit trail with the old and new figures. Nothing else needs a reason."""
+    from selecta.ai import price_guard
+
     validate_deployment(deployment)
     now = db_now(conn)
     values = _row_values(deployment)
-    exists = conn.execute(
-        sa.select(model_deployments.c.id).where(model_deployments.c.id == deployment.id)
+    table = model_deployments
+    stored = conn.execute(
+        sa.select(table.c.input_usd_per_mtok, table.c.output_usd_per_mtok)
+        .where(table.c.id == deployment.id)
+        .with_for_update()
     ).first()
-    if exists:
-        conn.execute(
-            sa.update(model_deployments)
-            .where(model_deployments.c.id == deployment.id)
-            .values(**values, updated_at=now)
+    if stored is None:
+        conn.execute(sa.insert(table).values(**values, created_at=now, updated_at=now))
+        return
+    old = Prices(float(stored.input_usd_per_mtok), float(stored.output_usd_per_mtok))
+    refusals = price_guard.check(deployment.id, old, deployment.prices, reason=reason)
+    if refusals:
+        raise RegistryError("; ".join(refusals))
+    # Whether the row was replaced is read from RETURNING, never from a row count.
+    replaced = conn.execute(
+        sa.update(table)
+        .where(table.c.id == deployment.id)
+        .values(**values, updated_at=now)
+        .returning(table.c.id)
+    ).first()
+    if replaced is not None and price_guard.changed(old, deployment.prices):
+        from selecta.authz import audit
+
+        audit.record(
+            conn,
+            actor_id=actor_id,
+            action=price_guard.AUDIT_ACTION,
+            result=audit.AuditResult.SUCCESS,
+            resource_type="model_deployment",
+            resource_id=deployment.id,
+            reason=reason.strip(),
+            metadata=price_guard.audit_fields(old, deployment.prices, reason=reason),
         )
-    else:
-        conn.execute(sa.insert(model_deployments).values(**values, created_at=now, updated_at=now))
 
 
 def set_status(conn: Connection, deployment_id: str, status: DeploymentStatus | str) -> bool:

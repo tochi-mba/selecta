@@ -4,6 +4,7 @@ import { recallFolder, runImport, type ImportSource, type MediaStore, type Store
 import type { Request, RetryPolicy } from '../media/importer';
 import { ImportJournal } from '../media/importJournal';
 import { IMPORT_RETRY_NOW } from '../media/journalledImport';
+import { askReadAccess } from '../media/withTimeout';
 import { mediaDeviceId, registeredDeviceId } from './ConnectMusic';
 import {
   clearImportSession, followImportElsewhere, IMPORT_SUSPENDED, IMPORT_TAB_FREED, importRunningHere, importSnapshot, readImportMarker, startImportSession,
@@ -211,7 +212,8 @@ export async function checkForInterruptedImport(parts: RunnerParts): Promise<voi
 export async function allowAndCarryOn(given: ResumeOffer & { kind: 'allow' }): Promise<boolean> {
   const parts = registered;
   if (!parts) return false;
-  const answer = given.handle.requestPermission ? await given.handle.requestPermission({ mode: 'read' }).catch(() => 'denied') : 'granted';
+  // a prompt the browser swallowed counts as not allowed, so Allow is offered again
+  const answer = await askReadAccess(given.handle);
   if (answer !== 'granted') return false;
   clearImportSession();
   startImport(parts, given.handle, { folder: given.handle.name, kind: 'folder', resume: given.marker });

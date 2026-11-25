@@ -10,7 +10,7 @@ change path.
 from __future__ import annotations
 
 import pytest
-from cloud_admin_kit import make_world
+from cloud_admin_kit import audit_actions, make_due, make_world
 
 from selecta import flags
 from selecta.flags import lucy_rollout_guard as guard
@@ -259,3 +259,48 @@ def test_other_flags_are_not_checked(world):
     answer = world.post("/api/admin/flags/rooms/change", action="rollout", reason="test",
                         params={"percent": 5})
     assert answer.status_code == 200, answer.text
+
+
+# A raise that waited as a delayed action ---------------------------------------------------------
+
+
+def queue(world, reason: str, rules: list[Rule]) -> str:
+    answer = change(world, "set_rules", reason, rules=[rule.to_dict() for rule in rules])
+    assert answer.status_code == 200, answer.text
+    body = answer.json()
+    outcome = body.get("outcome", body)
+    assert outcome["applied"] is False and outcome["action_id"], outcome
+    return outcome["action_id"]
+
+
+def carry_out(world, action_id: str) -> dict:
+    make_due(world.engine, action_id)
+    answer = world.post(f"/api/admin/actions/{action_id}/execute")
+    assert answer.status_code == 200, answer.text
+    return answer.json()
+
+
+def test_a_waiting_raise_is_checked_again_when_it_is_carried_out(world):
+    staff = staff_rule(world)
+    save(world.engine, [staff], "LM step 1: staff accounts")
+    first = queue(world, GREEN, [staff, pct(50)])
+    # proposed back to back: nothing was saved yet, so this one passed the first check too
+    second = queue(world, GREEN, [staff, pct(100)])
+
+    assert carry_out(world, first)["ok"] is True
+    assert stored(world) == (staff, pct(50))
+    refused = carry_out(world, second)
+
+    assert refused["ok"] is False
+    assert "held for at least 7 days" in refused["action"]["note"]
+    assert stored(world) == (staff, pct(50))
+    assert not audit_actions(world.engine, action="flags.rules.change", approval_id=second)
+
+
+def test_a_waiting_step_back_is_carried_out_whatever_the_guard_would_say(world):
+    staff = staff_rule(world)
+    save(world.engine, [staff, pct(100)], GREEN)  # the last raise was a moment ago
+    back = queue(world, "going back", [staff])  # and the reason has no marker
+
+    assert carry_out(world, back)["ok"] is True
+    assert stored(world) == (staff,)

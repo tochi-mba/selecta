@@ -1,3 +1,4 @@
+import { breathe } from './breathe';
 import { isAudioName } from './importer';
 import type { StoredFolderHandle } from './folders';
 import type { DirectoryHandleLike, FileHandleLike, MediaStore, SongSource, StoredSong } from './store';
@@ -16,7 +17,10 @@ export const YIELD_EVERY = 64;
 export type WalkedFile = { handle: FileHandleLike; path: string };
 export type FileFacts = WalkedFile & { size: number; modified: number };
 
-const yieldToPage = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+// A zero-length timer here made a hidden tab's check crawl: browsers hold timers back to once a
+// second in a tab that is not in front, and to once a minute after five minutes, so a 2,400-file
+// folder's 70-odd hand-backs could take over an hour. `breathe` gives the page its turn without that.
+const yieldToPage = breathe;
 
 function stopped(signal?: AbortSignal): void {
   if (signal?.aborted) throw new DOMException('The check was stopped.', 'AbortError');

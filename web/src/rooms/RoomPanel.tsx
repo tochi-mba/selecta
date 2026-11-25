@@ -84,6 +84,8 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const lastRoom = useRef('');
   if (panel) lastRoom.current = panel.room.id;
   const [qrOpen, setQrOpen] = useState(false);
+  // where the card's small QR code was when the large one was opened from it, so it grows from there
+  const [qrFrom, setQrFrom] = useState<DOMRect | null>(null);
   // ADR-0477: the room was opened from this page, so its code arrives as a moment and its status pings once
   const [justOpened, setJustOpened] = useState(false);
   const moving = useFeelPart('motion');
@@ -289,7 +291,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         </div>
         <div className="room-head-actions">
           <Action type="button" run={copy}><CopyWords copied={copied}>Copy link</CopyWords></Action>
-          <button type="button" onClick={() => setQrOpen(true)}><Icon name="expand" size="toolbar" /> Show QR<span className="room-qr-more"> full screen</span></button>
+          <button type="button" onClick={() => { setQrFrom(null); setQrOpen(true); }}><Icon name="expand" size="toolbar" /> Show QR<span className="room-qr-more"> full screen</span></button>
           <Menu className="room-menu" title="Room options" label={<><Icon name="more" /><VisuallyHidden>Room options</VisuallyHidden></>}>
             <MenuItem onClick={() => void lock()}>{isLocked ? 'Unlock room' : 'Lock room'}</MenuItem>
             <MenuItem onClick={() => newCode(false)}>Make a new code</MenuItem>
@@ -304,11 +306,12 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
 
       <div className="room-grid">
         <div className="room-side">
-          <RoomShare name={room.name} code={panel.code} link={link} copied={copied} copy={copy} onFullScreen={() => setQrOpen(true)} arriving={justOpened} />
+          <RoomShare name={room.name} code={panel.code} link={link} copied={copied} copy={copy} onFullScreen={(from) => { setQrFrom(from ?? null); setQrOpen(true); }} arriving={justOpened} />
           <section className="room-card room-guests" aria-labelledby="guests-title">
             <header className="room-card-head">
               <h3 id="guests-title" data-testid="room-guests-heading">Guests</h3>
-              <span className="room-count">{groups.here.length} here{away ? ` · ${away} away` : ''}</span>
+              {/* ADR-0477: the count rolls as guests really come and go; the words are the same */}
+              <span className="room-count">{moving ? <NumberRoll value={groups.here.length} format={(count) => `${count} here`} /> : `${groups.here.length} here`}{away ? ` · ${away} away` : ''}</span>
             </header>
             {!groups.here.length && !away && (
               <div className="room-empty room-empty-small"><Icon name="users" /><p>No guests yet. They join with the code.</p></div>
@@ -386,7 +389,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
       </section>
       </div>
       </fieldset>
-      {qrOpen && link && <RoomQrScreen name={room.name} code={panel.code} link={link} onClose={() => setQrOpen(false)} />}
+      {qrOpen && link && <RoomQrScreen name={room.name} code={panel.code} link={link} from={qrFrom} onClose={() => setQrOpen(false)} />}
       {confirm && (
         <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={confirm.confirmLabel} destructive
           working={`Working${ELLIPSIS}`} onConfirm={confirm.run} onClose={() => setConfirm(null)} />

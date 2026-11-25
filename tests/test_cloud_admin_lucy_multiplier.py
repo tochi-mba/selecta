@@ -137,3 +137,20 @@ def test_the_switch_needs_a_reason_the_permission_and_a_known_word(admin_world):
     assert cutover(admin_world, "tomorrow").status_code == 422
     assert cutover(admin_world, "now", reason="  ").status_code >= 400
     assert cutover(admin_world, "now", headers=admin_world.denied_headers).status_code == 403
+
+
+def test_the_customer_record_shows_the_factor_and_the_switch(admin_world):  # noqa: F811
+    from selecta.admin import customers
+
+    def shown() -> dict:
+        with transaction(admin_world.engine) as conn:
+            return customers._lucy(conn, admin_world.customer_workspace_id, 2_000_000_000.0)
+
+    assert put(admin_world, 1500).status_code == 200
+    assert shown()["allowance"]["factor_milli"] == 1500
+    assert shown()["allowance"]["cutover_at"] is None
+    assert cutover(admin_world, "now").status_code == 200
+    assert shown()["allowance"]["cutover_at"] == state(admin_world)["cutover_at"]
+    assert put(admin_world, None).status_code == 200
+    assert shown()["allowance"]["factor_milli"] is None
+    assert "turns_30d" in shown()

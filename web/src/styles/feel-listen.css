@@ -137,7 +137,9 @@
 :where(:root[data-feel~='depth']) .beat-pips i.on {
   box-shadow: var(--glow-accent);
 }
-/* The two songs' real peaks over the hand-over, and its real progress. */
+/* The two songs' real peaks over the hand-over, and its real progress. The outgoing song is the
+   top lane and the incoming one the bottom lane, each named in words, so the two are told apart
+   by place and label as well as colour. Nothing here transitions: it moves only with the clock. */
 :where(:root[data-feel~='music']) .live-blend {
   display: grid;
   gap: var(--space-1);
@@ -145,8 +147,22 @@
 }
 :where(:root[data-feel~='music']) .live-blend svg {
   inline-size: 100%;
-  block-size: calc(var(--space-6) + var(--space-4));
+  block-size: calc(var(--space-7) * 2);
   overflow: visible;
+}
+:where(:root[data-feel~='music']) .live-blend-window {
+  fill: var(--surface-selected);
+}
+:where(:root[data-feel~='music']) .live-blend-lane {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-soft);
+  font: var(--type-meta);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+:where(:root[data-feel~='music']) .live-blend-lane b {
+  color: var(--text);
 }
 :where(:root[data-feel~='music']) .live-blend path {
   fill: none;
@@ -358,11 +374,84 @@
   white-space: nowrap;
 }
 
+/* ---------- Stage: the hero fills the screen (views/stageTravel.ts) ----------
+   On Stage the whole screen takes the playing song's colour, behind everything (the page is its own
+   layer so the wash stays under its words). With motion on it fades in as the cover grows out to
+   meet it; leaving, a copy of the wash fades back out over the page while the cover settles home.
+   With motion off or calm it is simply there, and simply gone. */
+:root[data-feel~='ambient'] .now.stage {
+  isolation: isolate;
+}
+:root[data-feel~='ambient'] .now.stage::before,
+:where(:root[data-feel~='ambient']) .stage-travel-wash {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse at 50% 35%, var(--ambient-tint), transparent), var(--ambient-tint);
+  pointer-events: none;
+}
+:where(:root[data-feel~='ambient']) .stage-travel-wash {
+  z-index: var(--layer-toast);
+}
+:where(:root[data-feel~='ambient'][data-feel~='motion']) .now.stage::before {
+  transition: opacity var(--motion-spring-glide) var(--motion-ease);
+}
+@starting-style {
+  :where(:root[data-feel~='ambient'][data-feel~='motion']) .now.stage::before {
+    opacity: 0;
+  }
+}
+/* the cover's copy growing out to the whole screen; never pressable, never in the page's flow */
+:where(:root[data-feel~='motion']) .stage-travel-ghost {
+  z-index: var(--layer-toast);
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
+/* ---------- Lyrics follow the song (views/ListenLyrics.tsx) ----------
+   The line being sung grows a little and glows. It is its own element per line, so it grows as the
+   song clock reaches it (@starting-style) and the glide up is a script animation on the translate
+   property, which this scale leaves alone. The grow is the press scale turned outward, so Subtle
+   grows less and Still, where the motion part is off, not at all. Where the line has real word
+   timing, the words not yet sung wait a shade softer and light as they are reached. */
+:where(:root[data-feel~='motion']) .now .lyrics > p.sung[data-lyric='current'] {
+  scale: calc(2 - var(--press-scale));
+  transform-origin: 0 50%;
+  text-shadow: 0 0 var(--space-4) var(--word-glow);
+  transition: scale var(--motion-spring-snappy) var(--spring-gentle), text-shadow var(--motion-slow) var(--motion-ease);
+}
+:where(:root[data-feel~='motion']) .now .lyrics > p.sung[data-lyric='current']:dir(rtl) {
+  transform-origin: 100% 50%;
+}
+@starting-style {
+  :where(:root[data-feel~='motion']) .now .lyrics > p.sung[data-lyric='current'] {
+    scale: 1;
+    text-shadow: none;
+  }
+}
+:where(:root[data-feel~='motion']) .now .lyrics > p[data-words='timed'] > span {
+  transition: color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
+}
+:where(:root[data-feel~='motion']) .now .lyrics > p[data-words='timed'] > span:not(.sung-word, .current-word) {
+  color: var(--text-soft);
+}
+/* the first low-power step keeps the grow but drops the glow; this outranks the rule above on purpose */
+:root[data-low-power] .now .lyrics > p.sung[data-lyric='current'] {
+  text-shadow: none;
+}
+
 /* ---------- Forced colours ----------
    The system draws every state with borders and outlines; decoration made of light goes. */
 @media (forced-colors: active) {
-  :where(:root[data-feel]) :is(.listen-bloom, .build-moment) {
+  :where(:root[data-feel]) :is(.listen-bloom, .build-moment, .stage-travel-ghost, .stage-travel-wash) {
     display: none;
+  }
+  :root[data-feel] .now.stage::before {
+    display: none;
+  }
+  :root[data-feel] .now .lyrics > p.sung[data-lyric='current'] {
+    text-shadow: none;
   }
   :where(:root[data-feel]) :is(.strip-lens, .next-up[data-blend-near] .next-song) {
     box-shadow: none;
