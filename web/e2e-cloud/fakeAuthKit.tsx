@@ -7,6 +7,15 @@ import type { ReactNode } from 'react';
 
 const KEY = 'selecta-e2e-user';
 
+/** The same name AuthKit exports, so the app's `instanceof` checks build and run here too. The
+ * fake never throws it: a test signs out by clearing the stored name. */
+export class LoginRequiredError extends Error {
+  constructor(message = 'No access token available') {
+    super(message);
+    this.name = 'LoginRequiredError';
+  }
+}
+
 export function AuthKitProvider({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
