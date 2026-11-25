@@ -160,6 +160,14 @@ def _correction(store: EngineStore, connection: sa.Connection, song_id: int):
     )
 
 
+def _newer(old: Path, stored: Path) -> bool:
+    """Whether the old features file was written after the stored copy."""
+    try:
+        return old.stat().st_mtime > Path(stored).stat().st_mtime
+    except OSError:
+        return False
+
+
 def _arrays(
     store: EngineStore,
     artifacts: ArtifactStore,
@@ -169,15 +177,20 @@ def _arrays(
     names: tuple[str, ...] | None,
     legacy: Path | None,
 ) -> dict[str, np.ndarray]:
+    old = None if legacy is None else Path(legacy) / f"{song_id}.npz"
     if content_hash and version is not None:
         key = features_key(store.workspace_id, content_hash, version)
         try:
             with artifacts.open_input(key) as path:
-                return read_features(path, names)
+                # A song analysed again while core.engine_store was off rewrote only the old
+                # file, under the same hash and version. The newer file is the one the analysis
+                # row describes, so it wins.
+                if old is None or not _newer(old, path):
+                    return read_features(path, names)
         except ArtifactMissing:
             pass
-    if legacy is not None:
-        return read_features(Path(legacy) / f"{song_id}.npz", names)
+    if old is not None:
+        return read_features(old, names)
     raise ArtifactMissing(f"song {song_id} has no stored features")
 
 
