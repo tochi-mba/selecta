@@ -20,7 +20,8 @@ test('a guest leaving and a screen disconnecting update the host panel by themse
   expect(nickname).not.toBe('');
   const row = host.getByTestId('room-guest').filter({ hasText: nickname });
   await expect(row).toContainText('Here now', { timeout: 5_000 });
-  await expect(host.getByTestId('room-guests-heading')).toHaveText('Guests (1 here)');
+  // the Guests card counts who is here beside its heading
+  await expect(host.getByRole('region', { name: 'Guests' }).locator('.room-count')).toHaveText('1 here');
 
   // The phone loses the server for a moment: a calm note, then back by itself.
   await phone.setOffline(true);
