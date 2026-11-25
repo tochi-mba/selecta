@@ -103,7 +103,7 @@ function drawPairing(): void {
       h('h1', {}, 'Pair this screen'),
       h('ol', { className: 'd-steps' },
         step('1', 'Open your room in SelectaDJ'),
-        step('2', 'Find Big screen'),
+        step('2', 'Find Display screens'),
         step('3', 'Type this code')),
       // one box a letter, so it reads from the sofa; the label says it letter by letter
       h('p', { className: 'd-sr' }, `Pairing code ${pairingCode.split('').join(' ')}`),

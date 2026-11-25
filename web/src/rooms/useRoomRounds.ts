@@ -56,7 +56,8 @@ export function useRoomRounds({ api, workspaceId, roomId, enabled, isSpeaker, pl
         request<MeasuredPair[]>('/discoveries').catch(() => [] as MeasuredPair[]),
         api<{ marks: CrowdMark[] }>('/crowd-marks', {}, workspaceId).then((answer) => answer.marks, () => [] as CrowdMark[]),
       ]);
-      const songIds = pickCandidates({ pool, from, pairs, marks });
+      // never a song the mix already holds, whatever the suggestions say
+      const songIds = pickCandidates({ pool, from, pairs, marks, avoid: mix.map((song) => song.song_id) });
       if (!live || songIds.length < 2) return;
       // refused when another device beat this one to it, or the songs can't be played: either
       // way the room's pulse says what stands

@@ -28,10 +28,11 @@ class Deck(FakeNowPlaying):
         self.catalog = catalog
         self.index = 0
         self.state = "playing"
+        self.offset = 2.0
 
     def now_playing(self, workspace_id: str) -> NowPlaying:
         song = self.catalog.songs[self.index + 1]
-        return NowPlaying(song, (), self.state, "mix", self.index, 2.0)
+        return NowPlaying(song, (), self.state, "mix", self.index, self.offset)
 
 
 @pytest.fixture
@@ -108,14 +109,17 @@ def test_a_screen_counts_only_while_it_is_paired_and_has_just_looked(party, cloc
 # ---- plays ---------------------------------------------------------------------------------
 
 
-def test_each_song_is_one_play_and_a_loaded_song_that_has_not_played_is_none(party, engine):
+def test_each_song_is_one_play_and_a_loaded_song_that_has_not_played_is_none(party, engine, clock):
     rooms, opened, _guests = party
     deck = rooms.now_playing
-    deck.state = "paused"
+    deck.state, deck.offset = "paused", 0.0
     seen = _pulse(rooms, opened)
     assert seen["song"]["title"] == "Song 1" and seen["paused"] and seen["play"] is None
-    deck.state = "playing"
+    # paused part-way in has played, so the room can love it while it waits
+    deck.offset = 2.0
+    clock.advance(2)
     first = _play_id(rooms, opened)
+    deck.state = "playing"
     assert _play_id(rooms, opened) == first  # a second look is the same play
     deck.index = 1
     second = _pulse(rooms, opened)
