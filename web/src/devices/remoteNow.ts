@@ -92,14 +92,14 @@ export function whereWords(view: SessionView): string {
   return `Playing on ${name}`;
 }
 
-/** What the speaker says about its own sound, told to someone holding a remote: about that
- * device by name, and never an instruction only the speaker could follow (the check tone plays
- * there, not here). Null when its sound is confirmed or it has said nothing. */
+/** What the speaker says about its own sound, told to someone holding a remote: only when that
+ * device truly cannot make sound (the browser suspended its audio: autoplay, a call, another
+ * app), by name, with what to do there. A speaker that is playing and reporting where it is says
+ * nothing: an unconfirmed check tone is the speaker's own business, not the remote's
+ * (owner, 2026-11-25). Whether it is checking in at all is said by `stateWords`. */
 export function soundWords(view: SessionView, output: { state: string } | null): string | null {
   const who = view.speaker_name ?? 'The speaker';
-  if (output?.state === 'output_unverified') return `${who} hasn’t confirmed its sound yet.`;
-  if (output?.state === 'interrupted') return `Sound on ${who} was interrupted, so you may not hear it.`;
-  if (output?.state === 'uncertain') return `${who} can’t be sure it is making sound right now.`;
+  if (output?.state === 'interrupted') return `${who} can’t make sound right now. Press Play on ${who} to carry on.`;
   return null;
 }
 

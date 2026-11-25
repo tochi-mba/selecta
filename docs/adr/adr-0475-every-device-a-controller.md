@@ -242,6 +242,10 @@ A remote is any signed-in device of the same person that is not making the sound
 - **Rename a device.** The Devices page has Rename on every device (seen at 360x740), and names are read live.
 - **Sizes.** The remote at 360x740 and 820x1180 and the speaker at 1440x900 were opened and looked at; none scrolls sideways. Found: a laptop that was playing said "Safari on iPad 2 made a new mix." when a fresh tablet had only opened Listen and Library. Cause: the event stream replays its history to a device that has just connected; the tablet took each old `mix.current`, which set its pointer and told the account that old mix was current (one PUT per replayed event, 50 in one run), so the account's current mix changed under the laptop. Fixed: a value older than the one the device has already seen is ignored (`useAccountMix`). Proved (`ctl19.js`): the same fresh tablet made no PUT of the current mix and the laptop showed no offer.
 
+### What a remote says about the speaker's sound (2026-11-25)
+
+A remote said "{Speaker} hasn't confirmed its sound yet." under music that was plainly playing, because nobody had played the check tone on the speaker. That tone is the speaker's own business. A remote now says nothing about the sound while the speaker plays and reports where it is. It speaks only when the speaker truly can't make sound (the browser suspended its audio: autoplay blocked, a call, another app): "{Speaker} can't make sound right now. Press Play on {Speaker} to carry on." Whether the speaker is checking in at all is said by the state line ("has not checked in recently"). Proved (`ctl20.js`): a playing laptop gave the phone no sound line; with the laptop's audio suspended the phone said "Paused on Edge on Windows 3" and "Edge on Windows 3 can't make sound right now. Press Play on Edge on Windows 3 to carry on."
+
 ## Edge cases and what happens
 
 | Case | Behaviour |

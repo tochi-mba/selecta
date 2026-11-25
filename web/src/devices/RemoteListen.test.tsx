@@ -95,13 +95,13 @@ describe('the remote on Listen', () => {
     open(view({}, { state_confidence: 'uncertain', output_status: 'interrupted' }));
     expect(await screen.findByTestId('remote-state')).toHaveTextContent(/has not checked in recently/);
     // the speaker's sound is said about the speaker, by name, with nothing this device is asked to do
-    expect(screen.getByTestId('remote-sound')).toHaveTextContent('Sound on Laptop was interrupted, so you may not hear it.');
+    expect(screen.getByTestId('remote-sound')).toHaveTextContent('Laptop can’t make sound right now. Press Play on Laptop to carry on.');
   });
 
-  it('a speaker whose sound nobody has confirmed is named, and the remote is not told to play a check tone', async () => {
+  it('a playing speaker whose check tone nobody has confirmed says nothing about its sound', async () => {
     open(view({}, { output_status: 'output_unverified' }));
-    expect(await screen.findByTestId('remote-sound')).toHaveTextContent('Laptop hasn’t confirmed its sound yet.');
-    expect(screen.getByTestId('remote-sound')).not.toHaveTextContent(/check tone|this device/);
+    expect(await screen.findByTestId('remote-where')).toHaveTextContent('Playing on Laptop');
+    expect(screen.queryByTestId('remote-sound')).toBeNull();
     expect(screen.queryByTestId('remote-state')).toBeNull();
   });
 
