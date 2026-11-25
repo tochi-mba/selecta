@@ -376,15 +376,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     window.addEventListener(DEVICE_REGISTERED, registered);
     window.addEventListener('focus', refreshWhenActive);
     document.addEventListener('visibilitychange', refreshWhenActive);
-    // ADR-0475: the startup sweep can finish before this browser is registered as a device;
-    // once registered, the songs here are reported so Play counts this device's music
-    window.addEventListener(DEVICE_REGISTERED, refreshWhenActive);
     return () => {
       window.removeEventListener(DEVICE_REGISTERED, registered);
       window.clearInterval(timer);
       window.removeEventListener('focus', refreshWhenActive);
       document.removeEventListener('visibilitychange', refreshWhenActive);
-      window.removeEventListener(DEVICE_REGISTERED, refreshWhenActive);
     };
   }, [sweepLapsed]);
 
