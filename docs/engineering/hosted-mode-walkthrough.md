@@ -40,7 +40,37 @@ STILL_WORSE
 
 ## 5. Staging and production runbook
 
-RUNBOOK
+Staging today: uploads reach R2 (the buckets exist with app-origin CORS) and say "Upload accepted", and nothing processes them, because no worker runs (the console says "Workers (Modal): Not reporting"). With this branch deployed, an upload queues `analyse.song` at once, so the queue fills even with no worker, and the hosted card says honestly "waiting for a worker".
+
+### What must exist for hosted mode to process uploads
+
+| Piece | What | Where it is defined | State on staging |
+|---|---|---|---|
+| Worker gateway | `selecta gateway` web service: workers register with the bootstrap token, claim jobs, get signed R2 URLs for the `input_ref["objects"]` of each job, and complete with outputs it re-hashes | Render Blueprint; env in `launch-operator-checklist.md` §11 (`SELECTA_GATEWAY_DATABASE_URL`, `SELECTA_GATEWAY_ALLOWED_HOSTS`, `SELECTA_WORKER_TOKEN_SECRET`, `SELECTA_WORKER_BOOTSTRAP_TOKEN`, the R2 credentials and bucket names) | Check it is deployed and reachable from outside |
+| Worker app | Modal app `selecta-workers-staging` (`infra/modal/selecta_workers.py`), EU region, functions `cpu_light` (play.proxy), `cpu_heavy` (analyse.song, seam.render), `export` (export.render). `gpu_stems` and `gpu_stems_fallback` must **not** be deployed yet: no handler serves the gpu pool, so they would stop at start | `infra/modal/selecta_workers.py`, `infra/workers/pools.json` | Not deployed |
+| Worker image | Debian slim, Python 3.12, ffmpeg and libsndfile, the `uv.lock` runtime closure, `SELECTA_MODE=cloud`. Beat This weights are **not** baked in: the first analysis in each container downloads the `small0` checkpoint (a few MB) from the Beat This release. Bake it into the image before production (doc 10 §10.2 says weights are baked) | same file | - |
+| Worker secret | Modal secret `selecta-staging-workers`: `SELECTA_WORKER_GATEWAY_URL`, `SELECTA_WORKER_BOOTSTRAP_TOKEN`, `SELECTA_WORKER_STORAGE_HOSTS` (the R2 host, `ACCOUNT.eu.r2.cloudflarestorage.com`), optional `OTEL_*` | checklist §5 | Not created |
+| Queues and pools | Nothing to create: jobs live in PostgreSQL (`jobs`), pools come from the catalogue (`work/catalogue.py`) and `pools.json` | - | Ready |
+| R2 buckets | `selecta-staging-originals`, `-derived` (analysis, playback, seam, export files), `-exports`, `-staging`, `-deletion-ledger`, with app-origin CORS on GET/PUT/HEAD | OpenTofu `infra/cloudflare` | Exist |
+| Flags | `cloud.hosted_media` granted per account (console storage switch); `cloud.hosted_render` is on in the build and needs no change; `cloud.uploads` and `cloud.stored_media` on | `flags/cloud.json` | Grant per tester account |
+| Maintenance | `selecta maintain` reaps leases a dead worker left (the dev stack now does this in its worker) and runs the autoscaler when `SELECTA_MODAL_APP`, `SELECTA_MODAL_TOKEN_ID` and `SELECTA_MODAL_TOKEN_SECRET` are set | checklist §4 and §5 | Without the Modal token, nothing starts containers: set `min_containers=1` for a test, or start functions by hand |
+| GPU | None needed until Demucs is allowed | - | - |
+
+### Cost (the repo's rates: `pools.json`, doc 13; measured times from section 2)
+
+Rates: cpu-heavy 4 vCPU at $0.24 an hour, cpu-light 1 vCPU at $0.06, export 4 vCPU at $0.24, T4 GPU at $0.59; R2 at $0.015 per GB-month, egress free; Modal bills per second and scales to zero.
+
+COSTS
+
+### The cheapest honest way to get one worker running on staging for testing
+
+1. Confirm the gateway is deployed on Render and reachable (`GET /api/ready` on its host), and read its bootstrap token from the Render dashboard (the operator does this; it is a secret).
+2. Create the Modal secret `selecta-staging-workers` with the three values above, then `modal deploy infra/modal/selecta_workers.py --env staging` with the `gpu_stems` functions left out, and run one `cpu_heavy` and one `cpu_light` container with `modal run` (or set `min_containers=1` for the test hour and back to 0 after). Staging already caps `cpu_heavy` at 2 containers.
+3. Grant hosted media to one tester account, upload three songs, and watch the hosted card: analysis, then a server mix, then Play and Export.
+
+Idle cost is zero with `min_containers=0`. A test of 15 songs and one 12-song mix is about NN cpu-heavy minutes, under $0.20 at the repo's rate. A free alternative for a single test is to run `python -m selecta.workers.cloud` on a developer machine with the same three environment variables and `SELECTA_WORKER_POOL=cpu-heavy` (and a second one with `cpu-light`); it needs the bootstrap token on that machine, so only the owner should do it.
+
+Nothing here was set up: no deploy, no secret, no spend.
 
 ## 6. Decisions for the owner
 
