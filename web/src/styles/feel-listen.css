@@ -137,7 +137,9 @@
 :where(:root[data-feel~='depth']) .beat-pips i.on {
   box-shadow: var(--glow-accent);
 }
-/* The two songs' real peaks over the hand-over, and its real progress. */
+/* The two songs' real peaks over the hand-over, and its real progress. The outgoing song is the
+   top lane and the incoming one the bottom lane, each named in words, so the two are told apart
+   by place and label as well as colour. Nothing here transitions: it moves only with the clock. */
 :where(:root[data-feel~='music']) .live-blend {
   display: grid;
   gap: var(--space-1);
@@ -145,8 +147,22 @@
 }
 :where(:root[data-feel~='music']) .live-blend svg {
   inline-size: 100%;
-  block-size: calc(var(--space-6) + var(--space-4));
+  block-size: calc(var(--space-7) * 2);
   overflow: visible;
+}
+:where(:root[data-feel~='music']) .live-blend-window {
+  fill: var(--surface-selected);
+}
+:where(:root[data-feel~='music']) .live-blend-lane {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-soft);
+  font: var(--type-meta);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+:where(:root[data-feel~='music']) .live-blend-lane b {
+  color: var(--text);
 }
 :where(:root[data-feel~='music']) .live-blend path {
   fill: none;

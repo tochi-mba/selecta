@@ -52,6 +52,10 @@ export type BrowserSpeakerOptions = {
   /** cloud.seam_lead (scheduler.ts SchedulerDeps). */
   planAhead?: () => boolean;
   level?: (buffer: AudioBuffer) => Promise<number>;
+  /** Told each time a song's audio is ready to play, read only, so a surface can draw it without
+   * decoding the file again. Called synchronously on the way to the scheduler: it must only start
+   * its own work for later, and whatever it throws is ignored. */
+  decoded?: (id: TrackSource['id'], buffer: AudioBuffer) => void;
   store?: EngineStore;
   /** How many decoded songs to keep in memory (loader.ts, default 3). */
   keep?: number;
@@ -72,6 +76,7 @@ export class BrowserSpeaker implements Speaker {
   private readonly resolve: ResolveTrack;
   private readonly disposeOwner?: () => void;
   private readonly queueLength: (() => number) | null;
+  private readonly decoded: BrowserSpeakerOptions['decoded'];
   private readonly limiterReady: Promise<LimiterInstall>;
   private limiterInstalled: LimiterInstall | null = null;
   private visualTaps: { left: AnalyserNode; right: AnalyserNode } | null = null;
@@ -98,6 +103,7 @@ export class BrowserSpeaker implements Speaker {
     this.resolve = options.resolve;
     this.disposeOwner = options.disposeOwner;
     this.queueLength = options.queueLength ?? null;
+    this.decoded = options.decoded;
     this.graph = options.graph ?? buildGraph(options.audio.context);
     const context = options.audio.context;
     this.loader = createLoader((bytes) => context.decodeAudioData(bytes), { keep: options.keep });
@@ -188,6 +194,13 @@ export class BrowserSpeaker implements Speaker {
       return { kind: 'missing' };
     }
     const result = await this.loader.load(source.id, source.data);
+    if (result.ok && this.decoded) {
+      try {
+        this.decoded(source.id, result.buffer);
+      } catch {
+        // a picture of the song never stands in the way of playing it
+      }
+    }
     return result.ok ? { kind: 'buffer', buffer: result.buffer } : { kind: 'failed', error: result.error };
   }
 

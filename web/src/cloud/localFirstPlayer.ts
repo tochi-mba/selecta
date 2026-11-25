@@ -408,11 +408,13 @@ export type EngineStarter = (
   resolve: (index: number) => Promise<{ id: number; data: () => Promise<ArrayBuffer> } | null>,
   queueLength?: () => number,
   seams?: SeamWiring,
+  /** Told each time the engine has decoded a song to play (engine/speakerAdapter.ts decoded). */
+  decoded?: (id: number | string, buffer: AudioBuffer) => void,
 ) => Promise<{ speaker: BrowserSpeaker; refusal: string | null } | { speaker: null; refusal: string }>;
 
 /** The real starter: AudioContext from the press, the measured probe, worker calibration, the
  * capability roster, then the speaker with its worker-backed seam provider. */
-export const startBrowserEngine: EngineStarter = async (resolve, queueLength, seams) => {
+export const startBrowserEngine: EngineStarter = async (resolve, queueLength, seams, decoded) => {
   const engine: Engine = createEngine();
   try {
     const opened = engine.openContext({ fromUserGesture: true });
@@ -448,7 +450,7 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
     // cloud.seam_lead (ADR-0479 phase 1): plan each transition as its song starts, and play every
     // song at one level; both read the flag as they run, so a change needs no new speaker
     const speaker = engine.createSpeaker({
-      audio: opened, probe, resolve, queueLength, seam,
+      audio: opened, probe, resolve, queueLength, seam, decoded,
       planAhead: seamLeadOn,
       level: (buffer) => (seamLeadOn() ? songLevels().of(buffer) : Promise.resolve(1)),
     });
@@ -498,7 +500,7 @@ export function rememberCalibration(made: WorkerCalibration): void {
   }
 }
 
-export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, resolver, starter = startBrowserEngine, request }: {
+export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, resolver, starter = startBrowserEngine, request, decoded: whenDecoded }: {
   api: Api;
   workspaceId: string;
   mix: readonly (Pick<MixItem, 'duration' | 'song_id'> & { seam?: Pick<NonNullable<MixItem['seam']>, 'settings'> | null })[];
@@ -508,7 +510,12 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   starter?: EngineStarter;
   /** The catalogue's request, to save a length decoded here for a song that has none (songLength.ts). */
   request?: <T>(path: string, init?: RequestInit) => Promise<T>;
+  /** Told, by song, each time the engine has decoded one to play (Listen's waveforms read it). */
+  decoded?: (songId: number, audio: AudioBuffer) => void;
 }) {
+  // read when a song decodes, so the speaker made from an earlier press reaches the latest one
+  const onDecoded = useRef(whenDecoded);
+  onDecoded.current = whenDecoded;
   const [speaker, setSpeaker] = useState<BrowserSpeaker | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [engine, setEngine] = useState<EngineState | null>(null);
@@ -627,7 +634,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
         ...wiring,
         workerCalibration: measured?.record ?? null,
         deviceId: measured?.deviceId ?? null,
-      });
+      }, (id, buffer) => { if (typeof id === 'number') onDecoded.current?.(id, buffer); });
       if (made.refusal) {
         made.speaker?.dispose();
         setRefusal(made.refusal);
