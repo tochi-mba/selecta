@@ -660,6 +660,7 @@
           "GET /api/admin/takedowns",
           "POST /api/admin/takedowns",
           "POST /api/admin/takedowns/{notice_id}/{command}",
+          "POST /api/admin/catalog/art/{art_id}/{command}",
           "POST /api/admin/upload-restrictions/{workspace_id}/lift",
           "POST /api/admin/session/changes",
           "DELETE /api/admin/session/changes",

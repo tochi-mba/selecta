@@ -112,6 +112,8 @@
       "default": false,
       "kind": "release",
       "owner": "legal",
+      "modes": ["cloud"],
+      "routes": ["POST /api/catalog/art", "GET /api/catalog/art/{art_id}/{size}", "GET /api/catalog/songs/{song_id}/candidates", "PUT /api/catalog/songs/{song_id}/choice", "GET /api/catalog/settings", "PUT /api/catalog/settings"],
       "requires": ["library.art_embedded"]
     }
   }
