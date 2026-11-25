@@ -1,3 +1,356 @@
 /* The feel system (ADR-0477): the feel system applied to Make a Mix and Listen: build moment, hero, transport, strip, live blend, queue, Stage.
  * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
- * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md. */
+ * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md.
+ *
+ * Where a rule has to win over a component sheet (cloudMusic.css, listening.css), it is written with
+ * the specificity it needs instead of :where, and says so. Nothing here loops; the only things that
+ * move by themselves are driven by measured music (the beat bus) or the real song clock. */
+
+/* ---------- Listen hero: the bloom behind the cover (views/ListenHero.tsx) ----------
+   The room's tint gathered behind the cover. The header becomes its own layer so the bloom sits
+   over the header's background and under its words and cover. Its glow child is the beat bus's: it
+   brightens on measured kicks (opacity, from the bus) and swells with the measured loudness the bus
+   writes as --energy, settling back when the music stops. Cloud only, where the cover is drawn. */
+:root[data-feel~='ambient'] .shell[data-mode='cloud'] .now:not(.stage) .listen-identity:has(> .listen-bloom) {
+  isolation: isolate;
+}
+:root[data-feel~='ambient'] .shell[data-mode='cloud'] .now:not(.stage) .listen-bloom {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: -1;
+  inline-size: calc(var(--art) + var(--space-5) * 2);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--ambient-tint), transparent);
+  pointer-events: none;
+}
+:root[data-feel~='ambient'][data-feel~='music'] .listen-bloom > [data-beat='glow'] {
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: none;
+  background: radial-gradient(closest-side, var(--ambient-tint), transparent);
+  scale: calc(1 + var(--energy, 0) * 0.2);
+  transition: scale var(--motion-spring-snappy) var(--spring-gentle);
+}
+
+/* ---------- Play and Pause, one turning into the other (views/feelBits.tsx PlayMorph) ----------
+   Drawn only with motion on (Listen) or depth on (the hosted dock); the shown icon is full size and
+   the other is folded away under it. */
+:where(:root[data-feel]) .play-morph {
+  display: inline-grid;
+  vertical-align: middle;
+  margin-inline-end: var(--space-2);
+}
+:where(:root[data-feel]) .play-morph > .ui-icon {
+  grid-area: 1 / 1;
+}
+:where(:root[data-feel]) .play-morph[data-state='play'] > .play-morph-pause,
+:where(:root[data-feel]) .play-morph[data-state='pause'] > .play-morph-play {
+  opacity: 0;
+  scale: 0.5;
+}
+:where(:root[data-feel~='motion']) .play-morph > .ui-icon {
+  transition: opacity var(--motion-fast) var(--motion-ease), scale var(--motion-spring-snappy) var(--spring-bouncy);
+}
+
+/* ---------- Previous and Next nudge their arrow the way they go, while pressed ---------- */
+:where(:root[data-feel~='motion']) .now .transport [data-nudge] .ui-icon {
+  transition: translate var(--motion-spring-release) var(--spring-bouncy);
+}
+:where(:root[data-feel~='motion']) .now .transport [data-nudge='forward']:active:not(:disabled) .ui-icon {
+  translate: var(--space-1) 0;
+  transition-duration: var(--motion-feedback);
+  transition-timing-function: var(--motion-ease);
+}
+:where(:root[data-feel~='motion']) .now .transport [data-nudge='back']:active:not(:disabled) .ui-icon {
+  translate: calc(-1 * var(--space-1)) 0;
+  transition-duration: var(--motion-feedback);
+  transition-timing-function: var(--motion-ease);
+}
+
+/* ---------- The waveform strip (views/NowStrip.tsx) ----------
+   The played part and the playhead in the playing song's hue (the same number as the ambient
+   layer), the playhead glowing, and the magnifier under the mouse. These outrank cloudMusic.css's
+   played colour, so they are written with specificity rather than :where. */
+@supports (color: oklch(from red l c h)) {
+  :root[data-feel~='ambient'] .now .strip .peaks path.played {
+    stroke: oklch(from var(--playing) l c var(--ambient-hue));
+  }
+  :root[data-feel~='ambient'] .now .strip b.playhead {
+    background: oklch(from var(--playing) l c var(--ambient-hue));
+  }
+}
+:root[data-feel~='depth'] .now .strip b.playhead {
+  box-shadow: var(--glow-accent);
+}
+:where(:root[data-feel~='depth']) .strip-lens {
+  position: absolute;
+  inset-block-start: calc(-1 * var(--space-5));
+  z-index: 2;
+  translate: -50% 0;
+  padding: var(--space-hair) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-mark);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lift);
+  color: var(--text);
+  font: var(--type-counter);
+  white-space: nowrap;
+  pointer-events: none;
+}
+:where(:root[data-feel~='depth']) .strip-lens[hidden] {
+  display: none;
+}
+
+/* ---------- The live blend (views/LiveBlend.tsx, Now.tsx) ---------- */
+
+/* As a real hand-over nears, the next song's card rises into place once and stays lifted until the
+   blend starts. */
+:where(:root[data-feel~='motion']) .next-up[data-blend-near] .next-song {
+  animation: feel-listen-rise var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+:where(:root[data-feel~='depth']) .next-up[data-blend-near] .next-song {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift), var(--edge-light);
+}
+/* The countdown's current bar and beat glow; they already follow the song clock. */
+:where(:root[data-feel~='depth']) .countdown-track span.current-bar,
+:where(:root[data-feel~='depth']) .beat-pips i.on {
+  box-shadow: var(--glow-accent);
+}
+/* The two songs' real peaks over the hand-over, and its real progress. */
+:where(:root[data-feel~='music']) .live-blend {
+  display: grid;
+  gap: var(--space-1);
+  margin-block-start: var(--space-2);
+}
+:where(:root[data-feel~='music']) .live-blend svg {
+  inline-size: 100%;
+  block-size: calc(var(--space-6) + var(--space-4));
+  overflow: visible;
+}
+:where(:root[data-feel~='music']) .live-blend path {
+  fill: none;
+  stroke-width: var(--space-hair);
+  stroke-linecap: round;
+}
+:where(:root[data-feel~='music']) .live-blend-out,
+:where(:root[data-feel~='music']) .live-blend-in {
+  stroke: var(--border-strong);
+}
+:where(:root[data-feel~='music']) .live-blend-out.played {
+  stroke: var(--playing);
+}
+:where(:root[data-feel~='music']) .live-blend-in.played {
+  stroke: var(--status-request);
+}
+:where(:root[data-feel~='music']) .live-blend-head {
+  stroke: var(--text);
+  stroke-width: var(--space-hair);
+}
+:where(:root[data-feel~='music']) .live-blend-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  color: var(--text-soft);
+  font: var(--type-meta);
+}
+:where(:root[data-feel~='music']) .live-blend-caption b {
+  color: var(--text);
+}
+
+@keyframes feel-listen-rise {
+  from { opacity: 0.6; translate: 0 var(--space-2); }
+}
+
+/* ---------- The first hand-off (views/FirstHandoff.tsx) ----------
+   The note holds its celebration, so it is the celebration's positioned box. */
+:where(:root[data-feel~='moments']) .first-handoff {
+  position: relative;
+}
+:where(:root[data-feel~='moments']) .first-handoff-seam {
+  margin-block-end: var(--space-2);
+}
+
+/* ---------- Nothing playing (views/ListenEmpty.tsx) ---------- */
+:where(:root[data-feel~='depth']) .listen-empty-deck {
+  margin-block: var(--space-4);
+  border-radius: var(--radius);
+}
+
+/* ---------- The build moment (views/BuildMoment.tsx) ----------
+   Over Listen's hero, never taking a press: the songs arrive one after another (data-stagger), the
+   arcs between them draw (.feel-tick), and the whole line folds away. Its fade starts after two
+   glides, so it is gone in about a second, and views/BuildMoment.tsx removes it by MAX_MS at most. */
+:where(:root[data-feel~='moments']) .build-moment {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  align-content: center;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  border-radius: inherit;
+  background: var(--surface-raised);
+  pointer-events: none;
+  animation: feel-listen-build-out var(--motion-spring-snappy) var(--spring-gentle) forwards;
+  animation-delay: calc(var(--motion-spring-glide) * 2);
+}
+:where(:root[data-feel~='moments']) .build-moment-arcs {
+  order: -1;
+  inline-size: 100%;
+  block-size: var(--space-5);
+  overflow: visible;
+  fill: none;
+  stroke: var(--playing);
+  stroke-width: var(--space-hair);
+  stroke-linecap: round;
+}
+:where(:root[data-feel~='moments']) .build-moment-arcs path {
+  animation-delay: calc(var(--i, 0) * var(--motion-stagger) * 3);
+}
+:where(:root[data-feel~='moments']) .build-moment-line {
+  display: grid;
+  grid-template-columns: repeat(var(--count, 1), minmax(0, 1fr));
+  justify-items: center;
+}
+/* The local app does not draw cover tiles (listening.css); here each song still has its place. */
+:root[data-feel~='moments'] .build-moment .cover-art {
+  display: grid;
+  place-items: center;
+  inline-size: calc(var(--space-6) + var(--space-1));
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+@keyframes feel-listen-build-out {
+  to { opacity: 0; scale: 0.92; }
+}
+
+/* ---------- Make a Mix: the step line (cloud/QuickMix.tsx) ----------
+   A line runs from each step's mark down to the next; it fills once that step is settled. The fill
+   is a scale from the top, so it costs no layout. */
+:where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .shell[data-mode='cloud'] .quick-step:not(:last-child) {
+  position: relative;
+}
+:where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .shell[data-mode='cloud'] .quick-step:not(:last-child)::before,
+:where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .shell[data-mode='cloud'] .quick-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  inset-block: calc(var(--space-5) + var(--space-6)) calc(-1 * var(--space-5));
+  inset-inline-start: calc(var(--space-5) + var(--space-3) + var(--space-hair) / 2);
+  inline-size: var(--space-hair);
+  border-radius: var(--radius-hair);
+  pointer-events: none;
+}
+:where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .shell[data-mode='cloud'] .quick-step:not(:last-child)::before {
+  background: var(--border);
+}
+:where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .shell[data-mode='cloud'] .quick-step:not(:last-child)::after {
+  z-index: 1;
+  background: var(--status-ready);
+  transform-origin: top;
+  scale: 1 0;
+}
+:where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .shell[data-mode='cloud'] .quick-step[data-settled]:not(:last-child)::after {
+  scale: 1 1;
+}
+:where(:root[data-feel~='motion']) .shell[data-mode='cloud'] .quick-step:not(:last-child)::after {
+  transition: scale var(--motion-spring-glide) var(--spring-gentle);
+}
+@media (max-width: 560px) {
+  :where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .shell[data-mode='cloud'] .quick-step:not(:last-child)::before,
+  :where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .shell[data-mode='cloud'] .quick-step:not(:last-child)::after {
+    inset-block: calc(var(--space-4) + var(--space-6)) calc(-1 * var(--space-4));
+    inset-inline-start: calc(var(--space-4) + var(--space-3) + var(--space-hair) / 2);
+  }
+}
+
+/* ---------- Make a Mix: vibe cards lift (views/Mixes.tsx) ----------
+   listening.css gives a vibe card its own hover shadow and clips it (overflow: hidden). With the
+   lift on, the lifted skin carries the shadow instead, so the card's own goes, and the card clips
+   with a margin wide enough for the skin's shadow. These outrank listening.css on purpose. */
+:root:is([data-feel~='motion'], [data-feel~='depth']) .vibe-card[data-lift] {
+  overflow: clip;
+  overflow-clip-margin: var(--space-5);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root:is([data-feel~='motion'], [data-feel~='depth']) .vibe-card[data-lift]:hover {
+    box-shadow: none;
+  }
+}
+:root:is([data-feel~='motion'], [data-feel~='depth']) .vibe-card[data-lift]:focus-within {
+  box-shadow: none;
+}
+
+/* ---------- The current mix's playing bars (views/CurrentMix.tsx) ---------- */
+:where(:root[data-feel~='music']) .carry-on .eyebrow > [data-playing-bars] {
+  margin-inline-start: var(--space-2);
+}
+
+/* ---------- The hosted dock's transport (views/DockTransport.tsx, cloud/CloudTransportDock.tsx) ---------- */
+:root[data-feel~='depth'] .cloud-library-player > .cover-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: calc(var(--space-6) + var(--space-3));
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: color-mix(in srgb, var(--playing) 45%, var(--surface-control));
+}
+@supports (color: oklch(from red l c h)) {
+  :root[data-feel~='depth'] .cloud-library-player > .cover-art {
+    background: linear-gradient(var(--art-turn, 135deg), oklch(from var(--playing) l c calc(h + var(--art-hue, 0))), var(--surface-control));
+  }
+}
+:where(:root[data-feel~='depth']) .dock-transport {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: calc(var(--space-6) * 15);
+}
+:where(:root[data-feel~='depth']) .dock-transport-play {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--control-height);
+  block-size: var(--control-height);
+  padding: 0;
+  border-radius: var(--radius-pill);
+}
+:where(:root[data-feel~='depth']) .dock-transport-play .play-morph {
+  margin: 0;
+}
+:where(:root[data-feel~='depth']) .dock-transport-seek {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  accent-color: var(--playing);
+}
+:where(:root[data-feel~='depth']) .dock-transport-time {
+  flex: none;
+  color: var(--text-soft);
+  font: var(--type-counter);
+  white-space: nowrap;
+}
+
+/* ---------- Forced colours ----------
+   The system draws every state with borders and outlines; decoration made of light goes. */
+@media (forced-colors: active) {
+  :where(:root[data-feel]) :is(.listen-bloom, .build-moment) {
+    display: none;
+  }
+  :where(:root[data-feel]) :is(.strip-lens, .next-up[data-blend-near] .next-song) {
+    box-shadow: none;
+  }
+  :root[data-feel] .now .strip b.playhead,
+  :where(:root[data-feel]) :is(.countdown-track span.current-bar, .beat-pips i.on) {
+    box-shadow: none;
+  }
+}

@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import type { MixItem } from '../api';
 import { flagOn } from '../flags';
 import type { NowState } from '../player';
+import { Moment } from '../feel/moment';
+import { feelOn } from '../feel/root';
+import { SeamDiagram } from '../ui/MusicObjects';
+import { useFeelPart } from './feelBits';
 
 /** CI-0178-05: the first earned reward. The player sets `lastSeamKey` only once a finished, rendered
  * transition has actually played through its switch point, so a plan, a transition still rendering, or
@@ -27,23 +31,34 @@ function remember() {
 }
 
 export function FirstHandoff({ now, mix }: { now: NowState; mix: MixItem[] }) {
-  const [heard, setHeard] = useState<{ from: string; into: string } | null>(null);
+  const [heard, setHeard] = useState<{ from: string; into: string; seam?: MixItem['seam'] } | null>(null);
   const [gone, setGone] = useState(seenBefore);
   const on = flagOn('listen.first_handoff');
+  // ADR-0477: under the moments part, the note arrives with the seam it joined drawn beside it and a
+  // one-off celebration; the words are the same either way and say everything the drawing shows
+  const moments = useFeelPart('moments');
+  const [celebrating, setCelebrating] = useState(false);
 
   useEffect(() => {
     if (!on || gone || heard || !now.lastSeamKey || now.phase !== 'playing') return;
     const at = mix.findIndex((item) => item.seam?.state?.key === now.lastSeamKey);
     // only a transition this mix really has, between two songs it really holds
     if (at < 1 || mix[at].seam?.state?.status !== 'ready') return;
-    setHeard({ from: mix[at - 1].title, into: mix[at].title });
+    setHeard({ from: mix[at - 1].title, into: mix[at].title, seam: mix[at].seam });
+    setCelebrating(feelOn('moments'));
     // seeing it once is enough: it won't come back on the next visit even if it isn't dismissed
     remember();
   }, [on, gone, heard, now.lastSeamKey, now.phase, mix]);
 
   if (!on || gone || !heard) return null;
   return (
-    <aside className="notice first-handoff" role="status" aria-label="Your first hand-off" data-first-handoff="">
+    <aside className="notice first-handoff" role="status" aria-label="Your first hand-off" data-first-handoff="" data-arrive={moments ? '' : undefined}>
+      {moments && heard.seam && (
+        <div className="first-handoff-seam" aria-hidden="true">
+          <SeamDiagram seam={heard.seam} from={heard.from} into={heard.into} compact />
+        </div>
+      )}
+      {celebrating && <Moment kind="blend" onDone={() => setCelebrating(false)} />}
       <p>
         That was your first SelectaDJ hand-off: <span dir="auto">{heard.from}</span> into <span dir="auto">{heard.into}</span>, joined
         as one finished transition instead of a gap.
