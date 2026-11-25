@@ -17,6 +17,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
+from selecta import flags
 from selecta import jobs as engine_jobs
 from selecta.observability import tracing
 from selecta.persistence import new_id
@@ -142,6 +143,15 @@ class WorkerRunner:
         self.live: dict[str, AttemptSignals] = {}
         """The attempt this runner is working on, by id, so a local runner can stop it at once."""
 
+    def _flag_answers(self, job: Job) -> Mapping[str, bool] | None:
+        """The job's workspace's flag answers, with `core.engine_store` on and a store that can
+        decide them (the Cloud's database-backed one). Otherwise None: the handler reads this
+        process's flags, as it always has."""
+        if not flags.on("core.engine_store"):
+            return None
+        decide = getattr(self.store, "flag_answers", None)
+        return None if decide is None else decide(job.workspace_id)
+
     def run_once(self) -> RunResult | None:
         """Claim and run at most one job; return ``None`` when this pool has no eligible work."""
         self.store.touch_worker(self.caps.worker_id)
@@ -215,7 +225,8 @@ class WorkerRunner:
             )
             heartbeat.start()
             try:
-                with GIVE_WAY.watching(context.should_stop):
+                # the job's own workspace's flags, for the handler's thread (ADR-0479)
+                with GIVE_WAY.watching(context.should_stop), flags.bound(self._flag_answers(job)):
                     value = handler(job, context)
                 context.check_in()
             except engine_jobs.Interrupted:

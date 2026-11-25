@@ -1,65 +1,75 @@
-"""Choose a transition between two songs.
+"""Render and audit the transition the planner core ranks first, and repair it until one passes.
 
-Exit, entry, style and length are scored together, because the evidence suggests cue and pairing
-choices matter more than effect curves. Style is never random. The best candidate gets rendered
-and audited, and each failed check steers the next attempt. If nothing passes, an echo out is
-always available, so a set can't go silent.
+The deciding lives in `selecta.planner_core`: `choose` ranks the candidates and `repair` says what
+to try after each take. This is the Desktop studio's half: it renders, audits, hands the audit's
+numbers to the rule and does what it says. Everything the core decides stays importable from here.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
-from selecta import flags
-from selecta.analysis import vocal_sense
-from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
-from selecta.audit.checks import HARMONY_LIMIT, AuditReport, audit, excess_roughness
-from selecta.planner.fit import (
-    CLOSE_TEMPO,
-    COLD_ENTRY_DB,
-    FAR_KEYS,
-    MAX_FOLDED_GAP,
-    MAX_LEVEL_STEP_DB,
-    STEADY_GRID,
-    fold_ratio,
-    folded_gap,
-    level_step,
-    relative_level,
+from selecta.audit.checks import AuditReport, audit, audit_facts
+from selecta.planner_core.choose import (
+    _BLEND_BARS_BY_FAMILY,
+    BLEND_MAX_GAP,
+    BLEND_MIN_CONFIDENCE,
+    HOOK_IN_FADE_PENALTY,
+    LEVEL_FALL_FREE_DB,
+    LEVEL_RISE_FREE_DB,
+    SHORT_OVERLAP_BARS,
+    SHORT_OVERLAP_COST,
+    Candidate,
+    _energy_step,
+    _hook_in_fade,
+    _key,
+    _key_penalty,
+    _lengths_for,
+    _level_term,
+    _predicted_clash,
+    _score,
+    _style_fit,
+    _tempo_free_landing,
+    _vocal_clash_seconds,
+    enumerate_candidates,
+    fallback_candidate,
+    styles_for_language,
+    tempo_gap,
 )
+from selecta.planner_core.repair import ACCEPT, MAX_REPAIRS, TRY, Attempted, Option, next_step
 from selecta.render.engine import Rendered, SongCache, render
-from selecta.seam_kinds import move_on
-from selecta.styles import Recipe, all_recipes
 
-MAX_REPAIRS = 4
-
-BLEND_MIN_CONFIDENCE = STEADY_GRID
-"""Beat-locking needs a sure grid: every rated seam whose grid sat below this was disliked."""
-HOOK_IN_FADE_PENALTY = 0.7
-BLEND_MAX_GAP = CLOSE_TEMPO
-
-# No family gets 4-bar overlaps: every rated one was disliked, in every genre.
-_BLEND_BARS_BY_FAMILY = {
-    "dance": (16, 32),
-    "afro": (8, 16),
-    "pop": (8, 16),
-    "rnb": (8, 16),
-    "hiphop": (8, 16),
-    "latin": (8, 16),
-    "rock": (8, 16),
-    "other": (8,),
-}
-
-
-@dataclass(frozen=True)
-class Candidate:
-    recipe: Recipe
-    exit_cue: Cue
-    entry_cue: Cue
-    bars: int
-    score: float
-    reasons: tuple[str, ...] = ()
-    options: tuple[tuple[str, float], ...] = ()
+__all__ = [
+    "BLEND_MAX_GAP",
+    "BLEND_MIN_CONFIDENCE",
+    "HOOK_IN_FADE_PENALTY",
+    "LEVEL_FALL_FREE_DB",
+    "LEVEL_RISE_FREE_DB",
+    "MAX_REPAIRS",
+    "SHORT_OVERLAP_BARS",
+    "SHORT_OVERLAP_COST",
+    "_BLEND_BARS_BY_FAMILY",
+    "Attempt",
+    "Candidate",
+    "Choice",
+    "_energy_step",
+    "_hook_in_fade",
+    "_key",
+    "_key_penalty",
+    "_lengths_for",
+    "_level_term",
+    "_predicted_clash",
+    "_score",
+    "_style_fit",
+    "_tempo_free_landing",
+    "_vocal_clash_seconds",
+    "choose_transition",
+    "enumerate_candidates",
+    "fallback_candidate",
+    "styles_for_language",
+    "tempo_gap",
+]
 
 
 @dataclass
@@ -77,375 +87,6 @@ class Choice:
     fell_back: bool = False
 
 
-def tempo_gap(a: SongInfo, b: SongInfo) -> float:
-    return abs(a.bpm / b.bpm - 1.0)
-
-
-def _key_penalty(a: SongInfo, b: SongInfo, bars: int) -> float:
-    """Key barely matters for a cut, and matters a lot for a long overlap with tonal content."""
-    if bars <= 2:
-        return 0.0
-    distance = camelot_distance(a.camelot, b.camelot)
-    harm = {0: 0.0, 1: 0.0, 2: 0.4, 3: 0.75}.get(distance, 1.0)
-    scale = 0.5 if bars <= 8 else 1.0
-    trust = 0.4 + 0.6 * min(a.key_confidence, b.key_confidence)
-    return harm * scale * trust
-
-
-def _vocal_clash_seconds(
-    a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue, bars: int
-) -> float:
-    """Roughly how long both would be singing, to rule out bad blends before rendering."""
-    bar_seconds = a.period * a.beats_per_bar
-    total = 0.0
-    start_a = exit_cue.time - bars * bar_seconds
-    for i in range(bars * 2):
-        slice_a = start_a + i * bar_seconds / 2
-        slice_b = entry_cue.time + i * bar_seconds / 2
-        step = bar_seconds / 2
-        if (
-            a.vocal_seconds(slice_a, slice_a + step) > 0.1
-            and b.vocal_seconds(slice_b, slice_b + step) > 0.1
-        ):
-            total += step
-    return total
-
-
-def _energy_step(a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue) -> float:
-    exit_energy = float(a.energy_bars[max(exit_cue.bar - 2, 0) : exit_cue.bar].mean())
-    entry_energy = float(b.energy_bars[entry_cue.bar : entry_cue.bar + 2].mean())
-    return abs(exit_energy - entry_energy)
-
-
-def _style_fit(recipe: Recipe, a: SongInfo, b: SongInfo, bars: int, gap: float) -> float:
-    """How much to want each move. The first reel's ratings set the order: four of five
-    beatmatched blends rated well, and none of the four tempo-free moves did."""
-    rap = a.family == "hiphop" and b.family == "hiphop"
-    if recipe.name == "bass_swap_blend":
-        fit = 0.95 if gap <= 0.03 else 0.7
-        if rap:
-            fit -= 0.3
-        if a.family == "dance" or b.family == "dance":
-            fit += 0.05
-        return fit
-    if recipe.name == "filter_sweep":
-        return 0.75 if gap <= 0.03 else 0.55
-    if recipe.name == "tempo_ramp":
-        return 0.6
-    if recipe.name == "cut_on_one":
-        return 0.6 if rap else 0.45
-    if recipe.name == "echo_out":
-        return 0.45
-    if recipe.name == "delay_throw":
-        return 0.4
-    if recipe.name == "reverb_wash":
-        return 0.3
-    return 0.5
-
-
-def _predicted_clash(
-    a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int, bars: int
-) -> float | None:
-    """The overlap's excess roughness guessed from each song's stored bar chroma, before any
-    render. Key labels are one number per song; this hears the actual bars that will play
-    together, so a 'compatible' pair whose sections still grind is caught early."""
-    if a.chroma_bars is None or b.chroma_bars is None:
-        return None
-    b_bars = max(int(round(bars * fold_ratio(a, b))), 1)
-    chroma_a = a.chroma_bars[max(exit_bar - bars, 0) : exit_bar]
-    chroma_b = b.chroma_bars[entry_bar : entry_bar + b_bars]
-    if chroma_a.size == 0 or chroma_b.size == 0:
-        return None
-    return excess_roughness(chroma_a.mean(axis=0), chroma_b.mean(axis=0))
-
-
-def _hook_in_fade(a: SongInfo, b: SongInfo, entry_cue: Cue, bars: int) -> float:
-    """How much of B's fade-in is B singing, weighted by how long that fade lasts.
-
-    A hook should land, not fade up. The one blend in the first reel that rated badly had B's
-    chorus singing from its first bar through the whole overlap.
-    """
-    seconds = bars * b.period * b.beats_per_bar
-    if seconds <= 0 or not b.vocals_known:
-        return 0.0
-    share = b.vocal_seconds(entry_cue.time, entry_cue.time + seconds * 0.65) / (seconds * 0.65)
-    return min(share, 1.0) * min(bars / 8.0, 1.0)
-
-
-def _tempo_free_landing(
-    a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue, gap: float
-) -> tuple[float, float] | None:
-    """Rules for moves with no overlap to hide in, or None if the landing can't work.
-
-    Returns how good the entry is and how well the vocals hand over. With no blend, B has to arrive
-    on something: the first reel's cuts into quiet song intros, with 7 to 10 seconds to wait for a
-    voice, all rated badly. Quiet into quiet is fine, since nothing falls.
-    """
-    if gap > BLEND_MAX_GAP and folded_gap(a, b) > MAX_FOLDED_GAP:
-        return None
-    step = level_step(a, b, exit_cue.bar, entry_cue.bar)
-    if step is not None and abs(step) > MAX_LEVEL_STEP_DB:
-        return None
-    entry_level = relative_level(b, entry_cue.bar, entry_cue.bar + 4)
-    exit_level = relative_level(a, exit_cue.bar - 4, exit_cue.bar)
-    if (
-        entry_level is not None
-        and exit_level is not None
-        and entry_level < COLD_ENTRY_DB
-        and exit_level >= COLD_ENTRY_DB
-    ):
-        return None
-    if flags.on("planner.energy_intent") and entry_cue.kind != "chorus":
-        # a hot exit into a much colder landing is an unintended drop, not a transition
-        before = a.energy_bars[max(exit_cue.bar - 4, 0) : exit_cue.bar]
-        after = b.energy_bars[entry_cue.bar : entry_cue.bar + 4]
-        if before.size and after.size and float(before.mean()) - float(after.mean()) > 0.25:
-            return None
-    wait = b.vocal_free_after(entry_cue.time) if b.vocals_known and not b.instrumental else 0.0
-    beat = b.period
-    quality = {"chorus": 0.85, "verse": 0.7, "before chorus": 0.5, "song start": 0.4}.get(
-        entry_cue.kind, 0.45
-    )
-    if wait > 2 * b.period * b.beats_per_bar:
-        quality *= 0.5
-    before = a.vocal_free_before(exit_cue.time) if a.vocals_known and not a.instrumental else 9.0
-    hand_off = before <= 2 * a.period and wait <= 2 * beat
-    return quality, 1.0 if hand_off else 0.6
-
-
-def _lengths_for(recipe: Recipe, a: SongInfo, b: SongInfo) -> tuple[int, ...]:
-    if not recipe.beatmatched:
-        return recipe.lengths
-    if recipe.max_gap is not None:
-        return recipe.lengths
-    preferred = set(_BLEND_BARS_BY_FAMILY[a.family]) | set(_BLEND_BARS_BY_FAMILY[b.family])
-    return tuple(length for length in recipe.lengths if length in preferred)
-
-
-SHORT_OVERLAP_BARS = 4
-SHORT_OVERLAP_COST = 0.5
-LEVEL_FALL_FREE_DB = 2.5
-LEVEL_RISE_FREE_DB = 1.5
-
-
-def enumerate_candidates(
-    a: SongInfo,
-    b: SongInfo,
-    style: str | None = None,
-    recipes: dict[str, Recipe] | None = None,
-    exits: list[Cue] | None = None,
-    entries: list[Cue] | None = None,
-) -> list[Candidate]:
-    """Every transition worth trying between two songs, best first. A planner checking many pairs
-    can pass in a few cues per song, which is far quicker than working them out each time."""
-    recipes = recipes or all_recipes()
-    gap = tempo_gap(a, b)
-    # beat-locking folds half and double time: an 87 and a 174 BPM song share one pulse
-    blend_gap = folded_gap(a, b)
-    exits = a.exit_cues()[:8] if exits is None else exits
-    entries = b.entry_cues()[:10] if entries is None else entries
-    can_beatmatch = (
-        a.grid_confidence >= BLEND_MIN_CONFIDENCE
-        and b.grid_confidence >= BLEND_MIN_CONFIDENCE
-        and a.beats_per_bar == b.beats_per_bar
-    )
-
-    candidates: list[Candidate] = []
-    for recipe in recipes.values():
-        if style and recipe.name != style:
-            continue
-        if recipe.on_request and recipe.name != style:
-            continue
-        if recipe.needs_vocal_info and not a.vocals_known:
-            continue
-        for bars in _lengths_for(recipe, a, b):
-            if recipe.beatmatched:
-                effective = gap if recipe.max_gap is not None else blend_gap
-                if not can_beatmatch or effective > (recipe.max_gap or BLEND_MAX_GAP):
-                    continue
-                if (
-                    not (a.vocals_known and b.vocals_known)
-                    and bars > 4
-                    and not vocal_sense.sense_on()
-                ):
-                    # without lyrics or ears, a long overlap can't be checked for two voices
-                    continue
-            for exit_cue in exits:
-                if recipe.beatmatched and exit_cue.bar < bars + 4:
-                    continue
-                for entry_cue in entries:
-                    candidate = _score(recipe, a, b, exit_cue, entry_cue, bars, gap, blend_gap)
-                    if candidate is not None:
-                        candidates.append(candidate)
-    return sorted(candidates, key=lambda c: -c.score)
-
-
-def styles_for_language(language: str, stems: str = "sometimes") -> set[str] | None:
-    """Translate human-facing intent into a recipe family, not one compulsory effect.
-
-    `wordplay` allows every recipe for now: word cuts come from the link search, which the set
-    planner doesn't draw on yet. Stem recipes will return here, gated by `stems`, once they're real.
-    """
-    families = {
-        "seamless": {"bass_swap_blend", "filter_sweep", "tempo_ramp"},
-        "punchy": {"cut_on_one", "echo_out", "delay_throw"},
-    }
-    family = families.get(language)
-    if family is None:
-        return None
-    # moves turned off in this build drop out; a family with none left means any move that's on
-    return {move for move in family if move_on(move)} or None
-
-
-def _score(
-    recipe: Recipe,
-    a: SongInfo,
-    b: SongInfo,
-    exit_cue: Cue,
-    entry_cue: Cue,
-    bars: int,
-    gap: float,
-    blend_gap: float | None = None,
-) -> Candidate | None:
-    if camelot_distance(a.camelot, b.camelot) >= FAR_KEYS:
-        # five or more steps apart was liked twice in 11, even on cuts and echoes
-        return None
-    blend_gap = gap if blend_gap is None else blend_gap
-    reasons = [f"{exit_cue.kind} into {entry_cue.kind}"]
-    vocal_term = 1.0
-    entry_quality = entry_cue.quality
-    exit_quality = exit_cue.quality
-    if recipe.beatmatched and flags.on("analysis.phrases"):
-        # B's first downbeat lands where A starts a phrase, so the join reads as intended
-        if a.phrase_starts().get(exit_cue.bar - bars, 0.0) >= 0.6:
-            exit_quality = min(1.0, exit_quality + 0.1)
-            reasons.append("B enters on A's phrase line")
-    if recipe.beatmatched and a.vocals_known and b.vocals_known:
-        clash = _vocal_clash_seconds(a, b, exit_cue, entry_cue, bars)
-        limit = 1.5 if (a.family == "hiphop" or b.family == "hiphop") else 2.5
-        if clash > limit:
-            return None
-        vocal_term = 1.0 - clash / limit * 0.6
-        if clash == 0:
-            reasons.append("vocals take turns")
-        share = _hook_in_fade(a, b, entry_cue, bars)
-        vocal_term *= 1.0 - HOOK_IN_FADE_PENALTY * share
-    if recipe.beatmatched:
-        # B walks `fold` of its own bars for each of A's, so the landing bar scales with it
-        landing = entry_cue.bar + round(bars * fold_ratio(a, b))
-        if landing in b.chorus_start_bars():
-            entry_quality = min(1.0, entry_quality + 0.25)
-            reasons.append("B's chorus lands as A leaves")
-    motivation = 1.0
-    if not recipe.beatmatched:
-        landing = _tempo_free_landing(a, b, exit_cue, entry_cue, gap)
-        if landing is None:
-            return None
-        entry_quality, vocal_term = landing
-        if vocal_term > 0.9:
-            reasons.append("one voice hands straight to the next")
-        if flags.on("planner.motivated_punctuation") and recipe.name != "delay_throw":
-            # punctuation needs an audible reason: a thought just finished, or the song's own
-            # structure turned. Without one, a cut or echo reads as a mistake, not a moment.
-            # (delay_throw already demands a line ending at the exit.)
-            structural = exit_cue.kind in {"after chorus", "after section", "outro"}
-            line_done = (
-                a.vocals_known
-                and not a.instrumental
-                and a.vocal_free_before(exit_cue.time) <= 2.0 * a.period
-            )
-            if structural or line_done:
-                reasons.append("a moment worth marking")
-            else:
-                motivation = 0.35
-
-    key_penalty = _key_penalty(a, b, bars)
-    if key_penalty >= 0.75:
-        return None
-    if recipe.beatmatched and bars >= 4 and flags.on("planner.true_key"):
-        # hear the overlap's harmony from the stored chroma, not just the key labels
-        excess = _predicted_clash(a, b, exit_cue.bar, entry_cue.bar, bars)
-        if excess is not None:
-            key_penalty = max(key_penalty, min(max(excess, 0.0) / HARMONY_LIMIT, 1.0))
-            if key_penalty >= 0.75:
-                return None
-    energy_step = _energy_step(a, b, exit_cue, entry_cue)
-    energy_term = max(0.0, 1.0 - energy_step / 0.35)
-    fit = _style_fit(recipe, a, b, bars, blend_gap if recipe.beatmatched else gap)
-    score = (
-        0.25 * exit_quality
-        + 0.20 * entry_quality
-        + 0.20 * fit
-        + 0.15 * energy_term
-        + 0.10 * (1.0 - key_penalty)
-        + 0.10 * vocal_term
-    ) * (0.7 + 0.3 * _level_term(a, b, exit_cue, entry_cue, bars)) * motivation
-    if recipe.beatmatched and bars <= SHORT_OVERLAP_BARS:
-        # all six rated overlaps this short were disliked, against 13 of 16 liked at 8 bars or more
-        score *= SHORT_OVERLAP_COST
-    return Candidate(recipe, exit_cue, entry_cue, bars, round(score, 4), tuple(reasons))
-
-
-def _level_term(a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue, bars: int) -> float:
-    """How level the set stays across this seam, 0 to 1. Most warnings on rendered seams were the
-    level falling away after them, and that can be seen coming from the numbers already to hand."""
-    step = level_step(a, b, exit_cue.bar, entry_cue.bar + bars)
-    if step is None:
-        return 1.0
-    return max(0.0, 1.0 - max(-step - LEVEL_FALL_FREE_DB, step - LEVEL_RISE_FREE_DB, 0.0) / 6.0)
-
-
-def _next_candidate(
-    failed: Candidate,
-    report: AuditReport,
-    pool: list[Candidate],
-    tried: set[tuple],
-) -> Candidate | None:
-    """Pick the attempt most likely to fix what just failed."""
-    fixes = {check.fix for check in report.failures}
-    remaining = [c for c in pool if _key(c) not in tried]
-    if "shorten" in fixes:
-        shorter = [
-            c for c in remaining if c.recipe.name == failed.recipe.name and c.bars < failed.bars
-        ]
-        if shorter:
-            return shorter[0]
-    if "move_cue" in fixes or "close_gap" in fixes:
-        moved = [
-            c
-            for c in remaining
-            if c.recipe.name == failed.recipe.name
-            and (c.exit_cue != failed.exit_cue or c.entry_cue != failed.entry_cue)
-        ]
-        if moved:
-            return moved[0]
-    other = [c for c in remaining if c.recipe.name != failed.recipe.name]
-    return other[0] if other else (remaining[0] if remaining else None)
-
-
-def _key(candidate: Candidate) -> tuple:
-    return (
-        candidate.recipe.name,
-        candidate.exit_cue.bar,
-        candidate.entry_cue.bar,
-        candidate.bars,
-    )
-
-
-def fallback_candidate(a: SongInfo, b: SongInfo) -> Candidate:
-    """A deliberate cut on the downbeat. It needs no beatmatch and no key match, so it always
-    works, and the listener rated every clean cut well while a reasonless echo rated badly. One
-    last resort for the whole engine, so the fallback heard is the same everywhere."""
-    recipes = all_recipes()
-    exits = a.exit_cues() or [
-        Cue(a.bar_at(a.duration * 0.7), a.bar_time(a.bar_at(a.duration * 0.7)), "fallback", 0.2, 0)
-    ]
-    entries = b.entry_cues() or [Cue(0, b.bar_time(0), "song start", 0.5, 0)]
-    return Candidate(
-        recipes["cut_on_one"], exits[0], entries[0], 0, 0.0, ("nothing else cleared the bar",)
-    )
-
-
 def choose_transition(
     a: SongInfo,
     b: SongInfo,
@@ -456,27 +97,26 @@ def choose_transition(
 ) -> Choice:
     cache = cache or SongCache()
     pool = enumerate_candidates(a, b, style, exits=exits)
-    tried: set[tuple] = set()
+    options = [Option.of(candidate) for candidate in pool]
     attempts: list[Attempt] = []
-    candidate = pool[0] if pool else None
-
-    renders = 0
-    while candidate is not None and renders <= max_repairs:
-        tried.add(_key(candidate))
+    heard: list[Attempted] = []
+    step = next_step(options, heard, max_repairs)
+    while step.action == TRY:
+        candidate = pool[step.option]
         script = candidate.recipe.make(
             a, b, candidate.exit_cue, candidate.entry_cue, candidate.bars
         )
         if script is None:
             attempts.append(Attempt(candidate, None))
-            candidate = next((c for c in pool if _key(c) not in tried), None)
-            continue
-        renders += 1
-        rendered = render(script, cache)
-        report = audit(rendered)
-        attempts.append(Attempt(candidate, report))
-        if report.passed:
+            heard.append(Attempted(step.option))
+        else:
+            rendered = render(script, cache)
+            report = audit(rendered)
+            attempts.append(Attempt(candidate, report))
+            heard.append(Attempted(step.option, audit_facts(report)))
+        step = next_step(options, heard, max_repairs)
+        if step.action == ACCEPT:
             return Choice(rendered, report, candidate, attempts)
-        candidate = _next_candidate(candidate, report, pool, tried)
 
     safe = fallback_candidate(a, b)
     script = safe.recipe.make(a, b, safe.exit_cue, safe.entry_cue, safe.bars)

@@ -7,7 +7,9 @@ aside first and only then lets the migration run. The file records which local s
 in SQLite's own `user_version`, so the copy is made once per upgrade, not on every open.
 
 Bump `LOCAL_SCHEMA_VERSION` (and the fingerprint the tests keep) whenever `db.SCHEMA` or the
-start-up steps in `db.connect` change what a library file looks like. Feature flag:
+start-up steps in `db.connect` change what a library file looks like. With `core.engine_store`
+on, the engine tables' own stamp counts too (`upgrade_needed`), so their migrations are backed up
+the same way. Feature flag:
 `core.upgrade_backup` (core, so it cannot be turned off: an upgrade must never be the thing that
 loses a library). See docs/saas/06-data-model.md, 6.3.
 """
@@ -35,6 +37,21 @@ def schema_version(conn: sqlite3.Connection) -> int:
     return int(conn.execute("PRAGMA user_version").fetchone()[0])
 
 
+def upgrade_needed(conn: sqlite3.Connection) -> bool:
+    """The one answer to "does this file need upgrading?", asked by the backup below and by
+    `db.connect`. The hand-made schema is behind, or, with `core.engine_store` on, the engine
+    tables' stamp is missing or older than this app's (the rule is in `engine_store.library`)."""
+    if schema_version(conn) < LOCAL_SCHEMA_VERSION:
+        return True
+    from selecta import flags
+
+    if not flags.on("core.engine_store"):
+        return False
+    from selecta.engine_store import library
+
+    return library.behind(conn)
+
+
 def _has_library(conn: sqlite3.Connection) -> bool:
     return (
         conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='songs'").fetchone()
@@ -52,7 +69,7 @@ def backup_before_migrating(conn: sqlite3.Connection, path: Path) -> Path | None
     path = Path(path)
     with _lock:
         version = schema_version(conn)
-        if version >= LOCAL_SCHEMA_VERSION or not _has_library(conn):
+        if not upgrade_needed(conn) or not _has_library(conn):
             return None
         folder = path.parent / FOLDER
         folder.mkdir(parents=True, exist_ok=True)

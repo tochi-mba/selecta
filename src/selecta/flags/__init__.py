@@ -27,14 +27,19 @@ themselves. The targeting that reads them is in `flags/targeting.py`.
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import datetime as dt
 import difflib
+import functools
 import json
 import os
 import re
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
+from types import MappingProxyType
 
 ENV = "SELECTA_FLAGS"
 HERE = Path(__file__).parent
@@ -422,10 +427,42 @@ def use(text: str | None) -> None:
     _states = None if text is None else resolve(text)
 
 
+# One account's answers, bound for one request or one job (ADR-0479). A context variable, so it
+# follows the code that bound it: through `await`, into tasks it starts and into
+# `asyncio.to_thread`, but not into a plain `threading.Thread`, which starts from an empty
+# context on this Python; `carry` takes it there.
+_bound: contextvars.ContextVar[Mapping[str, bool] | None] = contextvars.ContextVar(
+    "selecta_flag_answers", default=None
+)
+
+
+@contextlib.contextmanager
+def bound(answers: Mapping[str, bool] | None) -> Iterator[None]:
+    """`on` answers from `answers` inside this block, for the flags it names; every other flag,
+    and everything after the block, gets this process's answer. `None` binds nothing."""
+    if answers is None:
+        yield
+        return
+    token = _bound.set(MappingProxyType(dict(answers)))
+    try:
+        yield
+    finally:
+        _bound.reset(token)
+
+
+def carry[T](function: Callable[..., T]) -> Callable[..., T]:
+    """`function`, run with the flags bound where `carry` was called, for a thread to run."""
+    context = contextvars.copy_context()
+    return functools.partial(context.run, function)
+
+
 def on(flag_id: str) -> bool:
     states = effective()
     if flag_id not in states:
         raise KeyError(f"There's no flag called {flag_id!r}.")
+    answers = _bound.get()
+    if answers is not None and flag_id in answers:
+        return answers[flag_id]
     return states[flag_id].on
 
 

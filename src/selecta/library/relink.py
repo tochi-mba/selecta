@@ -11,7 +11,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from selecta import db
+from selecta import db, flags
 from selecta.library.relevance import normalize_music
 from selecta.library.scan import library_folders, read_file
 
@@ -55,13 +55,20 @@ def _references(conn: sqlite3.Connection, ids: set[int]) -> dict[str, int]:
     def count(sql: str, twice: bool = False) -> int:
         return int(conn.execute(sql, values + values if twice else values).fetchone()[0])
 
+    if flags.on("core.engine_store"):
+        from selecta.engine_store import library
+        from selecta.engine_store import ratings as stored
+
+        rated = stored.count_touching(library.store_of(conn), ids)
+    else:
+        rated = count(
+            f"SELECT COUNT(*) FROM ratings WHERE song_a IN ({marks}) OR song_b IN ({marks})",  # noqa: S608
+            twice=True,
+        )
     return {
         "current_mix": count(f"SELECT COUNT(*) FROM queue WHERE song_id IN ({marks})"),  # noqa: S608
         "drafts": in_drafts,
-        "ratings": count(
-            f"SELECT COUNT(*) FROM ratings WHERE song_a IN ({marks}) OR song_b IN ({marks})",
-            twice=True,
-        ),  # noqa: S608
+        "ratings": rated,
         "corrections": count(f"SELECT COUNT(*) FROM song_overrides WHERE song_id IN ({marks})"),  # noqa: S608
         "discoveries": count(
             f"SELECT COUNT(*) FROM seam_book WHERE song_a IN ({marks}) OR song_b IN ({marks})",

@@ -65,7 +65,12 @@ def create_app(
     try:
         # Apply a validated restore only before database connections or
         # render/analysis workers start; never replace an active SQLite file.
-        activate_pending_restore(settings)
+        if activate_pending_restore(settings) and flags.on("core.engine_store"):
+            # a restored file may be older than this app: bring its engine tables forward now,
+            # after the upgrade backup, before anything reads them
+            from selecta import db
+
+            db.connect(settings.db_path).close()
     except (BackupError, OSError) as problem:
         restore_problem = str(problem)
         if not settings.db_path.exists():
@@ -282,6 +287,12 @@ def create_app(
 
     if prepare_links:
         threading.Thread(target=watch_for_new_songs, daemon=True).start()
+
+    if prepare_links and flags.on("core.engine_store"):
+        # one gentle pass filling the songs' content hashes, which never re-analyses anything
+        from selecta.engine_store import song_hashes
+
+        song_hashes.start_in_background(settings.db_path)
 
     if prepare_links:
         store.prepare_links = True

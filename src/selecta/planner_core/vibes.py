@@ -1,0 +1,884 @@
+"""Mixes that are ready to play, one for each feeling the library can support.
+
+A mix is built around why someone would press it: a moment, a mood, a sound or a journey. Each one
+says which songs belong and which belong most, what shape its energy takes, how far the tempo may
+wander from song to song, and how its songs should hand over. Everything is measured against your
+own library, because "high energy" or "a sad song" only means something next to your other songs.
+
+Mixes favour pairs that can carry a real move, and a move is only planned if the songs can do it
+and it hasn't already failed on them. The planner is judged by what a person hears, not by what it
+hoped to render.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field, replace
+from typing import Any
+
+import numpy as np
+
+from selecta import flags
+from selecta.analysis.key import camelot_distance
+from selecta.analysis.song import SongInfo
+from selecta.planner_core.arc import target_energy
+from selecta.planner_core.beam import (
+    CLOSE_TEMPO,
+    FAR_KEYS,
+    LINK_BONUS,
+    WORDPLAY_LINK_BONUS,
+    PlannedSong,
+    plan_set,
+    ratings_lean,
+)
+from selecta.planner_core.choose import enumerate_candidates
+from selecta.planner_core.fit import ROLL_MAX_GAP, felt_bpm
+from selecta.planner_core.memory import SeamMemory
+from selecta.planner_core.moods import THEMES, is_english, is_seasonal, read_lyrics
+from selecta.planner_core.moves import move_on
+from selecta.planner_core.names import clean_artist
+from selecta.planner_core.stem_gates import can_arrange, can_intertwine
+from selecta.planner_core.wordreel import modes_for, ride_lines
+
+MIN_SONGS = 6
+DEFAULT_SONGS = 12
+WORD_SPACING = 4
+"""Outside a wordplay mix, leave this many songs between word hand-offs, so they stay special."""
+WORD_MOVES = ("word_blend", "word_exchange", "phrase_roll", "word_cut")
+PLAYED_SHARE = 0.65
+"""A mix plays about two thirds of each song, which is what a card's length is worked out from."""
+
+# Weights follow the listening reels: rides and filter sweeps were loved, blends mostly liked,
+# effects mostly not. They say what to reach for first, and MAX_SHARE stops any one of them
+# taking over, however well it scores, so a mix never settles into one trick.
+# tempo_ramp is no longer planned: every rated one was disliked, and its design forces the
+# 4-bar overlap the ratings also ruled out. The move stays available when a person asks for it.
+MOVE_WEIGHTS: dict[str, dict[str, float]] = {
+    "balanced": {
+        "bass_swap_blend": 2.5,
+        "filter_sweep": 2.0,
+        "delay_throw": 0.3,
+        "echo_out": 0.5,
+    },
+    "seamless": {"bass_swap_blend": 2.5, "filter_sweep": 2.0},
+    "punchy": {"cut_on_one": 1.0, "echo_out": 1.2, "delay_throw": 0.6, "bass_swap_blend": 1.0},
+    "wordplay": {"bass_swap_blend": 2.0, "filter_sweep": 1.5},
+}
+RIDE_WEIGHT = {"balanced": 3.0, "seamless": 3.0, "wordplay": 1.5, "punchy": 1.5}
+MAX_SHARE = {
+    "vocal_ride": 0.35,
+    "stem_intertwine": 0.3,
+    "stem_arrange": 0.2,
+    "bass_swap_blend": 0.4,
+    "filter_sweep": 0.3,
+    "tempo_ramp": 0.25,
+    "cut_on_one": 0.3,
+    "echo_out": 0.25,
+    "delay_throw": 0.25,
+}
+"""The most of a mix's seams any one move should take."""
+FAMILIES = {
+    "bass_swap_blend": "blend",
+    "filter_sweep": "blend",
+    "tempo_ramp": "blend",
+    "delay_throw": "effect",
+    "echo_out": "effect",
+    "cut_on_one": "effect",
+    "vocal_ride": "voice",
+    "stem_intertwine": "blend",
+}
+ROLL_GAP = ROLL_MAX_GAP
+ROLL_SHOWCASE_GAP = 0.5
+BLEND_SHOWCASE_GAP = 0.08
+ARRANGE_WEIGHT = 1.5
+"""Less than a vocal ride for now. It has one example behind it, and rides have dozens. Ratings
+move it up or down through the same memory as every other move."""
+OVER_SHARE = 0.05
+SONG_RECORD_WEIGHT = 0.3
+"""Songs that keep rendering badly get picked a little less, and clean ones a little more."""
+RECENT_PENALTY = 0.45
+SAME_FAMILY_PENALTY = 0.35
+MOVE_WORDS = {
+    "balanced": "Vocal rides and blends, with the odd echo",
+    "seamless": "Vocal rides and long blends",
+    "punchy": "Echoes, throws and hard landings",
+    "wordplay": "Word hand-offs wherever they hold up",
+}
+
+
+@dataclass(frozen=True)
+class Traits:
+    """What a mix can ask about a song, on your library's own scale of 0 to 1."""
+
+    energy: float
+    felt: float
+    year: int | None
+    minor: bool = False
+    hook: float = 0.0
+    wordy: float = 0.0
+    english: bool = False
+    seasonal: bool = False
+    themes: dict[str, float] = field(default_factory=dict)
+
+    def about(self, theme: str) -> float:
+        return self.themes.get(theme, 0.0)
+
+
+def _anything(_: SongInfo, __: Traits) -> bool:
+    return True
+
+
+def _energetic(_: SongInfo, t: Traits) -> float:
+    return t.energy
+
+
+@dataclass(frozen=True)
+class Vibe:
+    key: str
+    name: str
+    blurb: str
+    fits: Callable[[SongInfo, Traits], bool]
+    group: str = ""
+    belongs: Callable[[SongInfo, Traits], float] = _energetic
+    """Among the songs that fit, which belong most. These lead, and they're who the card names."""
+    language: str = "balanced"
+    arc: str = "slow_burn"
+    wordplay: bool = False
+    seasonal: bool = False
+    steady: float = 0.35
+    """How strongly to stick to pairs that can carry a real move, rather than the best next song."""
+    family: str | None = None
+    """When set, this candidate has a hard musical-family boundary, not a ranking preference."""
+
+
+MOMENT = "The moment"
+MOOD = "The mood"
+SOUND = "The sound"
+JOURNEY = "The journey"
+GROUPS = (MOMENT, MOOD, SOUND, JOURNEY)
+
+FAMILY_NAMES = {
+    "afro": "Afrobeats & amapiano",
+    "dance": "Dance & house",
+    "hiphop": "Hip-hop",
+    "latin": "Latin",
+    "pop": "Pop",
+    "rnb": "R&B & soul",
+    "rock": "Rock & indie",
+}
+COHESIVE_JOURNEYS = {"slow_burn", "lift_off", "cool_down", "no_dips", "wordplay"}
+
+VIBES: tuple[Vibe, ...] = (
+    Vibe(
+        "pick",
+        "SelectaDJ’s pick",
+        "The strongest run it can find through your whole library, with a word hand-off or two.",
+        _anything,
+    ),
+    # ---- the moment: why you've put music on
+    Vibe(
+        "getting_ready",
+        "Getting ready",
+        "For the mirror. Confident songs that climb towards going out.",
+        lambda s, t: (
+            s.family in {"pop", "rnb", "hiphop", "afro", "dance", "latin"}
+            and 0.35 <= t.energy <= 0.9
+            and 92 <= t.felt <= 128
+            and (t.about("party") >= 0.5 or t.about("flex") >= 0.6 or t.hook >= 0.6)
+        ),
+        group=MOMENT,
+        belongs=lambda _, t: max(t.about("party"), t.about("flex")) + 0.3 * t.hook,
+        arc="climb",
+    ),
+    Vibe(
+        "house_party",
+        "House party",
+        "Songs people know at dance floor tempos, with long blends, and nothing lets up.",
+        lambda s, t: (
+            s.family in {"dance", "pop", "afro", "latin", "rnb"}
+            and 112 <= t.felt <= 135
+            and t.energy >= 0.3
+        ),
+        group=MOMENT,
+        belongs=lambda _, t: t.about("party") + 0.5 * t.hook + 0.3 * t.energy,
+        language="seamless",
+        arc="peak_time",
+        steady=0.5,
+    ),
+    Vibe(
+        "peak",
+        "Peak time",
+        "Your biggest songs, kept up high and locked to a tempo.",
+        lambda _, t: t.energy >= 0.6 and 100 <= t.felt <= 145,
+        group=MOMENT,
+        language="seamless",
+        arc="peak_time",
+        steady=0.5,
+    ),
+    Vibe(
+        "workout",
+        "Workout",
+        "Hard and steady, with no dips, so you can hold your pace.",
+        lambda _, t: t.energy >= 0.55 and 118 <= t.felt <= 150,
+        group=MOMENT,
+        language="seamless",
+        arc="steady",
+        steady=0.6,
+    ),
+    Vibe(
+        "road_trip",
+        "Road trip",
+        "Big choruses you can shout along to, windows down.",
+        lambda s, t: (
+            s.family in {"rock", "pop", "other", "rnb"}
+            and 88 <= t.felt <= 140
+            and (t.hook >= 0.5 or t.about("open_road") >= 0.7)
+        ),
+        group=MOMENT,
+        belongs=lambda _, t: t.hook + 0.6 * t.about("open_road") + (0.2 if not t.minor else 0.0),
+    ),
+    Vibe(
+        "dinner_party",
+        "Dinner with friends",
+        "Warm, familiar songs that leave room for conversation and still move.",
+        lambda s, t: (
+            s.family in {"rnb", "pop", "afro", "latin", "rock", "other"}
+            and 78 <= t.felt <= 126
+            and 0.18 <= t.energy <= 0.7
+        ),
+        group=MOMENT,
+        belongs=lambda _, t: 0.6 * t.hook + 0.4 * (1.0 - abs(t.energy - 0.45)),
+        language="seamless",
+        arc="slow_burn",
+        steady=0.55,
+    ),
+    Vibe(
+        "commute",
+        "On the move",
+        "A bright, forward-moving run for the train, the car or the walk home.",
+        lambda _, t: 84 <= t.felt <= 140 and 0.28 <= t.energy <= 0.86,
+        group=MOMENT,
+        belongs=lambda _, t: 0.55 * t.hook + 0.45 * t.energy,
+        arc="climb",
+    ),
+    # ---- the mood: how you're feeling
+    Vibe(
+        "feelings",
+        "In your feelings",
+        "Songs about the one who left. Slow and close, with no rush.",
+        lambda _, t: (
+            t.about("heartbreak") >= 0.65
+            and t.felt <= 125
+            and t.energy <= 0.75
+            and t.about("party") < 0.75
+        ),
+        group=MOOD,
+        belongs=lambda _, t: t.about("heartbreak") + (0.2 if t.minor else 0.0),
+        language="seamless",
+        arc="wind_down",
+        steady=0.5,
+    ),
+    Vibe(
+        "in_love",
+        "Falling for you",
+        "Love songs, warm and bright, that mean every word.",
+        lambda s, t: (
+            t.about("love") >= 0.65
+            and t.felt <= 128
+            and t.about("heartbreak") < 0.7
+            and t.about("flex") < 0.7
+            and s.family != "hiphop"
+        ),
+        group=MOOD,
+        belongs=lambda _, t: t.about("love") + (0.2 if not t.minor else 0.0),
+        language="seamless",
+        steady=0.5,
+    ),
+    Vibe(
+        "late_night",
+        "Late night",
+        "Low lights, slower tempos, voices up close.",
+        lambda s, t: (
+            s.family in {"rnb", "hiphop", "pop", "other", "afro"}
+            and t.felt <= 108
+            and t.energy <= 0.65
+        ),
+        group=MOOD,
+        belongs=lambda _, t: t.about("night") + 0.5 * (1.0 - t.energy),
+        language="seamless",
+        steady=0.5,
+    ),
+    Vibe(
+        "sunday",
+        "Sunday morning",
+        "Easy and warm, leaning to major keys, with nothing in a hurry.",
+        lambda s, t: (
+            t.energy <= 0.45
+            and t.felt <= 125
+            and t.about("flex") < 0.7
+            and s.family not in {"hiphop", "dance"}
+        ),
+        group=MOOD,
+        belongs=lambda _, t: (1.0 - t.energy) + (0.5 if not t.minor else 0.0),
+        language="seamless",
+        arc="wind_down",
+        steady=0.5,
+    ),
+    Vibe(
+        "confidence",
+        "Main character",
+        "Hooks, swagger and lift - songs that make the room feel like yours.",
+        lambda _, t: t.energy >= 0.42 and (t.about("flex") >= 0.55 or t.hook >= 0.62),
+        group=MOOD,
+        belongs=lambda _, t: t.about("flex") + 0.55 * t.hook + 0.25 * t.energy,
+        language="punchy",
+        arc="climb",
+    ),
+    Vibe(
+        "quiet_focus",
+        "Quiet focus",
+        "Low-distraction songs that settle in and keep the energy even.",
+        lambda _, t: t.energy <= 0.48 and 68 <= t.felt <= 122 and t.about("party") < 0.7,
+        group=MOOD,
+        belongs=lambda _, t: (1.0 - t.energy) + 0.2 * (1.0 - t.wordy),
+        language="seamless",
+        arc="steady",
+        steady=0.65,
+    ),
+    # ---- the sound: what you want to hear
+    Vibe(
+        "afro_heat",
+        "Afro heat",
+        "Afrobeats and amapiano, end to end, with voices riding each other’s drums.",
+        lambda s, _: s.family == "afro",
+        group=SOUND,
+        language="seamless",
+        steady=0.5,
+    ),
+    Vibe(
+        "rap_run",
+        "Rap run",
+        "Hip-hop mixed the way rap gets mixed, landing hard on the one.",
+        lambda s, t: s.family == "hiphop",
+        group=SOUND,
+        belongs=lambda _, t: t.wordy + 0.5 * t.about("flex"),
+        language="punchy",
+    ),
+    Vibe(
+        "rnb_hours",
+        "R&B hours",
+        "Soul and R&B, with vocals that take turns.",
+        lambda s, _: s.family == "rnb",
+        group=SOUND,
+        belongs=lambda _, t: t.about("love") + 0.3 * (1.0 - t.energy),
+        language="seamless",
+        steady=0.5,
+    ),
+    Vibe(
+        "throwbacks",
+        "Throwbacks",
+        "Everything from before 2010, oldest on your shelf included.",
+        lambda _, t: t.year is not None and t.year < 2010,
+        group=SOUND,
+        belongs=lambda _, t: t.hook + 0.3 * t.energy,
+    ),
+    Vibe(
+        "dance_floor",
+        "Dance floor",
+        "Dance, house and Latin energy with clean momentum and room to blend.",
+        lambda s, t: s.family in {"dance", "latin", "afro"} and t.energy >= 0.38,
+        group=SOUND,
+        belongs=lambda _, t: t.energy + 0.35 * t.about("party"),
+        language="seamless",
+        arc="peak_time",
+        steady=0.58,
+    ),
+    Vibe(
+        "guitars",
+        "Guitars out",
+        "Rock, indie and guitar-led songs with choruses given space to land.",
+        lambda s, _: s.family == "rock",
+        group=SOUND,
+        belongs=lambda _, t: 0.65 * t.hook + 0.35 * t.energy,
+        language="punchy",
+    ),
+    Vibe(
+        "christmas",
+        "Christmas",
+        "Only the Christmas songs, kept out of every other mix.",
+        lambda _, t: t.seasonal,
+        group=SOUND,
+        belongs=lambda _, t: t.hook + 0.3 * t.energy,
+        seasonal=True,
+    ),
+    # ---- the journey: where it goes
+    Vibe(
+        "slow_burn",
+        "Slow burn",
+        "Starts low and climbs, with a second peak near the end.",
+        _anything,
+        group=JOURNEY,
+        language="seamless",
+        steady=0.5,
+    ),
+    Vibe(
+        "lift_off",
+        "Lift off",
+        "Starts easy, keeps finding another gear and finishes at full height.",
+        _anything,
+        group=JOURNEY,
+        language="balanced",
+        arc="climb",
+    ),
+    Vibe(
+        "cool_down",
+        "Bring it home",
+        "Begins with energy, then lands somewhere warmer and more spacious.",
+        _anything,
+        group=JOURNEY,
+        language="seamless",
+        arc="wind_down",
+        steady=0.5,
+    ),
+    Vibe(
+        "no_dips",
+        "No dips",
+        "A high, steady run picked across your library when you want momentum over genre.",
+        lambda _, t: t.energy >= 0.5,
+        group=JOURNEY,
+        language="punchy",
+        arc="steady",
+        steady=0.68,
+    ),
+    Vibe(
+        "wordplay",
+        "Wordplay showcase",
+        "Runs through the phrases your songs share, one hand-off after another.",
+        _anything,
+        group=JOURNEY,
+        language="wordplay",
+        wordplay=True,
+    ),
+)
+BY_KEY = {vibe.key: vibe for vibe in VIBES}
+
+
+def family_vibe(vibe: Vibe, family: str) -> Vibe:
+    """Bind a broad energy journey to one musical family.
+
+    Energy shape is not permission to ignore musical identity. A journey can vary within
+    Afrobeats, R&B or any other supported family, but it must not silently fill an Afrobeats
+    candidate with unrelated songs merely because their energy curve happens to fit.
+    """
+    label = FAMILY_NAMES.get(family, family.replace("_", " ").title())
+    original_fits = vibe.fits
+    return replace(
+        vibe,
+        key=f"{vibe.key}__{family}",
+        name=f"{label} · {vibe.name}",
+        blurb=f"{vibe.blurb} Drawn only from your {label.lower()} songs.",
+        fits=lambda song, traits: song.family == family and original_fits(song, traits),
+        family=family,
+    )
+
+
+# Mix ideas that answer to a flag of their own, beyond mixes.ideas itself.
+VIBE_FLAGS = {"christmas": "mixes.seasonal", "wordplay": "mixes.wordplay_showcase"}
+
+
+def vibe_on(key: str) -> bool:
+    """Whether this build offers the mix idea. Selecta's pick is core: it's how Quick Play and
+    "Start a mix here" work, so it's always there."""
+    base = key.split("__", 1)[0]
+    if base == "pick":
+        return True
+    if not flags.on("mixes.ideas"):
+        return False
+    if "__" in key and not flags.on("mixes.genre_variants"):
+        return False
+    return flags.on(VIBE_FLAGS[base]) if base in VIBE_FLAGS else True
+
+
+def candidate_vibes(songs: list[SongInfo], traits: dict[int, Traits]) -> tuple[Vibe, ...]:
+    """Return only truthful cards, including every family-specific journey the library supports."""
+    families = sorted(
+        FAMILY_NAMES,
+        key=lambda family: (
+            -sum(song.family == family and not traits[song.id].seasonal for song in songs),
+            FAMILY_NAMES[family],
+        ),
+    )
+    supported = [
+        family
+        for family in families
+        if sum(song.family == family and not traits[song.id].seasonal for song in songs)
+        >= MIN_SONGS
+    ]
+    cards: list[Vibe] = []
+    for vibe in VIBES:
+        if not vibe_on(vibe.key):
+            continue
+        # without single-genre journeys, a journey draws from the whole library, as it first did
+        if vibe.key not in COHESIVE_JOURNEYS or not flags.on("mixes.genre_variants"):
+            cards.append(vibe)
+            continue
+        for family in supported:
+            candidate = family_vibe(vibe, family)
+            if len(eligible(candidate, songs, traits)) >= MIN_SONGS:
+                cards.append(candidate)
+    return tuple(cards)
+
+
+def resolve_vibe(key: str) -> Vibe | None:
+    """Resolve static cards and the family-bound journey keys emitted by ``candidate_vibes``."""
+    if not vibe_on(key):
+        return None
+    if "__" not in key:
+        return BY_KEY.get(key)
+    base, family = key.rsplit("__", 1)
+    vibe = BY_KEY.get(base)
+    if vibe is None or base not in COHESIVE_JOURNEYS or family not in FAMILY_NAMES:
+        return None
+    return family_vibe(vibe, family)
+
+
+def _ranks(values: list[float]) -> np.ndarray:
+    """Each value's place among the rest, from 0 to 1. Ties share the lowest place, so a song with
+    none of a thing doesn't rank above other songs with none of it."""
+    array = np.array(values)
+    if array.size < 2:
+        return np.zeros(array.size)
+    return np.searchsorted(np.sort(array), array, side="left") / (array.size - 1)
+
+
+def traits_of(songs: list[SongInfo], years: dict[int, Any]) -> dict[int, Traits]:
+    """Each song's traits, measured against the rest of this library."""
+    if not songs:
+        return {}
+    facts = [read_lyrics(song) for song in songs]
+    energy = _ranks([song.energy for song in songs])
+    hook = _ranks([fact.hook for fact in facts])
+    wordy = _ranks([fact.density for fact in facts])
+    theme = {name: _ranks([fact.themes.get(name, 0.0) for fact in facts]) for name in THEMES}
+    traits = {}
+    for i, (song, fact) in enumerate(zip(songs, facts, strict=True)):
+        text = str(years.get(song.id) or "")[:4]
+        traits[song.id] = Traits(
+            energy=float(energy[i]),
+            felt=felt_bpm(song),
+            year=int(text) if text.isdigit() else None,
+            minor=(song.camelot or "").endswith("A"),
+            hook=float(hook[i]),
+            wordy=float(wordy[i]),
+            english=fact.english,
+            seasonal=is_seasonal(song),
+            themes={name: float(theme[name][i]) for name in THEMES},
+        )
+    return traits
+
+
+def eligible(vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits]) -> list[SongInfo]:
+    return [
+        song
+        for song in songs
+        if vibe.fits(song, traits[song.id]) and (vibe.seasonal or not traits[song.id].seasonal)
+    ]
+
+
+# GP-0259-07: what a card may say it was chosen by. Read from the code of the idea's own tests, so
+# a card never names evidence (a mood, a genre) that its songs were not actually measured for.
+EVIDENCE_WORDS = {
+    "family": "genre tags",
+    "felt": "tempo",
+    "energy": "energy",
+    "about": "lyric themes",
+    "hook": "hook strength",
+    "wordy": "how wordy the lyrics are",
+    "minor": "major or minor key",
+    "year": "release year",
+    "seasonal": "seasonal tags",
+}
+
+
+def _names_read(fn: Callable, seen: set[int] | None = None) -> set[str]:
+    seen = seen if seen is not None else set()
+    code = getattr(fn, "__code__", None)
+    if code is None or id(code) in seen:
+        return set()
+    seen.add(id(code))
+    names: set[str] = set()
+    pending = [code]
+    while pending:
+        current = pending.pop()
+        names.update(current.co_names)
+        pending.extend(const for const in current.co_consts if hasattr(const, "co_names"))
+    for cell in getattr(fn, "__closure__", None) or ():
+        if callable(cell.cell_contents):
+            names |= _names_read(cell.cell_contents, seen)
+    return names
+
+
+def evidence(vibe: Vibe) -> list[str]:
+    """The measured song facts this idea chooses and ranks its songs by, in plain words."""
+    names = _names_read(vibe.fits) | _names_read(vibe.belongs)
+    if vibe.family:
+        names.add("family")
+    if vibe.arc:
+        names.add("energy")  # every energy shape is planned from measured energy
+    return [words for name, words in EVIDENCE_WORDS.items() if name in names]
+
+
+def belonging(name: str, songs: list[SongInfo], traits: dict[int, Traits]) -> dict[int, float]:
+    """How much each song suits the mix of this name, 0 to 1, for choosing what to add to it. Songs
+    that fit start at a half. A mix someone made themselves has no such opinion."""
+    vibe = next((item for item in VIBES if item.name == name), None)
+    if vibe is None:
+        return {}
+    values = {
+        song.id: vibe.belongs(song, traits[song.id]) for song in eligible(vibe, songs, traits)
+    }
+    top = max(values.values(), default=1.0) or 1.0
+    return {song: 0.5 + 0.5 * max(value / top, 0.0) for song, value in values.items()}
+
+
+def _blurb(vibe: Vibe) -> str:
+    """What the idea promises, without a word hand-off when this build can't make one."""
+    if any(move_on(move) for move in WORD_MOVES):
+        return vibe.blurb
+    return vibe.blurb.replace(", with a word hand-off or two", "")
+
+
+def describe(
+    vibe: Vibe, songs: list[SongInfo], traits: dict[int, Traits], language: str | None = None
+) -> dict:
+    """What a mix's card shows. Everything on it is read from the songs that would really play.
+
+    ``language`` is the listener's saved transition feel, which a build uses instead of the idea's
+    own (GP-0259-01), so the card's moves line names the moves the build will really plan."""
+    found = eligible(vibe, songs, traits)
+    artists: list[str] = []
+    for song in sorted(found, key=lambda s: -vibe.belongs(s, traits[s.id])):
+        artist = clean_artist(song.artist)
+        if artist not in artists:
+            artists.append(artist)
+        if len(artists) == 4:
+            break
+    felt = [traits[song.id].felt for song in found]
+    return {
+        "key": vibe.key,
+        "name": vibe.name,
+        "blurb": _blurb(vibe),
+        "group": vibe.group,
+        "family": FAMILY_NAMES.get(vibe.family) if vibe.family else None,
+        "songs": len(found),
+        "ready": len(found) >= MIN_SONGS,
+        "needs": max(MIN_SONGS - len(found), 0),
+        "artists": artists,
+        "tempo": [round(float(np.percentile(felt, p))) for p in (10, 90)] if felt else None,
+        "moves": MOVE_WORDS.get(language or vibe.language, MOVE_WORDS[vibe.language]),
+        "basis": evidence(vibe),
+        "seconds": sum(song.duration for song in found) * PLAYED_SHARE,
+    }
+
+
+def _opening_song(
+    vibe: Vibe,
+    found: list[SongInfo],
+    traits: dict[int, Traits],
+    rng: np.random.Generator,
+    energy_arc: Sequence[float] | None = None,
+) -> SongInfo:
+    """A song near where this mix's energy shape begins, with somewhere to leave it."""
+    start = target_energy(0.0, vibe.arc, energy_arc)
+    usable = [song for song in found if song.exit_cues()] or found
+    usable.sort(key=lambda song: abs(traits[song.id].energy - start))
+    return usable[int(rng.integers(0, min(5, len(usable))))]
+
+
+def build_vibe(
+    vibe: Vibe,
+    songs: list[SongInfo],
+    traits: dict[int, Traits],
+    phrases: dict[tuple[int, int], str],
+    count: int = DEFAULT_SONGS,
+    start: int | None = None,
+    seed: int | None = None,
+    memory: SeamMemory | None = None,
+    mix_language: str | None = None,
+    end_id: int | None = None,
+    stems: str = "sometimes",
+    energy_arc: Sequence[float] | None = None,
+) -> tuple[list[PlannedSong], dict[int, dict]]:
+    """Plan a mix for this vibe, and say how each seam should land."""
+    found = eligible(vibe, songs, traits)
+    if end_id is not None:
+        destination = next((song for song in songs if song.id == end_id), None)
+        if destination is None:
+            raise ValueError(f"destination song {end_id} is not available in the mix-ready library")
+        if all(song.id != end_id for song in found):
+            if vibe.family:
+                family = FAMILY_NAMES.get(vibe.family, vibe.family)
+                raise ValueError(f"Choose a {family} song for this mix destination")
+            if vibe.seasonal:
+                raise ValueError("choose a Christmas song for the Christmas mix destination")
+            raise ValueError(f"That destination song does not belong in {vibe.name}.")
+    rng = np.random.default_rng(seed)
+    if not found:
+        raise ValueError(f"No matching mix-ready songs are available for {vibe.name}.")
+    if start is not None and all(song.id != start for song in found):
+        raise ValueError(f"That starting song does not belong in {vibe.name}.")
+    first = start if start is not None else _opening_song(vibe, found, traits, rng, energy_arc).id
+    memory = memory or SeamMemory()
+    belongs = {song.id: vibe.belongs(song, traits[song.id]) for song in found}
+    top = max(belongs.values(), default=1.0) or 1.0
+    language = mix_language or vibe.language
+    selected_vibe = replace(vibe, language=language)
+    planned = plan_set(
+        found,
+        first,
+        count,
+        mix_language=language,
+        stems=stems,
+        links=set(phrases) if vibe.wordplay or vibe.key == "pick" else set(),
+        arc=vibe.arc,
+        seed=int(rng.integers(0, 2**31)),
+        steady=vibe.steady,
+        belongs={
+            song: value / top + SONG_RECORD_WEIGHT * memory.song_value(song)
+            for song, value in belongs.items()
+        },
+        link_bonus=WORDPLAY_LINK_BONUS if vibe.wordplay else LINK_BONUS,
+        memory=memory,
+        end_id=end_id,
+        energy_arc=energy_arc,
+    )
+    if end_id is not None and (not planned or planned[-1].song.id != end_id):
+        raise ValueError(
+            "No valid transition route reaches that song in this mix. Clear the destination or "
+            "choose a different mix."
+        )
+    return planned, seam_choices(selected_vibe, planned, phrases, rng, memory, stems)
+
+
+def _word_move_suits(name: str, a: SongInfo, b: SongInfo, showcase: bool) -> bool:
+    """What the ratings showed: rolls were liked 4 in 5 within 15% of each other's tempo and close
+    keys, and 4 in 14 beyond that. Word blends overlap, so they need tempos as close as any
+    overlap does. A mix all about wordplay can stretch further."""
+    gap = abs(a.bpm / b.bpm - 1.0)
+    if camelot_distance(a.camelot, b.camelot) >= FAR_KEYS:
+        return False
+    if name == "phrase_roll":
+        return gap <= (ROLL_SHOWCASE_GAP if showcase else ROLL_GAP)
+    if name in {"word_blend", "word_exchange"}:
+        return gap <= CLOSE_TEMPO or (showcase and gap <= BLEND_SHOWCASE_GAP)
+    return True
+
+
+def _word_move(a: SongInfo, b: SongInfo, memory: SeamMemory, showcase: bool = False) -> str | None:
+    """A word hand-off these two can really carry. It needs both sets of words timed, which only
+    works in English and has already failed on some songs."""
+    if not (is_english(a) and is_english(b)):
+        return None
+    if not (memory.can_time_words(a.id) and memory.can_time_words(b.id)):
+        return None
+    options = [
+        name
+        for name in modes_for(a, b)
+        if name in WORD_MOVES
+        and move_on(name)
+        and memory.move_factor(a.id, b.id, name) > 0
+        and _word_move_suits(name, a, b, showcase)
+    ]
+    proven = [name for name in options if memory.proven(a.id, b.id, name)]
+    return (proven or options or [None])[0]
+
+
+def _moves_that_fit(
+    vibe: Vibe, a: SongInfo, b: SongInfo, memory: SeamMemory, stems: str = "sometimes"
+) -> list[tuple[str, float]]:
+    """Moves these two songs can carry, and how much to favour each. Only moves this build can
+    make, and none that need stems if stems are turned off."""
+    stems = stems if flags.on("stems") else "never"
+    options: list[tuple[str, float]] = []
+    overlap_lean, other_lean = ratings_lean(a, b), ratings_lean(a, b, overlapping=False)
+    ride = memory.move_factor(a.id, b.id, "vocal_ride")
+    if stems != "never" and ride > 0 and "word_blend" in modes_for(a, b) and ride_lines(a, b):
+        ride_weight = RIDE_WEIGHT[vibe.language] * (1.5 if stems == "often" else 1.0)
+        options.append(("vocal_ride", ride_weight * ride * overlap_lean))
+    intertwine = memory.move_factor(a.id, b.id, "stem_intertwine")
+    if stems != "never" and intertwine > 0 and can_intertwine(a, b):
+        options.append(("stem_intertwine", (0.35 if stems == "sometimes" else 1.3) * intertwine))
+    arrange = memory.move_factor(a.id, b.id, "stem_arrange")
+    if stems != "never" and arrange > 0 and can_arrange(a, b):
+        weight = ARRANGE_WEIGHT * (1.5 if stems == "often" else 1.0)
+        options.append(("stem_arrange", weight * arrange * overlap_lean))
+    exits, entries = a.exit_cues()[:3], b.entry_cues()[:4]
+    for name, weight in MOVE_WEIGHTS[vibe.language].items():
+        known = memory.move_factor(a.id, b.id, name)
+        if known > 0 and enumerate_candidates(a, b, name, exits=exits, entries=entries):
+            lean = overlap_lean if name in {"bass_swap_blend", "filter_sweep"} else other_lean
+            options.append((name, weight * known * lean))
+    return [(name, weight) for name, weight in options if move_on(name)]
+
+
+def _choose_move(
+    options: list[tuple[str, float]],
+    history: list[str],
+    total: int,
+    rng: np.random.Generator,
+) -> str | None:
+    """Pick a move with the rest of the mix in mind. What works best gets picked most, but less
+    so the more this mix has already used it, and never twice running if anything else fits."""
+    fresh = [option for option in options if not history or option[0] != history[-1]] or options
+    if not fresh:
+        return None
+    weights = []
+    for name, weight in fresh:
+        share_left = MAX_SHARE.get(name, 0.25) * total - history.count(name)
+        weight *= OVER_SHARE if share_left < 1 else 1.0
+        weight *= RECENT_PENALTY ** history[-3:].count(name)
+        family = FAMILIES.get(name)
+        if family and len(history) >= 2 and all(FAMILIES.get(m) == family for m in history[-2:]):
+            weight *= SAME_FAMILY_PENALTY
+        weights.append(weight)
+    chances = np.array(weights)
+    return fresh[int(rng.choice(len(fresh), p=chances / chances.sum()))][0]
+
+
+def seam_choices(
+    vibe: Vibe,
+    planned: list[PlannedSong],
+    phrases: dict[tuple[int, int], str],
+    rng: np.random.Generator | None = None,
+    memory: SeamMemory | None = None,
+    stems: str = "sometimes",
+) -> dict[int, dict]:
+    """The move into each song, chosen from what fits and what the mix has already used, so no two
+    mixes run the same way and no one move takes over. Word hand-offs go where a real link can be
+    timed, and stay rare unless the mix is all about them. Every choice is soft: if it doesn't work
+    out when it's rendered, the seam uses the next best thing, and a cut only as a last resort."""
+    rng = rng or np.random.default_rng()
+    memory = memory or SeamMemory()
+    stems = stems if flags.on("stems") else "never"
+    seams: dict[int, dict] = {}
+    since_word = WORD_SPACING
+    history: list[str] = []
+    total = max(len(planned) - 1, 1)
+    for before, item in zip(planned, planned[1:], strict=False):
+        since_word += 1
+        phrase = phrases.get((before.song.id, item.song.id))
+        word_spacing = 2 if stems == "often" else WORD_SPACING
+        if stems != "never" and phrase and (vibe.wordplay or since_word >= word_spacing):
+            move = _word_move(before.song, item.song, memory, vibe.wordplay)
+            if move:
+                seams[item.song.id] = {"move": move, "phrase": phrase, "soft": True}
+                since_word = 0
+                history.append(move)
+                continue
+        options = _moves_that_fit(vibe, before.song, item.song, memory, stems)
+        move = _choose_move(options, history, total, rng)
+        if move is None:
+            continue
+        seams[item.song.id] = {"move": move, "soft": True}
+        history.append(move)
+    return seams

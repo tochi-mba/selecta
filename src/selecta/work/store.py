@@ -16,7 +16,7 @@ import contextlib
 import json
 import random
 import threading
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from typing import Any, Protocol
 
 import sqlalchemy as sa
@@ -159,6 +159,13 @@ class JobStore:
         heads.create_lanes(connection, db_now(connection))
         self._lanes_ready = True
         heads.lock_all_lanes(connection)
+
+    def flag_answers(self, workspace_id: str) -> Mapping[str, bool] | None:
+        """Every flag as this workspace gets it, for a runner to bind while one of its jobs runs
+        (ADR-0479); None where the flag port decides one flag at a time, as on Desktop, whose
+        jobs then read this process's flags as before."""
+        decide_all = getattr(self.flags, "answers", None)
+        return None if decide_all is None else decide_all(workspace_id)
 
     def _remember(self, attempt_id: str, workspace_id: str) -> None:
         with self._lock:

@@ -13,7 +13,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from selecta import local_upgrade
+from selecta import flags, local_upgrade
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS songs (
@@ -216,7 +216,7 @@ def _already_checked(conn: sqlite3.Connection, identity: tuple[str, int, int] | 
     return (
         cookie is not None
         and cookie == _schema_cookie(conn)
-        and local_upgrade.schema_version(conn) >= local_upgrade.LOCAL_SCHEMA_VERSION
+        and not local_upgrade.upgrade_needed(conn)
     )
 
 
@@ -279,6 +279,11 @@ def connect(path: Path) -> sqlite3.Connection:
     _saved_mixes_become_drafts(conn)
     _legacy_kinds_renamed(conn)
     local_upgrade.mark_migrated(conn)
+    if flags.on("core.engine_store"):
+        # the engine tables' own migrations, stamped and run only now, after the backup above
+        from selecta.engine_store import library
+
+        library.bring_forward(path)
     identity = identity or _identity(path)  # a new file exists only once it has been opened
     if identity is not None:
         with _checked_lock:
@@ -290,11 +295,24 @@ def upsert_song(conn: sqlite3.Connection, song: dict[str, Any]) -> None:
     columns = list(song)
     placeholders = ", ".join(f":{c}" for c in columns)
     updates = ", ".join(f"{c}=excluded.{c}" for c in columns if c != "path")
+    if {"size", "mtime"} <= set(song) and "content_hash" not in song and _hashes_songs(conn):
+        # a file that changed is other bytes, so the hash it had (core.engine_store) goes; the
+        # hash job or the next analysis fills it again. Kept even with the flag off, so a hash
+        # never outlives its file whichever way the flag was when the file changed.
+        updates += (
+            ", content_hash=CASE WHEN songs.size IS NOT excluded.size "
+            "OR songs.mtime IS NOT excluded.mtime THEN NULL ELSE songs.content_hash END"
+        )
     conn.execute(
         f"INSERT INTO songs ({', '.join(columns)}) VALUES ({placeholders}) "
         f"ON CONFLICT(path) DO UPDATE SET {updates}",
         song,
     )
+
+
+def _hashes_songs(conn: sqlite3.Connection) -> bool:
+    """Whether this library has `songs.content_hash`, added by the engine store's migration."""
+    return any(row[1] == "content_hash" for row in conn.execute("PRAGMA table_info(songs)"))
 
 
 def known_files(conn: sqlite3.Connection) -> dict[str, tuple[int, float]]:

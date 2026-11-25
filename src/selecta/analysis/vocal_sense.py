@@ -14,8 +14,10 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from selecta import flags
 from selecta.config import Settings
+
+# whether to listen is a flag read the planner core shares; it stays importable from here
+from selecta.planner_core.moves import sense_on
 
 FRAME_SECONDS = 0.05
 PRESENT_DB = -35.0
@@ -24,10 +26,6 @@ MIN_SING_SECONDS = 0.3
 """Shorter bursts are consonants and bleed, not a line."""
 JOIN_GAP_SECONDS = 0.35
 """A breath inside a line, not a gap between lines."""
-
-
-def sense_on() -> bool:
-    return flags.on("analysis.vocal_sense") and flags.on("stems")
 
 
 def singing_spans(

@@ -26,6 +26,7 @@ itself mean that cloud behavior is wired into the running app.
 | [Conventions](conventions.md) | Database, time, flags, errors, secrets, style and git rules |
 | [How-to recipes](how-to.md) | Adding a flagged feature, a table, a job type, a permission, a plan entitlement |
 | [Testing](testing.md) | Running tests, the two-database fixtures, Hypothesis, CI and the coverage gate |
+| [Engine store](engine-store.md) | The one storage layer for the engine's tables, its workspace rule, migrations and how a slice moves |
 | [Glossary](glossary.md) | Lease, fencing token, lane, workspace, kill switch, speaker device and the rest |
 | [Design system](design-system.md) | Tokens, the type scale, breakpoints, motion and the exit protocol, every shared `ui/` part, the galleries and the guard tests |
 

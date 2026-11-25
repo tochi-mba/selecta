@@ -20,7 +20,7 @@ from selecta.arrange import (
     taste_from,
     why_it_cant,
 )
-from selecta.audit.checks import AuditReport, VocalSpans, audit, beat_offset
+from selecta.audit.checks import AuditReport, VocalSpans, audit, audit_facts, beat_offset
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner
 from selecta.lyrics.match import LyricLink, SongFacts, discover
@@ -35,6 +35,7 @@ from selecta.planner.wordreel import (
     ride_lengths,
     ride_lines,
 )
+from selecta.planner_core.repair import TIGHTEN, closer, take_step
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.render.intertwine import can_intertwine, intertwine_windows, render_intertwined
 from selecta.render.script import Part, TransitionScript, Warp
@@ -171,9 +172,8 @@ def _chosen_cue(song: SongInfo, bar: int) -> Cue:
 
 
 def _closer(report: AuditReport, than: AuditReport) -> bool:
-    """Is this take nearer to clean than that one?"""
-    miss = lambda r: (len(r.failures), sum(c.value - c.limit for c in r.failures))  # noqa: E731
-    return miss(report) < miss(than)
+    """Is this take nearer to clean than that one? The planner core's rule decides."""
+    return closer(audit_facts(report), audit_facts(than))
 
 
 def tighten_beats(
@@ -187,7 +187,7 @@ def tighten_beats(
         return audit(take) if vocal_spans is None else audit(take, vocal_spans=vocal_spans)
 
     report = hear(rendered)
-    if not any(check.name == "beat alignment" for check in report.failures):
+    if take_step(audit_facts(report)).action != TIGHTEN:
         return rendered, report
     offset = beat_offset(rendered)
     if offset is None:
@@ -204,7 +204,8 @@ def tighten_beats(
         replace(script, b=later(script.b), extras=[later(part) for part in script.extras]), cache
     )
     second_report = hear(second)
-    return (second, second_report) if _closer(second_report, report) else (rendered, report)
+    kept = take_step(audit_facts(report), audit_facts(second_report))
+    return (second, second_report) if kept.take == 1 else (rendered, report)
 
 
 def _stem_audit(rendered: Rendered, cache: SongCache) -> tuple[Rendered, AuditReport]:

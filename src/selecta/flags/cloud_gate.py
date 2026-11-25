@@ -28,6 +28,18 @@ from selecta.persistence import db_now
 def decide(conn: Connection, principal, flag_id: str, rules: RulesCache) -> targeting.Decision:
     """The targeting decision for this person in this workspace, inside the caller's
     transaction."""
+    context, inputs = _inputs(conn, principal, rules)
+    return targeting.decide(flag_id, context, **inputs)
+
+
+def answers(conn: Connection, principal, rules: RulesCache) -> dict[str, bool]:
+    """Every flag as this person in this workspace gets it, from the same layers as `decide`,
+    for `flags.bound` to hold for the length of their request."""
+    context, inputs = _inputs(conn, principal, rules)
+    return targeting.decide_all(context, **inputs).snapshot()
+
+
+def _inputs(conn: Connection, principal, rules: RulesCache) -> tuple[Context, dict]:
     # Reuse the request transaction. Opening a second connection here deadlocks a cold cache on
     # SQLite once the request has written, and needlessly spends another pooled connection on
     # PostgreSQL.
@@ -47,16 +59,14 @@ def decide(conn: Connection, principal, flag_id: str, rules: RulesCache) -> targ
         staff_roles=frozenset(role.value for role in principal.staff_roles),
         account_age_days=max(0.0, (now - principal.user.created_at) / 86_400),
     )
-    return targeting.decide(
-        flag_id,
-        context,
-        build_states=flags.effective(),
-        rules=snapshot,
-        entitled=plan.flags,
-        plan_gated=plans.plan_gated_flags(),
-        user_prefs=user_preferences(conn, principal.user.id),
-        now=now,
-    )
+    return context, {
+        "build_states": flags.effective(),
+        "rules": snapshot,
+        "entitled": plan.flags,
+        "plan_gated": plans.plan_gated_flags(),
+        "user_prefs": user_preferences(conn, principal.user.id),
+        "now": now,
+    }
 
 
 def require(conn: Connection, principal, flag_id: str, rules: RulesCache) -> None:
@@ -87,4 +97,4 @@ def require(conn: Connection, principal, flag_id: str, rules: RulesCache) -> Non
     )
 
 
-__all__ = ["decide", "require"]
+__all__ = ["answers", "decide", "require"]

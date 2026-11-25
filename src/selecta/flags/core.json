@@ -21,6 +21,14 @@
       "default": false,
       "kind": "release"
     },
+    "core.engine_store": {
+      "label": "Engine store",
+      "about": "The engine's tables (ratings first) read and written through one storage layer that Desktop and Cloud share, with each account's flags bound to its own requests and jobs. Off by default because it changes how the Desktop database is opened: it stays off until its backup and restore round trip has been proved on a copy of a real library.",
+      "default": false,
+      "kind": "release",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Storage underneath existing features; it adds no page of its own to the Cloud site."
+    },
     "core.library": {
       "label": "Library",
       "about": "Reading a music folder, setting aside what isn't music, and the Library page with search, filters and sorting.",

@@ -400,6 +400,18 @@ def _scaled_section(section: dict, factor: float) -> dict:
 
 
 def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> SongInfo:
+    if flags.on("core.engine_store") and not conn.in_transaction:
+        # The store reads the last commit through its own connection. A caller with writes
+        # still pending on `conn` reads through `conn` below instead, so it sees them as before.
+        from selecta.engine_store import library
+        from selecta.engine_store import songs as stored
+
+        return stored.load_song(
+            library.store_of(conn),
+            library.artifacts_for(settings),
+            song_id,
+            legacy=settings.features_dir,
+        )
     row = conn.execute(
         "SELECT s.*, a.bpm, a.constant_tempo, a.grid_confidence, a.beats_per_bar, a.camelot, "
         "a.key_confidence, a.lufs, a.peak_db, a.energy, a.sections "
@@ -408,11 +420,18 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
     ).fetchone()
     if row is None:
         raise KeyError(f"song {song_id} hasn't been analysed")
-    features = dict(load_features(settings, song_id, SONG_ARRAYS))
+    features = dict(load_features(settings, song_id, SONG_ARRAYS, from_file=True))
     lyric = conn.execute("SELECT * FROM lyrics WHERE song_id = ?", (song_id,)).fetchone()
     corrected = conn.execute(
         "SELECT bpm, camelot FROM song_overrides WHERE song_id = ?", (song_id,)
     ).fetchone()
+    return build_song(row, features, lyric, corrected)
+
+
+def build_song(row, features: dict, lyric, corrected) -> SongInfo:
+    """A `SongInfo` from a song's facts (`row`: its identity joined with its analysis), its
+    arrays, its lyrics row and its correction, either of which may be None. Shared by the
+    library's own read above and the engine store's (`engine_store.songs`)."""
     lines: list[Line] = []
     vocals_known = False
     instrumental = False

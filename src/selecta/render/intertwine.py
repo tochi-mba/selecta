@@ -9,9 +9,11 @@ import numpy as np
 import soundfile as sf
 
 from selecta import flags
-from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
 from selecta.config import SAMPLE_RATE, Settings
+
+# whether two songs can intertwine, and where, is decided from song facts in the planner core
+from selecta.planner_core.stem_gates import can_intertwine, intertwine_cues  # noqa: F401
 from selecta.render import dsp
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.render.script import Curve, TransitionScript
@@ -64,33 +66,7 @@ def _curve(count: int, points: list[tuple[float, float]]) -> np.ndarray:
     return values.astype(np.float32)[:, None]
 
 
-def _pair_that_fits(a: SongInfo, b: SongInfo) -> tuple[Cue, Cue] | None:
-    if abs(a.bpm / b.bpm - 1.0) > 0.03:
-        return None
-    if min(a.grid_confidence, b.grid_confidence) < 0.55:
-        return None
-    if a.beats_per_bar != b.beats_per_bar or camelot_distance(a.camelot, b.camelot) > 1:
-        return None
-    exits, entries = a.exit_cues(), b.entry_cues()
-    if not exits or not entries:
-        return None
-    beats = 16 * a.beats_per_bar
-    for exit_cue in exits:
-        if exit_cue.bar < 8:
-            continue
-        a_index = a.beat_index_of_bar(exit_cue.bar - 8)
-        if a_index + beats >= len(a.beats):
-            continue
-        for entry_cue in entries:
-            b_index = b.beat_index_of_bar(entry_cue.bar)
-            if b_index + beats < len(b.beats):
-                return exit_cue, entry_cue
-    return None
-
-
-def can_intertwine(a: SongInfo, b: SongInfo) -> bool:
-    """Cheap musical and phrase-length gates, before the expensive stem separation."""
-    return _pair_that_fits(a, b) is not None
+_pair_that_fits = intertwine_cues
 
 
 def _vocal_curve(duration: float, points: list[tuple[float, float]]) -> Curve:

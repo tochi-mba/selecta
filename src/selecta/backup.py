@@ -3,6 +3,20 @@
 Original music, downloaded models, generated stems and audio caches are never
 bundled or modified. A restore is prepared while the app runs and activated
 before any connections/workers are started on its next launch.
+
+With `core.engine_store` on, the library file also holds the engine tables' stamp
+(`engine_version`). A backup is a copy of the whole file, so the stamp travels with the rows it
+describes. A backup stamped by a newer SelectaDJ is refused, since this app could not read its
+engine tables; an older or unstamped one is restored as it is and brought forward by `db.connect`
+when the app starts (`api.create_app`), after the usual upgrade backup.
+
+The counts below read the staged copy read-only with plain `sqlite3`, not through the engine
+store: the store opens files for writing, and a backup being checked must never be changed.
+
+`work.sqlite`, the durable job store, is deliberately not in the backup yet. It holds jobs and
+leases, not the library: restoring an old one would bring back finished or fenced work, and
+Desktop's audio jobs only move onto it with the seams slice, which decides what of it is worth
+keeping (docs/todo, "work.sqlite in backups").
 """
 
 from __future__ import annotations
@@ -76,6 +90,27 @@ def _check_database(path: Path) -> dict[str, int]:
             conn.close()
     except sqlite3.DatabaseError as problem:
         raise BackupError("The backup database cannot be read.") from problem
+
+
+def _check_engine_stamp(path: Path) -> None:
+    """Refuse a backup whose engine tables are newer than this app (see the module notes)."""
+    from selecta import flags
+
+    if not flags.on("core.engine_store"):
+        return
+    from selecta.engine_store import library
+
+    conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+    try:
+        stamp = library.stamp_of(conn)
+    except sqlite3.DatabaseError as problem:
+        raise BackupError("The backup database cannot be read.") from problem
+    finally:
+        conn.close()
+    if stamp is not None and stamp not in library.known():
+        raise BackupError(
+            "This backup was made by a newer SelectaDJ. Update SelectaDJ, then restore it."
+        )
 
 
 def export_backup(conn: sqlite3.Connection, settings: Settings) -> bytes:
@@ -203,6 +238,7 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
         path = Path(tmp) / "selecta.sqlite"
         path.write_bytes(db_bytes)
         counts = _check_database(path)
+        _check_engine_stamp(path)
     counts["seam_history"] = len(names) - 2
     return manifest, db_bytes, counts
 
