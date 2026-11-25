@@ -34,7 +34,11 @@ const moved = (from: number, to: number): MixData => {
 const titles = () => [...document.querySelectorAll('.pe-story .pe-song h3')].map((h) => h.textContent?.replace(/^\d+\.\s*/, ''));
 const phone = () => vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === COMPACT || query === NARROWER, addEventListener: () => {}, removeEventListener: () => {} }));
 
-beforeEach(() => phone());
+// the editor for every screen is a browser mix's (the local app keeps its inspector and classic editor)
+beforeEach(() => {
+  phone();
+  act(() => setFlags({ seam_inspector: false }));
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   act(() => setFlags(null));
@@ -85,7 +89,7 @@ describe('the editor on a phone (editor.phone_layout)', () => {
   });
 
   it('a transition opens in a sheet that grows, and closes on Escape with focus back on the transition', async () => {
-    fakeBackend({ 'GET /mix/2/options': { moves: [], exits: [], entries: [], links: [], keys: [], tempo_gap: 0 } });
+    fakeBackend({});
     render(<Harness start={start} />);
     const connector = screen.getByRole('button', { name: /Transition from Song 1 into Song 2/ });
     await userEvent.click(connector);
@@ -128,7 +132,7 @@ describe('the editor on a phone (editor.phone_layout)', () => {
   });
 
   it('with the flag off the editor is exactly as it was', () => {
-    act(() => setFlags({ 'editor.phone_layout': false }));
+    act(() => setFlags({ seam_inspector: false, 'editor.phone_layout': false }));
     fakeBackend({});
     render(<Harness start={start} />);
     expect(document.querySelector('[data-editor-layout]')).toBeNull();

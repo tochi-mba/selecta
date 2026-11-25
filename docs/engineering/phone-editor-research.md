@@ -131,7 +131,7 @@ From the top:
   It opens a full-height sheet with search.
 
 The song menu (a sheet, so every item is a 44px row): Play from here, Move up, Move down, Move to the
-top, Move to the end, Add a song after this, Lock (local mode), Remove. Remove shows the usual "Removed
+top, Move to the end, Add a song after this, Lock (where songs can be locked), Remove. Remove shows the usual "Removed
 X" notice with Undo.
 
 The transition sheet, opened at half height:
@@ -149,8 +149,7 @@ The transition sheet, opened at half height:
 - **Compare with SelectaDJ's pick.** When a move is chosen: "Try SelectaDJ's pick" switches to the
   default and plays the transition again; "Back to {move}" switches back. Both are real choices saved
   as they are made, so what is heard is what is in the mix.
-- In local mode, where the server renders transitions, the sheet holds the full transition inspector
-  instead (Listen, Change with exact cues, Studio, Details, Compare with before).
+- The local app, where the server renders transitions, keeps its classic editor at every size (see 3.4).
 
 Gestures: swipe the grabber or header down to shrink, then to close; up to grow. A swipe that starts in
 the sheet's scrolled content only scrolls it. Escape and the Back button close it. Focus goes into the
@@ -165,10 +164,20 @@ the right pane says "Choose a transition to hear or change it" and shows the mix
 ### 3.4 Desktop (wider than 1100px)
 
 A browser mix (Cloud) uses the same two panes at desktop width, so the list is a readable column and the
-opened transition sits beside it. Local mode keeps today's Arrange, Story and Detail views with the side
-inspector, which already work at that width.
+opened transition sits beside it.
 
-### 3.5 States
+### 3.5 The local app keeps its classic editor at every size
+
+The local app renders every transition and opens it in the transition inspector (Listen, Change with
+exact cues, Studio, Details, Compare with before), and its browser tests hold promises at small sizes
+this layout does not yet keep in the same way: at 320px the inspector is reached from a Change button
+beside the mini-player, the full Studio grid scrolls and the keyboard reaches all of it, names stay
+whole, the pages reflow at 400% zoom, and its states are paired in Light and Dark at 375x667. So
+`editorLayout.ts` gives the classic editor whenever the transition inspector is on. Bringing the local
+app across means opening the inspector and the Studio from the sheet and the pane with those promises
+kept, and moving those tests to the new layout in the same change.
+
+### 3.6 States
 
 | State | What it says and does |
 |---|---|
@@ -176,35 +185,35 @@ inspector, which already work at that width.
 | Worked out as it plays | An outlined mark: "SelectaDJ picks as it plays", or the chosen move. |
 | Played here | "Played: Blend" after the device played it this visit. |
 | Problem | A warning mark and "Fell back to a fade"; in the sheet the reason and the fix ("Choose another move, or let SelectaDJ pick"). |
-| Preparing (local) | A working mark: "Rendering now", "Waiting in line"; the sheet says what can be done meanwhile (choose a different move, hear the others). |
-| Failed (local) | "Couldn't be made" with Try again. |
+| Preparing (where the server renders) | A working mark: "Rendering now", "Waiting in line", as the connector's words. |
+| Failed (where the server renders) | "Couldn't be made", as the connector's words. |
 | Saving | "Saving..." in the facts line; the moving row is marked and announced. |
 | Not saved | "Not saved" with Try again, and the reason. |
 | Offline | The connection banner (shell) says what still works; the editor's writes queue as they do today. |
 | Empty / one song | The existing empty pages, with Add a song. A browser mix keeps at least two songs and says so. |
 | Playing while editing | The playing song's row shows a playing mark; the mix map's playhead moves. |
 
-### 3.6 Words
+### 3.7 Words
 
 - Connector: what happens, in at most four words, and nothing else.
 - Buttons are verbs: "Hear it", "Play from here", "Move to the top", "Add songs", "Mix actions".
 - Never "seam" on screen; always "transition".
 - No em dashes anywhere.
 
-### 3.7 Motion
+### 3.8 Motion
 
 The sheet rises over `--motion-overlay` and settles at its detent; a moved row settles over
 `--motion-reveal`. Both are tokens, so Subtle shortens them and Still and reduced motion take them to
 0ms. No looping motion.
 
-### 3.8 Accessibility
+### 3.9 Accessibility
 
 The story is an ordered list; each song is an `h3` inside its item, and each transition a button that
 names both songs. The handle is a button ("Reorder X") with the existing Space and arrow keys. The sheet
 is the app's own dialog (focus moved in, trapped, returned; Escape closes), plus a grabber button. At 200
 percent zoom the page is narrower than 640 CSS px, so it gets the one-column layout, which reflows.
 
-### 3.9 The flag
+### 3.10 The flag
 
 `editor.phone_layout`, on by default. Off: the editor is exactly as before at every size.
 

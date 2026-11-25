@@ -16,24 +16,23 @@ describe('the editor layout for a window', () => {
 
   it('a phone held upright gets the list with sheets', () => {
     windowMatching(COMPACT, NARROWER);
-    expect(layoutFor(true)).toBe('sheet');
+    expect(layoutFor(false)).toBe('sheet');
   });
 
-  it('a phone on its side, a tablet and a small laptop get two panes', () => {
+  it('a phone on its side, a tablet, a laptop and a wide window get two panes', () => {
     windowMatching(SHORT, NARROWER);
-    expect(layoutFor(true)).toBe('panes');
+    expect(layoutFor(false)).toBe('panes');
     windowMatching(NARROWER);
-    expect(layoutFor(true)).toBe('panes');
-  });
-
-  it('a wide window keeps the classic editor where the transition inspector fits beside it', () => {
-    windowMatching(WIDE);
-    expect(layoutFor(true)).toBe('classic');
-  });
-
-  it('a wide window without the inspector (a browser mix) gets two panes', () => {
+    expect(layoutFor(false)).toBe('panes');
     windowMatching(WIDE);
     expect(layoutFor(false)).toBe('panes');
+  });
+
+  it('with the transition inspector (the local app) the classic editor stays at every size', () => {
+    for (const sizes of [[COMPACT, NARROWER], [SHORT, NARROWER], [NARROWER], [WIDE]]) {
+      windowMatching(...sizes);
+      expect(layoutFor(true)).toBe('classic');
+    }
   });
 
   it('no answer from the window keeps the editor as it was', () => {
