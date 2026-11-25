@@ -18,7 +18,7 @@ type Planned = { asset_id: string; move: string | null };
 type Seam = { index: number; state: string; planned_move: string | null; move?: string | null; passed?: boolean | null; fell_back?: boolean | null; why?: string };
 type MixState = {
   parts: TimelinePart[]; seams: Seam[]; complete: boolean; estimate_s: number | null; worker_seen?: boolean;
-  counts: { seams_ready: number; seams: number; songs_analysed: number; songs: number; files_ready: number };
+  counts: { seams_ready: number; seams_failed?: number; seams: number; songs_analysed: number; songs: number; files_ready: number };
 };
 type Export = { state: string; job_id?: string; url?: string | null; why?: string; estimate_s?: number };
 
@@ -170,12 +170,13 @@ export function HostedMix({ api, workspaceId }: { api: Api; workspaceId: string 
       <div className="hosted-mix-actions">
         <button type="button" className="primary" disabled={busy || (songs?.counts.ready ?? 0) < 2} onClick={() => void plan()}>{order ? 'Plan another mix' : 'Make a mix on the server'}</button>
         {mix && <button type="button" disabled={!mix.complete} onClick={play}>{playing?.playing ? 'Stop' : 'Play the rendered mix'}</button>}
+        {mix && order && (mix.counts.seams_failed ?? 0) > 0 && <button type="button" onClick={() => void render(order, true).then((found) => { setMix(found); setOrder([...order]); }).catch((problemSeen) => setError(problem(problemSeen, 'SelectaDJ could not ask again.')))}>Try the failed transitions again</button>}
         {mix?.complete && <button type="button" onClick={() => void exportMix()} disabled={!!exported && exported.state !== 'ready' && exported.state !== 'failed'}>Export the whole mix</button>}
       </div>
       {mix && (
         <p aria-live="polite">
           {mix.complete
-            ? `Ready: ${mix.counts.songs} songs and ${mix.counts.seams_ready} rendered transitions, played as the server rendered them.`
+            ? `Ready: ${mix.counts.songs} songs and ${mix.counts.seams_ready} rendered transitions, played as the server rendered them.${mix.counts.seams_failed ? ` ${mix.counts.seams_failed} could not be rendered and play as a plain change from one song to the next.` : ""}`
             : `Rendering transitions: ${mix.counts.seams_ready} of ${mix.counts.seams} ready, ${mix.counts.files_ready} of ${mix.counts.songs} lossless playback files ready. ${waitWords(mix.estimate_s, 0)}`}
         </p>
       )}

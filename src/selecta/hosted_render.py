@@ -404,10 +404,14 @@ def _timeline(workspace_id, songs, seams, playback, client, buckets, each_seam, 
     public = [{k: v for k, v in seam.items() if k != "row"} for seam in seams]
     ready = sum(1 for seam in seams if seam["state"] == "ready")
     analysed = sum(1 for song in songs if song.get("analysis_key"))
-    waiting = len(seams) - ready
+    failed = sum(1 for seam in seams if seam["state"] in ("failed", "refused"))
+    # a hand-off whose render failed plays as the two songs back to back, said on the page, so
+    # one failure never keeps the rest of the mix from playing
+    waiting = len(seams) - ready - failed
     return {
         "parts": parts, "seams": public,
-        "counts": {"seams_ready": ready, "seams": len(seams), "songs_analysed": analysed,
+        "counts": {"seams_ready": ready, "seams_failed": failed, "seams": len(seams),
+                   "songs_analysed": analysed,
                    "songs": len(songs),
                    "files_ready": sum(1 for p in parts if p["kind"] == "song" and p["url"])},
         "estimate_s": round(waiting * each_seam + (len(songs) - analysed) * each_analysis),
