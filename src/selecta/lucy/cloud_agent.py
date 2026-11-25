@@ -23,7 +23,7 @@ import re
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from sqlalchemy.engine import Engine
@@ -399,7 +399,9 @@ async def run_turn(job: Job) -> None:
         return job.stop.is_set()
 
     writer = Writer(events, message["id"], stopped)
+    # one attempt's tokens: a step down the model chain starts the count again
     usage = {"tokens_in": 0, "tokens_out": 0, "cache_read": 0, "cache_write": 0}
+    attempts = Attempts(plan)
     notes: list[str] = []
     outcome, error_code, final, error = Outcome.COMPLETED, None, "completed", None
     cycles = steps = 0
@@ -409,7 +411,7 @@ async def run_turn(job: Job) -> None:
             events.state("streaming")
             await writer.write(builtin_words(job, ctx))
         else:
-            cycles, steps = await _model_loop(job, ctx, events, writer, usage, notes)
+            cycles, steps = await _model_loop(job, ctx, events, writer, usage, notes, attempts)
             if not writer.text().strip():
                 # never a blank bubble
                 await writer.write("I don't have an answer for that. Could you say it another "
@@ -475,6 +477,7 @@ async def run_turn(job: Job) -> None:
                 conn, plan, outcome=outcome, tokens_in=usage["tokens_in"],
                 tokens_out=usage["tokens_out"], cache_read_tokens=usage["cache_read"],
                 cache_write_tokens=usage["cache_write"], error_code=error_code,
+                answered_by=attempts.plan.deployment, earlier_cost_usd=attempts.earlier_usd,
             )
         events.emit("message.completed", {"message": message["id"], "status": status,
                                           "content": writer.content,
@@ -486,7 +489,8 @@ async def run_turn(job: Job) -> None:
             outcome=outcome.value, text=writer.content, cost_usd=summary.cost_usd, **usage,
             proposals=list(ctx.proposed), tools=list(notes), cycles=cycles,
             deployment=plan.deployment.id, model=plan.deployment.model_id,
-            limited=plan.limited,
+            limited=plan.limited, answered_deployment=summary.answered_deployment_id,
+            account_cost_usd=summary.account_cost_usd,
         )
 
 
@@ -505,11 +509,18 @@ async def _say(writer: Writer, words: str) -> None:
     await writer.write(("\n\n" if writer.text() else "") + words)
 
 
+@dataclass
+class Attempts:
+    """Which model is answering the turn now, and what the attempts before it cost. The
+    account pays for the attempt that answers; the platform books them all (ADR-0481 rule 5)."""
+
+    plan: gateway.TurnPlan
+    earlier_usd: float = 0.0
+
+
 def _step_down_plans(engine: Engine, plan: gateway.TurnPlan) -> list[gateway.TurnPlan]:
     """The turn's own deployment, then each one down its fallback chain (Opus, Sonnet,
     Haiku) that the tier may use; never the built-in planner, never up."""
-    from dataclasses import replace
-
     from selecta.ai.spend import turn_limits
 
     chain = [plan]
@@ -528,13 +539,15 @@ def _step_down_plans(engine: Engine, plan: gateway.TurnPlan) -> list[gateway.Tur
 
 async def _model_loop(
     job: Job, ctx: cloud_tools.CloudCtx, events: Events, writer: Writer,
-    usage: dict[str, int], notes: list[str],
+    usage: dict[str, int], notes: list[str], attempts: Attempts,
 ) -> tuple[int, int]:
     """The model's work for this turn. A failure that isn't the key or a missing header
     (both shared by every model) steps down to the next model, quietly, before nothing has
-    been said; the last failure is the person's to hear."""
+    been said; the last failure is the person's to hear. `usage` holds the tokens of the
+    attempt in `attempts.plan`; what the attempts before it cost is kept apart."""
     chain = _step_down_plans(job.engine, job.plan)
     for index, plan in enumerate(chain):
+        attempts.plan = plan
         try:
             return await _one_model(job, ctx, events, writer, usage, notes, plan)
         except ProviderError as problem:
@@ -546,6 +559,10 @@ async def _model_loop(
             shared = problem.status in {401} or (problem.status == 400 and problem.configuration)
             if shared or writer.text().strip() or index == len(chain) - 1:
                 raise
+            attempts.earlier_usd += plan.deployment.prices.cost(
+                usage["tokens_in"], usage["tokens_out"], usage["cache_read"],
+                usage["cache_write"])
+            usage.update(dict.fromkeys(usage, 0))
     raise AssertionError("unreachable")
 
 
