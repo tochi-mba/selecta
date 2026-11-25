@@ -24,6 +24,7 @@ import { PhoneEditor } from './PhoneEditor';
 import { draftShown, movedLocally, MoveQueue } from './optimisticMove';
 import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
+import { afterFold, useRowGlide } from './feelPieces';
 
 /** A transition is known by the two songs it's between, and a song by which time it appears in the mix,
  * so a selection stays with what was selected as the mix moves around. It remembers their names so it
@@ -108,6 +109,9 @@ function MixView(props: ViewProps) {
   const mode: EditorMode = chosenMode === 'detail' && !flagOn('seam_inspector') ? 'arrange' : chosenMode;
   const reduceMotion = useReducedMotion();
   const page = useRef<HTMLElement>(null);
+  // the feel (ADR-0477): songs and transitions glide to their new places when the order changes
+  const timeline = useRef<HTMLOListElement>(null);
+  useRowGlide(timeline, ':scope > li[data-song-key], :scope > li[data-seam]', (row) => row.dataset.songKey ?? row.dataset.seam, order);
   const storyHeading = useId();
   const arrangeHeading = useId();
   // What to bring into view once a change of view or selection has been drawn. 'focus' moves focus too.
@@ -492,7 +496,8 @@ function MixView(props: ViewProps) {
       const neighbour = keys[index + 1] ?? keys[index - 1];
       focusAfter.current = neighbour ? { key: neighbour, how: 'handle' } : null;
       try {
-        await act(del<MixData>(at(`/mix/songs/${item.position}`), guard), `Removed ${item.title}.`);
+        // the row folds away once the server has removed the song, then the new order is drawn
+        await act(afterFold(del<MixData>(at(`/mix/songs/${item.position}`), guard), () => document.querySelector(`[data-song-key="${CSS.escape(rowKey)}"]`)), `Removed ${item.title}.`);
       } catch (error) {
         focusAfter.current = null;
         throw error;
@@ -898,7 +903,7 @@ function MixView(props: ViewProps) {
 
         <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`} style={inspecting && !narrow ? { '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties : undefined}>
           {dropPreview && <p className="drop-preview" role="status">{dropPreview.words}</p>}
-          <ol className={`timeline density ${mix.length > LONG_MIX ? 'long' : ''}`} onDragOver={scrollWhileDragging}>
+          <ol ref={timeline} className={`timeline density ${mix.length > LONG_MIX ? 'long' : ''}`} onDragOver={scrollWhileDragging}>
             {mix.map((item, index) => (
               <FragmentRow key={keys[index]}>
                 {index > 0 && (

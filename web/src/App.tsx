@@ -33,6 +33,7 @@ import { Mixes } from './views/Mixes';
 import { Now } from './views/Now';
 import { RequestsContext, RequestsPanel, waitingRequestCount, useRequests } from './views/Requests';
 import { Start } from './views/Start';
+import { MissingArt } from './views/feelLocal';
 import { MixScope } from './views/mixScope';
 import { prefetchLibrary } from './views/libraryPrefetch';
 import { takeStartupStatus } from './startupStatus';
@@ -604,7 +605,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
   if (problem && !status) {
     return (
       <Frame>
-        <main className="page" id="main">
+        <main className="page" id="main" data-arrive="">
           <h1 className="display">Can’t reach SelectaDJ.</h1>
           <p className="lede">
             {problem === OFFLINE_WORDS ? '' : `${problem}. `}It may have stopped running. Start it again, and this page will pick up by itself.
@@ -694,7 +695,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
         song={playing}
         showPlayer={route.page !== 'listen' && !!playing && active}
         hasMix={mix.length > 0}
-        hasNext={mix.length > now.position + 1}
+        hasNext={mix.length > now.position + 1} next={mix[now.position + 1]}
         stage={stage}
         waitingRequests={waitingRequests}
         onRequests={() => setRequesting(true)}
@@ -746,10 +747,11 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
           {route.page === 'listening' && <Workshop {...shared} tab="learning" />}
           {route.page === 'lucy' && <Lucy conversation={route.conversation} setMixData={setMixData} player={player} request={request} />}
           {route.page === 'missing' && (
-            <main className="page" id="main">
+            <main className="page" id="main" data-arrive="">
               <h1 className="display small">There’s nothing at this address.</h1>
               <p className="lede">Your music and mixes are fine. It may be an old link.</p>
               <PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink>
+              <MissingArt />
             </main>
           )}
           </Suspense>

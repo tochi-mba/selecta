@@ -53,7 +53,8 @@ export function art(song: Song | null, size = '', ...extra: (Node | null)[]): HT
     song ? h('span', { className: 'g-art-text' }, initials(song.title) || null) : icon('note'), ...extra);
 }
 
-/** Three bars that rise and fall while music plays; still when it is paused or nothing is on. */
+/** Three bars that say music is playing: standing at three heights while it plays, low and soft
+ * when it is paused or nothing is on. Still either way, as the room feed has no beat to follow. */
 export function bars(on: boolean): HTMLElement {
   return h('span', { className: 'g-eq', 'aria-hidden': 'true', 'data-on': on }, h('i'), h('i'), h('i'));
 }

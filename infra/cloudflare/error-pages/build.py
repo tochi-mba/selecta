@@ -6,8 +6,9 @@ Writes one self-contained HTML file per page next to this script: no outside fil
 still works when the site behind it is down, and well under Cloudflare's 1.5 MB limit. Each
 carries the mark, plain words, Try again, a short reference to quote to support (made in the
 browser, with the time, since Cloudflare's own pages never reach our servers) and the support
-address. Upload: Cloudflare dashboard, the zone, Error Pages (or a Custom Error Rule for 5xx),
-"Fetch from URL" pointing at the published copy under https://selectadj.app/errors/.
+address. The mark settles into place once (CSS only, never looping, still under reduced motion);
+no page retries on a timer, so none draws a countdown. Upload: Cloudflare dashboard, the zone,
+Error Pages (or a Custom Error Rule for 5xx), "Fetch from URL" pointing at the published copy under https://selectadj.app/errors/.
 """
 
 from __future__ import annotations
@@ -53,10 +54,10 @@ PAGES = {
 }
 
 MARK = (
-    '<svg width="40" height="40" viewBox="0 0 512 512" aria-hidden="true">'
+    '<svg class="mark" width="40" height="40" viewBox="0 0 512 512" aria-hidden="true">'
     '<rect width="512" height="512" rx="96" fill="#100f0c"/>'
-    '<circle cx="256" cy="256" r="192" fill="#e8ff3a"/>'
-    '<circle cx="256" cy="256" r="51" fill="#100f0c"/></svg>'
+    '<circle class="disc" cx="256" cy="256" r="192" fill="#e8ff3a"/>'
+    '<circle class="hole" cx="256" cy="256" r="51" fill="#100f0c"/></svg>'
 )
 
 STYLE = """
@@ -77,8 +78,14 @@ p{margin:0 0 16px}
 .soft{color:var(--soft);font-size:14px}
 button{min-height:44px;padding:10px 18px;border:1px solid #16140e;border-radius:8px;
 background:var(--lime);color:var(--lime-ink);font:600 16px/1 inherit;cursor:pointer}
+button[aria-busy=true]{cursor:progress;opacity:.8}
 a{color:inherit}
 code{user-select:all}
+.mark .disc,.mark .hole{transform-box:fill-box;transform-origin:center}
+@media (prefers-reduced-motion:no-preference){
+.mark .disc{animation:feel-mark-settle .56s cubic-bezier(.2,.9,.3,1.16) both}
+.mark .hole{animation:feel-mark-settle .4s .2s cubic-bezier(.2,.9,.3,1.16) both}}
+@keyframes feel-mark-settle{from{opacity:0;transform:scale(.4)}}
 """
 
 SCRIPT = """
@@ -95,7 +102,9 @@ encodeURIComponent(document.title)+'&body='+encodeURIComponent('Reference: '+ref
 def page(title: str, words: str, widget: str) -> str:
     retry = (
         "" if widget else
-        '<p><button type="button" onclick="location.reload()">Try again</button></p>'
+        # the press says it is working while the page reloads, since a slow site can take a while
+        "<p><button type=\"button\" onclick=\"this.setAttribute('aria-busy','true');"
+        "this.textContent='Trying again…';location.reload()\">Try again</button></p>"
     )
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'

@@ -49,6 +49,10 @@ export const TICK_MS = 50;
 /** What the player says when no song left in the mix can be opened here; a shell may draw its own banner for it. */
 export const NOTHING_PLAYABLE_NOTICE = 'None of the songs left in this mix can play on this device right now. Connect your music in Library, then press Play.';
 export const LOAD_NEXT_WITHIN = 45;
+/** With `planAhead`, the next transition is planned once this much of a song has played. */
+export const PLAN_AHEAD_AFTER = 1;
+/** The first song of a start waits at most this long for its level, so Play stays quick. */
+export const FIRST_LEVEL_WAIT_MS = 2500;
 const START_LEAD = 0.05;
 
 /** What loading a track by index came to. 'missing' means past the end of the list; 'failed'
@@ -94,6 +98,13 @@ export type SchedulerDeps = {
   wake(): Promise<boolean>;
   seam?: SeamProvider;
   timers?: SchedulerTimers;
+  /** cloud.seam_lead: plan the next transition as soon as a song starts, not LOAD_NEXT_WITHIN
+   * before it ends. A 16-bar blend at 120 BPM starts up to 50 s before the end, so planning at
+   * 45 s left prepared many seams too late and they fell back to a 3 s fade. */
+  planAhead?: () => boolean;
+  /** cloud.seam_lead: the linear gain a song plays at so every song sits at one level
+   * (engine/level.ts, -14 LUFS as local mode's SongInfo.gain_db). 1 when absent. */
+  level?: (buffer: AudioBuffer) => Promise<number>;
 };
 
 export type SchedulerPosition = { index: number; offsetMs: number; paused: boolean };
@@ -321,7 +332,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     tails.delete(source);
   };
 
-  const layer = (buffer: AudioBuffer, index: number): Layer => {
+  const layer = (buffer: AudioBuffer, index: number, level = 1): Layer => {
     const source = context.createBufferSource();
     source.buffer = buffer;
     const gain = context.createGain();
@@ -332,7 +343,15 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     } else {
       source.connect(gain);
     }
-    gain.connect(index % 2 === 0 ? deps.graph.deckA : deps.graph.deckB);
+    // the song's own level sits after its fader, so seam gain curves keep meaning 0 to 1
+    const levelled = level !== 1 && Number.isFinite(level) && level > 0 ? context.createGain() : null;
+    if (levelled) {
+      levelled.gain.value = level;
+      gain.connect(levelled);
+      levelled.connect(index % 2 === 0 ? deps.graph.deckA : deps.graph.deckB);
+    } else {
+      gain.connect(index % 2 === 0 ? deps.graph.deckA : deps.graph.deckB);
+    }
     const made: Layer = { source, gain, moves };
     layers.add(made);
     source.onended = () => {
@@ -342,6 +361,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       dropStems(made);
       moves?.dispose();
       gain.disconnect();
+      levelled?.disconnect();
       layers.delete(made);
     };
     return made;
@@ -597,6 +617,14 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     return { at, startedAt: at, offset: 0 };
   };
 
+  /** The level a song plays at; 1 when none is measured, it fails, or it takes too long. */
+  const levelOf = async (buffer: AudioBuffer, withinMs?: number): Promise<number> => {
+    if (!deps.level) return 1;
+    const measured = deps.level(buffer).catch(() => 1);
+    if (withinMs === undefined) return measured;
+    return Promise.race([measured, new Promise<number>((resolve) => setTimeout(() => resolve(1), withinMs))]);
+  };
+
   /** Prepare the next song and schedule its entrance; a stale generation does nothing. */
   async function plan(nextIndex: number, mine: number): Promise<void> {
     planning = true;
@@ -612,6 +640,8 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         return plan(nextIndex + 1, mine);
       }
       const buffer = loaded.buffer;
+      const level = await levelOf(buffer);
+      if (mine !== generation || disposed || !current || planned) return;
       let schedule: SeamSchedule | null = null;
       let providerReason: string | undefined;
       if (deps.seam) {
@@ -626,7 +656,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       const now = context.currentTime;
       const endAt = from.startedAt + (from.duration - from.offset);
       const seamAt = endAt - SEAM_FADE;
-      const made = layer(buffer, nextIndex);
+      const made = layer(buffer, nextIndex, level);
       let entered: Entered;
       let problem = schedule ? unusable(schedule, from, buffer, now, { moves: canMakeMoves(context), effects: canMakeEffects(context) }) : null;
       let audio: Map<StemLayer, AudioBuffer> | undefined;
@@ -694,7 +724,8 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       planned = null;
     }
     const left = current.duration - songTime();
-    if (!planned && !planning && !atEnd && left < LOAD_NEXT_WITHIN) {
+    const ahead = deps.planAhead?.() === true && songTime() >= PLAN_AHEAD_AFTER;
+    if (!planned && !planning && !atEnd && (left < LOAD_NEXT_WITHIN || ahead)) {
       void plan(current.index + 1, generation);
     }
     if (!planned && atEnd && now > current.startedAt + (current.duration - current.offset)) {
@@ -738,8 +769,10 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       if (mine !== generation || disposed) return;
     }
     const buffer = loaded.buffer;
+    const level = await levelOf(buffer, FIRST_LEVEL_WAIT_MS);
+    if (mine !== generation || disposed) return;
     const offset = Math.min(Math.max(offsetMs / 1000, 0), Math.max(buffer.duration - 0.05, 0));
-    const made = layer(buffer, index);
+    const made = layer(buffer, index, level);
     const startedAt = context.currentTime + START_LEAD;
     made.gain.gain.setValueAtTime(1, startedAt);
     made.source.start(startedAt, offset);

@@ -155,6 +155,16 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.music_folders": {
+      "label": "Your music folders, watched",
+      "about": "The member can connect several music folders on this device. Each is listed with its song count, when it was last checked and whether the browser still allows it; folders the browser still allows are checked for new, changed and missing songs when SelectaDJ opens and when the tab comes back. Folder names and handles stay in this browser; nothing about a folder goes to the server. Off, one folder is remembered only to carry on an interrupted import, as before.",
+      "requires": ["cloud.local_media"],
+      "surfaces": ["cloud.library", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.offline_shell": {
       "label": "Cloud opens offline",
       "about": "The app opens without a connection and the library shows what this device already knows.",
@@ -475,6 +485,16 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.seam_lead": {
+      "label": "Browser transitions planned early",
+      "about": "In a browser mix, each transition is worked out as its song starts instead of 45 seconds before it ends, every song plays at one level (-14 LUFS, as local mode), and a slow analysis moment is waited for instead of turning beatmatching off for the visit (ADR-0479 phase 1). Off: transitions are planned late and songs play at their own level, as before.",
+      "requires": ["cloud.browser_dsp"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.browser_moves": {
       "label": "Browser transition moves",
       "about": "Local mode's moves in a browser mix: SelectaDJ picks a bass swap, filter sweep, cut, echo out or reverb wash for each transition from the audio as it plays, the member can choose one, and each transition says what really played (ADR-0459).",
@@ -660,6 +680,7 @@
           "GET /api/admin/takedowns",
           "POST /api/admin/takedowns",
           "POST /api/admin/takedowns/{notice_id}/{command}",
+          "POST /api/admin/catalog/art/{art_id}/{command}",
           "POST /api/admin/upload-restrictions/{workspace_id}/lift",
           "POST /api/admin/session/changes",
           "DELETE /api/admin/session/changes",

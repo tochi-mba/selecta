@@ -349,7 +349,8 @@ export function SeamInspector(props: {
   const tabs = TABS.filter((item) => item.id !== 'studio' || on('stem_studio'));
   const shownTab = tabs.some((item) => item.id === tab) ? tab : 'listen';
   return (
-    <div className="inspector">
+    // the feel (ADR-0477): an opened transition arrives (page-title is the page's own travelling name)
+    <div className="inspector" data-arrive="">
       <div className="inspector-identity" ref={identity}>
         <p className="inspector-pair"><SongMotif songId={previous.song_id} /><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <SongMotif songId={item.song_id} /><b>{item.title}</b></p>
         <p className="inspector-scope">

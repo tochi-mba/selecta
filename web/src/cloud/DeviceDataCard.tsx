@@ -47,7 +47,7 @@ export function DeviceDataCard({ workspaceId, onCleared }: { workspaceId: string
         <button ref={forget} type="button" disabled={working} aria-expanded={asking === 'forget'} onClick={() => setAsking('forget')}>Forget this account here…</button>
       </div>
       {asking === 'forget' && (
-        <div className="cloud-confirm" role="group" aria-label="Confirm forgetting this account in this browser" onKeyDown={escape}>
+        <div className="cloud-confirm" data-arrive="" role="group" aria-label="Confirm forgetting this account in this browser" onKeyDown={escape}>
           <p>Forget this account in this browser? Your music files stay where they are. This can’t be undone, and the page reloads afterwards.</p>
           <div className="cloud-actions"><button ref={keep} disabled={working} onClick={() => setAsking(null)}>Keep it</button><button className="destructive" disabled={working} aria-busy={working || undefined} onClick={() => void run('forget')}>{working ? 'Forgetting…' : 'Forget this account here'}</button></div>
         </div>
@@ -57,7 +57,7 @@ export function DeviceDataCard({ workspaceId, onCleared }: { workspaceId: string
         <button ref={everything} type="button" className="destructive" disabled={working} aria-expanded={asking === 'everything'} onClick={() => setAsking('everything')}>Clear everything…</button>
       </div>
       {asking === 'everything' && (
-        <div className="cloud-confirm" role="group" aria-label="Confirm clearing everything SelectaDJ keeps in this browser" onKeyDown={escape}>
+        <div className="cloud-confirm" data-arrive="" role="group" aria-label="Confirm clearing everything SelectaDJ keeps in this browser" onKeyDown={escape}>
           <p>Clear everything SelectaDJ keeps in this browser, for every account? Your music files and accounts stay as they are. This can’t be undone, and the page reloads afterwards.</p>
           <div className="cloud-actions"><button ref={keep} disabled={working} onClick={() => setAsking(null)}>Keep it</button><button className="destructive" disabled={working} aria-busy={working || undefined} onClick={() => void run('everything')}>{working ? 'Clearing…' : 'Clear everything'}</button></div>
         </div>

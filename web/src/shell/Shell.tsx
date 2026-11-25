@@ -1,5 +1,13 @@
-import { type KeyboardEvent as ReactKeyboardEvent, ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { flushSync } from 'react-dom';
 import { MixItem } from '../api';
+import { registerBeatTarget } from '../feel/beatBus';
+import { tick } from '../feel/haptics';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
+import { feelOn, onFeelChange, type FeelPart } from '../feel/root';
+import { motionMs, usePresence } from '../ui/exitMotion';
+import { nudgeLowPower } from '../ui/lowPower';
+import { CoverArt } from '../views/CoverArt';
 import { useFlags } from '../flags';
 import { NowState } from '../player';
 import { PlayerLike } from '../playerContract';
@@ -16,6 +24,7 @@ import { Toaster } from '../ui/toasts';
 import { aboutOf, classicDestinations, describeRoute, destinationOf, destinationsFor, type MoreDestination, type ShellMode, type ShellRoute, workspaceTabs } from './manifest';
 import { PageLink } from './PageLink';
 import { supportHref } from '../support';
+import { useMusicFeel } from '../feel/useMusicFeel';
 
 export { PageLink };
 
@@ -51,17 +60,45 @@ export function VolumeControl({ player, now }: { player: PlayerLike; now: NowSta
 /** The song that's playing, on every page but the one that's all about it. It only presents the
  * player. The player itself lives above every page, so nothing here can start or stop the music by
  * appearing or going away. */
-function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { player: PlayerLike; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number }) {
+function MiniPlayer({ player, now, song, hasNext, onRequests, waiting, cloud, closing, boxRef }: { player: PlayerLike; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number; cloud: boolean; closing: boolean; boxRef: RefObject<HTMLElement | null> }) {
   const progress = now.duration > 0 && Number.isFinite(now.songTime) ? Math.min(Math.max(now.songTime / now.duration, 0), 1) : 0;
   const on = useFlags();
+  // ADR-0477: the cover, the glowing head and the beat targets exist only while their part of the
+  // feel is on, so with the flags off the bar is exactly what it was
+  const music = useFeel('music');
+  const lit = useFeel('depth');
+  const moving = useFeel('motion');
+  const showArt = cloud && (lit || moving);
+  const art = useRef<HTMLSpanElement>(null);
+  const title = useRef<HTMLElement>(null);
+  const ring = useRef<HTMLSpanElement>(null);
+  const edge = useRef<HTMLSpanElement>(null);
+  useEffect(() => (music && ring.current ? registerBeatTarget(ring.current, 'ring') : undefined), [music]);
+  useEffect(() => (music && edge.current ? registerBeatTarget(edge.current, 'edge') : undefined), [music]);
+  // pressing the song carries its cover and title into Listen; the page there names its own pair
+  const share = () => {
+    const pairs: [Element, string][] = [];
+    if (art.current) pairs.push([art.current, 'player-art']);
+    if (title.current) pairs.push([title.current, 'page-title']);
+    return pairs;
+  };
+  // while leaving, the bar gives its shared names up, so Listen's cover and title are the only ones
+  const unnamed = closing ? { viewTransitionName: 'none' } : undefined;
   return (
-    <aside className="mini" aria-label={now.inSeam ? 'Playing transition' : now.phase === 'paused' ? 'Paused playback' : now.phase === 'loading' ? 'Loading playback' : 'Now playing'}>
+    <aside ref={boxRef} className="mini" aria-hidden={closing || undefined} inert={closing || undefined} aria-label={now.inSeam ? 'Playing transition' : now.phase === 'paused' ? 'Paused playback' : now.phase === 'loading' ? 'Loading playback' : 'Now playing'}>
       <i className="mini-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
-      <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} title={playLabel(now.phase)} aria-label={playLabel(now.phase)}>
-        <Icon name={now.phase === 'playing' ? 'pause' : 'play'} />
-      </button>
-      <PageLink to="/listen" className="mini-song" title={`${songTitle(song)} - ${songArtist(song)}`}>
-        <b title={song.title} dir="auto">{songTitle(song)}</b>
+      {lit && <i className="mini-head" aria-hidden="true"><i style={{ transform: `translateX(${progress * 100}%)` }} /></i>}
+      <span ref={edge} data-beat="edge" aria-hidden="true" />
+      <span className="mini-play">
+        <span ref={ring} data-beat="ring" aria-hidden="true" />
+        <button className="round" disabled={now.phase === 'loading'} aria-busy={now.phase === 'loading'} onClick={() => void player.togglePause()} title={playLabel(now.phase)} aria-label={playLabel(now.phase)}>
+          {/* keyed, so the new glyph turns in where the old one was (feel-glyph-swap) */}
+          <Icon key={now.phase === 'playing' ? 'pause' : 'play'} name={now.phase === 'playing' ? 'pause' : 'play'} />
+        </button>
+      </span>
+      <PageLink to="/listen" className="mini-song" title={`${songTitle(song)} - ${songArtist(song)}`} share={share}>
+        {showArt && <span ref={art} className="mini-art" data-vt={closing ? undefined : 'player-art'} style={unnamed}><CoverArt seed={song.song_id} songId={song.song_id} size="small" /></span>}
+        <b key={song.song_id} ref={title} style={unnamed} title={song.title} dir="auto">{songTitle(song)}</b>
         <span title={song.artist} dir="auto">{songArtist(song)} · {timeLabel(now.songTime, now.duration)}{now.inSeam ? ` · ${SEAM_LABEL}` : ''}</span>
         {/* UF-0373-08: an interrupted output, a lost device or a song that won't load is said here
             too, so the reason the music stopped is visible on every page, not only on Listen */}
@@ -94,6 +131,10 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
     if (speak && attention > heard.current) announce(attentionWords(jobs));
     heard.current = attention;
   }, [attention, jobs, speak]);
+  // a count that rises is news: its badge pops and the bell rings once (re-keyed to replay)
+  const rang = useRise(unseen);
+  const asked = useRise(waiting);
+  useThemeReveal(bar);
   return (
     <header className="context-bar" ref={bar}>
       <nav className="crumbs" aria-label="Breadcrumb">
@@ -116,13 +157,13 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
         )}
         {on('requests') && (
           <button className="context-button context-request context-counted" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
-            <Icon name="request" />{waiting ? <span className="count">{waiting}</span> : null}
+            <Icon name="request" />{waiting ? <span key={asked} className={asked ? 'count feel-pop' : 'count'}>{waiting}</span> : null}
           </button>
         )}
         {on('app.theme_choice') && <ThemeMenu />}
         {on('app.activity') && (
           <button className="context-button context-counted" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
-            <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
+            <Icon key={rang} name="bell" className={rang ? 'feel-ring' : undefined} />{unseen ? <span key={rang} className={rang ? 'count feel-pop' : 'count'}>{unseen}</span> : null}
           </button>
         )}
         {attention > 0 && (
@@ -171,6 +212,90 @@ function useHeaderBlock(bar: { current: HTMLElement | null }) {
       root.style.removeProperty('--header-block');
     };
   }, [bar]);
+}
+
+/** Whether one part of the feel is on now, kept current as the flags, the motion choice and low power
+ * change, so the shell draws a feel-only element exactly while its part is on. */
+function useFeel(part: FeelPart): boolean {
+  return useSyncExternalStore(onFeelChange, () => feelOn(part), () => false);
+}
+
+/** Counts the times `count` has risen. A badge keyed by it pops again on each rise; a count that
+ * falls or holds is not news, so nothing replays then. */
+function useRise(count: number): number {
+  const last = useRef(count);
+  const rises = useRef(0);
+  if (count > last.current) rises.current += 1;
+  last.current = count;
+  return rises.current;
+}
+
+type RevealDocument = Document & { startViewTransition?: (update: () => void) => { finished?: Promise<unknown> } | undefined };
+
+/** ADR-0477: choosing a theme from the bar's theme menu spreads the new colours out in a circle from
+ * the theme button, by a view transition (styles/feel-shell.css feel-theme-reveal). The menu itself
+ * is unchanged: its press is held for one frame while the old look is captured, then pressed again
+ * inside the transition. With motion off, without the API or while a page transition runs, the
+ * press goes straight through and the theme changes at once, as before. */
+function useThemeReveal(bar: { current: HTMLElement | null }) {
+  useEffect(() => {
+    const element = bar.current;
+    if (!element) return;
+    let replaying = false;
+    const choose = (event: MouseEvent) => {
+      if (replaying) return;
+      const item = (event.target as Element | null)?.closest?.('.theme-menu [role="menuitemradio"]');
+      const doc = document as RevealDocument;
+      const root = document.documentElement;
+      if (!(item instanceof HTMLElement) || item.getAttribute('aria-checked') === 'true') return;
+      if (!feelOn('motion') || typeof doc.startViewTransition !== 'function' || root.dataset.nav) return;
+      const from = (item.closest('.theme-menu')?.querySelector(':scope > button') ?? item).getBoundingClientRect();
+      root.style.setProperty('--feel-reveal-x', `${Math.round(from.left + from.width / 2)}px`);
+      root.style.setProperty('--feel-reveal-y', `${Math.round(from.top + from.height / 2)}px`);
+      event.stopPropagation();
+      event.preventDefault();
+      const press = () => {
+        if (!item.isConnected) return;
+        replaying = true;
+        try { flushSync(() => item.click()); } finally { replaying = false; }
+      };
+      const done = () => { delete root.dataset.themeReveal; };
+      root.dataset.themeReveal = '';
+      try {
+        const finished = doc.startViewTransition(press)?.finished;
+        if (finished) finished.then(done, done);
+        else done();
+      } catch {
+        // a browser that refuses still gets the theme
+        done();
+        press();
+      }
+    };
+    element.addEventListener('click', choose, true);
+    return () => element.removeEventListener('click', choose, true);
+  }, [bar]);
+}
+
+/** Three bars beside Listen's icon while a song plays, moved by the beat bus from the measured audio
+ * (ADR-0477 rule 4). Decoration: the link keeps its own name. */
+function PlayingBars() {
+  const bars = useRef<HTMLSpanElement>(null);
+  useEffect(() => (bars.current ? registerBeatTarget(bars.current, 'bars') : undefined), []);
+  return <span ref={bars} className="nav-bars" data-playing-bars="" aria-hidden="true"><i /><i /><i /></span>;
+}
+
+/** The rail's list of places, with one mark that slides to the current place (feel/indicator.ts).
+ * Its own component, so the mark is measured whenever the list is drawn, the Stage's return too.
+ * A press on a place gives a phone's small tick. */
+function RailList({ children }: { children: ReactNode }) {
+  const list = useRef<HTMLUListElement>(null);
+  useSlidingIndicator(list, 'a[aria-current="page"], button[aria-current="page"]');
+  return (
+    <ul ref={list} data-indicator-shape="fill" onClick={(event) => { if ((event.target as Element).closest('a, button')) tick(); }}>
+      {children}
+      <li className={INDICATOR_CLASS} aria-hidden="true" />
+    </ul>
+  );
 }
 
 /** Hands `found` what `look` returns as soon as it returns something: at once if it's already there,
@@ -296,11 +421,14 @@ export function Shell({
   more = [],
   account,
   status,
+  next,
 }: {
   route: ShellRoute;
   player: PlayerLike;
   now: NowState;
   song?: MixItem;
+  /** The song after `song`, so the ambient hue can travel during a real hand-over (ADR-0477). */
+  next?: MixItem;
   showPlayer: boolean;
   hasMix: boolean;
   hasNext?: boolean;
@@ -330,6 +458,20 @@ export function Shell({
   const prefs = usePrefs();
   const on = useFlags();
   useKeyboardInset();
+  useMusicFeel({ player, now, song, next });
+  // playback starting and a new page are the heavy moments: a struggling device is noticed then
+  const playing = now.phase === 'playing';
+  useEffect(() => { if (playing) nudgeLowPower(); }, [playing]);
+  useEffect(() => { nudgeLowPower(); }, [place]);
+  const bars = useFeel('music') && playing;
+  // the rail's width springs while its words fade in; only the rail moves, the page takes its new
+  // place at once, because sliding the page's margin would lay it out again every frame
+  const [railMove, setRailMove] = useState<'opening' | 'closing' | null>(null);
+  useEffect(() => {
+    if (!railMove) return;
+    const timer = window.setTimeout(() => setRailMove(null), motionMs('--motion-spring-snappy', 320) + 80);
+    return () => window.clearTimeout(timer);
+  }, [railMove, prefs.railCollapsed]);
 
   // A new page starts at the top with focus on its heading, and says where you are. Back and Forward
   // return to where you were. The history entry itself says which: a page left by navigating away
@@ -359,13 +501,21 @@ export function Shell({
 
   // the shape of the frame lives in one place, on the root, so everything is measured from the same numbers
   const withPlayer = showPlayer && !!song && !stage;
+  // The mini player can leave (ui/exitMotion.ts): it stays drawn, inert, while it sinks, and the
+  // page keeps its room until it has gone, so nothing slides under a bar that is still there.
+  // Without an exit animation it goes in the same frame, as before.
+  const dock = usePresence<HTMLElement>(withPlayer, '--motion-exit-drawer');
+  const lastSong = useRef(song);
+  if (song) lastSong.current = song;
+  const dockSong = song ?? lastSong.current;
+  const playerShown = withPlayer || dock.present;
   useEffect(() => {
     const root = document.documentElement;
-    root.dataset.player = withPlayer ? 'on' : 'off';
+    root.dataset.player = playerShown ? 'on' : 'off';
     root.dataset.rail = prefs.railCollapsed ? 'collapsed' : 'open';
     if (stage) root.dataset.stage = 'on';
     else delete root.dataset.stage;
-  }, [withPlayer, prefs.railCollapsed, stage]);
+  }, [playerShown, prefs.railCollapsed, stage]);
   // Cloud's shared look (styles/cloud-ui.css) also reaches what is drawn outside the frame: dialogs,
   // drawers and toasts. Local mode never carries the mark, so it is exactly as it was.
   useEffect(() => {
@@ -403,19 +553,20 @@ export function Shell({
     </li>
   );
   const requestsLabel = waitingRequests ? `Requests: Request a song, ${waitingRequests} waiting` : 'Requests: Request a song';
+  const asked = useRise(waitingRequests);
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`} data-mode={mode}>
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
       {!stage && (
-        <nav className="nav" aria-label="Main">
-          <PageLink to="/mixes" className="brand"><span className="brand-word">SelectaDJ</span><span className="visually-hidden">, go to Make a Mix</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
-          <ul>
+        <nav className="nav" aria-label="Main" data-rail-move={railMove ?? undefined}>
+          <PageLink to="/mixes" className="brand" data-vt="brand-mark"><span className="brand-word">SelectaDJ</span><span className="visually-hidden">, go to Make a Mix</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
+          <RailList>
             {cloudNav ? (
               <>
                 {primaryDestinations.map((item, index) => (
                   <li key={item.id} data-group={index === 0 ? 'Music' : undefined}>
                     <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
-                      <Icon name={item.icon} />
+                      <Icon name={item.icon} />{bars && item.id === 'listen' && <PlayingBars />}
                       <span className="nav-label">{item.label}</span>
                     </PageLink>
                   </li>
@@ -433,7 +584,7 @@ export function Shell({
                 {on('requests') && (
                   <li className="nav-place nav-request-item" data-group={partyPlaces.length ? undefined : 'Party'}>
                     <button className="nav-request" data-tip="Request a song" onClick={onRequests} aria-label={requestsLabel} title={on('app.shortcuts') ? 'Request a song (R)' : undefined}>
-                      <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count nav-badge">{waitingRequests}</span> : null}
+                      <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span key={asked} className={asked ? 'count nav-badge feel-pop' : 'count nav-badge'}>{waitingRequests}</span> : null}
                     </button>
                   </li>
                 )}
@@ -469,7 +620,7 @@ export function Shell({
                 : primaryDestinations.map((item) => (
                     <li key={item.id}>
                       <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
-                        <Icon name={item.icon} />
+                        <Icon name={item.icon} />{bars && item.id === 'listen' && <PlayingBars />}
                         <span className="nav-label">{item.label}</span>
                       </PageLink>
                     </li>
@@ -515,11 +666,11 @@ export function Shell({
               )}
               </>
             )}
-          </ul>
+          </RailList>
           <div className="nav-foot">
             {on('requests') && !cloudNav && (
               <button className="nav-request" onClick={onRequests} aria-label={requestsLabel} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
-                <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
+                <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span key={asked} className={asked ? 'count feel-pop' : 'count'}> {waitingRequests}</span> : ''}
               </button>
             )}
             {account && (
@@ -531,7 +682,10 @@ export function Shell({
               aria-pressed={collapsed}
               aria-label={collapsed ? 'Expand the side bar' : 'Collapse the side bar'}
               title={collapsed ? 'Expand the side bar' : 'Collapse the side bar'}
-              onClick={() => setPrefs({ railCollapsed: !collapsed })}
+              onClick={() => {
+                if (feelOn('motion')) setRailMove(collapsed ? 'opening' : 'closing');
+                setPrefs({ railCollapsed: !collapsed });
+              }}
             >
               <Icon name="rail" />
             </button>
@@ -545,7 +699,7 @@ export function Shell({
         {mode === 'cloud' && banner ? <div className="shell-banners">{banner}</div> : banner}
         {children}
       </div>
-      {withPlayer && song && <MiniPlayer player={player} now={now} song={song} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} />}
+      {dock.present && dockSong && <MiniPlayer player={player} now={now} song={dockSong} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} cloud={mode === 'cloud'} closing={dock.closing} boxRef={dock.ref} />}
       {moreOpen && cloudMore && (
         <Drawer title="More" onClose={() => setMoreOpen(false)}>
           <nav className="more-nav more-sheet" aria-label="More">
@@ -599,7 +753,7 @@ export type ShellAccount = { email: string; plan: string; onSignOut: () => void;
 
 const ACCOUNT_PLACES: ReadonlySet<string> = new Set(['account', 'billing']);
 const MORE_ICONS: Record<MoreDestination['id'], IconName> = {
-  account: 'user', billing: 'card', devices: 'system', rooms: 'users', workspace: 'settings', uploads: 'plus',
+  account: 'user', billing: 'card', devices: 'system', rooms: 'users', workspace: 'settings', uploads: 'plus', listening_room: 'volume',
 };
 
 /** One line each for the phone's More sheet: short enough to stay on one line at 375 px. */
@@ -610,6 +764,7 @@ const MORE_LINES: Record<MoreDestination['id'], string> = {
   rooms: 'Let guests ask for songs',
   workspace: 'Connected music and storage here',
   uploads: 'Upload tracks to your library',
+  listening_room: 'Judge transitions by ear',
 };
 
 /** A place in the phone's More sheet: its icon, its name and one line about it. The link is named by

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useState } from 'react';
 import { FLAG_IDS, flagOn } from '../flags';
 import { storageSpace, type MediaStore, type StorageSpace } from '../media';
 import { ENGINE_VERSION, probeCapability, type ProbeResult } from '../engine/probe';
@@ -137,14 +137,14 @@ export function BrowserDiagnostics({ openStore, playback }: { openStore: () => P
           <Action className="quiet" run={load} working="Checking…">Check again</Action>
         </div>
       </section>
-      <div className="lw-groups">
-        {GROUPS.map((group) => {
+      <div className="lw-groups" data-stagger="">
+        {GROUPS.map((group, place) => {
           const facts = gathered.facts.filter((fact) => fact.group === group.id);
           const bad = facts.filter((fact) => fact.level === 'problem').length;
           const noted = facts.filter((fact) => fact.level === 'note').length;
           const working = facts.length - bad - noted;
           return (
-            <details key={group.id} className="lw-group" open={bad > 0 || undefined}>
+            <details key={group.id} className="lw-group" open={bad > 0 || undefined} style={{ '--i': place } as CSSProperties}>
               <summary>
                 <span className="lw-group-title">{group.title}</span>
                 <span className="lw-group-count" data-level={bad ? 'problem' : noted ? 'note' : 'ok'}>
@@ -153,8 +153,9 @@ export function BrowserDiagnostics({ openStore, playback }: { openStore: () => P
                 </span>
               </summary>
               <ul className="lw-facts">
-                {facts.map((fact) => (
-                  <li key={fact.key} data-level={fact.level}>
+                {/* --i lets each line arrive after the one before when the group is opened (feel-account.css) */}
+                {facts.map((fact, index) => (
+                  <li key={fact.key} data-level={fact.level} style={{ '--i': index } as CSSProperties}>
                     <span className="lw-fact-mark"><Icon name={MARK[fact.level]} size="compact" aria-hidden="true" /><span className="visually-hidden">{SAID[fact.level]}:</span></span>
                     <b>{fact.label}</b>
                     <span>{fact.words}</span>
@@ -164,7 +165,7 @@ export function BrowserDiagnostics({ openStore, playback }: { openStore: () => P
             </details>
           );
         })}
-        <details className="lw-group diagnostic-raw">
+        <details className="lw-group diagnostic-raw" style={{ '--i': GROUPS.length } as CSSProperties}>
           <summary><span className="lw-group-title">What the copy for support contains</span></summary>
           <p className="hint">Only what this browser can do and how SelectaDJ is set up in it. No names, emails, songs, folders or account details.</p>
           <pre className="diagnostics" tabIndex={0}>{text}</pre>

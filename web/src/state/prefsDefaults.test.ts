@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { setFlags } from '../flags';
 import { changedPrefs, DEFAULT_PREFS, prefs, reloadPrefs, resetPrefs, setPrefs } from './prefs';
 
 // Area K (product audit): one constant per default, a missing value reads as the default, a
@@ -13,7 +14,13 @@ describe('interface defaults', () => {
     reloadPrefs();
     expect(prefs()).toEqual(DEFAULT_PREFS);
     expect(DEFAULT_PREFS.theme).toBe('system'); // follows the OS until chosen
+    // ADR-0477: Expressive while the feel system is on, Subtle (as before) when it is off
+    expect(DEFAULT_PREFS.motion).toBe('expressive');
+    setFlags({ 'app.feel_motion': false });
     expect(DEFAULT_PREFS.motion).toBe('subtle');
+    expect(prefs().motion).toBe('subtle');
+    setFlags(null);
+    expect(prefs().motion).toBe('expressive');
   });
 
   it('an old stored choice is kept, and an unknown value reads as the default', () => {

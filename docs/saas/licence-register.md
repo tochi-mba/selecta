@@ -56,6 +56,12 @@ Considered earlier and **not to be used** in cloud mode: Essentia models and lib
 | Source | Used for | Status |
 |---|---|---|
 | LRCLIB | Synced lyrics lookup | Terms and rate limits to confirm with the operators; lyric display needs a licence in a paid product. See [§10.5](10-audio-engine-in-cloud.md#105-lyrics-in-cloud-mode-needs-a-decision) |
+| Art inside the person's own files | Covers shown on that person's device ([ADR-0478](../adr/adr-0478-real-artwork-and-web-lookups.md)) | **Allowed.** No third party; the picture never leaves the device. Flag `library.art_embedded` |
+| MusicBrainz core data | Canonical names, album, year, ISRC and release ids for the catalogue (ADR-0478) | **Review.** Core data is public domain (CC0) and may be stored and used commercially; one request a second per IP with an identified client. MetaBrainz asks companies with revenue to join a supporter tier (free while not publicly offered, 100 to 599 dollars a month once public): owner step before `library.art_lookup` is on for customers. Read 2026-11-25: [data licence](https://musicbrainz.org/doc/About/Data_License), [rate limit](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting), [tiers](https://metabrainz.org/supporters/account-type) |
+| MusicBrainz genres, tags and ratings | Not used | **Blocked.** CC BY-NC-SA unless a commercial licence is bought |
+| Cover Art Archive | Front covers for songs whose file has none (ADR-0478) | **Review.** No licence is granted ("Use the images at your own risk"); covers belong to their owners. Stored and served from our own storage, with an admin hide as the takedown path. Owner decision, ideally with counsel, before `library.art_lookup` is on for customers. Read 2026-11-25: [Cover Art Archive](https://musicbrainz.org/doc/Cover_Art_Archive) |
+| Deezer API, Last.fm API, Apple Search API, AcoustID | Not used | **Blocked** for this product. Deezer: non-commercial, no local copies. Last.fm: commercial agreement needed, artwork excluded. Apple: promotional use beside a store badge only. AcoustID: free for non-commercial use only. Read 2026-11-25; links in ADR-0478 |
+| TheAudioDB, Discogs | Not used | Not decided. TheAudioDB allows storing with credit on a paid tier. Discogs terms not yet read |
 
 ## Rules
 

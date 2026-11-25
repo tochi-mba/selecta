@@ -1,5 +1,6 @@
 import { Gate, visible } from '../flags';
 import { FormEvent, useId, useState } from 'react';
+import { success } from '../feel/haptics';
 import { lucy } from '../lucy/client';
 import type { Budgets, LucyStatus, PhaseName, Phases, ProviderKind, SettingsChange } from '../lucy/types';
 import { LucyMemory } from './LucyMemory';
@@ -93,6 +94,7 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
       const next = await lucy.saveSettings(change);
       setApiKey('');
       setSaved('Saved.');
+      success();
       onSaved(next);
     } catch (error) {
       setProblem((error as Error).message);
@@ -112,7 +114,7 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
           </label>
           <p className="hint">Turning Lucy off never changes Make a Mix, your mixes or your music.</p>
           {visible(PHASES).map((phase) => (
-            <label key={phase.name} className="choice lucy-setting-line">
+            <label key={phase.name} className="choice lucy-setting-line" data-lift="row">
               <input type="checkbox" checked={phases[phase.name]} disabled={!enabled} onChange={(event) => setPhases({ ...phases, [phase.name]: event.target.checked })} />
               <span><b>{phase.label}</b> <span className="soft">{phase.about}</span></span>
             </label>
@@ -122,7 +124,7 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
         <fieldset>
           <legend>Who does the planning</legend>
           {visible(PROVIDERS).map((provider) => (
-            <label key={provider.kind} className="choice lucy-setting-line">
+            <label key={provider.kind} className="choice lucy-setting-line" data-lift="row">
               <input type="radio" name={`${ids}-provider`} checked={kind === provider.kind} onChange={() => chooseProvider(provider.kind)} />
               <span><b>{provider.label}</b> <span className="soft">{provider.about}</span></span>
             </label>
@@ -194,7 +196,7 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
         {problem && <p className="warn" role="alert">{problem}</p>}
         <div className="row wrap">
           <button type="submit" className="primary" disabled={saving || !!invalid.length || capInvalid || needsConsent} aria-busy={saving || undefined}>{saving ? 'Saving…' : 'Save settings'}</button>
-          {saved && <span className="hint" role="status">{saved}</span>}
+          {saved && <span className="hint feel-pop" role="status">{saved}</span>}
         </div>
       </form>
       {status.enabled && (

@@ -3,6 +3,7 @@
 // existing Action, so it shows it is working and cannot be pressed twice.
 
 import type { ComponentProps, ReactNode } from 'react';
+import { tap } from '../../feel/haptics';
 import { Action } from '../../ui/controls';
 import './staff.css';
 
@@ -16,10 +17,12 @@ export type BigActionProps = Omit<ComponentProps<typeof Action>, 'disabled'> & {
   pressed?: boolean;
 };
 
-export function BigAction({ disabled, detail, big = true, pressed, className = '', children, ...rest }: BigActionProps) {
+export function BigAction({ disabled, detail, big = true, pressed, className = '', children, run, ...rest }: BigActionProps) {
   return (
     <Action
       {...rest}
+      // the buzz comes first and the work starts in the same moment: nothing here waits on it
+      run={() => { tap(); return run(); }}
       className={`${big ? 'biz-big-action' : 'biz-button'} ${className}`.trim()}
       disabled={Boolean(disabled)}
       title={disabled ?? rest.title}

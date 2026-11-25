@@ -11,6 +11,8 @@ import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from '
 import { unfinishedUploads } from './uploadParts';
 import { useSharedLibraryPlayer } from './cloudTransport';
 import { useCloudPlayer } from './useCloudPlayer';
+import { CoverArt } from '../views/CoverArt';
+import { useFeelAlive } from './CloudRailFeel';
 
 // The Cloud library: private originals, played from prepared playback files. Listening starts a
 // run from that song to the end of the list, with the next song buffered ahead (see
@@ -140,6 +142,9 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   };
 
   const track = player.track;
+  // with the feel on, each row shows its cover (the file's own picture where this device has it,
+  // else its generated tile) and answers the pointer like the other lists
+  const alive = useFeelAlive();
   const busy = truthful ? isBusy(state) : loading;
   const overview = overviewOf(state, unfinished);
   const storage = account && holdsHostedStorage(account) ? (account.usage?.storage.used_bytes ?? account.entitlement.storage_used_bytes) : null;
@@ -147,8 +152,8 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   const list = (assets.length > 0 || nextCursor) && (
     <>
       <div className="cloud-library-list">{assets.map((asset, at) => (
-        <article className="cloud-library-row" key={asset.id}>
-          <span className="cloud-library-icon" aria-hidden="true"><Icon name="music" /></span>
+        <article className="cloud-library-row" key={asset.id} data-lift={alive ? 'row' : undefined}>
+          <span className="cloud-library-icon" aria-hidden="true">{alive ? <CoverArt seed={asset.id} songKey={asset.sha256 ?? undefined} size="small" /> : <Icon name="music" />}</span>
           <div className="cloud-library-meta"><strong><Truncate text={asset.name} /></strong><span>{asset.format?.toUpperCase() ?? 'Audio'} · {bytes(asset.size)}{asset.duration_seconds ? ` · ${Math.max(1, Math.round(asset.duration_seconds / 60))} min` : ''}</span></div>
           <button aria-label={`Listen to ${asset.name}`} onClick={() => void player.start(assets, at)} disabled={player.preparing === asset.id || busyId === asset.id}>{player.preparing === asset.id ? 'Opening…' : track?.id === asset.id ? 'Play again' : 'Listen'}</button>
           <button aria-label={`Remove ${asset.name}`} onClick={() => setAsking(asset)} disabled={busyId === asset.id}>Remove</button>

@@ -8,6 +8,9 @@ import { assetCatalogue, catalogueSource } from './cloudCatalogue';
 import { claimFocus, clearNotice, releaseFocus, shareLibraryPlayer, useTransport } from './cloudTransport';
 import { recoveringSpeaker } from './recoveringSpeaker';
 import { useCloudPlayer } from './useCloudPlayer';
+import { CoverArt } from '../views/CoverArt';
+import { DockTransport, type DockClock } from '../views/DockTransport';
+import { useFeelPart } from '../views/feelBits';
 
 // The one Cloud player (ADR-0419, flag `cloud.single_audio_owner`). CloudApp mounts this dock
 // above the pages, so the Library's song player and this browser as the session's speaker keep
@@ -89,6 +92,17 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
     player.advance();
   };
 
+  // ADR-0477: with depth on, the browser's own audio widget gives way to SelectaDJ's small transport,
+  // which drives this same element. The element's own events are the clock, so nothing is guessed.
+  // No beat effects here: this audio cannot be measured safely (ADR-0477, honest limits).
+  const custom = useFeelPart('depth');
+  const [clockState, setClockState] = useState<DockClock>({ time: 0, duration: 0, playing: false });
+  const follow = (element: HTMLAudioElement) => {
+    if (!custom) return;
+    const next = { time: element.currentTime || 0, duration: Number.isFinite(element.duration) ? element.duration : 0, playing: !element.paused && !element.ended };
+    setClockState((was) => (Math.abs(was.time - next.time) < 0.25 && was.duration === next.duration && was.playing === next.playing ? was : next));
+  };
+
   const track = player.track;
   const devices = accountFlagOn('devices', account.features);
   const showDevice = devices && armed;
@@ -104,14 +118,21 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
       )}
       {track && (
         <section className="cloud-card cloud-library-player" aria-label="Player">
+          {custom && <CoverArt seed={track.id} size="small" />}
           <div>
             <p className="cloud-eyebrow">Now playing from your library</p>
             <strong data-testid="now-playing">{track.name}</strong>
             {player.upNext && <p className="cloud-up-next" data-testid="up-next">Up next: {player.upNext.name}{player.bufferedId === player.upNext.id ? ' · loaded' : ''}</p>}
           </div>
-          <audio ref={audioRef} controls autoPlay={player.autoplay} src={track.url} data-track={track.id} data-testid="library-audio"
-            onLoadedMetadata={player.loaded} onTimeUpdate={player.heard} onPause={libraryPaused} onPlaying={libraryStarted} onPlay={libraryStarted}
-            onEnded={libraryEnded} onError={() => void player.refreshUrl()} />
+          {custom && <DockTransport audio={audioRef} clock={clockState} />}
+          <audio ref={audioRef} controls={!custom} autoPlay={player.autoplay} src={track.url} data-track={track.id} data-testid="library-audio"
+            onLoadedMetadata={(event) => { player.loaded(); follow(event.currentTarget); }}
+            onTimeUpdate={(event) => { player.heard(); follow(event.currentTarget); }}
+            onDurationChange={(event) => follow(event.currentTarget)}
+            onPause={(event) => { libraryPaused(); follow(event.currentTarget); }}
+            onPlaying={(event) => { libraryStarted(); follow(event.currentTarget); }}
+            onPlay={(event) => { libraryStarted(); follow(event.currentTarget); }}
+            onEnded={(event) => { libraryEnded(); follow(event.currentTarget); }} onError={() => void player.refreshUrl()} />
         </section>
       )}
       {error && <p className="cloud-feedback error" role="alert" data-testid="library-player-error">{error}</p>}

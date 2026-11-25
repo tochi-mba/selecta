@@ -149,6 +149,9 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .staff-buttons button, .staff-stop { transition: background-color var(--motion-fast) var(--motion-ease); }
+  /* the steering buttons carry the feel's press (ADR-0477); scale is only set while the feel is on,
+     so with it off this changes nothing */
+  .staff-buttons button { transition: background-color var(--motion-fast) var(--motion-ease), scale var(--press-dur, var(--motion-feedback)) var(--press-ease, var(--motion-ease)); }
 }
 
 @media (prefers-contrast: more) {
@@ -161,3 +164,10 @@
   .staff-nav-dot { background: CanvasText; forced-color-adjust: none; }
   .staff-dashboard button:focus-visible, .staff-dashboard a:focus-visible { outline-color: Highlight; }
 }
+
+/* The emergency Stop stays plain and immediate on the calm profile (ADR-0477 plan 3.14): it never
+   squashes and never carries the press pad or a sheen, so it answers the way it did before the
+   feel. Its pressed ring (polish.css) stays, because that is the plain answer to a press. */
+:root[data-feel] .staff-stop { scale: none; }
+:root[data-feel] .staff-stop::before,
+:root[data-feel] .staff-stop::after { content: none; }

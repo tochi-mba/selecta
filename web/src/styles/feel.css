@@ -1,0 +1,278 @@
+/* The feel system (ADR-0477): how controls, cards and rows answer a hand.
+ *
+ * Every rule here is scoped to a word in <html data-feel="...">, which feel/root.ts writes from the
+ * app.feel_* flags and the motion choice. No word, no rule: the page is exactly as it was.
+ *
+ *   data-feel~='motion'   presses, releases, arrivals, sliding indicators
+ *   data-feel~='depth'    lift shadows, lit edges, the glow on the main action
+ *   data-feel~='pointer'  the soft light under the mouse
+ *
+ * The rules of the house, which every block below keeps:
+ *   - Hovering never moves a control, and a press never shrinks its hit area.
+ *   - Colour and opacity use the six --motion-* tokens and --motion-ease. Position and scale use
+ *     the springs (--spring-*, --motion-spring-*).
+ *   - Selectors are new text and zero specificity (:where), so no existing rule is restated or
+ *     outranked, and every colour, shadow and duration is a token from tokens.css.
+ *   - Hover-only rules sit inside (hover: hover) and (pointer: fine), with a focus twin outside. */
+
+/* What a screen can ask for (FL-0477-02). Each one is inert until its data-feel word is on, and
+ * every animation runs once and ends at the element's own resting look, so Still, the computer's
+ * reduced-motion setting and an old browser all show the finished state.
+ *
+ *   data-lift            a card, tile or choice whose surface rises toward you on hover and on focus
+ *                        inside it. The surface is drawn by ::before (it copies the element's own
+ *                        background, border and corners), so the element and the buttons inside it
+ *                        never move. The element becomes its own stacking layer; it rises above its
+ *                        neighbours while hovered or holding focus, so a menu opened inside still
+ *                        covers the next card. An element with overflow: hidden clips its own lift
+ *                        shadow: use overflow: clip with overflow-clip-margin, or drop the clipping.
+ *                        A card with a border wider than 1px sets --lift-inset to that width.
+ *   data-lift="row"      a list row: no travel and no shadow (rows are hovered hundreds of times a
+ *                        day), only the lit top edge.
+ *   data-glow            the soft light that follows the mouse, with a lit border near it. Needs
+ *                        startPointerLight() (feel/pointerLight.ts, started in RuntimeApp). For
+ *                        cards, tiles and panels, not buttons: it uses ::after, the press pad's slot.
+ *   data-arrive          rises a little and fades in when it is first drawn (feel-arrive).
+ *   data-stagger         on a list or grid: every direct child arrives, each one --motion-stagger
+ *                        after the one before. Set --i on each child (style={{ '--i': index }}); the
+ *                        delay stops growing after the eighth, so a long list is never slow.
+ *   .feel-pop            something that just appeared because of a press, a count or a badge, pops
+ *                        in on a spring (feel-pop). Replay it by keying the element anew.
+ *   .feel-tick           on an SVG path drawn with pathLength="1": the tick draws itself (feel-draw).
+ *   .feel-flash          a new or just-changed row glows once in the selection colour (feel-flash).
+ *   .feel-collapse-out   a removed row fades and folds its height away (feel-collapse). Add it only
+ *                        when feelOn('motion') is true, then remove the node on animationend, with a
+ *                        timer as a fallback: no animation runs, and no event fires, when calm. */
+
+/* ---- press and release: buttons ---- */
+
+/* The press squashes to --press-scale fast; letting go springs back. The transition lists in
+   polish.css and cloud-ui.css carry `scale` through --press-dur and --press-ease, and a transition
+   is timed by the state it goes to: these resting values time the release, the :active ones the
+   press. */
+:where(:root[data-feel~='motion'] :is(button, a.button)) {
+  --press-dur: var(--motion-spring-release);
+  --press-ease: var(--spring-bouncy);
+}
+:where(:root[data-feel~='motion'] :is(button, a.button):active:not(:disabled, [aria-disabled='true'])) {
+  position: relative;
+  scale: var(--press-scale);
+  --press-dur: var(--motion-feedback);
+  --press-ease: var(--motion-ease);
+}
+/* The hit pad: while pressed the painted box shrinks by (1 - --press-scale), and this invisible pad
+   reaches 2.5% and a pixel past each edge, so every point of the resting box still lands on the
+   button and a press that slides to the edge is not lost. Buttons whose ::after already draws
+   something (a busy line, a Studio cell's mark, a collapsed rail's name, the pointer light) keep it. */
+:where(:root[data-feel~='motion'] :is(button, a.button):active:not(:disabled, [aria-disabled='true'], [aria-busy='true'], [data-working], [data-glow], .studio-cell, .inspector-resize, .nav *))::after {
+  content: '';
+  position: absolute;
+  inset: calc(-2.5% - 1px);
+}
+
+/* ---- depth: buttons ---- */
+
+/* The local buttons' transition list leaves box-shadow out, so the pressed ring stays instant with
+   the feel off; with depth on the lift eases in and out. */
+:where(:root[data-feel~='depth'] :is(button, a.button)) {
+  --lift-transition: box-shadow var(--motion-fast) var(--motion-ease);
+}
+/* A pressed button sits back down on the page: its inset ring or tint keeps the resting shadow
+   under it (polish.css and cloud-ui.css read --press-depth). */
+:where(:root[data-feel~='depth']) {
+  --press-depth: var(--shadow-rest);
+}
+/* The primary action's sheen: a band of light parked off the left edge. It crosses once when the
+   pointer or the keyboard arrives and jumps back unseen when they leave, because only the arriving
+   state carries a transition. */
+:where(:root[data-feel~='depth'] :is(button, a.button).primary:not([aria-busy='true'], [data-working], [data-lift])) {
+  position: relative;
+}
+:where(:root[data-feel~='depth'] :is(button, a.button).primary:not([aria-busy='true'], [data-working], [data-lift]))::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, var(--pointer-light) 50%, transparent 58%) no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* Hover is light, edge and shadow; the box never moves or grows. */
+  :where(:root[data-feel~='depth'] :is(button, a.button):hover:not(:disabled, [aria-disabled='true'], [data-lift], [aria-pressed='true'], .link, .nav *, [role='tab'], [role^='menuitem'], [role='option'])) {
+    box-shadow: var(--shadow-lift), var(--edge-light);
+  }
+  :where(:root[data-feel~='depth'] :is(button, a.button).primary:hover:not(:disabled, [aria-disabled='true'], [data-lift])) {
+    box-shadow: var(--shadow-lift), var(--edge-light), var(--glow-accent);
+  }
+  :where(:root[data-feel~='depth'] :is(button, a.button).primary:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true'], [data-working], [data-lift]))::before {
+    background-position: 0 0;
+    transition: background-position var(--motion-spring-glide) var(--motion-ease);
+  }
+}
+:where(:root[data-feel~='depth'] :is(button, a.button):focus-visible:not(:disabled, [aria-disabled='true'], [data-lift], [aria-pressed='true'], .link, .nav *, [role='tab'], [role^='menuitem'], [role='option'])) {
+  box-shadow: var(--shadow-lift), var(--edge-light);
+}
+:where(:root[data-feel~='depth'] :is(button, a.button).primary:focus-visible:not(:disabled, [aria-disabled='true'], [data-lift])) {
+  box-shadow: var(--shadow-lift), var(--edge-light), var(--glow-accent);
+}
+:where(:root[data-feel~='depth'] :is(button, a.button).primary:focus-visible:not(:disabled, [aria-disabled='true'], [aria-busy='true'], [data-working], [data-lift]))::before {
+  background-position: 0 0;
+  transition: background-position var(--motion-spring-glide) var(--motion-ease);
+}
+
+/* ---- moving skins: cards, tiles and rows ---- */
+
+/* The skin exists whenever it can move or cast a shadow. It inherits the element's background,
+   border and corners, so at rest it is the element's own look, and a hover colour change on the
+   element reaches it at the same moment. It sits under the content (z-index -1 inside the element's
+   own layer) and never takes the pointer. */
+:where(:root:is([data-feel~='motion'], [data-feel~='depth']) [data-lift]:not([data-lift='row'])) {
+  position: relative;
+  isolation: isolate;
+}
+:where(:root:is([data-feel~='motion'], [data-feel~='depth']) [data-lift]:not([data-lift='row']))::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--lift-inset, 1px));
+  z-index: -1;
+  border: inherit;
+  border-radius: inherit;
+  background: inherit;
+  pointer-events: none;
+  transition: translate var(--motion-spring-snappy) var(--spring-snappy), box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* the lifted card rises above its neighbours, so its shadow falls on them */
+  :where(:root:is([data-feel~='motion'], [data-feel~='depth']) [data-lift]:not([data-lift='row']):hover) {
+    z-index: 1;
+  }
+  :where(:root[data-feel~='motion'] [data-lift]:not([data-lift='row']):hover)::before {
+    translate: 0 calc(-1 * var(--space-hair));
+  }
+  :where(:root[data-feel~='depth'] [data-lift]:not([data-lift='row']):hover)::before {
+    box-shadow: var(--shadow-lift), var(--edge-light);
+  }
+  :where(:root[data-feel~='depth'] [data-lift='row']:hover) {
+    box-shadow: var(--edge-light);
+  }
+  /* the pointer light rides on the skin, so the two stay together */
+  :where(:root[data-feel~='motion'] [data-lift]:not([data-lift='row'])[data-glow]:hover)::after {
+    translate: 0 calc(-1 * var(--space-hair));
+  }
+}
+/* Focus inside a card lifts it as hover does, and keeps it above the next card while a menu inside
+   it is open. */
+:where(:root:is([data-feel~='motion'], [data-feel~='depth']) [data-lift]:not([data-lift='row']):focus-within) {
+  z-index: 1;
+}
+:where(:root[data-feel~='motion'] [data-lift]:not([data-lift='row']):focus-within)::before {
+  translate: 0 calc(-1 * var(--space-hair));
+}
+:where(:root[data-feel~='depth'] [data-lift]:not([data-lift='row']):focus-within)::before {
+  box-shadow: var(--shadow-lift), var(--edge-light);
+}
+:where(:root[data-feel~='depth'] [data-lift='row']:focus-within) {
+  box-shadow: var(--edge-light);
+}
+:where(:root[data-feel~='motion'] [data-lift]:not([data-lift='row'])[data-glow]:focus-within)::after {
+  translate: 0 calc(-1 * var(--space-hair));
+}
+
+/* ---- pointer light ---- */
+
+/* A soft light at --mx/--my (feel/pointerLight.ts writes them on this element alone), and a
+   stronger ring of it on the border near the pointer. Two layers of one gradient: the first fills
+   the inside, the second is clipped to the 1px border. Without a position it sits in the middle,
+   which is where keyboard focus puts it. */
+:where(:root[data-feel~='pointer'] [data-glow]) {
+  position: relative;
+  isolation: isolate;
+}
+:where(:root[data-feel~='pointer'] [data-glow])::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--lift-inset, 1px));
+  z-index: -1;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 16rem at var(--mx, 50%) var(--my, 50%), var(--pointer-light), transparent) border-box padding-box,
+    radial-gradient(circle 8rem at var(--mx, 50%) var(--my, 50%), var(--pointer-light), transparent) border-box border-box;
+  opacity: var(--glow-shown, 0);
+  transition: opacity var(--motion-fast) var(--motion-ease), translate var(--motion-spring-snappy) var(--spring-snappy);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='pointer'] [data-glow]:hover) {
+    --glow-shown: 1;
+  }
+}
+:where(:root[data-feel~='pointer'] [data-glow]:focus-within) {
+  --glow-shown: 1;
+}
+
+/* ---- arrivals and small answers ---- */
+
+:where(:root[data-feel~='motion'] :is([data-arrive], [data-stagger] > *)) {
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) both;
+}
+:where(:root[data-feel~='motion'] [data-stagger] > *) {
+  animation-delay: calc(min(var(--i, 0), 8) * var(--motion-stagger));
+}
+:where(:root[data-feel~='motion'] .feel-pop) {
+  animation: feel-pop var(--motion-spring-snappy) var(--spring-bouncy) both;
+}
+:where(:root[data-feel~='motion'] .feel-tick) {
+  stroke-dasharray: 1;
+  animation: feel-draw var(--motion-spring-snappy) var(--motion-ease) both;
+}
+/* a highlight has to be seen to be useful, so it holds longer than an answer to a press */
+:where(:root[data-feel~='motion'] .feel-flash) {
+  animation: feel-flash calc(var(--motion-slow) * 4) var(--motion-ease) both;
+}
+/* leaving is faster than arriving; interpolate-size lets the height fold from auto where the
+   browser can, and elsewhere the row fades and then goes */
+:where(:root[data-feel~='motion'] .feel-collapse-out) {
+  overflow: clip;
+  interpolate-size: allow-keywords;
+  pointer-events: none;
+  animation: feel-collapse var(--motion-handoff) var(--motion-ease) forwards;
+}
+
+@keyframes feel-arrive {
+  from { opacity: 0; translate: 0 var(--space-3); }
+}
+@keyframes feel-pop {
+  from { opacity: 0; scale: 0.85; }
+}
+@keyframes feel-draw {
+  from { stroke-dashoffset: 1; }
+}
+@keyframes feel-flash {
+  from { background-color: var(--surface-selected); }
+}
+@keyframes feel-collapse {
+  to { opacity: 0; block-size: 0; padding-block: 0; margin-block: 0; }
+}
+
+/* ---- forced colours ---- */
+
+/* The system draws every state with borders and outlines here; shadows, glows, the sheen and the
+   pointer light would only be noise, and the skin stays flat on its element. */
+@media (forced-colors: active) {
+  :where(:root[data-feel] :is(button, a.button, [data-lift])) {
+    box-shadow: none;
+  }
+  :where(:root[data-feel] [data-lift])::before {
+    box-shadow: none;
+    translate: none;
+  }
+  :where(:root[data-feel] :is(button, a.button).primary:not([aria-busy='true'], [data-working], [data-lift]))::before,
+  :where(:root[data-feel] [data-glow])::after {
+    display: none;
+  }
+}

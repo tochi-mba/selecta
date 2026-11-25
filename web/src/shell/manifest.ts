@@ -7,7 +7,7 @@ import { pathOf, type Route, type WorkshopTab } from '../router';
  * The older addresses stay the real ones. `router.ts` holds the friendlier aliases. */
 
 export type DestinationId = 'listen' | 'explore' | 'mine' | 'library' | 'workspace';
-export type MoreDestinationId = 'account' | 'billing' | 'devices' | 'rooms' | 'workspace' | 'uploads';
+export type MoreDestinationId = 'account' | 'billing' | 'devices' | 'rooms' | 'workspace' | 'uploads' | 'listening_room';
 
 export type ShellMode = 'local' | 'cloud';
 /** A Cloud-only page in More, by its address. Local addresses stay `Route`s, untouched. */
@@ -71,6 +71,8 @@ export const MORE_DESTINATIONS: readonly MoreDestination[] = [
   { id: 'rooms', label: 'Rooms', path: '/rooms', about: 'Host a request room for your guests', requires: { modes: ['cloud'], flag: 'rooms' } },
   { id: 'workspace', label: 'This device', path: '/workshop', about: 'The music connected on this device and the storage it uses', requires: { modes: ['cloud'], experience: 'local_first' } },
   { id: 'uploads', label: 'Add music', path: '/upload', about: 'Upload tracks to your SelectaDJ Cloud library', requires: { modes: ['cloud'], flag: 'cloud.uploads', experience: 'hosted' } },
+  // tools.listening_room: judging transitions by ear, on this device's own music (listening-room/)
+  { id: 'listening_room', label: 'Listening Room', path: '/listening-room', about: 'Hear transitions from your mix two ways, without knowing which is which, and say which sounds better', requires: { modes: ['cloud'], flag: 'tools.listening_room', experience: 'local_first' } },
 ];
 
 export function moreDestinationsFor(context: DestinationContext): MoreDestination[] {

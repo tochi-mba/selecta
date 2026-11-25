@@ -93,6 +93,16 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
   const [busy, setBusy] = useState(false);
   const list = useRef<HTMLOListElement>(null);
   const songs = snapshot.songs;
+  // Songs a new current revision really added glow once with a lit edge (lucy.css). The first list
+  // shown, and an older revision being looked at, have nothing new in them. Worked out once per
+  // revision, so a redraw never lights a row again.
+  const seen = useRef<{ snapshot: ProposalSnapshot | null; known: Set<string> | null; added: Set<string> }>({ snapshot: null, known: null, added: new Set() });
+  if (seen.current.snapshot !== snapshot) {
+    const before = seen.current.known;
+    const now = songs.map((song) => song.occurrence);
+    seen.current = { snapshot, known: new Set(now), added: new Set(before && editable ? now.filter((occurrence) => !before.has(occurrence)) : []) };
+  }
+  const added = seen.current.added;
   const seamOf = (a: string, b: string) => snapshot.seams.find((seam) => seam.a_occ === a && seam.b_occ === b);
   const entryOf = (a: string, b: string) => ledger?.seams.find((seam) => seam.a_occ === a && seam.b_occ === b);
 
@@ -139,7 +149,7 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
                 onAsk={() => onAsk({ seam: [previous.occurrence, song.occurrence] }, `the transition from ${previous.title || 'song ' + index} into ${name}`)}
               />
             )}
-            <div className={`lucy-song ${songSelected ? 'is-selected' : ''} ${song.locked ? 'is-locked' : ''}`} data-occ={song.occurrence}>
+            <div className={`lucy-song ${songSelected ? 'is-selected' : ''} ${song.locked ? 'is-locked' : ''}${added.has(song.occurrence) ? ' feel-flash' : ''}`} data-occ={song.occurrence}>
               <span className="lucy-song-n" aria-hidden="true">{index + 1}</span>
               <div className="lucy-song-main">
                 {!live && <SongMotif songId={song.song_id} />}

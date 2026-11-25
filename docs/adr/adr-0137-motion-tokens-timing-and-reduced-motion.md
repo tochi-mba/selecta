@@ -7,6 +7,7 @@
 - **Priority / phase:** P0 / Motion foundation.
 - **Related earlier ADRs:** ADR-0044, ADR-0132, ADR-0130; earlier decisions and historical implementation claims remain intact.
 - **Source touchpoints:** web/src/styles/tokens.css; web/src/styles/polish.css; web/src/ui/Skeleton.tsx.
+- **Superseded in part by:** [ADR-0477](adr-0477-feel-system.md) (Proposed): spring overshoot stays banned only for timeline drops and dialogs that hold data.
 
 ## Context and evidence boundary
 

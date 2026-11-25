@@ -46,8 +46,9 @@ export function StaffControl({ venueId }: { venueId: string }) {
   const steer = (word: 'bigger' | 'calmer' | 'something_else') => gate.gate(() => commands.send(zone.id, { kind: 'steer', word })).then(() => refresh());
   const decide = async (id: string, verdict: 'approve' | 'pass') => {
     await gate.gate(() => client.decide(zone.id, id, verdict));
-    setRequests(await client.requests(zone.id));
   };
+  // read after the answered row has folded away (the queue calls it), so the list never jumps first
+  const reread = async () => setRequests(await client.requests(zone.id));
   const managerLine = staffManagerLine({ org, venue, now, manager: viewerIsManager(org, pinsOn, gate.holder?.role) });
   const late = venue.stay_open_late;
   const stayLate: StayLate | null = !late || late.allowance_minutes <= 0 ? null
@@ -88,7 +89,7 @@ export function StaffControl({ venueId }: { venueId: string }) {
         requests={requests.length} onRequests={() => setShowRequests((value) => !value)} stayLate={stayLate} />}
     {commands.pending > 0 && <p role="status">{commands.pending} change(s) will send when back online.</p>}
     {commands.slow && <p role="status">Changes may take a few seconds to reach the players.</p>}
-    {showRequests && <RequestApprovalQueue requests={requests} big disabled={disabled ? 'Read-only' : null} onDecide={decide} />}
+    {showRequests && <RequestApprovalQueue requests={requests} big disabled={disabled ? 'Read-only' : null} onDecide={decide} onDecided={reread} />}
     {error && <p role="alert">{error}</p>}
     {managerLine && <ManagerNotice line kind="warning">{managerLine}</ManagerNotice>}
     {gate.asking && <PinKeypad onSubmit={gate.submit} onClose={gate.cancel} />}

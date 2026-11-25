@@ -4,6 +4,7 @@
 // billing routes, which only owners and admins may read. The page sits behind `business.billing`.
 
 import { FormEvent, useState } from 'react';
+import { DrawnTick, useMotionOn } from '../../views/feelPieces';
 import { BILLING_COPY as COPY } from '../copy/console';
 import { PATHS, useBusiness } from '../context';
 import { canManageBilling } from '../state';
@@ -160,10 +161,14 @@ function InvoiceDetailsCard({ summary, onSaved }: { summary: BillingSummary; onS
   const [centres, setCentres] = useState<Record<string, string>>(() => Object.fromEntries(summary.venues.map((venue) => [venue.venue_id, venue.cost_centre ?? ''])));
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  // Each save that lands draws a tick beside "Saved" (ADR-0477); keyed by this count so the next
+  // save draws it again. The words stay the status; the tick is decoration and only drawn with motion.
+  const [saves, setSaves] = useState(0);
+  const moving = useMotionOn();
   const run = async (work: () => Promise<unknown>, after: string = COPY.saved, refresh = true) => {
     setBusy(true);
     setStatus(refresh ? COPY.saving : COPY.downloading);
-    try { await work(); setStatus(after); if (refresh) await onSaved(); } catch (problem) { setStatus((problem as Error).message); } finally { setBusy(false); }
+    try { await work(); setStatus(after); if (refresh) setSaves((count) => count + 1); if (refresh) await onSaved(); } catch (problem) { setStatus((problem as Error).message); } finally { setBusy(false); }
   };
   const download = () => run(async () => { const file = await client.costBreakdown(); saveFile(file.filename, file.csv); }, '', false);
   return <section className="biz-card" aria-labelledby="biz-billing-invoice-details">
@@ -189,6 +194,6 @@ function InvoiceDetailsCard({ summary, onSaved }: { summary: BillingSummary; onS
     </fieldset>}
     <div className="biz-row"><button type="button" onClick={() => void download()} disabled={busy}>{COPY.breakdown}</button></div>
     <p className="biz-quiet">{COPY.breakdownNote}</p>
-    <p role="status" aria-live="polite">{status}</p>
+    <p role="status" aria-live="polite">{moving && saves > 0 && status === COPY.saved && <DrawnTick key={saves} className="biz-saved-tick" />}{status}</p>
   </section>;
 }

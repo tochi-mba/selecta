@@ -24,6 +24,19 @@
 .shell[data-mode='cloud'] .cover-art .song-motif { width: 62%; height: 62%; margin: 0; color: inherit; }
 .shell[data-mode='cloud'] .cover-art .ui-icon { width: 45%; height: 45%; }
 .shell[data-mode='cloud'] .cover-art[data-size='small'] { width: 36px; }
+/* The song file's own picture (ADR-0478, views/CoverArt.tsx) lies over the tile in the same grid
+   cell, so the tile shows until the picture has decoded and stays if it never does. */
+.shell[data-mode='cloud'] .cover-art[data-art] > * { grid-area: 1 / 1; }
+.shell[data-mode='cloud'] .cover-art-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity var(--motion-reveal) var(--motion-ease);
+}
+.shell[data-mode='cloud'] .cover-art-image[data-ready] { opacity: 1; }
+/* blur-up: the small picture, stretched under the large one, is soft on its own */
+.shell[data-mode='cloud'] .cover-art-image[data-layer='preview'] { transform: scale(1.04); }
 @media (forced-colors: active) {
   .shell[data-mode='cloud'] .cover-art { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
 }
