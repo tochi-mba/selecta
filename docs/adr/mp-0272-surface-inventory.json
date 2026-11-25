@@ -274,6 +274,20 @@
    "axe": "web/e2e-cloud/bf-accessibility.cloud.ts"
   },
   {
+   "id": "site.admin.workers",
+   "site": "admin",
+   "path": "/admin/workers",
+   "owner": [
+    "web/src/admin/WorkersPage.tsx",
+    "web/src/admin/WorkersActions.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": "web/e2e-cloud/bf-accessibility.cloud.ts"
+  },
+  {
    "id": "site.admin.ai",
    "site": "admin",
    "path": "/admin/ai",
