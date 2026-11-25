@@ -49,6 +49,9 @@ export type BrowserSpeakerOptions = {
   queueLength?: () => number;
   /** Builds dsp/seams.ts schedules for transitions; gapless boundaries without one. */
   seam?: SeamProvider;
+  /** cloud.seam_lead (scheduler.ts SchedulerDeps). */
+  planAhead?: () => boolean;
+  level?: (buffer: AudioBuffer) => Promise<number>;
   store?: EngineStore;
   /** How many decoded songs to keep in memory (loader.ts, default 3). */
   keep?: number;
@@ -105,6 +108,8 @@ export class BrowserSpeaker implements Speaker {
       hold: () => options.audio.hold(),
       wake: () => options.audio.wake(),
       seam: options.seam,
+      planAhead: options.planAhead,
+      level: options.level,
       timers: options.timers,
     });
     this.watchedDocument = typeof document === 'undefined' ? null : document;

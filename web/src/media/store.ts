@@ -42,7 +42,21 @@ export type StoredSong = {
    * in this import. Trusted for listing; checked against the bytes before they first play or any
    * shared analysis is read, which clears it. */
   fingerprint?: 'remembered';
+  /** `cloud.music_folders`: the watched folders this song's file was found in, with its place
+   * inside each, so per-folder counts and "stop watching and remove its songs" are exact. Kept
+   * only in this browser, never sent anywhere (ADR-0455). A song is its content hash, so the
+   * same song found in two folders is one row that belongs to both. */
+  sources?: SongSource[];
 };
+
+/** Where one watched folder holds a song's file: its path relative to that folder, and the size
+ * and modified time it had, so a later check knows the file without reading it again. */
+export type SongSource = { folderId: string; path: string; size: number; modified: number };
+
+/** The song's sources with `source` added (replacing the same folder and path). */
+export function withSource(sources: readonly SongSource[] | undefined, source: SongSource): SongSource[] {
+  return [...(sources ?? []).filter((one) => one.folderId !== source.folderId || one.path !== source.path), source];
+}
 
 /** Thrown where browser storage is full: the import pauses honestly instead of half-recording. */
 export class StorageFullError extends Error {
@@ -146,6 +160,10 @@ export class MediaStore {
   get availabilityRevision(): number { return this.revision; }
 
   private touchAvailability(): void { this.revision += 1; }
+
+  /** Something outside the index changed what this device can open (a folder's permission was
+   * allowed again, files went missing from a watched folder): the next lapsed sweep looks again. */
+  noteAvailabilityChanged(): void { this.touchAvailability(); }
 
   private constructor(workspaceId: string) {
     this.workspaceId = workspaceId;

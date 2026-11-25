@@ -747,7 +747,8 @@ export function CloudApp() {
       case 'devices': return <SettingsLayout current="devices" places={places}><DevicesPanel api={api} workspaceId={account.workspace.id} titled={false} /></SettingsLayout>;
       case 'rooms': return <RoomPanel api={api} workspaceId={account.workspace.id} locked={account.feature_locks.rooms} votesOn={flagOn('rooms.votes')} displayOn={flagOn('rooms.display')} playHereOn={flagOn('devices')} freshOnly={account.features['rooms.nickname_confirm'] === true} />;
       case 'uploads': return uploads;
-      case 'workspace': return null;
+      case 'workspace':
+      case 'listening_room': return null;
     }
   };
   // The hosted frame's account notices, in a shared shell's banner slot (one source for every frame).

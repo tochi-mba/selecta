@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FOLDERS_DB, forgetFolder, recallFolder, rememberFolder } from './folders';
-import type { StoredFolderHandle } from './folders';
+import {
+  FOLDERS_DB, FOLDERS_VERSION, forgetFolder, legacyFolderId, listWatchedFolders, recallFolder, rememberFolder, removeWatchedFolder, saveWatchedFolder,
+} from './folders';
+import type { StoredFolderHandle, WatchedFolder } from './folders';
+import { fakeIndexedDb } from './fakeIndexedDb';
 import { bytesFile, fakeDirectory, fakeHandle } from './testFixtures';
 
 /** A minimal in-memory IndexedDB: enough of open / upgrade / transaction / get / put / delete
@@ -62,8 +65,9 @@ describe('remembered import folders', () => {
     await forgetFolder('ws-1');
     expect(await recallFolder('ws-1')).toBeNull();
     expect((await recallFolder('ws-2'))?.name).toBe('Crates');
-    // Never the song index's database, always version 1 of its own.
-    expect(opened.every((entry) => entry.name === FOLDERS_DB && entry.version === 1)).toBe(true);
+    // Never the song index's database, always the current version of its own.
+    expect(FOLDERS_VERSION).toBe(2);
+    expect(opened.every((entry) => entry.name === FOLDERS_DB && entry.version === FOLDERS_VERSION)).toBe(true);
     expect(FOLDERS_DB).not.toBe('selecta-media');
   });
 
@@ -85,5 +89,74 @@ describe('remembered import folders', () => {
       },
     });
     expect(await recallFolder('ws-1')).toBeNull();
+  });
+});
+
+const record = (id: string, workspaceId: string, name: string, addedAt: number): WatchedFolder => ({
+  kind: 'folder', id, workspaceId, handle: folder(name), name, addedAt, checkedAt: null, songs: null, lastNew: 0, missing: 0, state: 'unchecked',
+});
+
+describe('watched music folders (cloud.music_folders)', () => {
+  it('keeps many folders per workspace, oldest first, and removes one without touching the rest', async () => {
+    vi.stubGlobal('indexedDB', fakeIndexedDb());
+    expect(await saveWatchedFolder(record('b', 'ws-1', 'Downloads', 2))).toBe(true);
+    expect(await saveWatchedFolder(record('a', 'ws-1', 'Music', 1))).toBe(true);
+    expect(await saveWatchedFolder(record('c', 'ws-1', 'Crates', 3))).toBe(true);
+    expect((await listWatchedFolders('ws-1'))?.map((one) => one.name)).toEqual(['Music', 'Downloads', 'Crates']);
+    await removeWatchedFolder('b');
+    expect((await listWatchedFolders('ws-1'))?.map((one) => one.id)).toEqual(['a', 'c']);
+  });
+
+  it('shows each account only its own folders in a shared browser', async () => {
+    vi.stubGlobal('indexedDB', fakeIndexedDb());
+    await saveWatchedFolder(record('a', 'ws-1', 'Mine', 1));
+    await saveWatchedFolder(record('b', 'ws-2', 'Theirs', 2));
+    expect((await listWatchedFolders('ws-1'))?.map((one) => one.name)).toEqual(['Mine']);
+    expect((await listWatchedFolders('ws-2'))?.map((one) => one.name)).toEqual(['Theirs']);
+    expect(await listWatchedFolders('ws-3')).toEqual([]);
+  });
+
+  it('copies the single remembered folder of version 1 into the list once, without losing it', async () => {
+    const factory = fakeIndexedDb();
+    vi.stubGlobal('indexedDB', factory);
+    // a version 1 database, as the previous release left it
+    await new Promise<void>((done) => {
+      const opening = factory.open(FOLDERS_DB, 1);
+      opening.onupgradeneeded = () => { opening.result.createObjectStore('folders'); };
+      opening.onsuccess = () => {
+        const transaction = opening.result.transaction('folders', 'readwrite');
+        transaction.objectStore('folders').put(folder('Old music'), 'ws-1');
+        transaction.oncomplete = () => { opening.result.close(); done(); };
+      };
+    });
+    // two tabs reading at once still make one record
+    const [first, second] = await Promise.all([listWatchedFolders('ws-1'), listWatchedFolders('ws-1')]);
+    expect(first?.map((one) => one.name)).toEqual(['Old music']);
+    expect(second?.map((one) => one.id)).toEqual([legacyFolderId('ws-1')]);
+    expect((await listWatchedFolders('ws-1'))?.length).toBe(1);
+    // the old offer still finds it
+    expect((await recallFolder('ws-1'))?.name).toBe('Old music');
+    // stopped watching, it is never brought back by the copy
+    await removeWatchedFolder(legacyFolderId('ws-1'));
+    expect(await listWatchedFolders('ws-1')).toEqual([]);
+    // another account in the same browser is not given it
+    expect(await listWatchedFolders('ws-2')).toEqual([]);
+  });
+
+  it('degrades quietly: nothing remembered reads as null and a write says it was not kept', async () => {
+    vi.stubGlobal('indexedDB', undefined);
+    expect(await listWatchedFolders('ws-1')).toBeNull();
+    expect(await saveWatchedFolder(record('a', 'ws-1', 'Music', 1))).toBe(false);
+    expect(await removeWatchedFolder('a')).toBe(false);
+    vi.stubGlobal('indexedDB', { open: () => { throw new Error('storage disabled'); } });
+    expect(await listWatchedFolders('ws-1')).toBeNull();
+    vi.stubGlobal('indexedDB', {
+      open: () => {
+        const opening: Record<string, unknown> = {};
+        setTimeout(() => (opening.onerror as () => void)?.(), 0);
+        return opening;
+      },
+    });
+    expect(await saveWatchedFolder(record('a', 'ws-1', 'Music', 1))).toBe(false);
   });
 });
