@@ -124,10 +124,10 @@ def preview(conn: Connection, actor: Actor, *, kind: str, job_type: str | None =
 
 def retry_failed(conn: Connection, actor: Actor, job_type: str, *, reason: str,
                  intent: safety.Intent) -> dict[str, Any]:
+    authorize(conn, actor, "jobs.retry", PLATFORM)
     reason = _reason(reason)
     if job_type not in CATALOGUE:
         raise ValueError("Choose a job type from the list.")
-    authorize(conn, actor, "jobs.retry", PLATFORM)
     _lanes(conn)
     now = db_now(conn)
     ids = _failed_ids(conn, job_type, now)
@@ -161,7 +161,7 @@ def propose_expire(conn: Connection, actor: Actor, *, hours: float, pool: str | 
                              reason=reason, resource=PLATFORM)
     safety.record(conn, actor, "jobs.expire_queued", resource_type="jobs", resource_id=pool,
                   workspace_id=None, reason=reason, count=found["count"], hours=hours,
-                  action_id=action.id)
+                  delayed_action=action.id)
     return action
 
 
@@ -187,10 +187,9 @@ def _drain_row(conn: Connection, target: str):
 
 def pause_pool(conn: Connection, actor: Actor, pool: str, *, reason: str,
                intent: safety.Intent) -> dict[str, Any]:
+    authorize(conn, actor, "workers.drain", ResourceRef("emergency_control", f"{DRAIN}:{pool}"))
     reason = _reason(reason)
     pool = _pool(pool)
-    resource = ResourceRef("emergency_control", f"{DRAIN}:{pool}")
-    authorize(conn, actor, "workers.drain", resource)
     safety.guard(conn, actor, "pool.pause", intent)
     if emergency_state.load(conn).drained(pool):
         raise ValueError(f"The {pool} pool is already paused.")
@@ -211,10 +210,9 @@ def pause_pool(conn: Connection, actor: Actor, pool: str, *, reason: str,
 
 def resume_pool(conn: Connection, actor: Actor, pool: str, *, reason: str,
                 intent: safety.Intent) -> dict[str, Any]:
+    authorize(conn, actor, "workers.drain", ResourceRef("emergency_control", f"{DRAIN}:{pool}"))
     reason = _reason(reason)
     pool = _pool(pool)
-    resource = ResourceRef("emergency_control", f"{DRAIN}:{pool}")
-    authorize(conn, actor, "workers.drain", resource)
     safety.guard(conn, actor, "pool.resume", intent)
     state = emergency_state.load(conn)
     if state.on(DRAIN, emergency_state.ALL):
@@ -257,9 +255,9 @@ def request_scale(conn: Connection, actor: Actor, pool: str, command: str, *, re
                   intent: safety.Intent) -> dict[str, Any]:
     """Ask the autoscaler for one worker for a test hour, none (for up to 24 hours), or to decide
     again by itself (`release`)."""
+    authorize(conn, actor, "workers.scale", ResourceRef("pool", pool))
     reason = _reason(reason)
     pool = _pool(pool)
-    authorize(conn, actor, "workers.scale", ResourceRef("pool", pool))
     action = "pool.scale_release" if command == "release" else SCALE_ACTIONS.get(
         command, (None,))[0]
     if action is None:

@@ -124,8 +124,10 @@ def test_every_installed_admin_route_is_owned_by_the_admin_flag(admin_world):
         for method in route.methods - {"HEAD"}
     }
     assert routes
+    # The Workers page's routes belong to its own flag, which needs admin.console.
     assert {route: owners.get(route) for route in routes} == {
-        route: "admin.console" for route in routes
+        route: "admin.workers" if " /api/admin/hosted/" in route else "admin.console"
+        for route in routes
     }
 
 
@@ -249,6 +251,9 @@ COMMANDS = {
     "/api/admin/actions/{action_id}/{command}": ("approve", "cancel", "execute"),
     "/api/admin/emergency/{control}/{command}": ("engage", "release"),
     "/api/admin/takedowns/{notice_id}/{command}": ("act", "reject"),
+    "/api/admin/hosted/pools/{pool}/{command}": ("pause", "resume", "start-test", "stop",
+                                                 "release"),
+    "/api/admin/catalog/art/{art_id}/{command}": ("hide", "unhide"),
 }
 # One body that satisfies every admin request model, so validation never answers first.
 EVERY_FIELD = {
@@ -286,6 +291,10 @@ EVERY_FIELD = {
     "mode": "hosted",
     "value": "default",
     "why": "requested_by_customer",
+    # the Workers page
+    "type": "analyse.song",
+    "hours": 24,
+    "monthly_usd": 100,
 }
 # Routes any signed-in staff member may call: starting the admin session and reading who you are.
 SELF_ONLY = {"POST /api/admin/session", "GET /api/admin/me",

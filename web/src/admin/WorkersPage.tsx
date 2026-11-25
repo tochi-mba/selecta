@@ -92,13 +92,15 @@ function Headline({ pools }: { pools: Pool[] | Fail }) {
   const queued = pools.reduce((n, p) => n + p.queued, 0);
   let level: 'ok' | 'partial' | 'problem' = 'ok';
   let text: string;
-  if (worst('failing').length) {
-    level = 'problem';
-    text = `${worst('failing').map((p) => poolName(p.pool)).join(' and ')}: failing. The latest attempts all failed.`;
-  } else if (worst('waiting').length) {
-    level = 'problem';
+  const problems: string[] = [];
+  if (worst('waiting').length) {
     const p = worst('waiting')[0];
-    text = `${worst('waiting').map((x) => poolName(x.pool)).join(' and ')}: waiting for a worker. ${p.queued} jobs queued, the oldest for ${waited(p.oldest_wait_s)}, and no worker is taking them.`;
+    problems.push(`${worst('waiting').map((x) => poolName(x.pool)).join(' and ')}: waiting for a worker. ${p.queued} jobs queued, the oldest for ${waited(p.oldest_wait_s)}, and no worker is taking them.`);
+  }
+  if (worst('failing').length) problems.push(`${worst('failing').map((p) => poolName(p.pool)).join(' and ')}: failing; the latest attempts all failed.`);
+  if (problems.length) {
+    level = 'problem';
+    text = problems.join(' ');
   } else if (never) {
     level = 'partial';
     text = queued ? `No worker has ever checked in, and ${queued} jobs are waiting.` : 'No worker has ever checked in. Nothing is waiting yet.';
@@ -202,7 +204,7 @@ function Pieces({ pieces }: { pieces: Status['pieces'] }) {
         <li data-lift="row">
           <strong>Hosted flags</strong>
           {failed(pieces.flags) ? <Problem error={pieces.flags.error} /> : <ul className="admin-health">{pieces.flags.map((f) => (
-            <li key={f.id}><Badge tone={f.on ? 'ok' : 'warn'}>{f.on ? 'On' : 'Off'}</Badge><code>{f.id}</code><span>{f.about}{f.note && `. ${f.note}`}.</span></li>
+            <li key={f.id}><code>{f.id}</code><Badge tone={f.on ? 'ok' : 'warn'}>{f.on ? 'On' : 'Off'}</Badge><span>{f.about}{f.note && `. ${f.note}`}.</span></li>
           ))}</ul>}
           <p><span className="admin-soft">What to do: </span>a flag that is off here is off in the build; change it in Flags, or grant hosted storage to an account from its customer page.</p>
         </li>
@@ -272,7 +274,7 @@ function CostSection({ cost, onChange }: { cost: Cost | Fail; onChange: () => vo
           { key: 'month', label: 'This month', numeric: true, render: (p) => hours(p.seconds_month), sort: (p) => p.seconds_month },
           { key: 'usd_month', label: 'Month', numeric: true, render: (p) => usd(p.usd_month), sort: (p) => p.usd_month ?? 0 },
         ]} />
-      <p className="admin-soft">Days and months are UTC. Figures as of <Time at={cost.as_of} /> (counted at most every five minutes).</p>
+      <p className="admin-soft">Days and months are UTC. Figures as of <Time at={cost.as_of} /> (counted at most every two minutes).</p>
     </Section>
   );
 }

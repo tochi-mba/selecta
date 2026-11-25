@@ -50,7 +50,7 @@ def install_routes(app: FastAPI, *, engine: Engine, current_claims: Callable[...
 
     @app.get("/api/admin/hosted/preview")
     def admin_hosted_preview(request: Request, claims: SignedIn,
-                             kind: str = Query(max_length=32),
+                             kind: str = Query(default="", max_length=32),
                              type: str | None = Query(default=None, max_length=64),  # noqa: A002
                              hours: float | None = None,
                              pool: str | None = Query(default=None, max_length=32)):

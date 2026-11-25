@@ -42,7 +42,7 @@ export function waited(seconds: number | null | undefined) {
 
 /** A button that is disabled for a reason the console's permission rules don't know about. */
 function Unavailable({ children, why }: { children: ReactNode; why: string }) {
-  return <span className="admin-action"><button type="button" disabled title={why}>{children}</button><small className="admin-soft">{why}</small></span>;
+  return <button type="button" disabled title={why}>{children}</button>;
 }
 
 /** Pause or resume one pool, and ask the autoscaler for a worker or for none. */
@@ -58,7 +58,7 @@ export function PoolActions({ pool, autoscaler, onChange }: { pool: Pool; autosc
   const release = () => careful(ctx, () => send('release', 'Handed back to the autoscaler'), `The autoscaler decides the ${name} pool by itself again.`);
   const noAutoscaler = 'The autoscaler isn’t running. See Autoscaler under Around the workers.';
   return (
-    <div className="admin-actions" aria-label={`${name} commands`}>
+    <div className="admin-actions" role="group" aria-label={`${name} commands`}>
       {pool.paused
         ? pool.paused.from_page
           ? <ActionButton permission="workers.drain" onPress={() => void resume()}>Resume {name}</ActionButton>
@@ -74,6 +74,7 @@ export function PoolActions({ pool, autoscaler, onChange }: { pool: Pool; autosc
           : <>
             <Unavailable why={noAutoscaler}>Start one worker for an hour</Unavailable>
             <Unavailable why={noAutoscaler}>Stop all workers</Unavailable>
+            <small className="admin-soft admin-actions-why">Starting and stopping workers needs the autoscaler, which isn’t running (see Around the workers).</small>
           </>}
       {request && <Badge tone="warn">{request.workers ? `${request.workers} worker asked for` : 'Stopped by staff'} until {when(request.until)}</Badge>}
     </div>

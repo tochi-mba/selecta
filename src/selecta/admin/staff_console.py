@@ -240,7 +240,7 @@ def propose_owner(conn: Connection, actor: Actor, *, user_id: str, reason: str,
                  target=_email(conn, user_id))
     action = assignments.propose_owner(conn, actor, user_id=user_id, reason=reason)
     safety.record(conn, actor, "owner.propose", resource_type="role_assignment",
-                  resource_id=user_id, workspace_id=None, reason=reason, action_id=action.id)
+                  resource_id=user_id, workspace_id=None, reason=reason, delayed_action=action.id)
     return action
 
 
