@@ -10,8 +10,9 @@ No size or price is set here. The catalogue comes from `SELECTA_STRIPE_PACK_PRIC
 unset by default, and the point-of-sale wording is named by `SELECTA_PACK_CONSENT_VERSION`.
 With either unset nothing can be bought.
 
-Nothing in this module spends a pack on its own: `spend` is for the gateway to call once the
-weekly limit is reached and the member has confirmed for that week (rule 3).
+Nothing in this module spends a pack on its own: `spend` and `give_back` are for the gateway
+(`selecta.ai.usage_extra`) once the weekly limit is reached and the member has confirmed for
+that week (rule 3).
 """
 
 from __future__ import annotations
@@ -244,6 +245,41 @@ def spend(conn: Connection, *, workspace_id: str, units: int, now: float) -> int
     return taken
 
 
+def give_back(conn: Connection, *, workspace_id: str, units: int, now: float) -> int:
+    """Return up to `units` to the workspace's packs, soonest expiry first, and answer how many
+    went back. A pack is never lifted above the units it was bought with, and an expired or
+    refunded pack takes nothing. Each step is one guarded update."""
+    returned = 0
+    for _ in range(1_000):
+        if returned >= units:
+            break
+        open_pack = sa.and_(
+            _packs.workspace_id == workspace_id,
+            _packs.refunded_at.is_(None),
+            _packs.expires_at > now,
+            _packs.remaining_units < _packs.units,
+        )
+        pack = conn.execute(
+            sa.select(_packs.id, _packs.units, _packs.remaining_units)
+            .where(open_pack)
+            .order_by(_packs.expires_at, _packs.bought_at, _packs.id)
+            .limit(1)
+        ).first()
+        if pack is None:
+            break
+        want = min(units - returned, int(pack.units) - int(pack.remaining_units))
+        gave = conn.execute(
+            sa.update(lucy_usage_packs)
+            .where(_packs.id == pack.id, open_pack,
+                   _packs.remaining_units + want <= _packs.units)
+            .values(remaining_units=_packs.remaining_units + want)
+            .returning(_packs.id)
+        ).first()
+        if gave is not None:
+            returned += want
+    return returned
+
+
 def balance(conn: Connection, workspace_id: str, now: float) -> dict[str, Any]:
     """The workspace's extra usage as of `now`: units left across live packs, the size of the
     most recently bought live pack (the meter shows the balance as a share of it), and the
@@ -370,6 +406,7 @@ __all__ = [
     "consent_version",
     "credit",
     "credit_from_refs",
+    "give_back",
     "list_packs",
     "mark_refunded",
     "month_bounds",

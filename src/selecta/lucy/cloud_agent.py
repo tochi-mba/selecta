@@ -529,7 +529,8 @@ async def run_turn(job: Job) -> None:
                 meter = usage_units.read_model(conn, job.workspace_id, now=db_now(conn))
                 off = cloud_limits.switched_off(conn, job.workspace_id, now=db_now(conn))
                 meta["limit"] = cloud_limits.signal(
-                    "off" if off else limit_note, meter, plan_id=plan.tier.value)
+                    "off" if off else limit_note, meter, plan_id=plan.tier.value,
+                    extra_available=plan.extra_offered)
             cloud_store.finish_message(
                 conn, job.workspace_id, message["id"], writer.content, status, revision, meta,
             )

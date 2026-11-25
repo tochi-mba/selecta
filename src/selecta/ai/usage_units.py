@@ -33,6 +33,8 @@ SHADOW = "shadow"
 ENFORCED = "enforced"
 PLAN_POOL = "plan"
 VENUE_POOL = "venue"
+# A turn paid for from a prepaid pack once the week is spent (ADR-0486, `usage_extra`).
+EXTRA_POOL = "extra"
 # A turn that ended this way through no fault of the person is charged nothing (ADR-0481 rule 5).
 REFUNDED_OUTCOMES = frozenset({"failed", "incomplete", "abandoned"})
 
@@ -87,6 +89,12 @@ def _venue_organisation(conn: Connection, workspace_id: str):
     if entitlement_gates.enabled():
         return entitlement_gates.org_for(conn, workspace_id)
     return None
+
+
+def venue_pool(conn: Connection, workspace_id: str) -> bool:
+    """Whether the workspace is a business organisation metered as one weekly venue pool
+    (ADR-0482 rule 7): `business.entitlements` is on and the workspace has an organisation."""
+    return _venue_organisation(conn, workspace_id) is not None
 
 
 def _targets_for_workspace(
@@ -510,7 +518,8 @@ def settle(
 
     The charge is added to the week and the session the run was admitted in, when each is still
     the current one. A window that has since closed is left alone and the charge stays on the
-    ledger row only (ADR-0482 rule 6). The run's reservation is released the same way.
+    ledger row only (ADR-0482 rule 6). The run's reservation is released the same way. A run
+    paid for from a pack of extra usage charges the pack and neither window.
     """
     charged = max(0, int(charged_units))
     claimed = conn.execute(
@@ -527,11 +536,21 @@ def settle(
             _ledger.c.session_seq,
             _ledger.c.reserved_units,
             _ledger.c.workspace_id,
+            _ledger.c.pool,
         )
     ).first()
     if claimed is None:
         return False
     reserved = max(0, int(claimed.reserved_units or 0))
+    if claimed.pool == EXTRA_POOL:
+        # Paid for from a pack: the week and the session are left alone (ADR-0486 rule 3).
+        from selecta.ai import usage_extra
+
+        usage_extra.settle(
+            conn, workspace_id=claimed.workspace_id, reserved_units=reserved,
+            charged_units=charged, now=now,
+        )
+        return True
     same_week = _state.c.week_seq == claimed.week_seq
     if claimed.session_seq is None:
         same_session: sa.ColumnElement = sa.false()
@@ -663,7 +682,8 @@ def read_model(
 
     Each line gives the whole percentage left, a state, the reset time and its plain words, and
     the lit segments of the level meter. Reserved units count as used (rule 6). `session` is
-    None for a row with no session limit. Settings can opt into a private estimate by supplying
+    None for a row with no session limit, as a venue pool has. `extra` is present only while a
+    pack of extra usage has a balance. Settings can opt into a private estimate by supplying
     the signed-in user's ID. Nothing is written.
     """
     view = units_view(conn, workspace_id, now=now)
@@ -692,6 +712,11 @@ def read_model(
     lighter = (session is not None and session["state"] == "spent" and week["state"] != "spent"
                and view["plan_id"] != "free")
     result = {"session": session, "week": week, "time_zone": zone, "lighter": lighter}
+    from selecta.ai import usage_extra
+
+    # The third line, only while a pack balance exists (ADR-0486 rule 7).
+    if (extra := usage_extra.meter_line(conn, workspace_id, now)) is not None:
+        result["extra"] = extra
     if estimate_for_user_id is not None:
         remaining = view["week_limit"] - view["week_used"] - view["week_reserved"]
         if view["session_limit"] is not None:
@@ -760,8 +785,11 @@ def export(conn: Connection, workspace_id: str) -> dict:
 
 
 __all__ = [
+    "EXTRA_POOL",
+    "PLAN_POOL",
     "REFUNDED_OUTCOMES",
     "Targets",
+    "VENUE_POOL",
     "charge_for",
     "ensure_state",
     "export",
@@ -773,4 +801,5 @@ __all__ = [
     "settle",
     "targets",
     "units_view",
+    "venue_pool",
 ]

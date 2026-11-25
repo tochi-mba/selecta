@@ -29,7 +29,7 @@ from urllib.parse import urlsplit
 from sqlalchemy.engine import Connection
 
 from selecta.admin import state as emergency_state
-from selecta.ai import usage_mode, usage_units, usage_windows
+from selecta.ai import usage_extra, usage_mode, usage_units, usage_windows
 from selecta.ai.allowance import (
     bucket_for,
     classes_from,
@@ -125,6 +125,9 @@ class TurnPlan:
     """Why Lucy stepped down, reached a limit, or fell back to the built-in planner."""
     alerts: tuple[SpendAlert, ...] = ()
     skipped: tuple[tuple[str, str], ...] = ()
+    extra_offered: bool = False
+    """The week is spent and the page may offer extra usage (ADR-0486): the flag is on for the
+    workspace and it holds a pack balance."""
 
     @property
     def is_builtin(self) -> bool:
@@ -229,7 +232,7 @@ def _enforced_route(
     conn: Connection, *, workspace_id: str, run_id: str, tier: Tier, plan_id: str,
     routing: RoutingVersion, deployments: Mapping[str, Deployment], health: HealthPort,
     needs: frozenset[str], policy: PlatformPolicy, now: float, room_usd: float,
-    alerts: list[SpendAlert],
+    alerts: list[SpendAlert], rules: usage_mode.Rules | None = None,
 ) -> tuple[RoutedDeployment | None, float, str | None, str | None]:
     # Under the unit model, the request classifier cannot affect routing, admission or price.
     route_class = RequestClass.EVERYDAY
@@ -262,6 +265,13 @@ def _enforced_route(
         )
         if cause not in {"week", "session"}:
             return route, reservation.amount_usd, reservation.day, cause or limited
+        # A spent week, never a spent session, may be carried on by a prepaid pack, on the
+        # model already chosen and inside the same per-turn and platform caps (ADR-0486 rule 3).
+        if cause == "week" and not lighter and usage_extra.reserve(
+            conn, workspace_id=workspace_id, run_id=run_id, tier=tier.value, now=now,
+            reserved_units=usage_windows.to_units(cap), rules=rules,
+        ):
+            return route, reservation.amount_usd, reservation.day, limited
         alerts.extend(reconcile(conn, reservation.day, reservation.amount_usd, 0.0, policy))
         if cause == "week" or tier is Tier.FREE or lighter:
             return None, 0.0, None, cause
@@ -321,23 +331,26 @@ def plan_turn(
     enforced = mode == usage_mode.ENFORCED
     chosen: RoutedDeployment | None = None
     bucket: RequestClass | None = None
-    reserved, spend_day, limited = 0.0, None, None
+    reserved, spend_day, limited, extra_offered = 0.0, None, None, False
     alerts: list[SpendAlert] = []
     used_up: set[RequestClass] = set()
     if enforced:
         entitlement = effective_entitlement(conn, workspace_id, now)
         # Keep the rollback counters live without using them to decide admission. Acquire
         # their lock before the platform reservation, in the same order as settlement.
-        bucket = start_turn_unchecked(conn, workspace_id, tier, requested, month)
+        bucket = _count_turn(conn, workspace_id, tier, requested, month)
         chosen, reserved, spend_day, limited = _enforced_route(
             conn, workspace_id=workspace_id, run_id=run_id, tier=tier, plan_id=entitlement.plan_id,
             routing=routing, deployments=deployments, health=health, needs=needs, policy=policy,
             now=now, room_usd=tier_limits.monthly_cost_ceiling_usd + CAP_TOLERANCE_USD - spent,
-            alerts=alerts,
+            alerts=alerts, rules=rules,
         )
         if chosen is None:
-            refund_turn(conn, workspace_id, month, bucket)
+            _refund_turn(conn, workspace_id, month, bucket)
             bucket = None
+            extra_offered = limited == "week" and usage_extra.offered(
+                conn, workspace_id, rules, now
+            )
         else:
             chosen = replace(chosen, request_class=requested)
     for candidate in (() if enforced else classes_from(requested)):
@@ -415,7 +428,7 @@ def plan_turn(
         prompt_version=prompt_version, tool_schema_version=tool_schema_version, limits=limits,
         reserved_usd=reserved, spend_day=spend_day, lease_id=lease_id,
         fallback_used=chosen.fallback_used, limited=limited, alerts=tuple(alerts),
-        skipped=chosen.skipped,
+        skipped=chosen.skipped, extra_offered=extra_offered,
     )
 
 
@@ -426,6 +439,17 @@ def _start_turn(conn, workspace_id: str, tier: Tier, served: RequestClass, month
 
     pooled = entitlement_gates.lucy_start(conn, workspace_id, served, month)
     return pooled if pooled is not None else try_start_turn(conn, workspace_id, tier, served, month)
+
+
+def _count_turn(conn, workspace_id: str, tier: Tier, requested: RequestClass, month: str):
+    """On the new allowance the month's turn counts decide nothing, and are still kept so going
+    back loses nothing: a business organisation's in its venue pool, anyone else's on its plan."""
+    from selecta.business import entitlement_gates
+
+    pooled = entitlement_gates.lucy_count(conn, workspace_id, requested)
+    if pooled is not None:
+        return pooled
+    return start_turn_unchecked(conn, workspace_id, tier, requested, month)
 
 
 def _refund_turn(conn, workspace_id: str, month: str, bucket) -> bool:
