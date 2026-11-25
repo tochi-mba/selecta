@@ -830,7 +830,7 @@ export function CloudApp() {
           <button className="cloud-delete-account" onClick={() => setConfirmingDelete(true)} disabled={busy('delete')}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className={account ? 'cloud-eyebrow' : 'cloud-eyebrow cloud-caps'}>{account?.workspace.name ?? 'Your workspace'}</p><h1 ref={titleRef} tabIndex={-1}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className={account ? 'cloud-eyebrow' : 'cloud-eyebrow cloud-caps'}>{account?.workspace.name ?? 'Your workspace'}</p><h1 ref={titleRef} tabIndex={-1}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div>{/* the plan is said only once the account says it, never guessed */}{account && <span className="cloud-plan-chip">{planName(account)} plan</span>}</header>
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         <OverQuotaBanner account={account} go={choosePage} />

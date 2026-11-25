@@ -270,6 +270,13 @@ describe('web app manifest (W5b)', () => {
     for (const icon of manifest.icons) expect(files).toContain(icon.src);
   });
 
+  it('gives launchers their own full-bleed maskable PNGs, never the rounded any-purpose ones', () => {
+    const sources = (purpose: string) => manifest.icons.filter((icon) => icon.type === 'image/png' && icon.purpose === purpose).map((icon) => icon.src);
+    const maskable = sources('maskable');
+    expect(maskable).toEqual(['/icons/selecta-maskable-192.png', '/icons/selecta-maskable-512.png']);
+    for (const src of maskable) expect(sources('any')).not.toContain(src);
+  });
+
   it('the SVG marks are the tokens’ lime on the dark base', () => {
     const svgs = import.meta.glob('../../public/icons/*.svg', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
     expect(Object.keys(svgs)).toHaveLength(2);

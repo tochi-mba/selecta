@@ -1,10 +1,23 @@
 import { useEffect, useRef } from 'react';
 import type { MixItem } from '../api';
+import { coverHueForSong } from '../media/coverLadder';
 import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
 import { beatBusSync, startBeatBus } from './beatBus';
 import { artHue, endTravel, handoverProgress, publishAmbientHue, travelAmbient } from './hue';
-import { onFeelChange } from './root';
+import { feelOn, onFeelChange } from './root';
+
+/** Covers' own hues by song, as found; a song asked about once is not asked again this visit. A
+ * short list is kept, since only the playing and next songs are ever needed. */
+const coverHues = new Map<number, number>();
+const asked = new Set<number>();
+const KEPT_HUES = 64;
+function remember(songId: number, hue: number) {
+  coverHues.delete(songId);
+  coverHues.set(songId, hue);
+  if (coverHues.size > KEPT_HUES) coverHues.delete(coverHues.keys().next().value as number);
+}
+const hueOf = (songId: number) => coverHues.get(songId) ?? artHue(songId);
 
 /** The shell's one hook for the music-reactive feel (ADR-0477 FL-0477-04).
  *
@@ -31,9 +44,26 @@ export function useMusicFeel({ player, now, song, next }: {
   }, [phase]);
 
   const songId = song?.song_id ?? null;
+  const nextId = next?.song_id ?? null;
   const loaded = phase !== 'idle';
+  // the room takes the cover's own colour where the song has a real cover (ADR-0478 FL-0478-05),
+  // found on the same ladder as the cover on screen; until then, and without one, the tile's hue.
+  // A hue found later is published straight from here, so this still never renders on its own.
+  const playing = useRef({ songId, loaded });
+  playing.current = { songId, loaded };
   useEffect(() => {
-    const publish = () => publishAmbientHue(songId !== null && loaded ? artHue(songId) : null);
+    for (const id of [songId, nextId]) {
+      if (id === null || coverHues.has(id) || asked.has(id) || !feelOn('ambient')) continue;
+      asked.add(id);
+      void coverHueForSong(id).catch(() => null).then((hue) => {
+        if (hue === null) return;
+        remember(id, hue);
+        if (playing.current.songId === id && playing.current.loaded) publishAmbientHue(hue);
+      });
+    }
+  }, [songId, nextId]);
+  useEffect(() => {
+    const publish = () => publishAmbientHue(songId !== null && loaded ? hueOf(songId) : null);
     publish();
     // ambient switched on or off (a flag, Still is not one of them, low power is)
     return onFeelChange(publish);
@@ -47,7 +77,7 @@ export function useMusicFeel({ player, now, song, next }: {
   useEffect(() => {
     if (handing && songId !== null && next && now.seamAt !== null) {
       travelled.current = true;
-      travelAmbient(artHue(songId), artHue(next.song_id), handoverProgress(now.songTime, now.seamAt, switchAt));
+      travelAmbient(hueOf(songId), hueOf(next.song_id), handoverProgress(now.songTime, now.seamAt, switchAt));
     } else if (travelled.current) {
       travelled.current = false;
       endTravel();

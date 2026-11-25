@@ -3,8 +3,9 @@ import { feelOn } from './root';
 /** The ambient hue (ADR-0477): a soft tint in the playing song's hue, on its own fixed layer
  * behind content.
  *
- * The hue is the same one the song's cover tile is drawn in (views/CoverArt.tsx), so the room and
- * the tile agree. It is published as a bare number, `--ambient-hue` on <html>, once per song
+ * The hue is the real cover's own where the song has one (found by useMusicFeel on the cover
+ * ladder, media/coverLadder.ts), else the one its generated tile is drawn in (views/CoverArt.tsx),
+ * so the room and the cover agree. It is published as a bare number, `--ambient-hue` on <html>, once per song
  * change, never as a colour and never per frame: tokens.css turns it into `--ambient-tint`. During
  * a real hand-over the number travels from one song's hue to the next on the ambient layer alone,
  * at most every 70ms, so the page root is never restyled at frame rate. All of it only while
