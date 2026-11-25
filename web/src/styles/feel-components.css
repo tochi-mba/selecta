@@ -98,8 +98,8 @@
 /* ---------- Dialogs, drawers and sheets ----------
    The scrim fades in; a dialog grows out of the control that opened it (growFrom in controls.tsx)
    with no overshoot, because dialogs hold data (ADR-0137); a drawer or sheet glides in on the gentle
-   spring. Leaving stays on the exit protocol (polish.css, ui/exitMotion.ts). No glass blur: there is
-   no blur token yet. */
+   spring. Leaving stays on the exit protocol (polish.css, ui/exitMotion.ts). Under depth the scrim
+   is glass (--blur-glass), except in low power or when the computer asks for less transparency. */
 :where(:root[data-feel~='motion']) .overlay:not([data-closing]) {
   animation: feel-fade-in var(--motion-overlay) var(--motion-ease) both;
 }
@@ -111,6 +111,13 @@
 }
 @keyframes feel-fade-in {
   from { opacity: 0; }
+}
+@supports (backdrop-filter: blur(var(--blur-glass))) {
+  @media (prefers-reduced-transparency: no-preference) {
+    :root[data-feel~='depth']:not([data-low-power]) .overlay {
+      backdrop-filter: blur(var(--blur-glass));
+    }
+  }
 }
 
 /* ---------- Toasts ----------

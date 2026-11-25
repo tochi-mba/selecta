@@ -11,7 +11,9 @@ Pure: no network, no database. The rule (ADR-0478 "Matching"):
    normalised lead artist or full credit, whichever is closer (0.35), and the length (0.15,
    falling linearly to 0 at four seconds apart). A candidate needs a title similarity of at least
    `MIN_TITLE`, an artist similarity of at least `MIN_ARTIST` and a length within four seconds of
-   ours (both lengths must be known), or it is dropped.
+   ours (both lengths must be known), or it is dropped. A candidate whose title names a version
+   ours does not ("(Live)", "[Acoustic]", "- Radio Remix") is dropped too: on a long title the
+   similarity alone would let it through.
 3. **A single clear winner.** MusicBrainz often holds the same song as several recordings (a
    remaster, the same track on a single and an album). Candidates with the same normalised title
    and artist whose lengths are within `SAME_SONG_S` of each other form one group, and groups
@@ -50,6 +52,19 @@ MAX_CANDIDATES_KEPT = 10
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 _DATE = re.compile(r"^\d{4}(-\d{2}(-\d{2})?)?$")
+# "(Live)", "[Acoustic]", "- Radio Remix": a different version of the song, not the song
+_VERSION_PART = re.compile(r"[\(\[]([^\)\]]*)[\)\]]|\s[-–]\s(.+)$")
+_VERSION_WORD = re.compile(
+    r"\b(live|remix|acoustic|instrumental|demo|karaoke|unplugged)\b", re.IGNORECASE
+)
+
+
+def versions(title: str | None) -> set[str]:
+    """The version words ("live", "remix" and so on) in a title's brackets or dash suffix."""
+    found: set[str] = set()
+    for part in _VERSION_PART.finditer(title or ""):
+        found.update(w.lower() for w in _VERSION_WORD.findall(part.group(1) or part.group(2) or ""))
+    return found
 
 
 def _fold(text: str) -> str:
@@ -178,6 +193,8 @@ def score(query: Query, recording: dict[str, Any]) -> float | None:
         return None
     delta = abs(ours - theirs)
     if delta > DURATION_TOLERANCE_S:
+        return None
+    if versions(recording.get("title")) - versions(query.title):
         return None
     title = similarity(normalise_title(query.title), normalise_title(recording.get("title")))
     full = credit(recording)

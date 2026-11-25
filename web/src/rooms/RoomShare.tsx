@@ -21,7 +21,7 @@ export function useCopyLink(link: string, failed: (words: string) => void) {
       setCopied(true);
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => setCopied(false), COPIED_MS);
-    } catch { failed('Couldn’t copy the link. Select it and copy it yourself.'); }
+    } catch { failed('Couldn’t copy the link. Select it and copy it yourself.'); return false; }
   };
   return { copied, copy };
 }

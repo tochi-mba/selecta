@@ -60,17 +60,17 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
     resolve?.(yes);
   };
   const selected = useCallback((event: ChangeEvent<HTMLInputElement>) => setFiles(Array.from(event.target.files ?? [])), []);
-  // The drop zone answers a file dragged over it (lifted, with a lit edge) and takes the files that
-  // are dropped, while any part of the feel is on. With the feel off it stays the press-to-choose
-  // zone it always was.
+  // The drop zone always takes the files dropped on it (the browser never opens them instead), the
+  // same way the picker does. Only the look of a file dragged over it (lifted, with a lit edge)
+  // waits for a part of the feel to be on.
   const feeling = useSyncExternalStore(onFeelChange, () => feelParts().length > 0, () => false);
   const moving = useSyncExternalStore(onFeelChange, () => feelOn('motion'), () => false);
   const [dragging, setDragging] = useState(false);
   const carriesFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes('Files');
   const dragOver = (event: DragEvent<HTMLLabelElement>) => {
-    if (!feeling || blocked || !carriesFiles(event)) return;
+    if (blocked || !carriesFiles(event)) return;
     event.preventDefault();
-    if (!dragging) setDragging(true);
+    if (feeling && !dragging) setDragging(true);
   };
   const dragLeave = (event: DragEvent<HTMLLabelElement>) => {
     // leaving for a child of the zone is not leaving the zone
@@ -79,8 +79,10 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   };
   const dropped = (event: DragEvent<HTMLLabelElement>) => {
     setDragging(false);
-    if (!feeling || blocked || !carriesFiles(event)) return;
+    if (!carriesFiles(event)) return;
+    // a blocked zone still keeps the browser from opening the file, but takes nothing
     event.preventDefault();
+    if (blocked) return;
     setFiles(Array.from(event.dataTransfer.files ?? []));
   };
 

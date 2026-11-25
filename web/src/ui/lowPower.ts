@@ -123,6 +123,11 @@ const browserClock = (): Clock => ({
   clear: (handle) => window.clearTimeout(handle),
 });
 
+/** The first step only drops feel effects, so with every feel flag off there is nothing for it to
+ * drop and the device goes straight to the second step, exactly as before ADR-0477. */
+const FEEL_FLAGS = ['app.feel_motion', 'app.feel_depth', 'app.feel_pointer_light', 'app.feel_music', 'app.feel_ambient', 'app.feel_moments'] as const;
+const liteHelps = () => FEEL_FLAGS.some(flagOn);
+
 /** Starts watching frames. Returns a stop function. Does nothing when the flag is off, the person
  * already chose Still, or they asked for full motion in this session. */
 export function watchLowPower(clock: Clock = browserClock()): () => void {
@@ -162,7 +167,7 @@ export function watchLowPower(clock: Clock = browserClock()): () => void {
       if (strikes >= 2) {
         strikes = 0;
         calm = 0;
-        if (level === null) {
+        if (level === null && liteHelps()) {
           // the first step drops only the costly effects; keep watching in case that was not enough
           set('lite');
         } else {

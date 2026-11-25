@@ -102,6 +102,24 @@
 :where(:root[data-feel~='depth']) .strip-lens[hidden] {
   display: none;
 }
+/* A seek by key, 5 seconds either way (views/NowStrip.tsx): one small ring opens and fades where the
+   playhead landed, once per press. Drawn only with motion on. */
+:where(:root[data-feel~='motion']) .strip-skip {
+  position: absolute;
+  inset-block-start: 50%;
+  inline-size: var(--space-5);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border: 1px solid var(--playing);
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  pointer-events: none;
+  animation: feel-listen-skip var(--motion-fast) var(--motion-ease) both;
+}
+@keyframes feel-listen-skip {
+  from { opacity: 1; scale: 0.4; }
+  to { opacity: 0; scale: 1; }
+}
 
 /* ---------- The live blend (views/LiveBlend.tsx, Now.tsx) ---------- */
 

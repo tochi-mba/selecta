@@ -559,7 +559,7 @@ export function Shell({
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
       {!stage && (
         <nav className="nav" aria-label="Main" data-rail-move={railMove ?? undefined}>
-          <PageLink to="/mixes" className="brand"><span className="brand-word">SelectaDJ</span><span className="visually-hidden">, go to Make a Mix</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
+          <PageLink to="/mixes" className="brand" data-vt="brand-mark"><span className="brand-word">SelectaDJ</span><span className="visually-hidden">, go to Make a Mix</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
           <RailList>
             {cloudNav ? (
               <>

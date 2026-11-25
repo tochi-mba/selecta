@@ -82,11 +82,11 @@ and `@media` preludes ignored).
 |---|---|---|---|
 | `.card` | `style.css` | `styles/depth.css`, `styles/polish.css` | intentional: `style.css` owns the card; polish adds name wrapping and the phone padding; depth drops the seam diagram's own fill inside a card |
 | `.panel` | `style.css` | `styles/depth.css`, `styles/polish.css` | intentional: polish owns only the phone padding (24 to 16 px at 760 px), shared with `.card`; depth drops the seam diagram's own fill inside a panel |
-| `.row` | `style.css` | `styles/listening.css`, `styles/lucy.css`, `styles/operations.css`, `styles/polish.css` | intentional: `.row` is the layout helper; every refinement is scoped under its feature's container (`.hero .row`, `.lucy-approve .row`, `.link-card > .row`, `.start .row`) |
+| `.row` | `style.css` | `styles/feel-local.css`, `styles/listening.css`, `styles/lucy.css`, `styles/operations.css`, `styles/polish.css` | intentional: `.row` is the layout helper; every refinement is scoped under its feature's container (`.hero .row`, `.lucy-approve .row`, `.link-card > .row`, `.start .row`); feel-local only positions a row that holds a local moment, behind `data-feel` |
 | `.display` | `style.css` | `styles/cloud-ui.css`, `styles/listening.css`, `styles/lucy.css`, `styles/music-objects.css`, `styles/operations.css`, `styles/polish.css`, `styles/shell.css` | intentional: `style.css` owns the metrics (MP-0275-02); the others place it within a feature, shell sets its text direction, and cloud-ui only clears its margin inside a Cloud page header |
 | `.count` | `style.css` (`.song .count`) | `styles/cloud-shell.css`, `styles/icons.css`, `styles/polish.css`, `styles/shell.css` | was accidental (the badge inherited `grid-area: count`); now the grid rule is `.song .count`, badges are `.nav .count`, `.mini .count`, `.context-bar .count`, polish only makes every count tabular, and cloud-shell restyles the same badges inside the Cloud shell only |
-| `.song` | `style.css` | `styles/creation.css`, `styles/depth.css`, `styles/polish.css`, `styles/shell.css` | intentional: timeline rows (creation scopes to `.timeline .song`); depth adds forced-colour state edges; Requests draws ghost rows that look like timeline rows on purpose |
-| `.seam` | `style.css` | `styles/creation.css`, `styles/shell.css` | intentional: the seam between two timeline rows, its timeline refinements (creation) and its phone indent (shell) |
+| `.song` | `style.css` | `styles/creation.css`, `styles/depth.css`, `styles/feel-library.css`, `styles/polish.css`, `styles/shell.css` | intentional: timeline rows (creation scopes to `.timeline .song`); depth adds forced-colour state edges; Requests draws ghost rows that look like timeline rows on purpose; feel-library lifts a timeline row being dragged, behind `data-feel` |
+| `.seam` | `style.css` | `styles/creation.css`, `styles/feel-library.css`, `styles/shell.css` | intentional: the seam between two timeline rows, its timeline refinements (creation), its phone indent (shell) and the seam diagram growing in on hover or focus (feel-library, behind `data-feel`) |
 
 Other tokens used by more than one feature (`className` strings parsed across `web/src`):
 
@@ -123,9 +123,14 @@ wins, and the row says which.
 | `min-width: 761px` | `styles/shell.css` | the side rail |
 | `min-width: 761px` | `styles/cloud-shell.css` | the Cloud rail: its account foot, the collapse toggle and the collapsed rail (same number as `styles/shell.css`, scoped to `.shell[data-mode='cloud']`) |
 | `min-width: 761px` | `styles/cloud-ui.css` | Cloud card grids go to two columns |
+| `min-width: 761px` | `styles/feel-shell.css` | the feel system's rail: the sliding indicator carries the rail's marker, and the rail's width springs on collapse and expand (same number as `styles/shell.css`) |
 | `min-width: 1101px` | `styles/cloud-ui.css` | Cloud card grids asked for three columns get them |
 | `max-width: 1100px` | `styles/cloud-shell.css` | between the rail breakpoint and here the top bar's search button gives up its minimum width |
 | `min-width: 769px` | `styles/boot.css` | the welcome page: benefits and steps sit three across |
+| `min-width: 769px` | `styles/feel-entry.css` | the welcome steps' connecting line draws across instead of down once they sit three across (same number as `styles/boot.css`) |
+| `max-width: 768px` | `styles/feel-entry.css` | the welcome page's docked Start bar appears on a phone or upright tablet once the hero's buttons scroll away |
+| `max-width: 900px` | `styles/feel-entry.css` | the Cloud onboarding spine becomes short bars whose fill springs across as each step is reached |
+| `max-width: 900px` | `styles/feel-account.css` | the account section list becomes a row of pills, which keeps its own pill for the current section instead of the sliding block |
 | `min-width: 901px` | `styles/boot.css` | the welcome page: the words and the blend drawing sit side by side |
 | `max-width: 760px` | `styles/tokens.css` | shell geometry: no rail offset, bottom bar and smaller header |
 | `max-width: 760px` | `styles/cloud-shell.css` | the Cloud top bar, tab bar and mini player on a phone (same number as `styles/shell.css`; scoped to the Cloud shell, so it wins there by specificity) |
@@ -135,6 +140,7 @@ wins, and the row says which.
 | `max-width: 760px` | `styles/listening.css` | Listen stacks transport before display options |
 | `max-width: 760px` | `styles/lucy.css` | Lucy messages full width |
 | `max-width: 760px` | `styles/polish.css` | page top, card and panel padding on phones |
+| `max-width: 760px` | `styles/feel-shell.css` | the phone's Cloud tab bar marks the current tab with a short line along its top (same number as `styles/shell.css`) |
 | `max-width: 620px` | `style.css` | timeline rows and the legacy `.song-row` stack (Library's own rule in operations.css wins) |
 | `max-width: 620px` | `styles/creation.css` | timeline grip column, Story rows |
 | `max-width: 620px` | `styles/listening.css` | vibe cards one column |
@@ -144,6 +150,8 @@ wins, and the row says which.
 | `max-width: 560px` | `style.css` | Listen handoff countdown stacks |
 | `max-width: 560px` | `styles/polish.css` | skeleton rows stack their name and details at phone widths |
 | `max-width: 560px` | `styles/shell.css` | job list one column, phone seam indent |
+| `max-width: 560px` | `styles/feel-local.css` | a Workspace job's meter moves under the job with the one-column job list (same number as `styles/shell.css`) |
+| `max-width: 560px` | `styles/feel-listen.css` | Cloud Make a Mix quick steps: the connecting line follows the stacked step on a phone |
 | `max-width: 480px` | `styles/boot.css` | runtime, welcome and onboarding actions stack full width on a phone |
 | `max-width: 480px` | `styles/lucy.css` | a compact Lucy song list puts the actions under the title on a small phone |
 | `max-width: 520px` | `style.css` | steering, destination and energy-arc stops one column; request rows |

@@ -301,6 +301,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     } catch {
       // Keep the successful pages and cursor intact so the same page can be retried.
       if (mine === asked.current) setPageProblem('Couldn’t load more songs. The recordings already shown are unchanged.');
+      return false; // said here, so the button draws no tick
     }
   };
 

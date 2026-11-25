@@ -193,6 +193,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
     } catch {
       setError('Couldn’t save that. Try again.');
       setUnsaved({ target, verdict });
+      return false; // said here, so the button draws no tick
     } finally {
       reviewing.current = false;
       setSaving(false);
@@ -377,7 +378,7 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, l
     try {
       const result = await post<SeamState>('/seams', { a: link.a, b: link.b, move: name, phrase: link.phrase });
       if (request === renderRequest.current) { setOverride(result); setPlaying(true); }
-    } catch (error) { if (request === renderRequest.current) setCardError((error as Error).message); }
+    } catch (error) { if (request === renderRequest.current) setCardError((error as Error).message); return false; }
     finally { if (request === renderRequest.current) setRendering(false); }
   };
   const rate = async (rating: string) => {
@@ -499,7 +500,7 @@ function LinksView({ mix, setMixData, setView, notify, status, analysisAvailable
         setData((before) => (before ? keepIfSame(before, { ...next, links: keepUnchangedItems(before.links, next.links) }) : next));
         setFailed(false);
       })
-      .catch(() => { if (mine === asked.current) setFailed(true); });
+      .catch(() => { if (mine === asked.current) setFailed(true); return false as const; });
   };
 
   useEffect(() => {

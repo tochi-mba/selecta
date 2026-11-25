@@ -1,7 +1,7 @@
 // S4-0095-09: malformed, wrongly typed or blocked browser storage can neither crash the app nor
 // change what it shows; a choice made while storage is blocked holds for the page's lifetime.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { prefs, reloadPrefs, setPrefs } from './prefs';
+import { defaultMotion, prefs, reloadPrefs, setPrefs } from './prefs';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -9,7 +9,8 @@ afterEach(() => {
   reloadPrefs();
 });
 
-const DEFAULTS = { theme: 'system', motion: 'subtle', density: 'comfortable', libraryLayout: 'list', railCollapsed: false };
+// motion reads as the default that holds now (ADR-0477: Expressive with the feel on, as in tests)
+const DEFAULTS = { theme: 'system', motion: defaultMotion(), density: 'comfortable', libraryLayout: 'list', railCollapsed: false };
 
 describe('saved preferences that cannot be trusted', () => {
   for (const [label, saved] of [['not JSON', '{oops'], ['JSON null', 'null'], ['a number', '42']] as const) {

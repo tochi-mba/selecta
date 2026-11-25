@@ -418,6 +418,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
       }));
     } catch (error) {
       setRelinkProblem((error as Error).message);
+      return false;
     } finally {
       setCheckingRelink(false);
     }
@@ -434,6 +435,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     } catch (error) {
       setRelocation(null);
       setRelinkProblem((error as Error).message);
+      return false; // said here, so the button draws no tick
     }
   };
   const scanPending = useRef(false);

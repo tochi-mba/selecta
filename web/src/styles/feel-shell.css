@@ -175,11 +175,11 @@
 
 /* Glass: the Cloud bar lets a little of the page show through, blurred, under depth. Not in low
    power (no blur there), nor when the computer asks for less transparency. */
-@supports (backdrop-filter: blur(var(--space-3))) {
+@supports (backdrop-filter: blur(var(--blur-glass))) {
   @media (prefers-reduced-transparency: no-preference) {
     :root[data-feel~='depth']:not([data-low-power]) .shell[data-mode='cloud'] .mini {
       background: color-mix(in oklch, var(--surface-panel) 92%, transparent);
-      backdrop-filter: blur(var(--space-3));
+      backdrop-filter: blur(var(--blur-glass));
     }
   }
 }

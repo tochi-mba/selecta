@@ -22,7 +22,10 @@ const DONE_MS = 900;
  * With data-feel~='motion' (ADR-0477) the end is shown as well as the start: when the work really
  * finished, a tick is drawn over the label for about 900ms (the label keeps its room, so nothing
  * moves, and its words stay the button's name); when it failed, the edge turns the danger colour
- * once, with no shake. Without it, exactly the behaviour above and nothing more. */
+ * once, with no shake. Without it, exactly the behaviour above and nothing more.
+ *
+ * Work that catches and reports its own trouble resolves the literal `false` to say "this did not
+ * succeed": no tick is drawn and no second message is shown, only the danger edge. */
 export function Action({
   run,
   working,
@@ -68,7 +71,7 @@ export function Action({
     setBusy(true);
     let how: 'done' | 'failed' = 'done';
     try {
-      await run();
+      if ((await run()) === false) how = 'failed';
     } catch (error) {
       how = 'failed';
       showProblem(failed ?? ((error as Error).message || 'That didn’t work. Try again.'));

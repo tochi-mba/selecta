@@ -34,6 +34,14 @@
   block-size: 100%;
   border-radius: 0;
 }
+/* the editor's head shows the same face (EditorHeader, feel parts only): the place a saved mix's
+   tile travels to on Edit */
+.mix-head .mix-art { margin-block-end: var(--space-2); }
+.mix-head .mix-art > .cover-art[data-size] {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 0;
+}
 
 /* ---------- Covers outside the Cloud sheet (library.art_embedded) ---------- */
 

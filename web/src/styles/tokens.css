@@ -252,6 +252,8 @@
   --ambient-hue: 125;
   --ambient-tint: oklch(0.3 0.07 var(--ambient-hue) / 0.38);
   --pointer-light: rgb(255 255 255 / 9%);
+  /* glass: how far a see-through surface (dialog scrim, mini player) blurs what is behind it */
+  --blur-glass: 12px;
   --gutter: clamp(16px, 3vw, 40px);
   --page-gutter: var(--gutter);
   --content-reading: 880px;

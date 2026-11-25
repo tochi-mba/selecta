@@ -155,6 +155,7 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
       setError('');
     } catch {
       setError('Couldn’t save that. Try again.');
+      return false; // said here, so the button draws no tick
     } finally {
       reviewing.current = false;
       setSaving(false);

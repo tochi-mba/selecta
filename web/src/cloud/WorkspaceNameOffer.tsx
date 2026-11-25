@@ -38,7 +38,7 @@ export function WorkspaceNameOffer({ account, rename }: {
   const save = async (event?: FormEvent) => {
     event?.preventDefault();
     const wanted = name.trim();
-    if (!wanted) { setProblem('Type a name first.'); return; }
+    if (!wanted) { setProblem('Type a name first.'); return false; }
     try {
       await rename(wanted);
       // the rename really saved: with motion on the tick is drawn first, then the card goes
@@ -49,6 +49,7 @@ export function WorkspaceNameOffer({ account, rename }: {
       } else close();
     } catch (error) {
       setProblem((error as Error).message || 'That did not save. Try again.');
+      return false; // reported here: the Rename button draws no tick
     }
   };
   return (

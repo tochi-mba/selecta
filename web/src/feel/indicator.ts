@@ -1,4 +1,4 @@
-import { RefObject, useLayoutEffect } from 'react';
+import { RefObject, useLayoutEffect, useState } from 'react';
 import { feelOn, onFeelChange } from './root';
 
 /** The sliding indicator (ADR-0477): one mark under the chosen tab, segment or nav item that travels
@@ -11,9 +11,13 @@ import { feelOn, onFeelChange } from './root';
  *   --ind-x, --ind-y   the active child's top-left corner inside the container, in px
  *   --ind-w, --ind-h   its width and height, as plain numbers of px (scale factors need no unit)
  *
- * The container renders the mark itself, as its last child:
+ * The container renders the mark itself, anywhere among its children (feel-parts.css stacks a fill
+ * mark behind the words with z-index, so first or last both work):
  *   <span className="feel-indicator" aria-hidden="true" />
  * and may set data-indicator-shape="fill" for a block behind the choice instead of a line under it.
+ *
+ * A container that is drawn later than the component (its ref empty on the first render) is picked
+ * up on the commit that draws it, and a ref that moves to a new element follows it.
  *
  * Without data-feel~='motion' nothing is measured and the mark is not drawn, so the container's own
  * static selected styles carry the choice, exactly as before. The choice is never carried by the
@@ -21,8 +25,12 @@ import { feelOn, onFeelChange } from './root';
 export const INDICATOR_CLASS = 'feel-indicator';
 
 export function useSlidingIndicator(containerRef: RefObject<HTMLElement | null>, activeSelector: string) {
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+  // every commit: one comparison, and a re-attach only when the container appeared or changed
   useLayoutEffect(() => {
-    const container = containerRef.current;
+    if (containerRef.current !== container) setContainer(containerRef.current);
+  });
+  useLayoutEffect(() => {
     if (!container) return;
     let observed: Element | null = null;
     let frame = 0;
@@ -79,5 +87,5 @@ export function useSlidingIndicator(containerRef: RefObject<HTMLElement | null>,
       cancelAnimationFrame(frame);
       clear();
     };
-  }, [containerRef, activeSelector]);
+  }, [container, activeSelector]);
 }

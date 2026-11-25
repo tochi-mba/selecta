@@ -121,6 +121,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
       if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
       if (hereNow.current) setProblem((error as Error).message);
+      return false; // said here, so the button draws no tick
     } finally {
       buildingNow.current = false;
       setBuilding('');
@@ -146,6 +147,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) operations.current.delete(signature);
       if (hereNow.current) setProblem((error as Error).message);
+      return false; // said here, so the button draws no tick
     } finally {
       buildingNow.current = false;
       setBuilding('');

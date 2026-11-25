@@ -87,7 +87,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
         setRecent(null);
         try { window.localStorage.removeItem(RECENT_DRAFT_KEY); } catch { /* storage disabled */ }
         setProblem('This draft changed since your last visit. Open it from the draft list to review the latest version.');
-        return;
+        return false;
       }
       if (transition) {
         selectInEditor(player, `draft:${recent.id}`, { kind: 'seam', a: transition.a, b: transition.b, from: transition.from, into: transition.into });
@@ -95,6 +95,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       openDraft?.(recent.id);
     } catch {
       setProblem('Could not verify that draft. Open it from the draft list when the server is available.');
+      return false; // said here, so the button draws no tick
     } finally { setChecking(false); }
   };
 

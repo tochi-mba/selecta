@@ -87,6 +87,7 @@ export function ExportPanel(props: {
       } else {
         setProblem((error as Error).message);
       }
+      return false; // said here, so the button draws no tick
     } finally {
       starting.current = false;
     }
