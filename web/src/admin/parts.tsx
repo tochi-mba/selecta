@@ -15,6 +15,9 @@ export function Fresh({ reading, format = String }: { reading: Reading; format?:
   );
 }
 
+export const COMMAND_LIMIT_MS = 60_000;
+const COMMAND_TOO_LONG = 'SelectaDJ didn’t answer in time. The change may still have been made: reload this page to check before trying again.';
+
 /**
  * A command button that asks for a reason first. Every admin command is audited with one, so the
  * button stays disabled until a reason is typed.
@@ -27,9 +30,13 @@ export function Command({ label, run, danger, note }: { label: string; run: (rea
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true); setError('');
-    try { await run(reason.trim()); setOpen(false); setReason(''); }
-    catch (problem) { setError((problem as Error).message); }
-    finally { setBusy(false); }
+    // A command that never answers must not hold Working... for ever. After the limit the button is
+    // free again and the words say the change may still have landed, so staff check before repeating.
+    let over = false;
+    const slow = window.setTimeout(() => { over = true; setBusy(false); setError(COMMAND_TOO_LONG); }, COMMAND_LIMIT_MS);
+    try { await run(reason.trim()); setOpen(false); setReason(''); setError(''); }
+    catch (problem) { if (!over) setError((problem as Error).message); }
+    finally { window.clearTimeout(slow); setBusy(false); }
   };
   if (!open) return <button className={danger ? 'admin-danger' : undefined} onClick={() => setOpen(true)}>{label}</button>;
   return (

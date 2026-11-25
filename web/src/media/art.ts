@@ -92,7 +92,13 @@ async function captureOne({ file, sha }: Job): Promise<void> {
 // ---------- the worker ----------
 
 let worker: Worker | null = null;
+/** No worker can be made here at all: covers are made on the page, at idle, as before. */
 let workerBroken = false;
+/** Workers that failed or hung in a row. One timeout is easy on a busy laptop, so a new worker is
+ * made each time; after this many the covers are skipped for the visit rather than drawn on the
+ * page, where decoding and scaling would hold the page on the machine that was already struggling. */
+let workerFailures = 0;
+export const WORKER_FAILURE_LIMIT = 3;
 let releaseTimer: ReturnType<typeof setTimeout> | undefined;
 let nextId = 1;
 
@@ -158,19 +164,30 @@ function inWorker(target: Worker, picture: FilePicture): Promise<MadeArt | null>
 }
 
 /** In the worker where there is one; otherwise on the page, at idle, one at a time. */
-async function makeArtOffPage(picture: FilePicture): Promise<MadeArt | null> {
+export async function makeArtOffPage(picture: FilePicture): Promise<MadeArt | null> {
+  if (workerFailures >= WORKER_FAILURE_LIMIT) return null;
   const target = spawn();
   if (target) {
     try {
-      return await inWorker(target, picture);
+      const art = await inWorker(target, picture);
+      workerFailures = 0;
+      return art;
     } catch {
-      // a worker that failed or hung is let go, and later pictures are made on the page instead;
-      // this one's bytes were handed over, so it simply has no cover until the next import
+      // a worker that failed or hung is let go and the next picture gets a new one; this one's
+      // bytes were handed over, so it simply has no cover until the next import
       target.terminate();
       if (worker === target) worker = null;
-      workerBroken = true;
+      workerFailures += 1;
       return null;
     }
   }
   return makeArt(picture.bytes, picture.mime);
+}
+
+/** For tests: forget the worker and its failures. */
+export function resetArtWorker(): void {
+  worker?.terminate();
+  worker = null;
+  workerBroken = false;
+  workerFailures = 0;
 }

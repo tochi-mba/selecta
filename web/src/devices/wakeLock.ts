@@ -50,3 +50,13 @@ export function holdWakeLock(nav: Navigator = navigator, doc: Document = documen
     },
   };
 }
+
+/** The speaker's lock follows what it does: held while it plays, let go while it is paused, so a
+ * phone left on a table is not kept lit for silence. `playing` null (not known) changes nothing.
+ * The browser drops a lock while the tab is hidden; `holdWakeLock` asks again when it is shown. */
+export function followPlaying(hold: WakeLockHold | null, playing: boolean | null, make: () => WakeLockHold = holdWakeLock): WakeLockHold | null {
+  if (playing === null) return hold;
+  if (playing) return hold ?? make();
+  hold?.release();
+  return null;
+}

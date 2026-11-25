@@ -2,7 +2,7 @@
 id: T-20261125-c413
 title: First-paint splash is unstyled in development
 area: shell
-status: open
+status: doing
 priority: later
 who: claude
 created: 2026-11-25

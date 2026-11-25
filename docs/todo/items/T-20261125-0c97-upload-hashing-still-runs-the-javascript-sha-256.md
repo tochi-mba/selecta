@@ -2,7 +2,7 @@
 id: T-20261125-0c97
 title: Upload hashing still runs the JavaScript SHA-256 on the page
 area: library
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25

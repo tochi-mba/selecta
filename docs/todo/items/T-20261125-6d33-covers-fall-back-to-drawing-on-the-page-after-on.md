@@ -2,7 +2,7 @@
 id: T-20261125-6d33
 title: Covers fall back to drawing on the page after one worker failure
 area: library
-status: open
+status: doing
 priority: later
 who: claude
 created: 2026-11-25

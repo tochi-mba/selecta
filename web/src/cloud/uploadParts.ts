@@ -1,4 +1,5 @@
 import type { Api } from './api';
+import { fileSha256 as identitySha256 } from '../media/identity';
 
 // Uploads, the parts that aren't drawing (docs/saas/05-storage-uploads-playback.md §5.2).
 //
@@ -16,15 +17,11 @@ export type UploadStatus = { upload: { id: string; name: string; size: number; s
 /** Session states that can still take parts. */
 export const RESUMABLE = new Set(['planned', 'uploading']);
 
+/** The upload's SHA-256, the same digest the import uses (media/identity.ts): WebCrypto off the page
+ * for a file that fits, and otherwise a streamed hash that yields between small slices, so hashing
+ * an upload never holds the page for a third of a second at a time. */
 export async function fileSha256(file: Blob) {
-  // r8c: the streaming hash is only needed once someone uploads, so it isn't in the first download.
-  const { sha256 } = await import('@noble/hashes/sha2.js');
-  const hash = sha256.create();
-  const chunkSize = 8 * 1024 * 1024;
-  for (let offset = 0; offset < file.size; offset += chunkSize) {
-    hash.update(new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer()));
-  }
-  return Array.from(hash.digest(), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return identitySha256(file);
 }
 
 /** The server's unfinished sessions, newest first. */

@@ -2,7 +2,7 @@
 id: T-20261125-7505
 title: Hidden catalogue covers stay in browser caches for up to a week
 area: legal
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25

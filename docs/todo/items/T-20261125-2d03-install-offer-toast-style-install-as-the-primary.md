@@ -2,7 +2,7 @@
 id: T-20261125-2d03
 title: Install offer toast: style Install as the primary action and tell Not now from a timeout
 area: shell
-status: open
+status: doing
 priority: later
 who: claude
 created: 2026-11-25

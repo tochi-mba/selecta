@@ -23,7 +23,7 @@ import './libraryWorkspace.css';
 
 const STATE: Record<FolderRow['state'] | 'checking', { kind: StatusKind; words: string }> = {
   watching: { kind: 'ready', words: 'Watching' },
-  unchecked: { kind: 'queued', words: 'Not checked yet' },
+  unchecked: { kind: 'queued', words: 'Waiting for its first check' },
   permission: { kind: 'needs-action', words: 'Needs your permission' },
   missing: { kind: 'warning', words: 'Not found' },
   visit: { kind: 'paused', words: 'Chosen this visit' },
@@ -39,7 +39,7 @@ export function rowWords(row: FolderRow, now = Date.now()): string {
   if (row.state === 'permission') parts.push('The browser asks before SelectaDJ reads it again. Allow brings back all its songs at once.');
   else if (row.state === 'missing') parts.push('It may have been renamed or moved. Choose it again and its songs are kept.');
   else if (row.state === 'visit') parts.push('This browser can’t keep it between visits, so choose it again next time.');
-  else parts.push(row.checkedAt ? `Checked ${relativeTime((now - row.checkedAt) / 1000)}` : 'Not checked yet');
+  else parts.push(row.checkedAt ? `Checked ${relativeTime((now - row.checkedAt) / 1000)}` : 'Checked when SelectaDJ is next idle');
   return parts.join(', ');
 }
 

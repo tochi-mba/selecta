@@ -2,7 +2,7 @@
 id: T-20261125-2a73
 title: Cloud writes have no time limit
 area: infra
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25

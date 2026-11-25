@@ -2,7 +2,7 @@
 id: T-20261125-8583
 title: Busy flags that mirror an Action can outlast its time limit
 area: shell
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25

@@ -2,7 +2,7 @@
 id: T-20261125-ca89
 title: Folder rows still say Not checked yet
 area: library
-status: open
+status: doing
 priority: later
 who: claude
 created: 2026-11-25

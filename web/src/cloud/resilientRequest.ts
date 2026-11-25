@@ -235,6 +235,11 @@ export type ResilientOptions = {
   baseMs?: number;
   /** A GET with no answer after this long counts as a timeout (default 20 s). 0 turns it off. */
   readTimeoutMs?: number;
+  /** Any other call (a write) with no answer after this long counts as a timeout (default 60 s),
+   * so a busy state waiting on it always ends. Generous, because a write can be slow to finish.
+   * Retrying it is safe only with an Idempotency-Key, which `isIdempotent` already checks; a
+   * keyless POST is reported once and never sent again. 0 turns it off. */
+  writeTimeoutMs?: number;
 };
 
 /** Join the caller's signal with a time limit, without AbortSignal.any (not in every browser). */
@@ -261,7 +266,8 @@ function withTimeout(init: RequestInit | undefined, ms: number): { init: Request
  *   fails at once with OfflineError, so pages can fall back to what this device knows instead of
  *   waiting. The store's own probe brings everything back.
  * - An idempotent call that fails in a way that can heal is tried again a few times quickly.
- * - A GET gets a time limit, so a connection that hangs is noticed.
+ * - A GET gets a time limit, so a connection that hangs is noticed; a write gets a longer one,
+ *   so no busy state waits for ever on a server that never answers.
  * - Raw network errors become OfflineError or TimeoutError with plain words.
  * Callers that should wait out a long outage (the import, the mix outbox) wrap their own work
  * in `withRetry`. */
@@ -269,9 +275,11 @@ export function resilient(api: Api, options: ResilientOptions = {}): Api {
   const attempts = options.attempts ?? 3;
   const baseMs = options.baseMs ?? 600;
   const readTimeoutMs = options.readTimeoutMs ?? 20_000;
+  const writeTimeoutMs = options.writeTimeoutMs ?? 60_000;
   const once = async <T,>(path: string, init: RequestInit | undefined, workspaceId: string | undefined): Promise<T> => {
     const method = (init?.method ?? 'GET').toUpperCase();
-    const limit = method === 'GET' ? withTimeout(init, readTimeoutMs) : null;
+    const ms = method === 'GET' ? readTimeoutMs : writeTimeoutMs;
+    const limit = ms ? withTimeout(init, ms) : null;
     try {
       const answer = await api<T>(path, limit ? limit.init : init, workspaceId);
       noteOutcome();

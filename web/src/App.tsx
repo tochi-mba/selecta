@@ -1,5 +1,5 @@
 import { type ReactNode, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { lazyPage as lazy } from './ui/staleBuild';
+import { lazyPage as lazy, SlowToArrive } from './ui/staleBuild';
 import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, request, Status } from './api';
 import { getDraftNames } from './state/draftNames';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
@@ -711,7 +711,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
       >
         <Section name={pageTitle} key={route.page}>
           {/* a split page names itself straight away, so the loading shell is never a page without a heading */}
-          <Suspense fallback={<main className={`page${route.page === 'edit' ? ' mix' : ''}`} id="main" aria-busy="true"><h1 className="display small">{pageTitle}</h1><Skeleton label={`Opening ${pageTitle}`} /></main>}>
+          <Suspense fallback={<main className={`page${route.page === 'edit' ? ' mix' : ''}`} id="main" aria-busy="true"><h1 className="display small">{pageTitle}</h1><Skeleton label={`Opening ${pageTitle}`} /><SlowToArrive /></main>}>
           {route.page === 'mixes' && route.tab === 'mine' && <MyMixes {...shared} />}
           {route.page === 'mixes' && route.tab === 'browse' && <Mixes {...shared} />}
           {nothingToHear && <ListenEmpty />}

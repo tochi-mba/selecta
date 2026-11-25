@@ -4,6 +4,7 @@ import { TONAL_PROFILE_IMPLEMENTATION, type TonalProfile } from '../dsp/analysis
 import { derivedStore, withHashLock, type DerivedStore } from '../media/derived';
 import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
 import { importSnapshot } from './importSession';
+import { setTonalActivity } from './tonalActivity';
 
 /** Browser tonal profiles and harmonic-match answers (cloud.browser_harmonic).
  *
@@ -307,8 +308,12 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
 
   // an import in this tab or another one (a following tab's snapshot says running too), or music
   const busy = () => importSnapshot().phase === 'running' || options.playing();
-  const quiet = async () => {
-    while (!stopped && busy()) await new Promise((resolve) => window.setTimeout(resolve, BUSY_POLL_MS));
+  // `report`: only while songs are waiting does the Workspace say why measuring has paused
+  const quiet = async (report = false) => {
+    while (!stopped && busy()) {
+      if (report) setTonalActivity(importSnapshot().phase === 'running' ? 'waiting_import' : 'waiting_music');
+      await new Promise((resolve) => window.setTimeout(resolve, BUSY_POLL_MS));
+    }
   };
 
   const pass = async () => {
@@ -317,8 +322,9 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
     const waiting = (await media.all()).filter((song) => !known.has(song.identity.content_sha256) && !unreachable.has(song.songId));
     for (const song of waiting) {
       await spareTime(IDLE_GAP_MS, isStopped);
-      await quiet();
+      await quiet(true);
       if (stopped) break;
+      setTonalActivity('measuring');
       try {
         await measure(song.songId, song.identity.content_sha256);
         options.onProfiled?.();
@@ -343,6 +349,8 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
       } catch {
         // the song index is not open yet; try again on the next pass
       }
+      // everything reachable is measured, or another tab is measuring
+      setTonalActivity('idle');
       unreachable.clear();
       await new Promise((resolve) => window.setTimeout(resolve, RESWEEP_MS));
     }
@@ -350,6 +358,7 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
 
   return () => {
     stopped = true;
+    setTonalActivity('idle');
     worker?.terminate();
     worker = null;
   };

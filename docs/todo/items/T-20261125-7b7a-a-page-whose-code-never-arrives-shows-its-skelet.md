@@ -2,7 +2,7 @@
 id: T-20261125-7b7a
 title: A page whose code never arrives shows its skeleton with no way to ask again
 area: shell
-status: open
+status: doing
 priority: later
 who: claude
 created: 2026-11-25

@@ -2,7 +2,7 @@
 id: T-20261125-66f1
 title: Hosted mix export polls with no end
 area: library
-status: open
+status: doing
 priority: later
 who: claude
 created: 2026-11-25

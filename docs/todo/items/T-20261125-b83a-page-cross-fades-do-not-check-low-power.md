@@ -2,7 +2,7 @@
 id: T-20261125-b83a
 title: Page cross-fades do not check low power
 area: shell
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25

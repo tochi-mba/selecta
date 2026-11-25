@@ -152,10 +152,14 @@ export function watchInstallMoments(): () => void {
     memory = { ...memory, shown: [...memory.shown, moment] };
     writeMemory(memory);
     const notNow = { label: 'Not now', run: () => dismiss(moment) };
-    if (how === 'home_screen') { showToast(offerWords(moment, how), { actions: [notNow] }); return; }
+    // closing the offer is a no, like Not now; letting it time out unread is not
+    const onDismiss = () => dismiss(moment);
+    if (how === 'home_screen') { showToast(offerWords(moment, how), { actions: [notNow], onDismiss }); return; }
     showToast(offerWords(moment, how), {
+      onDismiss,
       actions: [{
         label: 'Install',
+        primary: true,
         // asked inside the press itself, which the browser's install dialog needs
         run: () => promptInstall().then((outcome) => {
           if (outcome !== 'dismissed') return;

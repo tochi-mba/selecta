@@ -2,7 +2,7 @@
 id: T-20261125-238e
 title: Catalogue misses are retried only when a page asks again
 area: library
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25

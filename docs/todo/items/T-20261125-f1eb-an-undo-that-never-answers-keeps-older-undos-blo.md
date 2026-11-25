@@ -2,7 +2,7 @@
 id: T-20261125-f1eb
 title: An Undo that never answers keeps older Undos blocked
 area: shell
-status: open
+status: doing
 priority: later
 who: claude
 created: 2026-11-25

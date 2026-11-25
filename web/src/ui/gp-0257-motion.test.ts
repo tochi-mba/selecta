@@ -67,7 +67,6 @@ const INVENTORY: Record<string, Severity> = {
   'blend-head': 'waiting',
   'blend-skip': 'waiting',
   'blend-ring': 'waiting',
-  'blend-kick': 'waiting',
   'blend-tag': 'waiting',
   // music folders (cloud/libraryWorkspace.css): the drop zone answering files dragged over the page
   'mf-drop-in': 'answers-you',

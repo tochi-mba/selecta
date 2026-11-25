@@ -2,7 +2,7 @@
 id: T-20261125-e9b6
 title: Motion inventory still lists a Menu, Tooltip and Popover exit gap the code has closed
 area: docs
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25

@@ -115,7 +115,7 @@ Script animations are not stopped by a stylesheet, so every engine in `web/src/f
 | Shell (`styles/feel-shell.css`) | the rail opens; a menu opens; the page changes; activity; playback | the rail's words (`feel-rail-label`); a menu growing from its button (`feel-menu-grow`); the page's name (`feel-crumb-in`); the bell once on new activity (`feel-ring`); the mini player rising and sinking (`feel-dock-rise`, `feel-dock-sink`); Play turning into Pause (`feel-glyph-swap`); a new song's title (`feel-title-in`); the palette growing from its button (`feel-palette-grow`); the connection banner and import chip (`feel-banner-in`, `feel-banner-out`); a new theme spreading from the theme button (`feel-theme-reveal`) | spring and effects tokens | shown at rest; the theme changes at once |
 | Welcome page (`cloud/Welcome.tsx`) | the page opens; a step scrolls into view | `rise-in`: the headline a word at a time, then the lead, the buttons, the drawing, the benefits and the steps; with the feel one pass of light over the lit word (`feel-sweep`) and the step line drawn as it scrolls in (`feel-line-down`, `feel-line-across`) | `--motion-slow`, each `--motion-feedback` after the last | none: everything rests in place |
 | Onboarding steps | Next; Back | the step card arrives from the side ahead (`feel-arrive-forward`) or behind (`feel-arrive-back`) | `--motion-spring-snappy` | instant |
-| Blend drawing (`cloud/BlendArt.tsx`: Welcome, page not found) | shown | the playhead crosses (`blend-head`; `blend-skip` when nothing is up next), the blend point answers it (`blend-ring`), the two tags trade emphasis (`blend-tag`); with Expressive each bar lifts as the playhead passes (`blend-kick`) and the card leans toward the pointer | `--motion-loop-blend` 8s loop; the lean `--motion-slow` | a still drawing, the playhead resting on the blend; Subtle has no bar lift and no lean |
+| Blend drawing (`cloud/BlendArt.tsx`: Welcome, page not found) | shown | the playhead crosses (`blend-head`; `blend-skip` when nothing is up next), the blend point answers it (`blend-ring`), the two tags trade emphasis (`blend-tag`); with Expressive the card leans toward the pointer, and while the person drags the playhead the bars under it lift (a `--motion-fast` transition, never on the loop's timer, ADR-0477 rule 4) | `--motion-loop-blend` 8s loop; the lean `--motion-slow`; the bar lift `--motion-fast` | a still drawing, the playhead resting on the blend; Subtle has no bar lift and no lean |
 | Gate screens (`cloud/Gate.tsx`) | shown; waiting | the card and the account line `rise-in`; the waiting line runs `lucy-slide` | `--motion-slow`; `--motion-loop-slide` 1.6s loop | none |
 | Cloud pages (`styles/cloud-ui.css`) | page change; a card grid or a meter appears | the page and each card `cloud-arrive`, cards one after another; a meter fills from empty (`meter-fill`) | `--motion-slow`, cards `--motion-feedback` apart | none; the words still say the value |
 | Make a Mix and Listen (`styles/feel-listen.css`) | a skip; a hand-over nears; the mix is made | a ring where Skip was pressed (`feel-listen-skip`); the next song's card rises as a real hand-over nears (`feel-listen-rise`); the build moment leaves (`feel-listen-build-out`) | spring and effects tokens; the rise follows the song clock | shown at rest |
@@ -151,7 +151,7 @@ is still going, or follows the player clock. Their lengths are named tokens in `
 (`--motion-loop-*`, `--motion-clock`), so no sheet holds a raw duration.
 
 - `button-working` 0.9s, `skeleton-breathe` 1.4s, `lucy-slide` 1.6s, `request-pulse` 1.8s, `pending-flow` 2.4s: loops, longer than any token by design.
-- `blend-head`, `blend-skip`, `blend-ring`, `blend-kick`, `blend-tag` 8s (`--motion-loop-blend`): one slow pass of the playhead over the blend drawing. Decoration that shows what a blend is; it never claims to follow real audio.
+- `blend-head`, `blend-skip`, `blend-ring`, `blend-tag` 8s (`--motion-loop-blend`): one slow pass of the playhead over the blend drawing. Decoration that shows what a blend is; it never claims to follow real audio.
 - `.handoff-progress i` width 70ms linear: smooths the gap between clock ticks; a token would lag the music.
 - The beat bus's pulses (220 to 320ms) are script animations, not stylesheet durations; their lengths live in `MUSIC_MOTIONS` in `web/src/feel/beatBus.ts`, which may touch only transform, translate, scale and opacity.
 
@@ -167,7 +167,7 @@ is the beat bus alone.
 | `styles/foundation.css` | `lucy-slide` (waiting) |
 | `styles/shell.css` | `skeleton-breathe` (waiting), `button-working` (waiting) |
 | `styles/polish.css` | `feeling-reveal`, `skeleton-reveal`, `toast-appear`, `route-reveal` (arrives); `overlay-appear`, `drawer-appear`, `pop-appear`, `fade-exit`, `dialog-exit`, `drawer-exit`, `toast-exit` (answers you) |
-| `styles/boot.css` | `rise-in` (arrives); `blend-head`, `blend-skip`, `blend-ring`, `blend-kick`, `blend-tag` (waiting) |
+| `styles/boot.css` | `rise-in` (arrives); `blend-head`, `blend-skip`, `blend-ring`, `blend-tag` (waiting) |
 | `styles/cloud-ui.css` | `cloud-spin` (waiting); `cloud-arrive`, `meter-fill` (arrives) |
 | `styles/feel.css` | `feel-arrive`, `feel-flash` (arrives); `feel-pop`, `feel-draw`, `feel-collapse` (answers you) |
 | `styles/feel-parts.css` | `feel-tick-draw` (answers you); `feel-moment-ray` (arrives) |

@@ -2,7 +2,7 @@
 id: T-20261125-b06d
 title: Dropping files on Add music only works while a feel flag is on
 area: storage
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25

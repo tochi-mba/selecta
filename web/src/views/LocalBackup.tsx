@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { Action, Dialog } from '../ui/controls';
 import { words } from '../copy';
+import { answerWithin } from '../api';
 import { BytesRequest, useBytes } from '../requestContext';
 
 type Preview = {
@@ -11,6 +12,10 @@ type Preview = {
   skips: string;
 };
 type BackupStatus = { pending_restart: boolean; rollback_available: boolean; problem?: string | null };
+
+/** Backups are long by nature, so the buttons have no Action limit; this one is generous, so only a
+ * local server that never answers frees them, with words that say so. */
+const BACKUP_LIMIT_MS = 10 * 60_000;
 
 async function askBackup(bytes: BytesRequest, path: string, init?: RequestInit): Promise<Response> {
   const response = await bytes('/backup' + path, init);
@@ -49,8 +54,7 @@ export function LocalBackup() {
   const download = async () => {
     setWorking(true); setIssue(''); setNotice('');
     try {
-      const response = await backupRequest('');
-      const blob = await response.blob();
+      const blob = await answerWithin(backupRequest('').then((response) => response.blob()), BACKUP_LIMIT_MS);
       const url = URL.createObjectURL(blob);
       try {
         const anchor = document.createElement('a');
@@ -78,10 +82,9 @@ export function LocalBackup() {
     if (!chosen) return;
     setWorking(true); setIssue(''); setPreview(null);
     try {
-      const response = await backupRequest('/preview', {
+      setPreview(await answerWithin(backupRequest('/preview', {
         method: 'POST', headers: { 'content-type': 'application/zip' }, body: chosen,
-      });
-      setPreview(await response.json() as Preview);
+      }).then((response) => response.json() as Promise<Preview>), BACKUP_LIMIT_MS));
     } catch (error) { setIssue((error as Error).message); return false; }
     finally { setWorking(false); }
   };
@@ -90,11 +93,12 @@ export function LocalBackup() {
     if (!chosen || !preview) return;
     setWorking(true); setIssue('');
     try {
-      await backupRequest('/stage', {
+      // a staging that lands after the limit still says a restore is waiting, read from the server
+      await answerWithin(backupRequest('/stage', {
         method: 'POST',
         headers: { 'content-type': 'application/zip', 'x-backup-token': preview.token },
         body: chosen,
-      });
+      }), BACKUP_LIMIT_MS, () => void backupRequest('/status').then((response) => response.json()).then(setStatus).catch(() => {}));
       setStatus((current) => ({ pending_restart: true, rollback_available: current?.rollback_available ?? false }));
       setNotice(words().restorePrepared);
       setChosen(null); setPreview(null);

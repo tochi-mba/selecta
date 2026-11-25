@@ -2,7 +2,7 @@
 id: T-20261125-6763
 title: Workspace says Measuring song keys whenever Harmonic matches is on
 area: library
-status: open
+status: doing
 priority: later
 who: claude
 created: 2026-11-25

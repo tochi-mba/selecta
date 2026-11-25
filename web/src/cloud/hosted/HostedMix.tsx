@@ -27,6 +27,10 @@ const MOVE_NAMES: Record<string, string> = {
   echo_out: 'Echo out', delay_throw: 'Delay throw', reverb_wash: 'Reverb wash', vocal_ride: 'Vocal ride',
 };
 const POLL_MS = 3000;
+/** An export is followed at most this long (or twice its estimate, if longer) before the page stops
+ * asking and offers Check again, so a job stuck in the queue is not polled for ever. */
+export const EXPORT_FOLLOW_MS = 15 * 60_000;
+const EXPORT_DONE = ['ready', 'failed', 'refused'];
 
 export function minutes(seconds: number): string {
   if (seconds < 60) return 'under a minute';
@@ -74,7 +78,11 @@ export function HostedMix({ api, workspaceId }: { api: Api; workspaceId: string 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [playing, setPlaying] = useState<PlayerState | null>(null);
+  const [overdue, setOverdue] = useState(false);
   const player = useRef<TimelinePlayer | null>(null);
+  // the export follow stops when the page is left
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const call = useCallback(<T,>(path: string, body?: unknown) => api<T>(path, body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }, workspaceId), [api, workspaceId]);
 
@@ -135,19 +143,36 @@ export function HostedMix({ api, workspaceId }: { api: Api; workspaceId: string 
     void player.current.play(0);
   };
 
+  /** Follow an export until it ends, the page is left, or the time limit passes. */
+  const follow = async (first: Export) => {
+    let state = first;
+    const started = Date.now();
+    const limit = Math.max(EXPORT_FOLLOW_MS, (state.estimate_s ?? 0) * 2000);
+    setOverdue(false);
+    while (mounted.current && state.job_id && !EXPORT_DONE.includes(state.state)) {
+      if (Date.now() - started > limit) { setOverdue(true); return; }
+      await new Promise((done) => window.setTimeout(done, POLL_MS * 2));
+      if (!mounted.current) return;
+      const id: string = state.job_id;
+      state = { ...(await call<Export>(`/hosted/exports/${encodeURIComponent(id)}`)), job_id: id };
+      setExported(state);
+    }
+  };
+
   const exportMix = async () => {
     if (!order) return;
     setError('');
     try {
-      let state = await call<Export>('/hosted/mixes/export', { songs: order });
+      const state = await call<Export>('/hosted/mixes/export', { songs: order });
       setExported(state);
-      while (state.job_id && !['ready', 'failed'].includes(state.state)) {
-        await new Promise((done) => window.setTimeout(done, POLL_MS * 2));
-        const id: string = state.job_id;
-        state = { ...(await call<Export>(`/hosted/exports/${encodeURIComponent(id)}`)), job_id: id };
-        setExported(state);
-      }
+      await follow(state);
     } catch (problemSeen) { setError(problem(problemSeen, 'SelectaDJ could not export this mix.')); }
+  };
+
+  const checkAgain = async () => {
+    if (!exported) return;
+    setError('');
+    try { await follow(exported); } catch (problemSeen) { setError(problem(problemSeen, 'SelectaDJ could not check this export.')); }
   };
 
   const names = new Map((songs?.songs ?? []).map((song) => [song.asset_id, song.name]));
@@ -186,7 +211,9 @@ export function HostedMix({ api, workspaceId }: { api: Api; workspaceId: string 
         <p aria-live="polite">
           {exported.state === 'ready' && exported.url ? <a href={exported.url} download>Download the mix (lossless FLAC)</a>
             : exported.state === 'failed' || exported.state === 'refused' ? `The export could not be made: ${exported.why ?? 'it stopped part way'}`
+            : overdue ? 'The export is taking longer than expected. It carries on on the server.'
             : `Exporting on the server${exported.estimate_s ? `, ${minutes(exported.estimate_s)} left` : ''}…`}
+          {overdue && !EXPORT_DONE.includes(exported.state) && <> <button type="button" onClick={() => void checkAgain()}>Check again</button></>}
         </p>
       )}
       {order && (

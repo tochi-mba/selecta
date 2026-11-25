@@ -2,7 +2,7 @@
 id: T-20261125-d550
 title: Screen wake lock while a mix plays in the browser on a phone or tablet
 area: devices
-status: open
+status: doing
 priority: normal
 who: claude
 created: 2026-11-25
