@@ -69,6 +69,13 @@ def seam_hash(a_sha256: str, b_sha256: str, style: str | None) -> str:
     )
 
 
+def export_hash(shas: Sequence[str]) -> str:
+    from selecta.workers.engine_handlers import EXPORT_VERSION  # heavy module: only when asked
+
+    return _hash({"songs": list(shas), "analysis": ANALYSIS_VERSION, "render": RENDER_VERSION,
+                  "export": EXPORT_VERSION})
+
+
 def _first_key(keys: Any) -> str | None:
     if isinstance(keys, list) and keys:
         return str(keys[0])
@@ -130,6 +137,12 @@ def _state(artifact_row, job_row) -> dict[str, Any]:
     return out
 
 
+def _output(kind: str, input_hash: str) -> dict[str, str]:
+    # Where the gateway lets a remote worker write (cloud_ports.signed_outputs): without this
+    # declared namespace it refuses the upload slot and the job can never finish.
+    return {"kind": kind, "input_hash": input_hash}
+
+
 def _objects(*keys: str | None) -> list[str]:
     return [key for key in keys if key]
 
@@ -153,7 +166,8 @@ def _analysis_spec(workspace_id: str, song: dict, created_by: str | None, lane=L
     return JobSpec(
         workspace_id=workspace_id, type=ANALYSE, idempotency_key=analysis_hash(song["sha256"]),
         lane=lane, created_by=created_by,
-        input_ref={"source_key": key, "source_sha256": song["sha256"], "objects": [key]},
+        input_ref={"source_key": key, "source_sha256": song["sha256"], "objects": [key],
+                   "output": _output("analysis", analysis_hash(song["sha256"]))},
     )
 
 
@@ -348,7 +362,8 @@ def _seam_spec(workspace_id: str, a: dict, b: dict, move: str | None, lane, crea
         workspace_id=workspace_id, type=SEAM, lane=lane, created_by=created_by,
         idempotency_key=f"hosted-seam:{seam_hash(a['sha256'], b['sha256'], move)}",
         input_ref={"style": move, "a": sa_, "b": sb, "objects": _objects(
-            sa_["source_key"], sa_["analysis_key"], sb["source_key"], sb["analysis_key"])},
+            sa_["source_key"], sa_["analysis_key"], sb["source_key"], sb["analysis_key"]),
+            "output": _output("seam", seam_hash(a["sha256"], b["sha256"], move))},
     )
 
 
@@ -479,10 +494,13 @@ def request_export(engine: Engine, work: Work, workspace_id: str, ids: Iterable[
     if len(sides) < 2:
         return {"state": "refused", "why": "An export needs at least two songs."}
     objects = [key for side in sides for key in (side["source_key"], side["analysis_key"])]
-    digest = _hash({"songs": [side["source_sha256"] for side in sides], "kind": "hosted-export"})
+    shas = [side["source_sha256"] for side in sides]
+    digest = _hash({"songs": shas, "kind": "hosted-export"})
     job_id, refused = work.submit(JobSpec(
         workspace_id=workspace_id, type=EXPORT, idempotency_key=f"hosted-export:{digest}",
-        lane=Lane.STANDARD, created_by=created_by, input_ref={"songs": sides, "objects": objects}))
+        lane=Lane.STANDARD, created_by=created_by,
+        input_ref={"songs": sides, "objects": objects,
+                   "output": _output("export", export_hash(shas))}))
     if refused:
         return {"state": "refused", "why": refused}
     return {"state": "queued", "job_id": job_id}
