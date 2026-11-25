@@ -84,8 +84,8 @@ from selecta.billing.plans import plan_for  # noqa: E402
 from selecta.identity.tokens import BadSignature, Claims  # noqa: E402
 from selecta.local_media import store as local_media_store  # noqa: E402
 from selecta.persistence import db_now, make_engine, migrate, transaction  # noqa: E402
-from selecta.playback.schema import playback_commands, playback_sessions  # noqa: E402
 from selecta.playback.model import PlayState, position_at  # noqa: E402
+from selecta.playback.schema import playback_commands, playback_sessions  # noqa: E402
 from selecta.playback.store import load_session  # noqa: E402
 from selecta.rooms.cloud_ports import RoomPorts  # noqa: E402
 from selecta.rooms.ports import NowPlaying  # noqa: E402
