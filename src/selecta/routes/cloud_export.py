@@ -24,11 +24,13 @@ from sqlalchemy import and_, select
 from sqlalchemy.engine import Engine
 from starlette.background import BackgroundTask
 
+from selecta.ai.usage_schema import lucy_usage_ledger
 from selecta.billing import plans, stripe_sync
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
 from selecta.lucy import cloud_settings as lucy_cloud
 from selecta.lucy import cloud_store as lucy_conversations
+from selecta.lucy.cloud_schema import lucy_cloud_conversations, lucy_cloud_turns
 from selecta.persistence import transaction
 from selecta.playback.default_speaker_schema import playback_default_speakers
 from selecta.playback.schema import devices, playback_sessions
@@ -42,6 +44,36 @@ def _safe_filename(name: str) -> str:
     leaf = name.replace("\\", "/").rsplit("/", 1)[-1]
     cleaned = re.sub(r"[^A-Za-z0-9._ -]", "_", leaf).strip(" .")[:180]
     return cleaned or "audio"
+
+
+def _kept_lucy_usage(conn: Any, workspace_id: str, user_id: str) -> list[dict[str, Any]]:
+    """Export charges linked to the person's own turns in this workspace."""
+    ledger = lucy_usage_ledger.c
+    turns = lucy_cloud_turns.c
+    conversations = lucy_cloud_conversations.c
+    own_turn = (
+        select(turns.id)
+        .select_from(lucy_cloud_turns.join(lucy_cloud_conversations, and_(
+            conversations.workspace_id == turns.workspace_id,
+            conversations.id == turns.conversation_id,
+        )))
+        .where(
+            turns.workspace_id == ledger.workspace_id,
+            turns.run_id == ledger.run_id,
+            conversations.user_id == user_id,
+        )
+        .exists()
+    )
+    query = (
+        select(
+            ledger.run_id, ledger.created_at, ledger.settled_at, ledger.mode, ledger.pool,
+            ledger.catalogue_version, ledger.reserved_units, ledger.charged_units, ledger.outcome,
+            ledger.week_ends_at, ledger.session_ends_at,
+        )
+        .where(ledger.workspace_id == workspace_id, own_turn)
+        .order_by(ledger.created_at, ledger.run_id)
+    )
+    return [dict(row) for row in conn.execute(query).mappings()]
 
 
 def _kept_library(conn: Any, workspace_id: str) -> dict[str, Any]:
@@ -138,6 +170,7 @@ def install_routes(
             ]
             lucy_choices = lucy_cloud.choices(conn, principal.user.id)
             lucy_talk = lucy_conversations.export(conn, workspace.id, principal.user.id)
+            lucy_usage = _kept_lucy_usage(conn, workspace.id, principal.user.id)
             entitlement = stripe_sync.effective_entitlement(conn, workspace.id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             device_rows = [
@@ -302,6 +335,7 @@ def install_routes(
                     ),
                     "settings": "included in settings.json",
                     "lucy_conversations": "included in lucy-conversations.json",
+                    "lucy_usage": "included in lucy-usage.json",
                     "mixes": {
                         "saved_mixes": f"{len(kept['saved_mixes'])} revisions in mixes.json",
                         "current_mix": "included in mixes.json",
@@ -317,6 +351,7 @@ def install_routes(
                 archive.writestr("library.json", json.dumps(kept["songs"], indent=2, default=str))
                 # ADR-0476: this person's Lucy conversations, as they read them
                 archive.writestr("lucy-conversations.json", json.dumps(lucy_talk, indent=2))
+                archive.writestr("lucy-usage.json", json.dumps(lucy_usage, indent=2, default=str))
         except Exception:
             shutil.rmtree(temp_dir, ignore_errors=True)
             raise

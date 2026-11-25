@@ -682,6 +682,8 @@ def create_cloud_app(
                 plan,
                 principal.user.timezone,
                 hosted_media_granted=hosted,
+                flag_rules=snapshot,
+                now=now,
             )
         return {
             "user": {

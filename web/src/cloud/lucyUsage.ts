@@ -151,9 +151,13 @@ export function useLucyUsage(request?: Request): LucyWindows | null {
       return;
     }
     let live = true;
+    let latest = 0;
     read.current = () => {
+      const revision = ++latest;
       void asked.current?.<{ usage_windows?: unknown }>('/account/lucy')
-        .then((next) => { if (live) setWindows(windowsOf(next?.usage_windows)); })
+        .then((next) => {
+          if (live && revision === latest) setWindows(windowsOf(next?.usage_windows));
+        })
         // what was shown stays: a read that failed is not news about the allowance
         .catch(() => {});
     };
