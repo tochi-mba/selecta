@@ -1,4 +1,4 @@
-import { expect, Page, Route, test } from '@playwright/test';
+import { BrowserContext, expect, Page, Route, test } from '@playwright/test';
 import { listener } from './cloud';
 import { asLocalFirst, connectOnThisDevice, openLocalFirst, seeded } from './localFirst';
 
@@ -49,6 +49,29 @@ const chip = (page: Page) => page.locator('.cloud-import-chip');
 /** A new member's getting-started spine stands in for the page they opened until it is put off
  * (77a9a91d); Finish later shows the Library, whose own count proves the import landed. */
 const finishLater = (page: Page) => page.getByRole('button', { name: 'Finish later' }).click();
+
+/** Cut or restore the connection. `context.setOffline` fails the page's own requests, but the
+ * account answer that localFirst.ts amends is fetched by the test runner (route.fetch), which
+ * setOffline does not reach; while offline that one is failed here too, as the browser would. */
+const cut = new WeakSet<Page>();
+const routed = new WeakSet<Page>();
+async function setOffline(page: Page, context: BrowserContext, offline: boolean) {
+  if (!routed.has(page)) {
+    routed.add(page);
+    await page.route('**/api/account', (route) => (cut.has(page) ? route.abort('internetdisconnected') : route.fallback()));
+  }
+  if (offline) cut.add(page); else cut.delete(page);
+  await context.setOffline(offline);
+}
+
+/** Resolves once the account's holdings say a device holds songs: a first visit reports this
+ * device's songs only after it registers, and Play before that finds no device to play on
+ * (to-do T-20261125-de03). Start it before the page opens. */
+const heldOnADevice = (page: Page) => page.waitForResponse(async (answer) => {
+  if (!/\/api\/local-media\/holdings$/.test(new URL(answer.url()).pathname) || !answer.ok()) return false;
+  const body = await answer.json().catch(() => null) as { devices?: { songs: number; online: boolean }[] } | null;
+  return !!body?.devices?.some((device) => device.online && device.songs > 0);
+}, { timeout: 30_000 });
 
 /** Put a real folder in the origin-private file system and remember it where a folder pick does,
  * so a reload can carry the import on over it without a picker. */
@@ -109,7 +132,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await expect(chip(page)).toContainText(/of 20 checked/);
     await expect.poll(() => held.batches()).toBe(2);
 
-    await context.setOffline(true);
+    await setOffline(page, context, true);
     held.release();
     await expect(chip(page)).toContainText(/Offline\. \d+ of 20 checked\. Carries on when you’re back online\./, { timeout: 30_000 });
     await expect(page.getByRole('status').filter({ hasText: 'You’re offline.' }).first()).toBeVisible();
@@ -119,7 +142,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
       return (rows.fingerprinted ?? 0) + (rows.registered ?? 0) + (rows.saved ?? 0);
     }, { timeout: 30_000 }).toBe(20);
 
-    await context.setOffline(false);
+    await setOffline(page, context, false);
     await finishLater(page);
     await expect(songCount(page, 20)).toBeVisible({ timeout: 60_000 });
     await expect(chip(page)).toHaveCount(0);
@@ -218,6 +241,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     // said by the chip, and by Workspace's import card when that page is open
     await expect(second.locator('.cloud-import-chip')).toContainText(/Another tab is importing\. Progress shows here too/, { timeout: 30_000 });
     held.release();
+    await finishLater(page);
     await expect(songCount(page, 15)).toBeVisible({ timeout: 60_000 });
     expect(await second.evaluate((key) => localStorage.getItem(key), `selecta.import.${workspace}`)).toBeNull();
     await second.close();
@@ -235,7 +259,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await page.reload();
     await expect(page.getByText('Offline one').first()).toBeVisible();
 
-    await context.setOffline(true);
+    await setOffline(page, context, true);
     await page.reload();
     await expect(page.getByRole('status').filter({ hasText: 'You’re offline.' }).first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/Showing what this device knows/)).toBeVisible();
@@ -244,7 +268,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await page.goto('/account').catch(() => undefined);
     await expect(page.getByText(/needs the internet/).first()).toBeVisible({ timeout: 30_000 });
 
-    await context.setOffline(false);
+    await setOffline(page, context, false);
     await expect(page.getByText('Back online. Catching up...')).toBeVisible({ timeout: 30_000 });
   });
 
@@ -253,13 +277,15 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     const made = await seeded(request, user, { local_songs: 2, local_titles: ['Keeps one', 'Keeps two'] });
     await asLocalFirst(page, user);
     await connectOnThisDevice(page, made.workspace_id, [{ songId: made.local_songs[0], title: 'Keeps one', audio: true }, { songId: made.local_songs[1], title: 'Keeps two', audio: true }]);
+    const held = heldOnADevice(page);
     await page.goto('/mixes');
+    await held;
     await page.getByRole('button', { name: 'Play', exact: true }).click();
     await expect(page).toHaveURL(/\/listen$/);
     const position = () => page.evaluate(() => (window as unknown as { __selectaEngineTime?: () => number }).__selectaEngineTime?.() ?? Number(document.querySelector('[data-song-time]')?.getAttribute('data-song-time') ?? 0));
     await expect(page.getByRole('button', { name: 'Pause' }).first()).toBeVisible({ timeout: 30_000 });
 
-    await context.setOffline(true);
+    await setOffline(page, context, true);
     expect((await request.post('/test/expire-lease', { data: { user } })).ok()).toBe(true);
     await expect(page.getByRole('status').filter({ hasText: 'SelectaDJ keeps playing' }).first()).toBeVisible({ timeout: 30_000 });
     const before = await position();
@@ -269,7 +295,7 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     await expect(page.getByText(/could not renew its audio lease/)).toHaveCount(0);
     expect(await position()).toBeGreaterThanOrEqual(before);
 
-    await context.setOffline(false);
+    await setOffline(page, context, false);
     await expect(page.getByText('Back online. Catching up...')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: 'Pause' }).first()).toBeVisible();
   });
@@ -279,18 +305,21 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     const made = await seeded(request, user, { local_songs: 2, local_titles: ['Queue one', 'Queue two'] });
     await asLocalFirst(page, user);
     await connectOnThisDevice(page, made.workspace_id, [{ songId: made.local_songs[0], title: 'Queue one', audio: true }, { songId: made.local_songs[1], title: 'Queue two', audio: true }]);
+    const held = heldOnADevice(page);
     await page.goto('/mixes/mine');
     await expect(page.getByRole('heading', { name: 'My Mixes' })).toBeVisible();
+    await held;
 
-    await context.setOffline(true);
+    await setOffline(page, context, true);
     await page.goto('/mixes').catch(() => undefined);
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Make a Mix', exact: true }).click().catch(() => undefined);
     await page.getByRole('button', { name: 'Play', exact: true }).click();
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'My Mixes' }).click().catch(async () => { await page.goto('/mixes/mine'); });
     await expect(page.getByText('Waiting to sync').first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/Saved on this device; it goes to your account when the connection is back\./).first()).toBeVisible();
+    // the row says where the mix is kept until then (33031504's words)
+    await expect(page.getByText('Saved on this device', { exact: true }).first()).toBeVisible();
 
-    await context.setOffline(false);
+    await setOffline(page, context, false);
     await expect(page.getByText('Waiting to sync')).toHaveCount(0, { timeout: 60_000 });
     const recipes = await page.evaluate(async () => {
       const user = localStorage.getItem('selecta-e2e-user');
