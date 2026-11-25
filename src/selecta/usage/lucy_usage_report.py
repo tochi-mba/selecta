@@ -74,7 +74,8 @@ def measure(conn: Connection, since: float, until: float) -> dict[str, Any]:
             week_costs[tier][week_key] += cost
             if session is not None:
                 weekly_sessions[tier][week_key].add(session)
-        if session is not None and session_end is not None and since + 18_000 <= session_end <= until:
+        whole = session_end is not None and since + 18_000 <= session_end <= until
+        if session is not None and whole:
             key = (workspace, session)
             session_units[tier][key] += charged
             session_turns[tier][key] += 1
@@ -84,7 +85,8 @@ def measure(conn: Connection, since: float, until: float) -> dict[str, Any]:
     for tier in sorted(set(catalogue.plans) | costs.keys()):
         limits = targets(tier, catalogue_version=catalogue.version)
         result[tier] = {
-            "status": "measured" if len(costs[tier]) >= MIN_TURNS and week_units[tier] else "insufficient_data",
+            "status": ("measured" if len(costs[tier]) >= MIN_TURNS and week_units[tier]
+                       else "insufficient_data"),
             "cost_per_turn_usd": _distribution(costs[tier]),
             "turns_per_session": _distribution(list(session_turns[tier].values())),
             "sessions_per_active_week": _distribution([

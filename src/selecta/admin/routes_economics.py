@@ -80,7 +80,8 @@ def install_routes(
         def read(conn: Connection, actor: Actor) -> dict[str, Any]:
             authorize(conn, actor, "platform.dashboard.read")
             until = db_now(conn)
-            return lucy_usage_report.measure(conn, until - days * lucy_usage_report.SECONDS_PER_DAY, until)
+            since = until - days * lucy_usage_report.SECONDS_PER_DAY
+            return lucy_usage_report.measure(conn, since, until)
 
         return {"report": run(request, claims, read)}
 

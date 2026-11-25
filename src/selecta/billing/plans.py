@@ -483,6 +483,12 @@ class LucyUsageVersion:
     plans: Mapping[str, LucyUsagePlan]
     # A venue's pooled weekly allowance. Venue pools have no session window (ADR-0482 rule 7).
     venue_weekly_units: int
+    # When this version starts to apply (epoch seconds; 0 is from the start). A workspace takes
+    # it up at its first weekly reset on or after this moment (ADR-0485 rule 6).
+    effective_from: float = 0.0
+    # When members were told that this version gives less than the last (epoch seconds), or None.
+    # A version that reduces anything waits until its notice has gone out before a weekly reset.
+    reduction_notified_at: float | None = None
 
 
 LUCY_USAGE_1 = LucyUsageVersion(
@@ -533,6 +539,18 @@ def lucy_usage(version: int | None = None) -> LucyUsageVersion:
         if usage.version == version:
             return usage
     raise UnknownPlan(f"Lucy's allowance table has no version {version}.")
+
+
+def effective_lucy_usage(at: float) -> LucyUsageVersion:
+    """The newest version of the allowance table in effect at `at`; the first one when none is
+    yet, so there is always a table to meter against."""
+    if not LUCY_USAGE:
+        raise UnknownPlan("Lucy's allowance table has no versions.")
+    current = LUCY_USAGE[0]
+    for usage in LUCY_USAGE:
+        if usage.effective_from <= at:
+            current = usage
+    return current
 
 
 def _lucy_usage_plan(usage: LucyUsageVersion, plan_id: str) -> LucyUsagePlan:

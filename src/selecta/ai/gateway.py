@@ -242,7 +242,8 @@ def _enforced_route(
         if cap > room_usd:
             limited = "spend"
             cheaper = _cheaper_route(
-                deployments, routing, tier, route_class, workspace_id, health, needs, route, room_usd,
+                deployments, routing, tier, route_class, workspace_id, health, needs, route,
+                room_usd,
             )
             if cheaper is None:
                 return None, 0.0, None, limited
@@ -270,9 +271,12 @@ def _enforced_route(
         if not fallback or fallback == BUILTIN_ID:
             return None, 0.0, None, "session"
         lighter = True
-        lighter_routing = RoutingVersion(routing.version, {tier.value: {route_class.value: [fallback]}})
+        lighter_routing = RoutingVersion(
+            routing.version, {tier.value: {route_class.value: [fallback]}}
+        )
         route = replace(
-            choose_route(deployments, lighter_routing, tier, route_class, workspace_id, health, needs),
+            choose_route(deployments, lighter_routing, tier, route_class, workspace_id, health,
+                         needs),
             first_choice=primary.first_choice, fallback_used=True,
         )
     return None, 0.0, None, "no_model"

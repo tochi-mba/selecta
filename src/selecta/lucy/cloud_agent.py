@@ -36,7 +36,14 @@ from selecta.ai.runs import Outcome
 from selecta.ai.schema import ai_runs
 from selecta.ai.usage_mode import Rules
 from selecta.billing import plans, stripe_sync
-from selecta.lucy import cloud_health, cloud_prompt, cloud_store, cloud_tools, cloud_world
+from selecta.lucy import (
+    cloud_health,
+    cloud_limits,
+    cloud_prompt,
+    cloud_store,
+    cloud_tools,
+    cloud_world,
+)
 from selecta.lucy.providers import (
     AnthropicProvider,
     OpenAICompatibleProvider,
@@ -419,8 +426,10 @@ async def run_turn(job: Job) -> None:
     changed = _plan_change(job)
     if changed:
         events.emit("run.limit", {"limit": "plan", "text": changed})
+    limit_note = plan.limited if plan.limited in {"session", "week"} else None
     if plan.limited == "lighter" and (notice := _lighter_notice(job)):
         events.emit("run.limit", {"limit": "lighter", "text": notice})
+        limit_note = "lighter"
     ctx = cloud_tools.CloudCtx(job.engine, job.workspace_id, job.user_id, job.conversation_id,
                                job.turn_id, proposals_on=job.proposals_on)
 
@@ -508,6 +517,10 @@ async def run_turn(job: Job) -> None:
         if followups:
             meta["followups"] = followups
         with transaction(job.engine, job.workspace_id) as conn:
+            if limit_note:
+                # what the page needs to offer the next step under these words (ADR-0483)
+                meter = usage_units.read_model(conn, job.workspace_id, now=db_now(conn))
+                meta["limit"] = cloud_limits.signal(limit_note, meter, plan_id=plan.tier.value)
             cloud_store.finish_message(
                 conn, job.workspace_id, message["id"], writer.content, status, revision, meta,
             )
@@ -523,7 +536,9 @@ async def run_turn(job: Job) -> None:
             )
         events.emit("message.completed", {"message": message["id"], "status": status,
                                           "content": writer.content,
-                                          "meta": {"followups": followups}})
+                                          "meta": {"followups": followups, **(
+                                              {"limit": meta["limit"]} if "limit" in meta
+                                              else {})}})
         events.state(final, cycles, steps, error)
         with transaction(job.engine, job.workspace_id) as conn:
             cloud_store.prune_deltas(conn, job.workspace_id, job.conversation_id, plan.run_id)
@@ -631,11 +646,14 @@ async def _model_turns(
     with transaction(job.engine, job.workspace_id) as conn:
         seq = cloud_store.turn_row(conn, job.workspace_id, job.turn_id).seq
     messages = _model_history(job, seq) + [provider.user(job.text)]
+    with transaction(job.engine, job.workspace_id) as conn:
+        allowance = cloud_limits.state_words(
+            cloud_limits.enforced_meter(conn, job.workspace_id, now=db_now(conn)))
     system = [
-        cloud_prompt.INSTRUCTIONS,
+        cloud_prompt.INSTRUCTIONS_WINDOWS if allowance else cloud_prompt.INSTRUCTIONS,
         cloud_prompt.dynamic(cloud_tools.library_summary(ctx),
                              dt.datetime.now(dt.UTC).strftime("%A %d %B %Y"), job.proposals_on),
-        _right_now(job),
+        _right_now(job) + (f"\n{allowance}" if allowance else ""),
     ]
     limits = plan.limits
     deadline = time.monotonic() + limits.max_seconds

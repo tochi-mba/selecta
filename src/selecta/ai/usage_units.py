@@ -123,7 +123,8 @@ def _anchor(conn: Connection, workspace_id: str, now: float) -> windows.Anchor:
     if found is None:
         return windows.anchor_for(now, "UTC")
     org = _venue_organisation(conn, workspace_id)
-    return windows.anchor_for(float(found.created_at), org.time_zone if org is not None else found.timezone)
+    zone = org.time_zone if org is not None else found.timezone
+    return windows.anchor_for(float(found.created_at), zone)
 
 
 def _row(conn: Connection, workspace_id: str) -> sa.Row | None:
@@ -358,7 +359,8 @@ def record_shadow(
             "workspace_id": workspace_id,
             "run_id": run_id,
             "mode": SHADOW,
-            "pool": VENUE_POOL if _venue_organisation(conn, workspace_id) is not None else PLAN_POOL,
+            "pool": (VENUE_POOL if _venue_organisation(conn, workspace_id) is not None
+                     else PLAN_POOL),
             "tier": str(tier),
             "catalogue_version": row.catalogue_version,
             "week_seq": row.week_seq,
@@ -466,7 +468,8 @@ def reserve_enforced(
                     "workspace_id": workspace_id,
                     "run_id": run_id,
                     "mode": ENFORCED,
-                    "pool": VENUE_POOL if _venue_organisation(conn, workspace_id) is not None else PLAN_POOL,
+                    "pool": (VENUE_POOL if _venue_organisation(conn, workspace_id) is not None
+                     else PLAN_POOL),
                     "tier": str(tier),
                     "catalogue_version": row.catalogue_version,
                     "week_seq": row.week_seq,
@@ -629,7 +632,8 @@ def _recent_personal_charges(conn: Connection, workspace_id: str, user_id: str) 
 
     history = (
         _ledger.join(
-            turns, sa.and_(turns.c.workspace_id == _ledger.c.workspace_id, turns.c.run_id == _ledger.c.run_id)
+            turns, sa.and_(turns.c.workspace_id == _ledger.c.workspace_id,
+                           turns.c.run_id == _ledger.c.run_id)
         )
         .join(conversations, sa.and_(
             conversations.c.workspace_id == turns.c.workspace_id,
@@ -687,7 +691,9 @@ def read_model(
     if estimate_for_user_id is not None:
         remaining = view["week_limit"] - view["week_used"] - view["week_reserved"]
         if view["session_limit"] is not None:
-            remaining = min(remaining, view["session_limit"] - view["session_used"] - view["session_reserved"])
+            session_left = (view["session_limit"] - view["session_used"]
+                            - view["session_reserved"])
+            remaining = min(remaining, session_left)
         result["estimated_messages"] = windows.estimated_messages(
             remaining, _recent_personal_charges(conn, workspace_id, estimate_for_user_id)
         )

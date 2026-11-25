@@ -677,13 +677,8 @@ def create_cloud_app(
             # The meter and the shell read one hosted decision (BF-0456-06, BF-0464-02).
             hosted = decisions.snapshot().get("cloud.hosted_media") is not False
             usage = meters.meters(
-                conn,
-                principal.workspace.id,
-                plan,
-                principal.user.timezone,
-                hosted_media_granted=hosted,
-                flag_rules=snapshot,
-                now=now,
+                conn, principal.workspace.id, plan, principal.user.timezone,
+                hosted_media_granted=hosted, flag_rules=snapshot, now=now,
             )
         return {
             "user": {
