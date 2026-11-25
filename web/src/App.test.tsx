@@ -34,7 +34,9 @@ describe('the badges', () => {
     });
     render(<App />);
     await userEvent.click((await navigation()).getByRole('link', { name: 'Edit' }));
-    expect(await screen.findByText('Not rendered yet')).toBeInTheDocument();
+    // Edit is its own chunk and arrives a moment after the click: on a cold run with the feel on that
+    // takes a little over the default second, so it gets the same headroom as the wait below
+    expect(await screen.findByText('Not rendered yet', undefined, { timeout: 5_000 })).toBeInTheDocument();
     // The worker poll advances through four server reads. Leave enough wall-clock
     // headroom for a fully parallel suite without changing the polling contract.
     await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument(), { timeout: 10_000 });
