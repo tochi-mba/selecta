@@ -27,7 +27,7 @@ const PROBE_BYTES = 96 * 1024;
  * per-window cost (a read and a decode) stays well under the time it plays. */
 export const WINDOW_SECONDS = 8;
 const MAX_HEAD_BYTES = 4 * 1024 * 1024;
-const SEEK_TRIES = 8;
+const SEEK_TRIES = 24;
 
 export class PartReader {
   stream: StreamInfo | null = null;
@@ -92,38 +92,41 @@ export class PartReader {
     return out;
   }
 
-  /** Find the frame that holds `target`: guess the byte from the average frame size, read a little
-   * there, and correct the guess from the frame numbers found. */
+  /** Find the frame that holds `target`. Every read narrows a bracket (a frame known to be before
+   * the target, one known after it) and the next read lands where the bracket's bytes per sample
+   * say the target is: loud and quiet passages compress differently, so one average is not enough.
+   * Once the bracket is small, it is simply read from its start. */
   private async seek(target: number): Promise<void> {
     const stream = this.stream!;
+    let lo = { offset: stream.audioStart, sample: 0 };
+    let hi: { offset: number; sample: number } | null = null;
     let guess = stream.audioStart + Math.floor(target * this.bytesPerSample) - PROBE_BYTES / 2;
     for (let tries = 0; tries < SEEK_TRIES; tries += 1) {
-      const at = Math.max(stream.audioStart, guess);
+      if (hi && hi.offset - lo.offset <= 2 * PROBE_BYTES) guess = lo.offset;
+      const at = Math.max(lo.offset, Math.min(guess, hi ? hi.offset - PROBE_BYTES / 2 : guess));
       const bytes = await this.read(at, at + PROBE_BYTES);
-      const { frames, next } = framesIn(bytes, stream, bytes.length < PROBE_BYTES);
+      const atEnd = bytes.length < PROBE_BYTES;
+      const { frames, next } = framesIn(bytes, stream, atEnd);
       const all = next ? [...frames, next] : frames;
       if (!all.length) {
         if (at === stream.audioStart) throw new Error('This part of the mix could not be read.');
-        guess = at - PROBE_BYTES;
+        hi = { offset: at, sample: hi?.sample ?? stream.totalSamples };
+        guess = lo.offset + (at - lo.offset) / 2;
         continue;
       }
       const first = all[0];
       const final = all[all.length - 1];
-      if (first.sample > target) {
-        if (at === stream.audioStart) { this.offset = at + first.offset; this.sample = first.sample; return; }
-        guess = at - Math.ceil((first.sample - target) * this.bytesPerSample * 1.2) - PROBE_BYTES / 4;
-        continue;
-      }
       const holding = all.find((frame) => frame.sample <= target && target < frame.sample + frame.samples);
-      if (holding && holding !== final) { this.offset = at + holding.offset; this.sample = holding.sample; return; }
-      if (holding === final || (final.sample <= target && final.sample + final.samples > target)) {
-        this.offset = at + final.offset; this.sample = final.sample; return;
+      if (holding) { this.offset = at + holding.offset; this.sample = holding.sample; return; }
+      if (first.sample > target) {
+        if (at <= stream.audioStart) { this.offset = at + first.offset; this.sample = first.sample; return; }
+        hi = { offset: at + first.offset, sample: first.sample };
+      } else {
+        if (atEnd) { this.offset = at + final.offset; this.sample = final.sample; return; } // past the end
+        lo = { offset: at + final.offset, sample: final.sample };
       }
-      if (bytes.length < PROBE_BYTES) { this.offset = at + final.offset; this.sample = final.sample; return; } // past the end
-      // the target is further on: move by what the frames here say about bytes per sample
-      const span = final.sample - first.sample;
-      if (span > 0) this.bytesPerSample = (final.offset - first.offset) / span;
-      guess = at + final.offset + Math.floor((target - final.sample) * this.bytesPerSample) - PROBE_BYTES / 4;
+      const perSample = hi && hi.sample > lo.sample ? (hi.offset - lo.offset) / (hi.sample - lo.sample) : this.bytesPerSample;
+      guess = lo.offset + Math.floor((target - lo.sample) * perSample) - PROBE_BYTES / 2;
     }
     throw new Error('This part of the mix could not be found in its file.');
   }

@@ -89,8 +89,8 @@ Verdicts:
 
 | | Local app | Hosted before | Hosted now |
 |---|---|---|---|
-| What plays | Each song decoded at its mix level, rendered seam clips between them, scheduled on one clock | The raw MP3 original, mixed in the browser by the lighter engine | Lossless 24-bit FLAC playback files (`play.proxy`, 34 to 64 MB a song, about 6x the MP3) cut at each seam's cue points, the seam clips between them, at mix level, on one AudioContext clock |
-| Gapless | Yes | Browser crossfades | Yes (parts scheduled back to back; join alignment measured above) |
+| What plays | Each song decoded at its mix level, rendered seam clips between them, scheduled on one clock | The raw MP3 original, mixed in the browser by the lighter engine | Lossless 24-bit FLAC playback files (`play.proxy`, 34 to 64 MB a song with version 1 files, about a quarter less with version 2) cut at each seam's cue points, the seam clips between them, at mix level, on one AudioContext clock, read and decoded about 8 seconds at a time (section 8) |
+| Gapless | Yes | Browser crossfades | Yes (windows scheduled back to back in whole sample frames; section 8 measures every join) |
 | Starts playing | As soon as the first seam is ready | At once | Only when every part is ready or failed (a gap: see section 4) |
 | Export | Whole-mix render | Browser export only | `export.render`: one FLAC of the mix. Its transitions are chosen again by `render.setmix`, not the seams heard (T-20261125-4e63). A 12-song export was still rendering after 33 minutes on this loaded machine (all 12 songs fetched, the join running; the export limit is 2 hours), so a finished export file was not verified |
 
@@ -126,7 +126,7 @@ What the customer now sees on Make a Mix > Your hosted mix: "Analysing on Select
 5. **Slow blends near the runtime limit** (326 to 442 s of a 600 s limit here; one timed out).
 6. **Export re-chooses its transitions** instead of joining the heard seams.
 7. **No rating memory or mix-wide move variety** on the server.
-8. **Hosted accounts still see browser-first words** (where music lives) and the browser mixer alongside the server mix.
+8. ~~Hosted accounts still see browser-first words and the browser mixer alongside the server mix.~~ Fixed (section 8): Make a Mix is the hosted mix, the browser mixer one press away, and the footer says where uploads live.
 9. **Queued work has no time limit**: with no worker it waits, by design (nothing a customer paid for is dropped). The status says it is waiting for a worker and gives no estimate, and after 15 minutes operators get a `work.queue_stuck` alert (section 7).
 
 ## 5. Staging and production runbook

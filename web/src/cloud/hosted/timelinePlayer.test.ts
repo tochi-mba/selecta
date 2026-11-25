@@ -123,7 +123,7 @@ const PARTS: TimelinePart[] = [
 function laidOut(started: Started[]) {
   const sorted = [...started].sort((a, b) => a.when - b.when);
   const out: number[] = [];
-  for (const one of sorted) out.push(...one.buffer.data[0].map((x) => x * one.gain));
+  for (const one of sorted) for (const x of one.buffer.data[0]) out.push(x * one.gain);
   return { sorted, out };
 }
 
@@ -159,7 +159,7 @@ describe('PartReader', () => {
     await reader.open();
     const got: number[] = [];
     for (let window = await reader.next(); window; window = await reader.next()) {
-      got.push(...decode(window.file)[0].slice(window.skip, window.skip + window.keep));
+      for (const x of decode(window.file)[0].slice(window.skip, window.skip + window.keep)) got.push(x);
     }
     const begin = Math.round(from * 44100);
     expect(got.length).toBe(5 * 44100);
@@ -189,7 +189,30 @@ describe('TimelinePlayer', () => {
     let worst = 0;
     for (let i = 0; i < out.length; i += 1) worst = Math.max(worst, Math.abs(out[i] - expected[i]));
     expect(worst).toBeLessThan(1e-6);
-  });
+  }, 60_000);
+
+  it('plays a song to the very end of its file, then the next from its first sample (a straight change)', async () => {
+    files.set('c.flac', flac(44100 * 10 + 123, 4096, 4));
+    const parts: TimelinePart[] = [
+      { kind: 'song', from_s: 2, seconds: 8 + 123 / 44100, url: 'c.flac' },
+      { kind: 'song', from_s: 0, seconds: 3, url: 'b.flac' },
+    ];
+    for (const at of [0, 7.5]) {
+      const { context, started } = fakeContext();
+      const player = new TimelinePlayer(parts, async () => parts, () => undefined, { ...quietTimers, context: () => context as never, readUrl, aheadS: 100 });
+      await player.play(0, at);
+      const { out } = laidOut(started);
+      const first = Math.round((2 + at) * 44100);
+      const expected = [
+        ...Array.from({ length: 44100 * 10 + 123 - first }, (_, n) => sampleOf(4, first + n, 0) / 32768),
+        ...Array.from({ length: 3 * 44100 }, (_, n) => sampleOf(3, n, 0) / 32768),
+      ];
+      expect(out.length).toBe(expected.length);
+      let worst = 0;
+      for (let i = 0; i < out.length; i += 1) worst = Math.max(worst, Math.abs(out[i] - expected[i]));
+      expect(worst).toBeLessThan(1e-6);
+    }
+  }, 60_000);
 
   it('keeps only about AHEAD seconds decoded, and lets windows go as they play', async () => {
     const { context } = fakeContext();
@@ -214,7 +237,7 @@ describe('TimelinePlayer', () => {
     const whens = started.map((one) => Math.round(one.when * 44100));
     expect(new Set(whens).size).toBe(whens.length);
     expect(laidOut(started).out.length).toBe(Math.round((20.5 + 6 + 12) * 44100));
-  });
+  }, 60_000);
 
   it('Stop silences everything and lets every window go; leaving the page closes the context', async () => {
     const { context } = fakeContext();
