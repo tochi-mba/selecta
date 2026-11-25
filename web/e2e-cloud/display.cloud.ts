@@ -39,8 +39,8 @@ test('a paired display shows the room and survives a new code', async ({ browser
   const guest = await phone.newPage();
   await guest.goto(joinPath);
   await guest.getByRole('button', { name: 'Join the room' }).click();
-  await guest.getByLabel("Search the host's songs").fill('Song 7');
-  await guest.getByRole('button', { name: 'Choose Song 7 - Artist 0' }).click();
+  await guest.getByRole('searchbox', { name: 'Request a song' }).fill('Song 7');
+  await guest.getByRole('button', { name: 'Add Song 7 - Artist 0' }).click();
   await guest.getByRole('button', { name: 'Send request', exact: true }).click();
   await expect(screen.locator('#d-upcoming')).toContainText('Song 7 - Artist 0', { timeout: 15_000 });
 
