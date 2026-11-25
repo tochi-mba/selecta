@@ -1,0 +1,4 @@
+# made-up audio files: the exact bytes are the test, so git must never touch them
+* binary
+manifest.json text eol=lf
+.gitattributes text eol=lf

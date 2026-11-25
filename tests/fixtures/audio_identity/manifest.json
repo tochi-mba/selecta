@@ -1,0 +1,336 @@
+{
+  "version": "a1",
+  "spec": "docs/engineering/audio-identity.md",
+  "files": [
+    {
+      "file": "mp3-a-bare.mp3",
+      "group": "mp3-a",
+      "audio_id": "a1:726ecc0cdaa7422b1e6c48d06de11849eb6786d72a7e13bad0983efca1b41250",
+      "size": 404
+    },
+    {
+      "file": "mp3-a-id3.mp3",
+      "group": "mp3-a",
+      "audio_id": "a1:726ecc0cdaa7422b1e6c48d06de11849eb6786d72a7e13bad0983efca1b41250",
+      "size": 452
+    },
+    {
+      "file": "mp3-a-retitled.mp3",
+      "group": "mp3-a",
+      "audio_id": "a1:726ecc0cdaa7422b1e6c48d06de11849eb6786d72a7e13bad0983efca1b41250",
+      "size": 739
+    },
+    {
+      "file": "mp3-a-artwork.mp3",
+      "group": "mp3-a",
+      "audio_id": "a1:726ecc0cdaa7422b1e6c48d06de11849eb6786d72a7e13bad0983efca1b41250",
+      "size": 787
+    },
+    {
+      "file": "mp3-a-every-tag.mp3",
+      "group": "mp3-a",
+      "audio_id": "a1:726ecc0cdaa7422b1e6c48d06de11849eb6786d72a7e13bad0983efca1b41250",
+      "size": 759
+    },
+    {
+      "file": "mp3-a-junk-before.mp3",
+      "group": "mp3-a",
+      "audio_id": "a1:726ecc0cdaa7422b1e6c48d06de11849eb6786d72a7e13bad0983efca1b41250",
+      "size": 446
+    },
+    {
+      "file": "mp3-a-appended-id3.mp3",
+      "group": "mp3-a",
+      "audio_id": "a1:726ecc0cdaa7422b1e6c48d06de11849eb6786d72a7e13bad0983efca1b41250",
+      "size": 626
+    },
+    {
+      "file": "mp3-bad-tag-too-long.mp3",
+      "group": null,
+      "audio_id": null,
+      "size": 414
+    },
+    {
+      "file": "mp3-bad-no-frame.mp3",
+      "group": null,
+      "audio_id": null,
+      "size": 368
+    },
+    {
+      "file": "mp3-bad-lyrics3v1.mp3",
+      "group": null,
+      "audio_id": null,
+      "size": 429
+    },
+    {
+      "file": "mp3-bad-ape-version.mp3",
+      "group": null,
+      "audio_id": null,
+      "size": 483
+    },
+    {
+      "file": "mp3-bad-not-audio.mp3",
+      "group": null,
+      "audio_id": null,
+      "size": 406
+    },
+    {
+      "file": "flac-a-bare.flac",
+      "group": "flac-a",
+      "audio_id": "a1:791ffa093279a8157daf52171e483502e39753ab3bf71b7359f860784fc6fc91",
+      "size": 444
+    },
+    {
+      "file": "flac-a-tagged.flac",
+      "group": "flac-a",
+      "audio_id": "a1:791ffa093279a8157daf52171e483502e39753ab3bf71b7359f860784fc6fc91",
+      "size": 511
+    },
+    {
+      "file": "flac-a-retitled.flac",
+      "group": "flac-a",
+      "audio_id": "a1:791ffa093279a8157daf52171e483502e39753ab3bf71b7359f860784fc6fc91",
+      "size": 481
+    },
+    {
+      "file": "flac-a-artwork.flac",
+      "group": "flac-a",
+      "audio_id": "a1:791ffa093279a8157daf52171e483502e39753ab3bf71b7359f860784fc6fc91",
+      "size": 581
+    },
+    {
+      "file": "flac-a-id3-around.flac",
+      "group": "flac-a",
+      "audio_id": "a1:791ffa093279a8157daf52171e483502e39753ab3bf71b7359f860784fc6fc91",
+      "size": 665
+    },
+    {
+      "file": "flac-bad-first-block.flac",
+      "group": null,
+      "audio_id": null,
+      "size": 457
+    },
+    {
+      "file": "flac-bad-no-sync.flac",
+      "group": null,
+      "audio_id": null,
+      "size": 445
+    },
+    {
+      "file": "flac-bad-block-too-long.flac",
+      "group": null,
+      "audio_id": null,
+      "size": 18
+    },
+    {
+      "file": "mp4-a-moov-first.m4a",
+      "group": "mp4-a",
+      "audio_id": "a1:8b17b5b3cf6ef3b8ac20dcf5cf9b7d8fa6f4d8dfba7cdf866445e2b8c35a81ab",
+      "size": 609
+    },
+    {
+      "file": "mp4-a-mdat-first.m4a",
+      "group": "mp4-a",
+      "audio_id": "a1:8b17b5b3cf6ef3b8ac20dcf5cf9b7d8fa6f4d8dfba7cdf866445e2b8c35a81ab",
+      "size": 718
+    },
+    {
+      "file": "mp4-a-large-size.m4a",
+      "group": "mp4-a",
+      "audio_id": "a1:8b17b5b3cf6ef3b8ac20dcf5cf9b7d8fa6f4d8dfba7cdf866445e2b8c35a81ab",
+      "size": 698
+    },
+    {
+      "file": "mp4-a-to-end.m4a",
+      "group": "mp4-a",
+      "audio_id": "a1:8b17b5b3cf6ef3b8ac20dcf5cf9b7d8fa6f4d8dfba7cdf866445e2b8c35a81ab",
+      "size": 609
+    },
+    {
+      "file": "mp4-a-split.m4b",
+      "group": "mp4-a",
+      "audio_id": "a1:8b17b5b3cf6ef3b8ac20dcf5cf9b7d8fa6f4d8dfba7cdf866445e2b8c35a81ab",
+      "size": 617
+    },
+    {
+      "file": "mp4-bad-no-mdat.m4a",
+      "group": null,
+      "audio_id": null,
+      "size": 101
+    },
+    {
+      "file": "mp4-bad-box-too-long.m4a",
+      "group": null,
+      "audio_id": null,
+      "size": 604
+    },
+    {
+      "file": "mp4-bad-tiny-size.m4a",
+      "group": null,
+      "audio_id": null,
+      "size": 536
+    },
+    {
+      "file": "wav-a-bare.wav",
+      "group": "wav-a",
+      "audio_id": "a1:9e54aafa16c0f647dc888122fa4f82513f5338e5bf42400e17385ca4663c8119",
+      "size": 444
+    },
+    {
+      "file": "wav-a-info-before.wav",
+      "group": "wav-a",
+      "audio_id": "a1:9e54aafa16c0f647dc888122fa4f82513f5338e5bf42400e17385ca4663c8119",
+      "size": 474
+    },
+    {
+      "file": "wav-a-info-after.wav",
+      "group": "wav-a",
+      "audio_id": "a1:9e54aafa16c0f647dc888122fa4f82513f5338e5bf42400e17385ca4663c8119",
+      "size": 526
+    },
+    {
+      "file": "wav-a-trailing-id3.wav",
+      "group": "wav-a",
+      "audio_id": "a1:9e54aafa16c0f647dc888122fa4f82513f5338e5bf42400e17385ca4663c8119",
+      "size": 572
+    },
+    {
+      "file": "wav-a-rf64.wav",
+      "group": "wav-a",
+      "audio_id": "a1:9e54aafa16c0f647dc888122fa4f82513f5338e5bf42400e17385ca4663c8119",
+      "size": 480
+    },
+    {
+      "file": "wav-bad-two-data.wav",
+      "group": null,
+      "audio_id": null,
+      "size": 462
+    },
+    {
+      "file": "wav-bad-data-too-long.wav",
+      "group": null,
+      "audio_id": null,
+      "size": 424
+    },
+    {
+      "file": "wav-bad-no-data.wav",
+      "group": null,
+      "audio_id": null,
+      "size": 66
+    },
+    {
+      "file": "aiff-a-bare.aiff",
+      "group": "aiff-a",
+      "audio_id": "a1:efd5347cded4e58d9eaca1f5b463605783955799026a93ef471d71a9c14bd74f",
+      "size": 454
+    },
+    {
+      "file": "aiff-a-named.aiff",
+      "group": "aiff-a",
+      "audio_id": "a1:efd5347cded4e58d9eaca1f5b463605783955799026a93ef471d71a9c14bd74f",
+      "size": 472
+    },
+    {
+      "file": "aiff-a-offset.aif",
+      "group": "aiff-a",
+      "audio_id": "a1:efd5347cded4e58d9eaca1f5b463605783955799026a93ef471d71a9c14bd74f",
+      "size": 490
+    },
+    {
+      "file": "aiff-a-aifc.aifc",
+      "group": "aiff-a",
+      "audio_id": "a1:efd5347cded4e58d9eaca1f5b463605783955799026a93ef471d71a9c14bd74f",
+      "size": 454
+    },
+    {
+      "file": "aiff-bad-no-ssnd.aiff",
+      "group": null,
+      "audio_id": null,
+      "size": 56
+    },
+    {
+      "file": "aiff-bad-offset.aiff",
+      "group": null,
+      "audio_id": null,
+      "size": 62
+    },
+    {
+      "file": "ogg-vorbis-a-tagged.ogg",
+      "group": "ogg-vorbis-a",
+      "audio_id": "a1:e78db304022007833ec1704448eced4db11f2526572538a01c419f2eb88d43f8",
+      "size": 1666
+    },
+    {
+      "file": "ogg-vorbis-a-retitled.ogg",
+      "group": "ogg-vorbis-a",
+      "audio_id": "a1:e78db304022007833ec1704448eced4db11f2526572538a01c419f2eb88d43f8",
+      "size": 2560
+    },
+    {
+      "file": "ogg-vorbis-a-multiplexed.ogg",
+      "group": "ogg-vorbis-a",
+      "audio_id": "a1:e78db304022007833ec1704448eced4db11f2526572538a01c419f2eb88d43f8",
+      "size": 1896
+    },
+    {
+      "file": "ogg-opus-a-tagged.opus",
+      "group": "ogg-opus-a",
+      "audio_id": "a1:11c9562a2a5133846594609c6c20e6982806b388bde96189dc1b1bc931fdc9f6",
+      "size": 1448
+    },
+    {
+      "file": "ogg-opus-a-artwork.opus",
+      "group": "ogg-opus-a",
+      "audio_id": "a1:11c9562a2a5133846594609c6c20e6982806b388bde96189dc1b1bc931fdc9f6",
+      "size": 2114
+    },
+    {
+      "file": "ogg-bad-flac-in-ogg.oga",
+      "group": null,
+      "audio_id": null,
+      "size": 1420
+    },
+    {
+      "file": "ogg-bad-truncated.ogg",
+      "group": null,
+      "audio_id": null,
+      "size": 1656
+    },
+    {
+      "file": "ogg-bad-junk-after.ogg",
+      "group": null,
+      "audio_id": null,
+      "size": 1670
+    },
+    {
+      "file": "ogg-bad-unfinished.ogg",
+      "group": null,
+      "audio_id": null,
+      "size": 1914
+    },
+    {
+      "file": "ogg-bad-no-first-flag.ogg",
+      "group": null,
+      "audio_id": null,
+      "size": 1666
+    },
+    {
+      "file": "other-bad-empty.mp3",
+      "group": null,
+      "audio_id": null,
+      "size": 0
+    },
+    {
+      "file": "other-bad-text.mp3",
+      "group": null,
+      "audio_id": null,
+      "size": 28
+    },
+    {
+      "file": "other-bad-wma.wma",
+      "group": null,
+      "audio_id": null,
+      "size": 108
+    }
+  ]
+}
