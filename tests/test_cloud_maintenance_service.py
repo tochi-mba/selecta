@@ -67,6 +67,7 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
         "usage_reconcile",
         "export_expiry",
         "queue_metrics",
+        "queue_watch",
         "lost_jobs",
     }
     assert set(plan.disabled) == {

@@ -446,3 +446,22 @@ def test_the_smoke_test_passes_against_the_real_api_and_fails_when_a_service_is_
         assert not all(check.ok for check in results)
     finally:
         engine.dispose()
+
+
+def test_the_modal_image_bakes_the_pinned_beat_model_where_torch_looks_for_it():
+    """Each new container used to download the Beat This checkpoint from the model's university
+    server on its first analysis; with that server down, analysis failed. The image now fetches
+    it at build time from the SHA-256 lock, under TORCH_HOME, and checks it again at start."""
+    from selecta.workers import model_lock
+
+    source = (INFRA / "modal" / "selecta_workers.py").read_text("utf-8")
+    root = re.search(r'MODEL_ROOT = "([^"]+)"', source).group(1)
+    assert 'MODEL_LOCK = f"{MODEL_ROOT}/models.lock.json"' in source
+    assert '.add_local_file("services/worker/models.lock.json", MODEL_LOCK' in source
+    assert 'f"python -m selecta.workers.model_lock fetch {MODEL_LOCK} {MODEL_ROOT}"' in source
+    assert '"TORCH_HOME": f"{MODEL_ROOT}/torch"' in source
+    assert "model_lock.verify(model_lock.load_lock(Path(MODEL_LOCK)), Path(MODEL_ROOT))" in source
+    # torch's hub keeps checkpoints at $TORCH_HOME/hub/checkpoints, where the lock puts them
+    (beat,) = model_lock.load_lock(ROOT / "services" / "worker" / "models.lock.json")
+    assert beat.model_id == "beat_this.small0"
+    assert f"{root}/{beat.path}" == f"{root}/torch/hub/checkpoints/beat_this-small0.ckpt"

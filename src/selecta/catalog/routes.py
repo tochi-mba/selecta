@@ -17,9 +17,11 @@ is off. Tenant routes are scoped to the signed-in person's workspace and check t
 
 The routes are mounted only once every one of them has a flag owner in the registry, so the Cloud
 app keeps starting (`assert_cloud_api_routes_owned`) until the flag file lists them.
+FastAPI reads the route signatures at runtime, and `SignedIn` is local to `install_routes`, so this
+module must not use postponed annotations (`from __future__ import annotations`): with them the
+claims parameter becomes a required query field and every signed-in route answers 422, as in the
+admin route modules.
 """
-
-from __future__ import annotations
 
 import logging
 from collections.abc import Callable
@@ -101,7 +103,6 @@ def install_routes(
             return object_client_factory(), bucket()
         return service._default_objects()
 
-    SignedIn = Annotated[Claims, Depends(current_claims)]
 
     def who(request: Request, claims: Claims, action: WorkspaceAction):
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
@@ -110,7 +111,8 @@ def install_routes(
         return principal.workspace.id, principal.user.id
 
     @app.post("/api/catalog/art")
-    def catalog_art_for_songs(body: ArtRequest, request: Request, claims: SignedIn):
+    def catalog_art_for_songs(body: ArtRequest, request: Request,
+            claims: Claims = Depends(current_claims)):  # noqa: B008
         workspace_id, user_id = who(request, claims, WorkspaceAction.LIBRARY_READ)
         ids = list(dict.fromkeys(song.id for song in body.songs))
         queued = service.enqueue_for_songs(
@@ -143,7 +145,8 @@ def install_routes(
         )
 
     @app.get("/api/catalog/songs/{song_id}/candidates")
-    def catalog_candidates(song_id: int, request: Request, claims: SignedIn):
+    def catalog_candidates(song_id: int, request: Request,
+            claims: Claims = Depends(current_claims)):  # noqa: B008
         workspace_id, _ = who(request, claims, WorkspaceAction.LIBRARY_READ)
         with transaction(engine, workspace_id) as conn:
             try:
@@ -154,7 +157,8 @@ def install_routes(
                 ) from error
 
     @app.put("/api/catalog/songs/{song_id}/choice")
-    def catalog_choice(song_id: int, body: Choice, request: Request, claims: SignedIn):
+    def catalog_choice(song_id: int, body: Choice, request: Request,
+            claims: Claims = Depends(current_claims)):  # noqa: B008
         workspace_id, user_id = who(request, claims, WorkspaceAction.LIBRARY_WRITE)
         with transaction(engine, workspace_id) as conn:
             try:
@@ -175,20 +179,23 @@ def install_routes(
                     "cover_pending": fetch is not None}
 
     @app.get("/api/catalog/settings")
-    def catalog_settings(request: Request, claims: SignedIn):
+    def catalog_settings(request: Request,
+            claims: Claims = Depends(current_claims)):  # noqa: B008
         workspace_id, user_id = who(request, claims, WorkspaceAction.LIBRARY_READ)
         with transaction(engine, workspace_id) as conn:
             return {"lookups": service.allowed(conn, user_id)}
 
     @app.put("/api/catalog/settings")
-    def catalog_save_settings(body: Settings, request: Request, claims: SignedIn):
+    def catalog_save_settings(body: Settings, request: Request,
+            claims: Claims = Depends(current_claims)):  # noqa: B008
         workspace_id, user_id = who(request, claims, WorkspaceAction.LIBRARY_READ)
         with transaction(engine, workspace_id) as conn:
             return {"lookups": service.set_allowed(conn, user_id, body.lookups)}
 
     @app.post("/api/admin/catalog/art/{art_id}/{command}")
     def admin_catalog_art(
-        art_id: str, command: str, body: HideRequest, request: Request, claims: SignedIn
+        art_id: str, command: str, body: HideRequest, request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
     ):
         from selecta.admin import http
         from selecta.authz import audit

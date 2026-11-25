@@ -72,8 +72,9 @@ describe('S4-0090-01 colour consumers', () => {
     const allowed: Record<string, RegExp> = {
       // the browser chrome colour is set before any stylesheet exists, matching tokens.css --bg
       'state/prefs.ts': /const BAR_COLOUR = \{ dark: '#100f0c', light: '#f5f2e9' \};/,
-      // the QR code's own white quiet zone
-      'rooms/qr.ts': /fill="#fff"/,
+      // the QR code's own white quiet zone and black modules, in either theme, or phones cannot read
+      // it; ADR-0477 draws the modules as bands on lines of their own (the wave)
+      'rooms/qr.ts': /fill="#(?:fff|000)"/,
     };
     const found: string[] = [];
     for (const file of scripts) {

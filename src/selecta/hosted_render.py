@@ -3,10 +3,12 @@
 For an account with the `cloud.hosted_media` grant (ADR-0456), `cloud.hosted_render` turns on:
 
 - **Analysis at upload.** An accepted upload gets an `analyse.song` job (`on_upload_accepted`);
-  `prepare_songs` makes the same job for any stored song still missing one (older uploads). A
-  failed analysis is never retried by itself: `retry=True` (the customer's Try again) does it.
-- **Song status** (`songs_status`): per song, analysis queued, running, ready (tempo, key) or
-  failed (and why), with counts and a time estimate from this workspace's own finished jobs.
+  `prepare_songs` makes the same job for any stored song still missing one (older uploads) and
+  replaces a job that can never finish (`hosted_status.needs_new`). A failure that was the
+  song's own is tried again only by `retry=True` (the customer's Try again).
+- **Song status** (`songs_status`): per song waiting, running, done or failed with a plain
+  reason, with totals and a time estimate (from this workspace's own finished jobs) only while
+  something is moving.
 - **Server mixes.** `plan_mix` orders the analysed songs with the local planner
   (`planner.beam.plan_set`) and its planned move per hand-off. `mix_state` then asks for what the
   mix needs: each song's lossless playback file (`work.proxies.prepare`, the same `play.proxy`
@@ -33,6 +35,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
+from selecta import hosted_status
 from selecta.config import ANALYSIS_VERSION
 from selecta.persistence import db_now, transaction
 from selecta.scheduling.policy import Lane
@@ -112,9 +115,17 @@ def _latest_job(conn: Connection, workspace_id: str, kind: str, key: str):
     return conn.execute(sa.select(
         jobs.c.id, jobs.c.state, jobs.c.error_class, jobs.c.error_detail, jobs.c.result,
         jobs.c.progress_done, jobs.c.progress_total, jobs.c.started_at, jobs.c.finished_at,
+        jobs.c.input_ref,
     ).where(jobs.c.workspace_id == workspace_id, jobs.c.type == kind,
             jobs.c.idempotency_key == key)
         .order_by(jobs.c.created_at.desc(), jobs.c.id.desc()).limit(1)).mappings().first()
+
+
+def _unsuccessful(conn: Connection, workspace_id: str, kind: str, key: str) -> int:
+    """How many jobs for this work ended failed, quarantined or cancelled."""
+    return int(conn.execute(sa.select(sa.func.count()).where(
+        jobs.c.workspace_id == workspace_id, jobs.c.type == kind, jobs.c.idempotency_key == key,
+        jobs.c.state.in_(("failed", "quarantined", "cancelled")))).scalar_one())
 
 
 def _state(artifact_row, job_row) -> dict[str, Any]:
@@ -133,7 +144,8 @@ def _state(artifact_row, job_row) -> dict[str, Any]:
         state = "queued"
     out: dict[str, Any] = {"state": state, "job_id": job_row["id"]}
     if state == "failed":
-        out["why"] = (job_row["error_detail"] or "").strip()[:240] or "It stopped part way."
+        # words for the customer, never a worker's traceback (hosted_status.failure_reason)
+        out["why"] = hosted_status.failure_reason(job_row)
     return out
 
 
@@ -160,6 +172,23 @@ class Work:
         made = self.store.enqueue(spec)
         return made.job.id, None
 
+    def renew(self, spec: JobSpec, old_job_id: str) -> tuple[str | None, str | None]:
+        """A fresh job in place of one that can never finish (`JobStore.replace`): never two
+        live jobs for the same work. (None, None) while a worker lets go of the old one."""
+        admission = self.store.admit(spec)
+        if not admission.creates_job:
+            return None, getattr(admission, "reason", None) or "Not admitted right now."
+        expected = spec.input_ref["output"]
+        made = self.store.replace(
+            spec.workspace_id, old_job_id, spec,
+            lambda job: not hosted_status.declared_output_ok(job.input_ref, expected))
+        return (made.job.id if made is not None else None), None
+
+
+def _make(work: Work, spec: JobSpec, job) -> tuple[str | None, str | None]:
+    """A new job for this work, replacing the latest one when there is one."""
+    return work.submit(spec) if job is None else work.renew(spec, job["id"])
+
 
 def _analysis_spec(workspace_id: str, song: dict, created_by: str | None, lane=Lane.STANDARD):
     key = original_key(workspace_id, song["id"])
@@ -173,24 +202,42 @@ def _analysis_spec(workspace_id: str, song: dict, created_by: str | None, lane=L
 
 def prepare_songs(engine: Engine, work: Work, workspace_id: str, ids: Sequence[str] | None = None,
                   *, retry: bool = False, created_by: str | None = None) -> dict[str, int]:
-    """Analysis jobs for stored songs that have none (module notes). Returns counts."""
-    made = {"queued": 0, "ready": 0, "running": 0, "failed": 0, "refused": 0}
+    """An analysis job for every stored song that needs one (module notes). Returns counts.
+
+    A song needs one when it has no analysis and no job, or its latest job can never finish
+    (`hosted_status.needs_new`: no declared output namespace, cancelled, its file evicted, or
+    failed on our side, up to `hosted_status.AUTO_RENEW_LIMIT` jobs). `retry` (the customer's
+    Try again) also renews a failure that was the song's own. Songs with the same bytes share
+    one analysis and so one job. Safe to call from any number of tabs at once: a replacement
+    locks the old job, and the store never holds two live jobs for the same work.
+    """
+    made = {"queued": 0, "ready": 0, "running": 0, "failed": 0, "refused": 0, "replaced": 0}
     with transaction(engine, workspace_id) as conn:
-        songs = _songs(conn, workspace_id, ids)
-        wanted = []
-        for song in songs:
+        wanted, seen = [], set()
+        for song in _songs(conn, workspace_id, ids):
             digest = analysis_hash(song["sha256"])
-            state = _state(_artifact(conn, workspace_id, "analysis", digest),
-                           _latest_job(conn, workspace_id, ANALYSE, digest))["state"]
-            if state == "ready" or state in ("queued", "running"):
-                made["ready" if state == "ready" else "running"] += 1
-            elif state == "failed" and not retry:
-                made["failed"] += 1
-            else:
-                wanted.append(song)
-    for song in wanted:
-        _job, refused = work.submit(_analysis_spec(workspace_id, song, created_by))
-        made["refused" if refused else "queued"] += 1
+            if digest in seen:
+                continue
+            seen.add(digest)
+            found = _artifact(conn, workspace_id, "analysis", digest)
+            job = _latest_job(conn, workspace_id, ANALYSE, digest)
+            failures = _unsuccessful(conn, workspace_id, ANALYSE, digest) if job else 0
+            why = hosted_status.needs_new(found is not None, job, _output("analysis", digest),
+                                          unsuccessful=failures, retry=retry, renew_failed=True)
+            if why is not None:
+                wanted.append((song, job))
+                continue
+            state = _state(found, job)["state"]
+            made["ready" if state == "ready" else "failed" if state == "failed"
+                 else "running"] += 1
+    for song, job in wanted:
+        job_id, refused = _make(work, _analysis_spec(workspace_id, song, created_by), job)
+        if refused:
+            made["refused"] += 1
+        elif job_id is None:
+            made["running"] += 1  # its worker is letting go; the next call replaces it
+        else:
+            made["replaced" if job is not None else "queued"] += 1
     return made
 
 
@@ -224,9 +271,37 @@ def _worker_seen(conn: Connection, pool: str) -> bool:
 
 
 def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
+    """Where every stored song's analysis stands, for the hosted card.
+
+    Answers::
+
+        {"songs": [{"asset_id", "name", "duration_s",
+                    "status": {"state": "waiting" | "running" | "done" | "failed",
+                               "reason": str | None, "job_id": str | None,
+                               "can_retry": bool},
+                    "analysis": {"state": "ready" | "running" | "queued" | "failed"
+                                          | "not_started", "job_id"?, "why"?, "bpm"?,
+                                 "camelot"?},
+                    "same_file_as"?: [asset_id, ...]}],
+         "totals": {"waiting", "running", "done", "failed", "total"},
+         "moving": bool, "waiting_for": "worker" | "retry" | None,
+         "counts": {"ready", "running", "queued", "failed", "not_started"},
+         "estimate_s": int | None, "seconds_each": float, "worker_seen": bool, "total": int}
+
+    `status` and `totals` are the current shape; `analysis` and `counts` are the first one,
+    kept for pages that read it. `reason` is written for the customer (a failure's cause in
+    plain words, or what a waiting song waits for), never a worker's traceback. `estimate_s` is
+    null whenever nothing is moving: no worker of the analysis pool checked in within
+    `WORKER_SEEN_S` (`waiting_for` "worker"), or every unfinished song waits on a retry's
+    backoff or a hold (`waiting_for` "retry"). Queued work never expires: it waits for a worker
+    however long that takes, and operators hear of it (`work.queue_health`). Songs with the same
+    bytes share one analysis; each names the others in `same_file_as`.
+    """
     with transaction(engine, workspace_id) as conn:
         songs = _songs(conn, workspace_id)
-        out = []
+        worker = _worker_seen(conn, "cpu-heavy")
+        each = _measured(conn, workspace_id, ANALYSE)
+        out, by_digest = [], {}
         for song in songs:
             digest = analysis_hash(song["sha256"])
             found = _artifact(conn, workspace_id, "analysis", digest)
@@ -235,16 +310,37 @@ def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
             result = (job["result"] if job is not None else None) or {}
             if state["state"] == "ready":
                 state.update({"bpm": result.get("bpm"), "camelot": result.get("camelot")})
-            out.append({"asset_id": song["id"], "name": song["display_name"] or "Untitled",
-                        "duration_s": song["duration_s"], "analysis": state})
-        each = _measured(conn, workspace_id, ANALYSE)
-        worker = _worker_seen(conn, "cpu-heavy")
+            entry = {"asset_id": song["id"], "name": song["display_name"] or "Untitled",
+                     "duration_s": song["duration_s"],
+                     "status": hosted_status.customer_status(found is not None, job,
+                                                             worker_seen=worker),
+                     "analysis": state}
+            by_digest.setdefault(digest, []).append(entry)
+            out.append(entry)
+    for twins in by_digest.values():
+        for entry in twins if len(twins) > 1 else ():
+            entry["same_file_as"] = [t["asset_id"] for t in twins if t is not entry]
     counts = {name: sum(1 for s in out if s["analysis"]["state"] == name)
               for name in ("ready", "running", "queued", "failed", "not_started")}
-    left = counts["running"] + counts["queued"]
-    return {"songs": out, "counts": counts, "seconds_each": round(each, 1),
-            "estimate_s": round(left * each) if worker else None, "worker_seen": worker,
-            "total": len(out)}
+    totals = {name: sum(1 for s in out if s["status"]["state"] == name)
+              for name in ("waiting", "running", "done", "failed")}
+    totals["total"] = len(out)
+    in_line = sum(1 for s in out if s["status"]["reason"] == hosted_status.IN_LINE)
+    moving = worker and totals["running"] + in_line > 0
+    unfinished = totals["running"] + totals["waiting"]
+    waiting_for = None if moving or not unfinished else ("retry" if worker else "worker")
+    return {"songs": out, "totals": totals, "moving": moving, "waiting_for": waiting_for,
+            "counts": counts, "seconds_each": round(each, 1),
+            "estimate_s": round(unfinished * each) if moving else None,
+            "worker_seen": worker, "total": len(out)}
+
+
+def song_status(engine: Engine, workspace_id: str, asset_id: str) -> dict[str, Any] | None:
+    """One song's entry from `songs_status`, or None when this workspace has no such song."""
+    for song in songs_status(engine, workspace_id)["songs"]:
+        if song["asset_id"] == asset_id:
+            return song
+    return None
 
 
 # --- server mixes --------------------------------------------------------------------------------
@@ -399,14 +495,15 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
             row = _artifact(conn, workspace_id, "seam", digest)
             job = _latest_job(conn, workspace_id, SEAM, f"hosted-seam:{digest}")
             state = _state(row, job)
+            # a failed transition is tried again only on Try again (it plays as a plain change
+            # meanwhile); a job that can never publish, or was cancelled, is replaced at once
+            why = hosted_status.needs_new(row is not None, job, _output("seam", digest),
+                                          retry=retry)
             if row is None and not (a["analysis_key"] and b["analysis_key"]):
                 state = {"state": "waiting_for_analysis"}
-            elif state["state"] in ("not_started", "ready") or (
-                retry and state["state"] == "failed"
-            ):
-                if row is None:
-                    wanted.append((index, a, b, move))
-                    state = {"state": "queued"}
+            elif why is not None:
+                wanted.append((index, a, b, move, job))
+                state = {"state": "queued"}
             result = (job["result"] if job is not None else None) or {}
             seams.append({"index": index, "planned_move": move, **state, "row": row,
                           "move": result.get("move"), "passed": result.get("audit_passed"),
@@ -414,9 +511,9 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
         each_seam = _measured(conn, workspace_id, SEAM)
         each_analysis = _measured(conn, workspace_id, ANALYSE)
         worker = _worker_seen(conn, "cpu-heavy")
-    for index, a, b, move in wanted:
+    for index, a, b, move, old in wanted:
         lane = Lane.INTERACTIVE if index < 2 else Lane.STANDARD
-        _job, refused = work.submit(_seam_spec(workspace_id, a, b, move, lane, created_by))
+        _job, refused = _make(work, _seam_spec(workspace_id, a, b, move, lane, created_by), old)
         if refused:
             seams[index].update(state="refused", why=refused)
     timeline = _timeline(workspace_id, songs, seams, playback, client, buckets,
@@ -496,13 +593,22 @@ def request_export(engine: Engine, work: Work, workspace_id: str, ids: Iterable[
     objects = [key for side in sides for key in (side["source_key"], side["analysis_key"])]
     shas = [side["source_sha256"] for side in sides]
     digest = _hash({"songs": shas, "kind": "hosted-export"})
-    job_id, refused = work.submit(JobSpec(
+    spec = JobSpec(
         workspace_id=workspace_id, type=EXPORT, idempotency_key=f"hosted-export:{digest}",
         lane=Lane.STANDARD, created_by=created_by,
         input_ref={"songs": sides, "objects": objects,
-                   "output": _output("export", export_hash(shas))}))
+                   "output": _output("export", export_hash(shas))})
+    with transaction(engine, workspace_id) as conn:
+        old = _latest_job(conn, workspace_id, EXPORT, spec.idempotency_key)
+    # a live export that can never publish (queued before outputs were declared) is replaced;
+    # a finished one is asked for again by making a new job, as before
+    broken = old is not None and hosted_status.needs_new(
+        False, old, spec.input_ref["output"]) == "no_output"
+    job_id, refused = _make(work, spec, old if broken else None)
     if refused:
         return {"state": "refused", "why": refused}
+    if job_id is None:
+        return {"state": "queued", "job_id": old["id"]}
     return {"state": "queued", "job_id": job_id}
 
 
@@ -532,5 +638,6 @@ def export_status(engine: Engine, workspace_id: str, job_id: str, *, client,
 
 __all__ = [
     "FLAG", "Work", "analysis_hash", "export_status", "mix_state", "on_upload_accepted",
-    "plan_mix", "prepare_songs", "request_export", "seam_hash", "songs_status",
+    "plan_mix", "prepare_songs", "request_export", "seam_hash", "song_status",
+    "songs_status",
 ]

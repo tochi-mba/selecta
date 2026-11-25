@@ -79,6 +79,8 @@ export function captureRequest(options: CaptureOptions = {}): { request: Request
       return { songs: registered };
     }
     if (path === '/api/local-media/availability' && init?.method === 'POST') return {};
+    // the library's remove (a soft delete on the server) answers with nothing
+    if (/^\/api\/local-media\/songs\/\d+$/.test(path) && init?.method === 'DELETE') return {};
     throw new Error(`unexpected ${init?.method ?? 'GET'} ${path}`);
   }) as Request;
   return { request, calls };

@@ -215,6 +215,8 @@ def request_seams(
                     "source_key": key, "source_sha256": sha256, "zone_id": zone_id,
                     # the stored inputs the worker gateway signs (and the dev worker reads)
                     "objects": [key],
+                    # where it may write: without it the gateway refuses the upload slot
+                    "output": {"kind": "analysis", "input_hash": analysis_hash(sha256)},
                 },
             )
         ):
@@ -268,6 +270,7 @@ def request_seams(
                     "zone_id": zone_id,
                     "style": None,
                     "objects": [a_key, a_analysis, b_key, b_analysis],
+                    "output": {"kind": "seam", "input_hash": digest},
                     "a": {
                         "source_key": a_key,
                         "source_sha256": a["sha256"],

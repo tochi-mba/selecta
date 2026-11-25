@@ -26,6 +26,9 @@ if ENVIRONMENT not in {"staging", "production"}:
     raise SystemExit("SELECTA_ENVIRONMENT must be staging or production.")
 REGION = "eu"
 """Modal's EU region group; data stays in Europe (ADR-0409)."""
+MODEL_ROOT = "/opt/models"
+MODEL_LOCK = f"{MODEL_ROOT}/models.lock.json"
+"""Weights baked into the image, pinned in services/worker/models.lock.json (ADR-0396)."""
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
@@ -35,6 +38,7 @@ image = (
     .add_local_file("uv.lock", "/src/uv.lock", copy=True)
     .add_local_file("README.md", "/src/README.md", copy=True)  # the package build reads it
     .add_local_dir("src", "/src/src", copy=True)
+    .add_local_file("services/worker/models.lock.json", MODEL_LOCK, copy=True)
     .run_commands(
         "cd /src && uv export --frozen --no-dev --extra observability --no-emit-project"
         " -o /tmp/requirements.txt",
@@ -43,8 +47,14 @@ image = (
         "uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu"
         " --index-strategy unsafe-best-match -r /tmp/requirements.txt",
         "uv pip install --system --no-deps /src",
+        # The beat model is baked in at build time, checked against its SHA-256 in the lock,
+        # where torch looks for it (TORCH_HOME below), so no container downloads it from the
+        # model's university server on its first analysis (services/worker/Dockerfile does
+        # the same). A changed or unreachable file fails the build, never an analysis.
+        f"python -m selecta.workers.model_lock fetch {MODEL_LOCK} {MODEL_ROOT}",
     )
-    .env({"SELECTA_MODE": "cloud", "SELECTA_ENVIRONMENT": ENVIRONMENT})
+    .env({"SELECTA_MODE": "cloud", "SELECTA_ENVIRONMENT": ENVIRONMENT,
+          "TORCH_HOME": f"{MODEL_ROOT}/torch"})
 )
 
 app = modal.App(f"selecta-workers-{ENVIRONMENT}", image=image)
@@ -61,8 +71,14 @@ EXPORT = {"cpu": 4.0, "memory": 8192, "max_containers": 2 if ENVIRONMENT == "sta
 
 def _serve(pool: str) -> None:
     os.environ["SELECTA_WORKER_POOL"] = pool
+    from pathlib import Path
+
+    from selecta.workers import model_lock
     from selecta.workers.cloud import main
 
+    # every baked file checked again before the worker takes a job, as the Dockerfile's entry
+    # point does (`verify-then-run`)
+    model_lock.verify(model_lock.load_lock(Path(MODEL_LOCK)), Path(MODEL_ROOT))
     main()
 
 

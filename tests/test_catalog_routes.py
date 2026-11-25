@@ -45,7 +45,8 @@ def looked_up(world, who: str = "customer") -> tuple[int, str]:
     """A song in `who`'s workspace, asked for and looked up. Returns the song and its art id."""
     ws = world.workspaces[who]
     song = add_song(world.engine, ws)
-    assert call(world, "PUT", "/api/catalog/settings", who, lookups=True).status_code == 200
+    turned_on = call(world, "PUT", "/api/catalog/settings", who, lookups=True)
+    assert turned_on.status_code == 200, turned_on.text
     asked = call(world, "POST", "/api/catalog/art", who, songs=[{"id": song, "isrc": ISRC}])
     assert asked.status_code == 200, asked.text
     assert asked.json()["queued"] == 1 and asked.json()["songs"][0]["state"] == "pending"
@@ -53,9 +54,10 @@ def looked_up(world, who: str = "customer") -> tuple[int, str]:
         key = conn.execute(sa.select(song_catalog_links.c.lookup_key).where(
             song_catalog_links.c.song_id == song)).scalar_one()
     with musicbrainz(isrc_replay()) as mb:
-        service.run_lookup(world.engine, key, musicbrainz=mb, objects=world.objects,
-                           bucket=BUCKET)
-    answer = call(world, "POST", "/api/catalog/art", who, songs=[{"id": song}]).json()
+        ran = service.run_lookup(world.engine, key, musicbrainz=mb, objects=world.objects,
+                                 bucket=BUCKET)
+    assert ran == {"outcome": "matched", "method": "isrc", "cover": True}, ran
+    answer = call(world, "POST", "/api/catalog/art", who, songs=[{"id": song, "isrc": ISRC}]).json()
     assert answer["songs"][0]["state"] == "matched", answer
     return song, answer["songs"][0]["art"]["id"]
 
@@ -126,7 +128,7 @@ def test_another_workspace_cannot_read_a_songs_link(world):
     choice = call(world, "PUT", f"/api/catalog/songs/{song}/choice", "customer2",
                   choice="generated")
     assert choice.status_code == 404
-    mine = call(world, "POST", "/api/catalog/art", songs=[{"id": song}]).json()
+    mine = call(world, "POST", "/api/catalog/art", songs=[{"id": song, "isrc": ISRC}]).json()
     assert mine["songs"][0]["state"] == "matched", "the other workspace changed nothing"
 
 
@@ -163,6 +165,12 @@ def test_wrong_cover_candidates_and_choice_round_trip(world):
     assert call(world, "GET", "/api/catalog/songs/424242/candidates").status_code == 404
 
 
+def changes(world) -> list[dict]:
+    """The audit rows of hides and unhides (the permission checks have their own rows)."""
+    return [r for r in audit_actions(world.engine, resource_type="catalog_art")
+            if r["action"].startswith("legal.catalog_art.")]
+
+
 def test_staff_hide_and_unhide_an_image_with_an_audit_row(world):
     song, art_id = looked_up(world)
     path = f"/api/admin/catalog/art/{art_id}"
@@ -171,18 +179,22 @@ def test_staff_hide_and_unhide_an_image_with_an_audit_row(world):
     assert hidden.status_code == 200, hidden.text
     assert hidden.json() == {"id": art_id, "hidden": True}
     assert world.http.get(f"/api/catalog/art/{art_id}/500").status_code == 404
-    seen = call(world, "POST", "/api/catalog/art", songs=[{"id": song}]).json()["songs"][0]
-    assert seen["art"] is None
+    seen = call(world, "POST", "/api/catalog/art", songs=[{"id": song, "isrc": ISRC}]).json()
+    assert seen["songs"][0]["art"] is None
 
     shown = call(world, "POST", f"{path}/unhide", "owner", reason="notice withdrawn")
     assert shown.status_code == 200, shown.text
     assert world.http.get(f"/api/catalog/art/{art_id}/500").status_code == 200
 
-    rows = audit_actions(world.engine, resource_type="catalog_art")
+    rows = changes(world)
     assert [r["action"] for r in rows] == ["legal.catalog_art.hidden",
                                            "legal.catalog_art.unhidden"]
     assert rows[0]["resource_id"] == art_id and rows[0]["actor_id"] == world.users["owner"]
     assert rows[0]["metadata"]["release_id"] == ALBUM
+    assert rows[0]["reason"] == "rights holder asked"
+    allowed = [r for r in audit_actions(world.engine, resource_type="catalog_art")
+               if r["action"] == "legal.takedowns.manage"]
+    assert [r["result"] for r in allowed] == ["allow", "allow"], "each check is audited too"
 
 
 def test_hiding_needs_the_takedown_permission_and_a_known_image(world):
@@ -198,4 +210,7 @@ def test_hiding_needs_the_takedown_permission_and_a_known_image(world):
     assert unknown.status_code == 404
     with transaction(world.engine) as conn:
         assert conn.execute(sa.select(catalog_art.c.hidden)).scalar_one() is False
-    assert not audit_actions(world.engine, resource_type="catalog_art")
+    assert not changes(world), "nothing was hidden, so no change is recorded"
+    denied = [r for r in audit_actions(world.engine, resource_type="catalog_art")
+              if r["actor_id"] == world.users["auditor"]]
+    assert [(r["action"], r["result"]) for r in denied] == [("legal.takedowns.manage", "deny")]

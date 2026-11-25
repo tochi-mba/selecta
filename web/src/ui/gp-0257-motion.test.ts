@@ -69,6 +69,8 @@ const INVENTORY: Record<string, Severity> = {
   'blend-ring': 'waiting',
   'blend-kick': 'waiting',
   'blend-tag': 'waiting',
+  // music folders (cloud/libraryWorkspace.css): the drop zone answering files dragged over the page
+  'mf-drop-in': 'answers-you',
   // ADR-0477, the feel. Shared asks (styles/feel.css)
   'feel-arrive': 'arrives', // data-arrive and data-stagger: rises a little and fades in once
   'feel-pop': 'answers-you', // .feel-pop: something a press, a count or a badge just brought
