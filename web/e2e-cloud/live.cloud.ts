@@ -56,7 +56,7 @@ test('the cloud site only talks to its allowlisted origins', async ({ page, requ
 test('Lucy settings in Cloud show the plan’s level, the turn meter and only the person’s choices', async ({ page, request }) => {
   const user = listener('lucy');
   await signedIn(page, request, user, { path: '/account' });
-  await request.post('/test/usage', { data: { user, amounts: { 'lucy_turn.haiku': 4 } } });
+  await request.post('/test/usage', { data: { user, amounts: { 'lucy_turn.everyday': 4 } } });
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Lucy Basic' })).toBeVisible();
   await expect(page.getByText('4 of 40 turns this month', { exact: true }).first()).toBeVisible();

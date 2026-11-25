@@ -6,10 +6,11 @@ import { ImportJournal } from '../media/importJournal';
 import { IMPORT_RETRY_NOW } from '../media/journalledImport';
 import { mediaDeviceId, registeredDeviceId } from './ConnectMusic';
 import {
-  clearImportSession, IMPORT_SUSPENDED, IMPORT_TAB_FREED, importRunningHere, importSnapshot, readImportMarker, startImportSession,
+  clearImportSession, followImportElsewhere, IMPORT_SUSPENDED, IMPORT_TAB_FREED, importRunningHere, importSnapshot, readImportMarker, startImportSession,
   type ImportMarker, type ImportRunner,
 } from './importSession';
 import { getConnection } from './connection';
+import { importingElsewhere } from './importTabs';
 import { canHeal, withRetry } from './resilientRequest';
 import { ImportFingerprints } from '../media/fingerprints';
 
@@ -161,6 +162,14 @@ export async function checkForInterruptedImport(parts: RunnerParts): Promise<voi
   if (live.phase === 'running') return;
   const kept = readImportMarker(parts.workspaceId);
   if (!kept) { if (offerWorkspace === parts.workspaceId) setOffer(null, null); return; }
+  // another tab is importing: this one follows it and offers nothing (no carry on, no Forget this)
+  // until that tab lets go, when this check runs again (IMPORT_TAB_FREED)
+  if (await importingElsewhere(parts.workspaceId)) {
+    if (registered !== parts || importRunningHere()) return;
+    if (offerWorkspace === parts.workspaceId) setOffer(null, null);
+    followImportElsewhere(parts.workspaceId);
+    return;
+  }
   // The marker is rewritten per sent batch; the journal holds every file already checked, which is
   // what a resume skips, so the offer counts from it.
   const journal = await ImportJournal.open(parts.workspaceId).catch(() => null);

@@ -26,6 +26,7 @@ export type ImportClaim = {
 
 type LockManagerLike = {
   request(name: string, options: { ifAvailable?: boolean; signal?: AbortSignal }, callback: (lock: unknown) => unknown): Promise<unknown>;
+  query?(): Promise<{ held?: { name?: string }[] }>;
 };
 
 function locks(): LockManagerLike | null {
@@ -102,6 +103,25 @@ export function claimImport(workspaceId: string): Promise<ImportClaim | null> {
       if (!answered) resolve(makeClaim(workspaceId, () => {}));
     });
   });
+}
+
+/** Whether another tab of this browser is importing for this workspace right now. A tab that
+ * opens while one is importing follows it instead of offering to carry on (or forget) an import
+ * that is not interrupted at all. Without Web Locks no tab can tell, so the answer is no. */
+export async function importingElsewhere(workspaceId: string): Promise<boolean> {
+  const manager = locks();
+  if (!manager) return false;
+  try {
+    if (typeof manager.query === 'function') {
+      const state = await manager.query();
+      return (state.held ?? []).some((lock) => lock.name === name(workspaceId));
+    }
+    let held = false;
+    await manager.request(name(workspaceId), { ifAvailable: true }, (lock) => { held = !lock; return undefined; });
+    return held;
+  } catch {
+    return false;
+  }
 }
 
 /** Follow another tab's import: its snapshots arrive in `onSnapshot`; `onFreed` runs once that

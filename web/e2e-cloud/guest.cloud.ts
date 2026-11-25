@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { endRooms, hostWithRoom, slowPhone } from './helpers';
+import { endRooms, hostWithRoom, roomOption, slowPhone } from './helpers';
 
 // SC-0416-02: the guest page on a 320 px phone over a slow network: join, search, request,
 // vote, the honest status states, paused music, leaving and the room ending. It loads under
@@ -45,7 +45,9 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await expect(page.getByRole('heading', { name: 'Request a song' })).toBeVisible();
   expect(scriptBytes).toBeGreaterThan(0);
   expect(scriptBytes).toBeLessThan(100 * 1024);
-  await expect(page.getByText('deletes them 30 days after the room closes')).toBeVisible();
+  // what SelectaDJ keeps about a guest sits folded under its own heading, one press away
+  await page.getByText('What SelectaDJ keeps').click();
+  await expect(page.getByText('They are deleted 30 days after the room closes. No tracking.')).toBeVisible();
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
 
@@ -103,7 +105,7 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await expect(second.page.getByRole('heading', { name: 'You left the room' })).toBeVisible({ timeout: 30_000 });
 
   // The host closes the room and the first guest's page says so by itself.
-  await host.getByRole('button', { name: 'Close room' }).click();
+  await roomOption(host, 'Close room');
   await host.getByRole('alertdialog', { name: 'Close Garden party?' }).getByRole('button', { name: 'Close room' }).click();
   await expect(page.getByRole('heading', { name: 'This room has ended' })).toBeVisible({ timeout: 40_000 });
 
@@ -112,8 +114,8 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
 
 test('a locked room and a wrong code are refused in plain words', async ({ browser }) => {
   const { context: hostContext, host, joinPath } = await hostWithRoom(browser);
-  await host.getByRole('button', { name: 'Lock room' }).click();
-  await expect(host.getByTestId('room-status')).toHaveText('Locked: no new guests');
+  await roomOption(host, 'Lock room');
+  await expect(host.getByTestId('room-status')).toHaveText('Locked');
   const { context, page } = await slowPhone(browser);
   await page.goto(joinPath);
   await page.getByRole('button', { name: 'Join the room' }).click();
