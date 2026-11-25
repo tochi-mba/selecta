@@ -76,6 +76,14 @@ export function notHereWords(places: SongPlaces | null, speakerName: string): { 
 export const playsOn = (speakerName: string) => `Plays on ${speakerName}`;
 /** R4: the speaker has no file for this song, so adding it would only be skipped. */
 export const notOnSpeaker = (speakerName: string) => `${speakerName} can’t play this: its file isn’t there.`;
+/** ADR-0475 I85: the speaker lacks a song another open device holds. The Library does not
+ * refuse: it asks whether to move the music to that device (`MOVE_OFFER_EVENT` on window, with
+ * a `MoveOffer`), and the add answers `move_offered` so the row stays quiet. */
+export const MOVE_OFFER_EVENT = 'selecta-move-offer';
+export type MoveOffer = { songId: number; title: string; device: string; speaker: string };
+export const moveWords = (offer: Pick<MoveOffer, 'title' | 'device'>) => `${offer.title} is on ${offer.device}. Move the music there?`;
+/** Sent with a Library add that goes to the account's current mix, not to the speaker. */
+export const TO_CURRENT_MIX = 'x-selecta-current-mix';
 /** R4: kept for a speaker that is away. */
 export const addedOnReturn = (speakerName: string) => `Will be added when ${speakerName} is back.`;
 

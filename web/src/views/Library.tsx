@@ -377,8 +377,13 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const add = async (song: LibrarySong, position?: number) => {
     // "play next" means next in what's on screen, so it stops if that's changed
     const guard = position === undefined ? undefined : { 'x-mix-order': orderOf(mix) };
-    setMixData(await post<MixData>('/mix/songs', { song_id: song.id, position }, guard));
+    // ADR-0475 I85: the song lives on another open device; the offer to move there is showing
+    const added = await post<MixData>('/mix/songs', { song_id: song.id, position }, guard)
+      .catch((error: unknown) => { if (error instanceof ApiError && error.code === 'move_offered') return null; throw error; });
+    if (!added) return false;
+    setMixData(added);
     notify(position !== undefined ? `${song.title} plays next.` : `Added ${song.title}.`, true);
+    return true;
   };
   const never = async (song: LibrarySong) => {
     await post(`/songs/${song.id}/never`);

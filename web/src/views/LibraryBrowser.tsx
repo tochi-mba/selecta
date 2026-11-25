@@ -26,13 +26,13 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
   // ADR-0475 R6: where the music is, when that is another of this person's devices
   const holder = useContext(HolderContext);
   return (
-    <header className="page-header">
+    <header className="page-header" data-remote={holder ? '' : undefined}>
       <div className="page-header-text">
         <h1 className="display small">Library</h1>
         {/* I83: with another device holding music, the Library is the whole account's */}
         <p className="page-lead">{holder ? 'Your songs, and where each one plays.' : 'Your songs, and which of them can play on this device.'}</p>
         <p className="lw-stats">
-          {total !== null && <span><b>{total}</b> {songs === 1 ? 'song' : 'songs'}</span>}
+          {total !== null && <span className="lw-total"><b>{total}</b> {songs === 1 ? 'song' : 'songs'}</span>}
           {holder && <span data-testid="library-holder">{songs !== undefined && holder.songs >= songs ? <>All on <b>{holder.name}</b></> : <><b>{holder.songs.toLocaleString()}</b> on {holder.name}</>}</span>}
           {/* a remote with none of the music says nothing about it here; the line below says it */}
           {here !== null && (holder ? playable !== 0 && <span><b>{here}</b> on this device</span> : <span><b>{here}</b> ready to play here</span>)}

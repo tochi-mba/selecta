@@ -104,7 +104,8 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
   const action = importing
     ? <Status kind="working">Adding music</Status>
     : (
-      <Menu className={needsFolder && fresh ? 'lw-connect-menu' : 'lw-connect-menu lw-primary'} label={<><Icon name="plus" size="toolbar" />Connect music</>}>
+      // on a remote, connecting music here is a choice, not what the page is for: a quiet action
+      <Menu className={(needsFolder && fresh) || holder ? 'lw-connect-menu' : 'lw-connect-menu lw-primary'} label={<><Icon name="plus" size="toolbar" />Connect music</>}>
         <button type="button" role="menuitem" onClick={() => handle.current?.chooseFolder()}><Icon name="folder" size="toolbar" />Choose a folder</button>
         <button type="button" role="menuitem" onClick={() => handle.current?.chooseSongs()}><Icon name="music" size="toolbar" />Choose songs</button>
       </Menu>
@@ -116,7 +117,7 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
         {needsFolder && fresh && holder && (
           // ADR-0475 R6: another device has the music, so this one is its remote; connecting
           // music here is a choice, not the way forward
-          <p className="lw-remote-line" data-testid="library-remote-line">
+          <p className="lw-remote-line" data-testid="library-remote-line" data-remote-only={playable === 0 && keptHere === 0 ? '' : undefined}>
             <Icon name="system" size="toolbar" />
             <span>{remoteLineWords(playable, connected, holder, keptHere)}</span>
             {playable === 0 && keptHere > 0 && <button type="button" className="quiet" onClick={() => handle.current?.chooseSongs()}>Choose them again</button>}

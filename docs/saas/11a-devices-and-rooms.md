@@ -33,7 +33,7 @@ These two belong together: a Room needs one device that is *the speaker*, and a 
 
 **One tab per browser.** Two tabs of one browser are one device: a Web Lock picks the tab that makes the sound; the others say "Playing in another tab." with "Play in this tab instead", and carry on by themselves if that tab closes.
 
-**The Library on a remote.** A phone without the music shows the whole account's library; each song an open device holds says "Plays on Laptop" and can be started as a mix, added or played next from the phone, on the device that holds it.
+**The Library on a remote.** A phone without the music shows the whole account's library; each song an open device holds says "Plays on Laptop" and can be started as a mix, added or played next from the phone, on the device that holds it. On a phone the page is compact: one line says where the music lives, search and filters stay at the top, and while another device plays each row's button reads "Play next" and confirms "Added to Laptop's mix" in the row.
 
 **One account per browser.** Signing out in one tab signs this device out of the account and stops anything it plays; every other tab says "You signed out in another tab." If music is playing, a room is open or an import is running in any tab, signing out asks first. A second account needs another browser profile.
 

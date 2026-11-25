@@ -133,7 +133,7 @@ def test_read_only_engaged_on_one_instance_is_enforced_on_another_within_a_secon
             write = {"headers": world.headers("customer"), "json": {"enabled": False}}
             assert b.put("/api/account/labs/account.labs", **write).status_code != 503
             engaged = world.post("/api/admin/emergency/app.read_only/engage",
-                                 reason="incident", target=None)
+                                 reason="incident", target=None, confirm="app.read_only")
             assert engaged.status_code == 200, engaged.text
             started, answer = time.monotonic(), None
             while time.monotonic() - started < 1.0:

@@ -399,7 +399,7 @@ def has_older(conn: Connection, workspace_id: str, conversation_id: str, seq: in
 
 def snapshot_messages(
     conn: Connection, workspace_id: str, conversation_id: str, upto: int | None = None,
-    before: int | None = None, limit: int = PAGE_MESSAGES,
+    before: int | None = None, limit: int | None = None,
 ) -> list[dict[str, Any]]:
     """Every message in server order (`seq`, never a device's clock). An answer still
     streaming carries its text so far, rebuilt from its delta events up to `upto` (the cursor
@@ -412,7 +412,7 @@ def snapshot_messages(
     if before is not None:
         statement = statement.where(messages.c.seq < before)
     rows = list(reversed(conn.execute(
-        statement.order_by(messages.c.seq.desc()).limit(limit)
+        statement.order_by(messages.c.seq.desc()).limit(limit or PAGE_MESSAGES)
     ).all()))
     found = []
     for row in rows:
@@ -423,7 +423,8 @@ def snapshot_messages(
             "id": row.id, "seq": int(row.seq), "role": row.role, "turn": row.turn_id,
             "run": row.run_id, "content": content, "status": row.status,
             "revision": row.revision,
-            "meta": {key: (row.meta or {}).get(key) for key in ("rating", "followups")}
+            "meta": {key: (row.meta or {})[key] for key in ("rating", "followups")
+                     if (row.meta or {}).get(key) is not None}
             if row.role == "assistant" else {},
             "created_at": iso(row.created_at),
         })
