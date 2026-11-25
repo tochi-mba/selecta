@@ -140,8 +140,9 @@ def analyse_song(
 ) -> AnalysisResult | None:
     started = time.perf_counter()
     # with core.engine_store, the bytes about to be analysed, hashed first, so the features are
-    # stored under the hash of exactly what was heard (engine_store.songs.features_key)
-    content_hash = _content_hash(song)
+    # stored under the hash of exactly what was heard (engine_store.songs.features_key), and with
+    # library.audio_identity the audio id from the same read
+    hashes = _content_hash(song)
     try:
         stereo = audio.decode(song["path"])
         decode_seconds = time.perf_counter() - started
@@ -187,8 +188,8 @@ def analyse_song(
         replace_when_free(partial, target)
     finally:
         partial.unlink(missing_ok=True)
-    if content_hash is not None:
-        _store_features(conn, settings, song["id"], content_hash, target)
+    if hashes is not None:
+        _store_features(conn, settings, song["id"], hashes, target)
     result.timings["save"] = round(time.perf_counter() - save_started, 3)
     result.timings["total"] = round(time.perf_counter() - started, 3)
 
@@ -216,32 +217,50 @@ def analyse_song(
     return result
 
 
-def _content_hash(song: sqlite3.Row) -> str | None:
-    """The file's SHA-256, when the engine store is on and the library has the column for it."""
+def _content_hash(song: sqlite3.Row) -> tuple[str, str | None] | None:
+    """The file's SHA-256 and, with `library.audio_identity` and its column, its audio id ("" for
+    a file that has none), from one read; None when the engine store is off, the library has no
+    column for it, or the file can't be read here (a cloud placeholder is not fetched for it)."""
     if not flags.on("core.engine_store") or "content_hash" not in song.keys():
         return None
-    from selecta.engine_store.song_hashes import hash_file
+    from selecta.engine_store.song_hashes import hash_both
 
-    return hash_file(Path(song["path"]), song["size"], song["mtime"])
+    audio = flags.on("library.audio_identity") and "audio_id" in song.keys()
+    return hash_both(Path(song["path"]), song["size"], song["mtime"], audio)
 
 
 def _store_features(
-    conn: sqlite3.Connection, settings: Settings, song_id: int, content_hash: str, path: Path
+    conn: sqlite3.Connection,
+    settings: Settings,
+    song_id: int,
+    hashes: tuple[str, str | None],
+    path: Path,
 ) -> None:
     """Also publish the features file under its content key (the file above stays, for the flag
-    off and as the fallback), and note the hash it was made from. `save_analysis` commits the
-    hash with the analysis that names the version, so the key and the row always agree."""
+    off and as the fallback), and note the hashes it was made from. A song with an audio id is
+    stored under that key instead, which a tag edit leaves alone. `save_analysis` commits the
+    hashes with the analysis that names the version, so the key and the row always agree."""
     from selecta.engine_store import library
-    from selecta.engine_store.songs import features_key
+    from selecta.engine_store.songs import audio_features_key, features_key
     from selecta.persistence import LOCAL_WORKSPACE
 
-    key = features_key(LOCAL_WORKSPACE, content_hash, ANALYSIS_VERSION)
+    content_hash, audio_id = hashes
+    if audio_id:
+        key = audio_features_key(LOCAL_WORKSPACE, audio_id, ANALYSIS_VERSION)
+    else:
+        key = features_key(LOCAL_WORKSPACE, content_hash, ANALYSIS_VERSION)
     try:
         library.artifacts_for(settings).publish(key, path)
     except OSError as error:
         # the file above is complete and is what a read falls back to, so the song is still fine
         print(f"Features for song {song_id} were not stored by content: {error}")
-    conn.execute("UPDATE songs SET content_hash=? WHERE id=?", (content_hash, song_id))
+    if audio_id is None:
+        conn.execute("UPDATE songs SET content_hash=? WHERE id=?", (content_hash, song_id))
+    else:
+        conn.execute(
+            "UPDATE songs SET content_hash=?, audio_id=? WHERE id=?",
+            (content_hash, audio_id, song_id),
+        )
 
 
 def load_features(

@@ -124,6 +124,9 @@ songs = sa.Table(
     # SHA-256 of the file's bytes, as Cloud's catalogue keys a song. Filled in the background
     # (`engine_store.song_hashes`); not a key on Desktop, where two copies may share it.
     sa.Column("content_hash", sa.String(64), nullable=True),
+    # A hash of the audio alone (`library.audio_identity`, docs/engineering/audio-identity.md):
+    # the same after a tag edit. Filled beside `content_hash`; null for a format it can't place.
+    sa.Column("audio_id", sa.String(67), nullable=True),
 )
 
 lyrics = sa.Table(

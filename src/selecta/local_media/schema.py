@@ -38,6 +38,10 @@ local_songs = sa.Table(
     # A different hash whose normalised title and artist match an earlier entry: marked as a
     # likely duplicate for the library page, never silently merged (ADR-0458 edge case).
     sa.Column("duplicate_of", sa.Integer, sa.ForeignKey("local_songs.id"), nullable=True),
+    # A hash of the audio alone, "a1:" and 64 hex digits, sent by the device that registered it
+    # (`library.audio_identity`, docs/engineering/audio-identity.md). A file re-tagged elsewhere
+    # keeps it, so it can be known as this song. Not unique: two files may share it until merged.
+    sa.Column("audio_id", sa.String(67), nullable=True),
     sa.Column("created_at", Epoch, nullable=False),
     sa.Column("updated_at", Epoch, nullable=False),
     sa.Column("deleted_at", Epoch, nullable=True),
@@ -49,6 +53,7 @@ local_songs = sa.Table(
     # The target of the availability table's workspace-scoped foreign key.
     sa.UniqueConstraint("workspace_id", "id"),
     sa.Index("ix_local_songs_workspace_id_deleted_at", "workspace_id", "deleted_at"),
+    sa.Index("ix_local_songs_workspace_id_audio_id", "workspace_id", "audio_id"),
 )
 
 local_song_availability = sa.Table(
