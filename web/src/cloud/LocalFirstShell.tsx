@@ -78,6 +78,7 @@ import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
 import { ChangedFromLine } from '../devices/ChangedFromLine';
 import { PlayNoticeLine } from '../devices/PlayNoticeLine';
+import { HostedMix } from './hosted/HostedMix';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -885,7 +886,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       case 'mixes':
         if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
         // R8: a device with little or no music makes mixes from the songs the device R1 chooses holds
-        return <>{mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
+        // (a hosted account also gets the server-rendered mix first: cloud.hosted_render)
+        return <>{coexisting && on('cloud.hosted_render') && <div className="page"><HostedMix api={api} workspaceId={workspaceId} /></div>}{mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
           <MixesEmpty
             current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
             connected={connected}
