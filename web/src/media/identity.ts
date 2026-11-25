@@ -6,6 +6,8 @@
 // device, leak private structure, and break the moment a file moves. `assertNoPath` is run on
 // every payload before it leaves the device, so a path can never ride along by accident.
 
+import { breathe } from './breathe';
+
 export type TrackIdentity = {
   content_sha256: string;
   title: string;
@@ -19,7 +21,6 @@ export const HASH_CHUNK_BYTES = 4 * 1024 * 1024;
 
 /** A file up to this size is hashed by WebCrypto in one call. The JavaScript hash below costs about
  * 40 ms of the page's own time per megabyte on a slow laptop, so an import of thousands of songs
-import { breathe } from './breathe';
  * kept the page too busy to answer; WebCrypto hashes off the page in native code instead. Bigger
  * files keep the streamed hash, so a long WAV never sits in memory whole. */
 export const WHOLE_DIGEST_MAX_BYTES = 64 * 1024 * 1024;
