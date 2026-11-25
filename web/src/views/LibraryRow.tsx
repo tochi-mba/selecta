@@ -1,5 +1,6 @@
 import { memo, useContext, useState } from 'react';
-import { HolderContext, type MusicHolder } from '../devices/controller';
+import { HolderContext, openToPlay, type MusicHolder } from '../devices/controller';
+import { relativeTime } from '../ui/format';
 import { LibrarySong } from '../api';
 import { clock, etaWords } from '../lib';
 import { availabilityFacts } from '../state/availability';
@@ -65,7 +66,7 @@ const HERE: Record<string, { kind: StatusKind; words: string }> = {
 };
 
 /** ADR-0475 R6 row status, when the person has another device with music: "This device", "On
- * {device}" (open, has the file), "Needs its folder again on {device}" (had it, not open now), or
+ * {device}" (open, has the file), "On {device}, open {when}" (had it, not open now, with "Open SelectaDJ on {device} to play this."), or
  * "No device right now". Null leaves the plain availability words. */
 export function deviceChip(songId: number, availability: string, holder: MusicHolder | null): { kind: StatusKind; words: string; why: string } | null {
   if (!holder) return null;
@@ -76,7 +77,11 @@ export function deviceChip(songId: number, availability: string, holder: MusicHo
   // I83: one plain line; a song an open device holds plays from here, on that device
   if (open) return { kind: 'ready', words: `Plays on ${open}`, why: `${open} has this song’s file and makes the sound.` };
   const away = places ? places.before[0] : holder.ids?.has(songId) ? holder.name : undefined;
-  if (away) return { kind: 'needs-action', words: `Needs its folder again on ${away}`, why: `${away} had this song’s file but isn’t open now. Open SelectaDJ there, and choose its music folder again if it asks.` };
+  // I86: which device has it and when it was last open, with one hint and nothing to press
+  if (away) {
+    const age = holder.lastOpen?.(away);
+    return { kind: 'paused', words: age == null ? `On ${away}` : `On ${away}, open ${relativeTime(age)}`, why: openToPlay(away) };
+  }
   if (!places && availability === 'elsewhere') return null;
   return { kind: 'failed', words: 'No device right now', why: 'None of your devices has this song’s file right now.' };
 }
