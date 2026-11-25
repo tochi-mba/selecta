@@ -132,6 +132,7 @@ wins, and the row says which.
 | `max-width: 560px` | `styles/polish.css` | skeleton rows stack their name and details at phone widths |
 | `max-width: 560px` | `styles/shell.css` | job list one column, phone seam indent |
 | `max-width: 480px` | `styles/boot.css` | runtime, welcome and onboarding actions stack full width on a phone |
+| `max-width: 480px` | `styles/lucy.css` | a compact Lucy song list puts the actions under the title on a small phone |
 | `max-width: 520px` | `style.css` | steering, destination and energy-arc stops one column; request rows |
 | `max-width: 520px` | `styles/foundation.css` | setup steps: a finished step shows only its tick, so the steps take one line (MP-0282-07) |
 | `max-width: 520px` | `styles/listening.css` | energy-arc stop labels |

@@ -37,7 +37,7 @@ REQUIRED_SETTINGS = (
     ("SELECTA_STAFF_ORGANIZATION_ID", "the staff console's WorkOS organization"),
     ("SELECTA_WORKOS_WEBHOOK_SECRET", "WorkOS webhooks"),
     ("SELECTA_STRIPE_SECRET_KEY", "billing (Stripe)"),
-    ("SELECTA_STRIPE_WEBHOOK_SECRET", "Stripe webhooks"),
+    ("SELECTA_STRIPE_WEBHOOK_SECRETS", "Stripe webhooks"),
     ("SELECTA_STRIPE_PRICES", "the plan price map"),
     ("SELECTA_R2_ACCOUNT_ID", "object storage (R2)"),
     ("SELECTA_SUPPORT_EMAIL", "the support address customers see"),

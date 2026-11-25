@@ -28,7 +28,8 @@ _cache: dict[str, Any] = {"at": 0.0, "result": None}
 
 
 def _origins() -> list[str]:
-    raw = os.environ.get("SELECTA_ALLOWED_ORIGINS", "") or os.environ.get("SELECTA_SITE_URL", "")
+    raw = (os.environ.get("SELECTA_ALLOWED_ORIGINS", "")
+           or os.environ.get("SELECTA_EMAIL_SITE_URL", ""))
     return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
 
 

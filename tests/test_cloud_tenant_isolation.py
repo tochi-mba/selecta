@@ -40,6 +40,8 @@ CONSENT = "terms-2026-11"
 # Routes anyone may call: health checks, and webhooks that prove themselves by signature.
 PUBLIC = {
     ("GET", "/api/status"),
+    # the status banner every signed-in customer sees; it holds nothing private
+    ("GET", "/api/status-banner"),
     ("GET", "/api/ready"),
     ("POST", "/api/webhooks/stripe"),
     ("POST", "/api/webhooks/workos"),
@@ -154,6 +156,43 @@ STAFF_ONLY = {
     ("GET", "/api/admin/economics/lucy-ceiling"),
     # The business release-gate readout reads repository records and flag rules only.
     ("GET", "/api/admin/business/rollout"),
+    # The redesigned staff console (admin/routes_console.py): every route runs through the
+    # privileged staff session; a customer is named by user id in the path, never by header
+    ("DELETE", "/api/admin/session/changes"),
+    ("GET", "/api/admin/banners"),
+    ("GET", "/api/admin/billing"),
+    ("GET", "/api/admin/checklist"),
+    ("GET", "/api/admin/customers/{user_id}"),
+    ("GET", "/api/admin/customers/{user_id}/flags"),
+    ("GET", "/api/admin/customers/{user_id}/sign-ins"),
+    ("GET", "/api/admin/customers/{user_id}/storage-mode"),
+    ("GET", "/api/admin/customers/{user_id}/stripe"),
+    ("GET", "/api/admin/lookup"),
+    ("GET", "/api/admin/staff"),
+    ("GET", "/api/admin/system"),
+    ("POST", "/api/admin/alerts/{alert_id}/acknowledge"),
+    ("POST", "/api/admin/audit-export"),
+    ("POST", "/api/admin/banners"),
+    ("POST", "/api/admin/banners/{banner_id}/end"),
+    ("POST", "/api/admin/customers/{user_id}/delete"),
+    ("POST", "/api/admin/customers/{user_id}/notes"),
+    ("POST", "/api/admin/customers/{user_id}/portal-link"),
+    ("POST", "/api/admin/customers/{user_id}/sign-ins/{session_id}/revoke"),
+    ("POST", "/api/admin/customers/{user_id}/sign-out"),
+    ("POST", "/api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/refund"),
+    ("POST", "/api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/retry"),
+    ("POST", "/api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-at-period-end"),
+    ("POST", "/api/admin/customers/{user_id}/stripe/subscriptions/{sub_id}/cancel-now"),
+    ("POST", "/api/admin/customers/{user_id}/{command}"),
+    ("POST", "/api/admin/overrides/mass/dry-run"),
+    ("POST", "/api/admin/session/changes"),
+    ("POST", "/api/admin/staff/owners"),
+    ("POST", "/api/admin/staff/roles"),
+    ("POST", "/api/admin/staff/roles/{assignment_id}/revoke"),
+    ("POST", "/api/admin/staff/sessions/{session_id}/end"),
+    ("PUT", "/api/admin/customers/{user_id}/flags/{flag_id}"),
+    ("PUT", "/api/admin/customers/{user_id}/storage-mode"),
+    ("PUT", "/api/admin/me/preferences/{key}"),
 }
 # Business routes require an organisation workspace and membership, not merely a
 # personal library workspace. The dedicated Business tests exercise their tenant

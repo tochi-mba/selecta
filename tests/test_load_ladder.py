@@ -153,6 +153,12 @@ class As:
 
 @pytest.mark.invariants_off("the app owns its own engine; the run counts lost jobs itself")
 def test_a_scaled_down_l1_passes_the_thresholds_locally(tmp_path, monkeypatch):
+    # Every simulated listener here shares the test client's one address and a non-JWT test token,
+    # so the per-IP limits (cloud.rate_limits) would count ten people as one. The limits have their
+    # own tests (test_cloud_request_guards.py); k6 on staging measures them under real load.
+    from selecta import flags
+
+    flags.use("-cloud.rate_limits")
     objects = CloudObjects()
     use_fake_storage(monkeypatch, objects)
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")

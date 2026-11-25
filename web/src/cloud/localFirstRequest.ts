@@ -244,14 +244,18 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       firstRead = false;
       const kept = await readCached<CatalogueSong[]>(keep.workspaceId, CATALOGUE_KEY).catch(() => null);
       if (kept?.value?.length) {
-        void serverList().then((list) => {
-          arrived = list;
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event(CATALOGUE_CHANGED_EVENT));
-            window.dispatchEvent(new Event('selecta:library-changed'));
-          }
-        }).catch(() => undefined);
-        return kept.value;
+        const readAgain = () => {
+          if (typeof window === 'undefined') return;
+          window.dispatchEvent(new Event(CATALOGUE_CHANGED_EVENT));
+          window.dispatchEvent(new Event('selecta:library-changed'));
+        };
+        // the server's list replaces the copy; a refusal or an ended sign-in is never hidden by
+        // it: the page reads again and the next read throws it, as every later read would
+        void serverList().then((list) => { arrived = list; readAgain(); }, readAgain);
+        // the copy is said as one, with this device's own songs, as when the server is away
+        const device = await (keep.deviceSongs?.().catch(() => []) ?? Promise.resolve([]));
+        keep.onServed?.({ cached: true, at: kept.at });
+        return mergeSongs(kept.value, device);
       }
     }
     return serverList();
@@ -421,7 +425,11 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     const everyVersion = async (entries: { id: number; expected: boolean }[]) => {
       const grouping = await grouped();
       const rawNever = new Map(grouping.files.map((file) => [file.id, file.never === true]));
-      return entries.flatMap((entry) => grouping.versionsOf(entry.id).map((id) => ({ id, expected: rawNever.get(id) === true })));
+      return entries.flatMap((entry) => {
+        const ids = grouping.versionsOf(entry.id);
+        // one file: what the page showed; several: each file's own mark (the row shows the song's)
+        return ids.length === 1 ? [entry] : ids.map((id) => ({ id, expected: rawNever.get(id) === true }));
+      });
     };
     const toggle = route.match(/^\/songs\/(\d+)\/never$/);
     if (toggle) {
