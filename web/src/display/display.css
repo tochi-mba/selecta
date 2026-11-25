@@ -120,7 +120,8 @@ p { margin: 0.4em 0; }
 .d-round-left { font-family: var(--display); font-weight: var(--weight-display); font-size: 1.5em; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; }
 .d-round-how, .d-round-result { margin: 0 0 0.8em; }
 .d-round-result { font-weight: var(--weight-strong); font-size: 1.15em; }
-.d-round-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6em; }
+/* two across, so four songs still fit above the fold on a 16:9 screen */
+.d-round-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6em; }
 .d-round-opt { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0.3em 1em; padding: 0.55em 0.8em; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface-raised); font-size: 1.1em; }
 .d-round-won { border-color: var(--selected); }
 .d-round-count { font-family: var(--display); font-weight: var(--weight-display); font-size: 1.3em; font-variant-numeric: tabular-nums; }

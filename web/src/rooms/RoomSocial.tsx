@@ -22,7 +22,9 @@ export type SocialGroup = 'together' | 'rounds' | 'screen';
 export type SocialOn = { keeps: boolean; reactions: boolean; rounds: boolean; dedications: boolean; recap: boolean };
 
 type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
-type Pulse = { now: number; round?: { round_id: string; state: string; closes_at: number } | null };
+type Option = { song_id: number; votes: number; song?: { title?: string; artist?: string } | null };
+type Round = { round_id: string; state: string; closes_at: number; total: number; options: Option[]; winner?: { song_id?: number; song?: { title?: string } | null } | number | null };
+type Pulse = { now: number; round?: Round | null };
 
 const ANSWER_MS = 7000;
 const EVERY = [0, 2, 3, 4, 5, 6, 8, 10];
@@ -55,23 +57,36 @@ export function RoomSocial({ api, workspaceId, base, settings, on, screens, save
   save: (change: Partial<SocialSettings>, group: SocialGroup) => void;
   tell: (words: string, problem?: boolean) => void;
 }) {
-  const [open, setOpen] = useState<{ round_id: string } | null>(null);
+  const [open, setOpen] = useState<Round | null>(null);
+  // seconds left, counted down here between reads so the host sees the same clock as the phones
+  const [left, setLeft] = useState(0);
+  const ends = useRef(0);
   const live = useRef(true);
   useEffect(() => () => { live.current = false; }, []);
 
   const look = async () => {
     const pulse = await api<Pulse>(`${base}/pulse`, {}, workspaceId);
-    const round = pulse.round && pulse.round.state === 'open' ? { round_id: pulse.round.round_id } : null;
-    if (live.current) setOpen(round);
+    const round = pulse.round && pulse.round.state === 'open' ? pulse.round : null;
+    if (live.current) {
+      ends.current = round ? Date.now() + Math.max(0, round.closes_at - pulse.now) * 1000 : 0;
+      setOpen(round);
+      setLeft(round ? Math.ceil(Math.max(0, round.closes_at - pulse.now)) : 0);
+    }
     return round;
   };
   // the button says what is true: a vote the timer or another device started shows here too
   useEffect(() => {
     if (!on.rounds || !settings.rounds) return undefined;
     void look().catch(() => undefined);
-    const timer = window.setInterval(() => void look().catch(() => undefined), 5000);
+    // a vote in progress is read as often as the phones read it, so the counts here keep up
+    const timer = window.setInterval(() => void look().catch(() => undefined), open ? 2000 : 5000);
     return () => window.clearInterval(timer);
-  }, [base, on.rounds, settings.rounds]);
+  }, [base, on.rounds, settings.rounds, Boolean(open)]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const tick = window.setInterval(() => setLeft(Math.ceil(Math.max(0, ends.current - Date.now()) / 1000)), 1000);
+    return () => window.clearInterval(tick);
+  }, [Boolean(open)]);
 
   const start = async () => {
     try {
@@ -83,7 +98,7 @@ export function RoomSocial({ api, workspaceId, base, settings, on, screens, save
       await new Promise((done) => window.setTimeout(done, 700));
       if (await look().catch(() => null)) { tell('The room is voting for the next song.'); return; }
     }
-    if (live.current) tell('The device playing the music didn’t answer, so no vote started. Check it is open and playing.', true);
+    if (live.current) tell('The device playing the music didn’t answer, so no vote started. Check it is open with a mix loaded.', true);
   };
   const cancel = async () => {
     if (!open) return;
@@ -139,11 +154,22 @@ export function RoomSocial({ api, workspaceId, base, settings, on, screens, save
           {settings.rounds && (
             <>
               <div className="room-setting-row">
-                <span><b>{open ? 'The room is voting' : 'Start a vote now'}</b><span className="room-help">{open ? 'Guests are choosing on their phones.' : 'The device playing the music offers the songs.'}</span></span>
+                <span><b>{open ? 'The room is voting' : 'Start a vote now'}</b><span className="room-help">{open ? `Guests are choosing on their phones. ${left} ${left === 1 ? 'second' : 'seconds'} left.` : 'The device playing the music offers the songs.'}</span></span>
                 {open
                   ? <Action type="button" className="quiet" run={cancel} working="Calling off…">Call off the vote</Action>
                   : <Action type="button" run={start} working="Starting…">Let the room pick</Action>}
               </div>
+              {open && (
+                <ul className="room-round" aria-label="The vote so far">
+                  {open.options.map((option) => (
+                    <li key={option.song_id}>
+                      <span><b>{option.song?.title ?? 'A song'}</b><span className="room-help">{option.song?.artist ?? ''}</span></span>
+                      <span className="room-round-count">{option.votes} {option.votes === 1 ? 'vote' : 'votes'}</span>
+                      <span className="room-round-bar" aria-hidden="true"><i style={{ width: `${open.total ? Math.round((option.votes / open.total) * 100) : 0}%` }} /></span>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <Field label="A vote by itself" help={settings.round_every_songs ? `A vote starts every ${settings.round_every_songs} songs while guests are here.` : 'Votes start only when you press the button.'}>
                 {(field) => (
                   <select {...field} value={settings.round_every_songs} onChange={(event) => save({ round_every_songs: Number(event.target.value) }, 'rounds')}>

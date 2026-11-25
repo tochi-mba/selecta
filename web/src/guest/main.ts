@@ -471,11 +471,11 @@ function myRequests(v: View): HTMLElement {
         art(item.song),
         songText(item.song,
           h('span', { className: 'g-status' }, chip(status.kind, status.label)),
-          status.detail ? h('span', { className: 'g-detail' }, status.detail) : null,
-          social.dedication(v, item)),
+          status.detail ? h('span', { className: 'g-detail' }, status.detail) : null),
         PENDING.includes(item.status) && v.room_status !== 'ended'
           ? h('button', { type: 'button', className: 'g-quiet g-small-button', ...working(leaving), 'aria-label': `Withdraw ${songLine(item.song)}`, onclick: () => void withdraw(item.request_id) }, leaving ? 'Withdrawing...' : 'Withdraw')
-          : null);
+          : null,
+        social.dedication(v, item));
     })));
 }
 

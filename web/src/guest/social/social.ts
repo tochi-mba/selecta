@@ -71,6 +71,9 @@ let timer = 0;
 let failures = 0;
 let reading = false;
 let toldStorage = false;
+// the song the page last drew, and the one a fresh read was last asked for
+let viewSong: number | null = null;
+let askedFor: number | null = null;
 
 function adopt(fresh: Pulse): void {
   pulse = fresh;
@@ -96,6 +99,7 @@ function needsPulse(on: Features): boolean {
 
 /** Keep the pulse going while the room offers something that moves, and stop it when not. */
 export function sync(view: RoomView | null, live: boolean): void {
+  viewSong = view?.now_playing?.song_id ?? null;
   if (!host || !live || !needsPulse(features(view))) { stop(); return; }
   if (!timer && !reading) void read();
 }
@@ -122,6 +126,11 @@ async function read(): Promise<void> {
   try {
     adopt(await call<Pulse>(`${host.base()}/pulse`));
     failures = 0;
+    // The pulse hears of a new song up to five seconds before the page's own read does. Until
+    // the two agree the heart has no play to belong to, so the page is asked to read again now,
+    // once per song.
+    const playing = pulse?.song?.song_id ?? null;
+    if (playing !== viewSong && playing !== askedFor) { askedFor = playing; host.reread(); }
     host.redraw();
   } catch (error) {
     // The page's own read says what went wrong with the room; the pulse only backs off.

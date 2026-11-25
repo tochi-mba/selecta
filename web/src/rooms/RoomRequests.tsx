@@ -212,7 +212,7 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
   };
   const titleOf = (ask: RoomAsk) => ask.song?.title ?? 'A song';
   // the votes a request has, and the dedication on it (ADR-0488), said beside who asked
-  const voteWords = (ask: RoomAsk) => [votes && ask.votes > 1 ? countOf(ask.votes, 'vote') : '', ask.dedication ?? ''].filter(Boolean).join(' · ') || undefined;
+  const voteWords = (ask: RoomAsk) => [ask.room_pick ? 'The room picked this' : '', votes && ask.votes > 1 ? countOf(ask.votes, 'vote') : '', ask.dedication ?? ''].filter(Boolean).join(' · ') || undefined;
   const votesMoved = (ask: RoomAsk) => {
     const first = firstVotes.current.get(ask.request_id);
     if (first === undefined) { firstVotes.current.set(ask.request_id, ask.votes); return false; }
