@@ -50,6 +50,15 @@ const chip = (page: Page) => page.locator('.cloud-import-chip');
  * (77a9a91d); Finish later shows the Library, whose own count proves the import landed. */
 const finishLater = (page: Page) => page.getByRole('button', { name: 'Finish later' }).click();
 
+/** Resolves once the account's holdings say a device holds songs: a first visit reports this
+ * device's songs only after it registers, and Play before that finds no device to play on
+ * (to-do T-20261125-de03). Start it before the page opens. */
+const heldOnADevice = (page: Page) => page.waitForResponse(async (answer) => {
+  if (!/\/api\/local-media\/holdings$/.test(new URL(answer.url()).pathname) || !answer.ok()) return false;
+  const body = await answer.json().catch(() => null) as { devices?: { songs: number; online: boolean }[] } | null;
+  return !!body?.devices?.some((device) => device.online && device.songs > 0);
+}, { timeout: 30_000 });
+
 /** Put a real folder in the origin-private file system and remember it where a folder pick does,
  * so a reload can carry the import on over it without a picker. */
 async function rememberedFolder(page: Page, workspace: string, count: number) {
@@ -253,7 +262,9 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     const made = await seeded(request, user, { local_songs: 2, local_titles: ['Keeps one', 'Keeps two'] });
     await asLocalFirst(page, user);
     await connectOnThisDevice(page, made.workspace_id, [{ songId: made.local_songs[0], title: 'Keeps one', audio: true }, { songId: made.local_songs[1], title: 'Keeps two', audio: true }]);
+    const held = heldOnADevice(page);
     await page.goto('/mixes');
+    await held;
     await page.getByRole('button', { name: 'Play', exact: true }).click();
     await expect(page).toHaveURL(/\/listen$/);
     const position = () => page.evaluate(() => (window as unknown as { __selectaEngineTime?: () => number }).__selectaEngineTime?.() ?? Number(document.querySelector('[data-song-time]')?.getAttribute('data-song-time') ?? 0));
@@ -279,8 +290,10 @@ test.describe('nothing is lost when something interrupts SelectaDJ', () => {
     const made = await seeded(request, user, { local_songs: 2, local_titles: ['Queue one', 'Queue two'] });
     await asLocalFirst(page, user);
     await connectOnThisDevice(page, made.workspace_id, [{ songId: made.local_songs[0], title: 'Queue one', audio: true }, { songId: made.local_songs[1], title: 'Queue two', audio: true }]);
+    const held = heldOnADevice(page);
     await page.goto('/mixes/mine');
     await expect(page.getByRole('heading', { name: 'My Mixes' })).toBeVisible();
+    await held;
 
     await context.setOffline(true);
     await page.goto('/mixes').catch(() => undefined);
