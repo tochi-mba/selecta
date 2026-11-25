@@ -863,7 +863,7 @@ class SeamStore:
         if not move_on(request.move):
             raise CannotRender(f"{MOVES.get(request.move, (request.move,))[0]} is turned off.")
         if request.move == "stem_arrange":
-            return _arranged(self.settings, request, a, b, self.memory)
+            return _arranged(self.settings, request, a, b, self.memory, self._cache)
         if request.move in STEM_MOVES:
             if request.move == "stem_intertwine":
                 return _stem_render(self.settings, None, request, a, b, self._cache)

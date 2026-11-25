@@ -14,12 +14,20 @@ from selecta.config import SAMPLE_RATE
 from selecta.planner.choose import Choice, enumerate_candidates
 from selecta.render import dsp
 from selecta.render.engine import SongCache, render
+from selecta.render.sources import LocalFiles, SourceRef, SourceResolver
 
 SEAM_SECONDS = 0.03
 
 
-def _native(cache: SongCache, song: SongInfo, start: float, end: float) -> np.ndarray:
-    audio = cache.get(song.path)
+def _native(
+    cache: SongCache,
+    song: SongInfo,
+    start: float,
+    end: float,
+    resolver: SourceResolver | None = None,
+) -> np.ndarray:
+    found = (resolver or LocalFiles()).resolve(SourceRef(song.id), song.path)
+    audio = cache.get(found) if isinstance(found, str) else found
     lo = max(0, int(round(start * SAMPLE_RATE)))
     hi = min(audio.shape[0], int(round(end * SAMPLE_RATE)))
     gain = 10.0 ** (song.gain_db / 20.0)
@@ -47,6 +55,7 @@ def render_set(
     songs: list[SongInfo],
     output: Path,
     log: Callable[[str], None] = print,
+    resolver: SourceResolver | None = None,
 ) -> tuple[list[Choice], float]:
     if len(songs) < 2:
         raise ValueError("a set needs at least two songs")
@@ -55,9 +64,9 @@ def render_set(
     for number, (a, b) in enumerate(zip(songs, songs[1:], strict=False), 1):
         if choices:
             earliest = choices[-1].rendered.script.b_source_end + 8.0
-            choice = _choose_after(a, b, earliest, cache)
+            choice = _choose_after(a, b, earliest, cache, resolver)
         else:
-            choice = _choose_after(a, b, 0.0, cache)
+            choice = _choose_after(a, b, 0.0, cache, resolver)
         if not choice.report.passed:
             failed = ", ".join(check.name for check in choice.report.failures)
             raise RuntimeError(f"transition {number} failed its audit: {failed}")
@@ -66,7 +75,7 @@ def render_set(
 
     parts: list[np.ndarray] = []
     first_script = choices[0].rendered.script
-    parts.append(_native(cache, songs[0], 0.0, first_script.a_source_start))
+    parts.append(_native(cache, songs[0], 0.0, first_script.a_source_start, resolver))
     for index, choice in enumerate(choices):
         rendered_audio = choice.rendered.audio
         if index + 1 < len(choices):
@@ -86,11 +95,12 @@ def render_set(
             if end <= start:
                 raise RuntimeError(f"the planned cues overlap inside {current.name}")
             parts.append(rendered_audio)
-            parts.append(_native(cache, current, start, end))
+            parts.append(_native(cache, current, start, end, resolver))
         else:
             parts.append(rendered_audio)
     last_script = choices[-1].rendered.script
-    parts.append(_native(cache, songs[-1], last_script.b_source_end, songs[-1].duration))
+    last = songs[-1]
+    parts.append(_native(cache, last, last_script.b_source_end, last.duration, resolver))
 
     mixed = dsp.limit(join(parts))
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -98,7 +108,13 @@ def render_set(
     return choices, mixed.shape[0] / SAMPLE_RATE
 
 
-def _choose_after(a: SongInfo, b: SongInfo, earliest: float, cache: SongCache) -> Choice:
+def _choose_after(
+    a: SongInfo,
+    b: SongInfo,
+    earliest: float,
+    cache: SongCache,
+    resolver: SourceResolver | None = None,
+) -> Choice:
     """Choose an audited handoff that leaves the current song time to play first."""
     for candidate in enumerate_candidates(a, b):
         script = candidate.recipe.make(
@@ -106,7 +122,7 @@ def _choose_after(a: SongInfo, b: SongInfo, earliest: float, cache: SongCache) -
         )
         if script is None or script.a_source_start < earliest:
             continue
-        rendered = render(script, cache)
+        rendered = render(script, cache, resolver)
         report = audit(rendered)
         if report.passed:
             return Choice(rendered, report, candidate)

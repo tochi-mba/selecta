@@ -12,6 +12,7 @@ from selecta import jobs
 from selecta.config import SAMPLE_RATE
 from selecta.render import dsp
 from selecta.render.script import Part, TransitionScript
+from selecta.render.sources import LocalFiles, SourceRef, SourceResolver
 
 _SEAM_SECONDS = 0.03
 
@@ -32,6 +33,23 @@ class SongCache:
         while len(self._songs) > self.capacity:
             self._songs.popitem(last=False)
         return decoded
+
+
+def _fetch(
+    resolver: SourceResolver, cache: SongCache, ref: SourceRef, local_path: str | None
+) -> np.ndarray:
+    """A source's audio. A path the resolver hands back is decoded through the cache."""
+    found = resolver.resolve(ref, local_path)
+    return cache.get(found) if isinstance(found, str) else found
+
+
+def _part_source(part: Part, resolver: SourceResolver, cache: SongCache) -> np.ndarray:
+    return _fetch(resolver, cache, part.source, part.local_path)
+
+
+def _native(part: Part, resolver: SourceResolver, cache: SongCache) -> np.ndarray:
+    """The part's whole song, even when the part itself plays one stem of it."""
+    return _fetch(resolver, cache, SourceRef(part.song.id), part.song.path)
 
 
 @dataclass
@@ -146,30 +164,42 @@ def _nudge_into_the_pocket(
     return _slide(script, placed_b, lag), lag
 
 
-def render(script: TransitionScript, cache: SongCache | None = None) -> Rendered:
+def render(
+    script: TransitionScript,
+    cache: SongCache | None = None,
+    resolver: SourceResolver | None = None,
+) -> Rendered:
     jobs.check_in()
     cache = cache or SongCache()
+    resolver = resolver or LocalFiles()
     count = int(round(script.duration * SAMPLE_RATE))
 
-    placed_a, drift_a = _part_audio(script.a, cache.get(script.a.audio_path), count)
-    placed_b, drift_b = _part_audio(script.b, cache.get(script.b.audio_path), count)
+    placed_a, drift_a = _part_audio(script.a, _part_source(script.a, resolver, cache), count)
+    placed_b, drift_b = _part_audio(script.b, _part_source(script.b, resolver, cache), count)
     placed_b, nudge = _nudge_into_the_pocket(script, placed_a, placed_b)
     dry_a, tails_a = _apply_moves(script.a, placed_a)
     dry_b, tails_b = _apply_moves(script.b, placed_b)
 
     mixed = dry_a + dry_b + tails_a + tails_b
+    # a stem seam's lanes are each a part, so the audit hears each side as all its lanes together
+    lanes = bool(script.meta.get("stem_lanes"))
+    side_a, side_b = dry_a, dry_b
     for extra in script.extras:
-        placed, _ = _part_audio(extra, cache.get(extra.audio_path), count)
+        placed, _ = _part_audio(extra, _part_source(extra, resolver, cache), count)
         if extra.follows_b:
             placed = _slide(script, placed, nudge)
         dry, tails = _apply_moves(extra, placed)
         mixed = mixed + dry + tails
+        if lanes and extra.follows_b:
+            side_b = side_b + dry
+        elif lanes:
+            side_a = side_a + dry
     mixed = dsp.limit(mixed)
     return Rendered(
         script,
         mixed,
-        dry_a,
-        dry_b,
+        side_a,
+        side_b,
         {
             "a": round(drift_a * 1000, 2),
             "b": round(drift_b * 1000, 2),
@@ -179,7 +209,11 @@ def render(script: TransitionScript, cache: SongCache | None = None) -> Rendered
 
 
 def in_context(
-    rendered: Rendered, before: float, after: float, cache: SongCache | None = None
+    rendered: Rendered,
+    before: float,
+    after: float,
+    cache: SongCache | None = None,
+    resolver: SourceResolver | None = None,
 ) -> tuple[np.ndarray, float]:
     """Native A, the clip, then native B: what a listener actually hears.
 
@@ -187,9 +221,10 @@ def in_context(
     crossfades, because each side holds the same song at the same position.
     """
     cache = cache or SongCache()
+    resolver = resolver or LocalFiles()
     script = rendered.script
-    a_native = cache.get(script.a.song.path)
-    b_native = cache.get(script.b.song.path)
+    a_native = _native(script.a, resolver, cache)
+    b_native = _native(script.b, resolver, cache)
     gain_a = float(10.0 ** (script.a.song.gain_db / 20.0))
     gain_b = float(10.0 ** (script.b.song.gain_db / 20.0))
 

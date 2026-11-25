@@ -99,6 +99,10 @@
       "label": "Spare-time transitions",
       "about": "With nothing else to do, the best transitions across the library are tried out ahead of time."
     },
+    "render.one_engine": {
+      "label": "One engine for stem seams",
+      "about": "On: Studio shapes, strip and land and intertwined stems play through the same engine as every other transition, so the next song is nudged into the pocket, the beats are lined up on a second take, and the vocal check hears the separated voices; word and ride moves also lock half- and double-time songs to one pulse. Off: those seams mix their own stems as before, with none of that."
+    },
     "analysis.phrases": {
       "label": "Phrase lines",
       "about": "Transitions land on 8-bar phrase lines instead of any 4-bar mark, the way a DJ counts a song."
