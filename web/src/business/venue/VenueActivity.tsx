@@ -19,7 +19,7 @@ export function VenueActivity({ venueId }: { venueId: string }) {
     {lines.loading && !lines.data && <p role="status">{VENUE_COPY.activityLoading}</p>}
     {Boolean(lines.error) && <p role="alert">{VENUE_COPY.activityFailed} <button type="button" onClick={() => { void lines.reload(); }}>{VENUE_COPY.activityRetry}</button></p>}
     {lines.data && !lines.data.length && <p>{VENUE_COPY.activityEmpty}</p>}
-    {Boolean(lines.data?.length) && <ul>{lines.data!.map((item) => <li key={item.id}>
+    {Boolean(lines.data?.length) && <ul>{lines.data!.map((item) => <li key={item.id} data-lift="row">
       <time dateTime={new Date(item.at * 1000).toISOString()}>{new Date(item.at * 1000).toLocaleString()}</time>: {item.words}
     </li>)}</ul>}
   </section>;

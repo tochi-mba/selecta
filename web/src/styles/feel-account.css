@@ -1,0 +1,230 @@
+/* The feel system (ADR-0477): the feel system applied to Workspace, Account, Plan and billing, Discover and the hosted pages.
+ * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
+ * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md.
+ *
+ * The component sheets (account.css, cloud.css, libraryWorkspace.css) load after this one, with the
+ * page that needs them, so a rule here that has to win over one of theirs is written with one more
+ * class or attribute than theirs rather than relying on order. No keyframes of its own: arrivals use
+ * feel-arrive and drawn lines feel-draw (styles/feel.css). */
+
+/* ---------- Arrivals numbered by position ----------
+   data-stagger='auto' is a list whose children are passed in from elsewhere (a settings group's
+   cards, Plan & billing's cards, Overview's cards, Discover's pair cards), so they carry no --i of
+   their own. Their place in the list numbers them; feel.css stops the delay growing after the 8th. */
+:where(:root[data-feel~='motion']) [data-stagger='auto'] > :nth-child(2) { --i: 1; }
+:where(:root[data-feel~='motion']) [data-stagger='auto'] > :nth-child(3) { --i: 2; }
+:where(:root[data-feel~='motion']) [data-stagger='auto'] > :nth-child(4) { --i: 3; }
+:where(:root[data-feel~='motion']) [data-stagger='auto'] > :nth-child(5) { --i: 4; }
+:where(:root[data-feel~='motion']) [data-stagger='auto'] > :nth-child(6) { --i: 5; }
+:where(:root[data-feel~='motion']) [data-stagger='auto'] > :nth-child(7) { --i: 6; }
+:where(:root[data-feel~='motion']) [data-stagger='auto'] > :nth-child(n + 8) { --i: 7; }
+
+/* ---------- Plan and billing ---------- */
+
+/* The plan you are on carries the region's one lime peak: a lit edge, not a moving thing. */
+:where(:root[data-feel~='depth']) .acct-card.acct-plan-current {
+  box-shadow: var(--edge-light), var(--glow-accent);
+}
+/* the upgrade's equalizer burst is laid over this card (feel/moment.tsx needs a positioned holder) */
+:where(:root[data-feel~='moments']) .acct-card.acct-plan-current { position: relative; }
+
+/* Monthly or Annual: the chosen half is a block that slides between the two. The block stands in
+   for the chosen button's own fill and ring, so they step aside while it is drawn; the control's
+   pill rounds the block's outer ends, and the focus ring is drawn inside the button so the rounding
+   never hides it. */
+:where(:root[data-feel~='motion']) .cloud-interval[data-indicator] { overflow: clip; }
+:where(:root[data-feel~='motion']) .cloud-interval[data-indicator] > button[aria-pressed='true'] {
+  background: transparent;
+  box-shadow: none;
+}
+:where(:root[data-feel~='motion']) .cloud-interval[data-indicator] > button:focus-visible {
+  outline-offset: calc(-1 * var(--space-1));
+}
+
+/* A chosen plan card keeps its inner ring on the lifted surface (the surface is drawn over the
+   card's own background, ring included). */
+:where(:root:is([data-feel~='motion'], [data-feel~='depth'])) .cloud-plan-card[data-chosen][data-lift]::before {
+  box-shadow: inset 0 0 0 var(--separator) var(--edge-selected);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='depth']) .cloud-plan-card[data-chosen][data-lift]:hover::before {
+    box-shadow: inset 0 0 0 var(--separator) var(--edge-selected), var(--shadow-lift), var(--edge-light);
+  }
+}
+:where(:root[data-feel~='depth']) .cloud-plan-card[data-chosen][data-lift]:focus-within::before {
+  box-shadow: inset 0 0 0 var(--separator) var(--edge-selected), var(--shadow-lift), var(--edge-light);
+}
+
+/* ---------- Account ---------- */
+
+/* The section list: a block slides behind the current section. feel-parts.css makes an indicator's
+   holder position: relative; the list is sticky on a wide window, which positions it just as well. */
+:where(:root[data-feel~='motion']) .acct-nav.acct-nav[data-indicator] { position: sticky; }
+:where(:root[data-feel~='motion']) .acct-nav[data-indicator] > a[aria-current] { background: transparent; }
+:where(:root[data-feel~='motion']) .acct-nav[data-indicator] > .feel-indicator { background: var(--surface-control); }
+@media (max-width: 900px) {
+  /* a phone's row of pills keeps its own pill for the current section: a square block would show
+     past the pill's round ends, so there is no block there */
+  :where(:root[data-feel~='motion']) .acct-nav.acct-nav[data-indicator] { position: relative; }
+  :where(:root[data-feel~='motion']) .acct-nav[data-indicator] > a[aria-current] { background: var(--surface-selected); }
+  :where(:root[data-feel~='motion']) .acct-nav[data-indicator] > .feel-indicator { display: none; }
+}
+
+/* ---------- Workspace ---------- */
+
+/* Diagnostics: a group's lines arrive one after another each time it is opened (the rule starts to
+   match when [open] is set, which starts the animation). */
+:where(:root[data-feel~='motion']) .lw-group[open] > .lw-facts > li {
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-snappy) both;
+  animation-delay: calc(min(var(--i, 0), 8) * var(--motion-stagger));
+}
+
+/* ---------- The legacy Cloud rail ---------- */
+
+/* A visible answer to the pointer and the keyboard on each page name; the current page's block
+   slides between them (CloudRailFeel.tsx). */
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel]) .cloud-rail nav > button:hover:not([aria-current='page']) {
+    background: var(--surface-control);
+    color: var(--text);
+  }
+}
+:where(:root[data-feel]) .cloud-rail nav > button:focus-visible:not([aria-current='page']) {
+  background: var(--surface-control);
+  color: var(--text);
+}
+:where(:root[data-feel~='motion']) .cloud-rail nav[data-indicator] > button[aria-current='page'] { background: transparent; }
+:where(:root[data-feel~='motion']) .cloud-rail nav[data-indicator] > .feel-indicator { background: var(--surface-control); }
+
+/* Overview: the blend drawing in the hero, where the circles were */
+:where(:root[data-feel]) .cloud-hero > .cloud-hero-blend {
+  flex: 1 1 18rem;
+  min-inline-size: 0;
+  max-inline-size: 26rem;
+  margin-inline-start: auto;
+}
+
+/* ---------- Hosted pages: covers ----------
+   The Cloud shell's sheet (cloudMusic.css) draws covers only inside .shell[data-mode='cloud']; the
+   legacy frame has no such shell, so the library row and the mix picker draw their own tile here. */
+:where(:root[data-feel]) .cloud-library .cloud-library-row .cloud-library-icon > .cover-art,
+:where(:root[data-feel]) .cloud-mix-maker .cloud-mix-pick label > .cover-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  color: var(--text);
+  background: linear-gradient(var(--art-turn, 135deg), color-mix(in srgb, var(--motif) 45%, var(--surface-control)), var(--surface-control));
+}
+:where(:root[data-feel]) .cloud-library .cloud-library-row .cloud-library-icon > .cover-art { inline-size: 100%; block-size: 100%; }
+:where(:root[data-feel]) .cloud-mix-maker .cloud-mix-pick label > .cover-art { inline-size: var(--space-6); }
+:where(:root[data-feel]) .cloud-library-icon > .cover-art > *,
+:where(:root[data-feel]) .cloud-mix-pick label > .cover-art > * { grid-area: 1 / 1; }
+:where(:root[data-feel]) .cloud-library-icon > .cover-art .song-motif,
+:where(:root[data-feel]) .cloud-library-icon > .cover-art .ui-icon,
+:where(:root[data-feel]) .cloud-mix-pick label > .cover-art .song-motif,
+:where(:root[data-feel]) .cloud-mix-pick label > .cover-art .ui-icon { inline-size: 55%; block-size: 55%; }
+:where(:root[data-feel]) .cloud-library-icon > .cover-art .cover-art-image,
+:where(:root[data-feel]) .cloud-mix-pick label > .cover-art .cover-art-image { inline-size: 100%; block-size: 100%; object-fit: cover; }
+
+/* Make a mix: the picked count rides under the list while it scrolls, and arrives (data-arrive) */
+:where(:root[data-feel]) .cloud-mix-maker .cloud-mix-pickbar {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: var(--type-meta);
+}
+
+/* Add music: a file held over the drop zone lifts it and lights its edge */
+:where(:root[data-feel]) .cloud-drop.cloud-drop[data-drag] { border-color: var(--selected); }
+:where(:root[data-feel~='motion']) .cloud-drop[data-drag][data-lift]::before {
+  translate: 0 calc(-1 * var(--space-hair));
+}
+:where(:root[data-feel~='depth']) .cloud-drop[data-drag][data-lift]::before {
+  box-shadow: var(--shadow-lift), var(--edge-light), var(--glow-accent);
+}
+/* the tick an accepted file's line draws once, before its words */
+.cloud-upload-tick {
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  margin-inline-end: var(--space-1);
+  vertical-align: middle;
+  fill: none;
+  stroke: var(--status-ready);
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Discover ---------- */
+
+/* The shared word lights up while its card is pointed at or holds focus. */
+:where(:root[data-feel]) .link-card .phrase {
+  transition: color var(--motion-fast) var(--motion-ease), text-shadow var(--motion-fast) var(--motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(:root[data-feel~='depth']) .link-card:hover .phrase {
+    color: var(--motif);
+    text-shadow: 0 0 var(--space-3) color-mix(in srgb, var(--motif) 45%, transparent);
+  }
+}
+:where(:root[data-feel~='depth']) .link-card:focus-within .phrase {
+  color: var(--motif);
+  text-shadow: 0 0 var(--space-3) color-mix(in srgb, var(--motif) 45%, transparent);
+}
+/* each song's cover sits before its name, in the line */
+:where(:root[data-feel]) .shell[data-mode='cloud'] .link-handoff > .cover-art {
+  display: inline-grid;
+  vertical-align: middle;
+  margin-inline-end: var(--space-2);
+}
+/* a harmonic match: the two covers, and the two measured keys lit */
+:where(:root[data-feel]) .discovery-covers { display: flex; gap: var(--space-1); }
+:where(:root[data-feel]) .discovery .discovery-key {
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface-selected);
+  color: var(--text);
+  font-weight: var(--weight-label);
+}
+/* nothing to show yet: two song marks at rest, not yet joined, beside the same words */
+:where(:root[data-feel]) .links-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+}
+:where(:root[data-feel]) .links-empty > .lede { margin: 0; }
+:where(:root[data-feel]) .links-empty-pair {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-soft);
+}
+:where(:root[data-feel]) .links-empty-gap {
+  inline-size: var(--space-6);
+  border-block-start: var(--separator) dashed var(--edge-decorative);
+}
+/* The map settles once when it is opened: the songs arrive and the connections draw. Pointing at a
+   song lights its neighbours (data-near) as well as its connections (data-lit). */
+:where(:root[data-feel~='motion']) .relationship-map[open] svg [data-song] {
+  animation: feel-arrive var(--motion-spring-snappy) var(--spring-gentle) both;
+}
+:where(:root[data-feel~='motion']) .relationship-map[open] svg line[pathLength] {
+  stroke-dasharray: 1;
+  animation: feel-draw var(--motion-slow) var(--motion-ease) both;
+}
+:where(:root[data-feel]) .relationship-map svg [data-near] { color: var(--motif); }
+
+@media (forced-colors: active) {
+  :where(:root[data-feel]) .link-card .phrase { text-shadow: none; }
+}

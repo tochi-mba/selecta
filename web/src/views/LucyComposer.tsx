@@ -150,7 +150,9 @@ export function Composer({ value, onChange, onSend, onStop, running, sending, bl
         <span id={hintId} className="hint">{blocked || (running ? RUNNING_WORDS() : 'Enter sends · Shift+Enter for a new line')}</span>
         <div className="row">
           {voice && <VoiceButton onWords={(words) => onChange(latest.current.trim() ? `${latest.current.trimEnd()} ${words}` : words)} />}
-          {running && <Action type="button" working="Stopping…" run={onStop}><Icon name="stop" /> Stop</Action>}
+          {/* Stop springs in beside Send when real work starts; Send stays, because a new message
+              can replace the running one, so the two never become one button */}
+          {running && <Action type="button" className="feel-pop" working="Stopping…" run={onStop}><Icon name="stop" /> Stop</Action>}
           <button type="submit" className="primary" disabled={!canSend} aria-busy={sending || undefined}>{sending ? 'Sending…' : 'Send'}</button>
         </div>
       </div>

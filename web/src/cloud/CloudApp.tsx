@@ -8,7 +8,6 @@ import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
 import { START_ANSWER_EVENT, START_ASK_EVENT } from '../devices/playOn';
 import { CURRENT_MIX_EVENT } from './currentMix';
 import { DEFAULT_SPEAKER_EVENT, HOLDINGS_EVENT } from '../devices/useHoldings';
-import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
 import { ROOM_EVENT } from '../rooms/useRoomSession';
@@ -18,6 +17,8 @@ import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
 import { SettingsLayout, settingsPlaces } from './AccountLayout';
 import { AccountPage, AccountStrip } from './AccountPage';
+import { CatalogLookups } from './CatalogLookups';
+import { OverviewHeroArt, RailNav } from './CloudRailFeel';
 export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, statusWords, Page, pageShown, planName } from './api';
@@ -724,6 +725,7 @@ export function CloudApp() {
       <AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} withAudio={holdsHostedStorage(account)} />,
       localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />,
       localFirst && flagOn('cloud.local_media') && !flagOn('cloud.workspace') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />,
+      flagOn('library.art_lookup') && <CatalogLookups request={workspaceRequest} />,
       showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />,
     ]}
     advanced={[
@@ -810,11 +812,11 @@ export function CloudApp() {
     <div className="cloud-shell" data-stream={stream}>
       <aside className="cloud-rail">
         <button className="cloud-brand" title="Return to Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ{' '}<span className="cloud-brand-sub">REX Technologies</span></span></button>
-        <nav aria-label="Cloud workspace">
+        <RailNav>
           {(Object.keys(LABELS) as Page[]).filter((target) => pageShown(account, target)).map((target) => (
             <button key={target} aria-current={view === target ? 'page' : undefined} onClick={() => choosePage(target)}>{LABELS[target]}</button>
           ))}
-        </nav>
+        </RailNav>
         <div className="cloud-rail-bottom">{businessEntry}{showsAdmin(account) && <button onClick={openAdmin}>Staff console</button>}<span>{user.email}</span>{exact && <button onClick={signOutHere}>Sign out</button>}
           <Action run={signOutEverywhere} disabled={busy('everywhere')}>Sign out everywhere</Action>
           <button className="cloud-delete-account" onClick={() => setConfirmingDelete(true)} disabled={busy('delete')}>Delete account</button></div>
@@ -863,8 +865,8 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
 function Overview({ account, go }: { account: Account; go: (page: Page) => void }) {
   const uploads = flagOn('cloud.uploads');
   return <>
-    {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow cloud-caps">Made for your next set</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><Icon name="music" size="hero" /><i /><b /><em /></div></section>}
-    <div className="cloud-cards"><StorageMeter account={account} /><section className="cloud-card"><p className="cloud-eyebrow cloud-caps">Current plan</p><h2>{planName(account)}</h2><p>{holdsHostedStorage(account) ? 'Storage and processing limits are managed with your plan.' : 'Your plan sets what SelectaDJ does for you.'}</p><button onClick={() => go('billing')}>Manage plan</button></section>{uploads && <section className="cloud-card"><p className="cloud-eyebrow cloud-caps">Your music</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section>}</div>
+    {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow cloud-caps">Made for your next set</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><OverviewHeroArt /></section>}
+    <div className="cloud-cards" data-stagger="auto"><StorageMeter account={account} /><section className="cloud-card" data-lift="" data-glow=""><p className="cloud-eyebrow cloud-caps">Current plan</p><h2>{planName(account)}</h2><p>{holdsHostedStorage(account) ? 'Storage and processing limits are managed with your plan.' : 'Your plan sets what SelectaDJ does for you.'}</p><button onClick={() => go('billing')}>Manage plan</button></section>{uploads && <section className="cloud-card" data-lift="" data-glow=""><p className="cloud-eyebrow cloud-caps">Your music</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section>}</div>
     <RoomsCard account={account} go={go} />
   </>;
 }

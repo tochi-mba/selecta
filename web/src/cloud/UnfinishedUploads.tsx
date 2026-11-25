@@ -48,13 +48,13 @@ export function UnfinishedUploads({ api, workspaceId, sessions, onChanged }: {
   };
   if (!sessions.length) return null;
   return (
-    <section className="cloud-unfinished" aria-label="Unfinished uploads">
+    <section className="cloud-unfinished" aria-label="Unfinished uploads" data-arrive="">
       <h3>Unfinished uploads</h3>
       {ours.length > 0 && (
         <>
           <p role="status">{`SelectaDJ couldn’t store ${ours.length === 1 ? 'this file' : 'these files'}. That was on our side, and nothing was lost. SelectaDJ checks again by itself and tells you when you can finish.`}</p>
           <ul>{ours.map((session) => (
-            <li key={session.id}><Truncate text={session.name} /><Action className="quiet" run={() => remove(session.id)} working="Removing…">Remove</Action></li>
+            <li key={session.id} data-lift="row"><Truncate text={session.name} /><Action className="quiet" run={() => remove(session.id)} working="Removing…">Remove</Action></li>
           ))}</ul>
         </>
       )}
@@ -62,7 +62,7 @@ export function UnfinishedUploads({ api, workspaceId, sessions, onChanged }: {
         <>
           <p>{ready.size > 0 ? 'Storage is working again. Choose the same file again to finish it.' : 'Choose the same file again and SelectaDJ carries on from where it stopped.'}</p>
           <ul>{carryOn.map((session) => (
-            <li key={session.id}><Truncate text={session.name} /><small>{countOf(session.part_count, 'part')}</small><Action className="quiet" run={() => remove(session.id)} working="Removing…">Remove</Action></li>
+            <li key={session.id} data-lift="row"><Truncate text={session.name} /><small>{countOf(session.part_count, 'part')}</small><Action className="quiet" run={() => remove(session.id)} working="Removing…">Remove</Action></li>
           ))}</ul>
         </>
       )}

@@ -41,7 +41,7 @@ function FactRow({ fact, onChanged }: { fact: MemoryFact; onChanged: () => Promi
   const where = sourceWords(fact.source);
   const sure = sureWords(fact.confidence);
   return (
-    <li className="lucy-fact">
+    <li className="lucy-fact" data-lift="row">
       {editing === null ? (
         <>
           <p><b dir="auto">{fact.label || humanize(fact.subject)}</b>: <span dir="auto">{valueWords(fact.value)}</span></p>
@@ -162,7 +162,7 @@ export function LucyMemory({ onStatus }: { onStatus: (status: LucyStatus) => voi
               </button>
             )))}
           </div>
-          {done && <p className="hint" role="status">{done}</p>}
+          {done && <p className="hint feel-pop" role="status">{done}</p>}
           {problem && <p className="warn" role="alert">{problem}</p>}
 
           <div className="lucy-memory-group">

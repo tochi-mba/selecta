@@ -8,6 +8,7 @@
 - **Owner:** Unassigned.
 - **Related earlier ADRs:** ADR-0137, ADR-0138, ADR-0159, ADR-0163; earlier status unchanged.
 - **Existing source touchpoints:** web/src/styles/tokens.css; web/src/styles/polish.css; web/src/ui/controls.tsx; web/src/ui/toasts.tsx.
+- **Superseded in part by:** [ADR-0477](adr-0477-feel-system.md) (Proposed): the moving-target rule becomes "hovering never moves a control, and a press never shrinks its hit area".
 
 ## Context and evidence boundary
 

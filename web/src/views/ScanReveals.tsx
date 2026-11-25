@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { type Link, type LinkList } from '../api';
 import { useApi } from '../requestContext';
 import { flagOn } from '../flags';
@@ -7,7 +7,10 @@ import { flagOn } from '../flags';
  * library has really found: word connections the server returned from the lyrics it has read. Nothing
  * is invented or guessed. Before the server has returned one, when it returns none, or when it can't
  * be asked, this shows nothing at all, so a reveal is always a real pair of songs with a real shared
- * phrase. It asks again only when the ready or lyric counts the server reports change. */
+ * phrase. It asks again only when the ready or lyric counts the server reports change.
+ *
+ * ADR-0477: each pair arrives one after another (data-stagger, inert while motion is off) and the
+ * shared phrase is lit like the current lyric word (feel-local.css, only with the feel on). */
 
 const SHOWN = 3;
 const keyOf = (link: Link) => `${link.a}>${link.b}:${link.phrase}`;
@@ -39,10 +42,10 @@ export function ScanReveals({ ready, lyrics }: { ready: number; lyrics: number |
   return (
     <section className="scan-reveals" aria-labelledby="scan-reveals-title" data-scan-reveals="">
       <h2 id="scan-reveals-title" className="eyebrow">Found in your library so far</h2>
-      <ul className="hint" aria-live="polite">
-        {found.map((link) => (
-          <li key={keyOf(link)} data-link={keyOf(link)}>
-            <span dir="auto">{link.title_a}</span> can hand off into <span dir="auto">{link.title_b}</span> on “<span dir="auto">{link.phrase}</span>”.
+      <ul className="hint" aria-live="polite" data-stagger="">
+        {found.map((link, index) => (
+          <li key={keyOf(link)} data-link={keyOf(link)} style={{ '--i': index } as CSSProperties}>
+            <span dir="auto">{link.title_a}</span> can hand off into <span dir="auto">{link.title_b}</span> on “<span dir="auto" className="scan-reveal-word">{link.phrase}</span>”.
           </li>
         ))}
       </ul>

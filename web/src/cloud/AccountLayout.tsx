@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { navigate } from '../router';
 import { Icon, IconName } from '../ui/Icon';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
 import './account.css';
 
 // The settings area's frame: a list of sections down the left on a wide window (a scrolling row of
@@ -88,6 +89,8 @@ export function SettingsLayout({ current, places, children }: {
   // never cut off at the row's edge. Only the row scrolls; the page stays where it is.
   const active = onAccount ? inView : current;
   const row = useRef<HTMLElement>(null);
+  // the block behind the current section travels to the next one instead of jumping (feel motion)
+  useSlidingIndicator(row, '[aria-current]');
   useEffect(() => {
     const list = row.current;
     const pill = list?.querySelector<HTMLElement>('[aria-current]');
@@ -108,7 +111,9 @@ export function SettingsLayout({ current, places, children }: {
   };
   return (
     <div className="acct acct-layout">
-      <nav className="acct-nav" aria-label="Settings sections" ref={row}>
+      <nav className="acct-nav" aria-label="Settings sections" ref={row} data-indicator-shape="fill">
+        {/* first, so the moving block is painted under the section names, not over them */}
+        <span className={INDICATOR_CLASS} aria-hidden="true" />
         {places.filter((place) => !onAccount || !empty.includes(place.id)).map((place) => (
           <a
             key={place.id}
@@ -132,7 +137,9 @@ const Level = createContext<2 | 3>(2);
 /** A named run of cards on the Account page ("Data & privacy"), which the section list scrolls to. */
 export function SettingsGroup({ id, title, about, tone, children }: { id: string; title: string; about?: string; tone?: 'danger'; children: ReactNode }) {
   return (
-    <section className="acct-group" id={id} data-tone={tone} aria-labelledby={`${id}-title`}>
+    // the group's cards arrive one after another; feel-account.css numbers them, since the cards are
+    // passed in as children and carry no index of their own
+    <section className="acct-group" id={id} data-tone={tone} aria-labelledby={`${id}-title`} data-stagger="auto">
       <div className="acct-group-head">
         <h2 className="acct-group-title" id={`${id}-title`} tabIndex={-1} data-settings-title>{title}</h2>
         {about && <p className="acct-group-about">{about}</p>}

@@ -35,6 +35,7 @@ export function VolumeLimitSlider({ label, value, cap, onChange, disabled }: {
           valueText={volumeValueText(shown, top)}
           disabled={Boolean(disabled)}
           title={disabled ?? undefined}
+          // the shared Slider already ticks once per step on a phone (ADR-0477), at most every 40ms
           onChange={(event) => onChange(clampLevel(Number(event.currentTarget.value), top))}
         />
         <span className="biz-volume-beyond" aria-hidden="true" />

@@ -12,8 +12,11 @@ const fs = node.getBuiltinModule('node:fs') as Fs;
 const SOURCE = `${node.cwd()}/src/`;
 const doc = fs.readFileSync(`${SOURCE}../../docs/engineering/motion-inventory.md`, 'utf8');
 const tokens = fs.readFileSync(`${SOURCE}styles/tokens.css`, 'utf8');
-// The Cloud, Rooms and Devices sheets are under the same rule (ADR-0462 BF-0462-07).
-const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css') && name !== 'tokens.css').map((name) => `styles/${name}`), 'cloud/cloud.css', 'rooms/rooms.css', 'devices/devices.css'];
+// The Cloud, Rooms and Devices sheets are under the same rule (ADR-0462 BF-0462-07), and so is every
+// sheet that carries feel rules (ADR-0477): styles/feel*.css, and the feature sheets that scope their own
+// feel rules to <html data-feel>.
+const FEEL_FEATURE_SHEETS = ['admin/admin.css', 'business/business.css', 'business/staff/staff.css', 'venueops/staffDashboard.css'];
+const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css') && name !== 'tokens.css').map((name) => `styles/${name}`), 'cloud/cloud.css', 'rooms/rooms.css', 'devices/devices.css', ...FEEL_FEATURE_SHEETS];
 const sheets = FILES.map((file) => ({ file, text: fs.readFileSync(`${SOURCE}${file}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '') }));
 
 /** Raw durations kept on purpose, each named in the inventory. */
@@ -27,6 +30,16 @@ const EXCEPTIONS = new Map([
 ]);
 
 const TOKENS = { feedback: 80, fast: 120, reveal: 160, handoff: 200, overlay: 220, slow: 240 } as const;
+/** The spatial family (ADR-0477): spring durations, the stagger step and the press squash. */
+const SPATIAL = { 'spring-snappy': 320, 'spring-release': 420, 'spring-glide': 360, stagger: 30 } as const;
+
+/** The declarations of the first rule whose selector list starts with `head`, inside `within`. */
+function block(within: string, head: string): string {
+  const start = within.indexOf(head);
+  expect(start, head).toBeGreaterThanOrEqual(0);
+  const open = within.indexOf('{', start);
+  return within.slice(open + 1, within.indexOf('}', open));
+}
 
 type Use = { file: string; selector: string; declaration: string };
 
@@ -56,6 +69,26 @@ describe('motion tokens', () => {
     for (const name of Object.keys(TOKENS)) expect(tokens.match(new RegExp(`--motion-${name}:\\s*0ms;`, 'g'))?.length ?? 0).toBeGreaterThanOrEqual(2);
   });
 
+  it('ADR-0477 the spatial tokens keep their values and purposes, and Still and reduced motion take them to 0ms', () => {
+    const base = tokens.split(/\n\}/)[0];
+    for (const [name, ms] of Object.entries(SPATIAL)) {
+      expect(base, `--motion-${name}`).toMatch(new RegExp(`--motion-${name}:\\s*${ms}ms;`));
+      const row = doc.split('\n').find((line) => line.startsWith(`| \`--motion-${name}\``));
+      expect(row, `--motion-${name} purpose row`).toBeTruthy();
+      expect(row!.split('|')[3].trim().length, `--motion-${name} has a purpose`).toBeGreaterThan(20);
+    }
+    expect(base, '--press-scale').toMatch(/--press-scale:\s*0\.96;/);
+    for (const name of ['spring-gentle', 'spring-snappy', 'spring-bouncy', 'press-scale']) {
+      expect(doc, `--${name} is in the inventory`).toContain(`\`--${name}\``);
+    }
+    const still = block(tokens, ":root[data-motion='still'],");
+    const reduced = block(tokens.slice(tokens.indexOf('@media (prefers-reduced-motion: reduce)')), ':root, :root[data-motion]');
+    for (const [label, rules] of [['Still', still], ['reduced motion', reduced]] as const) {
+      for (const name of Object.keys(SPATIAL)) expect(rules, `--motion-${name} under ${label}`).toMatch(new RegExp(`--motion-${name}:\\s*0ms;`));
+      expect(rules, `--press-scale under ${label}`).toMatch(/--press-scale:\s*1;/);
+    }
+  });
+
   it('MP-0296-02 every stylesheet duration is a motion token or a listed exception', () => {
     const offenders: string[] = [];
     let tokened = 0;
@@ -77,6 +110,6 @@ describe('motion tokens', () => {
     expect(names.length).toBeGreaterThan(5);
     for (const name of names) expect(doc, `@keyframes ${name}`).toContain(`\`${name}\``);
     for (const [name, value] of EXCEPTIONS) expect(doc, `exception ${name}`).toContain(value);
-    for (const surface of ['Buttons', 'Dialog', 'cards', 'Skeleton', 'Drag', 'Spectrum', 'Lyric']) expect(doc, surface).toContain(surface);
+    for (const surface of ['Buttons', 'Dialog', 'cards', 'Skeleton', 'Drag', 'Spectrum', 'Lyric', 'Page transitions', 'Beat', 'Ambient']) expect(doc, surface).toContain(surface);
   });
 });

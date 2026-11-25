@@ -1,4 +1,5 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
+import { feelOn } from '../feel/root';
 import { accountFlagOn } from '../flags';
 import { Action } from '../ui/controls';
 import type { Account } from './api';
@@ -10,6 +11,9 @@ import { SettingsCard } from './AccountLayout';
 
 export const STARTING_NAME = 'Personal';
 const SEEN = 'selecta.workspaceNameOffered';
+/** With the feel system's motion on, how long the offer stays after a rename, so the Rename
+ * button's drawn tick (ui/controls.tsx, about 900ms) is seen before the card goes. */
+const SAVED_MS = 900;
 
 function offered(): boolean {
   try { return localStorage.getItem(SEEN) === '1'; } catch { return false; }
@@ -26,18 +30,26 @@ export function WorkspaceNameOffer({ account, rename }: {
   const [gone, setGone] = useState(offered);
   const [name, setName] = useState('');
   const [problem, setProblem] = useState('');
+  const leaving = useRef(0);
+  useEffect(() => () => window.clearTimeout(leaving.current), []);
   if (gone || account.workspace.name !== STARTING_NAME || account.workspace.role !== 'owner'
     || !accountFlagOn('account.workspace_name', account.features)) return null;
   const close = () => { remember(); setGone(true); };
   const save = async (event?: FormEvent) => {
     event?.preventDefault();
     const wanted = name.trim();
-    if (!wanted) { setProblem('Type a name first.'); return; }
+    if (!wanted) { setProblem('Type a name first.'); return false; }
     try {
       await rename(wanted);
-      close();
+      // the rename really saved: with motion on the tick is drawn first, then the card goes
+      if (feelOn('motion')) {
+        remember();
+        window.clearTimeout(leaving.current);
+        leaving.current = window.setTimeout(() => setGone(true), SAVED_MS);
+      } else close();
     } catch (error) {
       setProblem((error as Error).message || 'That did not save. Try again.');
+      return false; // reported here: the Rename button draws no tick
     }
   };
   return (

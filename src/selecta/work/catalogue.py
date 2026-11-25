@@ -46,6 +46,7 @@ CATALOGUE = MappingProxyType(
             JobType("play.proxy", CPU_LIGHT, Lane.STANDARD, "core.playback", 180.0, 6.0),
             JobType("analyse.song", CPU_HEAVY, Lane.STANDARD, "cloud.hosted_media", 1_200.0, 40.0),
             JobType("lyrics.fetch", CPU_LIGHT, Lane.STANDARD, "lyrics.lookup", 60.0, 1.0),
+            JobType("catalog.lookup", CPU_LIGHT, Lane.STANDARD, "library.art_lookup", 120.0, 4.0),
             JobType("lyrics.align", CPU_HEAVY, Lane.STANDARD, "lyrics.word_timing", 300.0, 25.0),
             JobType("stems.window", GPU, Lane.STANDARD, "stems", 600.0, 5.0),
             JobType("seam.render", CPU_HEAVY, Lane.STANDARD, "cloud.hosted_media", 600.0, 40.0),

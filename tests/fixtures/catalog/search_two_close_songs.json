@@ -1,0 +1,28 @@
+{
+  "count": 2,
+  "offset": 0,
+  "recordings": [
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000011",
+      "score": 100,
+      "title": "Lanterns",
+      "length": 200000,
+      "artist-credit": [{"name": "Night Harbour", "joinphrase": "", "artist": {"id": "eeeeeeee-0000-4000-8000-000000000001", "name": "Night Harbour"}}],
+      "releases": [
+        {"id": "bbbbbbbb-0000-4000-8000-000000000011", "title": "Lanterns", "status": "Official", "date": "2022-01-01",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000011", "primary-type": "Single", "secondary-types": []}}
+      ]
+    },
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000012",
+      "score": 97,
+      "title": "Lantern",
+      "length": 201000,
+      "artist-credit": [{"name": "Night Harbour", "joinphrase": "", "artist": {"id": "eeeeeeee-0000-4000-8000-000000000001", "name": "Night Harbour"}}],
+      "releases": [
+        {"id": "bbbbbbbb-0000-4000-8000-000000000012", "title": "Lantern", "status": "Official", "date": "2023-01-01",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000012", "primary-type": "Single", "secondary-types": []}}
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { lazyPage as lazy } from '../ui/staleBuild';
 import type { MixData, Request, Status } from '../api';
 import { accountFlagOn, setFlags, useFlags } from '../flags';
 import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
+import { useArtIndex } from './artIndex';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -88,7 +89,6 @@ import { HostedMix } from './hosted/HostedMix';
  * (localFirstPlayer.ts). CloudApp mounts this only when the account has the local-first experience
  * and `cloud.local_first` is on; otherwise the hosted pages render exactly as before.
  */
-
 /** Shell features served by this computer's own server and not by the browser runtime yet. The
  * shell reads them through the one flag read, so their buttons are gone rather than dead. The
  * command palette and the keyboard shortcuts stay: this shell offers their server-free subset
@@ -118,7 +118,6 @@ export const NOT_IN_THE_BROWSER = {
   'mixes.shaping.energy_arc': false,
   'mixes.shaping.stem_moves': false,
 } as const;
-
 /** What this shell turns off, with Harmonic matches off too unless the browser's own version
  * (cloud.browser_harmonic) is on for the account. */
 function browserFlags(browserHarmonic: boolean, lucyHere = false): Record<string, boolean> {
@@ -169,6 +168,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     if (store.current?.workspaceId !== workspaceId) store.current = { workspaceId, opened: MediaStore.open(workspaceId) };
     return store.current.opened;
   }, [workspaceId]);
+  useArtIndex(openStore);
   const resolving = useRef<Promise<MediaResolver> | null>(null);
   // Device first, hosted fallback (ADR-0465): only a grandfathered account with stored media
   // readable gets the hosted path; every answer lands in the source book the queue shows.
@@ -816,7 +816,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
-    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false, waveformOf,
+    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: true, waveformOf,
     startedAMix: (savedMixes ?? 0) > 0,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
     playOn: playsOn,
@@ -960,7 +960,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         showPlayer={route.page !== 'listen' && (remote ? remote.now.phase !== 'idle' : !!song && now.phase !== 'idle')}
         hasMix={data.mix.length > 0}
         hasNext={remote ? remote.hasNext : data.mix.length > now.position + 1}
-        stage={false}
+        stage={false} next={remote ? undefined : data.mix[now.position + 1]}
         waitingRequests={on('requests') ? waitingCount(roomShown, songRequests.requests) : 0}
         onRequests={() => setRequesting(true)}
         onHelp={controls.onHelp}

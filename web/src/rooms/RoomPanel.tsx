@@ -17,6 +17,8 @@ import { RoomStart } from './RoomStart';
 import { noteRoom, ROOM_EVENT, useRoomLive, type RoomAsk, type RoomControl } from './useRoomSession';
 import './rooms.css';
 import { useNeedsConnection } from '../cloud/connection';
+import { NumberRoll } from '../feel/numberRoll';
+import { useFeelPart } from './feelHooks';
 import { ROOM_REQUEST_EVENT } from '../cloud/localFirstRequests';
 import '../cloud/connection.css';
 
@@ -53,6 +55,8 @@ type Panel = {
 const POLL_MS = 3000;
 const ANNOUNCE_EVERY_MS = 10_000;
 const SAID_MS = 2500;
+/** How recently a guest joined, in seconds, for their mark to pop in as they appear. */
+const JUST_JOINED_S = 15;
 
 export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn = true, playHereOn = true, freshOnly = false, origin = window.location.origin }: {
   api: Api; workspaceId: string; locked?: string; votesOn?: boolean; displayOn?: boolean; playHereOn?: boolean; origin?: string;
@@ -67,6 +71,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const [pairing, setPairing] = useState('');
   const [saved, setSaved] = useState<SettingsGroup | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
+  // ADR-0477: the room was opened from this page, so its code arrives as a moment and its status pings once
+  const [justOpened, setJustOpened] = useState(false);
+  const moving = useFeelPart('motion');
+  const moments = useFeelPart('moments');
   const savedTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(savedTimer.current), []);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
@@ -161,7 +169,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
 
   if (!panel) {
     if (loadError) return <section className="room-panel" aria-labelledby="room-title"><h2 id="room-title" className="visually-hidden">Room</h2><Problem retry={load}>Couldn’t load your room. {loadError}</Problem></section>;
-    return <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`)} />;
+    return <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`).then((ok) => { if (ok) setJustOpened(true); return ok; })} />;
   }
 
   const room = panel.room;
@@ -201,9 +209,11 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     confirmLabel: 'Close room',
     run: () => act(`${base}/end`, { method: 'POST' }, `${room.name} is closed.`),
   });
+  // a guest who joined in the last few seconds (by the server's clock) pops in; nobody else moves
+  const joinedNow = (guest: Guest) => moving && guest.joined_at !== undefined && now - guest.joined_at < JUST_JOINED_S;
   const guestRow = (guest: Guest) => (
     <li key={guest.id} data-testid="room-guest" data-presence={guest.online ? 'here' : 'away'}>
-      <span className="ask-face room-face" aria-hidden="true">{guest.nickname.trim()[0]?.toUpperCase() ?? '?'}</span>
+      <span className={joinedNow(guest) ? 'ask-face room-face feel-pop' : 'ask-face room-face'} aria-hidden="true">{guest.nickname.trim()[0]?.toUpperCase() ?? '?'}</span>
       <span className="room-who"><b>{guest.nickname}</b>
         <span className={guest.online ? 'room-presence room-here' : 'room-presence room-muted'} data-testid="room-guest-presence">{guest.status === 'pending' ? 'Waiting to be let in · ' : ''}{guestPresence(guest, now)}</span></span>
       {guest.status === 'pending' && <Action type="button" className="primary" run={() => act(`${base}/guests/${guest.id}/approve`, { method: 'POST' }, `${guest.nickname} is in.`)} aria-label={`Let ${guest.nickname} in`}>Let in</Action>}
@@ -255,8 +265,8 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         <div className="room-head-main">
           <h2 id="room-title">{room.name}</h2>
           <p className="room-facts">
-            <span data-testid="room-status" className={`room-pill ${isLocked ? 'is-locked' : 'is-open'}`}><Status kind={isLocked ? 'paused' : 'ready'}>{isLocked ? 'Locked' : 'Open'}</Status></span>
-            <span><Icon name="users" size="compact" /> {countOf(groups.here.length, 'guest')} here</span>
+            <span data-testid="room-status" className={`room-pill ${isLocked ? 'is-locked' : 'is-open'}`} data-ping={justOpened && moments && !isLocked ? '' : undefined}><Status kind={isLocked ? 'paused' : 'ready'}>{isLocked ? 'Locked' : 'Open'}</Status></span>
+            <span><Icon name="users" size="compact" /> {moving ? <NumberRoll value={groups.here.length} format={(count) => countOf(count, 'guest')} /> : countOf(groups.here.length, 'guest')} here</span>
             <span><Icon name="music" size="compact" /> {music}</span>
           </p>
         </div>
@@ -277,7 +287,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
 
       <div className="room-grid">
         <div className="room-side">
-          <RoomShare name={room.name} code={panel.code} link={link} copied={copied} copy={copy} onFullScreen={() => setQrOpen(true)} />
+          <RoomShare name={room.name} code={panel.code} link={link} copied={copied} copy={copy} onFullScreen={() => setQrOpen(true)} arriving={justOpened} />
           <section className="room-card room-guests" aria-labelledby="guests-title">
             <header className="room-card-head">
               <h3 id="guests-title" data-testid="room-guests-heading">Guests</h3>

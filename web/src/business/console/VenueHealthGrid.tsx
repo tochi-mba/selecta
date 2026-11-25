@@ -4,9 +4,11 @@
 
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { moveInGrid } from '../../ui/primitives';
+import { RollingCount } from '../../views/feelPieces';
 import { CONSOLE_COPY } from '../copy/console';
 import type { Venue } from '../types';
 import { arrangeVenues, DEFAULT_OPTIONS, GridOptions, regionsOf, tagsOf } from './consoleLogic';
+import { useLiveFlash } from '../feelBits';
 import { GridFilters } from './GridFilters';
 import { useNowPlayingAnnouncements } from './useNowPlaying';
 import { NeedsYouMark, ZoneCellBody } from './ZoneCell';
@@ -46,6 +48,10 @@ export function VenueHealthGrid({ venues, now, offline = false, updatedAt = null
   const [viewport, setViewport] = useState(FALLBACK_VIEWPORT);
   const scroller = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // A venue that arrives while the console is open glows once (ADR-0477, calm profile). Keyed on
+  // every venue, not the filtered rows, so a filter or a scroll bringing a row back never counts.
+  useLiveFlash(bodyRef, venues.map((venue) => venue.id));
   const rowHeight = wall ? WALL_ROW_HEIGHT : ROW_HEIGHT;
 
   const rows = useMemo(() => arrangeVenues(venues, options, now), [venues, options, now]);
@@ -118,7 +124,7 @@ export function VenueHealthGrid({ venues, now, offline = false, updatedAt = null
   return <section className="hq-grid-section" aria-labelledby="hq-grid-title" data-wall={wall || undefined}>
     <div className="hq-grid-head">
       <h2 id="hq-grid-title">{CONSOLE_COPY.venuesHeading}</h2>
-      <p className="biz-quiet" aria-live="polite">{CONSOLE_COPY.shownCount(rows.length, venues.length)}</p>
+      <p className="biz-quiet" aria-live="polite"><RollingCount value={rows.length} format={(shownRows) => CONSOLE_COPY.shownCount(shownRows, venues.length)} /></p>
       <button type="button" className="hq-pause" aria-pressed={paused} onClick={() => setPaused(!paused)}>{CONSOLE_COPY.pauseAnnouncements}</button>
     </div>
     {!wall && <GridFilters options={options} onChange={(next) => { setOptions(next); setActive({ row: 0, column: active.column }); setScrollTop(0); if (scroller.current) scroller.current.scrollTop = 0; }} regions={regions} tags={tags} />}
@@ -131,7 +137,7 @@ export function VenueHealthGrid({ venues, now, offline = false, updatedAt = null
               {headers.map((name, index) => <div role="columnheader" aria-colindex={index + 2} key={index}>{name}</div>)}
             </div>
           </div>
-          <div role="rowgroup" className="hq-grid-body" style={{ height: rows.length * rowHeight }}>
+          <div ref={bodyRef} role="rowgroup" className="hq-grid-body" style={{ height: rows.length * rowHeight }}>
             {shown.map((venue, offset) => {
               const row = start + offset;
               const cellProps = (column: number) => ({
@@ -140,7 +146,7 @@ export function VenueHealthGrid({ venues, now, offline = false, updatedAt = null
                 tabIndex: row === tabRow && column === active.column ? 0 : -1,
                 onFocus: () => { if (activeRow !== row || active.column !== column) setActive({ row, column }); },
               });
-              return <div role="row" aria-rowindex={row + 2} key={venue.id} className="hq-grid-row" data-venue={venue.id} style={{ ...template, top: row * rowHeight, height: rowHeight }}>
+              return <div role="row" aria-rowindex={row + 2} key={venue.id} className="hq-grid-row" data-venue={venue.id} data-live-key={venue.id} data-lift="row" style={{ ...template, top: row * rowHeight, height: rowHeight }}>
                 <div role="rowheader" {...cellProps(0)} className="hq-grid-venue" onClick={() => onOpenVenue?.(venue.id)}>
                   <span className="hq-venue-name biz-clamp" title={venue.name}>{venue.name}</span>
                   {venue.region && <span className="biz-quiet">{venue.region}</span>}

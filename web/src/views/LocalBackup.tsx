@@ -65,6 +65,7 @@ export function LocalBackup() {
       setNotice('Backup downloaded. Keep it somewhere safe. It contains your song paths and preferences, but not your audio.');
     } catch (error) {
       setIssue((error as Error).message);
+      return false; // reported here, so the button draws no tick
     } finally { setWorking(false); }
   };
 
@@ -81,7 +82,7 @@ export function LocalBackup() {
         method: 'POST', headers: { 'content-type': 'application/zip' }, body: chosen,
       });
       setPreview(await response.json() as Preview);
-    } catch (error) { setIssue((error as Error).message); }
+    } catch (error) { setIssue((error as Error).message); return false; }
     finally { setWorking(false); }
   };
 
@@ -100,6 +101,7 @@ export function LocalBackup() {
     } catch (error) {
       setIssue((error as Error).message);
       setPreview(null); // stale archive or edited file must be checked again
+      return false;
     } finally { setWorking(false); }
   };
 

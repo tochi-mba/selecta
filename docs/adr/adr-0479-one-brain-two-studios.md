@@ -1,4 +1,4 @@
-# ADR-0477 - One brain, two studios: the same DJ on Desktop, in the cloud library and on the device
+# ADR-0479 - One brain, two studios: the same DJ on Desktop, in the cloud library and on the device
 
 - **Decision:** Proposed. The plan this records was approved by the owner on 2026-11-25, with the four decisions listed below made in that conversation. The wording of this ADR, which changes promises earlier Accepted ADRs made, still needs the owner's read.
 - **Implementation:** Started on branch `feat/one-brain` (cut from `main` at `f5b6a4ab`). See "What is built" at the end.

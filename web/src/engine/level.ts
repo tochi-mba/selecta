@@ -1,6 +1,6 @@
 import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
 
-/** The level each song plays at in a browser mix (cloud.seam_lead, ADR-0477 phase 1).
+/** The level each song plays at in a browser mix (cloud.seam_lead, ADR-0479 phase 1).
  *
  * Local mode plays every song at one loudness: `SongInfo.gain_db` is
  * `min(-14 LUFS - the song's loudness, -1 dB - its peak)` (src/selecta/analysis/song.py), so a

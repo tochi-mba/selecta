@@ -40,22 +40,57 @@ def _message(
 # The brand kit's colours (web/public/brand/BRAND.md). Emails use the Light palette, which every
 # mail client renders, and say `color-scheme: light dark` so a client in dark mode may adapt it;
 # the button keeps its dark ink on the lime and its dark edge either way.
-_PAGE, _CARD, _INK, _SOFT, _LIME, _LIME_INK, _EDGE = (
-    "#f5f2e9", "#fffdf6", "#16140e", "#6a6555", "#e8ff3a", "#14140a", "#16140e"
+_PAGE, _CARD, _INK, _SOFT, _LIME, _LIME_INK, _EDGE, _LINE = (
+    "#f5f2e9", "#fffdf6", "#16140e", "#6a6555", "#e8ff3a", "#14140a", "#16140e", "#d5cfbd"
+)
+# The Dark palette (the same one the Cloudflare error pages use). Neither palette is pure white or
+# pure black, so a client that inverts or darkens colours by itself never lands on a harsh extreme.
+_DARK_PAGE, _DARK_CARD, _DARK_INK, _DARK_SOFT, _DARK_LINE = (
+    "#100f0c", "#1a1814", "#f4f0e4", "#a8a292", "#3a362c"
 )
 _FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+
+# Clients that honour a style sheet and the reader's dark mode (Apple Mail, iOS, Outlook.com via
+# data-ogsc) get the Dark palette; everyone else keeps the inline Light one. The button is left out
+# on purpose: lime with dark ink reads on both, and a client must not flip its ink to light.
+_DARK_STYLE = (
+    "<style>"
+    "@media (prefers-color-scheme: dark){"
+    f".sdj-page{{background:{_DARK_PAGE}!important}}"
+    f".sdj-card{{background:{_DARK_CARD}!important;border-color:{_DARK_LINE}!important}}"
+    f".sdj-ink{{color:{_DARK_INK}!important}}"
+    f".sdj-soft{{color:{_DARK_SOFT}!important}}"
+    "}"
+    f"[data-ogsc] .sdj-ink{{color:{_DARK_INK}!important}}"
+    f"[data-ogsc] .sdj-soft{{color:{_DARK_SOFT}!important}}"
+    "</style>"
+)
+
+
+def _header_mark(origin: str) -> str:
+    """The brand mark at the head of every email. With the site's address it is the kit's PNG;
+    without one it is the same lime disc with a dark "S" drawn in HTML, so no email goes without
+    it and nothing is fetched from an address that may not be ours."""
+    if origin:
+        return (
+            f'<img src="{escape(origin, quote=True)}/brand/png/email-logo-96.png" width="32" '
+            'height="32" alt="" style="vertical-align:middle;border:0;margin-right:10px">'
+        )
+    return (
+        f'<span aria-hidden="true" style="display:inline-block;width:32px;height:32px;'
+        f"margin-right:10px;border:1px solid {_EDGE};border-radius:16px;background:{_LIME};"
+        f"color:{_LIME_INK};font:900 18px/32px {_FONT};text-align:center;"
+        'vertical-align:middle">S</span>'
+    )
 
 
 def _branded_html(subject: str, lines: list[str], label: str, url: str) -> str:
     """One email page in the brand: the mark and name, the words, one button, the footer."""
     origin = "/".join(url.split("/")[:3]) if url.startswith("https://") else ""
-    mark = (
-        f'<img src="{escape(origin, quote=True)}/brand/png/email-logo-96.png" width="32" '
-        'height="32" alt="" style="vertical-align:middle;border:0;margin-right:10px">'
-        if origin else ""
-    )
+    mark = _header_mark(origin)
     paragraphs = "".join(
-        f'<p style="margin:0 0 16px;color:{_INK};font:16px/1.5 {_FONT}">{escape(line)}</p>'
+        f'<p class="sdj-ink" style="margin:0 0 16px;color:{_INK};font:16px/1.5 {_FONT}">'
+        f"{escape(line)}</p>"
         for line in lines
     )
     button = (
@@ -69,13 +104,15 @@ def _branded_html(subject: str, lines: list[str], label: str, url: str) -> str:
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="color-scheme" content="light dark">'
         '<meta name="supported-color-schemes" content="light dark">'
-        f"<title>{escape(subject)}</title></head>"
-        f'<body style="margin:0;padding:24px 12px;background:{_PAGE}">'
+        f"<title>{escape(subject)}</title>{_DARK_STYLE}</head>"
+        f'<body class="sdj-page" style="margin:0;padding:24px 12px;background:{_PAGE}">'
         f'<div style="max-width:560px;margin:0 auto">'
-        f'<p style="margin:0 0 16px;font:900 20px/1 {_FONT};color:{_INK}">{mark}SelectaDJ</p>'
-        f'<div style="padding:24px;border:1px solid #d5cfbd;border-radius:10px;'
+        f'<p class="sdj-ink" style="margin:0 0 16px;font:900 20px/1 {_FONT};color:{_INK}">'
+        f"{mark}SelectaDJ</p>"
+        f'<div class="sdj-card" style="padding:24px;border:1px solid {_LINE};border-radius:10px;'
         f'background:{_CARD}">{paragraphs}{button}</div>'
-        f'<p style="margin:16px 0 0;color:{_SOFT};font:12px/1.5 {_FONT}">{escape(FOOTER)}</p>'
+        f'<p class="sdj-soft" style="margin:16px 0 0;color:{_SOFT};font:12px/1.5 {_FONT}">'
+        f"{escape(FOOTER)}</p>"
         "</div></body></html>"
     )
 

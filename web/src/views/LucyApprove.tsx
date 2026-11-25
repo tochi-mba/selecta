@@ -3,6 +3,7 @@ import { ApiError, problemKind } from '../api';
 import { lucy, lucyTransport, newId } from '../lucy/client';
 import type { CommitNote } from '../lucy/reducer';
 import type { Approval, ApproveAction, Commit, Revision } from '../lucy/types';
+import { success } from '../feel/haptics';
 import { PageLink } from '../shell/PageLink';
 import { Action, Dialog } from '../ui/controls';
 import { LifecyclePill } from './LucyProposal';
@@ -22,7 +23,7 @@ type PendingCommit = { key: string; token: string; action: ApproveAction; revisi
 type Outcome =
   | { state: 'saving' }
   | { state: 'checking' }
-  | { state: 'saved'; commit: Commit; action: ApproveAction; startedHere: boolean }
+  | { state: 'saved'; commit: Commit; action: ApproveAction; startedHere: boolean; confirmedHere: boolean }
   | { state: 'failed'; message: string; problems: string[] }
   | { state: 'not-received' }
   | { state: 'unknown'; message: string };
@@ -131,8 +132,11 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
     }
     // Only a Save and play confirmed on this page, just now, starts the music. Coming back to a
     // commit made earlier never does.
-    const startedHere = commit.played && asked.action === 'draft_and_play' && confirmedHere.current.has(asked.key);
-    setOutcome({ state: 'saved', commit, action: asked.action, startedHere });
+    const here = confirmedHere.current.has(asked.key);
+    const startedHere = commit.played && asked.action === 'draft_and_play' && here;
+    setOutcome({ state: 'saved', commit, action: asked.action, startedHere, confirmedHere: here });
+    // a save confirmed on this page, just now, that the server says really happened
+    if (here) success();
     if (startedHere) {
       confirmedHere.current.delete(asked.key);
       await startPlaying().catch(() => {});
@@ -250,6 +254,13 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
       {outcome?.state === 'checking' && <p className="hint" role="status">Checking whether it was saved…</p>}
       {outcome?.state === 'saved' && (
         <div className="lucy-saved" role="status">
+          {/* the drawn tick is only for a save confirmed here just now; lucy.css shows it while the
+              feel's motion is on, and the words beside it say the same thing */}
+          {outcome.confirmedHere && (
+            <svg className="lucy-saved-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path className="feel-tick" pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
+          )}
           <LifecyclePill stage={outcome.commit.played ? 'playing' : 'draft'} />
           <p>
             {words.saved} “{outcome.commit.name ?? 'Untitled'}”.

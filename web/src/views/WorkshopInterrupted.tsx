@@ -42,7 +42,9 @@ export function InterruptedWork({ status, request }: { status: ViewProps['status
   const going = interrupted?.carrying_on;
   if (!resumed && !interrupted?.lyrics && !going?.lyrics && !going?.exports) return null;
   return (
-    <section className="panel stack" aria-label="Interrupted work">
+    // arrives once (ADR-0477, inert while the feel's motion is off); Start it again is an Action, so
+    // it already shows working, then a drawn tick or a danger edge
+    <section className="panel stack" aria-label="Interrupted work" data-arrive="">
       {resumed && (
         <p role="status">
           {resumed.found

@@ -13,6 +13,7 @@ import { deleteImportJournal } from '../media/importJournal';
 import { carryOnNow, dropResumeOffer, fingerprintOption, startImport } from './importResume';
 import { CancelImportButton, checkedOf, checkedWords, formatCount, ImportProgressLine, ResumeOfferNotice } from './ImportStatus';
 import { addVisitFolder, pickFolderToWatch, watchingFor } from './folderWatch';
+import { DrawnTick, foldAway, RollingCount, useMotionOn } from '../views/feelPieces';
 import './libraryWorkspace.css';
 
 /** Connect Music in the local-first Library (ADR-0458 import, ADR-0463 surfaces).
@@ -246,11 +247,22 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   // news for a moment, not a fixture above the page.
   const [dismissed, setDismissedHere] = useState<ImportSummary | null>(null);
   const setDismissed = useCallback((summary: ImportSummary) => { putAway.add(summary); setDismissedHere(summary); }, []);
+  // the feel (ADR-0477): a result that is put away folds shut first; at once when motion is off
+  const resultBox = useRef<HTMLDivElement>(null);
+  const moving = useMotionOn();
+  const putAwayResult = (summary: ImportSummary) => {
+    const finish = () => { setDismissed(summary); onResultDismissed?.(summary); };
+    const folding = foldAway(resultBox.current);
+    if (folding) void folding.then(finish);
+    else finish();
+  };
+  const putAwayNow = useRef(putAwayResult);
+  putAwayNow.current = putAwayResult;
   const result = (live.phase === 'finished' || live.phase === 'paused') && live.summary && live.summary !== dismissed && !putAway.has(live.summary) ? live.summary : null;
   const cleanFinish = result && !result.paused && !result.cancelled && !result.failed ? result : null;
   useEffect(() => {
     if (!cleanFinish) return;
-    const timer = window.setTimeout(() => { setDismissed(cleanFinish); onResultDismissed?.(cleanFinish); }, RESULT_STAYS_MS);
+    const timer = window.setTimeout(() => putAwayNow.current(cleanFinish), RESULT_STAYS_MS);
     return () => window.clearTimeout(timer);
   }, [cleanFinish, setDismissed, onResultDismissed]);
 
@@ -273,7 +285,9 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
         <span className="lw-import-mark" aria-hidden="true"><Icon name="music" /></span>
         <div>
           <strong>{(live.resumed ?? 0) > 0 ? 'Carrying on adding your music' : 'Adding your music'}</strong>
-          <span className="lw-import-count">{checkedWords(live)}</span>
+          <span className="lw-import-count">
+            <RollingCount value={checked} format={(count) => (typeof live.total === 'number' ? `${formatCount(count)} of ${formatCount(live.total)} checked` : `${formatCount(count)} checked`)} />
+          </span>
         </div>
         <CancelImportButton label="Stop" className="quiet" />
       </div>
@@ -309,10 +323,10 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
       )}
       {progress}
       {result && (
-        <div className="banner" data-tone={result.paused ? 'warn' : 'ok'} role="status">
-          <Icon name={result.paused ? 'pause' : 'check'} size="toolbar" />
+        <div className="banner" data-tone={result.paused ? 'warn' : 'ok'} role="status" ref={resultBox}>
+          {!result.paused && moving ? <DrawnTick size="toolbar" /> : <Icon name={result.paused ? 'pause' : 'check'} size="toolbar" />}
           <p>{doneWords && !result.paused && !result.cancelled ? doneWords(result) : summaryWords(result)}</p>
-          <button type="button" className="quiet" onClick={() => { setDismissed(result); onResultDismissed?.(result); }}>Dismiss</button>
+          <button type="button" className="quiet" onClick={() => putAwayResult(result)}>Dismiss</button>
         </div>
       )}
       {shownProblem && (

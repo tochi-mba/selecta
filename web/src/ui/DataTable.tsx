@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useRef } from 'react';
 import { useMediaQuery } from './useMediaQuery';
 
 export type Column<T> = {
@@ -27,6 +27,7 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
   stacked?: boolean | 'auto';
 }) {
   const narrow = useMediaQuery('(max-width: 599px)');
+  const fresh = useFreshRows(rows.map(rowKey));
   if (stacked === true || (stacked === 'auto' && narrow)) {
     return (
       <div className="data-table-wrap data-table-stacked-wrap" role="region" aria-label={`${caption} table`}>
@@ -34,7 +35,7 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
         {rows.length === 0 ? <p className="data-table-empty">{empty}</p> : (
           <ul className="data-table-stacked">
             {rows.map((row) => (
-              <li key={rowKey(row)} className="data-table-card">
+              <li key={rowKey(row)} className={fresh.has(rowKey(row)) ? 'data-table-card feel-flash' : 'data-table-card'} data-lift>
                 <dl>
                   {columns.map((column, index) => {
                     const value = column.render ? column.render(row) : String((row as Record<string, unknown>)[column.key] ?? '');
@@ -60,7 +61,7 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
         <tbody>
           {rows.length === 0 && <tr><td colSpan={columns.length} className="data-table-empty">{empty}</td></tr>}
           {rows.map((row) => (
-            <tr key={rowKey(row)}>
+            <tr key={rowKey(row)} data-lift="row" className={fresh.has(rowKey(row)) ? 'feel-flash' : undefined}>
               {columns.map((column, index) => {
                 const value = column.render ? column.render(row) : String((row as Record<string, unknown>)[column.key] ?? '');
                 const cell = index === 0 && onPick ? <button className="data-table-pick" onClick={() => onPick(row)} aria-label={pickLabel?.(row)}>{value}</button> : value;
@@ -72,4 +73,23 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
       </table>
     </div>
   );
+}
+
+/** How long a row that just appeared keeps .feel-flash: longer than the flash itself
+ * (styles/feel.css), so a re-render during it never cuts it short. */
+const FRESH_MS = 1500;
+
+/** The keys of rows that appeared after the table first showed rows, for the moment they are new.
+ * The first rows to load are not news, so they never flash; .feel-flash does nothing without the
+ * feel's motion (ADR-0477). */
+function useFreshRows(keys: string[]): Set<string> {
+  const seen = useRef<Map<string, number> | null>(null);
+  const now = Date.now();
+  if (seen.current === null) {
+    if (keys.length) seen.current = new Map(keys.map((key) => [key, 0]));
+    return new Set();
+  }
+  for (const key of keys) if (!seen.current.has(key)) seen.current.set(key, now);
+  const fresh = new Set(keys.filter((key) => now - (seen.current!.get(key) ?? 0) < FRESH_MS));
+  return fresh;
 }

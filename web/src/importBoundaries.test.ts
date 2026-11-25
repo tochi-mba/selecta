@@ -12,7 +12,9 @@ const fs = node.getBuiltinModule('node:fs') as Fs;
 const SOURCE = `${node.cwd()}/src/`;
 // engine, media and dsp are the browser runtime (ADR-0457/0458/0459): shared by every Cloud
 // surface, so they may never reach up into a page or the app shell either.
-const SHARED = ['ui', 'state', 'audio', 'engine', 'media', 'dsp'];
+// feel is the feel system's engines (ADR-0477): used by the shell and by every page, so it may
+// never reach up into one. It is a flat folder on purpose: this guard does not read subfolders.
+const SHARED = ['ui', 'state', 'audio', 'engine', 'media', 'dsp', 'feel'];
 
 const sources = (folder: string) => fs.readdirSync(`${SOURCE}${folder}/`)
   .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))

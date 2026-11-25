@@ -29,7 +29,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 # SelectaDJ - One brain, two studios (2026-11-25)
 
-**Proposed; the plan it records was approved by the owner on 2026-11-25:** [ADR-0477](adr-0477-one-brain-two-studios.md), programme prefix OB, baseline `main` at `f5b6a4ab`. One Python planner for Desktop and Cloud, one storage layer both run on, and two studios (SelectaDJ's workers, the member's browser) that render the same transition scripts. It narrows or amends ADR-0391, 0393, 0394, 0405, 0418, 0455, 0456, 0457, 0459, 0465 and 0469, and says exactly how in its own table. Words: [glossary](../glossary.md). Research: [transition craft, part two](../research/transition-craft-2.md), [the device studio](../research/browser-studio.md).
+**Proposed; the plan it records was approved by the owner on 2026-11-25:** [ADR-0479](adr-0479-one-brain-two-studios.md), programme prefix OB, baseline `main` at `f5b6a4ab`. One Python planner for Desktop and Cloud, one storage layer both run on, and two studios (SelectaDJ's workers, the member's browser) that render the same transition scripts. It narrows or amends ADR-0391, 0393, 0394, 0405, 0418, 0455, 0456, 0457, 0459, 0465 and 0469, and says exactly how in its own table. Words: [glossary](../glossary.md). Research: [transition craft, part two](../research/transition-craft-2.md), [the device studio](../research/browser-studio.md).
 
 ---
 

@@ -1,0 +1,33 @@
+{
+  "isrc": "GBXYZ2400001",
+  "recordings": [
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000001",
+      "title": "Lanterns Over the Water",
+      "length": 241000,
+      "isrcs": ["GBXYZ2400001"],
+      "first-release-date": "2024-03-01",
+      "artist-credit": [{"name": "Night Harbour", "joinphrase": "", "artist": {"id": "eeeeeeee-0000-4000-8000-000000000001", "name": "Night Harbour"}}],
+      "releases": [
+        {"id": "bbbbbbbb-0000-4000-8000-000000000001", "title": "Lanterns Over the Water", "status": "Official", "date": "2024-03-01", "country": "GB",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000001", "primary-type": "Single", "secondary-types": []}},
+        {"id": "bbbbbbbb-0000-4000-8000-000000000002", "title": "Low Tide", "status": "Official", "date": "2024-05-10", "country": "GB",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000002", "primary-type": "Album", "secondary-types": []}},
+        {"id": "bbbbbbbb-0000-4000-8000-000000000003", "title": "Harbour Lights: The Best Of", "status": "Official", "date": "2023-11-01", "country": "XW",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000003", "primary-type": "Album", "secondary-types": ["Compilation"]}}
+      ]
+    },
+    {
+      "id": "aaaaaaaa-0000-4000-8000-000000000002",
+      "title": "Lanterns Over the Water",
+      "length": 242400,
+      "isrcs": ["GBXYZ2400001"],
+      "first-release-date": "2034-01-01",
+      "artist-credit": [{"name": "Night Harbour", "joinphrase": "", "artist": {"id": "eeeeeeee-0000-4000-8000-000000000001", "name": "Night Harbour"}}],
+      "releases": [
+        {"id": "bbbbbbbb-0000-4000-8000-000000000004", "title": "Low Tide (10th Anniversary Remaster)", "status": "Official", "date": "2034-05-10", "country": "GB",
+         "release-group": {"id": "cccccccc-0000-4000-8000-000000000002", "primary-type": "Album", "secondary-types": []}}
+      ]
+    }
+  ]
+}

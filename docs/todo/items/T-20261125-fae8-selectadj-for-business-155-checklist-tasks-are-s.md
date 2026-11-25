@@ -6,7 +6,7 @@ status: open
 priority: normal
 who: either
 created: 2026-11-25
-source: ADR-0477 and the owner's plan approval, 2026-11-25
+source: ADR-0479 and the owner's plan approval, 2026-11-25
 commit:
 ---
 

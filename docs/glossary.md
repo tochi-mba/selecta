@@ -1,7 +1,7 @@
 # Words we use
 
 SelectaDJ runs in three places. The code grew three sets of names for them, and some words mean
-two things. From 2026-11-25 (ADR-0477) new docs and all member copy use the words below. Code
+two things. From 2026-11-25 (ADR-0479) new docs and all member copy use the words below. Code
 identifiers keep their old names until the mechanical rename at the end of that programme; the
 last column says what you will meet in the code until then.
 

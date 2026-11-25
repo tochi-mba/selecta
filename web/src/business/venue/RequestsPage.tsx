@@ -45,9 +45,9 @@ export function RequestsPage({ venueId }: { venueId?: string }) {
       return <section key={zone.id} className="biz-card"><h2>{zone.name}</h2>
         <RequestApprovalQueue disabled={disabled} requests={waiting} onDecide={async (id, verdict) => {
           setError('');
-          try { await client.decide(zone.id, id, verdict); await requests.reload(); }
-          catch { setError("Couldn't update the request. Try again."); }
-        }} />
+          try { await client.decide(zone.id, id, verdict); }
+          catch { setError("Couldn't update the request. Try again."); return false; }
+        }} onDecided={requests.reload} />
         {waiting.map((request) => <GuestTools key={request.id} zoneId={zone.id} request={request} disabled={disabled} done={requests.reload} />)}
       </section>;
     })}

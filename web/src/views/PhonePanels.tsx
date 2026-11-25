@@ -114,6 +114,7 @@ export function LiveTransitionPanel(props: {
       refresh();
     } catch (error) {
       setProblem((error as Error).message);
+      return false; // said here, so the button draws no tick
     }
   };
   const nameOf = (move: string) => pickable.find(([one]) => one === move)?.[1] ?? names[move] ?? move.replaceAll('_', ' ');

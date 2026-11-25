@@ -1,7 +1,9 @@
-import { ReactNode, Ref, useContext } from 'react';
+import { ReactNode, Ref, useContext, useRef } from 'react';
 import { HolderContext } from '../devices/controller';
 import { Icon } from '../ui/Icon';
 import { SearchField } from '../ui/primitives';
+import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
+import { RollingCount } from './feelPieces';
 
 /** The Library's frame in browser-first Cloud: a page header with quiet counts and the one main
  * action, a single toolbar, a selection bar that exists only while something is selected, and
@@ -59,13 +61,17 @@ export function BrowserLibraryToolbar({ typed, onTyped, filters, filter, onFilte
   onCards: (cards: boolean) => void;
   cardsOffered: boolean;
 }) {
+  // the feel (ADR-0477): one mark slides to the chosen filter; without motion the pressed chip says it alone
+  const strip = useRef<HTMLDivElement>(null);
+  useSlidingIndicator(strip, '[aria-pressed="true"]');
   return (
     <div className="lw-toolbar">
       <SearchField label="Search your library" value={typed} onChange={onTyped} placeholder="Search songs and artists" />
-      <div className="lw-chips" role="group" aria-label="Show">
+      <div className="lw-chips" role="group" aria-label="Show" ref={strip}>
         {filters.map((option) => (
           <button key={option.name} type="button" aria-pressed={filter === option.name} onClick={() => onFilter(option.name)}>{option.label}</button>
         ))}
+        <span className={INDICATOR_CLASS} aria-hidden="true" />
       </div>
       <div className="lw-toolbar-end">
         <label className="lw-sort">
@@ -101,8 +107,8 @@ export function BrowserLibraryMeta({ countWords, updating, selected, canSelect, 
   return (
     <div className="lw-meta" data-selecting={selected > 0 || undefined}>
       {/* stays mounted so a screen reader hears each new count */}
-      <p className="library-count" role="status">{selected > 0 ? `${selected.toLocaleString()} selected` : updating && countWords ? 'Updating…' : countWords}</p>
-      {selected > 0 && <div className="lw-meta-actions" role="group" aria-label="Actions for the selected songs">{children}</div>}
+      <p className="library-count" role="status">{selected > 0 ? <><RollingCount value={selected} format={(count) => count.toLocaleString()} /> selected</> : updating && countWords ? 'Updating…' : countWords}</p>
+      {selected > 0 && <div className="lw-meta-actions" role="group" aria-label="Actions for the selected songs" data-arrive="">{children}</div>}
       {canSelect && (
         <div className="lw-meta-end">
           <button ref={selectRef} type="button" className="quiet" onClick={onSelectAll}>Select all</button>
@@ -121,7 +127,7 @@ export function BrowserLibraryEmpty({ query, filterLabel, onClearSearch, onShowA
   onShowAll: () => void;
 }) {
   return (
-    <section className="empty-state boxed" aria-labelledby="library-no-results">
+    <section className="empty-state boxed" aria-labelledby="library-no-results" data-glow="">
       <span className="empty-state-icon" aria-hidden="true"><Icon name={query ? 'search' : 'music'} /></span>
       <h2 id="library-no-results">{query ? `No songs match “${query}”` : `No songs in ${filterLabel ?? 'this view'}`}</h2>
       <p>{query

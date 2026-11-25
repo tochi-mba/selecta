@@ -373,29 +373,34 @@ function endWatch(): void {
 export function useFolderWatch(given: Parts, more?: WatchExtras): void {
   useEffect(() => { extras = more ?? {}; });
   const { request, openStore, workspaceId, importer } = given;
-  useEffect(() => {
-    if (!flagOn('cloud.music_folders')) return undefined;
-    const mine: Parts = { request, openStore, workspaceId, importer };
-    parts = mine;
-    void loadFolders(workspaceId).then(() => { if (parts === mine) later(() => whenIdle(() => autoCheck('all')), START_DELAY_MS); });
-    const visible = () => {
-      if (document.visibilityState !== 'visible' || parts !== mine) return;
-      void loadFolders(workspaceId).then(() => { if (parts === mine) whenIdle(() => autoCheck('due')); });
-    };
-    const unhear = subscribeImport(() => {
-      if (!deferred || importSnapshot().phase === 'running' || parts !== mine) return;
-      deferred = false;
-      // a check that was waiting carries on; what was queued keeps its order
-      if (queue.length) void runQueue();
-      else whenIdle(() => autoCheck('due'));
-    });
-    document.addEventListener('visibilitychange', visible);
-    return () => {
-      document.removeEventListener('visibilitychange', visible);
-      unhear();
-      if (parts === mine) endWatch();
-    };
-  }, [request, openStore, workspaceId, importer]);
+  useEffect(() => (flagOn('cloud.music_folders') ? bindWatch({ request, openStore, workspaceId, importer }) : undefined), [request, openStore, workspaceId, importer]);
+}
+
+/** Start watching one workspace's folders; the returned function stops it. The hook's body, and
+ * the seam the tests drive (with `given.extras` standing in for the shell's). */
+export function bindWatch(mine: Parts, given?: { extras?: WatchExtras; firstCheck?: boolean }): () => void {
+  parts = mine;
+  if (given?.extras) extras = given.extras;
+  void loadFolders(mine.workspaceId).then(() => {
+    if (parts === mine && given?.firstCheck !== false) later(() => whenIdle(() => autoCheck('all')), START_DELAY_MS);
+  });
+  const visible = () => {
+    if (document.visibilityState !== 'visible' || parts !== mine) return;
+    void loadFolders(mine.workspaceId).then(() => { if (parts === mine) whenIdle(() => autoCheck('due')); });
+  };
+  const unhear = subscribeImport(() => {
+    if (!deferred || importSnapshot().phase === 'running' || parts !== mine) return;
+    deferred = false;
+    // a check that was waiting carries on; what was queued keeps its order
+    if (queue.length) void runQueue();
+    else whenIdle(() => autoCheck('due'));
+  });
+  document.addEventListener('visibilitychange', visible);
+  return () => {
+    document.removeEventListener('visibilitychange', visible);
+    unhear();
+    if (parts === mine) endWatch();
+  };
 }
 
 // --- What the member does -------------------------------------------------------------------

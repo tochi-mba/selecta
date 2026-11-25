@@ -75,13 +75,13 @@ export function PeoplePage({ venueId }: { venueId?: string }) {
     {seats && <p className="biz-quiet">Seats: {seats.held} used of {seats.included + seats.paid} ({seats.included} included, {seats.paid} paid)</p>}
     {seats && seatsFull && canBuySeats && <p>All seats are in use. <button type="button" disabled={working} onClick={() => { void addSeat(); }}>Add a paid seat</button> It is billed from today.</p>}
     {seats && seatsFull && !canBuySeats && invitableRoles(org.role).length > 0 && <p className="biz-quiet">All seats are in use. An owner or admin can add a paid seat.</p>}
-    <ul>{members.map((member) => <li key={member.id} className="biz-card">
+    <ul>{members.map((member) => <li key={member.id} className="biz-card" data-lift="row">
       <strong>{member.name}</strong> ({member.email}): {roleWords(member.role)}
       {canRemove && member.role !== 'owner' && <button type="button" aria-label={`Remove ${member.name}`} disabled={working} onClick={() => setRemoving({ id: member.id, name: member.name })}>Remove</button>}
     </li>)}</ul>
     {(people.data?.invitations.length ?? 0) > 0 && <>
       <h2>Invited</h2>
-      <ul>{people.data!.invitations.map((item) => <li key={item.id} className="biz-card">
+      <ul>{people.data!.invitations.map((item) => <li key={item.id} className="biz-card" data-lift="row">
         <strong>{item.email}</strong>: {roleWords(item.role)}. {expiresWords(item.expires_at)}
         {canInvite && <button type="button" disabled={working} aria-label={`Withdraw the invitation to ${item.email}`} onClick={() => { void revoke(item.id); }}>Withdraw</button>}
       </li>)}</ul>

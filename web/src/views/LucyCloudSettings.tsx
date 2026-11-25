@@ -93,6 +93,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       });
     } catch (error) {
       if (live.current) setProblem(plainProblem(error));
+      return false; // said here, so Try again draws no tick
     }
   }, []);
   useEffect(() => {

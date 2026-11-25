@@ -3,7 +3,7 @@
 // density and the rest, but not motion. The selected mix lives on the server and is covered by
 // tests/rollback_check.py.
 import { afterEach, describe, expect, it } from 'vitest';
-import { prefs, reloadPrefs, setPrefs } from './prefs';
+import { defaultMotion, prefs, reloadPrefs, setPrefs } from './prefs';
 
 const KEY = 'selecta.prefs';
 
@@ -35,7 +35,7 @@ describe('preferences across a rollback', () => {
   it('old to new to old keeps the theme and every choice the old build made', () => {
     baselineSet({ theme: 'dark', density: 'compact', classicNav: true });
     reloadPrefs();
-    expect(prefs()).toMatchObject({ theme: 'dark', density: 'compact', classicNav: true, motion: 'subtle' });
+    expect(prefs()).toMatchObject({ theme: 'dark', density: 'compact', classicNav: true, motion: defaultMotion() });
     setPrefs({ motion: 'still' });
     expect(baselineRead()).toMatchObject({ theme: 'dark', density: 'compact', classicNav: true });
   });
@@ -61,6 +61,6 @@ describe('preferences across a rollback', () => {
     // only the choice is stored; the rest reads as the defaults (product audit, area K)
     expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ theme: 'dark' });
     reloadPrefs();
-    expect(prefs()).toMatchObject({ theme: 'dark', motion: 'subtle' });
+    expect(prefs()).toMatchObject({ theme: 'dark', motion: defaultMotion() });
   });
 });
