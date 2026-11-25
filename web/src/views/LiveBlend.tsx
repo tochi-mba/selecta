@@ -16,7 +16,7 @@ import { useFeelPart } from './feelBits';
 
 /** How close the seam is, in seconds, when the next song's card rises and its peaks are fetched. */
 export const NEAR_SEAM_S = 20;
-/** Seconds of the outgoing song drawn before the hand-over starts. */
+/** The most seconds of the outgoing song drawn before the hand-over starts. */
 export const LEAD_S = 20;
 /** Bars across the whole drawing; a lane that covers part of it gets its share. */
 const BARS = 72;
@@ -90,7 +90,10 @@ export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
   // one timeline, in the outgoing song's seconds: from the lead-in to the end of the hand-over
   const seamAt = now.seamAt ?? 0;
   const span = switchAt ?? 0;
-  const start = Math.max(0, seamAt - LEAD_S);
+  // a short move (an echo out lasts about three seconds) would be a sliver beside the full lead-in,
+  // so the lead-in shrinks with it and the hand-over keeps at least a third of the drawing
+  const lead = Math.min(LEAD_S, Math.max(6, span * 2));
+  const start = Math.max(0, seamAt - lead);
   const end = seamAt + span;
   const across = (seconds: number) => (end > start ? Math.min(100, Math.max(0, ((seconds - start) / (end - start)) * 100)) : 0);
   const entry = across(seamAt);
@@ -128,7 +131,7 @@ export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
         {inShape && <path className="live-blend-in played" d={inShape} clipPath={`url(#${clip})`} vectorEffect="non-scaling-stroke" />}
         <line className="live-blend-head" x1={at} y1="0" x2={at} y2={HIGH} vectorEffect="non-scaling-stroke" />
       </svg>
-      {inShape && <p className="live-blend-lane" data-lane="in" style={{ paddingInlineStart: `${entry.toFixed(2)}%` }}><span>Into</span> <b dir="auto">{entering.title}</b></p>}
+      {inShape && <p className="live-blend-lane" data-lane="in" style={entry > 50 ? { textAlign: 'end' } : { paddingInlineStart: `${entry.toFixed(2)}%` }}><span>Into</span> <b dir="auto">{entering.title}</b></p>}
       {(move || missing) && (
         <p className="live-blend-caption">
           {move ? <b>{move}</b> : null}
