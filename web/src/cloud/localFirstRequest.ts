@@ -408,6 +408,9 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       if (method !== 'GET') catalogue = null;
       return cloud<T>(path, init);
     }
+    // ADR-0478: covers and details from SelectaDJ's own catalogue (and "Wrong cover?") are the
+    // server's, gated there by library.art_lookup and the account's own lookup setting
+    if (route.startsWith('/catalog/')) return cloud<T>(path, init);
     const neverAnswer = setNever(method, route, init);
     if (neverAnswer) return (await neverAnswer) as T;
     throw notHereYet(path);

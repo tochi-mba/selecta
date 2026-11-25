@@ -181,3 +181,33 @@ describe('the limiter stage', () => {
   });
 });
 
+
+describe('the decoded audio, read only (Listen draws the next song from it)', () => {
+  const speakerWith = (decoded: (id: number | string, buffer: AudioBuffer) => void) => {
+    const context = new FakeAudioContext();
+    const store = createEngineStore();
+    const speaker = new BrowserSpeaker({
+      audio: { context: context as unknown as AudioContext, wake: async () => { await context.resume(); return true; }, hold: () => context.suspend() },
+      probe: passed,
+      resolve: async (index) => ({ id: `song-${index}`, data: async () => new ArrayBuffer(10_000) }),
+      store,
+      timers: manualTimers(),
+      decoded,
+    });
+    return { speaker, store };
+  };
+
+  it('hands over each song it decodes, by id', async () => {
+    const seen: (number | string)[] = [];
+    const { speaker, store } = speakerWith((id, buffer) => { seen.push(id); expect(buffer.duration).toBeCloseTo(10); });
+    await speaker.start(0, 0, true);
+    expect(store.get().phase).toBe('playing');
+    expect(seen).toEqual(['song-0']);
+  });
+
+  it('plays on when the reader fails', async () => {
+    const { speaker, store } = speakerWith(() => { throw new Error('drawing failed'); });
+    await speaker.start(0, 0, true);
+    expect(store.get().phase).toBe('playing');
+  });
+});

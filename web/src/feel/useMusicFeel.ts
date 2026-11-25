@@ -42,7 +42,7 @@ export function useMusicFeel({ player, now, song, next }: {
 
   // the hand-over: only before the switch point, when the song coming in is the next one
   const travelled = useRef(false);
-  const switchAt = next?.seam?.state.switch_at;
+  const switchAt = next?.seam?.state.switch_at ?? now.blend?.window;
   const handing = now.inSeam && !now.seamTail && now.seamAt !== null && songId !== null && !!next && !!switchAt;
   useEffect(() => {
     if (handing && songId !== null && next && now.seamAt !== null) {

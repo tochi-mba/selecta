@@ -77,6 +77,9 @@ function patch(id: number, change: Partial<ActivityEntry>) {
 }
 
 /** Take this one back, once. Throws if it can't, so whoever pressed it can say so. */
+export const UNDO_LIMIT_MS = 60_000;
+const UNDO_TOO_LONG = 'SelectaDJ couldn’t confirm this Undo in time. Check the mix, then press Undo again: it is never done twice.';
+
 export async function runUndo(id: number): Promise<void> {
   const entry = entries.find((item) => item.id === id);
   // A lost response doesn't prove the Undo was not applied. The saved
@@ -90,8 +93,24 @@ export async function runUndo(id: number): Promise<void> {
     throw new Error(`Undo “${newer.message}” first, because it’s the newest change in that mix.`);
   }
   patch(id, { undoState: 'running', problem: undefined });
+  // An Undo that never answers would hold Undoing... and keep the older Undos blocked until a
+  // reload. After the limit it counts as failed: older Undos stay blocked (it may still land), and
+  // pressing it again is safe, since the saved callback completes the same reversal or reports a
+  // conflict. A late success still marks it undone.
+  let over = false;
+  const undo = entry.undo;
+  // async, so a callback that throws at once is a failure like any other
+  const work = (async () => undo())();
+  void work.then((late) => {
+    const now = entries.find((item) => item.id === id);
+    if (over && late !== false && now?.undoState === 'failed') patch(id, { undoState: 'undone', problem: undefined });
+  }, () => undefined);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { over = true; reject(new Error(UNDO_TOO_LONG)); }, UNDO_LIMIT_MS);
+  });
   try {
-    const reversed = await entry.undo();
+    const reversed = await Promise.race([work, limit]);
     // Some scopes explicitly answer that there was no newest change to
     // reverse. False is authoritative: don't announce an Undo that didn't
     // happen. Void is a valid success for restoration operations.
@@ -101,6 +120,8 @@ export async function runUndo(id: number): Promise<void> {
     const words = (error as Error).message || 'Couldn’t undo that.';
     patch(id, { undoState: 'failed', problem: words });
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

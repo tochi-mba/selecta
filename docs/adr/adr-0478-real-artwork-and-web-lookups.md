@@ -62,9 +62,9 @@
 ## Checklist
 
 1. **FL-0478-01 - Art from the file in Cloud.** Tag reading, the worker, on-device storage, the ladder component. Implementation: Not started.
-2. **FL-0478-02 - Art from the file in the local app.** Scan, cache, route. Implementation: Not started.
+2. **FL-0478-02 - Art from the file in the local app.** Scan, cache, route. Implementation: Built on `feat/feel-playback` (`src/selecta/library/art.py`: front cover first, original bytes up to 4 MB kept once by their hash under `<home>/art/v1/`, since Pillow is not a dependency; read after each scan and on first ask; `GET /api/songs/{song_id}/art` answers 204 for no picture; `web/src/media/serverArt.ts` gives the ladder the address). Independent verification: None.
 3. **FL-0478-03 - Catalogue.** The module, the tables, the job, the rate bucket, matching against recorded fixtures. Implementation: Not started.
-4. **FL-0478-04 - Controls.** The account setting with its disclosure, "Wrong cover?", the admin hide. Implementation: Not started.
+4. **FL-0478-04 - Controls.** The account setting with its disclosure, "Wrong cover?", the admin hide. Implementation: Built on `feat/feel-playback` (setting `web/src/cloud/CatalogLookups.tsx`; "Wrong cover?" and the album and year suggestions `web/src/views/SongCatalog.tsx` over `web/src/media/catalogArt.ts`, which also gives the ladder the catalogue rung; routes and admin hide `src/selecta/catalog/routes.py`). Independent verification: None.
 5. **FL-0478-05 - Where it shows.** Library, song details, My Mixes collage, Listen, the dock, the queue, the editor, Rooms, the lock screen; catalogue covers only on guest phones and the display. Implementation: Not started.
 6. **FL-0478-06 - Tests and register.** The truthful-imagery test, catalogue tests, the licence register rows, the operator checklist. Implementation: Not started.
 7. **FL-0478-07 - Terms cleared.** The owner steps above. Needs the owner.

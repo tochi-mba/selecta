@@ -66,3 +66,20 @@ describe('repetitive notices', () => {
     expect(activityEntries().some((entry) => entry.message === 'Rendered 3 transitions.')).toBe(true);
   });
 });
+
+describe('an offer toast (install moments)', () => {
+  it('draws its main action as primary and tells closing it from timing out', () => {
+    vi.useFakeTimers();
+    const closed = vi.fn();
+    render(<Toaster />);
+    act(() => { showToast('Install SelectaDJ?', { actions: [{ label: 'Install', run: () => undefined, primary: true }, { label: 'Not now', run: () => undefined }], onDismiss: closed }); });
+    const install = [...document.body.querySelectorAll('.toast-row button')].find((button) => button.textContent === 'Install');
+    expect(install?.classList.contains('primary')).toBe(true);
+    act(() => { vi.advanceTimersByTime(20_000); });
+    expect(shown()).toEqual([]);
+    expect(closed).not.toHaveBeenCalled();
+    act(() => { showToast('Install SelectaDJ now?', { actions: [{ label: 'Install', run: () => undefined }], onDismiss: closed }); });
+    act(() => { (document.body.querySelector('.toast-close') as HTMLButtonElement).click(); });
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
+});

@@ -1,7 +1,7 @@
 import { KeyboardEvent, PointerEvent, ReactElement, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, MixData, SongDetail } from '../api';
 import { useApi } from '../requestContext';
-import { flagOn, useFlags } from '../flags';
+import { useFlags } from '../flags';
 import { listed } from '../shell/manifest';
 import { clock } from '../lib';
 import { VolumeControl } from '../shell/Shell';
@@ -12,7 +12,6 @@ import { useShownTheme } from '../state/prefs';
 import { useRevealed } from '../ui/Skeleton';
 import { TermHint } from '../ui/Glossary';
 import { Icon } from '../ui/Icon';
-import { useMediaQuery } from '../ui/useMediaQuery';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
 import { seamFamily, SongMotif } from '../ui/MusicObjects';
@@ -31,6 +30,7 @@ import { tick } from '../feel/haptics';
 import { ListenHero } from './ListenHero';
 import { LiveBlend, nearSeam } from './LiveBlend';
 import { BeatSpot, PlayMorph } from './feelBits';
+import { Lyrics } from './ListenLyrics';
 
 /** Fit the complete music title to its actual column, not the viewport.
  * Keep it in the accessibility tree and allow more lines at extreme zoom. */
@@ -101,22 +101,6 @@ function savedView(): ListenView {
   } catch {
     return defaults;
   }
-}
-
-const LYRIC_WORD = /^[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?$/u;
-
-function highlightedLine(text: string, activeWord: number) {
-  let word = 0;
-  return text.split(/([\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?)/gu).map((part, index) => {
-    if (!LYRIC_WORD.test(part)) return part;
-    const current = word === activeWord;
-    word += 1;
-    return (
-      <span key={index} className={current ? 'current-word' : undefined}>
-        {part}
-      </span>
-    );
-  });
 }
 
 /** Sections as a person would name them: neighbours with the same name are one section. */
@@ -422,82 +406,6 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${SPECTRUM_MODES.find((mode) => mode.id === spectrumShape)?.label ?? 'Frequency'} - actual mixed-audio frequency levels` : 'Audio frequency visualizer paused'} />;
 }
 
-/** Why there's nothing to follow along with. A song's timing is never made up to fill the gap. */
-function noLyricsWords(status: string | null | undefined): string {
-  switch (status) {
-    case 'instrumental': return 'Instrumental';
-    case 'plain': return 'Lyrics for this song aren’t timed, so they can’t follow along.';
-    case 'failed': return 'Looking up lyrics for this song didn’t work. SelectaDJ will try again later.';
-    case 'synced': return 'The timed lyrics for this song couldn’t be read.';
-    case null:
-    case undefined: return 'Lyrics haven’t been looked up yet.';
-    default: return 'No lyrics found for this song.';
-  }
-}
-
-function Lyrics({ detail, time, focus, canBrowse = false }: { detail: SongDetail; time: number; focus?: boolean; canBrowse?: boolean }) {
-  // Reading belongs to the song it was opened on, so a new song follows again. It's derived, not reset
-  // in an effect: a mount effect that ran after a quick first press would undo that press.
-  const [readingId, setReadingId] = useState<number | null>(null);
-  const reading = readingId === detail.id;
-  // and once another song is shown it is forgotten, so coming back to this one follows again
-  if (readingId !== null && !reading) setReadingId(null);
-  // On a phone the first screen is the song and its words, and anything to press starts below it, so
-  // nothing sits half hidden behind the player at whatever height the phone is (listening.css). The
-  // button comes after the words there, in the page as well as on screen, so Tab meets it where it is.
-  const phone = useMediaQuery('(max-width: 760px)');
-  const lines = detail.lines;
-  const starts = useMemo(() => lines.map((line) => line.start), [lines]);
-  // Audio ticks many times per second; a long lyric sheet should not be
-  // scanned linearly on every tick just to find the current phrase.
-  const index = useMemo(() => upperBound(starts, time + 0.1) - 1, [starts, time]);
-  // the space stays the same whichever it is, so the page doesn't jump about between songs
-  if (!lines.length) {
-    return <div className={`lyrics quiet ${focus ? 'focus' : ''}`}><p className="dim">{noLyricsWords(detail.lyric_status)}</p></div>;
-  }
-  const singing = index >= 0 && time < lines[index].end + 1.5;
-  const current = index >= 0 ? lines[index] : null;
-  const wordIndex = current?.words?.findIndex((word) => word.start <= time && time < word.end) ?? -1;
-  const around = focus ? 3 : 1;
-  const words = flagOn('listen.word_focus');
-  const timingWords = detail.lyric_status === 'plain'
-    ? 'Untimed lyrics - word timing unavailable.'
-    : words && lines.some((line) => !!line.words?.length)
-      ? 'Word highlights follow stored lyric alignment; timing may be approximate.'
-      : 'Line-timed lyrics; individual word timing unavailable.';
-  const browse = canBrowse && (
-    <button type="button" className="lyrics-browse" aria-pressed={reading} onClick={() => setReadingId(reading ? null : detail.id)}>
-      {reading ? 'Resume lyric follow' : 'Read all lyrics'}
-    </button>
-  );
-  return (
-    <div className={`lyrics ${focus ? 'focus' : ''} ${reading ? 'reading' : ''}`} aria-live="off">
-      <p className="lyric-confidence">{timingWords}</p>
-      {!phone && browse}
-      {reading ? (
-        <div className="lyrics-scroll" tabIndex={0} role="region" aria-label="All timed lyrics, scroll manually">
-          {lines.map((line, at) => (
-            <p key={at} dir="auto" className={at === index && singing ? 'sung' : 'dim'}>{line.text}</p>
-          ))}
-        </div>
-      ) : (
-        <>
-      {Array.from({ length: around }, (_, gap) => around - gap).map((back) => (
-        <p dir="auto" className="dim" key={`before-${back}`}>{lines[index - back]?.text ?? ' '}</p>
-      ))}
-      <p dir="auto" className={singing ? 'sung' : 'dim'}>
-        {current ? highlightedLine(current.text, singing && words ? wordIndex : -1) : ' '}
-      </p>
-      {Array.from({ length: around }, (_, gap) => gap + 1).map((ahead) => (
-        <p dir="auto" className="dim" key={`after-${ahead}`}>{lines[index + ahead]?.text ?? ' '}</p>
-      ))}
-        </>
-      )}
-      {phone && browse}
-    </div>
-  );
-}
-
 /** What makes this hand-over what it is, from what was measured and what the render reported, and
  * nothing that wasn't. GP-0249-05: whether it is planned or made, and what was asked for versus what
  * will play, is said once, by TransitionTruth under Up Next; this only adds the reasons. */
@@ -719,7 +627,9 @@ export function Now(props: ViewProps) {
         : now.phase === 'paused'
           ? `Paused · ${mixName}`
           : mixName;
-  const shown = detail && detail.id === item?.song_id ? detail : null;
+  // a song the catalogue has no length for takes the one the engine decoded (T-20261125-8ab8)
+  const known = detail && detail.id === item?.song_id ? detail : null;
+  const shown = useMemo(() => (known && !(known.duration > 0) && now.duration > 0 ? { ...known, duration: now.duration } : known), [known, now.duration]);
   useEffect(() => { setBeatGrid(gridOf(shown)); return () => setBeatGrid(null); }, [shown]);
   const waiting = waitingRequestCount(requests?.requests);
 
@@ -800,7 +710,7 @@ export function Now(props: ViewProps) {
               currentTitle={leaving?.title}
               ready={now.nextReady}
               inSeam={now.inSeam}
-              switchAt={tail ? undefined : seam?.switch_at}
+              switchAt={tail ? undefined : seam?.switch_at ?? now.blend?.window}
               phrase={on('listen.handoff_phrase') && !tail ? provenPhrase : undefined}
             />
           )}

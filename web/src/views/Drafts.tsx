@@ -12,7 +12,8 @@ import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { MenuItem } from '../ui/primitives';
 import { MixSignature } from '../ui/MusicObjects';
 import { ViewProps } from './shared';
-import { foldAway } from './feelPieces';
+import { foldAway, useFeelOn, useMotionOn } from './feelPieces';
+import { MixArt } from './MixArt';
 
 type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'> & {
   /** SF-0204-02: My Mixes has one primary action, and the drafts own it (the first draft's Edit, or
@@ -102,7 +103,7 @@ type RowActions = {
 
 /** One draft in the list. Memoised: a poll or a change to one draft redraws only the rows whose
  * draft really changed (see keepUnchangedDrafts), not all of them. */
-const DraftRow = memo(function DraftRow({ draft, twin, failure, renaming, editor, line, primary, actions }: {
+const DraftRow = memo(function DraftRow({ draft, twin, failure, renaming, editor, line, primary, actions, face = false, fresh = false, renamed = false }: {
   draft: DraftInfo;
   /** another draft has the same name, so this one says its number */
   twin: boolean;
@@ -113,19 +114,26 @@ const DraftRow = memo(function DraftRow({ draft, twin, failure, renaming, editor
   /** SF-0204-02: this row's Edit is the page's one primary action */
   primary: boolean;
   actions: RowActions;
+  /** ADR-0477: the draft wears its own face (the feel is on) */
+  face?: boolean;
+  /** a copy just made: the row arrives and glows once */
+  fresh?: boolean;
+  /** its name was just saved: the new name fades in where the field was */
+  renamed?: boolean;
 }) {
   const facts = draftReadiness(draft);
   const who = twin ? `${draft.name} (draft ${draft.id})` : draft.name;
   const signature = useMemo(() => (draft.song_ids ?? []).map((song_id) => ({ song_id })), [draft.song_ids]);
   return (
-    <li className={draft.place ? 'draft in-line' : 'draft'} data-lift="row">
+    <li className={`${draft.place ? 'draft in-line' : 'draft'}${fresh ? ' feel-flash' : ''}`} data-lift="row">
+      {face && <MixArt seed={`draft-${draft.id}`} songs={signature} />}
       <div className="draft-name">
         {renaming ? (
           <RenameDraft id={draft.id} name={draft.name} onDone={actions.renamed} />
         ) : (
           editor
-            ? <PageLink id={`draft-${draft.id}`} to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b>{draft.name}</b></PageLink>
-            : <b id={`draft-${draft.id}`} className="draft-open">{draft.name}</b>
+            ? <PageLink id={`draft-${draft.id}`} to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b data-renamed={renamed ? '' : undefined}>{draft.name}</b></PageLink>
+            : <b id={`draft-${draft.id}`} className="draft-open" data-renamed={renamed ? '' : undefined}>{draft.name}</b>
         )}
         {/* UF-0379-01/07: drafts that share a name are told apart by their exact draft number */}
         {twin && <span className="soft draft-number"> Draft {draft.id}</span>}
@@ -178,6 +186,15 @@ export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
   const [couldntLoad, setCouldntLoad] = useState(false);
   const [renaming, setRenaming] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<DraftInfo | null>(null);
+  // the feel (ADR-0477): a copy's row arrives and glows once, a renamed draft's new name fades in
+  const [fresh, setFresh] = useState<number | null>(null);
+  const [renamed, setRenamed] = useState<number | null>(null);
+  const shown = useRef<readonly DraftInfo[]>([]);
+  const awaitingCopy = useRef<Set<number> | null>(null);
+  const face = useFeelOn();
+  const moving = useMotionOn();
+  const feelMoving = useRef(moving);
+  feelMoving.current = moving;
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'recent' | 'name' | 'readiness'>('recent');
   const [visibleCount, setVisibleCount] = useState(40);
@@ -284,9 +301,16 @@ export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
     else notify(`Rendering ${draft.name} in the background.`);
   });
   const duplicate = (draft: DraftInfo) => onDraft(draft, 'copy that', async () => {
-    const made = await write(() => post<{ name: string }>(`/drafts/${draft.id}/duplicate`));
-    await refresh();
-    notify(`Made a copy: ${made.name}.`);
+    // the copy is the draft that is not here yet; the list marks it when it arrives
+    awaitingCopy.current = new Set(shown.current.map((item) => item.id));
+    try {
+      const made = await write(() => post<{ name: string }>(`/drafts/${draft.id}/duplicate`));
+      await refresh();
+      notify(`Made a copy: ${made.name}.`);
+    } catch (error) {
+      awaitingCopy.current = null;
+      throw error;
+    }
   });
   const remove = (draft: DraftInfo) => onDraft(draft, 'delete that', async () => {
     const removedLink = document.getElementById(`draft-${draft.id}`);
@@ -321,7 +345,13 @@ export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
     open: (id) => latest.current.openDraft?.(id),
     play: (id) => latest.current.playDraft?.(id),
     rename: (id) => setRenaming(id),
-    renamed: () => { setRenaming(null); void refresh(); },
+    renamed: () => {
+      setRenaming((was) => {
+        if (was !== null && feelMoving.current) setRenamed(was);
+        return null;
+      });
+      void refresh();
+    },
     duplicate: (draft) => void latest.current.duplicate(draft),
     prioritize: (draft) => void latest.current.prioritize(draft),
     outOfLine: (draft) => void latest.current.act(() => del<DraftList>(`/drafts/${draft.id}/line`)),
@@ -350,6 +380,20 @@ export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
     const counts = new Map<string, number>();
     for (const draft of all ?? []) counts.set(draft.name, (counts.get(draft.name) ?? 0) + 1);
     return counts;
+  }, [all]);
+  shown.current = all ?? [];
+  // A copy's row is marked before the browser paints it, so it arrives (and glows for four slow
+  // beats, .feel-flash) from its very first frame.
+  useLayoutEffect(() => {
+    const before = awaitingCopy.current;
+    const copy = before && all?.find((item) => !before.has(item.id));
+    if (!copy) return undefined;
+    awaitingCopy.current = null;
+    if (!feelMoving.current) return undefined;
+    setFresh(copy.id);
+    // the mark goes once the glow has played; a poll redrawing the list meanwhile does not cut it short
+    window.setTimeout(() => setFresh((was) => (was === copy.id ? null : was)), 1200);
+    return undefined;
   }, [all]);
   const inLine = useMemo(() => (all ?? []).filter((draft) => draft.place !== null), [all]);
   // nothing to show yet isn't the same as having no drafts
@@ -414,7 +458,8 @@ export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
             {shownDrafts.slice(0, visibleCount).map((draft, index) => (
               <DraftRow key={draft.id} draft={draft} twin={(sameName.get(draft.name) ?? 0) > 1}
                 failure={failures[draft.id]} renaming={renaming === draft.id} editor={editor} line={line}
-                primary={lead && index === 0} actions={actions} />
+                primary={lead && index === 0} actions={actions}
+                face={face} fresh={fresh === draft.id} renamed={renamed === draft.id} />
             ))}
           </ul>
         )}

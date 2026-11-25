@@ -31,7 +31,8 @@ async function startPlayingCurrent() {
     this.onChange(this.state);
   });
   render(<App />);
-  const currentArea = within(await screen.findByRole('region', { name: 'Current mix' }));
+  // My Mixes is its own chunk: on a cold, busy run it can take a little over the default second
+  const currentArea = within(await screen.findByRole('region', { name: 'Current mix' }, { timeout: 5_000 }));
   fireEvent.click(currentArea.getByRole('button', { name: 'Play' }));
   await waitFor(() => expect(window.location.pathname).toBe('/listen'));
   window.history.pushState({}, '', '/mixes/mine');

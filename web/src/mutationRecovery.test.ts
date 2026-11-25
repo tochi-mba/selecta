@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError, del, get, OFFLINE_WORDS, post, setMutationRetryDelays } from './api';
+import { answerWithin, ApiError, del, get, OFFLINE_WORDS, post, setMutationRetryDelays } from './api';
 
 /* Selecta 2.0 T0094 (ADR-0028): every change carries an operation id, and a change that got no
  * answer at all is sent again with the same id, so the server (which keeps first answers on disk,
@@ -66,5 +66,31 @@ describe('T0094 reconnect and resend', () => {
     const deletes = server([nothingAnswered]);
     await expect(del('/requests/1')).rejects.toThrow(OFFLINE_WORDS);
     expect(deletes).toHaveLength(1);
+  });
+});
+
+describe('a change that never answers', () => {
+  it('stops being waited for after the limit, and a late answer still lands', async () => {
+    vi.useFakeTimers();
+    try {
+      let answer: (value: number) => void = () => {};
+      const late = vi.fn();
+      const waited = answerWithin(new Promise<number>((done) => { answer = done; }), 1000, late);
+      const caught = waited.catch((error: ApiError) => error);
+      await vi.advanceTimersByTimeAsync(1000);
+      const error = await caught;
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).status).toBe(408);
+      expect((error as ApiError).code).toBe('answer_timeout');
+      answer(7);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(late).toHaveBeenCalledWith(7);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('an answer in time is passed straight through', async () => {
+    await expect(answerWithin(Promise.resolve('ready'), 1000)).resolves.toBe('ready');
   });
 });

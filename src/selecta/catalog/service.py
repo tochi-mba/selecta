@@ -15,6 +15,12 @@ in every workspace. Network calls happen outside any database transaction. A mis
 remembered with a retry time (`RETRY_*`), so it is not asked again at once. Running it twice is
 harmless: a key that is not due is skipped, and a cover already stored is reused.
 
+**Retries happen on view, by decision (T-20261125-238e).** Nothing sweeps due retries in the
+background. A due key is queued again the next time a page shows that song, which is when a cover
+is wanted. A sweep would spend the shared MusicBrainz allowance on songs nobody is looking at, and
+would ask on behalf of people who may have turned lookups off since (`allowed` is checked at each
+ask, with the person present).
+
 **Reading.** `art_for_songs` answers the page: per song, the cover's URLs on our own origin, its
 sizes, hue and confidence, and the details as suggestions. A person's choice ("Wrong cover?":
 another release, or the generated tile) always wins over the lookup. A hidden image is never

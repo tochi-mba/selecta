@@ -74,6 +74,9 @@ class ScanReport:
     set_aside: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     unreadable: list[str] = field(default_factory=list)
     held_back: int = 0
+    # the files read this time (new or changed), so their covers can be read once the scan is done
+    # (library/art.py, ADR-0478) without slowing the scan itself
+    fresh: list[str] = field(default_factory=list)
 
 
 def _first(tags, *keys: str) -> str | None:
@@ -425,6 +428,7 @@ def _scan(
         if checkpoint:
             batch.append(song)
         report.new_or_changed += 1
+        report.fresh.append(key)
 
     classify(songs, subtitled, root)
 

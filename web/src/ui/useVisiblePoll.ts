@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react';
 
+/** The longest one read may hold the polling slot before it is given up on. */
+export const STALLED_READ_MS = 60_000;
+
 /** Avoid background tab requests for presentation-only data. On return,
  * read immediately rather than waiting for another polling interval.
  * Slow reads must not pile up or overwrite a newer answer.
@@ -25,6 +28,7 @@ export function useVisiblePoll(
     // how many interval ticks to let pass before the next read, after failures
     let skip = 0;
     let failures = 0;
+    let reads = 0;
     const tick = (fromTimer = false) => {
       if (!live || document.visibilityState === 'hidden' || reading) return;
       if (fromTimer && skip > 0) {
@@ -36,8 +40,21 @@ export function useVisiblePoll(
       const result = latest.current();
       if (!result || typeof result.then !== 'function') return;
       reading = true;
+      const mine = ++reads;
+      // A read that never settles must not stop the polling for good: after the limit its slot is
+      // freed and counted as a failure, so a server that comes back is noticed. Its answer, if it
+      // ever comes, no longer moves the pace.
+      const stuck = window.setTimeout(() => {
+        if (mine !== reads || !reading) return;
+        reads += 1;
+        failed();
+      }, Math.max(STALLED_READ_MS, everyMs * 2));
+      const settle = (then: () => void) => () => {
+        window.clearTimeout(stuck);
+        if (mine === reads) then();
+      };
       void Promise.resolve(result).then(
-        () => {
+        settle(() => {
           reading = false;
           failures = 0;
           skip = 0;
@@ -45,21 +62,22 @@ export function useVisiblePoll(
             refreshOnFinish = false;
             tick();
           }
-        },
-        () => {
-          reading = false;
-          if (backoff) {
-            failures += 1;
-            const wait = Math.min(everyMs * 2 ** failures, Math.max(maxMs, everyMs));
-            skip = Math.max(Math.round(wait / everyMs) - 1, 0);
-          }
-          if (live && refreshOnFinish) {
-            refreshOnFinish = false;
-            tick();
-          }
-        },
+        }),
+        settle(failed),
       );
     };
+    function failed() {
+      reading = false;
+      if (backoff) {
+        failures += 1;
+        const wait = Math.min(everyMs * 2 ** failures, Math.max(maxMs, everyMs));
+        skip = Math.max(Math.round(wait / everyMs) - 1, 0);
+      }
+      if (live && refreshOnFinish) {
+        refreshOnFinish = false;
+        tick();
+      }
+    }
     const resumed = () => {
       if (document.visibilityState !== 'visible') return;
       if (reading) refreshOnFinish = true;

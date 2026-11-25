@@ -1,4 +1,4 @@
-import { cloneElement, CSSProperties, isValidElement, ReactElement, ReactNode, Ref, useEffect, useRef, useState } from 'react';
+import { cloneElement, CSSProperties, isValidElement, ReactElement, ReactNode, Ref, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Status as AppStatus } from '../api';
 import { useFlag, useFlags } from '../flags';
 import { forgetFolder, recallFolder, storageSpace, type ImportSummary, type MediaStore, type StorageSpace, type StoredFolderHandle } from '../media';
@@ -19,6 +19,7 @@ import { OnlyOnYourComputer } from './LocalFirstEmpty';
 import { readPersistState, subscribePersist, type PersistState } from './persistence';
 import { StorageCard } from './StorageCard';
 import { MusicFolders } from './MusicFolders';
+import { onTonalActivity, tonalActivity, tonalActivityWords } from './tonalActivity';
 import { NumberRoll } from '../feel/numberRoll';
 import { feelOn } from '../feel/root';
 import { motionMs } from '../ui/exitMotion';
@@ -169,6 +170,7 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
   const { counts } = status;
   const importing = useImportSession(workspaceId);
   const interrupted = useResumeOffer(workspaceId);
+  const keysNow = useSyncExternalStore(onTonalActivity, tonalActivity, tonalActivity);
   const handle = useRef<ConnectMusicHandle>(null);
   const [space, setSpace] = useState<StorageSpace | null>(null);
   const [persist, setPersist] = useState<PersistState | null>(null);
@@ -215,8 +217,10 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
     ? <Status key="check" kind="working">Checking which songs can play here.</Status>
     : fileCheck.at
       ? <Status key="check" kind="ready">{`Songs checked at ${clock(fileCheck.at)}.`}</Status>
-      : <Status key="check" kind="queued">Songs not checked yet this visit.</Status>);
-  if (measuringKeys) activity.push(<Status key="keys" kind="working">Measuring song keys for Harmonic matches.</Status>);
+      : <Status key="check" kind="queued">Songs are checked in the background while SelectaDJ is open.</Status>);
+  // what the profiler is really doing in this tab: nothing is said once every song is measured
+  const keysWords = measuringKeys ? tonalActivityWords(keysNow) : null;
+  if (keysWords) activity.push(<Status key="keys" kind={keysNow === 'measuring' ? 'working' : 'paused'}>{keysWords}</Status>);
 
   return (
     <div className="lw-stack">

@@ -2,11 +2,19 @@ import { render, screen } from '@testing-library/react';
 import { Suspense } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Section } from './controls';
-import { isChunkLoadError, lazyPage } from './staleBuild';
+import { isChunkLoadError, lazyPage, SlowToArrive } from './staleBuild';
 
 const gone = () => new TypeError('Failed to fetch dynamically imported module: https://selectadj.app/assets/Mix-abc123.js');
 
 describe('a deploy under an open tab (gap 4)', () => {
+  it('a page whose code never arrives offers Reload after the limit, not before', async () => {
+    const Page = lazyPage(() => new Promise<never>(() => undefined));
+    render(<Suspense fallback={<p>Loading<SlowToArrive ms={20} /></p>}><Page /></Suspense>);
+    expect(screen.queryByRole('button', { name: 'Reload' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Reload' }, { timeout: 2000 })).toBeTruthy();
+    expect(screen.getByText(/anything playing keeps playing/)).toBeTruthy();
+  });
+
   it('knows a missing page file from any other error', () => {
     expect(isChunkLoadError(gone())).toBe(true);
     expect(isChunkLoadError(new TypeError('Importing a module script failed.'))).toBe(true);

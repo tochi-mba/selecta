@@ -24,7 +24,9 @@ vi.mock('../media', async (original) => ({
 const { applyImportEvent, ConnectMusic, summaryWords } = await import('./ConnectMusic');
 
 const WS = 'ws';
-const store = { degraded: false } as unknown as MediaStore;
+// `get` answers no row: with cloud.music_folders on, a lapsed song is listed only when no watched
+// folder holds it, which ConnectMusic reads from the song's stored row
+const store = { degraded: false, get: async () => undefined } as unknown as MediaStore;
 const openStore = async () => store;
 const SUMMARY: ImportSummary = { imported: 1, duplicates: 0, failed: 1, skipped: 0, cancelled: false, paused: false };
 
@@ -60,7 +62,13 @@ afterEach(async () => {
 });
 
 /** The count beside "Adding your music" while an import runs (the meter says the same in its own words). */
-const importCount = () => document.querySelector('.lw-import-count')?.textContent ?? null;
+/** The import count as a screen reader hears it: a rolling figure's digit strips are decoration
+ * (aria-hidden) beside its visually hidden copy, so they are left out (ADR-0477 NumberRoll). */
+const importCount = () => {
+  const count = document.querySelector('.lw-import-count')?.cloneNode(true) as HTMLElement | undefined;
+  count?.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+  return count?.textContent ?? null;
+};
 
 describe('Connect Music', () => {
   it('folds importer events into one row per file, replacing in-progress stages', () => {

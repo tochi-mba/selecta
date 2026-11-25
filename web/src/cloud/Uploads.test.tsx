@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { Api } from './api';
@@ -59,6 +59,18 @@ describe('resuming an upload', () => {
 });
 
 describe('the Add music panel', () => {
+  it('takes dropped files with every feel flag off, the same as the picker', async () => {
+    const { api } = fakeApi();
+    render(<UploadsPanel api={api} workspaceId="ws" setError={() => {}} setNotice={() => {}} blocked={null} />);
+    const zone = screen.getByLabelText(/Choose music files/).closest('label')!;
+    const file = new File(['0123456789'], 'dropped.wav', { type: 'audio/wav' });
+    const dataTransfer = { types: ['Files'], files: [file], dropEffect: 'copy' };
+    expect(fireEvent.dragOver(zone, { dataTransfer })).toBe(false);
+    expect(fireEvent.drop(zone, { dataTransfer })).toBe(false);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start upload' })).toBeEnabled());
+  });
+
+
   it('lists unfinished uploads from the server, so a refreshed page knows about them', async () => {
     const { api } = fakeApi({ sessions: [session(), session({ id: 'done', status: 'accepted', name: 'finished.wav' })] });
     render(<UploadsPanel api={api} workspaceId="ws" setError={() => {}} setNotice={() => {}} blocked={null} />);

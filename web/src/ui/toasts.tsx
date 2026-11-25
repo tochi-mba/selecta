@@ -24,8 +24,12 @@ export type Toast = {
   /** Something the person asked for has finished: with the feel's motion on, a tick draws itself
    * beside the words (ADR-0477). The words still say it. */
   success?: boolean;
+  /** Told when the person closes the toast themselves (its close button or a swipe), never when it
+   * times out or one of its actions runs, so an offer can tell "no thanks" from "not seen". */
+  onDismiss?: () => void;
 };
-export type ToastAction = { label: string; run: () => Promise<unknown> | void };
+/** `primary` draws the action the toast is for as the main button (an install offer's Install). */
+export type ToastAction = { label: string; run: () => Promise<unknown> | void; primary?: boolean };
 
 const SHOWN = 3;
 const PLAIN_MS = 4500;
@@ -61,7 +65,7 @@ export function setToastsQuiet(on: boolean) {
   }
 }
 
-export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone; scope?: string | null; where?: string; actions?: ToastAction[]; success?: boolean } = {}): number {
+export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone; scope?: string | null; where?: string; actions?: ToastAction[]; success?: boolean; onDismiss?: () => void } = {}): number {
   const clean = message.replace(/\.\.$/, '.');
   const tone = options.tone ?? 'info';
   const key = `${options.scope ?? ''}\u0000${clean}`;
@@ -79,7 +83,7 @@ export function showToast(message: string, options: { undo?: Toast['undo']; tone
     recentRoutine.set(key, { at: Date.now(), id: -activity });
   }
   if (quiet && tone !== 'problem') return -activity;
-  const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity, where: options.where || undefined, actions: options.actions?.length ? options.actions : undefined, ...(options.success && tone === 'info' ? { success: true } : {}) };
+  const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity, where: options.where || undefined, actions: options.actions?.length ? options.actions : undefined, ...(options.success && tone === 'info' ? { success: true } : {}), ...(options.onDismiss ? { onDismiss: options.onDismiss } : {}) };
   const all = [...toasts, toast];
   // room is made from the oldest with no Undo first. One with an Undo can go too, because Activity has it.
   // UF-0371-07: routine news goes before a problem, so background completions never push an error away.
@@ -183,6 +187,7 @@ function ToastRow({ toast, closing = false, onGone, depth = 0 }: { toast: Toast;
     if (!cancelled && far) {
       restoreFocus();
       dismissToast(toast.id);
+      toast.onDismiss?.();
       return;
     }
     node.style.translate = '';
@@ -269,9 +274,9 @@ function ToastRow({ toast, closing = false, onGone, depth = 0 }: { toast: Toast;
         </button>
       )}
       {toast.actions?.map((action) => (
-        <button key={action.label} onClick={() => { restoreFocus(); dismissToast(toast.id); void action.run(); }}>{action.label}</button>
+        <button key={action.label} className={action.primary ? 'primary' : undefined} onClick={() => { restoreFocus(); dismissToast(toast.id); void action.run(); }}>{action.label}</button>
       ))}
-      <button className="toast-close" aria-label="Dismiss" title="Dismiss" onClick={() => { restoreFocus(); dismissToast(toast.id); }}><Icon name="close" /></button>
+      <button className="toast-close" aria-label="Dismiss" title="Dismiss" onClick={() => { restoreFocus(); dismissToast(toast.id); toast.onDismiss?.(); }}><Icon name="close" /></button>
     </div>
   );
 }

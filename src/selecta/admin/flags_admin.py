@@ -356,6 +356,14 @@ def execute_broad_rule(conn: Connection, action: delayed.DangerousAction) -> dic
         raise ValueError(f"not a broad flag rule: {action.kind}")
     flag_id = action.payload["flag_id"]
     proposed = [Rule.from_dict(item) for item in action.payload["rules"]]
+    if flag_id == lucy_rollout_guard.FLAG:
+        # Checked again against the rules and history as they are now: another raise may have
+        # been saved while this one waited (LM-0487-07). Going back still passes.
+        refusals = lucy_rollout_guard.check_change_now(
+            conn, str(action.payload.get("change") or ""), proposed, reason=action.reason
+        )
+        if refusals:
+            raise flag_rules.RuleError(refusals)
     saved = flag_rules.save(
         conn, flag_id, proposed, author=action.proposer_id, reason=action.reason
     )

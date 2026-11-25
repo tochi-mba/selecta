@@ -53,7 +53,14 @@ async function send<T>(path: string, init: RequestInit, token: TokenSource, sess
   headers.set('Authorization', `Bearer ${await token()}`);
   if (session) headers.set('X-Admin-Session', session);
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  const response = await fetch(`${origin}/api${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${origin}/api${path}`, { ...init, headers });
+  } catch (error) {
+    // nothing answered: the browser's own words ("Failed to fetch") tell staff nothing
+    if (error instanceof TypeError) throw new AdminError('Can’t reach SelectaDJ right now. Try again in a moment.', 0, 'offline');
+    throw error;
+  }
   const type = response.headers.get('content-type') ?? '';
   const payload = type.includes('json') ? await response.json().catch(() => null) : await response.text();
   if (!response.ok) {

@@ -7,6 +7,7 @@ import type { CardStatus, LimitNotice, Message } from '../lucy/types';
 import { humanize } from '../lucy/words';
 import { Action } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { showProblem } from '../ui/toasts';
 import { PermissionCard, PlanGroupView } from './LucyCards';
 import { LucyLimitStep, type ExtraOutcome } from './LucyLimitStep';
 
@@ -199,7 +200,10 @@ function CopyAnswer({ text }: { text: string }) {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-    } catch { /* the browser refused; nothing to undo */ }
+    } catch {
+      // the browser refused: say so, rather than a press that does nothing
+      showProblem('Your browser didn’t let SelectaDJ copy that. Select the answer and copy it yourself.');
+    }
   };
   return (
     <button type="button" className="quiet" onClick={() => void copy()} aria-label={copied ? 'Copied' : 'Copy this answer'}>

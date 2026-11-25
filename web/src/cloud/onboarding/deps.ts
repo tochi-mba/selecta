@@ -64,6 +64,8 @@ const TONE_HZ = 440;
 const TONE_SECONDS = 1.2;
 /** Quiet on purpose: a check tone must never startle a room through a big speaker. */
 const TONE_GAIN = 0.15;
+/** How long past the tone's own length its end is waited for. */
+const TONE_SLACK_SECONDS = 3;
 
 function engineSession(engine: Engine, made: EngineContext): AudioSession {
   return {
@@ -94,8 +96,16 @@ function engineSession(engine: Engine, made: EngineContext): AudioSession {
       gain.gain.setValueAtTime(TONE_GAIN, start + TONE_SECONDS - 0.15);
       gain.gain.linearRampToValueAtTime(0, start + TONE_SECONDS);
       oscillator.connect(gain).connect(context.destination);
-      await new Promise<void>((done) => {
-        oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); done(); };
+      // A context the browser would not start never reaches the tone's end, so `onended` never
+      // fires: without a limit the step said "Playing the check tone" for ever. Past the limit
+      // the tone counts as not played and the caller offers it again.
+      let limit: ReturnType<typeof setTimeout> | undefined;
+      await new Promise<void>((done, fail) => {
+        oscillator.onended = () => { clearTimeout(limit); oscillator.disconnect(); gain.disconnect(); done(); };
+        limit = setTimeout(() => {
+          try { oscillator.disconnect(); gain.disconnect(); } catch { /* already gone */ }
+          fail(new Error('The check tone did not play.'));
+        }, (TONE_SECONDS + TONE_SLACK_SECONDS) * 1000);
         oscillator.start(start);
         oscillator.stop(start + TONE_SECONDS);
       });

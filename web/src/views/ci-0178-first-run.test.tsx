@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Link, MixItem } from '../api';
 import { setFlags } from '../flags';
-import type { NowState } from '../player';
+import { noteHandoffHeard, resetHandoffHeard } from '../audio/handoffHeard';
 import { fakeBackend, Reply, seam, songs, status } from '../test/backend';
 import { FIRST_HANDOFF_KEY, FirstHandoff } from './FirstHandoff';
 import { ScanReveals } from './ScanReveals';
@@ -71,56 +71,63 @@ describe('CI-0178-04 genuine new-musical-possibility reveals during the first sc
   });
 });
 
-const state = (more: Partial<NowState> = {}): NowState => ({
-  phase: 'playing', position: 1, songTime: 3, duration: 200, inSeam: false, seamAt: null, notice: '',
-  nextReady: true, lastSeamKey: null, volume: 1, muted: false, ...more,
-});
-
 describe('CI-0178-05 first-seam earned-reward moment', () => {
   const mix: MixItem[] = songs(seam('ready', 'k1'), seam('rendering', 'k2'));
+  // what the players say once a hand-over has played to its end here, on screen (T-20261125-ebda)
+  const heard = (more: Partial<Parameters<typeof noteHandoffHeard>[0]> = {}) => act(() => {
+    noteHandoffHeard({ fromIndex: 0, intoIndex: 1, fromSongId: 1, intoSongId: 2, seamKey: 'k1', ...more });
+  });
 
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+    resetHandoffHeard();
+  });
 
-  it('waits for a finished transition to be heard, then names the two songs without blocking anything', () => {
-    const { rerender } = render(<FirstHandoff now={state()} mix={mix} />);
-    // playing, but no transition has been heard yet: the plan alone earns nothing
+  it('waits for a hand-over to be heard, then names the two songs without blocking anything', () => {
+    render(<FirstHandoff mix={mix} />);
+    // playing, but no hand-over has been heard yet: the plan alone earns nothing
     expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
-    rerender(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
+    heard();
     const note = screen.getByRole('status', { name: 'Your first hand-off' });
     expect(note).toHaveTextContent('That was your first SelectaDJ hand-off: Song 1 into Song 2');
     expect(note.tagName).toBe('ASIDE');
     expect(document.querySelector('dialog, [role="dialog"], [aria-modal]')).toBeNull();
   });
 
-  it('is not triggered while paused, or by a transition that is not finished or not in this mix', () => {
-    const { rerender } = render(<FirstHandoff now={state({ phase: 'paused', lastSeamKey: 'k1' })} mix={mix} />);
-    expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
-    rerender(<FirstHandoff now={state({ lastSeamKey: 'k2' })} mix={mix} />);
-    expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
-    rerender(<FirstHandoff now={state({ lastSeamKey: 'someone-else' })} mix={mix} />);
+  it("is not triggered by a hand-over that is not one of this mix's, then is by the real one", () => {
+    render(<FirstHandoff mix={mix} />);
+    heard({ seamKey: 'someone-else' });
+    heard({ intoSongId: 9 });
+    heard({ fromIndex: 4, intoIndex: 5 });
     expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     expect(window.localStorage.getItem(FIRST_HANDOFF_KEY)).toBeNull();
-    // the Pause came first; once it really plays through, it is earned
-    rerender(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
+    heard();
     expect(screen.getByText(/first SelectaDJ hand-off/)).toBeInTheDocument();
   });
 
-  it('a Pause after it was earned leaves the note in place, and Got it dismisses it for good', () => {
-    const { rerender, unmount } = render(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
-    rerender(<FirstHandoff now={state({ phase: 'paused', lastSeamKey: 'k1' })} mix={mix} />);
-    expect(screen.getByText(/first SelectaDJ hand-off/)).toBeInTheDocument();
+  it('counts a hand-over heard earlier in the visit, and one worked out live in Cloud', () => {
+    heard({ seamKey: null, fromIndex: 1, intoIndex: 2, fromSongId: 2, intoSongId: 3 });
+    render(<FirstHandoff mix={mix} />);
+    expect(screen.getByText(/Song 2 into Song 3/)).toBeInTheDocument();
+  });
+
+  it('Got it dismisses it for good', () => {
+    const { unmount } = render(<FirstHandoff mix={mix} />);
+    heard();
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
     expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     unmount();
-    // another visit, another transition: it stays dismissed
-    render(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
+    // another visit, another hand-over: it stays dismissed
+    render(<FirstHandoff mix={mix} />);
+    heard();
     expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     expect(window.localStorage.getItem(FIRST_HANDOFF_KEY)).toBe('1');
   });
 
   it('is gone with its flag off', () => {
     setFlags({ 'listen.first_handoff': false });
-    const { container } = render(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
+    const { container } = render(<FirstHandoff mix={mix} />);
+    heard();
     expect(container.innerHTML).toBe('');
     expect(window.localStorage.getItem(FIRST_HANDOFF_KEY)).toBeNull();
   });

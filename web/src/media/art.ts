@@ -1,5 +1,6 @@
 import { flagOn } from '../flags';
 import { hasArt, putArt } from './artStore';
+import { breathe } from './breathe';
 import { artSupported, makeArt, type ArtRequest, type ArtResponse, type MadeArt } from './artWorker';
 import { readFilePicture, type FilePicture } from './tags';
 
@@ -24,6 +25,9 @@ type Job = { file: File; sha: string };
 const queue: Job[] = [];
 const queued = new Set<string>();
 let running = false;
+/** How long the import must be quiet before covers start. */
+const QUIET_MS = 4_000;
+let quietTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** Queue a file's own picture to become its cover, keyed by the content hash the import just
  * computed. Returns at once; does nothing while the flag is off or where the browser cannot
@@ -34,13 +38,23 @@ export function captureArt(file: File, sha: string): void {
     if (queued.has(sha) || queue.length >= MAX_QUEUE) return;
     queued.add(sha);
     queue.push({ file, sha });
-    if (!running) void drain();
+    // Covers wait for the import to go quiet. Reading pictures while hundreds of files are still
+    // being hashed and registered competed with the import for the page, so the queue only starts
+    // once no new file has arrived for a few seconds; a large import gets its covers at the end.
+    if (quietTimer !== undefined) clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => {
+      quietTimer = undefined;
+      if (!running) void drain();
+    }, QUIET_MS);
   } catch {
     // a cover is never worth an import
   }
 }
 
 function idle(): Promise<void> {
+  // A hidden tab has no idle periods, so each cover waited out the timeout, itself held back to
+  // once a minute after a few minutes away. Nobody is using a hidden page, so it simply takes turns.
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return breathe();
   return new Promise((resolve) => {
     const scope = globalThis as { requestIdleCallback?: (run: () => void, options?: { timeout: number }) => number };
     if (typeof scope.requestIdleCallback === 'function') scope.requestIdleCallback(() => resolve(), { timeout: 2_000 });
@@ -78,7 +92,13 @@ async function captureOne({ file, sha }: Job): Promise<void> {
 // ---------- the worker ----------
 
 let worker: Worker | null = null;
+/** No worker can be made here at all: covers are made on the page, at idle, as before. */
 let workerBroken = false;
+/** Workers that failed or hung in a row. One timeout is easy on a busy laptop, so a new worker is
+ * made each time; after this many the covers are skipped for the visit rather than drawn on the
+ * page, where decoding and scaling would hold the page on the machine that was already struggling. */
+let workerFailures = 0;
+export const WORKER_FAILURE_LIMIT = 3;
 let releaseTimer: ReturnType<typeof setTimeout> | undefined;
 let nextId = 1;
 
@@ -144,19 +164,30 @@ function inWorker(target: Worker, picture: FilePicture): Promise<MadeArt | null>
 }
 
 /** In the worker where there is one; otherwise on the page, at idle, one at a time. */
-async function makeArtOffPage(picture: FilePicture): Promise<MadeArt | null> {
+export async function makeArtOffPage(picture: FilePicture): Promise<MadeArt | null> {
+  if (workerFailures >= WORKER_FAILURE_LIMIT) return null;
   const target = spawn();
   if (target) {
     try {
-      return await inWorker(target, picture);
+      const art = await inWorker(target, picture);
+      workerFailures = 0;
+      return art;
     } catch {
-      // a worker that failed or hung is let go, and later pictures are made on the page instead;
-      // this one's bytes were handed over, so it simply has no cover until the next import
+      // a worker that failed or hung is let go and the next picture gets a new one; this one's
+      // bytes were handed over, so it simply has no cover until the next import
       target.terminate();
       if (worker === target) worker = null;
-      workerBroken = true;
+      workerFailures += 1;
       return null;
     }
   }
   return makeArt(picture.bytes, picture.mime);
+}
+
+/** For tests: forget the worker and its failures. */
+export function resetArtWorker(): void {
+  worker?.terminate();
+  worker = null;
+  workerBroken = false;
+  workerFailures = 0;
 }

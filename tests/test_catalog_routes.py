@@ -103,6 +103,9 @@ def test_the_image_route_serves_our_bytes_with_a_private_cache(world):
     assert answer.content == tiny_jpeg()
     assert answer.headers["content-type"] == "image/jpeg"
     assert answer.headers["cache-control"] == CACHE_CONTROL
+    # a hidden image must leave browser caches soon: no week-long or immutable caching
+    assert "immutable" not in CACHE_CONTROL
+    assert int(CACHE_CONTROL.split("max-age=")[1].split(",")[0]) <= 3600
     assert answer.headers["x-content-type-options"] == "nosniff"
 
 

@@ -45,17 +45,25 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
   const tiles = useRef(new Map<string, HTMLSpanElement>());
   const rows = useRef(new Map<string, HTMLLIElement>());
   const [flashed, setFlashed] = useState<string | null>(null);
+  // the row whose name was just saved, so the new name fades in where the field was
+  const [renamed, setRenamed] = useState<string | null>(null);
   const moving = useMotionOn();
   const feel = useFeelOn();
-  const faces = useMixFaces(list, (mixId) => latest.current.recipes.read(mixId));
-  const travel = (recipe: RecipeSummary): NavigateOptions | undefined => {
+  const { faces, want } = useMixFaces(list, (mixId) => latest.current.recipes.read(mixId));
+  // Play carries the tile to Listen's cover (named player-art there); Edit carries it to the
+  // editor's own mix face (mix-art). Without page transitions the page changes at once.
+  const travel = (recipe: RecipeSummary, name: 'mix-art' | 'player-art'): NavigateOptions | undefined => {
     const tile = tiles.current.get(recipe.mix_id);
-    return tile ? { share: [[tile, 'mix-art']] } : undefined;
+    return tile ? { share: [[tile, name]] } : undefined;
   };
-  const flash = (mixId: string) => {
+  /** A copy's row arrives on top and glows once. Marked before the list is read again, so the row is
+   * drawn with its arrival from its very first frame; the mark goes once the glow has played. */
+  const arriving = (mixId: string) => {
+    if (moving) setFlashed(mixId);
+  };
+  const arrived = (mixId: string) => {
     if (!moving) return;
-    setFlashed(mixId);
-    // the glow lasts four slow beats (feel.css .feel-flash); the class goes once it has played
+    // the glow lasts four slow beats (feel.css .feel-flash)
     window.setTimeout(() => setFlashed((was) => (was === mixId ? null : was)), 1200);
   };
 
@@ -100,17 +108,19 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
   };
   const edit = async (recipe: RecipeSummary) => {
     await makeCurrent(recipe);
-    navigate('/mix/current/edit', travel(recipe));
+    navigate('/mix/current/edit', travel(recipe, 'mix-art'));
   };
   const play = async (recipe: RecipeSummary) => {
     await makeCurrent(recipe);
-    navigate('/listen', travel(recipe));
+    // the page change only starts its animation; the music starts straight after, never waiting
+    navigate('/listen', travel(recipe, 'player-art'));
     await player.playFrom(0);
   };
   const copy = async (recipe: RecipeSummary) => {
     const made = await recipes.duplicate(recipe.mix_id, copyName(recipe.name));
+    arriving(made.mix_id);
     await load();
-    flash(made.mix_id);
+    arrived(made.mix_id);
     notify(`Saved a copy: ${made.name}.`);
   };
   const saveCurrent = async () => {
@@ -121,13 +131,15 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
     const known = list?.find((recipe) => recipe.mix_id === current)?.name
       ?? await recipes.read(current).then((mix) => mix.name, () => undefined);
     const made = await recipes.duplicate(current, known ? copyName(known) : undefined);
+    arriving(made.mix_id);
     await load();
-    flash(made.mix_id);
+    arrived(made.mix_id);
     notify(`Saved a copy: ${made.name}.`);
   };
   const rename = async (recipe: RecipeSummary, name: string) => {
     const fresh = await recipes.read(recipe.mix_id);
     await recipes.edit(recipe.mix_id, fresh.revision, { name });
+    setRenamed(recipe.mix_id);
     setRenaming(null);
     notify(`Renamed to ${name}.`);
     if (recipes.current() === recipe.mix_id) setMixData(await request<MixData>('/mix'));
@@ -191,13 +203,13 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
               <li className={flashed === recipe.mix_id ? 'mix-row feel-flash' : 'mix-row'} key={recipe.mix_id} data-current={current || undefined}
                 data-lift={feel ? 'row' : undefined}
                 ref={(row) => { if (row) rows.current.set(recipe.mix_id, row); else rows.current.delete(recipe.mix_id); }}>
-                <MixArt seed={recipe.mix_id} songs={faces.get(recipe.mix_id)} travels={current}
+                <MixArt seed={recipe.mix_id} songs={faces.get(recipe.mix_id)} travels={current} want={() => want(recipe.mix_id)}
                   tileRef={(tile) => { if (tile) tiles.current.set(recipe.mix_id, tile); else tiles.current.delete(recipe.mix_id); }} />
                 <div className="mix-row-words">
                   {renaming === recipe.mix_id ? (
                     <RenameMix name={recipe.name} onCancel={() => setRenaming(null)} onSave={(name) => rename(recipe, name)} />
                   ) : (
-                    <b className="mix-row-name" dir="auto" title={recipe.name}>{recipe.name}</b>
+                    <b className="mix-row-name" dir="auto" title={recipe.name} data-renamed={renamed === recipe.mix_id && moving ? '' : undefined}>{recipe.name}</b>
                   )}
                   <span className="mix-row-meta">
                     {current && <span className="badge" data-tone="accent">{live ? 'Playing now' : phase === 'paused' ? 'Paused' : 'Current mix'}{live && feel && <PlayingBars />}</span>}
@@ -209,7 +221,7 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
                 </div>
                 <div className="mix-row-actions">
                   {current && phase !== 'idle'
-                    ? <button className="primary" aria-label={`Open ${recipe.name} in Listen`} onClick={() => navigate('/listen')}>Open</button>
+                    ? <button className="primary" aria-label={`Open ${recipe.name} in Listen`} onClick={() => navigate('/listen', travel(recipe, 'player-art'))}>Open</button>
                     : <Action className={current ? 'primary' : 'mix-row-play'} working="Starting…" aria-label={`Play ${recipe.name}`} run={() => play(recipe)}><Icon name="play" /> Play</Action>}
                   <Action className="quiet" working="Opening…" aria-label={`Edit ${recipe.name}`} run={() => edit(recipe)}>Edit</Action>
                   <Menu title={`More actions for ${recipe.name}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {recipe.name}</span></>}>

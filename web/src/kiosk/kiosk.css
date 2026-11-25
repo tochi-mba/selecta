@@ -20,8 +20,14 @@ body { margin: 0; background: var(--surface-base); color: var(--ink); font: clam
 /* Press depth on the big touch targets: a short squash while held and a spring back on release.
    The press is fast and the release takes the spring; the hit area is the resting box, because
    scale paints without moving layout. */
-.k-tap-button, .k-plain { transition: scale var(--motion-spring-release) var(--spring-bouncy); }
+.k-tap-button, .k-plain { position: relative; transition: scale var(--motion-spring-release) var(--spring-bouncy); }
 .k-tap-button:active, .k-plain:active { scale: var(--press-scale); transition-duration: var(--motion-feedback); transition-timing-function: var(--motion-ease); }
+/* A scaled box is also a smaller target, so while pressed an invisible pad reaches 2.5% and a pixel
+   past each edge (as feel.css does for the app's buttons): every point of the resting box still
+   lands on the button, and a finger that slides to the edge is not lost. */
+.k-tap-button:active::after, .k-plain:active::after { content: ''; position: absolute; inset: calc(-2.5% - 1px); }
+/* the staff buttons are touch targets too: never smaller than a fingertip */
+.k-plain { min-height: var(--control-height); }
 .k-tap-button:focus-visible, .k-plain:focus-visible, .k-corner:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
 .k-guide { display: block; margin-top: 1.5em; color: var(--soft); }
 .k-progress { height: 4px; width: 40%; margin: 1em auto; background: var(--surface-overlay); overflow: hidden; border-radius: var(--radius-hair); }
@@ -36,13 +42,28 @@ body { margin: 0; background: var(--surface-base); color: var(--ink); font: clam
 .k-motif span { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--selected); opacity: 0.5; }
 .k-motif span:nth-child(2) { opacity: 0.75; }
 .k-motif span:nth-child(3) { opacity: 1; }
+/* The player's own report says whether sound is really coming out (main.ts writes data-audible).
+   While the playing screen shows and nothing is heard yet (the audio is still opening, or the
+   browser holds it), the dots rest low and soft, so they never claim music that is not playing. */
+:root[data-audible='no'] .k-motif span { background: var(--soft); opacity: 0.5; }
+
+/* A new screen arrives from the side the player's day moves in (direction.ts): a step on from
+   ahead, a step back from behind. `translate` leaves the burn-in shift on `transform` alone. */
+.k-screen[data-enter='forward'] { animation: k-enter-forward var(--motion-spring-snappy) var(--spring-snappy) backwards; }
+.k-screen[data-enter='back'] { animation: k-enter-back var(--motion-spring-snappy) var(--spring-snappy) backwards; }
+@keyframes k-enter-forward { from { opacity: 0; translate: var(--space-6) 0; } }
+@keyframes k-enter-back { from { opacity: 0; translate: calc(-1 * var(--space-6)) 0; } }
 
 .k-saved { position: fixed; right: 3vmin; bottom: 3vmin; width: 1.4em; height: 1.4em; color: var(--soft); }
 /* the hidden staff corner and panel */
 .k-corner { position: fixed; left: 0; top: 0; width: 64px; height: 64px; background: transparent; border: 0; opacity: 0; z-index: 2; }
 .k-corner:focus-visible { opacity: 1; }
-.k-panel-layer { position: fixed; inset: 0; display: grid; place-items: center; background: var(--surface-scrim); z-index: 3; }
-.k-panel { background: var(--surface-overlay); color: var(--ink); border-radius: var(--radius); padding: 1.2em 1.4em; max-width: min(32em, 92vw); text-align: left; }
+.k-panel-layer { position: fixed; inset: 0; display: grid; place-items: center; background: var(--surface-scrim); z-index: 3; animation: k-scrim-in var(--motion-overlay) var(--motion-ease) backwards; }
+/* The panel slides in from the top-left corner it was opened from. Closing removes it at once: a
+   staff action is never held up by an animation. */
+.k-panel { background: var(--surface-overlay); color: var(--ink); border-radius: var(--radius); padding: 1.2em 1.4em; max-width: min(32em, 92vw); text-align: left; animation: k-panel-in var(--motion-spring-snappy) var(--spring-snappy) backwards; }
+@keyframes k-scrim-in { from { opacity: 0; } }
+@keyframes k-panel-in { from { opacity: 0; translate: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)); } }
 .k-panel dl { margin: 0; }
 .k-panel-row { display: flex; justify-content: space-between; gap: 1em; padding: 0.25em 0; }
 .k-panel-row dt { color: var(--soft); }
@@ -60,5 +81,10 @@ body { margin: 0; background: var(--surface-base); color: var(--ink); font: clam
   .k-progress span { animation: none; }
   .k-tap-button, .k-plain { transition: none; }
   .k-tap-button:active, .k-plain:active { scale: none; }
+  .k-screen[data-enter], .k-panel-layer, .k-panel { animation: none; }
+}
+@media (forced-colors: active) {
+  :root[data-audible='no'] .k-motif span { background: GrayText; }
+  .k-motif span { background: CanvasText; }
 }
 .k-room-code { margin-top: 1.2em; font-size: 1.2em; font-weight: 700; letter-spacing: 0.06em; }

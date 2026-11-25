@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ApiError, problemKind } from '../api';
+import { answerWithin, ApiError, problemKind } from '../api';
 import { lucy, lucyTransport, newId } from '../lucy/client';
 import type { CommitNote } from '../lucy/reducer';
 import type { Approval, ApproveAction, Commit, Revision } from '../lucy/types';
@@ -149,7 +149,8 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
       setOutcome((was) => (was?.state === 'saving' ? was : { state: 'checking' }));
     }
     try {
-      await settle(asked, await lucy.commitResult(asked.key));
+      // a lookup that never answers ends in Check again; a late answer still settles it
+      await settle(asked, await answerWithin(lucy.commitResult(asked.key), undefined, (late) => void settle(asked, late)));
     } catch (error) {
       if (!alive.current || asked.revision !== revisionNow.current) return;
       if (error instanceof ApiError && error.status === 404) setOutcome({ state: 'not-received' });
@@ -160,7 +161,9 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
   const submit = async (asked: PendingCommit) => {
     setOutcome({ state: 'saving' });
     try {
-      const commit = await lucy.commit({ token: asked.token, idempotency_key: asked.key, confirm_play: asked.action === 'draft_and_play' ? true : undefined });
+      // past the limit this is a 408, so it is looked up below instead of sent again; a late answer
+      // still settles it (settle counts each commit once)
+      const commit = await answerWithin(lucy.commit({ token: asked.token, idempotency_key: asked.key, confirm_play: asked.action === 'draft_and_play' ? true : undefined }), undefined, (late) => void settle(asked, late));
       await settle(asked, commit);
     } catch (error) {
       if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408) {

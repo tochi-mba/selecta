@@ -98,6 +98,15 @@ describe('openEventStream', () => {
     await waitFor(() => expect(states).toContain('polling'));
     stream.close();
   });
+
+  it('falls back to polling when the sign-in token never arrives', async () => {
+    const states: StreamState[] = [];
+    const fetchImpl = vi.fn();
+    const stream = openEventStream({ token: () => new Promise<string>(() => undefined), workspaceId: 'ws-1', silenceMs: 30, retryMs: 60_000, fetchImpl: fetchImpl as unknown as typeof fetch, onEvent: () => {}, onState: (state) => states.push(state) });
+    await waitFor(() => expect(states).toContain('polling'));
+    expect(fetchImpl).not.toHaveBeenCalled();
+    stream.close();
+  });
 });
 
 describe('useCloudEvents', () => {

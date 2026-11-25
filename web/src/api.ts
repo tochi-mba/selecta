@@ -312,6 +312,26 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+/** How long a page waits for a change's answer before it frees its controls and says so. */
+export const ANSWER_LIMIT_MS = 45_000;
+
+/** Waits for `work`, but not for ever: with no answer after `ms` it rejects with the same 408 a slow
+ * read gets, so the page can offer another go. The work itself is never cancelled (a change may
+ * still land), and an answer that comes after the limit is handed to `late`. */
+export function answerWithin<T>(work: Promise<T>, ms = ANSWER_LIMIT_MS, late?: (value: T) => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let over = false;
+    const timer = window.setTimeout(() => {
+      over = true;
+      reject(new ApiError('SelectaDJ is taking too long to respond. Try again.', 408, 'answer_timeout'));
+    }, ms);
+    work.then(
+      (value) => { window.clearTimeout(timer); if (over) late?.(value); else resolve(value); },
+      (error) => { window.clearTimeout(timer); if (!over) reject(error); },
+    );
+  });
+}
+
 /** How a view asks the server for anything (ADR-0462): the exact shape of the injected client.
  * Locally it is `send` over the relative `/api`; in Cloud it is the authenticated client with the
  * bearer token and workspace header. Views receive one on `ViewProps.request` and never import the

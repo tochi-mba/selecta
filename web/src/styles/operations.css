@@ -216,11 +216,37 @@
 .song-details-identity .song-motif { flex: none; }
 .song-details-identity .song-detail-artist { margin: 0; }
 .song-details-id { margin: 0; font-size: var(--text-sm); color: var(--text-soft); font-variant-numeric: tabular-nums; }
+/* ADR-0478 "Wrong cover?" (views/SongCatalog.tsx, library.art_lookup): the releases the catalogue
+   holds for a song, each a full-width choice with its cover and name; the chosen one carries the
+   selected edge. The small cover is the song sheet's own tile (feel-library.css), at row size. */
+.song-catalog-facts { margin: 0; }
+.song-catalog-choices { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.song-catalog-choices .song-catalog-choice { display: flex; align-items: center; gap: var(--space-3); inline-size: 100%; text-align: start; }
+.song-catalog-choices .song-catalog-choice[aria-pressed='true'] { border-color: var(--edge-selected); }
+.song-catalog-words { display: grid; gap: var(--space-1); min-inline-size: 0; overflow-wrap: anywhere; }
+.song-catalog-words > .hint { margin: 0; }
+.song-catalog-thumb { display: inline-flex; flex: none; }
+.song-catalog-thumb > .cover-art {
+  display: grid;
+  place-items: center;
+  inline-size: var(--space-6);
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: linear-gradient(var(--art-turn, 135deg), color-mix(in srgb, var(--motif) 45%, var(--surface-control)), var(--surface-control));
+  overflow: hidden;
+}
+.song-catalog-thumb > .cover-art > * { grid-area: 1 / 1; }
+.song-catalog-thumb > .cover-art .song-motif, .song-catalog-thumb > .cover-art .icon { width: 62%; height: 62%; margin: 0; color: inherit; }
+.song-catalog-thumb > .cover-art .cover-art-image { inline-size: 100%; block-size: 100%; object-fit: cover; opacity: 0; }
+.song-catalog-thumb > .cover-art .cover-art-image[data-ready] { opacity: 1; }
 @media (max-width: 1024px) {
   .library-rows .song-row .song-actions { justify-content: flex-start; }
 }
 @media (forced-colors: active) {
   .library-recording-id, .library-filters button[aria-pressed='true'] { border-color: Highlight; }
+  .song-catalog-choices .song-catalog-choice[aria-pressed='true'] { border-color: Highlight; }
+  .song-catalog-thumb > .cover-art { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
 }
 
 /* Native checkboxes must not inherit the global text-input 100% width,

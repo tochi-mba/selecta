@@ -1,43 +1,73 @@
 // The live blend (ADR-0477, plan 3.4): what Listen shows while one song really hands over to the
 // next. Split out of Now.tsx (file length limit).
 //
-// Everything drawn here is measured: the two songs' own waveform peaks over the stretch the
-// hand-over covers, and a line at the hand-over's real progress (feel/hue.ts handoverProgress, the
-// same sum Listen's hand-over bar and the ambient colour use). Nothing moves unless the song clock
-// does, so a pause holds it still. Where the next song's peaks cannot be read in this mode, only the
-// song that is playing is drawn, and the drawing says so.
+// Everything drawn here is measured: the two songs' own waveform peaks on one shared timeline, and
+// a line at the real time in the hand-over. The outgoing song is drawn from LEAD_S seconds before
+// the hand-over starts to where it ends, so its lane shows the music leading in and not only its
+// quiet last seconds; the incoming song is drawn from the moment it really came in, from the point
+// in it where it entered. Nothing moves unless the song clock does, so a pause holds it still, and
+// nothing is animated between two clock steps, so Still and reduced motion see the same picture.
+// Where the next song's peaks cannot be had, only the song that is playing is drawn, and the
+// drawing says so.
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { MixItem, SongDetail } from '../api';
 import type { NowState } from '../player';
-import { handoverProgress } from '../feel/hue';
 import { useFeelPart } from './feelBits';
 
 /** How close the seam is, in seconds, when the next song's card rises and its peaks are fetched. */
 export const NEAR_SEAM_S = 20;
-/** Bars drawn in each lane. */
-const BARS = 48;
+/** The most seconds of the outgoing song drawn before the hand-over starts. */
+export const LEAD_S = 20;
+/** Bars across the whole drawing; a lane that covers part of it gets its share. */
+const BARS = 72;
+/** The drawing's own units: 100 wide, two lanes of LANE high with a gap between. */
+const LANE = 20;
+const HIGH = LANE * 2 + 4;
+const OUT_MIDDLE = LANE / 2;
+const IN_MIDDLE = HIGH - LANE / 2;
 
 /** True while a real, scheduled hand-over is close and the music is playing. */
 export function nearSeam(now: Pick<NowState, 'phase' | 'inSeam' | 'seamAt' | 'songTime'>): boolean {
   return now.phase === 'playing' && !now.inSeam && now.seamAt !== null && now.seamAt - now.songTime >= 0 && now.seamAt - now.songTime <= NEAR_SEAM_S;
 }
 
-/** A song's peaks over a stretch of it, resampled to `BARS` bars. Empty when the song's length is unknown. */
-function stretch(peaks: readonly number[], duration: number, from: number, span: number): number[] {
-  if (!peaks.length || !(duration > 0) || !(span > 0)) return [];
-  return Array.from({ length: BARS }, (_, index) => {
-    const at = from + (span * (index + 0.5)) / BARS;
-    const sample = Math.floor((at / duration) * peaks.length);
-    return sample >= 0 && sample < peaks.length ? Math.max(0, Math.min(1, peaks[sample])) : 0;
-  });
+/** One lane: a song's peaks between two of its own times (`from`, `to`, seconds), drawn as bars
+ * between two places across the drawing (`left`, `right`, 0 to 100). Each bar is the loudest peak
+ * its stretch of the song covers, so a short loud moment is not lost between two bars. Empty when
+ * the song's length is unknown. */
+export function laneOf(peaks: readonly number[], duration: number, from: number, to: number, left: number, right: number, middle: number): string {
+  if (!peaks.length || !(duration > 0) || !(to > from) || !(right > left)) return '';
+  const count = Math.max(1, Math.round(((right - left) / 100) * BARS));
+  const step = (right - left) / count;
+  const bin = (seconds: number) => Math.floor((seconds / duration) * peaks.length);
+  let path = '';
+  for (let index = 0; index < count; index += 1) {
+    const first = bin(from + ((to - from) * index) / count);
+    const last = Math.max(first, bin(from + ((to - from) * (index + 1)) / count) - 1);
+    let level = 0;
+    for (let sample = Math.max(0, first); sample <= Math.min(peaks.length - 1, last); sample += 1) level = Math.max(level, peaks[sample]);
+    const height = Math.max(Math.min(1, level) * LANE, 0.6);
+    path += `M${(left + step * (index + 0.5)).toFixed(2)} ${(middle - height / 2).toFixed(2)}v${height.toFixed(2)}`;
+  }
+  return path;
 }
 
-function lane(levels: number[], middle: number, half: number): string {
-  const step = 100 / BARS;
-  return levels.map((level, index) => {
-    const height = Math.max(level * half * 2, 0.6);
-    return `M${(index * step + step / 2).toFixed(2)} ${(middle - height / 2).toFixed(2)}v${height.toFixed(2)}`;
-  }).join('');
+/** The shared timeline of one hand-over, in the outgoing song's seconds: where the hand-over starts
+ * (`seamAt`), the lead-in before it (`start`), its end (`end`) and the line for now (`head`).
+ *
+ * T-20261125-1110: the engine's clock for the outgoing song keeps counting past that song's own end
+ * while the next song is still being read. A mix resumed at 5:05 of a 5:05 song starts its late fade
+ * some seconds after the song has stopped, so the hand-over's start lay past the song's length, every
+ * bar of the lead-in read beyond the peaks, and the lane drew flat. That gap is silence the move does
+ * not include, so the drawing places the hand-over where the song really ended and moves the line back
+ * by the same amount. `length` is the song's own length (0 when unknown, which leaves it as it is). */
+export function blendTimeline(seamAt: number, span: number, songTime: number, length: number) {
+  const late = length > 0 ? Math.max(0, seamAt - length) : 0;
+  const at = seamAt - late;
+  // a short move (an echo out lasts about three seconds) would be a sliver beside the full lead-in,
+  // so the lead-in shrinks with it and the hand-over keeps at least a third of the drawing
+  const lead = Math.min(LEAD_S, Math.max(6, span * 2));
+  return { seamAt: at, start: Math.max(0, at - lead), end: at + span, head: songTime - late };
 }
 
 export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
@@ -53,7 +83,8 @@ export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
   // useId's colons are not valid in a url(#...) reference
   const clip = `live-blend-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const tail = now.inSeam && !!now.seamTail;
-  const switchAt = entering?.seam?.state?.switch_at;
+  // Cloud's mix items carry no switch point: there the engine's own hand-over length is the span
+  const switchAt = entering?.seam?.state?.switch_at ?? now.blend?.window;
   const handing = now.inSeam && !tail && now.seamAt !== null && !!switchAt && switchAt > 0;
   const wanted = on && !!entering && (handing || nearSeam(now)) ? entering.song_id : null;
 
@@ -74,39 +105,54 @@ export function LiveBlend({ now, leaving, entering, detail, peaksOf }: {
     return () => { live = false; };
   }, [wanted, incoming?.id]);
 
-  const seamAt = now.seamAt ?? 0;
+  // one timeline, in the outgoing song's seconds: from the lead-in to the end of the hand-over
   const span = switchAt ?? 0;
+  const { seamAt, start, end, head } = blendTimeline(now.seamAt ?? 0, span, now.songTime, detail?.duration ?? 0);
+  const across = (seconds: number) => (end > start ? Math.min(100, Math.max(0, ((seconds - start) / (end - start)) * 100)) : 0);
+  const entry = across(seamAt);
   const outShape = useMemo(
-    () => (detail && handing ? lane(stretch(detail.peaks, detail.duration, seamAt, span), 12, 10) : ''),
-    [detail, handing, seamAt, span],
+    () => (detail && handing ? laneOf(detail.peaks, detail.duration, start, end, 0, 100, OUT_MIDDLE) : ''),
+    [detail, handing, start, end],
   );
-  const inPeaks = incoming && entering && incoming.id === entering.song_id ? incoming.peaks : null;
+  const read = !!incoming && !!entering && incoming.id === entering.song_id;
+  const inPeaks = read ? incoming.peaks : null;
+  // a length the catalogue lacks is the one the engine decoded; where the song came in, likewise
+  const inLength = entering?.duration || now.blend?.nextLength || 0;
+  const inFrom = now.blend?.nextFrom ?? 0;
   const inShape = useMemo(
-    () => (inPeaks && entering && handing ? lane(stretch(inPeaks, entering.duration, 0, span), 36, 10) : ''),
-    [inPeaks, entering, handing, span],
+    () => (inPeaks && handing ? laneOf(inPeaks, inLength, inFrom, inFrom + span, entry, 100, IN_MIDDLE) : ''),
+    [inPeaks, handing, inLength, inFrom, span, entry],
   );
 
   if (!on || !handing || !leaving || !entering || !detail || detail.id !== leaving.song_id || !outShape) return null;
-  const progress = handoverProgress(now.songTime, seamAt, switchAt);
-  const at = (progress * 100).toFixed(2);
-  const move = entering.seam?.state?.label;
+  const at = across(head).toFixed(2);
+  // only an answer of "none" is said; while the next song's peaks are still on their way, its lane waits
+  const missing = read && !inShape;
+  // T-20261125-0e45: in Cloud the move is the one the engine really scheduled (NowState.blend.move),
+  // never the plan on the mix item; where it played no planned move there is no name to show
+  const move = now.blend ? now.blend.move : entering.seam?.state?.label;
   // decoration: the hand-over section around it already says, in words, what is happening
   return (
-    <div className="live-blend" aria-hidden="true" data-incoming={inShape ? 'measured' : 'missing'}>
-      <svg viewBox="0 0 100 48" preserveAspectRatio="none" focusable="false">
+    <div className="live-blend" aria-hidden="true" data-incoming={inShape ? 'measured' : missing ? 'missing' : 'reading'}>
+      <p className="live-blend-lane" data-lane="out"><span>From</span> <b dir="auto">{leaving.title}</b></p>
+      <svg viewBox={`0 0 100 ${HIGH}`} preserveAspectRatio="none" focusable="false">
         <defs>
-          <clipPath id={clip}><rect x="0" y="0" width={at} height="48" /></clipPath>
+          <clipPath id={clip}><rect x="0" y="0" width={at} height={HIGH} /></clipPath>
         </defs>
+        <rect className="live-blend-window" x={entry.toFixed(2)} y="0" width={(100 - entry).toFixed(2)} height={HIGH} />
         <path className="live-blend-out" d={outShape} vectorEffect="non-scaling-stroke" />
         <path className="live-blend-out played" d={outShape} clipPath={`url(#${clip})`} vectorEffect="non-scaling-stroke" />
         {inShape && <path className="live-blend-in" d={inShape} vectorEffect="non-scaling-stroke" />}
         {inShape && <path className="live-blend-in played" d={inShape} clipPath={`url(#${clip})`} vectorEffect="non-scaling-stroke" />}
-        <line className="live-blend-head" x1={at} y1="0" x2={at} y2="48" vectorEffect="non-scaling-stroke" />
+        <line className="live-blend-head" x1={at} y1="0" x2={at} y2={HIGH} vectorEffect="non-scaling-stroke" />
       </svg>
-      <p className="live-blend-caption">
-        {move ? <b>{move}</b> : null}
-        {!inShape && <span>The next song’s waveform can’t be read here, so only this song is drawn.</span>}
-      </p>
+      {inShape && <p className="live-blend-lane" data-lane="in" style={entry > 50 ? { textAlign: 'end' } : { paddingInlineStart: `${entry.toFixed(2)}%` }}><span>Into</span> <b dir="auto">{entering.title}</b></p>}
+      {(move || missing) && (
+        <p className="live-blend-caption">
+          {move ? <b>{move}</b> : null}
+          {missing && <span>The next song’s waveform can’t be read here, so only this song is drawn.</span>}
+        </p>
+      )}
     </div>
   );
 }

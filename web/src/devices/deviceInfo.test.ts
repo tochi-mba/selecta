@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { browserName, capabilities, deviceKind, IOS_WARNING, isIos, isPoorSpeaker, speakerWarning } from './deviceInfo';
-import { holdWakeLock } from './wakeLock';
+import { followPlaying, holdWakeLock } from './wakeLock';
 
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 const IPAD_AS_MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
@@ -117,5 +117,20 @@ describe('the wake lock', () => {
     const hold = holdWakeLock({} as Navigator, doc as unknown as Document);
     expect(hold.held()).toBe(false);
     hold.release();
+  });
+});
+
+describe('the speaker lock follows play and pause', () => {
+  it('is held while playing, let go while paused, and left alone when the phase is unknown', () => {
+    const release = vi.fn();
+    const make = vi.fn(() => ({ release, held: () => true }));
+    const playing = followPlaying(null, true, make);
+    expect(make).toHaveBeenCalledTimes(1);
+    expect(followPlaying(playing, true, make)).toBe(playing);
+    expect(followPlaying(playing, null, make)).toBe(playing);
+    expect(make).toHaveBeenCalledTimes(1);
+    expect(followPlaying(playing, false, make)).toBeNull();
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(followPlaying(null, false, make)).toBeNull();
   });
 });
