@@ -58,14 +58,18 @@ test('Lucy settings in Cloud show the plan’s level, the turn meter and only th
   await signedIn(page, request, user, { path: '/account' });
   await request.post('/test/usage', { data: { user, amounts: { 'lucy_turn.everyday': 4 } } });
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Lucy Basic' })).toBeVisible();
+  // the card is titled for the plan, with the plan's Lucy level as its badge (4ee3dc70)
+  const lucy = page.getByRole('region', { name: 'Lucy on your plan' });
+  await expect(lucy.getByRole('heading', { name: 'Lucy on your plan' })).toBeVisible();
+  await expect(lucy.getByText('Lucy Basic', { exact: true })).toBeVisible();
   await expect(page.getByText('4 of 40 turns this month', { exact: true }).first()).toBeVisible();
   for (const hidden of [/Who does the planning/, /API key/, /Spending limit/, /Most rounds/]) await expect(page.getByText(hidden)).toHaveCount(0);
-  await expect(page.getByRole('textbox')).toHaveCount(0);
-  await expect(page.getByRole('spinbutton')).toHaveCount(0);
+  // no model, key or limit to type: the page's only text field is the workspace's name
+  await expect(lucy.getByRole('textbox')).toHaveCount(0);
+  await expect(lucy.getByRole('spinbutton')).toHaveCount(0);
   await page.getByRole('checkbox', { name: /Share short lyric snippets/ }).check();
-  await page.getByRole('button', { name: 'Save Lucy settings' }).click();
-  await expect(page.getByText('Saved.')).toBeVisible();
+  await lucy.getByRole('button', { name: 'Save changes' }).click();
+  await expect(lucy.getByRole('status')).toHaveText('All changes saved.');
   await page.reload();
   await expect(page.getByRole('checkbox', { name: /Share short lyric snippets/ })).toBeChecked();
   await accessible(page, 'account');

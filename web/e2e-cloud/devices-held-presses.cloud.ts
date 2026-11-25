@@ -71,7 +71,7 @@ test('a press for an offline speaker waits for it, and one that runs out is repo
   expect(await playingAudio(laptop)).toBe(0);
 
   // The member can put the report away.
-  await phone.getByTestId('presses-missed').getByRole('button', { name: 'OK' }).click();
+  await phone.getByTestId('presses-missed').getByRole('button', { name: 'Dismiss' }).click();
   await expect(phone.getByTestId('presses-missed')).toHaveCount(0);
 
   await Promise.all([laptopContext.close(), phoneContext.close()]);

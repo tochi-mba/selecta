@@ -99,7 +99,8 @@ test('Create account goes to the hosted sign-up page and an unverified email get
   // Back on our site, signed in by the code exchange, but the email isn't verified yet.
   expect(new URL(page.url()).origin).toBe(site);
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible();
-  await expect(page.getByText(`Open the verification email for ${address}`)).toBeVisible();
+  // the verify screen names the address the email went to (0ffe3aa3's card frame)
+  await expect(page.getByRole('main')).toContainText(`Open the email sent to ${address}`);
   await expect(page).not.toHaveURL(/[?&]code=/);
 });
 

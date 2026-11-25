@@ -20,8 +20,11 @@ test('a new member makes a mix from the songs on this device, and it is still th
 
   await page.goto('/mixes');
   await expect(page.getByRole('heading', { name: 'Make a Mix', level: 1 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Your songs, in your browser' })).toBeVisible();
-  await expect(page.getByText('2 matching songs')).toBeVisible();
+  // the quick mix (QuickMix.tsx): what can play here, then the mix it will play and how long
+  const quick = page.getByRole('region', { name: 'Make a new mix' });
+  await expect(quick.getByText('2 of 3 songs can play on this device.')).toBeVisible();
+  await expect(quick.locator('.quick-play-words')).toContainText('Your songs, in your browser');
+  await expect(quick.locator('.quick-play-words')).toContainText('2 songs.');
 
   // MixSetup: only what a browser mix can honour, the ending; no feel, energy or stem controls
   await page.getByRole('button', { name: /Shape this mix/ }).click();
@@ -50,8 +53,10 @@ test('a new member makes a mix from the songs on this device, and it is still th
   await page.goto('/mixes/mine');
   await expect(page.getByRole('heading', { name: 'My Mixes' })).toBeVisible();
   // named after its own songs, so two mixes never share a title
-  await expect(page.getByRole('heading', { name: 'Bravo here to Alpha here' })).toBeVisible();
-  await expect(page.getByText(/^2 songs, about/)).toBeVisible();
+  const saved = page.getByRole('region', { name: /^Saved mixes/ }).getByRole('listitem').filter({ hasText: 'Bravo here to Alpha here' });
+  await expect(saved).toHaveCount(1);
+  await expect(saved).toContainText('Current mix');
+  await expect(saved).toContainText('2 songs');
   // and Listen plays it in the order the recipe keeps: the ending chosen in MixSetup last
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Listen', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Bravo here' })).toBeVisible();
@@ -66,8 +71,12 @@ test('a grandfathered account mixes a device song with a hosted one, and the que
   await connectOnThisDevice(page, made.workspace_id, [{ songId: device, title: 'Device song', audio: true }]);
 
   await page.goto('/library');
-  await expect(page.locator('li.song-row', { hasText: 'Device song' }).getByText('On this device')).toBeVisible();
-  await expect(page.locator('li.song-row', { hasText: 'Song 1' }).getByText('Hosted copy')).toBeVisible();
+  // each row's one chip says it plays; its title says from where (LibraryRow.tsx, 02889fe5)
+  const chip = (title: string) => page.locator('li.song-row', { hasText: title }).locator('.lw-state .status');
+  await expect(chip('Device song')).toHaveText('Ready');
+  await expect(chip('Device song')).toHaveAttribute('title', 'The file is connected here and can play.');
+  await expect(chip('Song 1')).toHaveText('Ready');
+  await expect(chip('Song 1')).toHaveAttribute('title', 'Plays from your hosted copy in SelectaDJ Cloud.');
 
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Make a Mix', exact: true }).click();
   await page.getByRole('button', { name: 'Play', exact: true }).click();

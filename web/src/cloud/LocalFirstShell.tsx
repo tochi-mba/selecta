@@ -27,8 +27,7 @@ import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
 import { RequestsContext, RequestsPanel, useRequests, type RequestRow } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
-import type { Account, Api } from './api';
-import { planName } from './api';
+import { planName, type Account, type Api } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
 import { forgetHostedAssets, hostedAssets, hostedResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
@@ -45,6 +44,7 @@ import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
 import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
+import { DEVICE_REGISTERED } from '../devices/playbackWire';
 import { ControllerListen } from '../devices/ControllerListen';
 import { tabLog } from '../devices/audioTab';
 import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
@@ -370,9 +370,14 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       if (typeof document === 'undefined' || document.visibilityState === 'visible') void sweepLapsed();
     };
     const timer = window.setInterval(refreshWhenActive, AVAILABILITY_REFRESH_MS);
+    // a browser's first visit registers its device after the startup sweep: report then, or the
+    // server counts no songs here and nothing can play on this device until the next sweep
+    const registered = () => { void sweepLapsed(true); };
+    window.addEventListener(DEVICE_REGISTERED, registered);
     window.addEventListener('focus', refreshWhenActive);
     document.addEventListener('visibilitychange', refreshWhenActive);
     return () => {
+      window.removeEventListener(DEVICE_REGISTERED, registered);
       window.clearInterval(timer);
       window.removeEventListener('focus', refreshWhenActive);
       document.removeEventListener('visibilitychange', refreshWhenActive);
