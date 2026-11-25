@@ -39,7 +39,7 @@ class NoWorkspace(ValueError):
 class EngineStore:
     """The engine's tables for one workspace. See the module notes."""
 
-    def __init__(self, engine: Engine, workspace_id: str | None) -> None:
+    def __init__(self, engine: Engine, workspace_id: str | None, *, library: bool = False) -> None:
         if not isinstance(workspace_id, str) or not workspace_id.strip():
             raise NoWorkspace(
                 "The engine store needs a workspace: Desktop passes LOCAL_WORKSPACE, Cloud the "
@@ -47,6 +47,9 @@ class EngineStore:
             )
         self.engine = engine
         self.workspace_id = workspace_id
+        # True on a Desktop library file, whose songs are its own `songs` rows with a device
+        # path; otherwise a song is Cloud's catalogue row and has none (engine_store.songs)
+        self.library = library
         # the same pool and events, with SQLite told to begin deferred (persistence.make_engine)
         self._reading = engine.execution_options(**{DEFERRED_READ: True})
 

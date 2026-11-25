@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import soxr
 
-from selecta import audio, db
+from selecta import audio, db, flags
 from selecta.analysis.beats import BeatGrid, BeatTracker, build_grid, onset_envelope
 from selecta.analysis.features import (
     FEATURE_SR,
@@ -139,6 +139,9 @@ def analyse_song(
     conn: sqlite3.Connection, settings: Settings, song: sqlite3.Row, analysers: Analysers
 ) -> AnalysisResult | None:
     started = time.perf_counter()
+    # with core.engine_store, the bytes about to be analysed, hashed first, so the features are
+    # stored under the hash of exactly what was heard (engine_store.songs.features_key)
+    content_hash = _content_hash(song)
     try:
         stereo = audio.decode(song["path"])
         decode_seconds = time.perf_counter() - started
@@ -184,6 +187,8 @@ def analyse_song(
         replace_when_free(partial, target)
     finally:
         partial.unlink(missing_ok=True)
+    if content_hash is not None:
+        _store_features(conn, settings, song["id"], content_hash, target)
     result.timings["save"] = round(time.perf_counter() - save_started, 3)
     result.timings["total"] = round(time.perf_counter() - started, 3)
 
@@ -211,11 +216,62 @@ def analyse_song(
     return result
 
 
+def _content_hash(song: sqlite3.Row) -> str | None:
+    """The file's SHA-256, when the engine store is on and the library has the column for it."""
+    if not flags.on("core.engine_store") or "content_hash" not in song.keys():
+        return None
+    from selecta.engine_store.song_hashes import hash_file
+
+    return hash_file(Path(song["path"]), song["size"], song["mtime"])
+
+
+def _store_features(
+    conn: sqlite3.Connection, settings: Settings, song_id: int, content_hash: str, path: Path
+) -> None:
+    """Also publish the features file under its content key (the file above stays, for the flag
+    off and as the fallback), and note the hash it was made from. `save_analysis` commits the
+    hash with the analysis that names the version, so the key and the row always agree."""
+    from selecta.engine_store import library
+    from selecta.engine_store.songs import features_key
+    from selecta.persistence import LOCAL_WORKSPACE
+
+    key = features_key(LOCAL_WORKSPACE, content_hash, ANALYSIS_VERSION)
+    try:
+        library.artifacts_for(settings).publish(key, path)
+    except OSError as error:
+        # the file above is complete and is what a read falls back to, so the song is still fine
+        print(f"Features for song {song_id} were not stored by content: {error}")
+    conn.execute("UPDATE songs SET content_hash=? WHERE id=?", (content_hash, song_id))
+
+
 def load_features(
-    settings: Settings, song_id: int, names: tuple[str, ...] | None = None
+    settings: Settings,
+    song_id: int,
+    names: tuple[str, ...] | None = None,
+    *,
+    from_file: bool = False,
 ) -> dict[str, np.ndarray]:
     """A song's arrays. `names` reads only those (r8d): each member of the file is decompressed
-    on its own, so planning skips the raw beats and the waveform it never looks at."""
-    with np.load(features_path(settings, song_id)) as data:
+    on its own, so planning skips the raw beats and the waveform it never looks at.
+
+    With `core.engine_store` on they come through the engine store's features artifact, with
+    this file as the fallback (`engine_store.songs`); `from_file` always reads this file."""
+    if not from_file and flags.on("core.engine_store") and settings.db_path.exists():
+        from selecta.engine_store import library
+        from selecta.engine_store import songs as stored
+
+        return stored.load_features(
+            library.store_for(settings.db_path),
+            library.artifacts_for(settings),
+            song_id,
+            names,
+            legacy=settings.features_dir,
+        )
+    return read_features(features_path(settings, song_id), names)
+
+
+def read_features(path: Path, names: tuple[str, ...] | None = None) -> dict[str, np.ndarray]:
+    """The arrays in one features file, or only `names` of them."""
+    with np.load(path) as data:
         wanted = data.files if names is None else [name for name in names if name in data.files]
         return {name: data[name] for name in wanted}

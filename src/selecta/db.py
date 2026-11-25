@@ -295,11 +295,24 @@ def upsert_song(conn: sqlite3.Connection, song: dict[str, Any]) -> None:
     columns = list(song)
     placeholders = ", ".join(f":{c}" for c in columns)
     updates = ", ".join(f"{c}=excluded.{c}" for c in columns if c != "path")
+    if {"size", "mtime"} <= set(song) and "content_hash" not in song and _hashes_songs(conn):
+        # a file that changed is other bytes, so the hash it had (core.engine_store) goes; the
+        # hash job or the next analysis fills it again. Kept even with the flag off, so a hash
+        # never outlives its file whichever way the flag was when the file changed.
+        updates += (
+            ", content_hash=CASE WHEN songs.size IS NOT excluded.size "
+            "OR songs.mtime IS NOT excluded.mtime THEN NULL ELSE songs.content_hash END"
+        )
     conn.execute(
         f"INSERT INTO songs ({', '.join(columns)}) VALUES ({placeholders}) "
         f"ON CONFLICT(path) DO UPDATE SET {updates}",
         song,
     )
+
+
+def _hashes_songs(conn: sqlite3.Connection) -> bool:
+    """Whether this library has `songs.content_hash`, added by the engine store's migration."""
+    return any(row[1] == "content_hash" for row in conn.execute("PRAGMA table_info(songs)"))
 
 
 def known_files(conn: sqlite3.Connection) -> dict[str, tuple[int, float]]:

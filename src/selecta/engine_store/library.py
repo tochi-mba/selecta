@@ -36,8 +36,10 @@ from alembic.script import ScriptDirectory
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 
+from selecta.config import Settings
 from selecta.engine_store import EngineStore
 from selecta.persistence import LOCAL_WORKSPACE, make_engine
+from selecta.storage.artifacts import LocalArtifactStore
 
 VERSION_TABLE = "engine_version"
 BASELINE = "lib0001baseline"
@@ -115,7 +117,14 @@ def engine_for(path: Path | str) -> Engine:
 
 def store_for(path: Path | str) -> EngineStore:
     """The local workspace's store on this library file."""
-    return EngineStore(engine_for(path), LOCAL_WORKSPACE)
+    return EngineStore(engine_for(path), LOCAL_WORKSPACE, library=True)
+
+
+def artifacts_for(settings: Settings) -> LocalArtifactStore:
+    """Desktop's artifact store: files under the home's `artifacts` folder, by key. Features
+    written with the flag on live here (`engine_store.songs.features_key`); the older
+    `features/{song_id}.npz` files stay where they are and are read as the fallback."""
+    return LocalArtifactStore(settings.home / "artifacts")
 
 
 def path_of(conn: sqlite3.Connection) -> Path:
@@ -179,6 +188,7 @@ __all__ = [
     "BASELINE",
     "VERSION_TABLE",
     "LibraryNotReady",
+    "artifacts_for",
     "behind",
     "bring_forward",
     "engine_for",

@@ -288,6 +288,12 @@ def create_app(
     if prepare_links:
         threading.Thread(target=watch_for_new_songs, daemon=True).start()
 
+    if prepare_links and flags.on("core.engine_store"):
+        # one gentle pass filling the songs' content hashes, which never re-analyses anything
+        from selecta.engine_store import song_hashes
+
+        song_hashes.start_in_background(settings.db_path)
+
     if prepare_links:
         store.prepare_links = True
         store.start()
