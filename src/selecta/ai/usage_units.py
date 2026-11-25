@@ -1,9 +1,8 @@
 """Lucy's allowance in usage units: the workspace's windows and the per-run ledger.
 
-This is the shadow form (ADR-0487 rule 1). Every turn is recorded against a five-hour session
-and a week (ADR-0482) and charged what it cost (ADR-0481), but nothing is refused and nothing is
-reserved: the `*_reserved` columns stay at 0 until enforced admission is built. `settle` already
-releases a reservation, so admission only has to write one.
+Shadow turns are recorded without checking or reserving capacity (ADR-0487 rule 1). Enforced
+turns reserve against their week and, when applicable, their five-hour session (ADR-0482).
+Settlement reconciles both to what the turn cost (ADR-0481).
 
 - `lucy_usage_state` holds one row per workspace: its week, its session and what each has used.
 - `lucy_usage_ledger` holds one row per run, with the week and session the run was admitted in.
@@ -31,6 +30,7 @@ from selecta.identity.schema import users, workspaces
 from selecta.persistence import new_id
 
 SHADOW = "shadow"
+ENFORCED = "enforced"
 PLAN_POOL = "plan"
 # A turn that ended this way through no fault of the person is charged nothing (ADR-0481 rule 5).
 REFUNDED_OUTCOMES = frozenset({"failed", "incomplete", "abandoned"})
@@ -297,6 +297,122 @@ def record_shadow(
     )
 
 
+def reserve_enforced(
+    conn: Connection,
+    *,
+    workspace_id: str,
+    run_id: str,
+    plan_id: str,
+    tier: str,
+    now: float,
+    allow_lighter: bool = False,
+    reserved_units: int | None = None,
+) -> str | None:
+    """Reserve for a run. Return None for a normal turn, or "lighter" for a week-only turn.
+
+    Return "week" or "session" if the corresponding window has no room. The update tests
+    spent and reserved amounts together, allowing at most one reservation to cross a limit.
+    """
+    ensure_state(conn, workspace_id, plan_id=plan_id, now=now)
+    roll(conn, workspace_id, plan_id=plan_id, now=now)
+    existing = sa.select(_ledger.c.cause).where(
+        _ledger.c.workspace_id == workspace_id, _ledger.c.run_id == run_id
+    )
+    previous = conn.execute(existing).first()
+    if previous is not None:
+        return previous.cause
+
+    while True:
+        row = _row(conn, workspace_id)
+        previous = conn.execute(existing).first()
+        if previous is not None:
+            return previous.cause
+        if row is None or row.week_used + row.week_reserved >= row.week_limit:
+            return "week"
+        has_session = row.session_limit is not None
+        session_spent = has_session and row.session_used + row.session_reserved >= row.session_limit
+        if session_spent and not allow_lighter:
+            return "session"
+        lighter = session_spent
+        cap = targets(row.plan_id, catalogue_version=row.catalogue_version).turn_cap
+        if reserved_units is not None:
+            cap = min(cap, reserved_units)
+        if cap <= 0:
+            raise ValueError("Lucy model reservations must use positive units")
+        # A weekly-only lighter turn consumes no session capacity. A venue has no session.
+        in_session = has_session and not lighter
+        opening = in_session and row.session_ends_at is None
+        values: dict[str, Any] = {
+            "week_reserved": _state.c.week_reserved + cap,
+            "updated_at": now,
+        }
+        if in_session:
+            values["session_reserved"] = _state.c.session_reserved + cap
+        if opening:
+            values["session_seq"] = _state.c.session_seq + 1
+            values["session_ends_at"] = windows.session_end(now)
+        session_total = _state.c.session_used + _state.c.session_reserved
+        session_condition = sa.true()
+        if has_session:
+            if lighter:
+                session_condition = session_total >= _state.c.session_limit
+            else:
+                session_condition = session_total < _state.c.session_limit
+
+        with conn.begin_nested() as reservation:
+            updated = conn.execute(
+                sa.update(_state)
+                .where(
+                    _state.c.workspace_id == workspace_id,
+                    _state.c.week_seq == row.week_seq,
+                    _state.c.week_limit == row.week_limit,
+                    _state.c.week_used + _state.c.week_reserved < _state.c.week_limit,
+                    _state.c.session_seq == row.session_seq,
+                    _state.c.session_ends_at.is_not_distinct_from(row.session_ends_at),
+                    _state.c.session_limit.is_not_distinct_from(row.session_limit),
+                    _state.c.plan_id == row.plan_id,
+                    _state.c.catalogue_version == row.catalogue_version,
+                    session_condition,
+                )
+                .values(**values)
+                .returning(_state.c.session_seq, _state.c.session_ends_at)
+            ).first()
+            if updated is None:
+                previous = conn.execute(existing).first()
+                if previous is not None:
+                    return previous.cause
+                continue
+            cause = "lighter" if lighter else None
+            inserted = insert_ignore(
+                conn,
+                _ledger,
+                {
+                    "id": new_id(),
+                    "workspace_id": workspace_id,
+                    "run_id": run_id,
+                    "mode": ENFORCED,
+                    "pool": PLAN_POOL,
+                    "tier": str(tier),
+                    "catalogue_version": row.catalogue_version,
+                    "week_seq": row.week_seq,
+                    "session_seq": updated.session_seq if in_session else None,
+                    "week_ends_at": row.week_ends_at,
+                    "session_ends_at": updated.session_ends_at if in_session else None,
+                    "reserved_units": cap,
+                    "cause": cause,
+                    "created_at": now,
+                },
+                ["run_id"],
+            )
+            if not inserted:
+                reservation.rollback()
+                previous = conn.execute(existing).first()
+                if previous is None:
+                    raise ValueError("Lucy usage run already belongs to another workspace")
+                return previous.cause
+            return cause
+
+
 def _floored(column: sa.ColumnElement, less: int) -> sa.ColumnElement:
     """`column - less`, never below 0. SQLite has no GREATEST."""
     left = column - less
@@ -432,12 +548,44 @@ def _line(used: int, limit: int, resets_at: float | None, time_zone: str, now: f
     }
 
 
-def read_model(conn: Connection, workspace_id: str, *, now: float) -> dict | None:
+def _recent_personal_charges(conn: Connection, workspace_id: str, user_id: str) -> list[int]:
+    from selecta.lucy.cloud_schema import lucy_cloud_conversations as conversations
+    from selecta.lucy.cloud_schema import lucy_cloud_turns as turns
+
+    history = (
+        _ledger.join(
+            turns, sa.and_(turns.c.workspace_id == _ledger.c.workspace_id, turns.c.run_id == _ledger.c.run_id)
+        )
+        .join(conversations, sa.and_(
+            conversations.c.workspace_id == turns.c.workspace_id,
+            conversations.c.id == turns.c.conversation_id,
+        ))
+    )
+    query = (
+        sa.select(_ledger.c.charged_units)
+        .select_from(history)
+        .where(
+            _ledger.c.workspace_id == workspace_id,
+            conversations.c.user_id == user_id,
+            _ledger.c.pool == PLAN_POOL,
+            _ledger.c.settled_at.is_not(None),
+            _ledger.c.charged_units.is_not(None),
+        )
+        .order_by(_ledger.c.created_at.desc(), _ledger.c.run_id.desc())
+        .limit(20)
+    )
+    return [int(charge) for charge in conn.scalars(query)]
+
+
+def read_model(
+    conn: Connection, workspace_id: str, *, now: float, estimate_for_user_id: str | None = None,
+) -> dict | None:
     """What every surface shows for Lucy's usage as of `now` (ADR-0484). None with no row.
 
     Each line gives the whole percentage left, a state, the reset time and its plain words, and
     the lit segments of the level meter. Reserved units count as used (rule 6). `session` is
-    None for a row with no session limit. Nothing is written.
+    None for a row with no session limit. Settings can opt into a private estimate by supplying
+    the signed-in user's ID. Nothing is written.
     """
     view = units_view(conn, workspace_id, now=now)
     if view is None:
@@ -460,7 +608,15 @@ def read_model(conn: Connection, workspace_id: str, *, now: float) -> dict | Non
             now,
         )
         session["open"] = view["session_ends_at"] is not None
-    return {"session": session, "week": week, "time_zone": zone}
+    result = {"session": session, "week": week, "time_zone": zone}
+    if estimate_for_user_id is not None:
+        remaining = view["week_limit"] - view["week_used"] - view["week_reserved"]
+        if view["session_limit"] is not None:
+            remaining = min(remaining, view["session_limit"] - view["session_used"] - view["session_reserved"])
+        result["estimated_messages"] = windows.estimated_messages(
+            remaining, _recent_personal_charges(conn, workspace_id, estimate_for_user_id)
+        )
+    return result
 
 
 def export(conn: Connection, workspace_id: str) -> dict:
@@ -527,6 +683,7 @@ __all__ = [
     "open_session",
     "read_model",
     "record_shadow",
+    "reserve_enforced",
     "roll",
     "settle",
     "targets",

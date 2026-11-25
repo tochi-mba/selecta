@@ -10,7 +10,7 @@ import { Meter } from '../ui/Meter';
 import { LUCY_USAGE_EVENT, windowsOf, type LucyWindows } from '../cloud/lucyUsage';
 import { LucyUsageMeter } from './LucyUsageMeter';
 
-/** Lucy's settings in Cloud mode (docs/saas/09-lucy-ai-gateway.md §9.5). Only the person's own
+/** Lucy's settings in Cloud mode (docs/saas/09-lucy-ai-gateway.md �9.5). Only the person's own
  * choices are here: Use Lucy, the phases, and what may be shared with Selecta's AI provider. The
  * provider, model, address, key, limits and spending cap belong to the server in Cloud, so they
  * aren't shown at all; the plan's Lucy level and this month's turns are shown instead. Local mode
@@ -23,7 +23,7 @@ export type CloudLucy = {
   tier: string;
   usage: { used: number; limit: number | null; fair_use: boolean; resets_at: number | null };
   /** ADR-0484: the one usage read model. Absent from a server that still counts turns. */
-  usage_windows?: LucyWindows | null;
+  usage_windows?: (LucyWindows & { estimated_messages?: number | null }) | null;
 };
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -33,7 +33,7 @@ type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 export function plainProblem(error: unknown): string {
   const message = error instanceof Error ? error.message.trim() : '';
   if (!message || /^(internal server error|bad gateway|service unavailable|gateway timeout|not found)\.?$/i.test(message)) {
-    return 'SelectaDJ couldn’t do that just now. Try again in a moment.';
+    return 'SelectaDJ couldn't do that just now. Try again in a moment.';
   }
   return message;
 }
@@ -48,14 +48,14 @@ export function LucyTurnsMeter({ usage }: { usage: CloudLucy['usage'] }) {
   const percent = usage.limit ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
   return (
     <div className="lucy-cloud-meter">
-      <p><b>{words}</b>{usage.resets_at ? <span className="soft"> · resets {resetDate(usage.resets_at)}</span> : null}</p>
+      <p><b>{words}</b>{usage.resets_at ? <span className="soft"> � resets {resetDate(usage.resets_at)}</span> : null}</p>
       {usage.limit !== null && <Meter kind="meter" label="Lucy turns this month" showLabel={false} value={Math.round(percent)} max={100} valueText={words} warnAt={0.8} dangerAt={1} />}
       {/* the meter turning red is not words: say what a full meter means, and when it ends */}
       {usage.limit !== null && usage.used >= usage.limit && (
         <p className="lucy-cloud-spent" role="note">
           {usage.fair_use
-            ? 'You’ve used this month’s planning turns. Quick turns still work.'
-            : 'You’ve used all of this month’s turns, so Lucy can’t take a new request yet.'}
+            ? 'You've used this month's planning turns. Quick turns still work.'
+            : 'You've used all of this month's turns, so Lucy can't take a new request yet.'}
           {usage.resets_at ? ` They start again on ${resetDate(usage.resets_at)}.` : ''}
         </p>
       )}
@@ -126,14 +126,16 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       <SettingsCard id="lucy-cloud" className="lucy-settings" title="Lucy" about="Whether to use Lucy, and what it may share." busy={!problem}>
         {problem
           // a way on from here: without it the only way to try again was to reload the page
-          ? <Notice tone="danger" role="alert" action={<Action run={() => load(true)} working="Trying again…">Try again</Action>}><strong>Lucy’s settings could not be loaded.</strong> <span>{problem}</span></Notice>
-          : <Skeleton variant="rows" lines={3} label="Loading Lucy’s settings" />}
+          ? <Notice tone="danger" role="alert" action={<Action run={() => load(true)} working="Trying again.">Try again</Action>}><strong>Lucy's settings could not be loaded.</strong> <span>{problem}</span></Notice>
+          : <Skeleton variant="rows" lines={3} label="Loading Lucy's settings" />}
       </SettingsCard>
     );
   }
 
   // the new meter only when the server sends its figures, never from a flag alone (ADR-0484)
   const windows = windowsOf(status.usage_windows);
+  const estimate = status.usage_windows?.estimated_messages;
+  const showEstimate = windows && typeof estimate === 'number' && Number.isSafeInteger(estimate) && estimate >= 0;
   const shown = PHASES.filter((phase) => ([] as FlagId[]).concat(phase.flag ?? []).every((flag) => accountFlagOn(flag, features)));
   const changed = enabled !== status.enabled || JSON.stringify(phases) !== JSON.stringify(status.phases)
     || privacy.share_lyrics !== status.privacy.share_lyrics || privacy.share_history !== status.privacy.share_history;
@@ -160,6 +162,9 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
       about="Your plan sets how much Lucy can do. You choose whether to use it and what it may share."
     >
       {windows ? <LucyUsageMeter windows={windows} /> : <LucyTurnsMeter usage={status.usage} />}
+      {showEstimate && (
+        <p className="hint">About {estimate} more {estimate === 1 ? 'message' : 'messages'} like your recent ones.</p>
+      )}
       <form onSubmit={(event) => void save(event)}>
         <fieldset>
           <legend>Use</legend>
@@ -174,7 +179,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
         </fieldset>
         <fieldset>
           <legend>Privacy</legend>
-          <p className="hint">These choices send text to SelectaDJ’s AI provider when Lucy works on a request. Audio is never sent.</p>
+          <p className="hint">These choices send text to SelectaDJ's AI provider when Lucy works on a request. Audio is never sent.</p>
           <label className="choice lucy-setting-line">
             <input type="checkbox" checked={privacy.share_lyrics} onChange={(event) => setPrivacy({ ...privacy, share_lyrics: event.target.checked })} />
             <span><b>Share short lyric snippets</b> <span className="soft">when it helps match words between songs.</span></span>
@@ -188,7 +193,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
         <div className="row wrap lucy-cloud-save">
           {/* aria-disabled, never disabled: a disabled button drops the keyboard's focus to the top
               of the page the moment a save starts or ends */}
-          <button type="submit" className={changed ? 'primary' : undefined} aria-disabled={saving || !changed || undefined} aria-busy={saving || undefined}>{saving ? 'Saving…' : 'Save changes'}</button>
+          <button type="submit" className={changed ? 'primary' : undefined} aria-disabled={saving || !changed || undefined} aria-busy={saving || undefined}>{saving ? 'Saving.' : 'Save changes'}</button>
           <span className="hint" role="status">{saving ? '' : changed ? 'You have changes that are not saved yet.' : saved ? 'All changes saved.' : ''}</span>
         </div>
       </form>
