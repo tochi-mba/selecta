@@ -22,7 +22,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
 | [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 10 | 0 | 110 | 0 | 0 | 0 | 0 |
 | [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 23 | 1 | 155 | 0 | 0 | 0 | 0 |
-| [selecta-lucy-usage-implementation-checklist.md](selecta-lucy-usage-implementation-checklist.md) | 52 | 4 | 38 | 10 | 0 | 0 | 4 | 0 |
+| [selecta-lucy-usage-implementation-checklist.md](selecta-lucy-usage-implementation-checklist.md) | 52 | 4 | 41 | 7 | 0 | 0 | 4 | 0 |
 | [selecta-service-operations-implementation-checklist.md](selecta-service-operations-implementation-checklist.md) | 30 | 0 | 4 | 26 | 0 | 0 | 0 | 0 |
 <!-- checklist-summary:end -->
 
