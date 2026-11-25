@@ -15,6 +15,16 @@ import numpy as np
 import soxr
 
 from selecta.config import SAMPLE_RATE
+
+# the harmony kernel and limit moved to the planner core, which guesses with them before a render;
+# they stay importable from here
+from selecta.planner_core.harmony import (  # noqa: F401
+    _ROUGHNESS_BY_INTERVAL,
+    HARMONY_LIMIT,
+    _roughness,
+    excess_roughness,
+)
+from selecta.planner_core.repair import AuditFacts, FailedCheck
 from selecta.render import dsp
 from selecta.render.engine import Rendered
 from selecta.render.script import Part, TransitionScript
@@ -40,7 +50,6 @@ TRUE_PEAK_LIMIT_DB = -1.0
 LOW_CLASH_LIMIT = 0.15
 STRETCH_TARGET = 0.05
 STRETCH_LIMIT = 0.08
-HARMONY_LIMIT = 0.16
 
 
 @dataclass
@@ -68,6 +77,18 @@ class AuditReport:
 
     def value(self, name: str) -> float | None:
         return next((check.value for check in self.checks if check.name == name), None)
+
+
+def audit_facts(report: AuditReport) -> AuditFacts:
+    """What the planner core's repair rule reads from a report, with no audio attached. It reads
+    `passed` and `failures` only, as the loops always have. A check naming no fix has none."""
+    return AuditFacts(
+        bool(report.passed),
+        tuple(
+            FailedCheck(check.name, check.value, check.limit, getattr(check, "fix", None))
+            for check in report.failures
+        ),
+    )
 
 
 def _audible_window(part: Part, count: int, threshold: float = 0.3) -> np.ndarray:
@@ -366,35 +387,12 @@ def _low_clash(rendered: Rendered) -> Check | None:
     )
 
 
-_ROUGHNESS_BY_INTERVAL = np.array(
-    [0.0, 1.0, 0.45, 0.12, 0.1, 0.03, 0.6, 0.03, 0.1, 0.12, 0.45, 1.0]
-)
-
-
 def _chroma_frames(audio: np.ndarray) -> np.ndarray:
     import librosa
 
     mono = soxr.resample(audio.mean(axis=1), SAMPLE_RATE, 22_050)
     power = np.abs(librosa.stft(mono, n_fft=4096, hop_length=2048)) ** 2
     return librosa.feature.chroma_stft(S=power, sr=22_050, norm=None)
-
-
-def _roughness(chroma_a: np.ndarray, chroma_b: np.ndarray) -> float:
-    a = chroma_a / np.maximum(chroma_a.sum(axis=0, keepdims=True), 1e-9)
-    b = chroma_b / np.maximum(chroma_b.sum(axis=0, keepdims=True), 1e-9)
-    kernel = np.stack([np.roll(_ROUGHNESS_BY_INTERVAL, i) for i in range(12)])
-    return float(np.mean(np.einsum("it,ij,jt->t", a, kernel, b)))
-
-
-def excess_roughness(profile_a: np.ndarray, profile_b: np.ndarray) -> float:
-    """How rough two averaged chroma profiles sound together, over how rough each is alone.
-    The same interval kernel as the rendered harmony check, so a planner can ask before paying
-    for a render what the render's own check will roughly say."""
-    a = np.asarray(profile_a, dtype=np.float64).reshape(12, 1)
-    b = np.asarray(profile_b, dtype=np.float64).reshape(12, 1)
-    together = _roughness(a, b)
-    alone = (_roughness(a, a) + _roughness(b, b)) / 2
-    return together - alone
 
 
 def _harmony(rendered: Rendered) -> Check | None:

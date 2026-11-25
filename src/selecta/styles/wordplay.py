@@ -27,16 +27,17 @@ import numpy as np
 from selecta import flags
 from selecta.analysis.song import SongInfo
 from selecta.lyrics.align import Word
-from selecta.planner.fit import fold_ratio
+
+# pulse and felt_bpm are song facts the planner core plans with; they stay importable from here
+from selecta.planner_core.fit import _HALF_TIME_ABOVE_BPM, felt_bpm, fold_ratio, pulse  # noqa: F401
+from selecta.planner_core.recipes.blend import _low_curves
+from selecta.planner_core.recipes.timing import beat_lock
 from selecta.render.script import Curve, Echo, Part, TransitionScript, Warp, fade_in, sweep
-from selecta.styles.blend import _low_curves
-from selecta.styles.timing import beat_lock
 
 _LEAD_SECONDS = 6.0
 _AFTER_SECONDS = 8.0
 _PAD = 0.02
 _DECLICK = 0.006
-_HALF_TIME_ABOVE_BPM = 135.0
 _SLOW_BEAT = 0.66
 _BAND_LEAVES = 0.3
 _BAND_GONE = 0.65
@@ -82,15 +83,6 @@ class Stem:
             "stem": self.name,
             "stem_seconds": self.duration,
         }
-
-
-def pulse(song: SongInfo) -> float:
-    """The beat a person would nod to, since fast grids are usually half-time songs."""
-    return song.period * (2.0 if song.bpm > _HALF_TIME_ABOVE_BPM else 1.0)
-
-
-def felt_bpm(song: SongInfo) -> float:
-    return 60.0 / pulse(song)
 
 
 def _reaches(stem: Stem, earliest_song_time: float) -> bool:

@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
-from selecta.planner.fit import folded_gap
+from selecta.planner_core.fit import folded_gap
 
 RULES_VERSION = 1
 SHAPED_MOVES = {"stem_studio", "stem_arrange"}

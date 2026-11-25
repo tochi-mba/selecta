@@ -23,15 +23,17 @@ from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
 from selecta.library.scan import identity
 from selecta.lyrics.lrclib import clean_artist
-from selecta.planner import beam, choose, fit, wordreel
 from selecta.planner.beam import _Cues, _Riders, handoff_quality
 from selecta.planner.choose import enumerate_candidates
 from selecta.planner.memory import RULES_VERSION, SeamMemory
 from selecta.planner.wordreel import BLEND_MIN_GRID, modes_for, ride_lines
+
+# the deciders live in the planner core now, so the book's rules are read from there
+from selecta.planner_core import beam, choose, fit, wordreel
+from selecta.planner_core.recipes import blend, timing
 from selecta.requests import Slot, custom_seam, find_slot, open_spots
 from selecta.seam_kinds import move_on
 from selecta.seams import request_from
-from selecta.styles import blend, timing
 
 QUICK_BLENDS = ("bass_swap_blend", "filter_sweep")
 EFFECTS = ("delay_throw", "echo_out")

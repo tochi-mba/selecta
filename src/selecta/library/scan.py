@@ -20,6 +20,7 @@ from statistics import median
 import mutagen
 
 from selecta import db, longpaths
+from selecta.planner_core.names import ARTIST_SPLIT
 
 AUDIO_EXTENSIONS = {".mp3", ".flac", ".m4a", ".aac", ".ogg", ".opus", ".wav", ".aiff", ".aif"}
 LOSSLESS_EXTENSIONS = {".flac", ".wav", ".aiff", ".aif"}
@@ -58,9 +59,8 @@ _TITLE_NOISE = re.compile(
     re.IGNORECASE,
 )
 _FEAT_TAIL = re.compile(r"\s+(feat\.?|ft\.?|featuring)\s+.*$", re.IGNORECASE)
-_ARTIST_SPLIT = re.compile(
-    r"\s*(,|&|;|/|\bfeat\.?\b|\bft\.?\b|\bfeaturing\b|\bx\b|\band\b)\s*", re.IGNORECASE
-)
+# one rule for where an artist credit splits, shared with the planner core's artist spacing
+_ARTIST_SPLIT = ARTIST_SPLIT
 
 
 @dataclass

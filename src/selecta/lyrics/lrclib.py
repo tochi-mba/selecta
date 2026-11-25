@@ -26,7 +26,10 @@ from functools import cached_property
 import httpx
 
 from selecta import __version__, db, flags, modes
-from selecta.library.scan import _ARTIST_SPLIT, _FEAT_TAIL, _TITLE_NOISE
+from selecta.library.scan import _FEAT_TAIL, _TITLE_NOISE
+
+# the planner core compares artists the same way, from text alone; it stays importable from here
+from selecta.planner_core.names import clean_artist  # noqa: F401
 
 API = "https://lrclib.net/api"
 USER_AGENT = f"selecta/{__version__} (https://github.com/tochi-mba/selecta)"
@@ -156,10 +159,6 @@ def parse_lrc(text: str, song_duration: float | None = None) -> list[Line]:
 
 def clean_title(title: str | None) -> str:
     return _FEAT_TAIL.sub("", _TITLE_NOISE.sub(" ", title or "")).strip(" -")
-
-
-def clean_artist(artist: str | None) -> str:
-    return _ARTIST_SPLIT.split(artist or "")[0].strip()
 
 
 class LrcLib:

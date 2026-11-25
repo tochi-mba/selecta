@@ -21,10 +21,8 @@ import numpy as np
 from selecta import flags
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
-from selecta.arrange import can_arrange
-from selecta.lyrics.lrclib import clean_artist
-from selecta.planner.arc import target_energy
-from selecta.planner.beam import (
+from selecta.planner_core.arc import target_energy
+from selecta.planner_core.beam import (
     CLOSE_TEMPO,
     FAR_KEYS,
     LINK_BONUS,
@@ -33,14 +31,14 @@ from selecta.planner.beam import (
     plan_set,
     ratings_lean,
 )
-from selecta.planner.choose import enumerate_candidates
-from selecta.planner.fit import ROLL_MAX_GAP
-from selecta.planner.memory import SeamMemory
-from selecta.planner.moods import THEMES, is_english, is_seasonal, read_lyrics
-from selecta.planner.wordreel import modes_for, ride_lines
-from selecta.render.intertwine import can_intertwine
-from selecta.seam_kinds import move_on
-from selecta.styles.wordplay import felt_bpm
+from selecta.planner_core.choose import enumerate_candidates
+from selecta.planner_core.fit import ROLL_MAX_GAP, felt_bpm
+from selecta.planner_core.memory import SeamMemory
+from selecta.planner_core.moods import THEMES, is_english, is_seasonal, read_lyrics
+from selecta.planner_core.moves import move_on
+from selecta.planner_core.names import clean_artist
+from selecta.planner_core.stem_gates import can_arrange, can_intertwine
+from selecta.planner_core.wordreel import modes_for, ride_lines
 
 MIN_SONGS = 6
 DEFAULT_SONGS = 12

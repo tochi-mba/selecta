@@ -8,18 +8,21 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, fields
 
-from selecta import flags
-from selecta.audit.checks import AuditReport, Check
+from selecta.audit.checks import AuditReport, Check, audit_facts
 from selecta.config import ANALYSIS_VERSION
 from selecta.lyrics.lrclib import Line
+
+# STUDIO_SESSION, MOVE_FLAGS and move_on live in the planner core now, which plans with them, and
+# NEAR_MISS beside its repair rule. They stay importable from here.
+from selecta.planner_core.moves import MOVE_FLAGS, STUDIO_SESSION, move_on  # noqa: F401
+from selecta.planner_core.repair import NEAR_MISS  # noqa: F401
+from selecta.planner_core.repair import good_enough as _good_enough
 
 RENDER_VERSION = 2
 
 PREVIEW_SECONDS = 12.0
 
 RIDES_BEFORE_OTHERS = 0.35
-
-NEAR_MISS = {"beat alignment": 20.0, "level fall": 3.0, "entry level": 1.5}
 
 UNSURE_WORDS = "SelectaDJ can’t tell exactly when these words are sung, so it won’t cut on them."
 
@@ -56,36 +59,6 @@ MOVES: dict[str, tuple[str, str]] = {
 WORD_MOVES = {"word_blend", "word_exchange", "phrase_roll", "word_cut"}
 
 STEM_MOVES = WORD_MOVES | {"vocal_ride", "stem_intertwine", "stem_studio", "stem_arrange"}
-
-STUDIO_SESSION = "studio_session"
-
-# The flag each move answers to. "auto" has none: letting Selecta pick is always possible, since
-# a cut is core and can't be turned off.
-MOVE_FLAGS = {
-    "cut_on_one": "move.cut",
-    "bass_swap_blend": "move.bass_swap_blend",
-    "vocal_ride": "move.vocal_ride",
-    "filter_sweep": "move.filter_sweep",
-    "tempo_ramp": "move.tempo_ramp",
-    "echo_out": "move.echo_out",
-    "delay_throw": "move.delay_throw",
-    "reverb_wash": "move.reverb_wash",
-    "word_cut": "move.word_cut",
-    "word_blend": "move.word_blend",
-    "phrase_roll": "move.phrase_roll",
-    "word_exchange": "move.call_and_response",
-    "stem_arrange": "move.strip_and_land",
-    "stem_intertwine": "move.intertwined_stems",
-    "stem_studio": "stem_studio",
-    STUDIO_SESSION: "stem_studio",
-}
-
-
-def move_on(move: str) -> bool:
-    """Whether this build can make the move. One that isn't a move at all is left for whatever
-    checks names to refuse."""
-    flag = MOVE_FLAGS.get(move)
-    return flag is None or flags.on(flag)
 
 
 def moves_on() -> dict[str, tuple[str, str]]:
@@ -208,12 +181,8 @@ def good_enough(report: AuditReport) -> bool:
     """Passed, or only a near miss on checks that have proved stricter than the ear. The beat
     check misreads syncopated drums, so a near miss still beats going silent - but of the rated
     seams, every one that shipped with a warning was disliked, so a near miss is only played
-    when not even a clean cut can be had."""
-    for check in report.failures:
-        slack = NEAR_MISS.get(check.name)
-        if slack is None or check.value > check.limit + slack:
-            return False
-    return True
+    when not even a clean cut can be had. The rule itself is the planner core's."""
+    return _good_enough(audit_facts(report))
 
 
 def _what_failed(report: AuditReport) -> str:

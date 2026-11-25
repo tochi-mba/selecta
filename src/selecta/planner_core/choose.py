@@ -1,21 +1,20 @@
 """Choose a transition between two songs.
 
 Exit, entry, style and length are scored together, because the evidence suggests cue and pairing
-choices matter more than effect curves. Style is never random. The best candidate gets rendered
-and audited, and each failed check steers the next attempt. If nothing passes, an echo out is
-always available, so a set can't go silent.
+choices matter more than effect curves. Style is never random. A studio renders and audits the best
+candidate, and the repair rule (`planner_core.repair`) lets each failed check steer the next
+attempt. If nothing passes, a cut on the downbeat is always available, so a set can't go silent.
+Rendering and auditing live in `selecta.planner.choose`.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass
 
 from selecta import flags
-from selecta.analysis import vocal_sense
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
-from selecta.audit.checks import HARMONY_LIMIT, AuditReport, audit, excess_roughness
-from selecta.planner.fit import (
+from selecta.planner_core.fit import (
     CLOSE_TEMPO,
     COLD_ENTRY_DB,
     FAR_KEYS,
@@ -27,11 +26,10 @@ from selecta.planner.fit import (
     level_step,
     relative_level,
 )
-from selecta.render.engine import Rendered, SongCache, render
-from selecta.seam_kinds import move_on
-from selecta.styles import Recipe, all_recipes
-
-MAX_REPAIRS = 4
+from selecta.planner_core.harmony import HARMONY_LIMIT, excess_roughness
+from selecta.planner_core.moves import move_on, sense_on
+from selecta.planner_core.recipes import Recipe, all_recipes
+from selecta.planner_core.repair import MAX_REPAIRS  # noqa: F401  the loop's default, kept here
 
 BLEND_MIN_CONFIDENCE = STEADY_GRID
 """Beat-locking needs a sure grid: every rated seam whose grid sat below this was disliked."""
@@ -60,21 +58,6 @@ class Candidate:
     score: float
     reasons: tuple[str, ...] = ()
     options: tuple[tuple[str, float], ...] = ()
-
-
-@dataclass
-class Attempt:
-    candidate: Candidate
-    report: AuditReport | None
-
-
-@dataclass
-class Choice:
-    rendered: Rendered
-    report: AuditReport
-    candidate: Candidate
-    attempts: list[Attempt] = field(default_factory=list)
-    fell_back: bool = False
 
 
 def tempo_gap(a: SongInfo, b: SongInfo) -> float:
@@ -263,11 +246,7 @@ def enumerate_candidates(
                 effective = gap if recipe.max_gap is not None else blend_gap
                 if not can_beatmatch or effective > (recipe.max_gap or BLEND_MAX_GAP):
                     continue
-                if (
-                    not (a.vocals_known and b.vocals_known)
-                    and bars > 4
-                    and not vocal_sense.sense_on()
-                ):
+                if not (a.vocals_known and b.vocals_known) and bars > 4 and not sense_on():
                     # without lyrics or ears, a long overlap can't be checked for two voices
                     continue
             for exit_cue in exits:
@@ -395,34 +374,6 @@ def _level_term(a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue, bars: i
     return max(0.0, 1.0 - max(-step - LEVEL_FALL_FREE_DB, step - LEVEL_RISE_FREE_DB, 0.0) / 6.0)
 
 
-def _next_candidate(
-    failed: Candidate,
-    report: AuditReport,
-    pool: list[Candidate],
-    tried: set[tuple],
-) -> Candidate | None:
-    """Pick the attempt most likely to fix what just failed."""
-    fixes = {check.fix for check in report.failures}
-    remaining = [c for c in pool if _key(c) not in tried]
-    if "shorten" in fixes:
-        shorter = [
-            c for c in remaining if c.recipe.name == failed.recipe.name and c.bars < failed.bars
-        ]
-        if shorter:
-            return shorter[0]
-    if "move_cue" in fixes or "close_gap" in fixes:
-        moved = [
-            c
-            for c in remaining
-            if c.recipe.name == failed.recipe.name
-            and (c.exit_cue != failed.exit_cue or c.entry_cue != failed.entry_cue)
-        ]
-        if moved:
-            return moved[0]
-    other = [c for c in remaining if c.recipe.name != failed.recipe.name]
-    return other[0] if other else (remaining[0] if remaining else None)
-
-
 def _key(candidate: Candidate) -> tuple:
     return (
         candidate.recipe.name,
@@ -444,42 +395,3 @@ def fallback_candidate(a: SongInfo, b: SongInfo) -> Candidate:
     return Candidate(
         recipes["cut_on_one"], exits[0], entries[0], 0, 0.0, ("nothing else cleared the bar",)
     )
-
-
-def choose_transition(
-    a: SongInfo,
-    b: SongInfo,
-    style: str | None = None,
-    cache: SongCache | None = None,
-    max_repairs: int = MAX_REPAIRS,
-    exits: list[Cue] | None = None,
-) -> Choice:
-    cache = cache or SongCache()
-    pool = enumerate_candidates(a, b, style, exits=exits)
-    tried: set[tuple] = set()
-    attempts: list[Attempt] = []
-    candidate = pool[0] if pool else None
-
-    renders = 0
-    while candidate is not None and renders <= max_repairs:
-        tried.add(_key(candidate))
-        script = candidate.recipe.make(
-            a, b, candidate.exit_cue, candidate.entry_cue, candidate.bars
-        )
-        if script is None:
-            attempts.append(Attempt(candidate, None))
-            candidate = next((c for c in pool if _key(c) not in tried), None)
-            continue
-        renders += 1
-        rendered = render(script, cache)
-        report = audit(rendered)
-        attempts.append(Attempt(candidate, report))
-        if report.passed:
-            return Choice(rendered, report, candidate, attempts)
-        candidate = _next_candidate(candidate, report, pool, tried)
-
-    safe = fallback_candidate(a, b)
-    script = safe.recipe.make(a, b, safe.exit_cue, safe.entry_cue, safe.bars)
-    rendered = render(script, cache)
-    report = audit(rendered)
-    return Choice(rendered, report, replace(safe), attempts, fell_back=True)

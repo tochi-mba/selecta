@@ -46,6 +46,18 @@ def folded_gap(a: SongInfo, b: SongInfo) -> float:
     return min(abs(a.bpm * ratio / b.bpm - 1.0) for ratio in (0.5, 1.0, 2.0))
 
 
+_HALF_TIME_ABOVE_BPM = 135.0
+
+
+def pulse(song: SongInfo) -> float:
+    """The beat a person would nod to, since fast grids are usually half-time songs."""
+    return song.period * (2.0 if song.bpm > _HALF_TIME_ABOVE_BPM else 1.0)
+
+
+def felt_bpm(song: SongInfo) -> float:
+    return 60.0 / pulse(song)
+
+
 def fold_ratio(a: SongInfo, b: SongInfo) -> float:
     """How many of B's beats pass for each of A's: 2 against a double-time B, 0.5 against a
     half-time one, 1 otherwise. An 87 BPM song and a 174 BPM one share a single pulse, which is

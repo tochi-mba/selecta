@@ -1,4 +1,6 @@
-"""Transition recipes. Each one is a small function that returns a TransitionScript."""
+"""Transition recipes. Each one is a small function that builds a TransitionScript from song facts
+alone, so any studio can render what the planner core chose. Word moves need word timing from the
+separated voice, so they live in `selecta.styles.wordplay`, outside the core."""
 
 from __future__ import annotations
 
@@ -32,8 +34,8 @@ class Recipe:
 def all_recipes() -> dict[str, Recipe]:
     """Recipes the planner can pick from bar cues. Word cuts need word timing from a lyric link,
     so `selecta.styles.wordplay` is reached through the word-link search instead."""
-    from selecta.styles.blend import bass_swap_blend, filter_sweep, tempo_ramp
-    from selecta.styles.exits import cut_on_one, delay_throw, echo_out, reverb_wash
+    from selecta.planner_core.recipes.blend import bass_swap_blend, filter_sweep, tempo_ramp
+    from selecta.planner_core.recipes.exits import cut_on_one, delay_throw, echo_out, reverb_wash
 
     recipes = [
         Recipe("cut_on_one", cut_on_one, False, description="Cut on the downbeat"),

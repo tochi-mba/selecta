@@ -13,12 +13,12 @@ import numpy as np
 
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
-from selecta.lyrics.lrclib import clean_artist
-from selecta.planner.arc import target_energy
-from selecta.planner.choose import enumerate_candidates, styles_for_language
-from selecta.planner.fit import CLOSE_TEMPO, FAR_KEYS, STEADY_GRID, TimbreSpace, folded_gap
-from selecta.planner.memory import SeamMemory
-from selecta.planner.wordreel import (
+from selecta.planner_core.arc import target_energy
+from selecta.planner_core.choose import enumerate_candidates, styles_for_language
+from selecta.planner_core.fit import CLOSE_TEMPO, FAR_KEYS, STEADY_GRID, TimbreSpace, folded_gap
+from selecta.planner_core.memory import SeamMemory
+from selecta.planner_core.names import clean_artist
+from selecta.planner_core.wordreel import (
     BLEND_MAX_GAP,
     BLEND_MAX_KEY_DISTANCE,
     BLEND_MIN_GRID,

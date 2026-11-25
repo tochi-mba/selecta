@@ -20,11 +20,16 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from selecta.analysis.song import SongInfo
 from selecta.config import SAMPLE_RATE
-from selecta.planner.choose import tempo_gap
-from selecta.planner.wordreel import modes_for
-from selecta.studio import CELLS, LANES, SIDES, Shape, clean_shape, find_placement
+
+# whether two songs can be arranged at all is decided from song facts, in the planner core
+from selecta.planner_core.stem_gates import ARRANGE_CLOSE_TEMPO as CLOSE_TEMPO  # noqa: F401
+from selecta.planner_core.stem_gates import ARRANGE_MIN_GRID as MIN_GRID  # noqa: F401
+from selecta.planner_core.stem_gates import (  # noqa: F401
+    ARRANGE_SHORTEST_OVERLAP as SHORTEST_OVERLAP,
+)
+from selecta.planner_core.stem_gates import can_arrange, why_it_cant  # noqa: F401
+from selecta.studio import CELLS, LANES, SIDES, Shape, clean_shape
 
 STRIP_AND_LAND: Shape = {
     "a": {
@@ -50,9 +55,6 @@ on the seam the listener liked. It holds, thins out, teases, drops to its lowest
 PRESENT_DB = -40.0
 """Louder than this, a stem really has something in that square. Separation leaves about -50 dB of
 other instruments behind, and real parts measured at -20 to -30 dB on real songs."""
-CLOSE_TEMPO = 0.045
-SHORTEST_OVERLAP = 12
-MIN_GRID = 0.8
 LONGEST_CARRIER_GAP = 2
 """How many squares of the stripped-down stretch can pass without a melody before it isn't one."""
 QUIET_AROUND_SECONDS = 0.25
@@ -90,25 +92,6 @@ Levels = dict[str, dict[str, list[float]]]
 
 class WontWork(ValueError):
     """These two can't be arranged this way. The message says why, in plain words."""
-
-
-def can_arrange(a: SongInfo, b: SongInfo) -> bool:
-    """Cheap checks before spending minutes splitting stems."""
-    return why_it_cant(a, b) is None
-
-
-def why_it_cant(a: SongInfo, b: SongInfo) -> str | None:
-    gap = tempo_gap(a, b)
-    if gap > CLOSE_TEMPO:
-        return f"The songs are {gap:.0%} apart in tempo, too far to play their parts together."
-    if min(a.grid_confidence, b.grid_confidence) < MIN_GRID:
-        return "This needs a steadier beat in both songs."
-    if "word_blend" not in modes_for(a, b):
-        return "These two are too far apart in key for their melodies to overlap."
-    place = find_placement(a, b)
-    if place is None or place.bars < SHORTEST_OVERLAP:
-        return "These two don't have enough clear bars to line their stems up."
-    return None
 
 
 # ---- listening to the stems

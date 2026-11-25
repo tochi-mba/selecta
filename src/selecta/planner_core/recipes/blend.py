@@ -5,9 +5,9 @@ from __future__ import annotations
 import numpy as np
 
 from selecta.analysis.song import Cue, SongInfo
-from selecta.planner.fit import fold_ratio
+from selecta.planner_core.fit import fold_ratio
+from selecta.planner_core.recipes.timing import BlendTiming, blend_timing, tempo_gap
 from selecta.render.script import Curve, Part, TransitionScript, fade_in, fade_out, sweep
-from selecta.styles.timing import BlendTiming, blend_timing, tempo_gap
 
 _FADE_SHARE = 0.65
 RAMP_MIN_GAP = 0.05

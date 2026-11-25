@@ -9,15 +9,20 @@ plays and the listener can rate.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 
 from selecta import flags
-from selecta.analysis.song import Cue, SongInfo
+from selecta.analysis.song import SongInfo
 from selecta.config import SAMPLE_RATE, Settings
+
+# where two songs can overlap is decided from song facts, in the planner core
+from selecta.planner_core.stem_gates import STUDIO_MAX_TEMPO_GAP as MAX_TEMPO_GAP
+from selecta.planner_core.stem_gates import STUDIO_MIN_GRID as MIN_GRID  # noqa: F401
+from selecta.planner_core.stem_gates import STUDIO_OVERLAP_BARS as OVERLAP_BARS  # noqa: F401
+from selecta.planner_core.stem_gates import Placement, find_placement
 from selecta.render import dsp
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.render.intertwine import _fit, _read
@@ -29,9 +34,6 @@ LANES = ("vocals", "drums", "bass", "other")
 SIDES = ("a", "b")
 CELLS = 8
 """However long the overlap, the grid has this many steps, so it stays easy to read and tap."""
-OVERLAP_BARS = (16, 12, 8)
-MAX_TEMPO_GAP = 0.08
-MIN_GRID = 0.55
 EDGE_SECONDS = 0.012
 WINDOW_MARGIN = 5.0
 
@@ -52,43 +54,6 @@ START_SHAPE: Shape = {
     },
 }
 """A starting point: B's drums come in early, there's one bass at a time, and voices trade late."""
-
-
-@dataclass(frozen=True)
-class Placement:
-    exit_cue: Cue
-    entry_cue: Cue
-    bars: int
-
-
-def find_placement(
-    a: SongInfo,
-    b: SongInfo,
-    exit_bar: int | None = None,
-    entry_bar: int | None = None,
-    leave_after: float | None = None,
-) -> Placement | None:
-    """Where these two can overlap, longest first. Long overlaps are the ones the listener likes."""
-    if abs(a.bpm / b.bpm - 1.0) > MAX_TEMPO_GAP or a.beats_per_bar != b.beats_per_bar:
-        return None
-    if min(a.grid_confidence, b.grid_confidence) < MIN_GRID:
-        return None
-    exits = [c for c in a.exit_cues() if exit_bar is None or c.bar == exit_bar] or a.exit_cues()
-    entries = [c for c in b.entry_cues() if entry_bar is None or c.bar == entry_bar]
-    entries = entries or b.entry_cues()
-    for bars in OVERLAP_BARS:
-        beats = bars * a.beats_per_bar
-        for exit_cue in exits:
-            if exit_cue.bar < bars // 2:
-                continue
-            if leave_after is not None and a.bar_time(exit_cue.bar - bars // 2) < leave_after:
-                continue
-            if a.beat_index_of_bar(exit_cue.bar - bars // 2) + beats >= len(a.beats):
-                continue
-            for entry_cue in entries:
-                if b.beat_index_of_bar(entry_cue.bar) + beats < len(b.beats):
-                    return Placement(exit_cue, entry_cue, bars)
-    return None
 
 
 def why_no_studio(a: SongInfo, b: SongInfo) -> str | None:
