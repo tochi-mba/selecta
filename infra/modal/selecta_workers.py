@@ -33,11 +33,15 @@ image = (
     .pip_install("uv")
     .add_local_file("pyproject.toml", "/src/pyproject.toml", copy=True)
     .add_local_file("uv.lock", "/src/uv.lock", copy=True)
+    .add_local_file("README.md", "/src/README.md", copy=True)  # the package build reads it
     .add_local_dir("src", "/src/src", copy=True)
     .run_commands(
         "cd /src && uv export --frozen --no-dev --extra observability --no-emit-project"
         " -o /tmp/requirements.txt",
-        "uv pip install --system -r /tmp/requirements.txt",
+        # The lock pins torch to PyTorch's CPU builds, which live on PyTorch's own index
+        # (pyproject's pytorch-cpu), as infra/docker/service.Dockerfile does.
+        "uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu"
+        " --index-strategy unsafe-best-match -r /tmp/requirements.txt",
         "uv pip install --system --no-deps /src",
     )
     .env({"SELECTA_MODE": "cloud", "SELECTA_ENVIRONMENT": ENVIRONMENT})
