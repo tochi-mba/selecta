@@ -76,7 +76,7 @@ resource "cloudflare_r2_bucket_cors" "browser" {
       methods = ["GET", "PUT", "HEAD"]
       headers = ["content-type", "range"]
     }
-    expose_headers  = ["ETag", "Content-Range"]
+    expose_headers  = ["ETag"]
     max_age_seconds = 3600
   }]
 }
