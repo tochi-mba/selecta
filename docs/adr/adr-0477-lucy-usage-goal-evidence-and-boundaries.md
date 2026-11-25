@@ -20,6 +20,8 @@ Reading the code at the baseline found five faults in the present model:
 4. **Two tables kept in step by hand.** Allowances are written in `src/selecta/billing/plans.py` and again in `src/selecta/ai/allowance.py`.
 5. **What is sold is not what is delivered.** A plan card promises 400 turns; the ceiling delivers about 170 on the plan's model and then quietly answers with a smaller one.
 
+**Since the baseline (2026-11-25).** Faults 1 to 3 were fixed in the present turn model, ahead of any decision on this set: the meter reads `ai_usage`, `request_class` returns all four classes, and the dollar ceiling has its own words. Fault 4 is guarded by a test that fails when the two tables disagree; the tables are still two. Fault 5 stands, and is the reason for this programme. The fixes make the turn model honest; they do not make the visible limit and the enforced limit one thing.
+
 During 2026 the large chat products moved away from message counts to a single allowance measured by work done, on a rolling five-hour window under a weekly cap (see the research note). That design removes faults 2, 3 and 5 by construction, because the thing the customer is shown is the thing that limits them.
 
 ## Decision

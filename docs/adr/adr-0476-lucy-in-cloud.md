@@ -50,7 +50,7 @@ No file path, device or audio detail is ever stored; song ids point at the catal
 
 ## One turn through the gateway
 
-1. `POST .../turns` stores the turn and the person's message, then admits it with `gateway.plan_turn` in the workspace transaction (tier from the plan, request class from the words: a whole new mix is `planning`, anything else `everyday`). A refusal (the account's run slot is busy, Lucy paused) is answered at once as 409 with the gateway's own words, and nothing is counted.
+1. `POST .../turns` stores the turn and the person's message, then admits it with `gateway.plan_turn` in the workspace transaction (tier from the plan, request class from the words: a whole new mix is `planning`, one of two hours or more or for a long event is `deep_plan`, a short question that asks for no mix is `quick`, anything else `everyday`). A refusal (the account's run slot is busy, Lucy paused) is answered at once as 409 with the gateway's own words, and nothing is counted.
 2. The turn runs on a worker thread. If the plan is the built-in planner (allowance used, dollar ceiling reached, no model reachable), Lucy answers honestly in plain words: which of those it is, when turns come back (the month's reset date), and a simple catalogue search for what was asked. She never pretends a model answered.
 3. Otherwise `gateway.provider_settings_for` gives the provider (the key comes from the deployment's secret reference, never from anything the person typed) and the loop runs with the plan's ceilings: cycles, seconds, output tokens and the per-turn cost cap.
 4. `gateway.finish_turn` settles it with the real tokens (cache reads and writes counted separately); a failed or stopped turn is given back.
@@ -157,6 +157,7 @@ Each item names where it is handled; "decided" lines say what happens and why.
 - "Why these songs", folded, in the mix pane.
 - `interactive-widget=resizes-content` in the viewport meta (Android); the shell's `visualViewport` inset already keeps the box above the keyboard on iOS.
 - The remaining-turns meter updates on every device (`lucy.turns` on the workspace stream).
+- Limits made true (2026-11-25): the turns meter reads the counters the gateway admits against (`ai_usage`), where it used to read counters no turn wrote; a message can count as any of the four kinds of turn, where only planning and everyday could happen; and at the dollar ceiling Lucy says so, where she used to say the turns were used. Tests: `tests/test_cloud_lucy_turn_meter.py`, `tests/test_lucy_request_class.py`, `tests/test_lucy_cloud_limits.py`.
 - Long conversations open on their newest 80 messages; "Show earlier messages" reads a page at a time.
 - Lucy's state block names where the playing mix is (song and time) and the open room's waiting requests as catalogue songs.
 - Inline tool cards were already there: one card per tool call, with its own title ("Searching your library", "Proposing a new mix") and state.

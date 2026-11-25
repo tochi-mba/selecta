@@ -393,7 +393,8 @@ def test_artists_and_the_current_mix(lucy):
 def test_a_whole_new_mix_is_a_planning_turn():
     assert cloud_agent.request_class("make a 1 hour mix for a house party") is \
         RequestClass.PLANNING
-    assert cloud_agent.request_class("what's playing next?") is RequestClass.EVERYDAY
+    assert cloud_agent.request_class("play something upbeat") is RequestClass.EVERYDAY
+    # every kind and its edges: tests/test_lucy_request_class.py
 
 
 # Edge cases (ADR-0476 addendum) -------------------------------------------------------------

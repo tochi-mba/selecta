@@ -40,6 +40,9 @@ ends with everything that needs you.*
 - Reading the code for it found faults in today's limits: the turns meter reads counters nothing
   writes, two of the four turn classes can never happen, and the "out of turns" words are also
   shown when the hidden dollar ceiling was the cause. Each is filed in `docs/todo/items/`.
+- Those three are fixed (2026-11-25): the meter reads what the gateway counts, messages count as
+  quick turns and deep plans as the plans say, and at the dollar ceiling Lucy says it is the plan's
+  monthly limit on her AI, not the turns. A test now fails if the two allowance tables disagree.
 - Needs you: accept, amend or reject the set (LM-0477-02). Chapter: [09 §9.8](09-lucy-ai-gateway.md).
 
 ## Billing and plans

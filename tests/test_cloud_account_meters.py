@@ -7,6 +7,7 @@ import pytest
 from cloud_world import HEADERS, add_asset, signed_up
 from test_cloud_billing_fakes import PRICES_JSON
 
+from selecta.ai import allowance as lucy_allowance
 from selecta.billing import stripe_sync
 from selecta.billing.plans import plan_for
 from selecta.persistence import db_now, transaction
@@ -21,6 +22,16 @@ def _consume(engine, workspace_id: str, kind: str, amount: int, timezone: str = 
             conn, workspace_id, kind, amount, allowances.limit_for(plan, kind), timezone=timezone
         )
         assert taken.ok
+
+
+def _lucy_turns(engine, workspace_id: str, times: int, tier: str = "free",
+                request_class: str = "everyday") -> None:
+    """Count Lucy turns the way the AI gateway admits them (`ai_usage`), which the meter reads."""
+    with transaction(engine, workspace_id) as conn:
+        month = lucy_allowance.month_key(db_now(conn), "UTC")
+        for _ in range(times):
+            started = lucy_allowance.try_start_turn(conn, workspace_id, tier, request_class, month)
+            assert started.admitted
 
 
 def _premium(engine, workspace_id: str, valid_until: float = 4_000_000_000) -> None:
@@ -42,7 +53,7 @@ def test_account_reports_every_meter_with_its_reset(tmp_path, monkeypatch):
     with signed_up(tmp_path, monkeypatch) as world:
         add_asset(world.engine, world.objects, world.workspace_id, b"x" * 2_000)
         _consume(world.engine, world.workspace_id, "analysis_song", 3)
-        _consume(world.engine, world.workspace_id, "lucy_turn.everyday", 5)
+        _lucy_turns(world.engine, world.workspace_id, 5)
         _consume(world.engine, world.workspace_id, "export", 1)
         with world.engine.connect() as conn:
             now = db_now(conn)
@@ -148,6 +159,13 @@ def test_premium_meters_show_its_limits_and_fair_use(tmp_path, monkeypatch):
         # Sonnet and Opus are limited; Haiku quick turns are fair use, counted but never refused.
         assert (lucy["limit"], lucy["fair_use"]) == (175, True)
         assert [entry["limit"] for entry in lucy["classes"]] == [150, 25, None]
+        _lucy_turns(world.engine, world.workspace_id, 2, "premium")
+        _lucy_turns(world.engine, world.workspace_id, 1, "premium", "deep_plan")
+        _lucy_turns(world.engine, world.workspace_id, 9, "premium", "quick")
+        lucy = world.client.get("/api/account", headers=HEADERS).json()["usage"]["lucy_turns_month"]
+        # the fair-use quick turns are in their own line, never in the limited total
+        assert [entry["used"] for entry in lucy["classes"]] == [2, 1, 9]
+        assert (lucy["used"], lucy["limit"]) == (3, 175)
 
 
 def test_a_new_entitlement_snapshot_tells_the_workspaces_open_pages(tmp_path, monkeypatch):

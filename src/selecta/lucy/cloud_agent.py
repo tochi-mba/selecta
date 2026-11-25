@@ -54,19 +54,68 @@ HISTORY_MESSAGES = 200
 HISTORY_CHARS = {"free": 12_000, "standard": 40_000, "premium": 80_000}
 """How much earlier conversation is sent verbatim, per plan (about 3k, 10k and 20k tokens)."""
 NOTE_CHARS = 700
+# A length is a number and a unit that ends there: "2 hours", "90min", "2h30", never "2 house
+# tracks" or "10 minor-key songs" (the unit must not run on into another word).
+_HOURS = r"(?:hours?|hrs?|h)(?![a-z])"
+_MINUTES = r"(?:minutes?|mins?)(?![a-z])"
 PLANNING = re.compile(
-    r"\b(make|build|create|plan|start)\b.{0,40}\b(mix|set|playlist)\b|\b\d+\s*(hour|hr|h|min)",
+    r"\b(make|build|create|plan|start)\b.{0,40}\b(mix|set|playlist)\b"
+    rf"|\b\d+(?:\.\d+)?[\s-]*(?:{_HOURS}|{_MINUTES})",
     re.IGNORECASE,
 )
+_COUNT = {name: number for number, name in enumerate(
+    "one two three four five six seven eight nine ten eleven twelve".split(), start=1)}
+ASKED_HOURS = re.compile(
+    rf"\b(\d+(?:\.\d+)?|{'|'.join(_COUNT)})[\s-]*{_HOURS}", re.IGNORECASE)
+ASKED_MINUTES = re.compile(rf"\b(\d+(?:\.\d+)?)[\s-]*{_MINUTES}", re.IGNORECASE)
+LONG_EVENT = re.compile(
+    r"\b(all[\s-]night(?:er)?|all[\s-]day|(?:whole|entire) (?:night|evening|day|party|event)"
+    r"|wedding|festival)\b",
+    re.IGNORECASE,
+)
+DEEP_PLAN_MINUTES = 120
+"""A whole new mix this long or longer, or for a named long event, is a deep plan."""
+QUESTION = re.compile(
+    r"^\W*(?:what|whats|who|whos|whose|which|when|where|how\s+(?:long|many|much))\b",
+    re.IGNORECASE,
+)
+QUICK_WORDS = 8
+"""A question this short that asks for no new mix is a quick turn."""
 
 BUSY_WORDS = ("Lucy is busy right now. Try again in a moment; this didn't use one of your "
               "turns, and your mixes and music are unaffected.")
 ProviderFactory = Callable[[gateway.ProviderSettings, gateway.TurnPlan], Any]
 
 
-def request_class(text: str) -> RequestClass:
-    """A whole new mix is a planning turn; anything else an everyday one (ADR-0404)."""
-    return RequestClass.PLANNING if PLANNING.search(text or "") else RequestClass.EVERYDAY
+def asked_minutes(text: str) -> float:
+    """The longest length the words ask for, in minutes: "2 hours 30 min" is 150, "three hour"
+    is 180, and words that name no length are 0."""
+    hours = [float(_COUNT.get(found.lower()) or found) for found in ASKED_HOURS.findall(text)]
+    minutes = [float(found) for found in ASKED_MINUTES.findall(text)]
+    return max(hours, default=0.0) * 60 + max(minutes, default=0.0)
+
+
+def request_class(text: str | None) -> RequestClass:
+    """Which of the four kinds of turn the plans sell these words ask for (ADR-0404).
+
+    - A whole new mix, or anything naming a length, is a planning turn; one of two hours or
+      more, or for a long event (a wedding, a festival, all night), is a deep plan.
+    - A short question that asks for no new mix ("what's playing next?") is a quick turn.
+    - Everything else is an everyday turn.
+
+    Every class is answered by the plan's own model, so this only decides which allowance the
+    turn counts against (`ai.allowance.BUCKETS`). A wrong guess never refuses a turn on its
+    own: a used-up allowance steps down to the next one (`ai.allowance.STEP_DOWN`).
+    """
+    words = (text or "").strip()
+    if not words:
+        return RequestClass.EVERYDAY
+    if PLANNING.search(words):
+        long = asked_minutes(words) >= DEEP_PLAN_MINUTES or LONG_EVENT.search(words)
+        return RequestClass.DEEP_PLAN if long else RequestClass.PLANNING
+    if len(words.split()) <= QUICK_WORDS and QUESTION.search(words):
+        return RequestClass.QUICK
+    return RequestClass.EVERYDAY
 
 
 def tier_of(conn, workspace_id: str) -> Tier:
@@ -285,6 +334,9 @@ def _model_history(job: Job, before_seq: int) -> list[dict[str, Any]]:
 
 
 def _resets_words(job: Job) -> str:
+    """The first day of the month after the turn's month, as "1 December". The turn's month is
+    already the account's own (`gateway.plan_turn` reads it in the account's time zone), so UTC
+    here only turns that month into a date and the day is right in every zone."""
     when = dt.datetime.fromtimestamp(month_resets_at(job.plan.month, "UTC"), dt.UTC)
     return f"{when.day} {when:%B}"
 
@@ -292,9 +344,15 @@ def _resets_words(job: Job) -> str:
 def builtin_words(job: Job, ctx: cloud_tools.CloudCtx) -> str:
     """What Lucy says when no model answers this turn: why, and what still works."""
     limited = job.plan.limited
-    if limited in {"allowance", "spend"}:
+    if limited == "allowance":
         why = (f"You've used this month's Lucy turns on your plan, so I can't think this one "
                f"through. They come back on {_resets_words(job)}.")
+    elif limited == "spend":
+        # The plan's monthly dollar ceiling, not its turns: turns may well be left, so saying
+        # they are used up would be untrue. Both start again with the account's month.
+        why = (f"You've reached your plan's monthly limit on Lucy's AI, which is separate from "
+               f"your turns, so I can't think this one through. It comes back on "
+               f"{_resets_words(job)}.")
     elif limited == "platform":
         why = "Lucy's AI is very busy right now, so I can't think this one through."
     else:

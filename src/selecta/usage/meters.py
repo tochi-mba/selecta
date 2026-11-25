@@ -2,12 +2,13 @@
 
 One read, no locks: storage used of the limit, songs analysed today, Lucy turns this month and
 exports this month, each with the moment it resets. The numbers come from the same rows the
-server enforces with (`quota_state` and `allowance_counters`), so the page never shows a limit
-the server doesn't apply.
+server enforces with (`quota_state`, `allowance_counters` and, for Lucy, the AI gateway's
+`ai_usage`), so the page never shows a limit the server doesn't apply.
 
 Lucy turns are counted per purpose (everyday, planning, deep plan, quick), and the meter adds
 them up: "37 of 40 this month" on Free, "120 of 440" on Standard. A purpose under fair use has
-no limit, so a plan with one shows its limited purposes' total and says the rest is fair use.
+no limit, so a plan with one shows its limited purposes' total (fair-use turns are in that
+purpose's own line, never in the total) and says the rest is fair use.
 Allowances reset at the person's own midnight, so the timezone passed in is the signed-in user's.
 """
 
@@ -18,7 +19,9 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from selecta.ai import allowance as lucy_allowance
 from selecta.billing.plans import Plan
+from selecta.persistence import db_now
 from selecta.usage import allowances, quota
 
 LUCY_TIERS = {
@@ -60,32 +63,40 @@ def _allowance(allowance: allowances.Allowance) -> dict[str, Any]:
 def lucy_turns(
     connection: Connection, workspace_id: str, plan: Plan, timezone: str | None
 ) -> dict[str, Any]:
-    """This month's Lucy turns for the plan's model classes, and their sum."""
+    """This month's Lucy turns for the plan's model classes, and their sum.
+
+    Read from `ai_usage`, the counters the AI gateway admits turns against
+    (`ai.allowance.try_start_turn`), with the month the gateway uses: the account's own. No turn
+    writes a `lucy_turn.*` allowance counter, so those are not read here.
+    """
+    month = lucy_allowance.month_key(db_now(connection), timezone)
+    counted = lucy_allowance.turns_by_class(connection, workspace_id, month)
+    resets_at = lucy_allowance.month_resets_at(month, timezone)
+    period = allowances.Period.MONTH.value
     classes = []
-    used = 0.0
+    used = 0
     limit = 0
     fair_use = False
-    resets_at = None
     for turns in plan.lucy:
-        kind = f"lucy_turn.{turns.purpose}"
-        allowance = allowances.remaining(
-            connection, workspace_id, kind, allowances.limit_for(plan, kind), timezone=timezone
-        )
-        resets_at = allowance.resets_at
-        used += allowance.used
-        if allowance.limit is None:
+        spent = counted.get(turns.purpose, 0)
+        if turns.turns is None:
+            # fair use is counted in its own line and never added to the limited total, or a
+            # month of quick questions would read as "300 of 175" and look used up
             fair_use = True
         else:
-            limit += int(allowance.limit)
-        classes.append(
-            {"model_class": turns.model_class, "purpose": turns.purpose, **_allowance(allowance)}
-        )
+            used += spent
+            limit += int(turns.turns)
+        classes.append({
+            "model_class": turns.model_class, "purpose": turns.purpose, "used": spent,
+            "limit": None if turns.turns is None else int(turns.turns),
+            "resets_at": resets_at, "period": period,
+        })
     return {
-        "used": int(used) if used == int(used) else used,
+        "used": used,
         "limit": limit if limit or not fair_use else None,
         "fair_use": fair_use,
         "resets_at": resets_at,
-        "period": allowances.Period.MONTH.value,
+        "period": period,
         "classes": classes,
     }
 
