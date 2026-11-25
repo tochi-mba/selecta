@@ -34,6 +34,13 @@ function mount(locked?: string) {
 }
 // the Guests card heads its list with "N here" and, when anyone is away, "· N away"
 const guestCount = () => screen.getByTestId('room-guests-heading').nextElementSibling as HTMLElement;
+/** What the count says. A rolling number also draws strips of digits for the eye only
+ * (feel/numberRoll, aria-hidden), which are not part of the words. */
+const countSays = () => {
+  const copy = guestCount().cloneNode(true) as HTMLElement;
+  copy.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+  return copy.textContent ?? '';
+};
 async function poll() {
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
   await act(async () => { await vi.advanceTimersByTimeAsync(0); }); // the announcement, if due now
@@ -47,7 +54,7 @@ describe('room panel presence', () => {
     current = panel({ guests: [guest('g1', 'Creative Lemur', true, 2), guest('g2', 'Quiet Otter', false, 5 * 60)] });
     mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(guestCount()).toHaveTextContent(/^1 here · 1 away$/);
+    expect(countSays()).toMatch(/^1 here · 1 away$/);
     const rows = screen.getAllByTestId('room-guest');
     expect(rows[0]).toHaveTextContent('Creative Lemur');
     expect(within(rows[0]).getByTestId('room-guest-presence')).toHaveTextContent('Here now');
@@ -63,7 +70,7 @@ describe('room panel presence', () => {
     expect(gone.tagName).toBe('DETAILS');
     expect(gone).not.toHaveAttribute('open');
     expect(within(gone).getByText('Away for a while (1)')).toBeInTheDocument();
-    expect(guestCount()).toHaveTextContent(/^0 here · 1 away$/);
+    expect(countSays()).toMatch(/^0 here · 1 away$/);
   });
 
   it('shows each screen online or offline with its own Disconnect', async () => {
@@ -83,12 +90,12 @@ describe('room panel presence', () => {
     current = panel({ guests: [guest('g1', 'Creative Lemur', true, 2)], displays: 1, screens: [tv('d1', 'Screen 1', true, NOW - 2)] });
     mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(guestCount()).toHaveTextContent(/^1 here$/);
+    expect(countSays()).toMatch(/^1 here$/);
 
     // the server restarts: its first answer says nobody has checked in since
     current = panel({ guests: [guest('g1', 'Creative Lemur', false, 40)], displays: 1, screens: [tv('d1', 'Screen 1', false, NOW - 40)], now: NOW + 3 });
     await poll();
-    expect(guestCount()).toHaveTextContent(/^0 here · 1 away$/);
+    expect(countSays()).toMatch(/^0 here · 1 away$/);
     expect(screen.getByTestId('room-screen')).toHaveTextContent('offline since');
     const said = screen.getByTestId('room-presence-said');
     expect(said).toHaveAttribute('aria-live', 'polite');
