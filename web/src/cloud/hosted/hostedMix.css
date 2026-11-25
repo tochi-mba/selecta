@@ -1,0 +1,11 @@
+/* Hosted mix (cloud.hosted_render). Spacing and colours from tokens.css. */
+.hosted-mix{display:grid;gap:var(--space-3);margin-bottom:var(--space-4)}
+.hosted-mix h2,.hosted-mix p{margin:0}
+.hosted-mix-actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.hosted-mix-error{color:var(--danger)}
+.hosted-mix-now{font-weight:600}
+.hosted-mix-failed ul{margin:var(--space-2) 0;padding-left:var(--space-4)}
+.hosted-mix-order{margin:0;padding-left:var(--space-4);display:grid;gap:var(--space-2)}
+.hosted-mix-order li{overflow-wrap:anywhere}
+.hosted-mix-order small{display:block;color:var(--text-soft);font-size:var(--text-xs)}
+.hosted-mix-order small[data-state="failed"],.hosted-mix-order small[data-state="refused"]{color:var(--danger)}

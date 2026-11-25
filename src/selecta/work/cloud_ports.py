@@ -31,25 +31,31 @@ class CloudJobEntitlements(Entitlements):
 
     def standing(self, workspace_id: str) -> AccountStanding:
         with transaction(self.engine, workspace_id) as conn:
-            owner = conn.execute(
-                sa.select(users.c.id, users.c.created_at, users.c.deleted_at)
-                .select_from(workspaces.join(users, workspaces.c.owner_user_id == users.c.id))
-                .where(workspaces.c.id == workspace_id)
-            ).first()
-            if owner is None:
-                return AccountStanding(suspended=True)
-            entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
-            plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
-            caps = dict(plan.concurrency) | {"speculative": 1}
-            # ADR-0448: a business organisation's work runs at the open-hours weight while one
-            # of its venues is open (from 30 minutes before), else at the business weight.
-            business_tier = entitlement_gates.scheduler_tier(conn, workspace_id, db_now(conn))
-            return AccountStanding(
-                tier=business_tier or plan.id,
-                suspended=owner.deleted_at is not None,
-                entitlement_version=entitlement.snapshot_version,
-                caps=caps,
-            )
+            return self.standing_in(conn, workspace_id)
+
+    def standing_in(self, conn, workspace_id: str) -> AccountStanding:
+        """The same answer read through the caller's connection. The claim path uses it: a
+        second connection inside the claim's write transaction deadlocks SQLite (dev.cmd cloud
+        never claimed a Cloud job), and on PostgreSQL it saves a connection per claim."""
+        owner = conn.execute(
+            sa.select(users.c.id, users.c.created_at, users.c.deleted_at)
+            .select_from(workspaces.join(users, workspaces.c.owner_user_id == users.c.id))
+            .where(workspaces.c.id == workspace_id)
+        ).first()
+        if owner is None:
+            return AccountStanding(suspended=True)
+        entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
+        plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
+        caps = dict(plan.concurrency) | {"speculative": 1}
+        # ADR-0448: a business organisation's work runs at the open-hours weight while one
+        # of its venues is open (from 30 minutes before), else at the business weight.
+        business_tier = entitlement_gates.scheduler_tier(conn, workspace_id, db_now(conn))
+        return AccountStanding(
+            tier=business_tier or plan.id,
+            suspended=owner.deleted_at is not None,
+            entitlement_version=entitlement.snapshot_version,
+            caps=caps,
+        )
 
 
 class CloudJobFlags:
@@ -62,36 +68,41 @@ class CloudJobFlags:
     def is_on(self, workspace_id: str, flag_id: str) -> bool:
         self.rules.refresh_if_stale()
         with transaction(self.engine, workspace_id) as conn:
-            owner = conn.execute(
-                sa.select(users.c.id, users.c.created_at, users.c.deleted_at)
-                .select_from(workspaces.join(users, workspaces.c.owner_user_id == users.c.id))
-                .where(workspaces.c.id == workspace_id)
-            ).first()
-            if owner is None or owner.deleted_at is not None:
-                return False
-            now = db_now(conn)
-            entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
-            plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
-            context = Context(
-                environment="production",
-                mode="cloud",
-                workspace_id=workspace_id,
-                user_id=owner.id,
-                plan=plan.id,
-                plan_version=plan.version,
-                account_age_days=max(0.0, (now - owner.created_at) / 86_400),
-            )
-            decision = targeting.decide(
-                flag_id,
-                context,
-                build_states=flags.effective(),
-                rules=self.rules.snapshot,
-                entitled=plan.flags,
-                plan_gated=plans.plan_gated_flags(),
-                user_prefs=user_preferences(conn, owner.id),
-                now=now,
-            )
-            return decision.on
+            return self.is_on_in(conn, workspace_id, flag_id)
+
+    def is_on_in(self, conn, workspace_id: str, flag_id: str) -> bool:
+        """`is_on` through the caller's connection (see `CloudJobEntitlements.standing_in`)."""
+        self.rules.refresh_if_stale(conn)
+        owner = conn.execute(
+            sa.select(users.c.id, users.c.created_at, users.c.deleted_at)
+            .select_from(workspaces.join(users, workspaces.c.owner_user_id == users.c.id))
+            .where(workspaces.c.id == workspace_id)
+        ).first()
+        if owner is None or owner.deleted_at is not None:
+            return False
+        now = db_now(conn)
+        entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
+        plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
+        context = Context(
+            environment="production",
+            mode="cloud",
+            workspace_id=workspace_id,
+            user_id=owner.id,
+            plan=plan.id,
+            plan_version=plan.version,
+            account_age_days=max(0.0, (now - owner.created_at) / 86_400),
+        )
+        decision = targeting.decide(
+            flag_id,
+            context,
+            build_states=flags.effective(),
+            rules=self.rules.snapshot,
+            entitled=plan.flags,
+            plan_gated=plans.plan_gated_flags(),
+            user_prefs=user_preferences(conn, owner.id),
+            now=now,
+        )
+        return decision.on
 
 
 class R2OutputVerifier(OutputVerifier):
