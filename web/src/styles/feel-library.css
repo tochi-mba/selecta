@@ -1,0 +1,3 @@
+/* The feel system (ADR-0477): the feel system applied to My Mixes, Library, import, song details, the editor and Studio.
+ * Every rule is scoped to a word in <html data-feel>, uses tokens only and zero specificity where it
+ * can (:where), and never restates an existing selector. See docs/engineering/feel-cheatsheet.md. */

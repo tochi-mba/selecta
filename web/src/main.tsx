@@ -24,6 +24,11 @@ import './styles/feel.css';
 import './styles/feel-scene.css';
 import './styles/feel-music.css';
 import './styles/feel-parts.css';
+import './styles/feel-components.css';
+import './styles/feel-shell.css';
+import './styles/feel-entry.css';
+import './styles/feel-listen.css';
+import './styles/feel-library.css';
 import './styles/typography.css';
 
 // The browser's install offer can arrive before any page has loaded, so it is kept from the start.
