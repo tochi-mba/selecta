@@ -23,7 +23,7 @@ describe('a sheet that keeps the tab bar and mini-player', () => {
   it('lets Tab and Shift+Tab leave it for the chrome, and still closes on Escape', () => {
     const onClose = vi.fn();
     const view = page(onClose);
-    const close = screen.getByRole('button', { name: 'Close', exact: true });
+    const close = screen.getByRole('button', { name: 'Close' });
     const last = screen.getByRole('button', { name: 'Last in the sheet' });
     expect(screen.getByText('On the page').closest('main')).toHaveAttribute('inert');
     expect(screen.getByText('Pause').closest('[inert]')).toBeNull();

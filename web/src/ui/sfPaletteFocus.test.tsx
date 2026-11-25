@@ -54,7 +54,7 @@ describe('SF-0244-06 the palette returns focus predictably', () => {
       fireEvent.keyDown(document.activeElement ?? dialog, { key: 'Tab' });
       expect(dialog.contains(document.activeElement)).toBe(true);
     }
-    fireEvent.click(screen.getByRole('button', { name: 'Close', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(opener).toHaveFocus();
   });
 });
