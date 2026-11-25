@@ -715,7 +715,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // ADR-0475: with nobody playing elsewhere, the one rule decides where Play makes the sound
   const where = useWhereToPlay({
     enabled: on('devices.remote_control') && !speakerElsewhere,
-    situation: holdings.devices ? {
+    // until this device's own report is in, the server would count none of its songs: play here, as before
+    situation: holdings.devices && !((status?.counts.ready ?? 0) > 0 && !holdings.devices.find((one) => one.device_id === playback.device?.id)?.reported_at) ? {
       devices: holdings.devices, defaultId: holdings.defaultId, thisDeviceId: playback.device?.id ?? null, mixIds: songOrder, ids: holdings.ids,
       speaker: playback.view?.speaker === 'here' && playback.view.speaker_device_id ? { deviceId: playback.view.speaker_device_id, online: true } : null,
     } : null,

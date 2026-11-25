@@ -56,10 +56,11 @@ test('a local-first account finds its account places in the side bar account men
   const signedIn = page.getByRole('region', { name: 'Signed in as' });
   await expect(signedIn).toContainText(`${user}@example.test`);
   await expect(signedIn.getByRole('button', { name: 'Sign out' })).toBeVisible();
-  // the two account removals open a confirmation first, so their buttons end with an ellipsis
-  for (const name of ['Download my data', 'Sign out everywhere…', 'Delete account…']) {
+  for (const name of ['Download my data', 'Sign out everywhere', 'Delete account']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
   }
+  // the two account removals sit in the Danger zone, which says each asks to confirm first
+  await expect(page.getByRole('region', { name: 'Leave or delete' })).toContainText('Each one asks you to confirm first.');
   await expect(page.locator('footer.cloud-footer')).toContainText('Your music files stay on your devices');
   // a new local-first member has no hosted library to line up
   await expect(page.getByRole('heading', { name: 'How your libraries line up' })).toHaveCount(0);
