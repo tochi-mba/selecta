@@ -563,7 +563,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     const key = `${sessionNow.fence ?? ''}:${songOrder.join(',')}`;
     if (published.current.key === key && Date.now() - published.current.at < PUBLISH_RETRY_MS) return;
     published.current = { key, at: Date.now() };
-    void publishProgramme(songOrder, playingAt);
+    // not taken (sent before this device was the speaker, just after a move): again in 2 seconds
+    void publishProgramme(songOrder, playingAt).then((took) => { if (!took) published.current = { key, at: Date.now() - PUBLISH_RETRY_MS + 2_000 }; });
   }, [audible, playingAt, publishProgramme, remoteControlOn, request, sessionNow, setMixData, songOrder]);
   useEffect(() => {
     player.onChange = setNow;
