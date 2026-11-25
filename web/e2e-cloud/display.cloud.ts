@@ -30,7 +30,8 @@ test('a paired display shows the room and survives a new code', async ({ browser
   await expect(qr.locator('svg')).toBeVisible();
   await expect(screen.getByRole('heading', { name: 'Garden party' })).toBeVisible();
   await expect(screen.getByText('Scan to request a song')).toBeVisible();
-  await expect(screen.getByText("The music's paused.")).toBeVisible();
+  // no device is playing yet: the screen is led by what's playing, and says nothing is (f3ee73dc)
+  await expect(screen.locator('#d-now')).toContainText('Nothing playing yet');
   await expect(screen.locator('#d-upcoming')).toContainText('No requests yet');
 
   // A guest's request shows up on the big screen.
