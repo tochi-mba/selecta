@@ -353,7 +353,8 @@ test('a Free account sees each plan-locked feature as a teaser naming its plan, 
   await expect(page.getByText('PREMIUM FEATURE')).toBeVisible();
   await page.getByRole('button', { name: 'Explore Premium' }).click();
   await expect(page.locator('main h1')).toHaveText('Plan & billing');
-  await expect(page.getByRole('region', { name: 'Premium' })).toContainText('guest request rooms');
+  // The plans to upgrade to are a radio group; Premium's choice names the rooms.
+  await expect(page.getByRole('radio', { name: /^Premium\b/ })).toHaveAccessibleName(/guest request rooms/);
   const rooms = teasers.flatMap((id) => (spec(id).routes ?? []).map(asPattern));
   // Only the one read a downgraded host's open room needs (TEASED_READS), and nothing it writes.
   const asked = seen.requests.filter((one) => rooms.some((route) => route.method === one.method && route.path.test(one.path)));
@@ -449,7 +450,7 @@ const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> 
   // Its on-state (the shared shell's Main navigation and More for a hosted account) is shown below
   // and in hosted-shell.cloud.ts; off, the legacy rail is all there is.
   'cloud.hosted_shell': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: true, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'button', name: 'More' } }] },
-  'cloud.local_media': { surfaces: ['cloud.library'], ships: true, marks: [{ role: { role: 'heading', name: 'Connect music' } }, { text: /Local song \d/ }] },
+  'cloud.local_media': { surfaces: ['cloud.library'], ships: true, marks: [{ role: { role: 'button', name: 'Connect music' } }, { text: /Local song \d/ }] },
   'devices.browser_player': { surfaces: ['cloud.listen'], ships: true, marks: [{ text: /Browser player/ }, { text: /This device can.t play mixes/ }] },
   'cloud.browser_dsp': { surfaces: ['cloud.listen'], ships: true, marks: [{ text: /Browser DSP/ }] },
   'cloud.venue_tablet': { surfaces: ['cloud.listen', 'cloud.settings'], ships: false, marks: [{ text: /Venue tablet/ }] },
@@ -506,7 +507,8 @@ test('each Browser-first mark is real: shown with its flag on', async ({ page, r
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Make a Mix', exact: true }).first()).toBeVisible();
   // This test build turns the catalogue on (tests/e2e_cloud_server.py), so its marks show.
-  await expect(page.getByRole('heading', { name: 'Connect music' })).toBeVisible();
+  // The Library header's Connect music (CloudLibrary.tsx), a button that opens its menu.
+  await expect(page.getByRole('button', { name: 'Connect music', exact: true })).toBeVisible();
   await expect(page.getByText('Local song 1', { exact: true }).first()).toBeVisible();
 });
 
@@ -520,6 +522,9 @@ test('the hosted shell marks are real: shown with cloud.hosted_shell on for a ho
     features: { ...account.features, 'cloud.hosted_shell': true },
   })));
   await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
+  // More is the phone tab bar's (shell.css hides it wider, where the side bar lists every place),
+  // so the marks are shown at a phone width; the sweep checks them at 320 px too.
+  await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/library');
   // marksShown never waits, so let the shell finish booting first (as the local-first test does)
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
