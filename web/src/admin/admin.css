@@ -108,7 +108,8 @@
 .admin-irreversible { border-left: var(--radius-hair) solid var(--danger); padding-left: var(--space-2); color: var(--danger); }
 .admin-id { display: inline-flex; gap: var(--space-1); align-items: center; }
 .admin-id code { font-family: var(--mono); font-size: var(--text-sm); }
-.admin-icon-button { min-height: auto; padding: 0 var(--space-1); font-size: var(--text-xs); }
+/* the "What is this?" button: small, but at least the 24px target WCAG 2.5.8 asks for */
+.admin-icon-button { min-height: 24px; min-width: 24px; padding: 0 var(--space-1); font-size: var(--text-xs); }
 .admin-whats { display: inline-flex; gap: var(--space-1); align-items: baseline; font-weight: var(--weight-body); }
 .admin-whats-text { font-size: var(--text-sm); color: var(--text-soft); max-width: var(--content-reading); }
 .admin-empty { padding: var(--space-3) 0; }

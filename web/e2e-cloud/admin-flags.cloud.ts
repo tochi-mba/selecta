@@ -75,7 +75,7 @@ test('an Owner applies each kind of flag change on the Flags page, and each show
   const them = await theirs.newPage();
   await signedIn(them, request, customer, { path: '/listen' });
   await them.evaluate(() => { (window as unknown as { stayed: boolean }).stayed = true; });
-  const bigScreen = them.locator('.room-panel').getByRole('heading', { name: 'Big screen' });
+  const bigScreen = them.locator('.room-panel').getByRole('heading', { name: 'Display screens' });
   await expect(bigScreen).toBeVisible();
   const customerId = (await accountOf(request, customer)).user.id;
 
@@ -148,6 +148,9 @@ test('an Owner applies each kind of flag change on the Flags page, and each show
 
   // Both broad changes wait on the Security page. The tier switch-off is cancelled.
   await page.goto('/admin/security/actions');
+  // a reload starts a new staff session, which opens in view mode (AdminArea enter())
+  await page.getByRole('button', { name: 'Make changes' }).click();
+  await expect(page.getByRole('button', { name: 'Stop making changes' })).toBeVisible();
   const waiting = page.getByRole('region', { name: 'Waiting actions' });
   const tierRow = waiting.getByRole('row').filter({ hasText: why('tier off') });
   await expect(tierRow).toBeVisible();
