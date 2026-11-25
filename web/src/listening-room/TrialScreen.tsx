@@ -104,11 +104,11 @@ export function TrialScreen(props: TrialScreenProps) {
       let handled = true;
       if (key === ' ' || key === 'spacebar') {
         if (own) return;
-        if (!now.blocked) now.onToggle();
-      } else if (key === '1' || key === 'a') {
-        if (!now.blocked) now.onPlay('A');
-      } else if (key === '2' || key === 'b') {
-        if (!now.blocked) now.onPlay('B');
+        if (!now.blocked && !now.answer.failed) now.onToggle();
+      } else if (key === '1' || key === 'a' || key === '2' || key === 'b') {
+        // switches to the other version; the one already chosen keeps playing
+        const label: Label = key === '1' || key === 'a' ? 'A' : 'B';
+        if (!now.blocked && !now.answer.failed && now.listening.label !== label) now.onPlay(label);
       } else if (KEYS[key]) {
         if (allowedVerdicts(now.answer).includes(KEYS[key])) now.onVerdict(KEYS[key]);
       } else if (key === 'enter' || key === 'arrowright') {
