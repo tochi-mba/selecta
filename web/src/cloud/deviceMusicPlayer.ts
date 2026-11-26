@@ -805,7 +805,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     return () => { live = false; };
   }, [studio, speaker, position, mix, resolve]);
   // cloud.studio_seams: which seams the cloud studio makes (studioPlan.ts), worked out per mix
-  const [cloudPairs, setCloudPairs] = useState<readonly (CloudPair | null)[]>([]);
+  // null until worked out, so a song starting meanwhile waits a moment for it (cloudSeams.ts songAt)
+  const [cloudPairs, setCloudPairs] = useState<readonly (CloudPair | null)[] | null>(null);
   const ownCopies = request?.cloudOwnCopies;
   useEffect(() => {
     if (!ownCopies || !cloudSeamsOn() || !seamLeadOn()) { setCloudPairs([]); return undefined; }
@@ -815,7 +816,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     return () => { live = false; };
   }, [mix, ownCopies]);
   // ...and the next two of them asked for, from the playing song
-  useEffect(() => { if (speaker) cloud.follow(cloudPairs, position); }, [cloud, speaker, cloudPairs, position]);
+  useEffect(() => { if (speaker && cloudPairs) cloud.follow(cloudPairs, position); }, [cloud, speaker, cloudPairs, position]);
   const prefetch: Observable<PrefetchState> | null = prefetcher?.state ?? null;
   // T-20261125-8ab8: the song the engine decoded has a length the catalogue lacks; keep it there
   const playingSong = here ? mix[here.song_index] : undefined;

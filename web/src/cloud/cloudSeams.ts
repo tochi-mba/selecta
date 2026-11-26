@@ -120,6 +120,7 @@ export async function askPair(pair: CloudPair, lane: Lane, deps: AskDeps, signal
         if (await (deps.sha256 ?? bytesSha256)(bytes) !== answer.clip.sha256) return { declined: 'the transition from your cloud library did not arrive whole' };
         return { ready: answer, bytes };
       }
+      if (answer.state === 'ready') return { declined: 'the transition from your cloud library came without a song’s file' };
       if (answer.state === 'refused') return { declined: answer.code === 'allowance_used' ? ALLOWANCE_USED_LINE : `the cloud library could not take it on: ${answer.why ?? 'it was busy'}` };
       if (answer.state === 'failed') return { declined: `the cloud library could not make it: ${answer.why ?? 'it stopped part way'}` };
     } catch (problem) {
