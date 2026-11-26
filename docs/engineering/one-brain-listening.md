@@ -12,8 +12,34 @@ Turn a flag on for a run with `SELECTA_FLAGS`, for example `SELECTA_FLAGS="+move
   audio, because a seam's key does not include these flags, so clear the copy's rendered seams
   first or the comparison is old against old.
 - Change one flag per reel. With several on at once a bad seam cannot be traced to its cause.
-- `core.engine_store` changes how the Desktop opens its database. Prove it on the copy (open,
-  rate a seam, back up, restore) before it is ever turned on for the real library.
+- `core.engine_store` changes how the Desktop opens its database. Prove it on a copy before it
+  is ever turned on for the real library (its default stays off until you have). The tests
+  prove it on made-up libraries (docs/verification/engine-store-flag-on-sweep.md); only your
+  own library can prove it on yours. In a PowerShell window in the repo:
+  1. Close SelectaDJ. Copy the whole home folder, for example
+     `Copy-Item -Recurse $HOME\.selecta D:\selecta-proof\home`, and keep a reference copy of
+     the database that nothing will open: `Copy-Item D:\selecta-proof\home\selecta.sqlite
+     D:\selecta-proof\before.sqlite`. Your music files are not copied and are only read.
+  2. Point SelectaDJ at the copy and start it with the flag on:
+     `$env:SELECTA_HOME="D:\selecta-proof\home"; $env:SELECTA_FLAGS="+core.engine_store";
+     uv run selecta web`. The first start takes an upgrade backup and brings the file forward.
+  3. Click through: the Library (search, sort, a song's details), the current mix and each
+     draft, Requests, Discover, the Workshop's Listening and Memory, and Lucy's conversations.
+     Everything you had must be there. Then rate one transition Good, edit a draft, add a
+     request and ask Lucy one thing, so the store writes too.
+  4. Close it and compare: `uv run python tools/library_compare.py D:\selecta-proof\before.sqlite
+     D:\selecta-proof\home\selecta.sqlite`. Every table you had says `same` except the ones you
+     just changed (`ratings` or `seams`, `drafts`, `song_requests`, Lucy's); the store's own
+     tables say `new`; it ends "Nothing lost." or names a table to look at.
+  5. Back up and restore: start it again (same two lines), Workshop, Storage, Download a backup.
+     Then restore that ZIP twice, each into a fresh copy of the home folder: once started without
+     the flag (`$env:SELECTA_FLAGS=""`) and once with it, each time Workshop, Storage, Restore a
+     backup, Confirm, then restart. Both must open with everything from step 3, and
+     `tools/library_compare.py` from the first copy's `selecta.sqlite` (unchanged since the
+     backup) to each restored `selecta.sqlite` says `same` throughout.
+  6. Turn the flag off on the first copy (`$env:SELECTA_FLAGS=""`), start once more and click
+     through again: nothing is missing. Remove `SELECTA_HOME` and `SELECTA_FLAGS` when done; the
+     real library was never opened.
 
 ## Desktop
 
