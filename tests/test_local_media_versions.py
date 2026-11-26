@@ -214,6 +214,9 @@ READS_BY_ID_OR_HASH = {
     "src/selecta/engine_store/schema.py": "foreign key from a song's facts",
     "src/selecta/engine_store/songs.py": "one song's facts, by id",
     "src/selecta/engine_store/song_hashes.py": "mentions the table in a comment",
+    "src/selecta/engine_store/facts_store.py": "a song's facts, by id or by content hash",
+    "src/selecta/cloud_brain/export.py": "the account's own export: every measured song's hash",
+    "src/selecta/cloud_brain/planning_routes.py": "never-play for the songs a plan names, by id",
 }
 
 
