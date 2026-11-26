@@ -3,7 +3,7 @@ import { setFlags } from '../flags';
 import { forgetAccountMeasured, type Request } from './accountFacts';
 import { ACCOUNT_BASE, accountDiscoveries, SWEEP_GAP_MS, SWEEP_SONGS } from './accountDiscoveries';
 import { pairSteps } from './BrowserHarmonicMatches';
-import { discoveriesFamily, type BrowserAudition, type BrowserDiscovery, type DiscoverySong } from './localFirstDiscoveries';
+import { discoveriesFamily, type BrowserAudition, type BrowserDiscovery, type DiscoverySong } from './deviceMusicDiscoveries';
 
 // T-20261126-9a31: Harmonic matches calls the account's sweep in spare time, one call at a time,
 // at most one every SWEEP_GAP_MS, never waiting on it; the account's pairs join the browser's own

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cloudModeCopy, pageShown } from './api';
+import { musicHomeCopy, pageShown } from './api';
 
 const account = (features: Record<string, boolean>) => ({ features });
 
@@ -15,14 +15,14 @@ describe('browser-first Cloud page gates', () => {
   });
 });
 
-describe('the two Cloud modes use one truthful copy layer', () => {
+describe('where the music lives picks one truthful copy layer', () => {
   it.each([
     [{ local_first: true, hosted: false }, 'device', 'stays on this device'],
-    [{ local_first: false, hosted: true }, 'hosted', 'hosted music remains available'],
+    [{ local_first: false, hosted: true }, 'cloud_library', 'cloud library stays available'],
     [{ local_first: true, hosted: true }, 'both', 'stays on this device'],
     [{ local_first: false, hosted: false }, 'none', 'not been given access'],
   ] as const)('describes %j without product jargon or deprecation language', (experience, source, words) => {
-    const copy = cloudModeCopy({ experience });
+    const copy = musicHomeCopy({ experience });
     expect(copy.source).toBe(source);
     expect(copy.privacy).toContain(words);
     expect(`${copy.heading} ${copy.privacy}`).not.toMatch(/local.first|metadata.only|legacy|deprecated/i);

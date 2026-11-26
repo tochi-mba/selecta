@@ -137,14 +137,15 @@ class CloudSettings:
         url = os.environ.get("SELECTA_DATABASE_URL", "").strip()
         if not url.startswith(("postgresql://", "postgresql+psycopg://")):
             raise CloudConfigurationError(
-                "Cloud mode requires SELECTA_DATABASE_URL to be a PostgreSQL URL."
+                "The Cloud server requires SELECTA_DATABASE_URL to be a PostgreSQL URL."
             )
         client_id = os.environ.get("SELECTA_WORKOS_CLIENT_ID", "").strip()
         issuer = os.environ.get("SELECTA_AUTH_ISSUER", "").strip()
         audience = os.environ.get("SELECTA_AUTH_AUDIENCE", "").strip()
         if not all((client_id, issuer)):
             raise CloudConfigurationError(
-                "Set SELECTA_WORKOS_CLIENT_ID and SELECTA_AUTH_ISSUER before starting Cloud mode."
+                "Set SELECTA_WORKOS_CLIENT_ID and SELECTA_AUTH_ISSUER before starting the Cloud "
+                "server."
             )
         api_key = os.environ.get("SELECTA_WORKOS_API_KEY", "").strip()
         webhook_secret = os.environ.get("SELECTA_WORKOS_WEBHOOK_SECRET", "").strip()
@@ -159,14 +160,14 @@ class CloudSettings:
         ]
         if missing:
             raise CloudConfigurationError(
-                f"Set {' and '.join(missing)} before starting Cloud mode: onboarding, signing "
-                "out everywhere and WorkOS webhooks can't work without them."
+                f"Set {' and '.join(missing)} before starting the Cloud server: onboarding, "
+                "signing out everywhere and WorkOS webhooks can't work without them."
             )
         hosts = _csv("SELECTA_ALLOWED_HOSTS")
         origins = _csv("SELECTA_ALLOWED_ORIGINS")
         if not hosts or "*" in hosts or not origins:
             raise CloudConfigurationError(
-                "Cloud mode requires explicit, non-wildcard SELECTA_ALLOWED_HOSTS and "
+                "The Cloud server requires explicit, non-wildcard SELECTA_ALLOWED_HOSTS and "
                 "SELECTA_ALLOWED_ORIGINS allowlists."
             )
         if any(not _valid_origin(origin) for origin in origins):

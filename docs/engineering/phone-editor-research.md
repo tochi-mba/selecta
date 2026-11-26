@@ -248,6 +248,6 @@ Measured on a local Cloud stack with a real ten-song browser mix playing, in Pla
 - Redo: the server keeps one undo, not a redo history, so there is no Redo button.
 - Fine adjustment of a browser mix's transition (its length and where it starts): the browser runtime
   takes only the move, so there is nothing honest to adjust yet. Exact cues stay where the server
-  renders transitions (local mode's inspector, `seam_inspector.exact_cues`).
+  renders transitions (the Desktop app's inspector, `seam_inspector.exact_cues`).
 - The current mix's name is not editable from the editor: there is no rename for the current mix, only
   for drafts (Mix actions, Rename) and Save a copy.

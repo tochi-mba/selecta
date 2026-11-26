@@ -154,7 +154,7 @@ export function makeSourceBook(): SourceBook {
   };
 }
 
-export const NOT_ON_DEVICE = 'This song is not on this device, and SelectaDJ has no hosted copy to play instead.';
+export const NOT_ON_DEVICE = 'This song is not on this device, and it is not in your cloud library to play instead.';
 export const NOT_ANYWHERE = 'This song is not on this device right now.';
 
 /** Device first, hosted fallback. Without `hosted` (an account with no hosted media, or

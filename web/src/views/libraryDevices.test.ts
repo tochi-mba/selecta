@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { libraryPage, type CatalogueSong } from '../cloud/localFirstRequest';
+import { libraryPage, type CatalogueSong } from '../cloud/deviceMusicRequest';
 import type { MusicHolder, WhereHeld } from '../devices/controller';
 import { deviceChip } from './LibraryRow';
 

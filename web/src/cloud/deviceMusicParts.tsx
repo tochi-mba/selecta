@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import type { MediaStore } from '../media';
 import { StorageCard } from './StorageCard';
 
-// Small pages of the local-first shell (LocalFirstShell.tsx), kept apart so the shell stays
+// Small pages of the local-first shell (CloudShell.tsx), kept apart so the shell stays
 // readable: More > This device, and the two "couldn't open" states.
 
 /** More > This device: the music connected here and the storage it uses (workspace extras). */

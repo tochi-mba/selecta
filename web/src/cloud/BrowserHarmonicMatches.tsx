@@ -8,7 +8,7 @@ import { Icon } from '../ui/Icon';
 import { Action, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import type { BrowserAudition, BrowserDiscovery, ProfileProgress } from './localFirstDiscoveries';
+import type { BrowserAudition, BrowserDiscovery, ProfileProgress } from './deviceMusicDiscoveries';
 import { CoverArt } from '../views/CoverArt';
 import { RestingPair, useFeelAlive } from '../views/Links';
 

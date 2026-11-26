@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { MixData, MixItem, Request } from '../api';
 import { setFlags } from '../flags';
 import type { RequestRow } from '../views/Requests';
-import type { PlayableSong } from './localFirstMixes';
-import { requestsFamily } from './localFirstRequests';
+import type { PlayableSong } from './deviceMusicMixes';
+import { requestsFamily } from './deviceMusicRequests';
 
 // The member's own requests kept with the account (cloud.brain with cloud.account_mixes): asked,
 // listed and let go through the account's request routes, the same on every device; when the

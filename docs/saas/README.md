@@ -2,20 +2,40 @@
 
 *Prepared 9 November 2026 for Tochi Mba. Grounded in the `tochi-mba/selecta` repo at `main` (3c2f1eb, including the feature-flag work merged today), three code maps of the backend, frontend and docs/CI, and web research on hosting, queues, billing, AI pricing, licensing and music-locker law. Prices are from public pages and third-party summaries as of Oct–Nov 2026 and must be re-checked before any spend decision.*
 
-**Status:** Accepted by the owner on 2026-11-09. Decisions are recorded as ADR-0391 to ADR-0416 (all Accepted); progress is tracked in the [implementation checklist](../adr/selecta-cloud-implementation-checklist.md). Local mode keeps every guarantee it has today.
+**Status:** Accepted by the owner on 2026-11-09. Decisions are recorded as ADR-0391 to ADR-0416 (all Accepted); progress is tracked in the [implementation checklist](../adr/selecta-cloud-implementation-checklist.md). Desktop keeps every guarantee it has today.
 
-## Guarantees by runtime mode
+## Three places
 
-| Concern | Local mode | Cloud mode |
+SelectaDJ runs in three places. A member never meets a "mode": in Cloud they see where each song
+lives, and one account can hold songs in both Cloud places. The words are in
+[glossary.md](../glossary.md); the decision is [ADR-0479](../adr/adr-0479-one-brain-two-studios.md).
+
+| | Desktop | Cloud, music on this device | Cloud, music in your cloud library |
+|---|---|---|---|
+| Where the audio lives | On the person's computer; never uploaded | On the member's device; never uploaded. The account holds song facts (measurements), never audio or file paths | Uploaded to the account's private object storage |
+| Who measures | The Desktop engine, on that computer | The device studio: the member's browser, saving song facts to the account | The cloud studio: SelectaDJ's workers, running the Desktop engine |
+| Who chooses the order and transitions | The Desktop planner | The account's planner on the Cloud server, from song facts (`cloud.brain`; without it, the browser's own simpler order) | The account's planner on the Cloud server |
+| Who renders | The Desktop engine | The device studio, ahead of time where its flag is on; otherwise the browser works each transition out as it plays | The cloud studio |
+| What works across devices | Nothing: one computer, no account | Song facts, mixes, ratings, requests and Lucy belong to the account. A song plays only on a device that holds its file, and each device renders its own transitions | Everything: any signed-in device plays the account's library and its rendered mixes |
+| What it has of the Desktop | Everything | Feature by feature: [cloud-device-features.md](../engineering/cloud-device-features.md) | Measured against Desktop, with the runbook: [cloud-library-walkthrough.md](../engineering/cloud-library-walkthrough.md) |
+
+In code, Desktop is `SELECTA_MODE=local` and Cloud is `SELECTA_MODE=cloud`; music on the device
+is the `cloud.local_first` flag and the cloud library is the `cloud.hosted_media` grant.
+
+<a id="guarantees-by-runtime-mode"></a>
+
+## Guarantees in each place
+
+| Concern | Desktop | Cloud |
 |---|---|---|
-| Music and storage | Music stays on this PC; Selecta never uploads it. | Music is private to the account and workspace in tenant-isolated object storage. |
+| Music and storage | Music stays on this PC; Selecta never uploads it. | Music on a device stays on it. Music in the cloud library is private to the account and workspace in tenant-isolated object storage. |
 | Network boundary | The app serves only the local loopback origin and needs no account. | Authenticated public APIs use explicit browser origins, short-lived access, and private signed object URLs. |
 | Processing | Analysis, rendering, lyrics, and Lucy use only the local adapters the user enables. | Remote work is fenced, metered, plan-bounded, and processed only by allowlisted workers and models. |
 | Product control | Existing local flags, privacy copy, folders, backups, and offline behavior remain unchanged. | Plan entitlements, server-side flags, deletion/retention, billing, and audit controls apply. |
 | User trust | No telemetry or cloud account is required; local files remain under the user's control. | Tenant isolation, honest status, export/deletion rights, bounded spending, and audited staff access are required. |
 
-The local contract remains owned by ADR-0025, ADR-0072, and ADR-0390. Cloud-specific guarantees
-are additive and are tracked by ADR-0391–0416; they do not relax the local contract.
+The Desktop contract remains owned by ADR-0025, ADR-0072, and ADR-0390. Cloud-specific guarantees
+are additive and are tracked by ADR-0391 to ADR-0416; they do not relax the Desktop contract.
 
 ---
 
@@ -104,6 +124,6 @@ are additive and are tracked by ADR-0391–0416; they do not relax the local con
 | [../todo/README.md](../todo/README.md) | The to-do list: everything still to do, one file per item, `python scripts/todo.py list` |
 | [CHANGES-2026-11.md](CHANGES-2026-11.md) | What changed in November 2026, in plain words, and what needs the owner |
 | [sources.md](sources.md) | Where the facts and prices came from |
-| [licence-register.md](licence-register.md) | Every model and key dependency, its licence and whether cloud mode may use it |
+| [licence-register.md](licence-register.md) | Every model and key dependency, its licence and whether Cloud may use it |
 
 ADRs: [0391](../adr/adr-0391-selecta-cloud-goal-and-local-guarantees.md) · [0392](../adr/adr-0392-two-runtime-modes.md) · [0393](../adr/adr-0393-postgres-alembic-and-tenancy.md) · [0394](../adr/adr-0394-durable-jobs-leases-and-fencing.md) · [0395](../adr/adr-0395-fair-scheduling-policy.md) · [0396](../adr/adr-0396-worker-gateway-and-pools.md) · [0397](../adr/adr-0397-object-storage-layout.md) · [0398](../adr/adr-0398-upload-protocol-and-quota-reservations.md) · [0399](../adr/adr-0399-cloud-playback-proxies.md) · [0400](../adr/adr-0400-identity-with-workos-authkit.md) · [0401](../adr/adr-0401-authorization-rbac-and-audit.md) · [0402](../adr/adr-0402-plans-entitlements-and-quotas.md) · [0403](../adr/adr-0403-stripe-billing-and-uk-vat.md) · [0404](../adr/adr-0404-lucy-ai-gateway.md) · [0405](../adr/adr-0405-licence-register-and-s-key-replacement.md) · [0406](../adr/adr-0406-lyrics-in-cloud-mode.md) · [0407](../adr/adr-0407-realtime-updates-sse.md) · [0408](../adr/adr-0408-admin-console-v1.md) · [0409](../adr/adr-0409-hosting-topology-and-environments.md) · [0410](../adr/adr-0410-observability-slos-and-emergency-controls.md) · [0411](../adr/adr-0411-stress-chaos-and-release-gates.md) · [0412](../adr/adr-0412-privacy-retention-and-deletion.md) · [0413](../adr/adr-0413-copyright-takedown-and-repeat-infringers.md) · [0414](../adr/adr-0414-feature-flag-targeting-in-cloud-mode.md) · [0415](../adr/adr-0415-playback-devices-and-sessions.md) · [0416](../adr/adr-0416-rooms-guest-requests.md)

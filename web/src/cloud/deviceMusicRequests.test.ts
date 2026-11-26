@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MixData, MixItem, Request } from '../api';
 import type { RequestRow } from '../views/Requests';
 import { requestWords } from '../views/Requests';
-import type { PlayableSong } from './localFirstMixes';
+import type { PlayableSong } from './deviceMusicMixes';
 import {
   JOINS_BY_HAND, NO_BRIDGES, NO_MIX_YET, NOT_ON_THIS_DEVICE, NOTHING_TO_HEAR, requestsFamily, ROOM_REQUEST_EVENT, type RoomRequest,
-} from './localFirstRequests';
+} from './deviceMusicRequests';
 
 // Request a song in browser-first Cloud: a queue kept in this browser, joined by hand right after
 // the song that is playing. Nothing is measured here, so bridges and previews are refused.

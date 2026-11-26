@@ -325,7 +325,7 @@
 .cloud-confirm[data-tone='plain'] { border-inline-start-color: var(--edge-interactive); }
 .cloud-card .cloud-confirm p { margin: 0; color: var(--text); }
 .cloud-confirm .cloud-actions { margin: var(--space-3) 0 0; }
-/* A page that is not there (LocalFirstEmpty.tsx Lost, CloudStates.tsx NotFound): what happened and
+/* A page that is not there (DeviceMusicEmpty.tsx Lost, CloudStates.tsx NotFound): what happened and
    the ways back, beside the drawing of a song with nothing after it (styles/boot.css .welcome-art).
    One column on a phone, the words first; side by side once there is room. */
 .lost-page,

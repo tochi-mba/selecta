@@ -38,7 +38,7 @@ export function StorageMode({ api, userId, canChange, ensureChanges }: { api: Ad
         if (problem instanceof AdminError && problem.code === 'view_mode' && ensureChanges && await ensureChanges()) result = await send();
         else throw problem;
       }
-      setDone({ text: next === 'hosted' ? 'Hosted storage and rendering is on for this account.' : 'This account is back to browser-first. Its stored songs stay playable.', undo: next === 'hosted' ? 'browser' : 'hosted' });
+      setDone({ text: next === 'hosted' ? 'Cloud library storage and rendering is on for this account.' : 'This account is back to music on its devices. Its stored songs stay playable.', undo: next === 'hosted' ? 'browser' : 'hosted' });
       setReason('');
       await state.reload();
       return result;
@@ -47,17 +47,17 @@ export function StorageMode({ api, userId, canChange, ensureChanges }: { api: Ad
   };
 
   return (
-    <section className="admin-config" aria-label="Storage mode" data-tour="storage-mode">
+    <section className="admin-config" aria-label="Where their music lives" data-tour="storage-mode">
       <h3>Storage and processing</h3>
       <Failure error={state.error || error} />
-      {!mode && !state.error && <p className="admin-skeleton" aria-busy="true">Loading the storage mode…</p>}
+      {!mode && !state.error && <p className="admin-skeleton" aria-busy="true">Loading where their music lives…</p>}
       {mode && <>
-        <p><strong>{mode.mode === 'hosted' ? 'Hosted Cloud storage and rendering' : 'Browser-first (the default)'}</strong>{' '}
+        <p><strong>{mode.mode === 'hosted' ? 'Cloud library: stored and rendered by SelectaDJ' : 'On their devices (the default)'}</strong>{' '}
           <small className="admin-note">from {mode.grant.source}{mode.grant.last_change ? `; flag last changed ${when(mode.grant.last_change.at)}` : ''}</small></p>
         <p className="admin-note">
           {mode.mode === 'hosted'
             ? 'Uploads go to SelectaDJ storage and mixes are rendered on our workers, which costs storage and compute. Turning it off stops new uploads and renders; everything stored stays playable and exportable.'
-            : 'Songs stay on the customer’s own devices and mixes play in their browser. Hosted mode lets them upload and have mixes rendered by us, at our storage and compute cost.'}
+            : 'Songs stay on the customer’s own devices and mixes play in their browser. A cloud library lets them upload and have mixes rendered by us, at our storage and compute cost.'}
           {' '}Plan: {mode.plan}. Stored: {bytes(mode.storage.used_bytes)} of {bytes(mode.storage.limit_bytes)}.
         </p>
         {mode.warnings.map((warning) => <p key={warning} className="admin-warning" role="note">{warning}</p>)}
@@ -66,7 +66,7 @@ export function StorageMode({ api, userId, canChange, ensureChanges }: { api: Ad
             <label>Reason<input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={2000} placeholder="Why, for the audit log" /></label>
             <button type="button" className={mode.mode === 'hosted' ? undefined : 'primary'} disabled={busy || !reason.trim()}
               onClick={() => void change(mode.mode === 'hosted' ? 'browser' : 'hosted', reason.trim())}>
-              {busy ? 'Working…' : mode.mode === 'hosted' ? 'Turn off hosted storage for this account' : 'Turn on hosted storage for this account'}
+              {busy ? 'Working…' : mode.mode === 'hosted' ? 'Turn off the cloud library for this account' : 'Turn on a cloud library for this account'}
             </button>
           </div>
         ) : <p className="admin-note">Changing this needs the Billing, Admin or Owner role.</p>}

@@ -1,7 +1,7 @@
 import { ApiError, Link, LinkList, MixData, Request } from '../api';
 import { flagOn } from '../flags';
 import { browserMovesOn, defaultBrowserMove } from './browserMoves';
-import { BROWSER_MIX_NEEDS, mixNameFor, type PlayableSong } from './localFirstMixes';
+import { BROWSER_MIX_NEEDS, mixNameFor, type PlayableSong } from './deviceMusicMixes';
 import { asMixData, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 
 /** The Word connections route family of the local-first adapter (ADR-0462 "one adapter per route
@@ -35,7 +35,7 @@ export type CloudLinks = {
 export const NO_PREVIEW_HERE = 'Transition previews aren’t made in your browser. Add both songs to your mix and SelectaDJ works the transition out as it plays.';
 
 function refuse(message: string, code: string, status = 400): ApiError {
-  return new ApiError(message, status, code, 'local-first:links');
+  return new ApiError(message, status, code, 'device-music:links');
 }
 
 /** A Cloud link in the shape the shared Links view reads. Its one move is the browser's own

@@ -1,5 +1,7 @@
 # ADR-0461 - Remote control protocol: signed commands, fencing and takeover
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 6/7 Implemented; 1/7 In progress; 0/7 Not started.
 - **Independent verification:** 0/7 Verified.

@@ -6,7 +6,7 @@ import { accountMixesOn } from './accountMixes';
  * song the member asks for is saved by the account's request routes, the Desktop's own
  * (`GET /requests`, `POST /requests`, `DELETE /requests/{id}`), so it waits on every device they
  * use. Off, or on a server too old to name the flags, nothing here is asked and the browser keeps
- * its requests itself, as before (localFirstRequests.ts).
+ * its requests itself, as before (deviceMusicRequests.ts).
  *
  * What is sent: a catalogue song id, and a request's id to let it go. Never audio, a file, a path
  * or a folder name. */

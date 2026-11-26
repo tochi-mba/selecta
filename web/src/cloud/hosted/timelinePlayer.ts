@@ -11,7 +11,7 @@ import { fileKey, PartReader, type ReadBytes } from './partReader';
  * What it holds is bounded: about `AHEAD_S` of decoded audio is scheduled ahead and each window is
  * let go once it has played. It used to fetch and decode whole files (34 to 64 MB each, 60 to 90 MB
  * decoded) and keep up to three, and a slow decode let every 250 ms tick schedule the same part
- * again (docs/engineering/hosted-mode-walkthrough.md, section 7).
+ * again (docs/engineering/cloud-library-walkthrough.md, section 7).
  *
  * Signed links live 15 minutes: the player asks the server for fresh ones (`refresh`) when its
  * links are older than `LINK_LIFE_MS` or a read is refused, so a long mix never dies part way.

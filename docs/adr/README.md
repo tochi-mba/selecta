@@ -20,7 +20,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Library + Lucy (LX)](selecta-library-lucy-experience-implementation-checklist.md) | 208 | 179 | 29 | 0 | 0 | 0 | 147 | 0 |
 | [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 192 | 0 | 0 | 0 | 0 | 123 | 0 |
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
-| [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 10 | 0 | 110 | 0 | 0 | 0 | 0 |
+| [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 14 | 1 | 105 | 0 | 0 | 0 | 0 |
 | [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 23 | 1 | 155 | 0 | 0 | 0 | 0 |
 | [selecta-lucy-usage-implementation-checklist.md](selecta-lucy-usage-implementation-checklist.md) | 52 | 4 | 41 | 7 | 0 | 0 | 4 | 0 |
 | [selecta-service-operations-implementation-checklist.md](selecta-service-operations-implementation-checklist.md) | 30 | 0 | 4 | 26 | 0 | 0 | 0 | 0 |
@@ -81,7 +81,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 **26 accepted ADRs, [ADR-0391](adr-0391-selecta-cloud-goal-and-local-guarantees.md) to [ADR-0416](adr-0416-rooms-guest-requests.md):** a subscription cloud edition beside the local app, from one codebase. Free, Standard and Premium plans (10, 50 and 100 GB); a durable job queue in Postgres with per-account fair shares by tier, leases and fencing; workers that scale by adding containers; R2 storage with server-completed uploads; Stripe billing; Lucy routed to hosted models per tier; staff roles and an admin console; one playing device per account; Premium Rooms with QR-code guest requests; and layered feature-flag targeting on top of [ADR-0390](adr-0390-feature-flags.md). All 26 Accepted by the owner on 2026-11-09; implementation tracked in the [checklist](selecta-cloud-implementation-checklist.md); 0 independently Verified. Baseline main `3c2f1eb`.
 
-**Scope:** Local mode keeps every guarantee in earlier ADRs, including ADR-0025 and ADR-0072, and its flags behave exactly as ADR-0390 describes; ADR-0391 scopes the earlier SaaS non-goals to local mode without changing any older status. The [mode-by-mode guarantee table](../saas/README.md#guarantees-by-runtime-mode) is the concise contract for both runtimes.
+**Scope:** Desktop (local mode) keeps every guarantee in earlier ADRs, including ADR-0025 and ADR-0072, and its flags behave exactly as ADR-0390 describes; ADR-0391 scopes the earlier SaaS non-goals to local mode without changing any older status. The [guarantees in each place](../saas/README.md#guarantees-in-each-place) are the concise contract for Desktop and Cloud.
 
 **Start here:** [Proposal](../saas/README.md) · [Queue and scheduling](../saas/04-queue-and-scheduling.md) · [Devices and Rooms](../saas/11a-devices-and-rooms.md) · [Feature flags](../saas/11b-feature-flags.md) · [Roadmap and risks](../saas/17-roadmap-and-risks.md) · [Licence register](../saas/licence-register.md)
 

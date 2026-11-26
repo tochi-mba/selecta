@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MixData, Request } from '../api';
 import { setFlags } from '../flags';
 import type { RequestRow } from '../views/Requests';
-import type { PlayableSong } from './localFirstMixes';
+import type { PlayableSong } from './deviceMusicMixes';
 import { ACCOUNT_OFFER, accountPlacements, placingOn } from './accountPlacements';
-import { bridgeWords, making, NO_BRIDGES, requestsFamily } from './localFirstRequests';
+import { bridgeWords, making, NO_BRIDGES, requestsFamily } from './deviceMusicRequests';
 import { browserFlags } from './browserFlags';
 
 // T-20261126-a246: the account plans where a request joins; this device makes the transitions it

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { LibrarySong } from '../api';
-import { libraryFamily, songsAnswer } from './localFirstLibrary';
+import { libraryFamily, songsAnswer } from './deviceMusicLibrary';
 import { firstAsked, measureInTurn, measuringPaused, nextOf, setMeasuringPaused, setWaiting } from './measuringControl';
 
 const row = (id: number, more: Partial<LibrarySong> = {}): LibrarySong => ({

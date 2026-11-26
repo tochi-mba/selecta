@@ -11,6 +11,17 @@ Lucy's tables), and what still runs raw `sqlite3` is the deliberate remainder li
 the hand-made schema and `connect`, the upgrade backup, the whole-file tools and a few small
 reads with a reason. The flag stays off until it has been proved on a copy of a real library.
 
+Proved so far: CI runs the whole Desktop suite with the flag forced on (`Python / tests, engine
+store on`, through `tests/engine_store_on.py`, `SELECTA_TEST_ENGINE_STORE=1`), which also counts
+store transactions against old-path statements. Before that job, 246 existing test files ran
+flag-on locally; the 18 tests the flag broke are fixed, three of them product faults (seam
+readiness missing a file the table hadn't caught up with, a transaction per draft in the drafts
+list, Lucy's event replay off the store), and 19,251 store transactions ran against 197 old-path
+statements, all on paths kept on purpose (docs/verification/engine-store-flag-on-sweep.md).
+`tests/test_engine_store_whole_library.py` takes one whole flag-off library on, off and on again
+and through a backup both ways with nothing lost. What is left is the owner's proof on a copy of
+their library (docs/engineering/one-brain-listening.md, "Before listening").
+
 ## What it is
 
 `EngineStore(engine, workspace_id)` is the only door to an engine table. A slice (ratings, then

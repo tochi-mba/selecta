@@ -4,7 +4,7 @@ import { rememberFeel } from './mixFeel';
 
 /** A browser mix's order from the account's planner (docs/engineering/device-to-account.md).
  *
- * The browser still chooses which songs a mix plays, by today's rule (localFirstMixes.ts
+ * The browser still chooses which songs a mix plays, by today's rule (deviceMusicMixes.ts
  * `chooseSongs`). With planning on and at least `ORDER_NEEDS` of them measured in the account,
  * `POST /api/planning/order` orders the measured ones the way the Desktop's "make a mix" does,
  * from the same choices: the first song, the ending, and the steering (mix language, stems, energy

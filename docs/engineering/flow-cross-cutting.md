@@ -96,7 +96,7 @@ it", "the full Studio grid works at the smallest size ..."), `web/src/state/shor
 
 ## Network egress and local files (SF-0238-01)
 
-In local mode the server binds `127.0.0.1` (`src/selecta/cli.py`) and the page only talks to it.
+On Desktop the server binds `127.0.0.1` (`src/selecta/cli.py`) and the page only talks to it.
 Only these modules may open outbound connections:
 
 | Module | Destination | What is sent | When |
@@ -104,12 +104,12 @@ Only these modules may open outbound connections:
 | `src/selecta/lyrics/lrclib.py` | `lrclib.net` | Title, artist, album, duration; never audio | Lyric lookup, disclosed on first run; off with the lyrics flag |
 | `src/selecta/lucy/providers.py` | The AI provider the person configured | Lucy conversation and the mix facts it needs | Only when Lucy is set up and used |
 | `src/selecta/analysis/key.py` | GitHub raw (S-KEY weights, pinned commit) | Nothing but the download request | First key analysis without cached weights |
-| Cloud-only: `src/selecta/billing/webhooks.py`, `src/selecta/identity/tokens.py`, `src/selecta/identity/workos.py`, `src/selecta/identity/deletion_effects.py`, `src/selecta/storage/r2.py`, `src/selecta/workers/remote.py`, `src/selecta/admin/stripe_admin.py` (the staff console's live Stripe reads and audited actions) | Cloud services | Cloud mode only (ADR-0391, ADR-0392) | Never in local mode |
+| Cloud-only: `src/selecta/billing/webhooks.py`, `src/selecta/identity/tokens.py`, `src/selecta/identity/workos.py`, `src/selecta/identity/deletion_effects.py`, `src/selecta/storage/r2.py`, `src/selecta/workers/remote.py`, `src/selecta/admin/stripe_admin.py` (the staff console's live Stripe reads and audited actions) | Cloud services | Cloud only (ADR-0391, ADR-0392) | Never on Desktop |
 | Cloud-only word connections: `src/selecta/local_media/links.py` | `lrclib.net`, through the same lookup as `src/selecta/lyrics/lrclib.py` | Title, artist, album and duration of a catalogue song; never audio | Only with `discover.word_links` on for the account, a few songs at a time, outside any transaction |
 | Cloud-only catalogue lookups: `src/selecta/catalog/client.py` | `musicbrainz.org` and the Cover Art Archive (`coverartarchive.org`) | An ISRC, or an artist and title; never audio, never who asked | Only with `library.art_lookup` on and the person allowing web lookups (ADR-0478), within the platform-wide MusicBrainz rate |
 | Cloud-only staff console: `src/selecta/admin/hosted_status.py` | The worker gateway's own `/api/ready`, at the address the operator set on the API service | Nothing but the request; the answer is its readiness and schema | Only when staff open the console's Workers page, at most once a cache period |
-| Cloud-only mail: `src/selecta/notify/mail.py` | Operator-configured transactional email provider | Email template fields and recipient address; no local-library audio | Only for Cloud account email flows, never local mode |
-| Cloud image build only: `src/selecta/workers/model_lock.py` | The pinned model URLs in `services/worker/models.lock.json` | Nothing but the download request; each file is checked against its SHA-256 | Only when the Cloud worker image is built (ADR-0396); never at run time or in local mode |
+| Cloud-only mail: `src/selecta/notify/mail.py` | Operator-configured transactional email provider | Email template fields and recipient address; no local-library audio | Only for Cloud account email flows, never Desktop |
+| Cloud image build only: `src/selecta/workers/model_lock.py` | The pinned model URLs in `services/worker/models.lock.json` | Nothing but the download request; each file is checked against its SHA-256 | Only when the Cloud worker image is built (ADR-0396); never at run time or on Desktop |
 | Dev-only: `src/selecta/devstack/identity.py` | The locally configured Cloud API webhook endpoint | Signed identity events; no external identity provider is contacted | Only in the guarded local development identity service; never in production |
 | Dev-only: `src/selecta/devstack/launcher.py` | `127.0.0.1` only: the services `dev.cmd cloud` itself started | Health and readiness requests; nothing about the developer | Only while `dev.cmd cloud` starts and watches its own loopback services |
 

@@ -28,6 +28,7 @@ from hypothesis.stateful import (
 
 from selecta import db, mix
 from selecta.config import ANALYSIS_VERSION, Settings
+from selecta.engine_store import library
 from selecta.seams import SeamStore
 
 SONGS = range(1, 9)
@@ -59,6 +60,8 @@ class ScopedWrites(RuleBasedStateMachine):
         conn = getattr(self, "conn", None)
         if conn is not None:
             conn.close()
+            # the store keeps idle connections to a file it has opened
+            library.forget(Path(self.folder.name) / "selecta.sqlite")
             self.folder.cleanup()
 
     def _songs(self, scope):

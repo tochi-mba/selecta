@@ -1,6 +1,6 @@
 import { flagListed } from '../flags';
 import { accountMeasured, type Measured, type Request } from './accountFacts';
-import type { BrowserDiscovery, DiscoverySong } from './localFirstDiscoveries';
+import type { BrowserDiscovery, DiscoverySong } from './deviceMusicDiscoveries';
 
 /** Harmonic matches the account finds (T-20261126-9a31; docs/engineering/engine-store-discovery.md).
  *

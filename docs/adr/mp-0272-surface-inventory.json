@@ -116,7 +116,7 @@
    "site": "cloud",
    "path": "/listen (local-first)",
    "owner": [
-    "web/src/cloud/LocalFirstShell.tsx"
+    "web/src/cloud/CloudShell.tsx"
    ],
    "states": [
     "initial"
@@ -129,7 +129,7 @@
    "site": "cloud",
    "path": "/library (local-first)",
    "owner": [
-    "web/src/cloud/LocalFirstShell.tsx",
+    "web/src/cloud/CloudShell.tsx",
     "web/src/cloud/ConnectMusic.tsx"
    ],
    "states": [
@@ -143,7 +143,7 @@
    "site": "cloud",
    "path": "/mixes (local-first)",
    "owner": [
-    "web/src/cloud/LocalFirstShell.tsx",
+    "web/src/cloud/CloudShell.tsx",
     "web/src/views/Mixes.tsx"
    ],
    "states": [
@@ -157,7 +157,7 @@
    "site": "cloud",
    "path": "/mixes/mine (local-first)",
    "owner": [
-    "web/src/cloud/LocalFirstShell.tsx"
+    "web/src/cloud/CloudShell.tsx"
    ],
    "states": [
     "initial"
@@ -490,7 +490,7 @@
    "id": "site.overlay.cloud.requests",
    "title": "Requests",
    "kind": "drawer",
-   "owner": "web/src/cloud/LocalFirstShell.tsx"
+   "owner": "web/src/cloud/CloudShell.tsx"
   },
   {
    "id": "site.overlay.cloud.activity",

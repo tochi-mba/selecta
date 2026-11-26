@@ -1,4 +1,8 @@
-# Hosted Cloud mode: walkthrough, comparison with the local app, and the staging runbook
+# Cloud library: walkthrough, comparison with the Desktop app, and the staging runbook
+
+Words: this record was written as "hosted mode"; it is a Cloud account's music **in your cloud
+library**, worked on by the **cloud studio**, and "the local app" is **Desktop**
+([glossary](../glossary.md)). The body keeps the words it was written in.
 
 Written 2026-11-25 on branch `hosted/render`. Hosted mode is the `cloud.hosted_media` staff grant (ADR-0455, ADR-0456): songs are uploaded to object storage and workers run the engine. The owner's bar: it should render as well as the **local app**, because the server runs the same engine.
 
@@ -339,7 +343,7 @@ The owner's 23 edge cases for hosted mode (to-do T-20261125-803e) were reasoned 
 | 14 | A song deleted or replaced during rendering, playing or export | Handled | Every hosted read takes only live songs (`hosted_render._songs`), so the next poll drops it; a part already playing finishes on its 15-minute link; a queued export joins its stored parts, which stay through the recovery window; a re-upload is a new song (`test_hosted_edges.py::test_a_deleted_song_is_never_analysed_listed_or_planned_again`) |
 | 15 | Locked phone screen, calls and Bluetooth changes | Filed | 15 s scheduled ahead copes with once-a-second timers; no Media Session or interruption handling: T-20261125-aefa (with T-20261125-0cce, T-20261125-d7a5) |
 | 16 | Remotes, room requests and Lucy's Save and play | Filed | The hosted player is not a session speaker: T-20261125-dfa3 |
-| 17 | The same song uploaded and on the device | Handled | The catalogue lists each song once; an upload is a fallback matched by content, then exact name, never a guess (`web/src/cloud/hostedMedia.ts`; `hostedMedia.test.ts`). The browser mixer plays the device copy; the hosted mix plays uploads only |
+| 17 | The same song uploaded and on the device | Handled | The catalogue lists each song once; an upload is a fallback matched by content, then exact name, never a guess (`web/src/cloud/cloudLibraryMedia.ts`; `cloudLibraryMedia.test.ts`). The browser mixer plays the device copy; the hosted mix plays uploads only |
 | 18 | Two devices pressing Make a mix or Export at once | Fixed | One live job per idempotency key (`test_cloud_jobs_enqueue.py::test_a_duplicate_idempotency_key_returns_the_same_job`; `test_hosted_stuck_jobs.py::test_a_replacement_that_lost_the_race_returns_the_winners_job`). The new export allowance takes one export for the pair (`test_hosted_edges.py::test_two_devices_pressing_export_at_once_make_one_job_and_pay_once`) |
 | 19 | Alerts reaching a person outside the console | Fixed | Operator alert mail (section 11.3, `notify/operator_alerts.py`); the owner sets the address (T-20261126-483a) |
 | 20 | Worker and gateway version skew during a deploy | Fixed | The gateway turns away a worker on another engine build and the worker exits (section 11.5, `work/engine_build.py`) |

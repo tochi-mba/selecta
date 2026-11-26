@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionState, SessionView } from '../devices/usePlaybackDevice';
-import { LocalFirstPlayer, PlayerActions, PlayerFacts, VOLUME_HOLD_MS, VOLUME_SETTLE_MS } from './localFirstPlayer';
+import { LocalFirstPlayer, PlayerActions, PlayerFacts, VOLUME_HOLD_MS, VOLUME_SETTLE_MS } from './deviceMusicPlayer';
 
 // Dragging the volume slider on the speaker used to send one `set_volume` per movement, all based
 // on the same session sequence: the first was applied, every other was refused as stale ("Something

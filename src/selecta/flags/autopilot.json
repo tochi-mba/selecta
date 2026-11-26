@@ -3,7 +3,7 @@
   "flags": {
     "cloud.mix_create": {
       "label": "Make a mix in the Cloud",
-      "about": "Create and edit planned mixes from Cloud Library songs, using the same mix contract as the local app. Seams are plain crossfades until songs have tempo and key facts.",
+      "about": "Create and edit planned mixes from cloud library songs, using the same mix contract as the Desktop app. Seams are plain crossfades until songs have tempo and key facts.",
       "surfaces": [
         "cloud.listen",
         "cloud.library"

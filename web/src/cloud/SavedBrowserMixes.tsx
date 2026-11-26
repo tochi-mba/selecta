@@ -6,7 +6,7 @@ import { countOf, relativeTime } from '../ui/format';
 import { Icon } from '../ui/Icon';
 import { MenuItem } from '../ui/primitives';
 import type { ViewProps } from '../views/shared';
-import { EMPTY_MIX } from './localFirstRequest';
+import { EMPTY_MIX } from './deviceMusicRequest';
 import { copyName, MIX_NAME_LIMIT, type RecipeStore, type RecipeSummary } from './recipeStore';
 import { flagOn } from '../flags';
 import { length } from '../lib';

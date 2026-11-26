@@ -35,10 +35,10 @@ const ACTIONS: { id: FlagAction; label: string }[] = [
 ];
 const PLANS = ['free', 'standard', 'premium'];
 const BROWSER_EXPERIENCE_LABEL: Record<NonNullable<Trace['browser_first_experience']>['mode'], string> = {
-  local_first: 'local-first Cloud',
-  hosted: 'hosted media',
-  both: 'both modes',
-  neither: 'neither mode',
+  local_first: 'music on their devices',
+  hosted: 'music in their cloud library',
+  both: 'both, on their devices and in their cloud library',
+  neither: 'neither',
 };
 
 function describe(rule: Rule) {
@@ -184,10 +184,10 @@ function Trace({ api }: { api: AdminFetch }) {
       </form>
       <Failure error={error} />
       {trace && <>
-        {trace.browser_first_experience && <section className="admin-impact" aria-label="Browser-first Cloud experience">
-          <h3>Cloud experience: {BROWSER_EXPERIENCE_LABEL[trace.browser_first_experience.mode]}</h3>
-          <p><b>Browser-first Cloud:</b> {trace.browser_first_experience.local_first_on ? 'On' : 'Off'}: {trace.browser_first_experience.local_first_reason}</p>
-          <p><b>Hosted media:</b> {trace.browser_first_experience.hosted_media_on ? 'On' : 'Off'}: {trace.browser_first_experience.hosted_media_reason}</p>
+        {trace.browser_first_experience && <section className="admin-impact" aria-label="Where this account's music lives">
+          <h3>Where their music lives: {BROWSER_EXPERIENCE_LABEL[trace.browser_first_experience.mode]}</h3>
+          <p><b>Music on their devices (cloud.local_first):</b> {trace.browser_first_experience.local_first_on ? 'On' : 'Off'}: {trace.browser_first_experience.local_first_reason}</p>
+          <p><b>Cloud library (cloud.hosted_media):</b> {trace.browser_first_experience.hosted_media_on ? 'On' : 'Off'}: {trace.browser_first_experience.hosted_media_reason}</p>
         </section>}
         <DataTable stacked="auto" caption={`Decisions for ${trace.user_id} on ${trace.plan} (rules version ${trace.rule_version})`} rows={rows} rowKey={(f) => f.flag_id} empty="Every feature is on."
           columns={[{ key: 'flag_id', label: 'Flag' }, { key: 'on', label: 'Decision', render: (f) => f.on ? 'On' : 'Off' }, { key: 'reason', label: 'Reason' },

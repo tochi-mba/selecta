@@ -52,7 +52,7 @@ export function sentMemory(workspaceId: string): SentMemory {
 }
 
 export type UploaderOptions = {
-  /** The Cloud API for this workspace, paths without `/api` (LocalFirstShell's `cloud`). */
+  /** The Cloud API for this workspace, paths without `/api` (CloudShell's `cloud`). */
   request: Request;
   workspaceId: string;
   /** This workspace's song index on this device. */

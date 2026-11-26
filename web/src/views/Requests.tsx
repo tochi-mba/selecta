@@ -29,7 +29,7 @@ export type RequestRow = {
   stage?: Stage; waiting_on?: string; seconds?: number | null; after?: string | null;
   never?: boolean; no_cues?: boolean; declined?: boolean; bridge_choice?: boolean | null;
   saving?: boolean; picked?: number[] | null; behind?: string; bridge_lost?: boolean;
-  /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */ browser_note?: string;
+  /** Cloud in the browser (deviceMusicRequests.ts): what happens to this request, instead of the planner's words. */ browser_note?: string;
   plays_on?: string; where_note?: string; connect_here?: boolean; // ADR-0475: who plays it, the line saying so, and whether connecting here is the only way
   /** Cloud in the browser: the room a guest asked in, and the guest's nickname when it is known. */
   room_name?: string; asked_by?: string | null; room_request_id?: string; joined_words?: string; // ADR-0488: said when the room's pick joins

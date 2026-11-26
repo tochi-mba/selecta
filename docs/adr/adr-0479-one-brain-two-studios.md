@@ -15,7 +15,7 @@ SelectaDJ plays in three places, and they are not the same DJ.
 |---|---|---|---|
 | Measures a song with | Beat This, refined grid, sections, bar-level features, key model, lyrics, vocal sensing from stems | The same analysis on a worker since 2026-11-25 (`cloud.hosted_render`), with a chroma key and no lyrics or stems | Tempo by autocorrelation on a 60 s slice, at seam time |
 | Chooses the order with | Idea cards, beam search, energy arc, seam memory | The planner's order for up to 60 songs, with no memory | Alphabetical between a chosen start and end |
-| Makes a transition by | 15 moves; exit, entry, move and length scored together; rendered, audited, repaired | The same render and audit on a worker, but with no vocal information every blend falls back to an echo or a cut (`docs/engineering/hosted-mode-walkthrough.md`) | Live Web Audio scripting; exits at the song's end, entries at second 0; often a 3 s fade |
+| Makes a transition by | 15 moves; exit, entry, move and length scored together; rendered, audited, repaired | The same render and audit on a worker, but with no vocal information every blend falls back to an echo or a cut (`docs/engineering/cloud-library-walkthrough.md`) | Live Web Audio scripting; exits at the song's end, entries at second 0; often a 3 s fade |
 | Stems | Demucs windows; vocal ride, strip and land, intertwine, studio | None (licence) | Built, can never switch on |
 | Pages | The full shell | A card on Make a Mix with its own small player; no editor, Seam Inspector, Studio, requests or discovery | The full shell, with 12 features switched off |
 

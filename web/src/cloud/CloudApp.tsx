@@ -23,6 +23,7 @@ import { CatalogLookups } from './CatalogLookups';
 import { OverviewHeroArt, RailNav } from './CloudRailFeel';
 export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
+import { musicHomeOf, setMusicHome } from '../copy';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, statusWords, Page, pageShown, planName } from './api';
 import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
@@ -36,20 +37,20 @@ import { AccountProblemNote, NotFound, SuspendedPanel } from './CloudStates';
 import { AccountProblemPage, BlockedAccount, GateLoading, OfflineWait, SignInAgain, VerifyEmail, WorkspaceCheck } from './Gate';
 import { Welcome } from './Welcome';
 import { CloudEvent, useCloudEvents } from './events';
-import { ROOM_REQUEST_EVENT } from './localFirstRequests';
-import { CATALOGUE_CHANGED_EVENT } from './localFirstRequest';
+import { ROOM_REQUEST_EVENT } from './deviceMusicRequests';
+import { CATALOGUE_CHANGED_EVENT } from './deviceMusicRequest';
 import { LIBRARY_STATES_FLAG } from './libraryState';
 import { LibraryPanel } from './Library';
 import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
-import { LIBRARY_CHANGED_EVENT } from './hostedMedia';
+import { LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { WorkspaceNameOffer } from './WorkspaceNameOffer';
 import { setProblemReporter, SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
-import { isHostedAccount } from './localFirstGate';
-import { LocalFirstLabs } from './labs/LocalFirstLabs';
+import { isHostedAccount } from './deviceMusicGate';
+import { DeviceMusicLabs } from './labs/DeviceMusicLabs';
 import { ReconciliationPanel } from './migration/ReconciliationPanel';
 import { navigate, useLocationText } from '../router';
 import { Action, LiveRegion, Section } from '../ui/controls';
@@ -72,7 +73,7 @@ import '../business/business.css';
 const AdminArea = lazy(() => import('../admin/AdminArea'));
 // The local-first shell (ADR-0462/0463) and the browser engine it carries load only for an account
 // that has the local-first experience with `cloud.local_first` on; everyone else never fetches it.
-const LocalFirstShell = lazy(() => import('./LocalFirstShell').then((module) => ({ default: module.LocalFirstShell })));
+const CloudShell = lazy(() => import('./CloudShell').then((module) => ({ default: module.CloudShell })));
 // The venue tablet posture flow (ADR-0460) carries the browser engine too, so it loads only with
 // `cloud.venue_tablet` on.
 const VenuePosture = lazy(() => import('./venue/VenuePosture').then((module) => ({ default: module.VenuePosture })));
@@ -100,7 +101,7 @@ type Operation = 'onboarding' | 'checkout' | 'portal' | 'everywhere' | 'delete';
 /** Whether this account gets the local-first shell, decided on the account's own
  * read. The hosted shell reads `cloud.local_first` as off while it is open (it is not the
  * local-first shell), which must not keep a member who has just joined Labs out of it. */
-function localFirstDecided(account: Account | null): boolean {
+function deviceMusicDecided(account: Account | null): boolean {
   return account?.experience?.local_first === true && accountFlagOn('cloud.local_first', account.features);
 }
 
@@ -156,6 +157,9 @@ export function CloudApp() {
     return (authSignOut as (...given: unknown[]) => unknown)(...args);
   }) as typeof authSignOut, [authSignOut]);
   const [account, setAccount] = useState<Account | null>(null);
+  // The shared pages' words follow where this account's music lives, before they draw (copy.ts).
+  const home = musicHomeOf(deviceMusicDecided(account), account?.experience?.hosted !== false);
+  setMusicHome(home === 'none' ? 'cloud_library' : home);
   // ADR-0475 R12: another tab of this browser signed out, or in as someone; and what a sign-out
   // pressed here would stop, said first
   const [elsewhere, setElsewhere] = useState<{ kind: 'out' } | { kind: 'in'; email: string } | null>(null);
@@ -448,7 +452,7 @@ export function CloudApp() {
     if (event.topic === 'requests.room' || event.topic.startsWith('room.')) window.dispatchEvent(new Event(ROOM_EVENT));
     if (event.topic === 'room.round') window.dispatchEvent(new CustomEvent(ROOM_ROUND_EVENT, { detail: event.payload })); // ADR-0488
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }
-    // the browser-first catalogue is kept until the library changes (localFirstRequest.ts)
+    // the browser-first catalogue is kept until the library changes (deviceMusicRequest.ts)
     if (/^(upload|asset|library|local_media)\./.test(event.topic)) window.dispatchEvent(new Event(CATALOGUE_CHANGED_EVENT));
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);
@@ -467,7 +471,7 @@ export function CloudApp() {
   // explicit offline mode: the library from this device, local files play, mixes are queued, and
   // anything only the server can do waits with its reason. Any other account waits on a page.
   const offlineCandidate = !isLoading && !user && connectionDown ? rememberedAccount() : null;
-  const offlineUsable = offlineCandidate !== null && localFirstDecided(offlineCandidate.value);
+  const offlineUsable = offlineCandidate !== null && deviceMusicDecided(offlineCandidate.value);
   const [offlineMode, setOfflineMode] = useState(false);
   useEffect(() => {
     if (!offlineUsable || offlineMode || !offlineCandidate) return;
@@ -600,7 +604,7 @@ export function CloudApp() {
   // With exact routes, an address whose page is switched off shows the overview and says so in
   // the address too, never a page that doesn't match it.
   const routedPage = route.kind === 'page' ? route.page : null;
-  const localFirst = account !== null && localFirstDecided(account);
+  const localFirst = account !== null && deviceMusicDecided(account);
   // `cloud.hosted_shell`: every other account's pages in the shared shell, which routes them itself.
   // The server decides every registry flag in the account's snapshot; this one moves the whole
   // frame, so it is drawn only when decided on, never because an answer did not mention it.
@@ -650,7 +654,7 @@ export function CloudApp() {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
         {offlineMode && account
-          ? <LocalFirstShell api={api} account={account} more={() => <p className="needs-connection">This needs the internet. You’ll be signed in again when the connection is back.</p>} offlineReadOnly />
+          ? <CloudShell api={api} account={account} more={() => <p className="needs-connection">This needs the internet. You’ll be signed in again when the connection is back.</p>} offlineReadOnly />
           : <GateLoading label="Opening SelectaDJ…" />}
       </Suspense>
     );
@@ -738,7 +742,7 @@ export function CloudApp() {
       showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />,
     ]}
     advanced={[
-      labsShown && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />,
+      labsShown && <DeviceMusicLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />,
       showsDeviceCheck(account.features) && <DeviceCheck />,
       flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>,
       venueSetup && <VenueSetup api={api} workspaceId={account.workspace.id} />,
@@ -779,7 +783,7 @@ export function CloudApp() {
   if (account && localFirst) {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
-        <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
+        <CloudShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
         {signOutAsk && <ConfirmDialog title="Sign out?" body={signOutAsk} confirmLabel="Sign out" cancelLabel="Cancel" onConfirm={() => void leave()} onClose={() => setSignOutAsk(null)} />}
       </Suspense>
     );

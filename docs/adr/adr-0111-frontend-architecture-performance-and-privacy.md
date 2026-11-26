@@ -1,5 +1,7 @@
 # ADR-0111: Frontend module boundaries, CSS performance, 20k/100-song scale and local-first privacy
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress (7/10 implemented, 3 in progress; source reconciliation 2026-11-10, branch feat/finish-checklists)
 - **Verification status:** Not verified (0/10)

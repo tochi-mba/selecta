@@ -17,9 +17,9 @@ Read from the code at `main` (f5b6a4ab):
 | Planning starts 45 s before a song ends | `web/src/engine/scheduler.ts` `LOAD_NEXT_WITHIN` | A 16-bar blend at 120 BPM must start 50 to 34 s before the end, so many are "prepared too late" and become a 3 s fade |
 | A few missed worker deadlines end beatmatching for the visit | `web/src/dsp/budget.ts` | One slow moment costs the whole session |
 | No per-song loudness gain | `web/src/engine/scheduler.ts`, `graph.ts` | Songs jump in level; Desktop plays every song at -14 LUFS |
-| Song order is alphabetical between a chosen start and end | `web/src/cloud/localFirstMixes.ts` | No pairing by tempo, key, energy or timbre |
+| Song order is alphabetical between a chosen start and end | `web/src/cloud/deviceMusicMixes.ts` | No pairing by tempo, key, energy or timbre |
 | The offline export plays no seams | `web/src/engine/render.ts` | An exported file would not match what was heard |
-| Stems can never switch on | `dsp/stems/model.ts` (`STEM_MODEL_ARTEFACT = null`), `localFirstPlayer.ts` | No vocal ride, strip and land, or studio |
+| Stems can never switch on | `dsp/stems/model.ts` (`STEM_MODEL_ARTEFACT = null`), `deviceMusicPlayer.ts` | No vocal ride, strip and land, or studio |
 
 None of these is a limit of the browser. They come from deciding late, with little knowledge.
 

@@ -110,7 +110,7 @@ def test_the_pinned_beat_tracker_matches_the_copy_the_app_has_been_using():
 @pytest.mark.parametrize(
     ("entry", "match"),
     [
-        ({"skey": {}}, "not allowed in cloud mode"),
+        ({"skey": {}}, "not allowed in Cloud"),
         ({"beat_this.final0": {"url": "http://x"}}, "https"),
         ({"beat_this.final0": {"sha256": "abc"}}, "SHA-256"),
         ({"beat_this.final0": {"path": "../../etc/passwd"}}, "model root"),

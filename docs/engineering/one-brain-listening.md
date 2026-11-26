@@ -77,7 +77,7 @@ another mix with the same songs. A seam made with the flag on has its own key (`
 | A hosted mix is ordered by the planner core from the songs' stored facts, and each transition is the core's own ranked choice, rendered, checked and repaired by the Desktop's rule (at most 5 takes and a cut) | `cloud.hosted_brain` | off | The same uploads, one mix with the flag off and one with it on. Each hand-off on the card names its move; the job result says `engine: planner-core` |
 
 With no lyrics and no stems (Cloud runs no separator), the flag off still renders blends first
-and the audit refuses them (hosted-mode-walkthrough.md section 2.3), so it ends on an echo out
+and the audit refuses them (cloud-library-walkthrough.md section 2.3), so it ends on an echo out
 or a cut after minutes of work. With the flag on such a pair is offered only a cut, an echo out
 or a reverb wash, picked by rank, and a song whose lyrics a device found can earn an 8 or 16 bar
 blend. Listen for

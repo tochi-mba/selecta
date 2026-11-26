@@ -2,7 +2,7 @@
 
 One place that answers "is a device-music Cloud account as good as the Desktop app, and where
 is it not". A device-music account runs the Desktop's own shell in the browser
-(web/src/cloud/LocalFirstShell.tsx) through the request adapter (web/src/cloud/localFirstRequest.ts).
+(web/src/cloud/CloudShell.tsx) through the request adapter (web/src/cloud/deviceMusicRequest.ts).
 What the shell switches off is one table, web/src/cloud/browserFlags.ts; every row there is
 below, with what would switch it on.
 
@@ -17,7 +17,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Library rows and Song details: tempo, key, energy | Works for songs the account has measured; others show length only | `cloud.brain`, `cloud.device_analysis` | |
 | Tempo and key corrections | Works: `PUT`/`DELETE /api/song-facts/{id}/correction`, read back from `GET /api/song-facts` | `cloud.brain`, `cloud.device_analysis` | |
 | "Is it music?" | Works: Song details sets a song aside or counts it as music again, kept by the account beside the corrections (`song_overrides.is_music`, `PUT /api/song-facts/{id}/correction` with `is_music`); the Library counts and filters set-aside songs, and the account's planner and the browser's own mixes leave them out. A browser never decides by itself, so there is no "Let SelectaDJ decide" | `cloud.brain`, `cloud.device_analysis` | |
-| Analysis priority, analyse this song now | Works on the device that measures: Measure this first in a Library row's menu (and the app's analyse, priority and priority batch routes, answered in web/src/cloud/localFirstLibrary.ts) puts the song next in this device's measuring. Kept on the device, not the account: once one device has measured a song every device has its measurements | `cloud.browser_harmonic`, `library.priority` | |
+| Analysis priority, analyse this song now | Works on the device that measures: Measure this first in a Library row's menu (and the app's analyse, priority and priority batch routes, answered in web/src/cloud/deviceMusicLibrary.ts) puts the song next in this device's measuring. Kept on the device, not the account: once one device has measured a song every device has its measurements | `cloud.browser_harmonic`, `library.priority` | |
 | Start and stop analysis | Works: Pause measuring and Carry on measuring in Workspace (and the app's start and stop routes); a pause lasts across visits until the member carries on | `cloud.browser_harmonic` | |
 | Library song search (`GET /api/songs`), interrupted work | Works: the search answers from the Library rows; nothing is offered again after a reload because measuring picks up by itself | `cloud.local_first` | |
 | A song's audio, cover and waveform | Works from the device's own files: the player, the cover index and Listen's waveform read them; the app's server routes for them are not asked | `cloud.local_first` | |

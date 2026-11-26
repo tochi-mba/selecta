@@ -202,11 +202,11 @@ describe('view mode and the safety tiers', () => {
 describe('customers', () => {
   it('shows the mode, the library in true words and plans as badges', async () => {
     await enter('/admin/customers?q=listener');
-    expect(await screen.findByText('Browser')).toBeInTheDocument();
+    expect(await screen.findByText('On devices')).toBeInTheDocument();
     expect(screen.getByText('2,918 songs on 2 devices')).toBeInTheDocument();
     expect(screen.getByText('Free')).toBeInTheDocument();
     expect(libraryWords({ mode: 'hosted', committed_bytes: 1_200_000_000, limit_bytes: 50_000_000_000, device_songs: 0, devices: 0 })).toBe('1.2 GB of 50.0 GB');
-    expect(libraryWords({ mode: 'browser', committed_bytes: 1_200_000_000, limit_bytes: 0, device_songs: 3, devices: 1 })).toContain('Cloud storage off, 1.2 GB still stored');
+    expect(libraryWords({ mode: 'browser', committed_bytes: 1_200_000_000, limit_bytes: 0, device_songs: 3, devices: 1 })).toContain('cloud library off, 1.2 GB still stored');
   });
 
   it('starts empty and never lists everyone', async () => {

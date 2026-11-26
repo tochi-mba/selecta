@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { playbackStatusText } from '../copy';
 import type { SessionState, SessionView } from '../devices/usePlaybackDevice';
 import type { BrowserSpeaker } from '../engine';
-import { LocalFirstPlayer, NOTHING_TO_PLAY, nowStateFrom, PlayerActions, PlayerFacts, statusOf } from './localFirstPlayer';
+import { LocalFirstPlayer, NOTHING_TO_PLAY, nowStateFrom, PlayerActions, PlayerFacts, statusOf } from './deviceMusicPlayer';
 
 const session = (over: Partial<SessionState> = {}): SessionState => ({
   mix_revision_id: 'r', song_index: 1, offset_ms: 30_000, anchor_at: 100, state: 'playing',

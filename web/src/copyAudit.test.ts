@@ -147,7 +147,7 @@ function promises(file: string, source: string): string[] {
 describe('no "not yet" in SelectaDJ', () => {
   it('scans the pages and the copy tables, so the scan is not vacuous', () => {
     expect(PROMISE_FILES.length).toBeGreaterThan(FILES.length);
-    expect(PROMISE_FILES).toContain('cloud/localFirstRequest.ts');
+    expect(PROMISE_FILES).toContain('cloud/deviceMusicRequest.ts');
     expect(PROMISE_FILES).toContain('cloud/browserFlags.ts');
   });
 
@@ -170,6 +170,55 @@ describe('no "not yet" in SelectaDJ', () => {
 
   it('no string in web/src promises a feature later', () => {
     const found = PROMISE_FILES.flatMap((file) => promises(file, fs.readFileSync(SOURCE + file, 'utf8')));
+    expect(found, found.join('\n')).toEqual([]);
+  });
+});
+
+/**
+ * The names ADR-0479 retired (docs/glossary.md). A member sees where a song lives ("on this
+ * device", "in your cloud library"), never a "mode", so no string or JSX text in web/src may say
+ * one of these. "BF" counts only as a capital word on its own: a requirement id such as
+ * BF-0463-03 cites a checklist, and lower-case ids such as a model's implementation id are data.
+ */
+const RETIRED = /(local[- ]first|browser[- ]first|hosted mode|local mode|cloud mode)/i;
+const RETIRED_BF = /\bBF\b(?!-\d)/;
+
+/** Identifiers that must keep the old words, each with why. The fragment is taken out of the
+ * string before the check, so prose around it is still read. */
+const IDENTIFIERS: ReadonlyArray<[string, string, string]> = [
+  ['cloud/labs/DeviceMusicLabs.tsx', '/labs/local-first', 'a deployed API route; renaming it breaks a client already in a member\'s browser'],
+];
+
+function retired(file: string, source: string): string[] {
+  const out: string[] = [];
+  for (const piece of literals(source)) {
+    let plain = piece;
+    for (const [where, fragment] of IDENTIFIERS) if (where === file) plain = plain.split(fragment).join('');
+    const said = plain.match(RETIRED) ?? plain.match(RETIRED_BF);
+    if (said) out.push(`${file}: "${piece.slice(0, 100)}" says "${said[0]}"`);
+  }
+  return out;
+}
+
+describe('no retired names in SelectaDJ (ADR-0479)', () => {
+  it('catches a planted name and lets an identifier through', () => {
+    expect(retired('x.tsx', '<p>Browser-first Cloud is on.</p>')).toHaveLength(1);
+    expect(retired('x.ts', "const a = 'Your hosted mode is on';")).toHaveLength(1);
+    expect(retired('x.ts', "const b = 'Join BF today';")).toHaveLength(1);
+    expect(retired('x.ts', "const c = 'Checked under BF-0463-03';")).toEqual([]);
+    expect(retired('x.ts', "const d = 'bf-tier3-beat-this';")).toEqual([]);
+    expect(retired('cloud/labs/DeviceMusicLabs.tsx', "const e = '/account/labs/local-first';")).toEqual([]);
+    expect(retired('cloud/labs/DeviceMusicLabs.tsx', "const f = 'Labs: local-first Cloud';")).toHaveLength(1);
+  });
+
+  it('every allowed identifier is still there, so the list never goes stale', () => {
+    for (const [file, fragment] of IDENTIFIERS) {
+      expect(literals(fs.readFileSync(SOURCE + file, 'utf8')).some((piece) => piece.includes(fragment)), `${file}: ${fragment}`).toBe(true);
+    }
+  });
+
+  it('no string in web/src says a retired name', () => {
+    const found = PROMISE_FILES.flatMap((file) => retired(file, fs.readFileSync(SOURCE + file, 'utf8')));
     expect(found, found.join('\n')).toEqual([]);
   });
 });

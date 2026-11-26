@@ -70,7 +70,7 @@ describe('LX-0354 feelings as a way into a mix', () => {
     const waiting = screen.getByRole('heading', { name: 'Needs more mix-ready songs' }).closest('section')!;
     expect(within(waiting).getByText('Sparse idea')).toBeVisible();
     expect(within(waiting).getByText('needs 6 more')).toBeVisible();
-    expect(waiting.textContent).toMatch(/try another available idea, or analyse more local songs/);
+    expect(waiting.textContent).toMatch(/try another available idea, or analyse more songs/);
     expect(waiting.textContent).toMatch(/No new mix will be made from an unavailable idea/);
     expect(within(waiting).queryByRole('button', { name: 'Play' })).toBeNull();
   });

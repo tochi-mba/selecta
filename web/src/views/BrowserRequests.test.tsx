@@ -5,7 +5,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, type MixData, type MixItem } from '../api';
-import { JOINS_BY_HAND } from '../cloud/localFirstRequests';
+import { JOINS_BY_HAND } from '../cloud/deviceMusicRequests';
 import type { PlayerLike } from '../playerContract';
 import { BrowserRequests } from './BrowserRequests';
 import type { RequestRow, Stage } from './Requests';

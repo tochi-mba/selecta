@@ -52,7 +52,7 @@ def test_registry_rejects_fake_exclusions_and_requires_real_justifications():
     assert "cloud_surface_reason must explain" in violations(cloud_surface_reason="")
     assert "cloud_surface_kind must be one of" in violations(cloud_surface_kind="placeholder")
     assert "cloud_surface_reason needs cloud_surface_kind" in violations(cloud_surface_kind=None)
-    assert "a Cloud exclusion needs cloud mode" in violations(modes=("local",))
+    assert "a Cloud exclusion needs SELECTA_MODE=cloud" in violations(modes=("local",))
 
 
 def test_venue_dashboard_is_not_mounted_as_a_cloud_customer_page(tmp_path):

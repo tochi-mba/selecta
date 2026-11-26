@@ -3,7 +3,7 @@ import type { Request, VibeCard } from '../api';
 import { setFlags } from '../flags';
 import { forgetAccountMeasured } from './accountFacts';
 import { accountIdeas, ideaSongs } from './accountIdeas';
-import { mixFamily, type PlayableSong } from './localFirstMixes';
+import { mixFamily, type PlayableSong } from './deviceMusicMixes';
 import { feelFor } from './mixFeel';
 import { DEFAULT_STEERING, type RecipeStore } from './recipeStore';
 

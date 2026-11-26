@@ -23,7 +23,7 @@ export const HELP: Record<AdminPage, PageHelp> = {
   },
   customers: {
     purpose: 'Find a customer by email, user or workspace id, Stripe id or an error reference, and help them. Metadata only: never their audio or Lucy prompts.',
-    numbers: [['Mode', 'Browser: their music stays on their devices (the default). Cloud storage: the hosted media grant, so they upload to us and we render.'], ['Storage', 'Shown only for Cloud storage accounts, as used of allowed.']],
+    numbers: [['Music', 'On devices: their music stays on their devices (the default). Cloud library: the cloud.hosted_media grant, so they upload to us and we render.'], ['Storage', 'Shown only for cloud library accounts, as used of allowed.']],
     tasks: [['Grant time', 'Open the customer, Overview tab, Grant time: pick a plan and how long. It expires by itself.'], ['Sign them out everywhere', 'Open the customer, press Sign out everywhere. They sign in again on every device.'], ['Suspend', 'Dangerous: it needs the email typed and a sign-in from the last 5 minutes.']],
     runbook: `${CONSOLE_DOC}#7b4-pages`,
   },
@@ -40,7 +40,7 @@ export const HELP: Record<AdminPage, PageHelp> = {
     runbook: RUNBOOK,
   },
   workers: {
-    purpose: 'Hosted processing at a glance: for each worker pool, whether it is working, idle, waiting for a worker or failing; the gateway, autoscaler, storage and flags around the workers; what customers are waiting for; and what processing costs this month.',
+    purpose: 'The cloud studio at a glance: for each worker pool, whether it is working, idle, waiting for a worker or failing; the gateway, autoscaler, storage and flags around the workers; what customers are waiting for; and what processing costs this month.',
     numbers: [
       ['Verdict', 'Working: workers are checking in. Idle: nothing is queued. Waiting for a worker: jobs are queued and no worker has checked in for two minutes, so nothing is processing them. Failing: the last attempts in the pool all failed. Paused: staff stopped new claims.'],
       ['Workers seen', 'Workers that checked in with the worker gateway in the last two minutes. Workers are Modal containers that start when the autoscaler asks for them.'],
@@ -50,12 +50,12 @@ export const HELP: Record<AdminPage, PageHelp> = {
       ['As of', 'The page reads again every 30 seconds while it is open. If a read fails, the last good numbers stay with their time.'],
     ],
     tasks: [
-      ['Jobs are waiting with no worker', 'Look at Worker gateway and Autoscaler under Around the workers: each says what to do. Until the autoscaler runs, workers start only by hand (doc hosted-mode-walkthrough, section 5).'],
+      ['Jobs are waiting with no worker', 'Look at Worker gateway and Autoscaler under Around the workers: each says what to do. Until the autoscaler runs, workers start only by hand (doc cloud-library-walkthrough, section 5).'],
       ['A pool keeps failing', 'Pause the pool so it stops burning attempts, open Jobs filtered to its failed jobs, read the error, fix the cause, then Resume and Retry failed jobs of that type.'],
       ['Customers have waited for hours', 'Fix the worker first. If the work is no longer wanted, Cancel jobs waiting too long: it waits 15 minutes and can be cancelled.'],
       ['Set a budget', 'Cost, Set budget: the monthly figure and when to warn. Needs a billing role.'],
     ],
-    runbook: 'https://github.com/tochi-mba/selecta/blob/main/docs/engineering/hosted-mode-walkthrough.md',
+    runbook: 'https://github.com/tochi-mba/selecta/blob/main/docs/engineering/cloud-library-walkthrough.md',
   },
   ai: {
     purpose: 'Lucy’s model routing per plan, the deployments behind it, spend against the ceiling, and Lucy’s emergency switches.',
@@ -123,7 +123,7 @@ export const TOURS: Record<AdminPage, TourStep[]> = {
   ],
   customers: [
     { target: 'customer-search', title: 'Find a customer', text: 'Search by email, user or workspace id, or a Stripe id. The list never loads everyone.' },
-    { target: 'customer-table', title: 'Mode, plan and status', text: 'Browser accounts keep music on their devices; Cloud storage accounts store it with us.' },
+    { target: 'customer-table', title: 'Music, plan and status', text: 'Some accounts keep music on their devices; cloud library accounts store it with us.' },
     { target: 'customer-actions', title: 'Actions', text: 'Grant time, sign out everywhere, suspend. Dangerous ones ask you to type the email.', needs: 'accounts.read_metadata' },
   ],
   billing: [

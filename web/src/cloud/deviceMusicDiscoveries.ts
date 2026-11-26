@@ -52,7 +52,7 @@ export type BrowserAudition = {
 export const HEAR_STEP_REFUSAL = 'In your browser SelectaDJ plays the end of one song into the start of the other, from the files on this device. It can’t play the chords it heard, because it doesn’t read chords bar by bar here.';
 
 function refuse(message: string, code: string, status = 400): ApiError {
-  return new ApiError(message, status, code, 'local-first:/discoveries');
+  return new ApiError(message, status, code, 'device-music:/discoveries');
 }
 
 function unit(values: readonly number[]): number[] {

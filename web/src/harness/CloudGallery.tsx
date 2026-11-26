@@ -16,7 +16,7 @@ import '../cloud/cloud.css';
 import '../rooms/rooms.css';
 import '../devices/devices.css';
 import { AccountProblemNote, NotFound, SuspendedPanel } from '../cloud/CloudStates';
-import { CannotPlayHere, EmptyState, NotOnThisAccount } from '../cloud/LocalFirstEmpty';
+import { CannotPlayHere, EmptyState, NotOnThisAccount } from '../cloud/DeviceMusicEmpty';
 import { BrandMark } from '../ui/BrandMark';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Action, LiveRegion, Problem, Skeleton, Status } from '../ui/controls';
@@ -75,7 +75,7 @@ export function CloudGallery() {
         <NotFound path="/an-old-link" go={nowhere} />
         <AccountProblemNote kind="offline" onRetry={nowhere} />
         <SuspendedPanel go={nowhere} />
-        <EmptyState title="Nothing here yet" actions={<button>Connect music</button>}><p>Specimen empty state on the local-first shell’s pattern.</p></EmptyState>
+        <EmptyState title="Nothing here yet" actions={<button>Connect music</button>}><p>Specimen empty state on the cloud shell’s pattern.</p></EmptyState>
         <CannotPlayHere reason="This browser can’t decode these files." />
         <NotOnThisAccount />
         <Problem retry={() => new Promise((resolve) => window.setTimeout(resolve, 400))}>Example: the library could not be loaded.</Problem>

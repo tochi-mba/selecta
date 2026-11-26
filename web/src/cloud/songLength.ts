@@ -1,4 +1,4 @@
-import type { CatalogueSong } from './localFirstRequest';
+import type { CatalogueSong } from './deviceMusicRequest';
 
 // T-20261125-8ab8: a song whose length the import could not probe (some video rips) has none in
 // the catalogue, so it showed 0:00 and could not be seeked. Once the browser engine has decoded it

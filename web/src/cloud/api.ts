@@ -1,3 +1,4 @@
+import { MUSIC_HOME_START, musicHomeOf, type MusicHome } from '../copy';
 import { accountFlagOn, type FlagId } from '../flags';
 import { userLocale } from '../ui/format';
 import type { LucyWindows } from './lucyUsage';
@@ -41,40 +42,20 @@ export type Account = {
   feature_locks: Record<string, string>;
 };
 
-export type CloudModeCopy = {
+export type MusicHomeCopy = {
   heading: string;
   privacy: string;
-  source: 'device' | 'hosted' | 'both' | 'none';
+  source: MusicHome | 'none';
 };
 
-/** Member-facing words for the decided Cloud experience (BF-0455-06).
+/** Member-facing words for where the account's music lives (BF-0455-06), from copy.ts.
  *
- * Keep this keyed by the account snapshot rather than scattering flag checks and jargon through
- * pages. Hosted mode is intentionally described as available, never legacy or deprecated.
+ * Keyed by the account snapshot rather than scattering flag checks and jargon through pages. The
+ * cloud library is described as available, never legacy or deprecated.
  */
-export function cloudModeCopy(account: Pick<Account, 'experience'> | null): CloudModeCopy {
-  const local = account?.experience?.local_first === true;
-  const hosted = account?.experience?.hosted === true;
-  if (local && hosted) return {
-    heading: 'Use music on this device or from your Cloud library',
-    privacy: 'Music you connect locally stays on this device. Your hosted library remains available in SelectaDJ Cloud.',
-    source: 'both',
-  };
-  if (local) return {
-    heading: 'Use music on this device',
-    privacy: 'Your music stays on this device. SelectaDJ Cloud keeps only the details needed for your library and mixes.',
-    source: 'device',
-  };
-  if (hosted) return {
-    heading: 'Use your SelectaDJ Cloud library',
-    privacy: 'Your hosted music remains available in SelectaDJ Cloud.',
-    source: 'hosted',
-  };
-  return {
-    heading: 'Connect music to begin',
-    privacy: 'SelectaDJ has not been given access to music for this account.',
-    source: 'none',
-  };
+export function musicHomeCopy(account: Pick<Account, 'experience'> | null): MusicHomeCopy {
+  const source = musicHomeOf(account?.experience?.local_first === true, account?.experience?.hosted === true);
+  return { ...MUSIC_HOME_START[source], source };
 }
 export type Asset = { id: string; name: string; size: number; sha256: string | null; format: string | null; duration_seconds: number | null; sample_rate: number | null; channels: number | null; created_at: number };
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;

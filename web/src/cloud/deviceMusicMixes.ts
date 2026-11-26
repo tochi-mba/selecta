@@ -28,7 +28,7 @@ export const PICK_BLURB = `A run through the songs you can play on this device, 
 export const BROWSER_MIX_NEEDS = 2;
 
 function refuse(message: string, code: string, status = 400): ApiError {
-  return new ApiError(message, status, code, 'local-first:mix');
+  return new ApiError(message, status, code, 'device-music:mix');
 }
 
 export function pickCard(songs: readonly PlayableSong[]): VibeCard {

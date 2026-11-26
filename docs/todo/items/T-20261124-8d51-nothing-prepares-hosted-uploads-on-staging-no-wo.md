@@ -12,4 +12,4 @@ commit:
 
 Staging has no Modal workers, so analysis and server rendering cannot run. Decide whether staging gets workers. The app must say honestly that preparing is waiting.
 
-2026-11-25: the hosted walkthrough (docs/engineering/hosted-mode-walkthrough.md, 'Staging and production runbook') lists exactly what a staging worker needs and what it costs. Needs the owner's pick of host and approval of spend.
+2026-11-25: the hosted walkthrough (docs/engineering/cloud-library-walkthrough.md, 'Staging and production runbook') lists exactly what a staging worker needs and what it costs. Needs the owner's pick of host and approval of spend.

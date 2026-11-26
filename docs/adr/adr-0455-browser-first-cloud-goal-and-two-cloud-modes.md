@@ -1,5 +1,7 @@
 # ADR-0455 - Browser-first Cloud: goal and two Cloud modes
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 5/7 Implemented; 1/7 In progress; 1/7 Not started.
 - **Independent verification:** 0/7 Verified.

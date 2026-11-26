@@ -5,6 +5,9 @@ text in the flag registry's JSON, `about` included) is checked for a promise abo
 "not yet", "coming soon", "soon" (other than "as soon as" and "too soon"), and a refusal that
 ends in "yet" ("isn't available here yet"). The web side has the same rule in
 web/src/copyAudit.test.ts. A state ("No mixes yet") is a fact and is not matched.
+
+The same strings are also checked for the names ADR-0479 retired ("browser-first", "hosted
+mode" and the rest; docs/glossary.md), so a member never meets a "mode" again.
 """
 
 from __future__ import annotations
@@ -127,4 +130,72 @@ def test_every_allowed_sentence_is_still_said():
 
 def test_nothing_the_server_says_promises_a_feature_later():
     found = [line for name, path in _files() for line in promises(name, _strings(path))]
+    assert found == [], "\n".join(found)
+
+
+# The words ADR-0479 retired (docs/glossary.md). "BF" is matched as a capital word, except as
+# a requirement id such as BF-0467-05, which cites an ADR's checklist rather than naming a mode.
+RETIRED = re.compile(
+    r"(?i:local[- ]first|browser[- ]first|hosted mode|local mode|cloud mode)|\bBF\b(?!-\d)"
+)
+
+# Identifiers the server must keep saying, each with why. The fragment is taken out of the
+# string before the check, so prose around it is still read.
+IDENTIFIERS = {
+    ("routes/local_first_labs.py", "/labs/local-first"):
+        "a deployed route path; renaming it breaks a client already in a member's browser",
+    ("flags/cloud.json", "/labs/local-first"): "the same route paths, listed as the flag's routes",
+    ("hosted_coexistence/grandfather.py", "bf-local-first"):
+        "the salt of a stored percentage rule; changing it re-buckets every member",
+}
+
+
+def _said(path: Path) -> list[str]:
+    """What a file can say, without any bare string statement (docstrings and attribute notes)."""
+    if path.suffix == ".json":
+        return _strings(path)
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    notes = {
+        id(node.value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
+    }
+    return [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in notes
+    ]
+
+
+def retired(name: str, strings: list[str]) -> list[str]:
+    out = []
+    for text in strings:
+        plain = " ".join(text.split())
+        for (where, fragment) in IDENTIFIERS:
+            if where == name:
+                plain = plain.replace(fragment, "")
+        found = RETIRED.search(plain)
+        if found:
+            out.append(f'{name}: "{plain[:100]}" says {found.group(0)!r}')
+    return out
+
+
+def test_a_retired_word_is_caught_and_an_identifier_is_not():
+    assert retired("x.py", ["Browser-first Cloud is paused."])
+    assert retired("x.py", ["Your hosted mode is on."])
+    assert retired("x.py", ["Join BF today."])
+    assert not retired("x.py", ["Labs opt-in (BF-0467-05)"])
+    assert not retired("x.py", ["docs/verification/bf-gate-register.md"])
+    assert not retired("routes/local_first_labs.py", ["/api/account/labs/local-first/join"])
+    assert retired("routes/local_first_labs.py", ["/api/account/labs/local-first is local-first"])
+
+
+def test_every_allowed_identifier_is_still_said():
+    for (name, fragment), reason in IDENTIFIERS.items():
+        assert reason
+        assert any(fragment in text for text in _said(SOURCE / name)), f"{name}: {fragment}"
+
+
+def test_nothing_the_server_says_uses_a_retired_name():
+    found = [line for name, path in _files() for line in retired(name, _said(path))]
     assert found == [], "\n".join(found)

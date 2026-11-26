@@ -12,7 +12,7 @@ import { pageShown, type Account } from './api';
 /** Hosted Cloud on the shared shell (`cloud.hosted_shell`): one shell for every Cloud account.
  *
  * The same Shell, manifest and router as local mode and browser-first Cloud, with the hosted pages
- * as its children and the account places in More, exactly as LocalFirstShell has them. Hosted
+ * as its children and the account places in More, exactly as CloudShell has them. Hosted
  * playback is the CloudTransportDock's own media element, drawn by CloudApp in the banner, so the
  * shell gets a player that does nothing and is never shown: no engine, media store or DSP is
  * imported here, and the hosted bundle stays free of them. With the flag off CloudApp draws the

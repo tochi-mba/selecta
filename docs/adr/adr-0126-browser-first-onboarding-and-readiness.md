@@ -1,5 +1,7 @@
 # ADR-0126 - Browser-first onboarding and readiness, without desktop packaging
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Implemented 4/5 new tasks (2026-11-10, uncommitted on `feat/finish-checklists`).
 - **Verified:** Automated verification 2/5 on 2026-11-10; open items name a person or a pending run in the checklist.

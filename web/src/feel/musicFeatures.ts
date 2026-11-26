@@ -450,7 +450,7 @@ export function createFeatureTracker(): FeatureTracker {
 }
 
 /** The player's read-only side taps (player.ts getVisualTaps, and the Cloud engine's through
- * cloud/localFirstPlayer.ts): unsmoothed left and right analysers. */
+ * cloud/deviceMusicPlayer.ts): unsmoothed left and right analysers. */
 export type VisualTaps = { left: AnalyserNode; right: AnalyserNode };
 type Readable = {
   getSpectrum(): Uint8Array | null;

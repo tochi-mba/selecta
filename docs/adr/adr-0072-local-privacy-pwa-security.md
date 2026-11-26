@@ -1,5 +1,7 @@
 # ADR-0072: Local-first privacy, file access, installed PWA and theme integration
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** In progress: 7 of 8 tasks implemented with automated evidence on 2026-11-12; 1 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal

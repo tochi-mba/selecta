@@ -15,7 +15,7 @@ itself mean that cloud behavior is wired into the running app.
 3. Find the relevant decision in [the ADR index](../adr/README.md). An accepted ADR records an
    intended contract; its checklist and implementation evidence show whether code and independent
    verification exist yet.
-4. Keep changes focused. Preserve local mode behavior unless the task explicitly changes it, and
+4. Keep changes focused. Preserve Desktop behavior unless the task explicitly changes it, and
    record cross-cutting contract changes in an ADR.
 
 ## Guides in this folder
@@ -86,7 +86,7 @@ pnpm e2e:flags
 To run the Cloud API locally, set `SELECTA_MODE=cloud` and configure
 `SELECTA_DATABASE_URL`, `SELECTA_WORKOS_CLIENT_ID`, `SELECTA_AUTH_ISSUER`,
 `SELECTA_ALLOWED_HOSTS`, and `SELECTA_ALLOWED_ORIGINS`. Apply migrations
-with `uv run selecta db upgrade`, then run `uv run selecta web --no-open`. Cloud mode binds to
+with `uv run selecta db upgrade`, then run `uv run selecta web --no-open`. The Cloud server binds to
 `0.0.0.0` by default for container hosting and serves the API only; the React app is hosted
 separately. Keep local development on the default `SELECTA_MODE=local` unless you have a disposable
 Cloud test database and AuthKit test credentials.
@@ -166,7 +166,7 @@ rules and Cloud Flags page are not implied by the local developer flag controls.
 Use the accepted [proposal](../saas/README.md) and its [roadmap](../saas/17-roadmap-and-risks.md)
 to sequence Cloud work. The core contracts are:
 
-- Keep local mode's privacy and single-user guarantees intact.
+- Keep Desktop's privacy and single-user guarantees intact.
 - Persist accepted work durably; retries, cancellation and worker loss must have explicit states.
 - Enforce workspace ownership at every API, storage and worker boundary.
 - Make quota reservations and billing entitlements authoritative on the server.

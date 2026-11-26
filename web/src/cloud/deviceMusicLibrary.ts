@@ -2,7 +2,7 @@ import { ApiError, type LibrarySong } from '../api';
 import { isFirst, measureFirst, measureInTurn, measuringPaused, setMeasuringPaused, waitingSongs } from './measuringControl';
 
 /** The Desktop's Library routes the shared views still ask, answered from what this device and
- * the account hold (T-20261126-ed4c). The adapter (localFirstRequest.ts) asks here first.
+ * the account hold (T-20261126-ed4c). The adapter (deviceMusicRequest.ts) asks here first.
  *
  * - `GET /songs`: the Desktop's song search, from the Library rows the adapter already makes.
  * - `POST /songs/{id}/analyse`, `/songs/{id}/priority` and the priority batches: this device
@@ -13,7 +13,7 @@ import { isFirst, measureFirst, measureInTurn, measuringPaused, setMeasuringPaus
  * - `GET /library/interrupted`: nothing to offer again; measuring picks up by itself.
  *
  * Not answered here, on purpose: a song's audio and cover come from the device's own files
- * (localFirstPlayer.ts, the art index), its waveform from the device (Now's `waveformOf`), and
+ * (deviceMusicPlayer.ts, the art index), its waveform from the device (Now's `waveformOf`), and
  * folders, relinking and checking them are the Workspace's Music folders (folderWatch.ts). */
 
 export type LibrarySources = {

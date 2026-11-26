@@ -22,7 +22,7 @@ import './rooms.css';
 import { useNeedsConnection } from '../cloud/connection';
 import { NumberRoll } from '../feel/numberRoll';
 import { useFeelPart } from './feelHooks';
-import { ROOM_REQUEST_EVENT } from '../cloud/localFirstRequests';
+import { ROOM_REQUEST_EVENT } from '../cloud/deviceMusicRequests';
 import '../cloud/connection.css';
 
 // The host's room page (ADR-0416): a live control room.

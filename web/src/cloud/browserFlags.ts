@@ -9,7 +9,7 @@ export const NOT_IN_THE_BROWSER = {
   // found with a request's place is offered to agree to; searching every song for one is the app's.
   'requests.bridges': false,
   // The energy horizon: on below when the account keeps measurements; the mix's rows carry each
-  // song's measured energy from the account (localFirstRequest.ts withMeasured).
+  // song's measured energy from the account (deviceMusicRequest.ts withMeasured).
   'editor.energy_horizon': false,
   // Locks: on below when the account keeps the mix (cloud.account_mixes), whose lock route is the
   // app's own; a mix kept in this browser has no lock.

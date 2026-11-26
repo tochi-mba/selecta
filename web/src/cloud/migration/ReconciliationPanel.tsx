@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Skeleton, Status } from '../../ui/controls';
 import { Truncate } from '../../ui/format';
 import { navigate } from '../../router';
-import { EmptyState } from '../LocalFirstEmpty';
+import { EmptyState } from '../DeviceMusicEmpty';
 
 /** The migration reconciliation (ADR-0465 BF-0465-02): the member's hosted uploads side by side
  * with the songs added on their devices, matched by content hash and nothing else (ADR-0458:
@@ -15,12 +15,12 @@ import { EmptyState } from '../LocalFirstEmpty';
  * paths below start at the route (`/assets`, `/local-media/songs`). */
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
-export type HostedAsset = { id: string; name: string; sha256: string | null; size?: number };
+export type CloudLibraryAsset = { id: string; name: string; sha256: string | null; size?: number };
 export type LocalSong = { id: number; content_sha256: string; title: string; artist: string; duplicate_of?: number | null };
 
 export type ReconciledRow =
-  | { kind: 'matched'; asset: HostedAsset; song: LocalSong; reason: string }
-  | { kind: 'hosted_only'; asset: HostedAsset; reason: string }
+  | { kind: 'matched'; asset: CloudLibraryAsset; song: LocalSong; reason: string }
+  | { kind: 'hosted_only'; asset: CloudLibraryAsset; reason: string }
   | { kind: 'device_only'; song: LocalSong; reason: string };
 
 /** Safety stop for a runaway cursor: 100 pages of 100 is 10,000 items each side. */
@@ -29,16 +29,16 @@ const PAGE = 100;
 
 const REASONS = {
   matched: 'The same audio is on your device, matched by its contents. Mixes that use it can play it from there.',
-  noFingerprint: 'SelectaDJ has no fingerprint for this upload, so it can’t be matched. It stays in your hosted library and plays from there.',
-  notOnDevice: 'Not on a device yet. It stays in your hosted library and plays from there.',
+  noFingerprint: 'SelectaDJ has no fingerprint for this upload, so it can’t be matched. It stays in your cloud library and plays from there.',
+  notOnDevice: 'Not on a device yet. It stays in your cloud library and plays from there.',
   differentAudio: 'A song with a similar name is on your device, but its audio is different (perhaps another encoding), so the two are kept apart. Each mix keeps using the one it already uses.',
-  deviceOnly: 'Added on a device, with no hosted copy. That’s fine: it plays from the device.',
+  deviceOnly: 'Added on a device, with no copy in your cloud library. That’s fine: it plays from the device.',
 };
 
 const normal = (text: string) => text.toLowerCase().replace(/\.[a-z0-9]{2,5}$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
 /** Match hosted assets to local songs by content hash. Pure, so it can be tested on its own. */
-export function reconcile(assets: HostedAsset[], songs: LocalSong[]): ReconciledRow[] {
+export function reconcile(assets: CloudLibraryAsset[], songs: LocalSong[]): ReconciledRow[] {
   const byHash = new Map<string, LocalSong>();
   for (const song of songs) {
     const hash = song.content_sha256.toLowerCase();
@@ -73,12 +73,12 @@ export function reconcile(assets: HostedAsset[], songs: LocalSong[]): Reconciled
 
 type PageResult<T> = { items: T[]; truncated: boolean };
 
-async function allAssets(request: Request): Promise<PageResult<HostedAsset>> {
-  const found: HostedAsset[] = [];
+async function allAssets(request: Request): Promise<PageResult<CloudLibraryAsset>> {
+  const found: CloudLibraryAsset[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const query: string = cursor ? `?limit=${PAGE}&cursor=${encodeURIComponent(cursor)}` : `?limit=${PAGE}`;
-    const answer: { assets: HostedAsset[]; next_cursor?: string | null } = await request(`/assets${query}`, { method: 'GET' });
+    const answer: { assets: CloudLibraryAsset[]; next_cursor?: string | null } = await request(`/assets${query}`, { method: 'GET' });
     found.push(...answer.assets);
     cursor = answer.next_cursor ?? null;
     if (!cursor) break;
@@ -129,11 +129,11 @@ export function ReconciliationPanel({ request }: { request: Request }) {
 
   return (
     <section className="cloud-card cloud-reconcile" aria-labelledby="cloud-reconcile-title">
-      <p className="cloud-eyebrow">Your hosted and device music</p>
+      <p className="cloud-eyebrow">Your cloud library and device music</p>
       <h2 id="cloud-reconcile-title">How your libraries line up</h2>
-      <p>SelectaDJ compares the audio itself, not the names. This only looks: it never deletes, moves or copies anything, and your hosted library stays as it is.</p>
+      <p>SelectaDJ compares the audio itself, not the names. This only looks: it never deletes, moves or copies anything, and your cloud library stays as it is.</p>
       <div className="cloud-reconcile-next-steps">
-        <p>To bring hosted music onto this device, download your hosted archive below, then choose the extracted original files here. SelectaDJ checks their contents in this browser; it never transfers audio between Cloud and this device.</p>
+        <p>To bring music from your cloud library onto this device, download your cloud library archive below, then choose the extracted original files here. SelectaDJ checks their contents in this browser; it never transfers audio between Cloud and this device.</p>
         <div className="cloud-actions">
           <a href="#cloud-data-title">Go to your account export</a>
           <button type="button" onClick={() => navigate('/library')}>Add music from this device</button>
@@ -170,18 +170,18 @@ function Report({ rows, truncated, onRefresh }: { rows: ReconciledRow[]; truncat
   if (!rows.length) {
     return (
       <EmptyState title="Nothing to compare yet" actions={<button type="button" onClick={onRefresh}>Check again</button>}>
-        There’s nothing to compare yet: no hosted uploads and no songs added on a device.
+        There’s nothing to compare yet: no uploads in your cloud library and no songs added on a device.
       </EmptyState>
     );
   }
   return (
     <>
       {truncated && <p role="status">This report reached the 10,000-item safety limit. It may not include every item; narrow your library or ask support for a full reconciliation.</p>}
-      <p role="status">{matched.length} matched · {hosted.length} only in your hosted library · {device.length} only on your devices</p>
+      <p role="status">{matched.length} matched · {hosted.length} only in your cloud library · {device.length} only on your devices</p>
       {!!matched.length && (
         <Group title="Matched" rows={matched} />
       )}
-      {!!hosted.length && <Group title="Only in your hosted library" rows={hosted} />}
+      {!!hosted.length && <Group title="Only in your cloud library" rows={hosted} />}
       {!!device.length && <Group title="Only on your devices" rows={device} />}
       <button type="button" onClick={onRefresh}>Check again</button>
     </>
@@ -200,7 +200,7 @@ function Group({ title, rows }: { title: string; rows: ReconciledRow[] }) {
             <li key={key}>
               <Truncate className="cloud-reconcile-name" text={name} />
               {row.kind === 'matched' && <Status kind="ready">Matched</Status>}
-              {row.kind === 'hosted_only' && <Status kind="unavailable">Hosted only</Status>}
+              {row.kind === 'hosted_only' && <Status kind="unavailable">Cloud library only</Status>}
               {row.kind === 'device_only' && <Status kind="planned">On your device</Status>}
               <small>{row.kind === 'matched' ? `${row.reason} On your device as ${row.song.title} · ${row.song.artist}.` : row.reason}</small>
             </li>

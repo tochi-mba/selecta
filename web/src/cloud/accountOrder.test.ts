@@ -4,7 +4,7 @@ import { setFlags } from '../flags';
 import { forgetAccountMeasured } from './accountFacts';
 import { accountOrderPlanner, mergeOrder, ORDER_NEEDS, orderBody, type OrderPlanner } from './accountOrder';
 import { CloudError } from './api';
-import { mixFamily, type PlayableSong } from './localFirstMixes';
+import { mixFamily, type PlayableSong } from './deviceMusicMixes';
 import { DEFAULT_STEERING, recipeStore } from './recipeStore';
 
 // docs/engineering/device-to-account.md, "A mix's order": the account's answer orders the measured

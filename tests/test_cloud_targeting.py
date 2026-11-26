@@ -688,9 +688,9 @@ def test_explain_names_a_missing_plan_and_a_plan_that_includes_the_feature():
 
 def test_explain_in_local_mode_says_plans_and_rules_do_not_apply():
     found = explain("child", LOCAL)
-    assert found.steps[2] == t.Step("plan", None, "local", "local mode has no plans")
-    assert found.steps[3] == t.Step("rules", None, "local", "local mode has no rules")
-    assert found.lines()[2] == "plan: n/a (local) local mode has no plans"
+    assert found.steps[2] == t.Step("plan", None, "local", "Desktop has no plans")
+    assert found.steps[3] == t.Step("rules", None, "local", "Desktop has no rules")
+    assert found.lines()[2] == "plan: n/a (local) Desktop has no plans"
     assert found.lines()[4] == "requires: yes (on) plain default"
 
 

@@ -54,7 +54,7 @@ def parse_lock(data: dict) -> list[PinnedModel]:
         relative = PurePosixPath(model.path)
         problems = [
             why for bad, why in (
-                (not allowed_in_cloud(model_id), "is not allowed in cloud mode by the licence "
+                (not allowed_in_cloud(model_id), "is not allowed in Cloud by the licence "
                                                  "register"),
                 (not model.url.startswith("https://"), "must download over https"),
                 (not SHA256.fullmatch(model.sha256), "needs a full lower-case SHA-256"),

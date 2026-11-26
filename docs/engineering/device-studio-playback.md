@@ -26,7 +26,7 @@ of that missing, nothing here runs and playback is exactly as before.
 
 ## The life of a seam
 
-1. **Pair known.** Each time the playing position or the mix changes, `localFirstPlayer.ts` resolves
+1. **Pair known.** Each time the playing position or the mix changes, `deviceMusicPlayer.ts` resolves
    the playing song and the next two and calls `studio.follow(order, position)`. The wanted seams
    are (playing, next) and (next, the one after): two ahead, chosen because the speaker's decode
    cache keeps three songs (`loader.ts` KEEP_DECODED), exactly the three these two seams read.

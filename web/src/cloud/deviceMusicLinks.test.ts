@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { LinkList, MixData, Request } from '../api';
 import { setFlags } from '../flags';
-import { asLink, linksFamily, NO_PREVIEW_HERE, pairInto, type CloudLink } from './localFirstLinks';
-import { localFirstRequest } from './localFirstRequest';
-import type { PlayableSong } from './localFirstMixes';
+import { asLink, linksFamily, NO_PREVIEW_HERE, pairInto, type CloudLink } from './deviceMusicLinks';
+import { deviceMusicRequest } from './deviceMusicRequest';
+import type { PlayableSong } from './deviceMusicMixes';
 import { recipeStore, WORKED_OUT_LIVE, type Recipe } from './recipeStore';
 
 // Word connections in browser-first Cloud: links come from the Cloud API's lyric lookups, a pair
@@ -282,7 +282,7 @@ describe('Word connections through the whole adapter', () => {
       return fake.cloud(path, init);
     }) as Request;
     const store = recipeStore(cloud, 'ws-1');
-    const request = localFirstRequest(cloud, { recipes: store, here: async () => new Map([[1, 'here' as const], [2, 'here' as const], [3, 'here' as const]]) });
+    const request = deviceMusicRequest(cloud, { recipes: store, here: async () => new Map([[1, 'here' as const], [2, 'here' as const], [3, 'here' as const]]) });
     expect((await request<LinkList>('/links?q=&limit=60')).links).toHaveLength(1);
     const paired = await request<MixData>('/mix/pair', { method: 'POST', body: JSON.stringify({ a: 1, b: 2 }) });
     expect(paired.mix.map((item) => item.song_id)).toEqual([1, 2]);

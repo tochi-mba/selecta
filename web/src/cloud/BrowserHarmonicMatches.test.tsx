@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MediaResolver, ResolvedTrack } from '../media';
 import { fakeBackend, Reply } from '../test/backend';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
-import type { BrowserAudition, BrowserDiscovery, ProfileProgress } from './localFirstDiscoveries';
+import type { BrowserAudition, BrowserDiscovery, ProfileProgress } from './deviceMusicDiscoveries';
 
 // cloud.browser_harmonic: Make a Mix > Harmonic matches in a browser library. The page says what
 // it measured (whole-song keys, here) and what its preview plays (two stretches, as recorded).

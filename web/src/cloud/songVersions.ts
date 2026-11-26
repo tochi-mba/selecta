@@ -1,6 +1,6 @@
 import type { ControllerLink, WhereHeld } from '../devices/controller';
 import type { MediaResolver } from '../media';
-import type { CatalogueSong } from './localFirstRequest';
+import type { CatalogueSong } from './deviceMusicRequest';
 
 /** One song, however many files of it (ADR-0469 amendment 2).
  *

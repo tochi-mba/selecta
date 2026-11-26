@@ -1,5 +1,7 @@
 # ADR-0392 - Two runtime modes, one codebase
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 5/5 Implemented; 0/5 In progress; 0/5 Not started.
 - **Independent verification:** 0/5 Verified.

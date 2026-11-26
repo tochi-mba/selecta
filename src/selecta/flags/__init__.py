@@ -301,7 +301,7 @@ def _cloud_problems(flag: Flag) -> list[str]:
         if not isinstance(reason, str) or len(reason.strip()) < 20:
             found.append(f"{flag.id}: cloud_surface_reason must explain the exclusion")
         if "cloud" not in flag.modes:
-            found.append(f"{flag.id}: a Cloud exclusion needs cloud mode")
+            found.append(f"{flag.id}: a Cloud exclusion needs SELECTA_MODE=cloud")
         if any(surface.startswith("cloud.") for surface in flag.surfaces):
             found.append(f"{flag.id}: a flag with Cloud surfaces cannot also exclude them")
     elif flag.cloud_surface_reason is not None:

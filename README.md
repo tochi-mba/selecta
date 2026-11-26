@@ -9,9 +9,11 @@ An auto DJ for your own music folder. Point it at a folder and it plays a set in
 
 It runs entirely on your PC. Your music never leaves your machine, and no audio is ever stored in this repo.
 
-This README describes **local mode**. The optional SelectaDJ Cloud edition has a separate
-[mode-by-mode guarantee table](docs/saas/README.md#guarantees-by-runtime-mode); adding Cloud does
-not weaken local mode's privacy, storage, network, or user-control guarantees.
+This README describes **Desktop**: SelectaDJ on your own computer (`SELECTA_MODE=local` in the
+code). SelectaDJ Cloud, the signed-in product in a browser, keeps each song on the member's device
+or in their cloud library; [three places](docs/saas/README.md#three-places) says what each does,
+with the [guarantees in each place](docs/saas/README.md#guarantees-in-each-place). Adding Cloud
+does not weaken Desktop's privacy, storage, network, or user-control guarantees.
 
 **Status: early build.** You can build a mix, edit how every song hands over to the next, hear each seam, play the set and save it as a file. Whether it sounds good is still being judged by ear, reel by reel. See [docs/acceptance.md](docs/acceptance.md) for exactly what works and what doesn't.
 
@@ -132,14 +134,14 @@ Use `dev.cmd cloud --check` to start all services, validate identity, API readin
 workers and Vite proxies, then stop them cleanly. `--no-browser`, `--verbose`,
 `--startup-timeout 300`, `--api-port`, `--site-port`, `--identity-port`,
 `--data-dir` and `--isolated` are supported. `--isolated` uses a separate
-`.cache/selecta-cloud-isolated/` folder. Cloud mode requires uv, Node.js 22.12+,
+`.cache/selecta-cloud-isolated/` folder. The Cloud stack requires uv, Node.js 22.12+,
 pnpm and FFmpeg on your PATH. Use Ctrl+C to stop launcher-owned services. No
 production WorkOS key or live Stripe key is allowed; the launcher refuses them.
 
 This is **Cloud application development**, not hosted deployment. It does not start
 managed R2, production WorkOS/Stripe or a remote worker gateway. To test PostgreSQL
 instead of SQLite, set `SELECTA_DEV_DATABASE_URL` to a development database
-connection URL before launching. Normal `dev.cmd` continues running local mode.
+connection URL before launching. Normal `dev.cmd` continues running Desktop.
 ## Working on Selecta
 
 **One command starts local development:** the Python API (auto-reloads when code changes) and the
@@ -156,7 +158,7 @@ You need [uv](https://docs.astral.sh/uv/), [Node.js 22+](https://nodejs.org/), a
 `uv run` and performs an incremental, lockfile-checked `pnpm install` itself.
 Install [ffmpeg](https://ffmpeg.org/download.html) for music analysis and playback; missing ffmpeg
 is reported prominently rather than hidden. No production Cloud credentials or hosted services are
-needed for **local mode**. Set `SELECTA_HOME` to use a separate development library, otherwise
+needed for **Desktop**. Set `SELECTA_HOME` to use a separate development library, otherwise
 the usual user data folder is used.
 
 You can see progress while it starts. Every stage is labelled, API and site output are prefixed,
@@ -188,7 +190,7 @@ The existing server is never stopped when this launcher exits.
 | `dev.cmd` | Start the full **local** API + Vite dev stack and open the browser |
 | `dev.cmd --no-browser` | Start the stack without opening a browser |
 | `dev.cmd --check` | Start both services, verify API/site/proxy, then cleanly stop |
-| `dev.cmd doctor` | Show Python, uv, Node, pnpm, ffmpeg, local mode and data configuration |
+| `dev.cmd doctor` | Show Python, uv, Node, pnpm, ffmpeg, Desktop and data configuration |
 | `dev.cmd --api-port 8740 --site-port 5180` | Request different starting ports |
 | `dev.cmd --reuse-server` | Explicitly reuse an existing API on port 8733 |
 | `dev.cmd --isolated` | Use a separate development-only library without touching your existing library or migrating legacy data |

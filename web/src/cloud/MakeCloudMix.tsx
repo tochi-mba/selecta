@@ -5,7 +5,7 @@ import { Skeleton } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { countOf, Truncate } from '../ui/format';
 import { CloudError, type Account, type Api, type Asset } from './api';
-import { EmptyState } from './LocalFirstEmpty';
+import { EmptyState } from './DeviceMusicEmpty';
 import { NumberRoll } from '../feel/numberRoll';
 import { CoverArt } from '../views/CoverArt';
 import { useFeelAlive } from './CloudRailFeel';

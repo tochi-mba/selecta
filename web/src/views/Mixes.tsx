@@ -415,7 +415,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       {on('mixes.ideas') && waiting.length > 0 && (
         <section className="waiting">
           <h2 className="section-title">Needs more mix-ready songs</h2>
-          <p className="hint">These ideas do not have enough eligible recordings yet. You can try another available idea, or analyse more local songs. No new mix will be made from an unavailable idea.</p>
+          <p className="hint">These ideas do not have enough eligible recordings yet. You can try another available idea, or analyse more songs. No new mix will be made from an unavailable idea.</p>
           <ul>
             {waiting.map((card) => (
               <li key={card.key}>

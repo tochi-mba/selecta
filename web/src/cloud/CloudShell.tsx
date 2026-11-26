@@ -30,17 +30,17 @@ import { RequestsContext, RequestsPanel, useRequests, type RequestRow } from '..
 import type { View, ViewProps } from '../views/shared';
 import { planName, type Account, type Api } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
-import { forgetHostedAssets, hostedAssets, hostedResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './hostedMedia';
-import { isHostedAccount } from './localFirstGate';
+import { forgetCloudLibraryAssets, cloudLibraryAssets, cloudLibraryResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './cloudLibraryMedia';
+import { isHostedAccount } from './deviceMusicGate';
 import { CloudLibrary } from './CloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
 import { CurrentMix } from '../views/CurrentMix';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { lucyTransport as currentLucyTransport, setLucyTransport } from '../lucy/client';
-import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './LocalFirstEmpty';
-import { useLocalFirstPlayer } from './localFirstPlayer';
-import { BROWSER_MIX_NEEDS } from './localFirstMixes';
-import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
+import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './DeviceMusicEmpty';
+import { useLocalFirstPlayer } from './deviceMusicPlayer';
+import { BROWSER_MIX_NEEDS } from './deviceMusicMixes';
+import { EMPTY_MIX, deviceMusicRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './deviceMusicRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
 import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
@@ -49,7 +49,7 @@ import { DEVICE_REGISTERED } from '../devices/playbackWire';
 import { ControllerListen } from '../devices/ControllerListen';
 import { tabLog } from '../devices/audioTab';
 import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
-import { ROOM_REQUEST_EVENT } from './localFirstRequests';
+import { ROOM_REQUEST_EVENT } from './deviceMusicRequests';
 import { useRoomRounds, addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
@@ -74,7 +74,7 @@ import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
 import { useAccountMix } from './useAccountMix';
-import { MixProblem, StatusProblem, ThisDevice } from './localFirstParts';
+import { MixProblem, StatusProblem, ThisDevice } from './deviceMusicParts';
 import { setTabBusy } from './accountTabs';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
 import { OtherTabLine } from '../devices/OtherTabLine';
@@ -93,8 +93,8 @@ import { placingOn } from './accountPlacements';
  *
  * The same Shell, manifest, router and views as local mode: Listen, Make a Mix, My Mixes and
  * Library, with Cloud's own surfaces in More. Views ask through the adapted, authenticated request
- * (localFirstRequest.ts); the player is the browser engine through the playback session
- * (localFirstPlayer.ts). CloudApp mounts this only when the account has the local-first experience
+ * (deviceMusicRequest.ts); the player is the browser engine through the playback session
+ * (deviceMusicPlayer.ts). CloudApp mounts this only when the account has the local-first experience
  * and `cloud.local_first` is on; otherwise the hosted pages render exactly as before.
  */
 const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit: '/mix/current/edit', Library: '/library', Words: '/discover', Workshop: '/workshop' };
@@ -114,7 +114,7 @@ const LUCY_POLL_MS = 500;
 const Lucy = lazy(() => import('../views/Lucy'));
 const ListeningRoom = lazy(() => import('../listening-room/ListeningRoom')); // tools.listening_room
 
-export function LocalFirstShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
+export function CloudShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
   api: Api;
   account: Account;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */
@@ -262,7 +262,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       return found;
     },
     hosted: coexisting ? async (songs) => {
-      const listing = hostedAssets(api, workspaceId); // read again after an upload (hostedMedia.ts)
+      const listing = cloudLibraryAssets(api, workspaceId); // read again after an upload (cloudLibraryMedia.ts)
       const assets = await listing;
       return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
     } : undefined,
@@ -288,7 +288,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       onServed: (from) => setServedFrom(from.cached ? { at: from.at } : null),
     } : undefined,
   }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
-  const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
+  const request = useMemo(() => deviceMusicRequest(cloud, sources), [cloud, sources]);
   // imports register through the adapted request, so each landed batch reads a fresh catalogue
   const media = useMemo(() => mediaRequest(request), [request]);
   mediaRef.current = media;
@@ -310,7 +310,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         }).catch(() => undefined);
       }
     }, { sharedCache: on('cloud.content_cache') }), workspaceId),
-    hosted: coexisting ? hostedResolver(api, workspaceId, {
+    hosted: coexisting ? cloudLibraryResolver(api, workspaceId, {
       songs: () => programme.current,
       shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
     }) : null,
@@ -337,7 +337,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   refreshStatusRef.current = refreshStatus;
   // an upload accepted (or a stored song changed): read the hosted copies and the catalogue again
   useEffect(() => {
-    const changed = () => { forgetHostedAssets(workspaceId); refreshStatus(); };
+    const changed = () => { forgetCloudLibraryAssets(workspaceId); refreshStatus(); };
     window.addEventListener(LIBRARY_CHANGED_EVENT, changed);
     return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, changed);
   }, [workspaceId, refreshStatus]);
@@ -906,7 +906,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       case 'missing':
         return <PageNotFound />;
       case 'discover':
-        // Word connections are answered in the browser (localFirstLinks.ts) while
+        // Word connections are answered in the browser (deviceMusicLinks.ts) while
         // discover.word_links is on for the account; with it off this page is as it was
         if (route.tab === 'words' && on('discover.word_links')) return <Links {...shared} tab="words" />;
         // falls through

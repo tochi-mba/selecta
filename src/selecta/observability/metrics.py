@@ -74,7 +74,8 @@ SERIES: Mapping[str, Series] = {
         Series("selecta_rate_limited_total", "counter",
                "Cloud API requests refused by a rate limit, by bucket.", ("bucket",)),
         Series("selecta_api_requests_total", "counter",
-               "Cloud API requests by browser-first/hosted cohort and HTTP status class.",
+               "Cloud API requests by where the account's music lives (device or cloud library) "
+               "and HTTP status class.",
                ("cohort", "status_class")),
         Series("selecta_oldest_queued_seconds", "gauge",
                "Age of the oldest queued job, by lane.", ("lane",), unit="s"),

@@ -1,13 +1,13 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { HostedAsset, LocalSong, reconcile, ReconciliationPanel } from './ReconciliationPanel';
+import { CloudLibraryAsset, LocalSong, reconcile, ReconciliationPanel } from './ReconciliationPanel';
 
 const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
 const C = 'c'.repeat(64);
 
-const assets: HostedAsset[] = [
+const assets: CloudLibraryAsset[] = [
   { id: 'as-1', name: 'Track One.mp3', sha256: A.toUpperCase() },
   { id: 'as-2', name: 'Night Drive.flac', sha256: B },
   { id: 'as-3', name: 'Mystery.wav', sha256: null },
@@ -52,9 +52,9 @@ describe('ReconciliationPanel', () => {
   it('lists matched and unmatched across every page, with reasons', async () => {
     const { request } = server();
     render(<ReconciliationPanel request={request} />);
-    expect(await screen.findByText('1 matched · 3 only in your hosted library · 2 only on your devices')).toBeInTheDocument();
+    expect(await screen.findByText('1 matched · 3 only in your cloud library · 2 only on your devices')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Matched' })).getByText('Track One.mp3')).toBeInTheDocument();
-    const hosted = screen.getByRole('region', { name: 'Only in your hosted library' });
+    const hosted = screen.getByRole('region', { name: 'Only in your cloud library' });
     expect(hosted).toHaveTextContent('Night Drive.flac');
     expect(hosted).toHaveTextContent('no fingerprint');
     expect(screen.getByRole('region', { name: 'Only on your devices' })).toHaveTextContent('Only Local');

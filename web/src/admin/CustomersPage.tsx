@@ -21,14 +21,14 @@ export function statusBadge(status: string) {
   return <Badge tone={status === 'active' ? 'ok' : 'bad'}>{words(status)}</Badge>;
 }
 
-/** Library and storage in words that are true for the account's mode (doc 07b §7B.4). */
+/** Library and storage in words that are true for where the account's music lives (doc 07b §7B.4). */
 export function libraryWords(row: Pick<CustomerRow, 'mode' | 'committed_bytes' | 'limit_bytes' | 'device_songs' | 'devices'>) {
   const stored = row.committed_bytes ?? 0;
   if (row.mode === 'hosted') return `${bytes(stored)} of ${bytes(row.limit_bytes ?? 0)}`;
   const songs = row.device_songs ?? 0;
   const devices = row.devices ?? 0;
   const local = songs ? `${songs.toLocaleString()} songs on ${devices} device${devices === 1 ? '' : 's'}` : 'No songs reported by devices yet';
-  return stored > 0 ? `${local}; Cloud storage off, ${bytes(stored)} still stored` : local;
+  return stored > 0 ? `${local}; cloud library off, ${bytes(stored)} still stored` : local;
 }
 
 /** Customers: search, then open a record. The list never loads everyone (searches are audited). */
@@ -59,10 +59,10 @@ function CustomerSearch({ query, api }: { query: string; api: ReturnType<typeof 
           empty={query ? <Empty title="No customers match.">Try the full email, or paste a user or workspace id.</Empty> : <Empty title="Search to begin.">The list starts empty on purpose: it never shows every customer at once.</Empty>}
           cols={[
             { key: 'email', label: 'Email', sort: (r) => r.email ?? '', render: (r) => <>{r.email ?? r.id}{r.staff && <> <Badge>Staff</Badge></>}</> },
-            { key: 'mode', label: 'Mode', sort: (r) => r.mode, help: 'Browser: their music stays on their devices (the default). Cloud storage: the hosted media grant.', render: (r) => <Badge tone={r.mode === 'hosted' ? 'warn' : 'neutral'}>{r.mode === 'hosted' ? 'Cloud storage' : 'Browser'}</Badge> },
+            { key: 'mode', label: 'Music', sort: (r) => r.mode, help: 'On devices: their music stays on their devices (the default). Cloud library: the cloud.hosted_media grant.', render: (r) => <Badge tone={r.mode === 'hosted' ? 'warn' : 'neutral'}>{r.mode === 'hosted' ? 'Cloud library' : 'On devices'}</Badge> },
             { key: 'plan_id', label: 'Plan', sort: (r) => r.plan_id, render: (r) => planBadge(r.plan_id) },
             { key: 'status', label: 'Status', sort: (r) => r.status, render: (r) => statusBadge(r.status) },
-            { key: 'library', label: 'Library', help: 'Cloud storage accounts: stored of allowed. Browser accounts: what their devices report, not stored by SelectaDJ.', render: (r) => <span title={r.mode === 'browser' ? 'Not stored by SelectaDJ' : undefined}>{libraryWords(r)}</span> },
+            { key: 'library', label: 'Library', help: 'Cloud library accounts: stored of allowed. Accounts with music on their devices: what their devices report, not stored by SelectaDJ.', render: (r) => <span title={r.mode === 'browser' ? 'Not stored by SelectaDJ' : undefined}>{libraryWords(r)}</span> },
             { key: 'created_at', label: 'Joined', sort: (r) => r.created_at, render: (r) => <Time at={r.created_at} /> },
             { key: 'recent_failures', label: 'Failed jobs (24 h)', numeric: true, optional: true, sort: (r) => r.recent_failures },
           ]} />

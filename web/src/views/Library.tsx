@@ -619,7 +619,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const compact = preferences.density === 'compact';
   const on = useFlags();
   const cardLayout = preferences.libraryLayout === 'cards' && on('library.card_view');
-  // a browser that measures songs itself can measure one first (localFirstLibrary.ts)
+  // a browser that measures songs itself can measure one first (deviceMusicLibrary.ts)
   const measuresFirst = (song: LibrarySong) => !!browser && flagListed('cloud.browser_harmonic') && song.detected_bpm === null && song.availability === 'here';
   // batch actions need at least one thing they can do
   const batch = on('library.batch') && (on('library.priority') || on('library.never_play'));
@@ -776,7 +776,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {!browser && committedRows?.length === 0 && !failed && (
         <section className="empty-state" data-glow="">
           <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
-          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while SelectaDJ scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once SelectaDJ has analysed it. Show all songs to see how far each one has got.' : !query && filter !== 'all' ? `No song is in ${FILTERS.find((option) => option.name === filter)?.label ?? filter} right now. Show all songs to see the rest of your library.` : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder of your music to begin. The original audio stays in place while SelectaDJ scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once SelectaDJ has analysed it. Show all songs to see how far each one has got.' : !query && filter !== 'all' ? `No song is in ${FILTERS.find((option) => option.name === filter)?.label ?? filter} right now. Show all songs to see the rest of your library.` : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
           {/* WP3 pilot: set-aside songs never appear under Everything, so a search there can miss them */}
           {query && filter !== 'set_aside' && counts.set_aside > 0 && (
             <p className="hint">Set-aside songs are only searched under Set aside.</p>

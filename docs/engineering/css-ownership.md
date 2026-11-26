@@ -9,12 +9,12 @@ Later sheets win ties of equal specificity. A sheet only refines what an earlier
 | Order | Sheet | Owns |
 | --- | --- | --- |
 | 1 | `styles/tokens.css` | Every value: palette, semantic roles (text, surface, focus, selection, status, border, edge), spacing, type, motion, density and theme overrides. The only place a raw colour may appear. |
-| 2 | `styles/boot.css` | What shows before an app has a frame: the runtime and sign-in messages (`.cloud-runtime-message`, `.cloud-welcome`, `.cloud-onboarding`, drawn by `RuntimeApp.tsx`, `CloudRoot`, `CloudApp` and `CloudStates`) and the brand mark (`.brand-mark-badge` from `ui/BrandMark.tsx`, and `.cloud-mark` on the older screens). Loaded right after the tokens, so these screens are styled in local mode and in the Cloud before any page sheet arrives (moved out of `cloud.css` in `1d41a445`). |
+| 2 | `styles/boot.css` | What shows before an app has a frame: the runtime and sign-in messages (`.cloud-runtime-message`, `.cloud-welcome`, `.cloud-onboarding`, drawn by `RuntimeApp.tsx`, `CloudRoot`, `CloudApp` and `CloudStates`) and the brand mark (`.brand-mark-badge` from `ui/BrandMark.tsx`, and `.cloud-mark` on the older screens). Loaded right after the tokens, so these screens are styled on Desktop and in the Cloud before any page sheet arrives (moved out of `cloud.css` in `1d41a445`). |
 | 3 | `style.css` | Element defaults and the legacy page layouts that came before the split sheets. |
 | 4 | `styles/shell.css` | The frame around every page: rail, phone tab bar, context bar, mini-player, overlays, notifications, skeletons. |
 | 5 | `styles/polish.css` | Shared finish over legacy layouts: hit targets, focus that never moves, reveal and pop-in motion, the exit protocol's `[data-closing]` animations and their reduced-motion fade, reduced-motion overrides. |
 | 6 | `styles/foundation.css` | Small building blocks every page uses: primary action, Activity, command palette parts. |
-| 7 | `styles/cloud-ui.css` | The Cloud look for the shared primitives, scoped to `:root[data-cloud='on']` so local mode is untouched: buttons, fields, page headers, cards, card grids, badges, empty states and the page arriving. |
+| 7 | `styles/cloud-ui.css` | The Cloud look for the shared primitives, scoped to `:root[data-cloud='on']` so Desktop is untouched: buttons, fields, page headers, cards, card grids, badges, empty states and the page arriving. |
 | 8 | `styles/cloud-shell.css` | The Cloud shell, scoped to `.shell[data-mode='cloud']`: the rail and its account foot, the top bar and room pill, the phone tab bar and the mini player. It refines `styles/shell.css` and never restates one of its Cloud-scoped rules. |
 | 9 | `styles/listening.css` | Onboarding, Explore (Make a Mix), Listen, My Mixes and Requests. |
 | 10 | `styles/creation.css` | The editor, the transition inspector and the Studio. |
@@ -46,8 +46,8 @@ These sheets load with their own components rather than from `main.tsx`, so they
 
 | Sheet | Loaded by | Owns |
 | --- | --- | --- |
-| `cloud/cloud.css` | `cloud/CloudApp.tsx` | The legacy Cloud rail (`.cloud-shell`, kept for `cloud.hosted_shell` off), the words and actions every Cloud page shares (in either shell), the home hero and cards, account, billing, plan cards and meters, uploads, the hosted library, the local-first onboarding spine, the cutover notice and the reconciliation report. Re-expanded onto meaning, type and radius roles in `99d7acc8`. |
-| `cloud/libraryWorkspace.css` | `cloud/CloudLibrary.tsx`, `cloud/ConnectMusic.tsx`, `cloud/ImportChip.tsx`, `cloud/CloudWorkspace.tsx`, `cloud/StorageCard.tsx` | Browser-first Cloud's Library (toolbar, rows, selection bar, the banner for a browser without the music, the import card) and Workspace (tiles, attention list, sources, storage, grouped diagnostics). |
+| `cloud/cloud.css` | `cloud/CloudApp.tsx` | The legacy Cloud rail (`.cloud-shell`, kept for `cloud.hosted_shell` off), the words and actions every Cloud page shares (in either shell), the home hero and cards, account, billing, plan cards and meters, uploads, the cloud library, the onboarding spine for music on the device, the cutover notice and the reconciliation report. Re-expanded onto meaning, type and radius roles in `99d7acc8`. |
+| `cloud/libraryWorkspace.css` | `cloud/CloudLibrary.tsx`, `cloud/ConnectMusic.tsx`, `cloud/ImportChip.tsx`, `cloud/CloudWorkspace.tsx`, `cloud/StorageCard.tsx` | Cloud's Library for music on the device (toolbar, rows, selection bar, the banner for a browser without the music, the import card) and Workspace (tiles, attention list, sources, storage, grouped diagnostics). |
 | `rooms/rooms.css` | `rooms/RoomPanel.tsx` | Rooms hosting: the room panel, its share code and QR, settings, guests and presence (radius, surface and type roles since `0f8c0ba7`). |
 | `devices/devices.css` | `devices/DevicesPanel.tsx`, `devices/PlayingBar.tsx`, `devices/RemoteListen.tsx` | The devices list, the "playing on" bar (radius, surface and line roles since `cdefdf1d`) and the remote on Listen (`.remote-*`, its own block at the end of the sheet). |
 

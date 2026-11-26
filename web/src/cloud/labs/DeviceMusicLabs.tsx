@@ -5,7 +5,7 @@ import { Badge, Notice, SettingsCard } from '../AccountLayout';
 import { messageOf } from '../api';
 
 /**
- * BF-0467-05: the Labs card for browser-first Cloud. It asks the server where the member stands
+ * BF-0467-05: the Labs card for music on the member's devices. It asks the server where the member stands
  * (`GET /api/account/labs/local-first`) and offers exactly what is true: join while Labs is open,
  * leave whenever they are in (even after Labs closes), and a feedback box while they are in.
  * When Labs is closed and the member is not in, it renders nothing, so the settings page reflows.
@@ -31,7 +31,7 @@ function keepDraft(text: string) {
   } catch { /* this visit only */ }
 }
 
-export function LocalFirstLabs({ request, onChanged }: { request: Request; onChanged?: () => void }) {
+export function DeviceMusicLabs({ request, onChanged }: { request: Request; onChanged?: () => void }) {
   const [status, setStatus] = useState<LabsStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
@@ -59,7 +59,7 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
     refocus.current = true;
     try {
       await request(`${BASE}/${path}`, { method: 'POST' });
-      setNote(path === 'join' ? 'You are in. Browser-first Cloud is on for your account.' : 'You have left. Your account is back to the usual Cloud.');
+      setNote(path === 'join' ? 'You are in. Your account now plays music from your own devices.' : 'You have left. Your account is back to how it was.');
       showToast(path === 'join' ? 'You joined Labs.' : 'You left Labs.');
       onChanged?.();
     } catch (error) {
@@ -88,14 +88,14 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
     <SettingsCard
       id="cloud-labs"
       className="cloud-labs"
-      title="Labs: browser-first Cloud"
+      title="Labs: music on your devices"
       badge={<Badge tone={status.enrolled ? 'accent' : undefined}>{status.enrolled ? 'You are in' : 'Preview'}</Badge>}
       about="Your music stays on your own devices and plays in this browser. It is a preview, and you can leave at any time."
       actions={status.enrolled
         ? <button ref={main} type="button" aria-disabled={busy || undefined} onClick={() => { if (!busy) setAsking(true); }}>Leave Labs</button>
         : <button ref={main} type="button" className="primary" aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => { if (!busy) void act('join'); }}>{busy ? 'Joining…' : 'Join Labs'}</button>}
     >
-      {status.enrolled && !status.on && <Notice tone="warn">You are in Labs, but browser-first Cloud is paused for your account right now.</Notice>}
+      {status.enrolled && !status.on && <Notice tone="warn">You are in Labs, but music on your devices is paused for your account right now.</Notice>}
       {status.enrolled && status.labs_open && (
         <div className="cloud-labs-feedback">
           <label htmlFor="cloud-labs-feedback">Tell us what you noticed</label>
@@ -109,8 +109,8 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
         <ConfirmDialog
           title="Leave Labs?"
           body={status.labs_open
-            ? 'Your account goes back to the usual Cloud. Your music stays where it is, and you can join again while Labs is open.'
-            : 'Your account goes back to the usual Cloud. Your music stays where it is. Labs is closed to new members now, so you could not join again until it reopens.'}
+            ? 'Your account goes back to how it was. Your music stays where it is, and you can join again while Labs is open.'
+            : 'Your account goes back to how it was. Your music stays where it is. Labs is closed to new members now, so you could not join again until it reopens.'}
           confirmLabel="Yes, leave Labs"
           cancelLabel="Stay in Labs"
           onConfirm={() => act('leave')}

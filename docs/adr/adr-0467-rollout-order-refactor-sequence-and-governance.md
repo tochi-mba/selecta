@@ -1,5 +1,7 @@
 # ADR-0467 - Rollout order, refactor sequence and programme governance
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 3/6 Implemented; 2/6 In progress; 1/6 Not started.
 - **Independent verification:** 0/6 Verified.
