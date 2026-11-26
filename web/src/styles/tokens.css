@@ -319,7 +319,9 @@
 
   /* The shell's own shape. All of it is worked out here, on the root, so the page, the player, toasts
      and scrolling are always measured from the same numbers and nothing ends up underneath anything. */
-  --rail-open: 212px;
+  /* 212px at the browser's own text size; with text enlarged the rail grows a little with it, so
+     its names and Request a song are not cut off (never wider than 300px) */
+  --rail-open: clamp(212px, 10rem + 52px, 300px);
   --rail-collapsed: 72px;
   --rail-width: var(--rail-open);
   --rail-offset: var(--rail-width);
