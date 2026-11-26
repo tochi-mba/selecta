@@ -673,6 +673,7 @@ def world(tmp_path, monkeypatch):
                 "display_id": new_id(),
                 "request_id": new_id(),
                 "guest_id": new_id(),
+                "round_id": new_id(),
                 "command_id": new_id(),
                 "ask_id": new_id(),
                 "zone_id": new_id(),
