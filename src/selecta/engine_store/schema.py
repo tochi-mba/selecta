@@ -424,21 +424,31 @@ ENGINE_TABLES = (
 library_metadata = sa.MetaData()
 """Desktop's own engine tables: adopted in place by the library chain, never created anywhere."""
 
-# Only the columns the engine store reads or writes. The hand-made table has more (folder,
-# album, duplicate_of, ...), which these statements simply don't name.
+# The hand-made table of `db.SCHEMA`, every column, as the scanner writes it
+# (`engine_store.library_writes`); `path` is unique there.
 songs = sa.Table(
     "songs",
     library_metadata,
     sa.Column("id", sa.Integer, primary_key=True),
     sa.Column("workspace_id", Id, nullable=False, index=True),
     sa.Column("path", sa.Text, nullable=False),
+    sa.Column("folder", sa.Text, nullable=False),
     sa.Column("size", sa.Integer, nullable=False),
     sa.Column("mtime", sa.Float, nullable=False),
     sa.Column("duration", sa.Float, nullable=False),
     sa.Column("artist", sa.Text, nullable=True),
     sa.Column("title", sa.Text, nullable=True),
+    sa.Column("album", sa.Text, nullable=True),
     sa.Column("genre", sa.Text, nullable=True),
+    sa.Column("year", sa.Text, nullable=True),
+    sa.Column("bitrate", sa.Integer, nullable=True),
+    sa.Column("sample_rate", sa.Integer, nullable=True),
+    sa.Column("lossless", sa.Integer, nullable=False, server_default="0"),
     sa.Column("is_music", sa.Integer, nullable=False),
+    sa.Column("set_aside_reason", sa.Text, nullable=True),
+    # a person's "this is music" (1) or "set it aside" (0); null when they never said
+    sa.Column("music_override", sa.Integer, nullable=True),
+    sa.Column("processing_priority", sa.Integer, nullable=False, server_default="0"),
     # SHA-256 of the file's bytes, as Cloud's catalogue keys a song. Filled in the background
     # (`engine_store.song_hashes`); not a key on Desktop, where two copies may share it.
     sa.Column("content_hash", sa.String(64), nullable=True),
@@ -456,6 +466,8 @@ lyrics = sa.Table(
     sa.Column("workspace_id", Id, nullable=False, index=True),
     sa.Column("status", sa.Text, nullable=False),
     sa.Column("synced", sa.Text, nullable=True),
+    sa.Column("plain", sa.Text, nullable=True),
+    sa.Column("fetched_at", sa.Text, nullable=True),
 )
 
 # What a listener skipped and how far in: Desktop only. It was made by its route on the first skip;
