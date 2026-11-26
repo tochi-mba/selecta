@@ -453,3 +453,33 @@ With the flag off every job, hash and answer is the older one (`tests/test_hoste
 **The local versus Cloud map** (`GET /api/cloud-mixes/capabilities`) is computed from the account's flags; no row says "not yet": the Studio lanes are Desktop only and Cloud needs sign-in, both said as decisions.
 
 **Not run here.** PostgreSQL (row security on the facts and seam writes is the engine store's, already tested in CI), a real worker rendering a core seam, a real upload, the dev cloud stack.
+
+## 13. Uploads join the song they are for (2026-11-26, two-places plan phase 6a)
+
+Branch `feat/cloud-two-places`, flag `storage.upload_identity` (default off, needs
+`cloud.uploads`). A member whose account has the cloud library uploads songs that are already in
+their device library; each upload now lands on the same catalogue song, so its facts,
+corrections, seams, mixes, drafts, requests and ratings carry over. The rules are in
+`audio-identity.md`, "Uploads". In short:
+
+- A file on `POST /api/uploads/plan` may name its `song_id` (and `audio_id`). The plan refuses it
+  per file with `song_mismatch` unless the file is that song; acceptance checks again with the
+  probed hash and the audio id the server reads, and a mismatch is rejected with its storage
+  released (`upload_sessions.song_id`, migration `st0480up01`).
+- Unnamed uploads find their song by any of its file hashes, or by an audio id exactly one live
+  song has; an unsure match becomes a version of that song. A reused row keeps its own hash,
+  title and artist.
+- The duplicate check says "already in your cloud library" for a song uploaded under any of its
+  hashes.
+- `POST /api/uploads/preview` is a dry run, rate limited like the plan and behind the same grant:
+  per file `ok`, `in_cloud_library` or `refused` (`song_mismatch`, `format`, `too_large`,
+  `too_long`, `quota`), the note `long_for_server_mixes` for a song over 30 minutes, and totals
+  (`bytes_needed`, `bytes_left`, `fit` in the given order, `measure_days` under the daily analysis
+  cap, or null when no cap applies). It creates and reserves nothing.
+- An uploaded song a device measured is measured again by the worker, whose facts replace the
+  device's; the member's corrections still win.
+
+Tested through the routes on SQLite (`tests/test_cloud_upload_identity.py`) and the no-grant
+refusal in `tests/test_bf_no_audio_egress.py`. Not run here: PostgreSQL, a real upload, the dev
+cloud stack.
+

@@ -187,8 +187,9 @@ transaction lock per workspace; SQLite writers already queue):
 3. No match, two or more rows, or a deleted match: a new song, exactly as before. A wrong merge
    loses a member's data; a missed merge only costs a re-measure.
 
-An upload (`storage/catalogue_link.py`) still finds its song by the row's own hash only (to-do
-item "An upload of a re-tagged copy becomes its own catalogue song"). The browser computes the audio id in the same read as the file hash where the file is hashed
+With `storage.upload_identity` off, an upload (`storage/catalogue_link.py`) finds its song by the
+row's own hash only; with it on, uploads follow the rules in "Uploads" below. The browser computes
+the audio id in the same read as the file hash where the file is hashed
 whole (up to 64 MB), and in a second streamed pass otherwise (`audioIdentity.fileIdentity`). It
 keeps the id beside the file hash (derived kind `audio`, version `a1`, keyed by the file hash), so
 a file already seen is not read again. A file the import memo recognises without reading is never
@@ -197,3 +198,34 @@ hashes the file (a new browser, a changed file, a folder picked afresh) and regi
 
 With the flag off the columns exist (migrations are not feature switches) but stay empty and are
 never read or matched, and the server drops any `audio_id` it is sent.
+
+## Uploads: the same song from a device
+
+Flag: `storage.upload_identity` (needs `cloud.uploads`; code in `storage/upload_identity.py`). A
+member uploading a song a device already registered must land on that same row, so its facts,
+corrections, seams, mixes, drafts, requests and ratings stay with it.
+
+- **An upload may name its song** (`song_id`, and the device's `audio_id`, on a file of
+  `POST /api/uploads/plan`; kept in `upload_sessions.song_id`). The plan refuses the file
+  (`refusal_code: song_mismatch`) unless the declared file hash is one of the song's hashes, or
+  the declared audio id is the song's. A file hash already known for another song is never
+  this one. Acceptance checks again with the hash the server computed and the audio id it reads
+  from the staged bytes (`library/audio_identity.py`, after the sandbox accepted the file); a
+  mismatch is rejected with `rejection_code: song_mismatch` and its storage released.
+- **Without a named song**, the file hash (the row's own or one in `local_song_hashes`) finds the
+  song; else the audio id the server read, when exactly one live row has it
+  (`register_songs(..., audio_ids=True)`). Two or more rows with that audio id is unsure: the
+  upload becomes a version (`duplicate_of`) of the first one's group, named as that song, never
+  a song that looks separate. No match is a new song, named from the file, as before.
+- **A reused row keeps** its own hash (the new one is recorded in `local_song_hashes`), title,
+  artist and album; a row with no audio id takes the one the server read.
+- **"Already in your cloud library"**: the upload duplicate check also answers for a song with a
+  live upload under any of its hashes (venue uploads never count), and `POST /api/uploads/preview`
+  says so per file before anything is sent.
+- **Measurements.** An uploaded song whose only facts are a device's is measured by the worker,
+  matched through any of its hashes (`hosted_facts.unmeasured`); the worker's facts replace the
+  device's (`facts.wins`), a song with a worker's facts is never measured again, and the member's
+  corrections (`song_overrides`) still win.
+
+Off: none of this runs, the named song and audio id are dropped unread, and the preview route
+answers 403 `flag_off`.
