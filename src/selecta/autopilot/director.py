@@ -371,8 +371,8 @@ class Director:
             if target is None:
                 raise DirectorError("not_found", "There's no director change with that id", 404)
             if target.status != "applied" or target.undone_by:
-                raise DirectorError("not_undoable", "Only an applied, not yet undone change "
-                                    "can be undone", 409)
+                raise DirectorError("not_undoable", "Only an applied change that is still in "
+                                    "place can be undone", 409)
             before = self.store.revision(workspace, session_id, target.before_revision or 0)
             if before is None:
                 raise DirectorError("history_gone", "That revision is no longer kept", 410)

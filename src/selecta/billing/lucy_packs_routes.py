@@ -180,7 +180,9 @@ def install_routes(
             wording = lucy_packs.consent_version()
             pack = lucy_packs.catalogue().get(body.price_id)
             if not (lucy_packs.packs_available() and wording and _stripe_key()):
-                raise _refuse(503, "packs_not_configured", "Extra usage is not on sale yet.")
+                raise _refuse(
+                    503, "packs_not_configured", "Extra usage isn't on sale on this site."
+                )
             if not hmac.compare_digest(body.consent_version, wording):
                 raise _refuse(409, "consent_version_changed",
                               "The terms for extra usage have changed. Read them again.")

@@ -139,6 +139,10 @@ Nothing new: no setting and no status line. A new mix may be in a different orde
 "why" in the editor reads "Planned from how both songs are built: their beats, bars, key and
 energy." when the account chose it. Make a Mix's busy state may last up to 12 s longer.
 
+What a device-music account has of the Desktop, feature by feature, is in
+[cloud-device-features.md](cloud-device-features.md): Library tempo and key and corrections come
+from the measurements this page sends.
+
 ## Next
 
 - Beat This in the browser (docs/engineering/device-beats.md) waits on the owner's steps
