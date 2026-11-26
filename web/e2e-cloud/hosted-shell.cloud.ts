@@ -95,6 +95,42 @@ test('with cloud.hosted_shell on, the hosted pages render in the shared shell, e
   expect(carrying).toEqual([]);
 });
 
+/** cloud.one_shell for an account with no music on its devices, amended in this person's answer
+ * as above: the Cloud shell opens cloud only. */
+async function cloudOnlyShell(page: Page) {
+  await page.route('**/api/account', (route) => rewriteJson(route, (account) => ({
+    ...account,
+    experience: { ...(account.experience ?? {}), local_first: false, hosted: true },
+    features: { ...account.features, 'cloud.local_first': false, 'cloud.one_shell': true, 'library.places': true, 'cloud.account_mixes': true },
+  })));
+}
+
+test('with cloud.one_shell on, an account with no music on its devices opens the Cloud shell, cloud only', async ({ page, request }) => {
+  const user = listener('one-shell-cloud-only');
+  const seeded = await request.post('/test/seed', { data: { user, songs: 1 } });
+  expect(seeded.ok(), await seeded.text()).toBeTruthy();
+  await cloudOnlyShell(page);
+  await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
+  await page.goto('/library');
+
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await expect(nav).toBeVisible();
+  for (const name of ['Listen', 'Make a Mix', 'My Mixes', 'Library']) await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
+  await expect(page.locator('aside.cloud-rail')).toHaveCount(0);
+  // nothing about this device: no Workspace, no This device, no folder to connect
+  await expect(nav.getByRole('link', { name: 'Workspace', exact: true })).toHaveCount(0);
+  await expect(nav.getByRole('link', { name: 'This device', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
+  await expect(page.getByText('Connect music', { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Choose (a|your music) folder/)).toHaveCount(0);
+  // adding music is uploading: the Library's action and the side bar's place go to /upload
+  await expect(page.getByRole('main').getByRole('link', { name: 'Upload music' })).toHaveAttribute('href', '/upload');
+  await nav.getByRole('link', { name: 'Upload music', exact: true }).click();
+  await expect(page).toHaveURL(/\/upload$/);
+  await expect(page.getByRole('button', { name: 'Start upload' })).toBeVisible();
+  await accessible(page, 'cloud-only upload music');
+});
+
 test('the hosted shell holds together at phone and desktop widths in both themes', async ({ page, request }) => {
   const user = listener('hosted-shell-a11y');
   const seeded = await request.post('/test/seed', { data: { user } });

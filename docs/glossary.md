@@ -118,7 +118,7 @@ Accepted ADR bodies keep the old identifiers as records.
 | `src/selecta/hosted_render.py`, `hosted_brain.py`, `hosted_caps.py`, `hosted_*.py`, `hosted_coexistence/` | `cloud_studio_*` | `hosted_render` 154 in 38 files | Named by flag ids, job evidence lists in `cloud_mixes.CAPABILITIES`, docs evidence and tests; a Python package rename is not mechanical here |
 | `src/selecta/cloud_mixes.py` | (keeps its name) | 29 in 8 files | Names itself in its own capability evidence strings and serves `/cloud-mixes`; "cloud mixes" is not a retired word |
 | `tests/test_bf_*.py` | `test_device_music_*` | 24 files | Names cited in CI, ADR evidence and checklists; developer-only |
-| `web/src/cloud/HostedShell.tsx`, `web/src/cloud/hosted/` (`HostedMix`, `HostedMakeAMix`, `hostedWords`, `timelinePlayer`), `useCloudPlayer.ts` | retired, not renamed | | Pages still in use; retiring them is to-do T-20261126-73f9 (below) |
+| `web/src/cloud/HostedShell.tsx`, `web/src/cloud/hosted/` (`HostedMix`, `HostedMakeAMix`, `hostedWords`, `timelinePlayer`), `useCloudPlayer.ts` | retired, not renamed | | Pages still in use with `cloud.one_shell` off; removing them is to-do T-20261126-fefe (below) |
 | Route paths `/api/account/labs/local-first`, `/api/local-media/*`, `/api/hosted/*`, `/admin/hosted/*`, `/admin/customers/{id}/storage-mode` | (kept) | | A deployed client calls them |
 | Stored values: the `bf-local-first` rule salt, the Labs cohort note, `selecta.labs.feedback-draft`, the `hosted_only` row kind, the `mode: 'hosted' or 'browser'` field of the console's API | (kept) | | Data: renaming loses a member's state or re-buckets a rollout |
 | CSS classes such as `local-first-*`, `hosted-mix-*`, `cloud-hosted-page` | (kept) | | Selectors in tests, e2e specs and stylesheets; renaming them is not word-for-word safe |
@@ -141,12 +141,16 @@ ADR-0479 named what made the owner's original complaint ("the two Cloud modes ar
   the account's music lives, so a device-music member is no longer told SelectaDJ Cloud measured,
   uploaded or rendered their songs, and a cloud library member is no longer told nothing is
   measured ahead.
-- **Three shells**: the device-music shell is now the Cloud shell (`CloudShell`), and with
-  `cloud.hosted_shell` on (the default) cloud library accounts draw their pages inside it. Still
-  open: the legacy side rail in `CloudApp.tsx` (kept for `cloud.hosted_shell` off) and the
-  cloud library's own thinner pages (`HostedShell.tsx`, the Make a Mix card in
-  `cloud/hosted/`) are still separate, to-do T-20261126-73f9.
-- **Two Cloud players** (three counting the device's): still open. `useCloudPlayer.ts` plays the
-  cloud library in the legacy pages, `cloud/hosted/timelinePlayer.ts` plays a cloud library mix
-  on its card, and `deviceMusicPlayer.ts` plays music on the device; one player for the Cloud
-  shell is part of the same to-do.
+- **Three shells**: the device-music shell is now the Cloud shell (`CloudShell`). With
+  `cloud.one_shell` on, every Cloud account opens it: an account with no music on its devices
+  gets it cloud only (`musicHomes`, `cloud/musicHomes.ts`: no Connect music, folder checks or
+  This device; adding music is Upload music), and `cloud.local_first` off no longer swaps the
+  frame. With `cloud.one_shell` off, the older frames stay as they were: the cloud library's
+  thinner pages (`HostedShell.tsx`, with `cloud.hosted_shell`) and the legacy side rail in
+  `CloudApp.tsx`. They are removed after one release with the flag on, to-do T-20261126-fefe.
+- **Two Cloud players** (three counting the device's): with `cloud.one_shell` on, one. The
+  Cloud shell's player (`deviceMusicPlayer.ts`, the shared engine registered as a session speaker)
+  plays music on the device and in the cloud library, so remotes, Rooms and Lucy reach it for
+  every account. With the flag off, `useCloudPlayer.ts` still plays the cloud library in the
+  legacy pages and `cloud/hosted/timelinePlayer.ts` a cloud library mix on its card; both go with
+  the same to-do.
