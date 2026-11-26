@@ -429,6 +429,9 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("PUT", "/api/catalog/settings"): {"lookups": True},
     ("POST", "/api/hosted/mixes/plan"): {"count": 4},
     ("POST", "/api/hosted/mixes/render"): {"songs": [{"asset_id": "tenant-a"}]},
+    # one hand-off by catalogue ids (cloud.studio_seams, forced on in `world`);
+    # `test_hosted_seams_route.py` names another account's songs
+    ("POST", "/api/hosted/seams"): {"a": 1, "b": 2},
     ("POST", "/api/hosted/mixes/export"): {"songs": [{"asset_id": "tenant-a"}]},
     ("GET", "/api/hosted/exports/{job_id}"): None,
     # cloud.stored_media (open without the hosted grant): only the caller's own exports;
@@ -621,10 +624,11 @@ def world(tmp_path, monkeypatch):
     from selecta import flags
 
     # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`, the upload dry run
-    # behind `storage.upload_identity` and removing from the cloud library behind
-    # `library.places`; on here for the same reason.
+    # behind `storage.upload_identity`, removing from the cloud library behind
+    # `library.places` and one cloud hand-off behind `cloud.studio_seams`; on here for the same
+    # reason.
     flags.use("+business.orgs +business.zones +library.art_embedded +library.art_lookup"
-              " +storage.upload_identity +library.places")
+              " +storage.upload_identity +library.places +cloud.studio_seams")
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)
