@@ -384,12 +384,12 @@ const moveOf = (song: MixSong): string | null => {
 };
 
 /** The cloud's seams of a mix by the position each leaves, null where studioPlan.ts gives a seam
- * to another studio. `ownCopy` is each song's own cloud copy (never a version's). */
-export async function cloudPairsOf(mix: readonly MixSong[], ownCopy: (songId: number) => Promise<string | null>, options: { device: boolean; here?: (index: number) => boolean; connection?: ConnectionLike }): Promise<(CloudPair | null)[]> {
-  const copies = await Promise.all(mix.map((song) => ownCopy(song.song_id).catch(() => null)));
+ * to another studio. `ownCopies` names the songs with their own cloud copy (never a version's). */
+export async function cloudPairsOf(mix: readonly MixSong[], ownCopies: (songIds: readonly number[]) => Promise<ReadonlySet<number>>, options: { device: boolean; here?: (index: number) => boolean; connection?: ConnectionLike }): Promise<(CloudPair | null)[]> {
+  const copies = await ownCopies(mix.map((song) => song.song_id)).catch(() => new Set<number>());
   const plan = planStudios(mix.map((song, index) => ({
     songId: song.song_id,
-    cloud: !!copies[index],
+    cloud: copies.has(song.song_id),
     here: options.here?.(index) ?? false,
     cued: song.seam?.settings?.exit_bar != null || song.seam?.settings?.entry_bar != null,
   })), { cloud: true, device: options.device, connection: options.connection });

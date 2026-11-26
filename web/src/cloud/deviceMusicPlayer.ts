@@ -527,8 +527,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   resolver: () => Promise<MediaResolver | null>;
   starter?: EngineStarter;
   /** The catalogue's request, to save a length decoded here for a song that has none (songLength.ts);
-   * with `cloudOwnCopy`, each song's own cloud copy (cloud.studio_seams). */
-  request?: (<T>(path: string, init?: RequestInit) => Promise<T>) & { cloudOwnCopy?: (songId: number) => Promise<string | null> };
+   * with `cloudOwnCopies`, the songs with their own cloud copy (cloud.studio_seams). */
+  request?: (<T>(path: string, init?: RequestInit) => Promise<T>) & { cloudOwnCopies?: (songIds: readonly number[]) => Promise<ReadonlySet<number>> };
   /** Told, by song, each time the engine has decoded one to play (Listen's waveforms read it). */
   decoded?: (songId: number, audio: AudioBuffer) => void;
 }) {
@@ -806,14 +806,14 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   }, [studio, speaker, position, mix, resolve]);
   // cloud.studio_seams: which seams the cloud studio makes (studioPlan.ts), worked out per mix
   const [cloudPairs, setCloudPairs] = useState<readonly (CloudPair | null)[]>([]);
-  const ownCopy = request?.cloudOwnCopy;
+  const ownCopies = request?.cloudOwnCopies;
   useEffect(() => {
-    if (!ownCopy || !cloudSeamsOn() || !seamLeadOn()) { setCloudPairs([]); return undefined; }
+    if (!ownCopies || !cloudSeamsOn() || !seamLeadOn()) { setCloudPairs([]); return undefined; }
     let live = true;
-    void cloudPairsOf(mix, ownCopy, { device: deviceRenderOn(), here: (index) => held.current.has(index), connection: browserConnection() })
+    void cloudPairsOf(mix, ownCopies, { device: deviceRenderOn(), here: (index) => held.current.has(index), connection: browserConnection() })
       .then((pairs) => { if (live) setCloudPairs(pairs); }, () => undefined);
     return () => { live = false; };
-  }, [mix, ownCopy]);
+  }, [mix, ownCopies]);
   // ...and the next two of them asked for, from the playing song
   useEffect(() => { if (speaker) cloud.follow(cloudPairs, position); }, [cloud, speaker, cloudPairs, position]);
   const prefetch: Observable<PrefetchState> | null = prefetcher?.state ?? null;
