@@ -116,6 +116,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `move.vocal_ride` | **Vocal ride.** The next song's band comes in under the voice, before it starts singing. | `stems` |
 | `move.filter_sweep` | **Filter sweep.** The song filters away upward as the next one opens up. |  |
 | `move.tempo_ramp` | **Tempo ramp.** Both songs drift to a shared speed for a short overlap. |  |
+| `move.loop_room` | **Loop and blend.** When a song leaves no clean bars to blend over, its last clean phrase loops so the next song can still come in slowly. Off until it has been listened to. |  |
+| `move.tempo_bridge` | **Tempo bridge.** Songs too far apart in tempo to blend: the first is stripped to its beat and walked to the next one's speed over sixteen bars, then the next comes in untouched. Off until it has been listened to. |  |
 | `move.echo_out` | **Echo out.** The last beat rings on as the next song lands under it. |  |
 | `move.delay_throw` | **Delay throw.** The last word is thrown into a delay as the next song slams in. |  |
 | `move.reverb_wash` | **Reverb wash.** The song dissolves into a room as the next one arrives. |  |

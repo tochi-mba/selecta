@@ -840,6 +840,20 @@ def listening_report(study: str) -> None:
     console.print_json(data=study_summary(conn, study))
 
 
+@app.command("move-trial")
+def move_trial(
+    move: str = typer.Argument(..., help="loop_room or tempo_bridge."),
+    count: int = typer.Option(6, help="How many pairs to render."),
+    register: bool = typer.Option(False, help="Add them to the Workshop's blind listening."),
+) -> None:
+    """Render a move still behind its flag against what the planner would otherwise choose."""
+    from selecta.listening_trials import move_trials
+
+    settings, conn = _open()
+    made = move_trials(conn, settings, move, count, register, log=console.print)
+    console.print(f"{len(made)} trials written to {settings.home / 'move-trials' / move}.")
+
+
 @app.command("gather-data")
 def gather_data() -> None:
     """Bring older SelectaDJ data folders into the active folder. Safe to repeat."""
