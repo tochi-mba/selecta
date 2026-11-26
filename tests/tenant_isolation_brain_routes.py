@@ -1,5 +1,6 @@
-"""Song facts, planning, seam and mix routes (`cloud.brain`, ADR-0479) for the tenant isolation
-matrix (tests/test_cloud_tenant_isolation.py), kept apart so that file stays under the length limit.
+"""Song facts, planning, seam, mix and request routes (`cloud.brain`, ADR-0479) for the tenant
+isolation matrix (tests/test_cloud_tenant_isolation.py), kept apart so that file stays under the
+length limit.
 
 Each one reads or writes only the caller's own workspace through the engine store, so naming
 another workspace is refused before anything happens. The bodies are valid enough to get past
@@ -45,4 +46,16 @@ BRAIN_SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/mix/{position}/lock"): None,
     ("POST", "/api/mix/undo"): None,
     ("POST", "/api/mix/clear"): None,
+    # the account's song requests (cloud_brain.requests_routes, the same flags)
+    ("GET", "/api/requests"): None,
+    ("POST", "/api/requests"): {"song_id": 1},
+    ("DELETE", "/api/requests/{request_id}"): None,
+    ("POST", "/api/requests/{request_id}/bridge"): {"allow": False},
+    ("POST", "/api/requests/{request_id}/add"): {},
+    ("POST", "/api/requests/consider"): {
+        "order": [1], "position": 0, "phase": "playing", "seconds_left": 60.0,
+    },
+    ("POST", "/api/requests/insert"): {
+        "order": [1], "position": 0, "phase": "playing", "seconds_left": 60.0, "offer": "0" * 64,
+    },
 }

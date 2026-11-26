@@ -95,6 +95,13 @@ def request_rows(mixes: StoreMixes) -> list[dict]:
     return rows
 
 
+def _number(request_id: str) -> int:
+    """The request's id. The path is read as text, so a workspace check comes before this."""
+    if not request_id.isdigit() or len(request_id) > 12:
+        raise HTTPException(404, "That request isn't there.")
+    return int(request_id)
+
+
 def _snapshot(mixes: StoreMixes, body: PlaybackBody) -> tuple[list[tuple], int]:
     """routes/song_requests.request_snapshot, word for word."""
     items = mix._items(mixes)
@@ -189,23 +196,24 @@ def install(
 
     @app.delete("/api/requests/{request_id}")
     def cancel_song_request(
-        request_id: int,
+        request_id: str,  # a number; read after the workspace check
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict:
         with writing(request, claims) as mixes:
-            cancelled = song_requests.cancel_request(mixes, request_id)
+            cancelled = song_requests.cancel_request(mixes, _number(request_id))
             return {"cancelled": cancelled, "requests": request_rows(mixes)}
 
     @app.post("/api/requests/{request_id}/bridge")
     def choose_request_bridge(
-        request_id: int,
+        request_id: str,  # a number; read after the workspace check
         body: ChoiceBody,
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict:
         """Yes or no to an extra song for this request; naming the songs holds it to those."""
         with writing(request, claims) as mixes:
+            request_id = _number(request_id)
             row, rows = the_row(mixes, request_id)
             songs = body.songs if body.allow else None
             if songs:
@@ -227,7 +235,7 @@ def install(
 
     @app.post("/api/requests/{request_id}/add")
     def add_request_anyway(
-        request_id: int,
+        request_id: str,  # a number; read after the workspace check
         request: Request,
         body: WhereBody | None = None,
         claims: Claims = Depends(current_claims),  # noqa: B008
@@ -236,6 +244,7 @@ def install(
         seam and the request's mark are one write."""
         body = body or WhereBody()
         with writing(request, claims) as mixes:
+            request_id = _number(request_id)
             row, _rows = the_row(mixes, request_id)
             if not row["available"]:
                 raise HTTPException(404, "That song isn't in your library.")
@@ -276,10 +285,13 @@ def install(
         body: OfferBody,
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
-        device_id: str = Query(pattern=DEVICE),  # noqa: B008
+        device_id: str | None = Query(default=None, pattern=DEVICE),  # noqa: B008
     ) -> dict:
-        """Put a ready placement in, against the exact mix it was planned for."""
+        """Put a ready placement in, against the exact mix it was planned for, once the device
+        playing it (`device_id`) has its handovers."""
         store = store_for(request, claims, WorkspaceAction.MIXES_EDIT)
+        if device_id is None:
+            raise HTTPException(422, "Say which device plays the mix.")
         found, _settled, items, protected = look(store, body, device_id, settle=False)
         row = next((r for r in found if r.get("offer") == body.offer), None)
         if row is None:
