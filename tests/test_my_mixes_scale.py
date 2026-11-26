@@ -56,9 +56,14 @@ def statements(monkeypatch):
     seen: list[str] = []
     real = db.connect
 
+    def kept(sql: str) -> None:
+        # the store's routing probes on the caller's connection are left out (T-20261126-3582)
+        if sql != "PRAGMA database_list" and "engine_version" not in sql:
+            seen.append(sql)
+
     def traced(path):
         conn = real(path)
-        conn.set_trace_callback(seen.append)
+        conn.set_trace_callback(kept)
         return conn
 
     monkeypatch.setattr(db, "connect", traced)
