@@ -44,6 +44,9 @@ ratings = sa.Table(
     sa.Column("tags", sa.Text, nullable=False, server_default="[]"),
     # UTC as `YYYY-MM-DD HH:MM:SS`, the format SQLite's CURRENT_TIMESTAMP wrote for older rows
     sa.Column("created_at", sa.Text, nullable=True),
+    # the rendered seam the grade was given to, when the reel knew it (`seams.key`); added by
+    # `lib0006seams` and `es0479seam01`, null on every older row
+    sa.Column("seam_key", sa.String(80), nullable=True),
     sa.CheckConstraint("rating BETWEEN 1 AND 5", name="rating_range"),
 )
 
@@ -106,7 +109,129 @@ song_overrides = sa.Table(
     _of_a_song("song_overrides"),
 )
 
-ENGINE_TABLES = (ratings, analysis, song_overrides)
+def _of_two_songs(table: str) -> tuple[sa.ForeignKeyConstraint, ...]:
+    # Cloud only, as above, for a row about song A into song B. Desktop's library migration
+    # creates its seam tables without these (its songs are the library's own `songs`).
+    return tuple(
+        sa.ForeignKeyConstraint(
+            ["workspace_id", side],
+            ["local_songs.workspace_id", "local_songs.id"],
+            name=f"fk_{table}_{side}",
+            ondelete="CASCADE",
+        )
+        for side in ("song_a", "song_b")
+    )
+
+
+# The seams slice (`engine_store.seams`, docs/engineering/engine-store-seams.md). `record` is the
+# seam's record exactly as `seam.json` or its `seam-history` file holds it; the named columns are
+# copies of its fields, written from it in one place, so a reader can ask by pair, state or
+# verdict without parsing every record.
+SEAM_KEY = 80
+
+seams = sa.Table(
+    "seams",
+    metadata,
+    sa.Column("workspace_id", Id, primary_key=True),
+    # `SeamRequest.key` on Desktop (20 hex); a device's or worker's key in Cloud
+    sa.Column("key", sa.String(SEAM_KEY), primary_key=True),
+    sa.Column("song_a", sa.Integer, nullable=False),  # request.a
+    sa.Column("song_b", sa.Integer, nullable=False),  # request.b
+    sa.Column("asked", sa.Text, nullable=True),  # request.move: the move asked for, or auto
+    sa.Column("status", sa.Text, nullable=False),  # ready or failed; nothing under way is kept
+    sa.Column("style", sa.Text, nullable=True),  # the move rendered
+    sa.Column("bars", sa.Integer, nullable=True),
+    sa.Column("exit_bar", sa.Integer, nullable=True),
+    sa.Column("entry_bar", sa.Integer, nullable=True),
+    sa.Column("a_source_start", sa.Float, nullable=True),  # where A is left, in A's seconds
+    sa.Column("b_source_end", sa.Float, nullable=True),  # where B is joined, in B's seconds
+    sa.Column("duration", sa.Float, nullable=True),
+    sa.Column("rules", sa.Integer, nullable=True),  # `planner_core.memory.RULES_VERSION`
+    # the planner's answer the script came from (Cloud's candidates fingerprint); null on Desktop
+    sa.Column("fingerprint", sa.String(64), nullable=True),
+    sa.Column("passed", sa.Boolean, nullable=True),
+    sa.Column("near_miss", sa.Boolean, nullable=True),
+    sa.Column("fell_back", sa.Boolean, nullable=True),
+    sa.Column("pair", sa.Text, nullable=True),  # JSON: the pair's facts when it was made
+    sa.Column("checks", sa.Text, nullable=True),  # JSON: the audit report, as the record says
+    sa.Column("error", sa.Text, nullable=True),  # why it failed
+    # the verdict on this version, exactly as the record holds it; every click is in seam_verdicts
+    sa.Column("rating", sa.Text, nullable=True),
+    sa.Column("rated_at", sa.Float, nullable=True),
+    sa.Column("note", sa.Text, nullable=True),
+    sa.Column("source", sa.Text, nullable=False),  # desktop, device or worker
+    sa.Column("record", sa.Text, nullable=False),  # JSON: the whole record, as the file holds it
+    sa.Column("record_hash", sa.String(64), nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+    *_of_two_songs("seams"),
+)
+sa.Index("ix_seams_pair", seams.c.workspace_id, seams.c.song_a, seams.c.song_b)
+
+# Who rendered a seam's clip. A seam is ready for a reader with an attestation from a studio it
+# can play from (`engine_store.seams`); the clip itself is never in the database.
+seam_attestations = sa.Table(
+    "seam_attestations",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("key", sa.String(SEAM_KEY), nullable=False),
+    sa.Column("studio", sa.Text, nullable=False),  # desktop, worker or device
+    # which one: `desktop`, a worker's id, or the member's playback device id
+    sa.Column("studio_id", sa.String(80), nullable=False),
+    sa.Column("implementation", sa.Text, nullable=False),
+    sa.Column("clip_sha256", sa.String(64), nullable=False),
+    sa.Column("clip_seconds", sa.Float, nullable=False),
+    sa.Column("attested_at", sa.Text, nullable=False),
+    sa.UniqueConstraint("workspace_id", "key", "studio_id", name="uq_seam_attestations_studio"),
+    sa.ForeignKeyConstraint(
+        ["workspace_id", "key"],
+        ["seams.workspace_id", "seams.key"],
+        name="fk_seam_attestations_seam",
+        ondelete="CASCADE",
+    ),
+)
+
+# Every version of a seam's record as it was kept: what `seam-history/{key}.json` held each time
+# it was written. Append-only; a row is never changed.
+seam_history = sa.Table(
+    "seam_history",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("key", sa.String(SEAM_KEY), nullable=False),
+    sa.Column("song_a", sa.Integer, nullable=False),
+    sa.Column("song_b", sa.Integer, nullable=False),
+    sa.Column("status", sa.Text, nullable=False),
+    sa.Column("rating", sa.Text, nullable=True),
+    sa.Column("record", sa.Text, nullable=False),
+    sa.Column("record_hash", sa.String(64), nullable=False),
+    sa.Column("recorded_at", sa.Text, nullable=False),
+    *_of_two_songs("seam_history"),
+)
+sa.Index("ix_seam_history_key", seam_history.c.workspace_id, seam_history.c.key)
+
+# Every Good, Bad and cleared verdict a listener gave, oldest first. Append-only.
+seam_verdicts = sa.Table(
+    "seam_verdicts",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("key", sa.String(SEAM_KEY), nullable=False),
+    sa.Column("song_a", sa.Integer, nullable=False),
+    sa.Column("song_b", sa.Integer, nullable=False),
+    sa.Column("verdict", sa.Text, nullable=False),  # good, bad or none (cleared)
+    sa.Column("note", sa.Text, nullable=False, server_default=""),
+    sa.Column("rated_at", sa.Float, nullable=False),  # seconds since 1970, as `rated_at` is
+    # who: the member's user id in Cloud; `local` on Desktop
+    sa.Column("rated_by", sa.String(80), nullable=False),
+    sa.CheckConstraint("verdict IN ('good', 'bad', 'none')", name="seam_verdict_kind"),
+    *_of_two_songs("seam_verdicts"),
+)
+sa.Index("ix_seam_verdicts_key", seam_verdicts.c.workspace_id, seam_verdicts.c.key)
+
+SEAM_TABLES = (seams, seam_attestations, seam_history, seam_verdicts)
+
+ENGINE_TABLES = (ratings, analysis, song_overrides, *SEAM_TABLES)
 """Every engine table Cloud has, for the migrations and the fail-closed policy."""
 
 library_metadata = sa.MetaData()
@@ -149,10 +274,15 @@ LIBRARY_TABLES = (songs, lyrics)
 __all__ = [
     "ENGINE_TABLES",
     "LIBRARY_TABLES",
+    "SEAM_TABLES",
     "analysis",
     "library_metadata",
     "lyrics",
     "ratings",
+    "seam_attestations",
+    "seam_history",
+    "seam_verdicts",
+    "seams",
     "song_overrides",
     "songs",
 ]
