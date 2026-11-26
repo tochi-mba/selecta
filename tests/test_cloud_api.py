@@ -9,7 +9,7 @@ from selecta.api_cloud import CloudConfigurationError, CloudSettings, create_clo
 from selecta.identity.tokens import Claims
 from selecta.modes import Mode, current_mode
 from selecta.persistence import make_engine, metadata
-from selecta.persistence.migrate import current, head, upgrade
+from selecta.persistence.migrate import current, downgrade, head, pending_changes, upgrade
 from selecta.persistence.registry import load_all_tables
 from selecta.rooms.cloud_ports import RoomPorts
 
@@ -425,18 +425,16 @@ def test_serve_defaults_to_local_and_cloud_does_not_start_local_workers(monkeypa
         app.state.database_engine.dispose()
 
 
-def test_cloud_schema_upgrade_stops_on_a_desktop_library_and_leaves_it_untouched(
-    tmp_path,
-):
-    """A file holding the Desktop library's `songs` table is not a Cloud database: the engine
-    store migrations refuse it (its engine tables move with the library chain, the one-brain
-    work), and the refusal leaves the file exactly as it was: the whole upgrade is one
-    transaction, so no Cloud table is left half made beside the library's own."""
+def test_cloud_schema_upgrade_and_rollback_preserve_legacy_local_tables(tmp_path):
     load_all_tables()
     engine = make_engine(f"sqlite:///{tmp_path / 'upgrade.sqlite'}")
     with engine.begin() as conn:
         conn.exec_driver_sql("CREATE TABLE songs (id INTEGER PRIMARY KEY)")
-    with pytest.raises(RuntimeError, match="Desktop library file"):
-        upgrade(engine)
-    assert current(engine) is None
-    assert set(sa.inspect(engine).get_table_names()) == {"songs"}
+    upgrade(engine)
+    assert current(engine) == head()
+    assert not pending_changes(engine)
+    assert "jobs" in sa.inspect(engine).get_table_names()
+    downgrade(engine)
+    table_names = set(sa.inspect(engine).get_table_names())
+    assert "songs" in table_names
+    assert "jobs" not in table_names
