@@ -140,6 +140,9 @@ export function removedWords(songs: readonly LibrarySong[], answer: RemovedFromC
   return nowhere ? `${done} ${nowhere === 1 ? 'One song has' : `${nowhere} songs have`} no copy left anywhere.` : done;
 }
 
+/** A removal asks first, as an alert dialog (one overlay: overlay.remove_from_cloud). */
+const CONFIRMS = 'alertdialog';
+
 /** "Remove from cloud library": the button and its confirmation, for a selection or one song. */
 export function RemoveFromCloud({ songs, chrome, onDone, disabled = false, label = 'Remove from cloud library' }: {
   songs: readonly LibrarySong[];
@@ -170,7 +173,7 @@ export function RemoveFromCloud({ songs, chrome, onDone, disabled = false, label
     <>
       <button type="button" disabled={disabled} onClick={() => { setProblem(''); setAsking(inCloud); }}>{label}</button>
       {asking && said && (
-        <Dialog title={said.title} role="alertdialog" onClose={() => setAsking(null)} footer={<>
+        <Dialog title={said.title} role={CONFIRMS} onClose={() => setAsking(null)} footer={<>
           <button type="button" onClick={() => setAsking(null)}>Keep it</button>
           <Action className="primary" working="Removing…" run={remove}>Remove from cloud library</Action>
         </>}>

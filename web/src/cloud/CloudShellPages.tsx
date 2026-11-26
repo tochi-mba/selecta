@@ -43,7 +43,8 @@ import { onboardingFinished } from './onboarding/state';
 import type { useImportShellView } from './importSession';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
 import { HostedMakeAMix } from './hosted/HostedMakeAMix';
-import { flagListed } from '../flags';
+import { oneMixerOn } from './musicHomes';
+import { CloudOnlyLibrary } from './CloudOnlyLibrary';
 import { ExportElsewhere } from '../views/exportElsewhere';
 import { cloudFileOn } from './cloudFileExport';
 import { CloudFileOffer } from './CloudFileOffer';
@@ -113,6 +114,8 @@ export type CloudShellPagesContext = {
   newest: { mix_id: string; name: string; songs: number; ids?: number[] } | null;
   songOrder: number[];
   playOn: ReturnType<typeof usePlayOn>;
+  /** cloud.one_shell: false with no music on this account's devices (the cloud-only profile) */
+  devicesHere: boolean;
 };
 
 /** The page CloudShell shows for its route. Moved out of CloudShell.tsx unchanged, so the shell
@@ -121,9 +124,13 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   const { api, cloud, request, media, workspaceId, on, route, moreItems, more, shared, status, statusProblem, setStatusProblem, refreshStatus, refreshMix } = at;
   const { data, mixProblem, setMixData, shellPlayer, now, playback, refusal, output, notify, openStore, connect, sweepLapsed, stems, recipes, deviceTrack, book } = at;
   const { lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive } = at;
-  const { remote, playWays, holdings, where, followsHere, newest, songOrder, playOn } = at;
+  const { remote, playWays, holdings, where, followsHere, newest, songOrder, playOn, devicesHere } = at;
   // cloud.one_mixer: the shared mixer for every account, and its file made in the cloud library
-  const oneMixer = flagListed('cloud.one_mixer');
+  // (and always in the cloud-only profile, musicHomes.ts)
+  const oneMixer = oneMixerOn();
+  // cloud.one_shell, cloud only: songs come from Upload music, never a folder on this device
+  const uploadPlace = moreItems.find((place) => place.id === 'uploads')?.path ?? null;
+  const cloudOnly = devicesHere ? undefined : { upload: uploadPlace };
   const cloudFile = oneMixer && coexisting && cloudFileOn();
   // cloud.account_mixes: My Mixes lists the account's drafts and the editor opens one (AccountDrafts.tsx)
   const drafts = accountMixesOn() ? accountDraftActions({ request, setMixData, refreshStatus, player: shellPlayer, notify }) : null;
@@ -173,6 +180,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   switch (route.page) {
     case 'library':
       // I84: on a remote, the Library's Play next follows the speaker's music, not this device's
+      if (!devicesHere) return <CloudOnlyLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} upload={uploadPlace} />;
       return <CloudLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} cloudStorage={coexisting} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
     case 'mixes':
       if (route.tab === 'mine' && drafts) return <><MyMixes {...shared} {...drafts} />{localExport}</>;
@@ -184,6 +192,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
           connected={connected}
           onSetUp={onboardingFinished(workspaceId) ? undefined : () => { setSpineAsked(true); setSpine(true); }}
           checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
+          cloudOnly={cloudOnly}
         />
       );
       // cloud.one_mixer: the shared mixer for every account; the old card only with it off
@@ -207,7 +216,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
       return (
         <>
           {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
-          {data.mix.length ? <Now {...shared} listenQueue={<>{oneMixer && <TransitionsGettingReady workspaceId={workspaceId} />}<ListenQueue mix={data.mix} now={now} player={shellPlayer} /></>} noticeAction={<>{output?.state === 'output_unverified' && <SoundCheck />}{on('cloud.local_media') && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} nothingPlays={now.notice === NOTHING_PLAYABLE_NOTICE} />}</>} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
+          {data.mix.length ? <Now {...shared} listenQueue={<>{oneMixer && <TransitionsGettingReady workspaceId={workspaceId} />}<ListenQueue mix={data.mix} now={now} player={shellPlayer} /></>} noticeAction={<>{output?.state === 'output_unverified' && <SoundCheck />}{on('cloud.local_media') && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting || !devicesHere} nothingPlays={now.notice === NOTHING_PLAYABLE_NOTICE} />}</>} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} cloudOnly={cloudOnly} />}
         </>
       );
     case 'edit':

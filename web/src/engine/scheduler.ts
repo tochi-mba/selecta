@@ -60,7 +60,8 @@ export const FIRST_LEVEL_WAIT_MS = 2500;
  * means the file could not be resolved or decoded and is excluded from the mix (ADR-0457:
  * never silence inside a seam, never a silent substitution). */
 export type LoadedTrack =
-  | { kind: 'buffer'; buffer: AudioBuffer }
+  /** `level`: the gain the song must play at (a cloud song's, media/resolve.ts); measured when absent. */
+  | { kind: 'buffer'; buffer: AudioBuffer; level?: number }
   | { kind: 'missing' }
   | { kind: 'failed'; error: string };
 
@@ -562,8 +563,10 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     return { at, startedAt: at, offset: 0 };
   };
 
-  /** The level a song plays at; 1 when none is measured, it fails, or it takes too long. */
-  const levelOf = async (buffer: AudioBuffer, withinMs?: number): Promise<number> => {
+  /** The level a song plays at: the one it came with when it has one (a cloud song plays at its
+   * clip's level), else measured; 1 when none is measured, it fails, or it takes too long. */
+  const levelOf = async (buffer: AudioBuffer, withinMs?: number, given?: number): Promise<number> => {
+    if (given !== undefined && Number.isFinite(given) && given > 0) return given;
     if (!deps.level) return 1;
     const measured = deps.level(buffer).catch(() => 1);
     if (withinMs === undefined) return measured;
@@ -585,7 +588,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         return plan(nextIndex + 1, mine);
       }
       const buffer = loaded.buffer;
-      const level = await levelOf(buffer);
+      const level = await levelOf(buffer, undefined, loaded.level);
       if (mine !== generation || disposed || !current || planned) return;
       let schedule: SeamSchedule | null = null;
       let providerReason: string | undefined;
@@ -730,7 +733,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       if (mine !== generation || disposed) return;
     }
     const buffer = loaded.buffer;
-    const level = await levelOf(buffer, FIRST_LEVEL_WAIT_MS);
+    const level = await levelOf(buffer, FIRST_LEVEL_WAIT_MS, loaded.level);
     if (mine !== generation || disposed) return;
     const offset = Math.min(Math.max(offsetMs / 1000, 0), Math.max(buffer.duration - 0.05, 0));
     const made = layer(buffer, index, level);

@@ -18,9 +18,12 @@ lives, and one account can hold songs in both Cloud places. The words are in
 | Who renders | The Desktop engine | The device studio, ahead of time where its flag is on; otherwise the browser works each transition out as it plays | The cloud studio |
 | What works across devices | Nothing: one computer, no account | Song facts, mixes, ratings, requests and Lucy belong to the account. A song plays only on a device that holds its file, and each device renders its own transitions | Everything: any signed-in device plays the account's library and its rendered mixes |
 | What it has of the Desktop | Everything | Feature by feature: [cloud-device-features.md](../engineering/cloud-device-features.md) | Measured against Desktop, with the runbook: [cloud-library-walkthrough.md](../engineering/cloud-library-walkthrough.md) |
+| Which pages | The Desktop app | The Cloud shell (`CloudShell`) | With `cloud.one_shell` on, the same Cloud shell, cloud only when the account has no music on its devices (no Connect music or This device; adding music is Upload music). Off, the older cloud library pages (`HostedShell`) |
 
 In code, Desktop is `SELECTA_MODE=local` and Cloud is `SELECTA_MODE=cloud`; music on the device
-is the `cloud.local_first` flag and the cloud library is the `cloud.hosted_media` grant.
+is the `cloud.local_first` flag and the cloud library is the `cloud.hosted_media` grant. With
+`cloud.one_shell` on, `cloud.local_first` only says whether the account has music on its devices;
+every account opens the one Cloud shell either way.
 
 <a id="guarantees-by-runtime-mode"></a>
 

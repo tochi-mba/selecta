@@ -3,8 +3,9 @@ import { PageLink } from '../shell/PageLink';
 import { Action, Sheet, Skeleton, Status } from '../ui/controls';
 import { countOf } from '../ui/format';
 import { bytes } from './api';
+import { RightsStatement } from './RightsStatement';
 import {
-  acceptUploadRights, previewUploads, readUploadRights, refusalCode, REFUSAL_WORDS,
+  agreeToRights, previewUploads, readUploadRights, refusalCode, REFUSAL_WORDS,
   type Request, type StartUploads, type UploadCandidate, type UploadPreview, type UploadRights,
 } from './uploadConsent';
 import './uploadToCloud.css';
@@ -87,7 +88,6 @@ export function UploadToCloudSheet({ request, songs, start, onClose, onStarted }
   const [changed, setChanged] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const statementId = useId();
   const choiceName = useId();
 
   useEffect(() => {
@@ -107,16 +107,11 @@ export function UploadToCloudSheet({ request, songs, start, onClose, onStarted }
 
   const accept = async () => {
     if (!rights) return;
-    try {
-      setRights(await acceptUploadRights(request, rights));
-      setChanged(false);
-      setAgreed(true);
-    } catch (error) {
-      if (refusalCode(error) !== 'stale_statement') throw error;
-      // the wording changed while the sheet was open: show the new one to read
-      setRights(await readUploadRights(request));
-      setChanged(true);
-    }
+    // the wording may have changed while the sheet was open: then the new one is shown to read
+    const answer = await agreeToRights(request, rights);
+    setRights(answer.rights);
+    setChanged(answer.changed);
+    setAgreed(!answer.changed);
   };
   const go = async () => {
     if (!ready) return;
@@ -143,13 +138,7 @@ export function UploadToCloudSheet({ request, songs, start, onClose, onStarted }
           ? <div className="banner" data-tone="danger" role="alert"><p>{previewProblem}</p><button type="button" onClick={() => { setPreview(null); setAttempt((n) => n + 1); }}>Try again</button></div>
           : preview ? <PreviewLines preview={preview} /> : <Skeleton variant="rows" lines={3} label="Checking these songs" />}
         {rightsProblem && <div className="banner" data-tone="danger" role="alert"><p>{rightsProblem}</p><button type="button" onClick={() => { setRights(null); setAttempt((n) => n + 1); }}>Try again</button></div>}
-        {needsConsent && rights.statement && (
-          <section className="upload-sheet-rights" aria-labelledby={statementId}>
-            <h3 id={statementId}>{changed ? 'The statement has changed' : 'Before your first upload'}</h3>
-            <blockquote>{rights.statement}</blockquote>
-            <Action className="primary" run={accept} working="Saving…" failed="SelectaDJ could not save that. Try again.">I agree</Action>
-          </section>
-        )}
+        {needsConsent && <RightsStatement rights={rights} changed={changed} onAgree={accept} />}
         {agreed && rights?.accepted && <p className="hint" role="status">Thank you. You won’t be asked again unless the statement changes.</p>}
         <fieldset className="upload-sheet-choice">
           <legend>Once each song is uploaded</legend>

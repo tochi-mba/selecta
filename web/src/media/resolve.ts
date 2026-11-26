@@ -21,6 +21,9 @@ export type ResolvedTrack = {
   /** The file on this device that answered: its catalogue song id (a version's own id when the
    * song has several) and the content hash its bytes are checked against before they play. */
   held?: { songId: number; sha: string };
+  /** cloud.studio_seams: the linear gain this song must play at, the one its transition from the
+   * cloud was made at. Absent everywhere else: the engine measures the song itself. */
+  level?: number;
 };
 
 /** The contract injected into the engine: null means unavailable on this device right now. */

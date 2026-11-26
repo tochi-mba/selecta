@@ -344,6 +344,9 @@
   :root[data-page-layout='frame'] .library-browser .lw-toolbar .search-field { flex: 1 1 8rem; min-width: 0; }
   :root[data-page-layout='frame'] .library-browser .lw-chips { order: 2; flex: 1 1 100%; margin-inline-end: calc(-1 * var(--page-gutter)); }
   :root[data-page-layout='frame'] .library-browser .lw-toolbar-end { order: 1; }
+  /* sort as narrow as "Title" needs, so search keeps room; a cut placeholder ends in "…" */
+  :root[data-page-layout='frame'] .library-browser .lw-sort select { max-width: 5.5rem; }
+  :root[data-page-layout='frame'] .library-browser .lw-toolbar .search-field input { text-overflow: ellipsis; }
   .library-browser .lw-sort select { max-width: 6.5rem; }
   .library-browser .lw-state { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); }
   .library-browser .lw-sort > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

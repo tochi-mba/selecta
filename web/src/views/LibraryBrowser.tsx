@@ -13,11 +13,13 @@ import { RollingCount } from './feelPieces';
 export type LibraryBrowserChrome = {
   /** the page's main action, drawn at the end of the header (Connect music) */
   action: ReactNode;
+  /** cloud.one_shell: no music on this account's devices, so nothing names this device */
+  cloudOnly?: boolean;
 };
 
 const figure = (value: number | undefined) => (Number.isFinite(value) ? (value as number).toLocaleString() : null);
 
-export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAside, places }: {
+export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAside, places, cloudOnly = false }: {
   songs: number | undefined;
   playable: number | undefined;
   setAside: number | undefined;
@@ -25,6 +27,8 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
   onSetAside: () => void;
   /** library.places: "N songs · X on this device · Y in your cloud library" */
   places?: PlaceCounts;
+  /** cloud.one_shell: every song is in the cloud library, so no count names this device */
+  cloudOnly?: boolean;
 }) {
   const total = figure(songs);
   const here = figure(playable);
@@ -36,12 +40,12 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
       <div className="page-header-text">
         <h1 className="display small">Library</h1>
         {/* I83: with another device holding music, the Library is the whole account's */}
-        <p className="page-lead">{places ? 'Your songs, and where each one is kept.' : holder ? 'Your songs, and where each one plays.' : 'Your songs, and which of them can play on this device.'}</p>
+        <p className="page-lead">{cloudOnly ? 'Your songs, kept in your cloud library.' : places ? 'Your songs, and where each one is kept.' : holder ? 'Your songs, and where each one plays.' : 'Your songs, and which of them can play on this device.'}</p>
         <p className="lw-stats">
           {/* the counts roll as an import adds songs (the same words without motion) */}
           {total !== null && <span className="lw-total"><b><RollingCount value={songs as number} format={(count) => count.toLocaleString()} /></b> {songs === 1 ? 'song' : 'songs'}</span>}
           {holder && <span data-testid="library-holder">{songs !== undefined && holder.songs >= songs ? <>All on <b>{holder.name}</b></> : <><b>{holder.songs.toLocaleString()}</b> on {holder.name}</>}</span>}
-          {places && <span data-testid="library-here">{rolled(places.here)} on this device</span>}
+          {places && !cloudOnly && <span data-testid="library-here">{rolled(places.here)} on this device</span>}
           {places && <span data-testid="library-cloud">{rolled(places.cloud)} in your cloud library</span>}
           {/* a remote with none of the music says nothing about it here; the line below says it */}
           {!places && here !== null && (holder ? playable !== 0 && <span><b>{here}</b> on this device</span> : <span><b><RollingCount value={playable as number} format={(count) => count.toLocaleString()} /></b> ready to play here</span>)}

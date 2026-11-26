@@ -96,7 +96,15 @@ Nothing may push a page sideways on a phone. These hold for every sheet:
 - **Member strings wrap or truncate.** Titles, file names, device names and emails get `overflow-wrap: anywhere` or the `Truncate` component.
 - **Wide content scrolls inside its own box** (`.studio-grid` in `styles/polish.css` is the model). Never clip or hide overflow on the page itself.
 
-`web/src/styles/layoutRules.test.ts` holds the second and third rules as a ratchet: the rules that broke them when it was written are in `layoutRules.allow.json`, a new one fails, and a fixed one must leave that list. The layout sweeps (`web/e2e/layout-sweep.e2e.ts`, `web/e2e-cloud/layout-sweep.cloud.ts`) draw every route and Cloud surface from 320 to 1920px and name whatever pokes past the window, and `web/src/shell/layoutSweepCoverage.test.ts` fails when a route has no sweep entry or written reason.
+`web/src/styles/layoutRules.test.ts` holds the second and third rules as a ratchet: the rules that broke them when it was written are in `layoutRules.allow.json`, a new one fails, and a fixed one must leave that list. Three are left (2026-11-26, down from 30): the schedule board and the Studio's lanes, which are wide on purpose and scroll inside their own boxes.
+
+The layout sweeps draw every route and Cloud surface at 320, 390, 768, 1280 and 1920px, a phone on its side (844x390) and a laptop with its text at 200% (the root font size doubled), and name whatever pokes past the window:
+
+- `web/e2e/layout-sweep.e2e.ts` and `web/e2e-cloud/layout-sweep.cloud.ts`: every route and Cloud surface as it opens.
+- `web/e2e/layout-sweep-states.e2e.ts` and `web/e2e-cloud/layout-sweep-states.cloud.ts`: what a route alone does not reach, such as the bars' drawers, sheets and menus, a song's details, the strip's lens, a hand-off, the Seam Inspector and the Studio, a long Lucy conversation, many notices, and empty, loading, failing and offline pages.
+- `web/e2e-cloud/layout-sweep-sites.cloud.ts`: the staff console, SelectaDJ for Business, a joined guest and a paired display; `web/e2e-cloud/layout-sweep.kiosk.ts` (kiosk config, not in CI): the kiosk.
+
+`web/e2e/layoutSweep.ts` holds what they share (`sweep`, `sweepStates`, `barStates`). `web/src/shell/layoutSweepCoverage.test.ts` fails when a route or surface has no sweep entry or written reason.
 
 ## `!important` exceptions
 

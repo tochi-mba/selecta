@@ -44,6 +44,26 @@ export function acceptUploadRights(request: Request, shown: Pick<UploadRights, '
   });
 }
 
+/** Agree to the wording shown. When it changed while it was shown, the new wording comes back
+ * unconfirmed, with `changed`, for the member to read. */
+export async function agreeToRights(request: Request, shown: UploadRights): Promise<{ rights: UploadRights; changed: boolean }> {
+  try {
+    return { rights: await acceptUploadRights(request, shown), changed: false };
+  } catch (error) {
+    if (refusalCode(error) !== 'stale_statement') throw error;
+    return { rights: await readUploadRights(request), changed: true };
+  }
+}
+
+/** The statement a refused upload plan carries (409 `rights_needed`), to show, or null. */
+export function rightsAsked(problem: unknown): UploadRights | null {
+  if (!(problem instanceof CloudError) || problem.code !== 'rights_needed') return null;
+  const payload = (problem.payload ?? {}) as { detail?: unknown };
+  const detail = (payload.detail ?? payload) as { statement?: unknown; version?: unknown; wording_sha256?: unknown };
+  if (typeof detail.statement !== 'string' || typeof detail.version !== 'string' || typeof detail.wording_sha256 !== 'string') return null;
+  return { applies: true, reason: null, accepted: false, version: detail.version, statement: detail.statement, wording_sha256: detail.wording_sha256, accepted_at: null };
+}
+
 /** Whether uploads may start: the current wording is confirmed, or the statement does not apply
  * (a business workspace). Any failure to ask is a no. */
 export async function hasUploadConsent(request: Request): Promise<boolean> {

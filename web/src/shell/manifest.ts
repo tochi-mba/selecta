@@ -111,8 +111,9 @@ export const DESTINATIONS: Destination[] = [
   // In Cloud, browser-first (`cloud.local_first`) has all three; the hosted shell, which reads
   // `cloud.local_first` as off, has Make a Mix with `cloud.mix_create` and the Library with
   // `cloud.stored_media`, and no My Mixes. Local mode is permissive, so it is untouched.
+  // `cloud.one_shell`: the Cloud shell for an account with no music on its devices has My Mixes too.
   { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it', requires: { anyFlag: ['cloud.local_first', 'cloud.mix_create'] } },
-  { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line', requires: { flag: 'cloud.local_first' } },
+  { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line', requires: { anyFlag: ['cloud.local_first', 'cloud.one_shell'] } },
   { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections', requires: { anyFlag: ['cloud.local_first', 'cloud.stored_media'] } },
   // Analysis and learning are this computer's server. Browser-first Cloud has its own Workspace
   // (`cloud.workspace`, cloud/CloudWorkspace.tsx) with the tabs a browser can fill; the hosted

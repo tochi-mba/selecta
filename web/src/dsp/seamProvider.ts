@@ -221,6 +221,8 @@ export function recordable(schedule: SeamSchedule): SeamSchedule {
   }
   if (kept.stems?.buffers) kept = { ...kept, stems: { plan: kept.stems.plan } };
   if (kept.rendered) kept = { ...kept, rendered: { ...kept.rendered, channels: [] } };
+  // what plays instead keeps no audio in the record either
+  if (kept.instead) kept = { ...kept, instead: recordable(kept.instead) };
   return kept;
 }
 
@@ -351,6 +353,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
       return schedule;
     }
+    let cloudClip: SeamSchedule | null = null;
     try {
       const analyse = async (buffer: PcmLike, part: 'head' | 'tail') => {
         const current = budgetState();
@@ -397,7 +400,12 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
         from: request.from as AudioBuffer, to: request.to as AudioBuffer, fromLevel: request.fromLevel, toLevel: request.toLevel,
       }).catch(() => null) ?? null;
       // a clip rendered ahead that does not fit these very songs gives way before it is recorded
-      const answer = settleRendered(asked, request);
+      const settled = settleRendered(asked, request);
+      // a clip from the cloud studio has no live plan of its own: this device chooses as usual, and
+      // that choice is kept as what plays if the clip cannot be used after all (cloud.studio_seams)
+      const fromCloud = settled && 'schedule' in settled && settled.schedule.chosenBy?.by === 'cloud' && !settled.schedule.instead ? settled : null;
+      cloudClip = fromCloud?.schedule ?? null;
+      const answer = fromCloud ? null : settled;
       const plan = answer && 'schedule' in answer ? answer : null;
       const chosenBy = plan ? plan.schedule.chosenBy : answer && 'declined' in answer ? { by: 'device' as const, note: answer.declined } : undefined;
       // an injected analysis (tests, diagnostics) stands in for the worker's
@@ -469,9 +477,15 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       }
       // who chose it, said on the record for the Listening Room and the seam inspector
       if (chosenBy && !schedule.chosenBy) schedule = { ...schedule, chosenBy };
+      if (fromCloud) schedule = { ...fromCloud.schedule, instead: schedule };
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule: recordable(schedule) });
       return schedule;
     } catch (problem) {
+      // the cloud's clip still plays when this device could not work out its own choice
+      if (cloudClip) {
+        options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule: recordable(cloudClip) });
+        return cloudClip;
+      }
       worker?.terminate();
       worker = null;
       const reason = problem instanceof Error ? problem.message : String(problem);

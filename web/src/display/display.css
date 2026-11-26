@@ -46,7 +46,8 @@ p { margin: 0.4em 0; }
 .d-mark { width: 1.15em; height: 1.15em; border-radius: 50%; background: radial-gradient(circle, var(--accent-ink) 0 22%, var(--selected) 24%); }
 .d-spin { display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.5em; vertical-align: -0.1em; border-radius: 50%; border: 0.12em solid currentColor; border-top-color: transparent; animation: d-turn var(--motion-loop-working) linear infinite; }
 /* small capitals over the code: the words in ink, never lime as text */
-.d-eyebrow { text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); font-weight: var(--weight-strong); margin: 0 0 0.8em; }
+/* balanced, so a wrapped line never leaves one word alone ("SCAN TO REQUEST A / SONG") */
+.d-eyebrow { text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); font-weight: var(--weight-strong); margin: 0 0 0.8em; text-wrap: balance; }
 .d-muted { color: var(--soft); }
 .d-waiting { color: var(--soft); font-size: 1.2em; }
 .d-lede { font-size: 1.2em; color: var(--soft); }

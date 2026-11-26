@@ -6,14 +6,16 @@
 .skip-link {
   position: fixed;
   left: var(--space-3);
-  top: -60px;
+  /* wholly above the window however large the text is (a fixed -60px let it peek at 200%) */
+  top: 0;
+  translate: 0 calc(-100% - var(--space-3));
   z-index: var(--layer-toast);
   background: var(--primary-fill);
   color: var(--primary-ink);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
 }
-.skip-link:focus { top: var(--space-3); }
+.skip-link:focus { top: var(--space-3); translate: none; }
 
 .visually-hidden {
   position: absolute;

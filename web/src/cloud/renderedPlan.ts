@@ -1,7 +1,7 @@
 import { PLANNED_TRANSITION_WHY } from '../copy';
 import type { SongFacts } from '../dsp/analysis/song';
 import type { MadeSeam } from '../dsp/render/seamMaker';
-import type { SeamSchedule } from '../dsp/seams';
+import type { RenderedClip, SeamSchedule } from '../dsp/seams';
 import { joinSamples, renderedProblem } from '../engine/renderedSeam';
 import { cueSeconds, LATE_GUARD_SECONDS, measuredTiming, type AccountSeamAnswer, type AccountSeamAsk, type PlannedSeam } from './accountSeams';
 import type { CandidatesAnswer } from './deviceStudio';
@@ -52,17 +52,14 @@ export function studioNote(made: MadeSeam): NonNullable<SeamSchedule['studio']> 
   };
 }
 
-/** The rendered seam for the scheduler, or null when the songs' timing is not known. */
-export function renderedPlan(made: MadeSeam, live: PlannedSeam | null, a: SongFacts, b: SongFacts, ask: AccountSeamAsk): PlannedSeam | null {
-  const ta = measuredTiming(a, ask.fromSeconds);
-  const tb = measuredTiming(b, ask.toSeconds);
-  if (!ta || !tb) return null;
-  const clip = made.rendered;
+/** A clip made ahead as the schedule the scheduler plays, whichever studio made it: its start and
+ * window are the clip's span on A, its events where native B comes in. */
+export function renderedSchedule(clip: RenderedClip, made: { beatsAligned: boolean; move: string; why: string; chosenBy: NonNullable<SeamSchedule['chosenBy']>; studio: NonNullable<SeamSchedule['studio']> }, instead?: SeamSchedule): SeamSchedule {
   const rate = clip.sampleRate;
   const length = clip.channels[0].length;
   const seam = joinSamples(rate);
   const startSeconds = clip.aStartSample / rate;
-  const schedule: SeamSchedule = {
+  return {
     implementation: clip.implementation,
     kind: made.beatsAligned ? 'beatmatch' : 'fade',
     startSeconds,
@@ -72,12 +69,22 @@ export function renderedPlan(made: MadeSeam, live: PlannedSeam | null, a: SongFa
       { deck: 'a', kind: 'stop', at: startSeconds + seam / rate },
     ],
     style: made.move,
-    why: PLANNED_TRANSITION_WHY,
-    chosenBy: { by: 'account-rendered' },
+    why: made.why,
+    chosenBy: made.chosenBy,
     rendered: clip,
-    instead: live?.schedule,
-    studio: studioNote(made),
+    instead,
+    studio: made.studio,
   };
+}
+
+/** The rendered seam for the scheduler, or null when the songs' timing is not known. */
+export function renderedPlan(made: MadeSeam, live: PlannedSeam | null, a: SongFacts, b: SongFacts, ask: AccountSeamAsk): PlannedSeam | null {
+  const ta = measuredTiming(a, ask.fromSeconds);
+  const tb = measuredTiming(b, ask.toSeconds);
+  if (!ta || !tb) return null;
+  const schedule = renderedSchedule(made.rendered, {
+    beatsAligned: made.beatsAligned, move: made.move, why: PLANNED_TRANSITION_WHY, chosenBy: { by: 'account-rendered' }, studio: studioNote(made),
+  }, live?.schedule);
   return { scripted: live?.scripted ?? { a: ta, b: tb, abilities: ask.abilities, allowed: ask.allowed }, schedule };
 }
 

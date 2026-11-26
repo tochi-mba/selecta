@@ -14,13 +14,16 @@ import { withVersions } from './songVersions';
 /** Where CloudShell's songs can play from, and the resolver that plays them (ADR-0465, ADR-0469):
  * the availability sources the request adapter reads, the adapted request itself, and the device
  * first, hosted fallback resolver. Kept out of CloudShell.tsx so the shell stays under the cap. */
-export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting: granted, places = false, catalogue = false, openStore, lapsed, refreshStatus, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed, book }: {
+export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting: granted, places = false, catalogue = false, devices = true, openStore, lapsed, refreshStatus, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed, book }: {
   api: Api;
   cloud: Request;
   workspaceId: string;
   on: (id: FlagId) => boolean;
   /** a grandfathered account with stored media readable gets the hosted path */
   coexisting: boolean;
+  /** cloud.one_shell: false for an account with no music on its devices. Songs then play from
+   * the cloud library alone, by catalogue id, and this device's files are never read. */
+  devices?: boolean;
   /** library.places: the Library answers by place; an account that keeps songs in the cloud
    * library still plays them when its grant was taken away (the grant gates uploads only) */
   places?: boolean;
@@ -54,7 +57,8 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting: gr
     controller: () => controllerLink.current,
     holders: () => whereHeld.current,
     mixable: () => mixableIds.current,
-    here: async () => {
+    // cloud only: nothing is on this device, so its song index is not read
+    here: !devices ? async () => new Map() : async () => {
       const opened = await openStore();
       const found = new Map<number, 'here' | 'reauth' | 'reconnect'>();
       for (const song of await opened.all()) {
@@ -100,7 +104,7 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting: gr
       })),
       onServed: (from) => onServed(from.cached ? { at: from.at } : null),
     } : undefined,
-  }), [api, cloud, workspaceId, coexisting, places, catalogue, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
+  }), [api, cloud, workspaceId, coexisting, places, catalogue, devices, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
   const request = useMemo(() => deviceMusicRequest(cloud, sources), [cloud, sources]);
   // the resolver asks the newest adapter for a song's upload (cloud.catalogue_play)
   const latestRequest = useRef<DeviceMusicRequest>(request);
@@ -111,8 +115,15 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting: gr
   const resolving = useRef<Promise<MediaResolver> | null>(null);
   const resolverFor = useRef<string | null>(null);
   const resolver = useCallback(async () => {
-    const made = `${workspaceId}:${catalogue}:${coexisting}`;
+    const made = `${workspaceId}:${catalogue}:${coexisting}:${devices}`;
     if (resolverFor.current !== made) { resolverFor.current = made; resolving.current = null; }
+    // cloud.one_shell, cloud only: the cloud library by catalogue id, never this device's files
+    if (!devices) {
+      return (resolving.current ??= Promise.resolve(cloudOnlyResolver(cloudLibraryResolver(api, workspaceId, {
+        songs: () => programme.current,
+        assetOf: (songId) => latestRequest.current.cloudAssetOf(songId),
+      }), book)));
+    }
     return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
     // any version of the song this device holds plays it (ADR-0469 amendment 2)
     device: withVersions(makeResolver(opened, undefined, (songId, present, why) => {
@@ -137,9 +148,30 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting: gr
     }) : null,
     book,
   })));
-  }, [openStore, coexisting, catalogue, api, workspaceId, book, media, on]);
+  }, [openStore, coexisting, catalogue, devices, api, workspaceId, book, media, on]);
   resolveNow.current = resolver;
   return { sources, request, media, resolver, programme, controllerLink, whereHeld, mixableIds };
+}
+
+/** Said in the queue for a song the cloud-only shell cannot find in the cloud library. */
+export const NOT_IN_CLOUD_LIBRARY = 'This song isn’t in your cloud library.';
+
+/** cloud.one_shell, cloud only: a song plays from its cloud copy alone, never from this device;
+ * each answer lands in the source book the queue shows. */
+export function cloudOnlyResolver(cloudCopy: MediaResolver, book?: SourceBook): MediaResolver {
+  return async (songId) => {
+    try {
+      const found = await cloudCopy(songId);
+      if (found) {
+        book?.set(songId, { source: 'hosted' });
+        return { ...found, source: 'hosted' };
+      }
+    } catch {
+      // a copy that cannot be reached is the same honest null as a missing one
+    }
+    book?.set(songId, { source: 'unavailable', reason: NOT_IN_CLOUD_LIBRARY });
+    return null;
+  };
 }
 
 /** cloud.catalogue_play: every file of each song in the cloud library, read again with each

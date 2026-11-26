@@ -27,8 +27,11 @@ export function otherTabNote(playback: Playback, onPlayHere: () => void): ReactN
  * notices, import progress, the cutover note and page feedback. Kept out of CloudShell.tsx so the
  * shell stays under the file-length cap. With cloud.page_layout on they are one stack, most
  * pressing first, with one open at a time (NoticeStack.tsx). */
-export function CloudShellNotices({ account, workspaceId, on, playback, deviceName, asked, accountMix, where, playNoticeShown, onPlayHere, onListen, offlineShell, servedFrom, offlineReadOnly, notices, accountNotices, feedback }: {
+export function CloudShellNotices({ account, workspaceId, on, playback, deviceName, asked, accountMix, where, playNoticeShown, onPlayHere, onListen, offlineShell, servedFrom, offlineReadOnly, notices, accountNotices, feedback, deviceMusic = true }: {
   account: Account;
+  /** cloud.one_shell: false with no music on this account's devices, so nothing about a device's
+   * music is said here: no import chip, no upload-from-this-device chip, no note about the change */
+  deviceMusic?: boolean;
   workspaceId: string;
   on: (id: FlagId) => boolean;
   playback: Playback;
@@ -59,11 +62,11 @@ export function CloudShellNotices({ account, workspaceId, on, playback, deviceNa
   const connection = offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />;
   const takeover = on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>;
   const controller = on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />;
-  const importing = on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />;
+  const importing = deviceMusic && on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />;
   // cloud.move_to_cloud: the upload queue's chip sits beside the import chip
-  const uploading = on('cloud.move_to_cloud') && <UploadChip workspaceId={workspaceId} />;
+  const uploading = deviceMusic && on('cloud.move_to_cloud') && <UploadChip workspaceId={workspaceId} />;
   const layout = on('cloud.page_layout');
-  const cutover = isHostedAccount(account) && <CutoverNotice accountId={account.user.id} storedBytes={account.entitlement.storage_used_bytes} line={layout} />;
+  const cutover = deviceMusic && isHostedAccount(account) && <CutoverNotice accountId={account.user.id} storedBytes={account.entitlement.storage_used_bytes} line={layout} />;
   if (!layout) return <>{changedFrom}{asked}{accountMix}{where.picker}{playNotice}{otherTabNote(playback, onPlayHere)}{connection}{notices}{takeover}{controller}{importing}{uploading}{cutover}{feedback}</>;
   // the picker answers a press of Play, so it is never folded away
   return (

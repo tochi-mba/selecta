@@ -1,5 +1,6 @@
-import { ChangeEvent, CSSProperties, DragEvent, ReactNode, useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { ChangeEvent, CSSProperties, DragEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { feelOn, feelParts, onFeelChange } from '../feel/root';
+import { flagListed, useFlag } from '../flags';
 import { Icon } from '../ui/Icon';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { countOf, Truncate } from '../ui/format';
@@ -7,6 +8,8 @@ import type { Api } from './api';
 import { completeOutcome, completeStatusWords, uploadSummary, UploadResult, withUnreached } from './libraryState';
 import { fileSha256, resumableFor, sendParts, unfinishedUploads, UploadEntry, UploadSession, UploadStatus } from './uploadParts';
 import { UnfinishedUploads } from './UnfinishedUploads';
+import { RightsStatement } from './RightsStatement';
+import { agreeToRights, readUploadRights, rightsAsked, type Request as RightsRequest, type UploadRights } from './uploadConsent';
 
 type Item = UploadResult;
 
@@ -62,6 +65,29 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
     setRights(null);
     resolve?.(yes);
   };
+  // cloud.move_to_cloud: a workspace that is not a business agrees to the upload statement once,
+  // before its first upload; the plan is refused without it (409 rights_needed)
+  const asksRights = useFlag('cloud.move_to_cloud') && flagListed('cloud.move_to_cloud');
+  const rightsRequest = useMemo(() => ((path: string, init?: RequestInit) => api(path.replace(/^\/api(?=\/)/, ''), init, workspaceId)) as RightsRequest, [api, workspaceId]);
+  const [statement, setStatement] = useState<UploadRights | null>(null);
+  // Start upload waits for the answer, so a first upload never races the statement
+  const [rightsKnown, setRightsKnown] = useState(!asksRights);
+  const [statementChanged, setStatementChanged] = useState(false);
+  useEffect(() => {
+    if (!asksRights) { setRightsKnown(true); return undefined; }
+    let live = true;
+    setRightsKnown(false);
+    // a failed read lets the upload go: a refused plan then shows the statement (rights_needed)
+    void readUploadRights(rightsRequest).then((found) => { if (live) setStatement(found.applies && !found.accepted ? found : null); }, () => undefined)
+      .finally(() => { if (live) setRightsKnown(true); });
+    return () => { live = false; };
+  }, [asksRights, rightsRequest]);
+  const agree = async () => {
+    if (!statement) return;
+    const answer = await agreeToRights(rightsRequest, statement);
+    setStatementChanged(answer.changed);
+    setStatement(answer.changed ? answer.rights : null);
+  };
   const selected = useCallback((event: ChangeEvent<HTMLInputElement>) => setFiles(Array.from(event.target.files ?? [])), []);
   // The drop zone always takes the files dropped on it (the browser never opens them instead), the
   // same way the picker does. Only the look of a file dragged over it (lifted, with a lit edge)
@@ -113,7 +139,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   };
 
   const begin = async () => {
-    if (!files.length || blocked) return;
+    if (!files.length || blocked || statement || !rightsKnown) return;
     setUploading(true); setError(''); setNotice(''); setItems([]);
     const next: Item[] = [];
     const chosen = files.map((file) => file.name);
@@ -138,6 +164,9 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
         try {
           planned = await plan();
         } catch (problem) {
+          // cloud.move_to_cloud: the workspace has not agreed to the current statement yet
+          const asked = rightsAsked(problem);
+          if (asked) { setStatement(asked); throw new Error('Agree to the upload statement above, then start the upload again.'); }
           // A business organisation asks for the upload rights statement first (ADR-0449
           // BZ-0449-04): confirm it for this batch, then plan again naming the batch.
           const detail = attestationAsked(problem);
@@ -213,9 +242,10 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
       <small>MP3, FLAC, WAV, AIFF, M4A, AAC and Ogg audio</small>
     </label>
   );
+  const rightsFirst = statement && <RightsStatement rights={statement} changed={statementChanged} onAgree={agree} />;
   const actions = (
     <div className="cloud-upload-actions">
-      <button className="primary" disabled={!files.length || uploading || Boolean(blocked)} onClick={() => void begin()}>{uploading ? 'Uploading…' : 'Start upload'}</button>
+      <button className="primary" disabled={!files.length || uploading || Boolean(blocked) || Boolean(statement) || !rightsKnown} onClick={() => void begin()}>{uploading ? 'Uploading…' : 'Start upload'}</button>
       {progress && <span role="status">{progress}</span>}
     </div>
   );
@@ -227,7 +257,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
         <>
           <div className="cloud-upload-main">
             <div className="cloud-upload-intro"><p className="cloud-eyebrow">Private library</p><h2>Add your tracks</h2></div>
-            {blockedLine}{drop}{actions}{results}
+            {blockedLine}{rightsFirst}{drop}{actions}{results}
           </div>
           <div className="cloud-upload-side">
             {side}
@@ -238,7 +268,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
       ) : (
         <>
           <div className="cloud-upload-intro"><p className="cloud-eyebrow">Private library</p><h2>Add your tracks</h2><p>{about}</p></div>
-          {blockedLine}{unfinishedList}{drop}{actions}{results}
+          {blockedLine}{unfinishedList}{rightsFirst}{drop}{actions}{results}
         </>
       )}
       {rights !== null && (

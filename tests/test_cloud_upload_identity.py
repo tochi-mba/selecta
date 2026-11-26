@@ -44,6 +44,7 @@ from selecta.local_media.hashes_schema import local_song_hashes
 from selecta.local_media.schema import local_songs
 from selecta.persistence import db_now, new_id, transaction
 from selecta.storage import api as upload_api
+from selecta.storage import personal_rights
 from selecta.storage.api import install_routes
 from selecta.storage.artifacts import LocalArtifactStore
 from selecta.storage.keys import original_key
@@ -89,6 +90,8 @@ def world(cloud_engine):
     for workspace in (A, B):
         with transaction(cloud_engine, workspace) as conn:
             quota.set_limit(conn, workspace, plan_for("free"))
+            # cloud.move_to_cloud: the upload statement is agreed before a first upload
+            personal_rights.record(conn, workspace, "user-test", now=db_now(conn))
     objects = FakeS3()
 
     def claims():

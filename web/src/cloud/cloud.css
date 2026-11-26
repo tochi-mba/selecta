@@ -379,7 +379,8 @@
 .cloud-upload-intro { max-width: 40rem; }
 .cloud-upload-intro p:not(.cloud-eyebrow) { color: var(--text-soft); }
 /* cloud.page_layout: the files on the left, storage and what happens to uploads on the right, side
-   by side once the window is wide enough; one column, files first, below that */
+   by side once the window is wider than a laptop breakpoint (styles/breakpoints.ts above('laptop'));
+   one column, files first, below that */
 .cloud-upload-panel[data-columns] .cloud-upload-intro { max-width: none; }
 .cloud-upload-main,
 .cloud-upload-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-content: start; min-width: 0; }
@@ -387,7 +388,7 @@
 .cloud-upload-about h3 { margin: 0 0 var(--space-1); font-size: var(--text-md); }
 .cloud-upload-about p { margin: 0; color: var(--text-soft); }
 .cloud-upload-side .cloud-meter-card { margin: 0; }
-@media (min-width: 1180px) {
+@media (min-width: 1101px) {
   .cloud-upload-panel[data-columns] { grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem); align-items: start; }
 }
 .cloud-drop {
@@ -672,8 +673,11 @@
   .cloud-spine-step .cloud-actions { width: 100%; }
   .cloud-library-row { padding: var(--space-3); gap: var(--space-2); }
   .cloud-library-row button { padding: var(--space-dense) var(--space-2); }
+  /* each action as wide as its words, sharing the row when both fit and each taking a row of its
+     own when not, so "Manage storage" never breaks onto two lines */
   .cloud-over-quota-actions button,
-  .cloud-spine-step .cloud-actions > * { flex: 1; }
+  .cloud-spine-step .cloud-actions > * { flex: 1 1 auto; }
+  .cloud-over-quota-actions button { white-space: nowrap; }
   .cloud-danger-row > button,
   .cloud-current-plan > button,
   .cloud-confirm .cloud-actions > button { flex: 1 1 100%; }

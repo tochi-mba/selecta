@@ -382,11 +382,12 @@ function endWatch(): void {
 
 /** The shell's hook (through `useImportCarryOn`): loads this workspace's folders, checks them
  * once after opening, again when the tab comes back and is due, and after an import that made a
- * check wait. Off (`cloud.music_folders`), it does nothing at all. */
-export function useFolderWatch(given: Parts, more?: WatchExtras): void {
+ * check wait. Off (`cloud.music_folders`, or `enabled` false for an account with no music on its
+ * devices), it does nothing at all. */
+export function useFolderWatch(given: Parts, more?: WatchExtras, enabled = true): void {
   useEffect(() => { extras = more ?? {}; });
   const { request, openStore, workspaceId, importer } = given;
-  useEffect(() => (flagOn('cloud.music_folders') ? bindWatch({ request, openStore, workspaceId, importer }) : undefined), [request, openStore, workspaceId, importer]);
+  useEffect(() => (enabled && flagOn('cloud.music_folders') ? bindWatch({ request, openStore, workspaceId, importer }) : undefined), [request, openStore, workspaceId, importer, enabled]);
 }
 
 /** Start watching one workspace's folders; the returned function stops it. The hook's body, and

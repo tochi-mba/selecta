@@ -543,3 +543,68 @@ T-20261126-afbb.
 Tested on SQLite with synthetic numbers (`tests/test_hosted_pairs.py`,
 `tests/test_hosted_seams_route.py`). Not run here: a real worker, PostgreSQL, the dev cloud
 stack, the browser.
+
+## 15. One shell for every Cloud account (2026-11-26, two-places plan Phase 8)
+
+Flag `cloud.one_shell` (default off; it needs `library.places` and `cloud.account_mixes`; it lives
+in `src/selecta/flags/cloud_shell.json`, because `cloud.json` is near the file-length cap). The
+browser reads it from the account's own decisions and only when named on, so an older server
+never switches it on (`oneShellFor`, `web/src/cloud/musicHomes.ts`).
+
+**Routing.** With the flag on, `CloudApp` mounts `CloudShell` for every Cloud account, from one
+place in the tree. An account with music on its devices (`experience.local_first` and
+`cloud.local_first`) gets the shell exactly as before. Any other account gets the **cloud-only
+profile**, passed as one prop, `musicHomes: {device: false, cloud: true}`. `cloud.local_first` is
+then only a kill switch for music on devices: turning it off for an account (the Labs switch, a
+rule) hides the device features and keeps the shell mounted, never swapping frames. With
+`cloud.one_shell` off, the routing is exactly as it was: `HostedShell` with `cloud.hosted_shell`,
+else the legacy rail.
+
+**The cloud-only profile.**
+- No device sweeps (`sweepLapsed`), availability reports, folder watching or interrupted-import
+  carry-on (`useImportCarryOn` and `useFolderWatch` take `enabled`), facts uploads, key-profile
+  measuring, upload queue from this device, getting-started spine, Connect music, This device,
+  Listening Room, browser Workspace, import chip or cutover note.
+- The Library is `CloudOnlyLibrary`: the shared Library with one action, Upload music (the More
+  place at `/upload`), its counts and chips never naming this device.
+- Songs play from the cloud library alone, found by catalogue id (`cloudOnlyResolver` over
+  `cloudLibraryResolver` with `assetOf`); a song with no cloud copy says "This song isn’t in your
+  cloud library." in the queue.
+- Make a Mix is the shared mixer, with both of its files, as with `cloud.one_mixer`
+  (`oneMixerOn`).
+- Listen plays through the shared engine (`deviceMusicPlayer.ts`), registered as this tab's
+  playback device (`POST /api/devices`, then `GET /api/playback/session`), so remotes, Rooms and
+  Lucy reach it (closes T-20261125-dfa3).
+
+**Where every older page and control now lives, for a cloud-only account.**
+
+| Older page or control | In the one shell |
+|---|---|
+| Overview: workspace name and plan chip | The account menu at the foot of the side bar (email and plan) and the Account page's Signed in as |
+| Overview: Add music hero, "Library and uploads" card | Upload music and Library in the side bar; the Library's Upload music action |
+| Overview: storage meter | Plan & billing's usage (`Meters`), and beside the uploads on Upload music with `cloud.page_layout` |
+| Overview: Current plan, Manage plan | Plan & billing (`/account/billing`) |
+| Overview: Rooms card (invitation, or the plan that unlocks it) | Rooms in the side bar (`/rooms`), whose panel says the plan when Rooms is locked |
+| Add music (`UploadsPanel`): choose files, Start upload, each file's result | Upload music (`/upload`), the same panel, drawn by `cloudAppPlaces.tsx` |
+| Unfinished uploads, Carry on | The same list on Upload music |
+| Library (`LibraryPanel`): the list, Listen from a song, Load more | The Library (`CloudOnlyLibrary`): the shared list, Play and Play next through the shared player, its pages |
+| Library: Remove, with undo | Remove from cloud library (`library.places`), from a song or a selection, saying what is left nowhere |
+| Library: songs, storage and unfinished uploads counts | The Library header's counts; storage in Plan & billing; unfinished uploads on Upload music |
+| Library and dock player (`useCloudPlayer`, `CloudTransportDock`): now playing, up next | Listen and the mini player, on the shared engine |
+| Listen (`CloudListen`): the Playing on bar | Listen and the mini player, with Play here instead and remote control |
+| Listen (`CloudListen`): the host's room panel | Rooms |
+| Make a Mix (`MakeCloudMix`): make a mix from chosen songs | Make a Mix (the shared mixer); songs added from the Library |
+| Make a Mix: your Cloud mixes, Open | My Mixes: `cloud.account_mixes` brings each in once as a draft |
+| Make a Mix: reorder, remove, Save | The editor (`/mix/current/edit`, or a draft's own editor) |
+| Make a Mix: earlier versions, Restore | No place in the one shell: filed as T-20261126-6080 |
+| The Make a Mix card (`HostedMakeAMix`, `HostedMix`): Make a mix, Play, the track list | Make a Mix and Listen |
+| The card: songs that could not be analysed, Try again | Upload music lists them with Try again (`CloudSongProblems`) |
+| The card: transitions rendering, Try the straight changes again | Listen's transitions line; a transition not ready is blended live (`cloud.studio_seams`) |
+| The card: Export the whole mix, the download | The editor's Export panel: Make the file in your cloud library (`CloudFileOffer`, with `cloud.hosted_render`), or the file saved on this device (`cloud.local_export`) |
+| Devices | Devices in the side bar's settings group and in Account's sections (`/account/devices`) |
+| The legacy rail: Sign out, Sign out everywhere, Delete account, Staff console, business switcher | The account menu's Sign out; the Account page's Sign out everywhere and Delete account (always with `cloud.one_shell`), staff console and business switcher |
+
+**Left.** Removing the older rail, pages and players after one release with the flag on is
+T-20261126-fefe. Not run here: the dev cloud stack and a real account; the new browser check is
+`web/e2e-cloud/hosted-shell.cloud.ts` ("with cloud.one_shell on ..."), written here and run by
+the browser suite, not here.

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { accessible, listener, r2Log, signedIn } from './cloud';
+import { accessible, agreeIfAsked, listener, r2Log, signedIn } from './cloud';
 
 // SC-0402-03 (over quota), SC-0398-05 (upload resume) and SC-0412-04 (data export).
 
@@ -65,6 +65,7 @@ test('a refreshed browser carries on an upload from the parts already uploaded',
   await request.post('/test/r2/fail-parts', { data: { parts: [2] } });
 
   await page.locator('input[type=file]').setInputFiles(file);
+  await agreeIfAsked(page);
   await page.getByRole('button', { name: 'Start upload' }).click();
   await expect(page.getByText('Needs attention', { exact: true })).toBeVisible({ timeout: 60_000 });
   const before = await r2Log(request);
@@ -75,6 +76,7 @@ test('a refreshed browser carries on an upload from the parts already uploaded',
   const unfinished = page.getByRole('region', { name: 'Unfinished uploads' });
   await expect(unfinished).toContainText('Long Take.wav');
   await page.locator('input[type=file]').setInputFiles(file);
+  await agreeIfAsked(page);
   await page.getByRole('button', { name: 'Start upload' }).click();
   await expect(page.getByText('Upload accepted')).toBeVisible({ timeout: 60_000 });
   const sent = (await r2Log(request)).filter((entry) => entry.method === 'PUT' && entry.status === 200).map((entry) => entry.part);

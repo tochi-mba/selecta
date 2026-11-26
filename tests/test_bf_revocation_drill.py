@@ -44,6 +44,7 @@ from selecta.flags import rules as flag_rules  # noqa: E402
 from selecta.flags.rules import RulesCache  # noqa: E402
 from selecta.hosted_coexistence.grandfather import build_grandfather_rules  # noqa: E402
 from selecta.persistence import transaction  # noqa: E402
+from selecta.storage import personal_rights  # noqa: E402
 from selecta.work import catalogue  # noqa: E402
 from selecta.work.cloud_ports import CloudJobFlags  # noqa: E402
 from selecta.work.enqueue import JobSpec  # noqa: E402
@@ -110,6 +111,11 @@ def _wav(r: Rehearsal, seconds: float) -> bytes:
 
 
 def _plan(r: Rehearsal, user: str, name: str, size: int) -> httpx.Response:
+    # cloud.move_to_cloud: a personal workspace agrees to the upload statement before a first
+    # upload; refused (flag_off) while the grant is revoked, as the plan below is
+    r.call("POST", "/api/uploads/rights", user, json={
+        "version": personal_rights.STATEMENT_VERSION,
+        "wording_sha256": personal_rights.WORDING_SHA256})
     return r.call("POST", "/api/uploads/plan", user, json={"files": [{"name": name, "size": size}]})
 
 

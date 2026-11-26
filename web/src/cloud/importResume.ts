@@ -229,13 +229,14 @@ export function carryOnNow(): void {
 
 /** The shell's hook: registers how this workspace imports, checks for an interrupted import on
  * mount, and checks again on reconnect, on the page becoming visible and when another tab that
- * was importing lets go. */
-export function useImportCarryOn(parts: RunnerParts & { watch?: WatchExtras }): void {
+ * was importing lets go. `enabled` false (cloud.one_shell, no music on devices) does none of it. */
+export function useImportCarryOn(parts: RunnerParts & { watch?: WatchExtras; enabled?: boolean }): void {
   const { request, openStore, workspaceId, importer } = parts;
+  const enabled = parts.enabled !== false;
   // cloud.music_folders: the shell's one hook also starts watching this workspace's folders
-  useFolderWatch({ request, openStore, workspaceId, importer }, parts.watch);
+  useFolderWatch({ request, openStore, workspaceId, importer }, parts.watch, enabled);
   useEffect(() => {
-    if (!flagOn('cloud.resilient_import')) return undefined;
+    if (!enabled || !flagOn('cloud.resilient_import')) return undefined;
     const mine: RunnerParts = { request, openStore, workspaceId, importer };
     registered = mine;
     const check = () => {
@@ -256,7 +257,7 @@ export function useImportCarryOn(parts: RunnerParts & { watch?: WatchExtras }): 
       document.removeEventListener('visibilitychange', visible);
       if (registered === mine) { registered = null; setOffer(null, null); }
     };
-  }, [request, openStore, workspaceId, importer]);
+  }, [request, openStore, workspaceId, importer, enabled]);
 }
 
 /** Forget an interrupted import: its offer goes; ConnectMusic clears the marker and journal. */

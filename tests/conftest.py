@@ -20,6 +20,7 @@ from cloud_db import (  # noqa: E402, F401
 )
 from lucy_helpers import lucy, lucy_home, lucy_template  # noqa: E402, F401
 from mix_helpers import client, conn, store  # noqa: E402, F401
+from real_home_guard import _a_selecta_home_of_its_own, _never_the_real_home  # noqa: E402, F401
 from sharding import in_shard  # noqa: E402
 
 

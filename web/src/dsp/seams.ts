@@ -113,8 +113,9 @@ export interface SeamSchedule {
   /** A stem move (stemSchedule.ts): the recipe's plan and, once prepared, its per-stem audio. */
   stems?: SeamStems;
   /** With planning from the account on (cloud/accountSeams.ts): who chose this move, the account's
-   * planner or this device, and when the device chose, why the account's choice wasn't used. */
-  chosenBy?: { by: 'account' | 'account-rendered' | 'device'; note?: string };
+   * planner or this device, and when the device chose, why the account's choice wasn't used.
+   * `cloud`: made ahead by the cloud studio (cloud.studio_seams, cloud/cloudSeams.ts). */
+  chosenBy?: { by: 'account' | 'account-rendered' | 'cloud' | 'device'; note?: string };
   /** cloud.device_render: the planner's choice rendered ahead of time on this device, played
    * between native A and native B (engine/renderedSeam.ts). The schedule's own fields describe
    * the same span for surfaces; the clip is never kept in a seam record. */
