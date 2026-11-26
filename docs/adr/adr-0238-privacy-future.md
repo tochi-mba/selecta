@@ -1,5 +1,7 @@
 # ADR-0238 - Local-first privacy and future SaaS-ready boundaries without SaaS
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
 - **Implementation:** In progress (6/8 Implemented, 0/8 In progress, 2/8 Not started or needing a person; updated 2026-11-11).
 - **Independent verification:** No (0/8).

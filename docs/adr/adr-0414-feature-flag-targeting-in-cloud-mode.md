@@ -1,5 +1,7 @@
 # ADR-0414 - Feature-flag targeting in cloud mode
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 10/10 Implemented; 0/10 In progress; 0/10 Not started.
 - **Independent verification:** 0/10 Verified.

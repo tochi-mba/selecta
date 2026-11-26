@@ -1,5 +1,7 @@
 # ADR-0457 - Browser audio runtime
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 4/8 Implemented; 4/8 In progress.
 - **Independent verification:** 0/8 Verified.

@@ -1,5 +1,7 @@
 # ADR-0462 - Shared web shell and component reuse across local and Cloud
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 5/8 Implemented; 2/8 In progress; 1/8 Not started.
 - **Independent verification:** 0/8 Verified.

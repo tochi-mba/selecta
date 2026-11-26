@@ -1,5 +1,7 @@
 # ADR-0456 - Hosted media mode: preservation and per-account flag gating
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 5/8 Implemented; 3/8 In progress.
 - **Independent verification:** 0/8 Verified.

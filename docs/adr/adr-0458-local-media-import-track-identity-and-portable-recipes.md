@@ -1,5 +1,7 @@
 # ADR-0458 - Local media import, track identity and portable recipes
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 7/7 implemented in code. Required regression and integration tests remain for the final test phase; real-device quota evidence is pending.
 - **Independent verification:** 0/7 Verified.

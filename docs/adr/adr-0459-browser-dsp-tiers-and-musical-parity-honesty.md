@@ -1,5 +1,7 @@
 # ADR-0459 - Browser DSP tiers and musical parity honesty
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 5/8 Implemented; 2/8 In progress; 1/8 Not started. Tier 2 remains `unsupported_here` without a fresh, matching per-device worker calibration; beatmatched playback stays on the labelled fade path meanwhile.
 - **Independent verification:** 0/8 Verified.

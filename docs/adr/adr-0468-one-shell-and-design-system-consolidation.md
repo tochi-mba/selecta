@@ -1,5 +1,7 @@
 # ADR-0468 - One shell and design-system consolidation
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-18).
 - **Implementation:** 12/12 Implemented; 0/12 In progress; 0/12 Not started.
 - **Independent verification:** 0/12 Verified.

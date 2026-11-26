@@ -1,5 +1,7 @@
 # ADR-0391 - Selecta Cloud becomes a goal; local-only guarantees are scoped to local mode
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 4/4 Implemented; 0/4 In progress; 0/4 Not started.
 - **Independent verification:** 0/4 Verified.

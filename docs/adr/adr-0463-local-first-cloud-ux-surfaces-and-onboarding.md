@@ -1,5 +1,7 @@
 # ADR-0463 - Local-first Cloud UX surfaces and onboarding
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 4/7 Implemented; 2/7 In progress; 1/7 Not started.
 - **Independent verification:** 0/7 Verified.

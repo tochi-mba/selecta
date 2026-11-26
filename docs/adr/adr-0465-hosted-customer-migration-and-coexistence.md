@@ -1,5 +1,7 @@
 # ADR-0465 - Hosted customer migration and coexistence
 
+> Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 5/6 implemented in code; 0/6 in progress; 1/6 not started. Required regression and seeded integration tests plus real hosted-account evidence remain pending.
 - **Independent verification:** 0/6 Verified.
