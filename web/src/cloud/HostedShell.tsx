@@ -134,7 +134,7 @@ export function HostedShell({ account, page, notices, dock, footer, signedIn }: 
       {/* one page at a time, each in its own Section: a page that fails to draw says so and can
           start again, and the shell, the navigation and the dock stay */}
       <Section key={place} name={title}>
-        <main className="page cloud-hosted-page" id="main">
+        <main className="page cloud-hosted-page" id="main" data-place={typeof view === 'object' && 'more' in view ? view.more : undefined}>
           <h1 className="display small">{typeof view === 'object' && 'missing' in view ? 'Page not found' : title}</h1>
           <div className="stack">{page(view)}</div>
         </main>

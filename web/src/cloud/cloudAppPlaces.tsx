@@ -11,6 +11,7 @@ import { BillingStandingNotice } from './BillingStanding';
 import { AccountProblemNote, SuspendedPanel } from './CloudStates';
 import { ConnectionBanner } from './ConnectionBanner';
 import { OverQuotaBanner } from './OverQuota';
+import type { NoticeGroups } from './NoticeStack';
 
 /** Said while a lapsed sign-in renews in the background. */
 export const RENEWING_WORDS = 'Renewing your sign-in. Everything on this page is kept.';
@@ -40,9 +41,10 @@ export function morePanelFor({ account, api, settingsPanel, billing, uploads, pl
 }
 
 /** The hosted frame's account notices, in a shared shell's banner slot (one source for every
- * frame). The local-first shell draws its own connection banner, which also says when its
- * library is served from this device. */
-export function shellNoticesFor({ account, connectionBanner, exact, go, problem, onRetry, onBillingPage, portalBusy, onPortal, renewing, polling }: {
+ * frame): `all` in the order every frame has drawn them, and `groups`, the same notices by how
+ * pressing they are, for the notice stack (cloud.page_layout). The local-first shell draws its own
+ * connection banner, which also says when its library is served from this device. */
+export function accountNotices({ account, connectionBanner, exact, go, problem, onRetry, onBillingPage, portalBusy, onPortal, renewing, polling }: {
   account: Account | null;
   /** the hosted frame's connection banner (the local-first shell draws its own) */
   connectionBanner: boolean;
@@ -58,14 +60,17 @@ export function shellNoticesFor({ account, connectionBanner, exact, go, problem,
   renewing: boolean;
   /** live updates fell back to polling on this network, with the connection up */
   polling: boolean;
-}): ReactNode {
-  return account && <>
-    {connectionBanner && <ConnectionBanner />}
-    {account.user.suspended && (exact ? <SuspendedPanel go={go} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
-    {problem && <AccountProblemNote kind={problem.kind} onRetry={onRetry} />}
-    <OverQuotaBanner account={account} go={go} />
-    {!onBillingPage && <BillingStandingNotice account={account} place="shell" busy={portalBusy} onPortal={onPortal} />}
-    {renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>}
-    {polling && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
-  </>;
+}): { all: ReactNode; groups: NoticeGroups } {
+  if (!account) return { all: account, groups: {} };
+  const connection = connectionBanner && <ConnectionBanner />;
+  const suspended = account.user.suspended && (exact ? <SuspendedPanel go={go} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>);
+  const trouble = problem && <AccountProblemNote kind={problem.kind} onRetry={onRetry} />;
+  const quota = <OverQuotaBanner account={account} go={go} />;
+  const standing = !onBillingPage && <BillingStandingNotice account={account} place="shell" busy={portalBusy} onPortal={onPortal} />;
+  const renew = renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>;
+  const slow = polling && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>;
+  return {
+    all: <>{connection}{suspended}{trouble}{quota}{standing}{renew}{slow}</>,
+    groups: { blocking: <>{suspended}{trouble}{quota}</>, playback: connection, info: <>{standing}{renew}{slow}</> },
+  };
 }

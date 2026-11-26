@@ -43,7 +43,9 @@ function noteKind(accountId: string, storedBytes: number): 'grandfathered' | 'gr
   }
 }
 
-export function CutoverNotice({ accountId, storedBytes = 1 }: { accountId: string; storedBytes?: number }) {
+/** `line` (cloud.page_layout): one dismissible line in the notice stack instead of a card, kept
+ * dismissed in the same place. */
+export function CutoverNotice({ accountId, storedBytes = 1, line = false }: { accountId: string; storedBytes?: number; line?: boolean }) {
   const id = useId();
   const [hidden, setHidden] = useState(() => wasDismissed(accountId));
   const [kind] = useState(() => noteKind(accountId, storedBytes));
@@ -52,6 +54,7 @@ export function CutoverNotice({ accountId, storedBytes = 1 }: { accountId: strin
     remember(accountId);
     setHidden(true);
   };
+  if (line) return <p className="cloud-cutover-line" role="status">Your cloud library and mixes work as before. <button type="button" onClick={dismiss}>Dismiss</button></p>;
   if (kind === 'granted') return (
     <section className="cloud-card cloud-cutover" aria-labelledby={`${id}-title`}>
       <div className="cloud-card-heading">

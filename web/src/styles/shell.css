@@ -678,6 +678,15 @@ main.page h1[tabindex='-1']:focus { outline: none; }
 .shell[data-mode='cloud'] .content > main.page:has(~ div.page) { flex: none; padding-bottom: var(--space-5); }
 .shell[data-mode='cloud'] .listen-empty { min-height: 0; }
 
+/* cloud.page_layout: a Cloud page fills the frame instead of being capped narrower, so a wide
+   window has no empty half; its text keeps a readable measure. Account, billing and onboarding keep
+   the reading width, centred in the frame. The frame's left edge and the top bar stay put. */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content { --page-max: var(--page-frame); }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) { --page-max: var(--content-reading); }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) > :is(.page, .cloud-footer) { margin-inline: auto; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > .shell-banners { max-width: var(--page-frame); }
+:where(:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > main.page) p { max-width: 70ch; }
+
 /* Cloud notices (connection, account, import progress): one stack on the page column, in the
    page's flow under the bar. Each takes a row of its own; none floats over the page. */
 .shell-banners { display: grid; gap: var(--space-2); padding: var(--space-3) var(--page-gutter) 0; min-width: 0; }

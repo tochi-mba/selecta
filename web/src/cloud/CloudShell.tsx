@@ -59,7 +59,8 @@ import { placingOn } from './accountPlacements';
 import { RoomOpenLine } from './RoomOpenLine';
 import { useCloudShellMedia } from './cloudShellMedia';
 import { CloudShellPages } from './CloudShellPages';
-import { CloudShellNotices } from './CloudShellNotices';
+import { CloudShellNotices, otherTabNote } from './CloudShellNotices';
+import type { NoticeGroups } from './NoticeStack';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -83,7 +84,7 @@ const PUBLISH_RETRY_MS = 10_000;
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 const LUCY_POLL_MS = 500;
 
-export function CloudShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
+export function CloudShell({ api, account, more, notices, accountNotices, feedback, onSignOut, offlineReadOnly = false }: {
   api: Api;
   account: Account;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */
@@ -91,6 +92,8 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
   /** The account's notices (suspended, account problem, over quota, paused live updates), drawn
    * by CloudApp from the same sources as the hosted frame, shown first in the banner. */
   notices?: ReactNode;
+  /** cloud.page_layout: the same account notices, by how pressing they are (NoticeStack.tsx) */
+  accountNotices?: NoticeGroups;
   feedback?: ReactNode;
   /** Sign out of this device, from the side bar's account menu. */
   onSignOut?: () => void;
@@ -733,7 +736,9 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
         status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? <RoomOpenLine room={room} path={roomsPlace.path} waiting={roomWaiting} add={roomAdd} /> : undefined}
         banner={<CloudShellNotices account={account} workspaceId={workspaceId} on={on} playback={playback} deviceName={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null}
           asked={askedBanner} accountMix={accountMix.banner} where={where} playNoticeShown={!(route.page === 'listen' && (remote || !followsHere))} onPlayHere={() => void shellPlayer.togglePause()}
-          offlineShell={offlineShell} servedFrom={servedFrom} offlineReadOnly={offlineReadOnly} notices={notices} feedback={feedback} />}
+          onListen={route.page === 'listen'} offlineShell={offlineShell} servedFrom={servedFrom} offlineReadOnly={offlineReadOnly} notices={notices} accountNotices={accountNotices} feedback={feedback} />}
+        // cloud.page_layout: another tab playing is said in the mini player, off Listen
+        playerNote={on('cloud.page_layout') && route.page !== 'listen' ? otherTabNote(playback, () => void shellPlayer.togglePause()) : undefined}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}><CloudShellPages at={{

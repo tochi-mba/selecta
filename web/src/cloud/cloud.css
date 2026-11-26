@@ -370,6 +370,18 @@
 .cloud-upload-panel { display: grid; gap: var(--space-4); }
 .cloud-upload-intro { max-width: 40rem; }
 .cloud-upload-intro p:not(.cloud-eyebrow) { color: var(--text-soft); }
+/* cloud.page_layout: the files on the left, storage and what happens to uploads on the right, side
+   by side once the window is wide enough; one column, files first, below that */
+.cloud-upload-panel[data-columns] .cloud-upload-intro { max-width: none; }
+.cloud-upload-main,
+.cloud-upload-side { display: grid; gap: var(--space-4); align-content: start; min-width: 0; }
+.cloud-upload-about { padding: var(--space-cozy) var(--space-4); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); background: var(--surface-control); }
+.cloud-upload-about h3 { margin: 0 0 var(--space-1); font-size: var(--text-md); }
+.cloud-upload-about p { margin: 0; color: var(--text-soft); }
+.cloud-upload-side .cloud-meter-card { margin: 0; }
+@media (min-width: 1180px) {
+  .cloud-upload-panel[data-columns] { grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem); align-items: start; }
+}
 .cloud-drop {
   position: relative;
   min-height: 190px;

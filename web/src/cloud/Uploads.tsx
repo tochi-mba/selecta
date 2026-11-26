@@ -1,4 +1,4 @@
-import { ChangeEvent, CSSProperties, DragEvent, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { ChangeEvent, CSSProperties, DragEvent, ReactNode, useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { feelOn, feelParts, onFeelChange } from '../feel/root';
 import { Icon } from '../ui/Icon';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -18,7 +18,7 @@ type Item = UploadResult;
 // outcome (added, already there, skipped, needs attention, not uploaded), one file's failure
 // doesn't stop the rest, and the closing message counts them instead of one "Upload finished".
 
-export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, onAccepted, perFile = true, venueId }: {
+export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, onAccepted, perFile = true, venueId, side }: {
   api: Api;
   workspaceId: string;
   setError: (value: string) => void;
@@ -28,6 +28,9 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   perFile?: boolean;
   /** A business venue the files are for (ADR-0448 per-venue storage); none for the whole library. */
   venueId?: string;
+  /** cloud.page_layout: what goes beside the files on a wide screen (the storage meter); given, the
+   * panel is two columns, with what happens to uploads and the unfinished ones on the right. */
+  side?: ReactNode;
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -198,23 +201,46 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
     finally { setUploading(false); setProgress(''); void loadUnfinished(); }
   };
 
+  const aboutId = useId();
+  const about = 'Files transfer directly to private object storage. SelectaDJ checks the actual audio format, file size and duration before accepting an upload.';
+  const blockedLine = blocked && <p className="cloud-inline-error" role="status">{blocked}</p>;
+  const unfinishedList = <UnfinishedUploads api={api} workspaceId={workspaceId} sessions={unfinished} onChanged={() => void loadUnfinished()} />;
+  const drop = (
+    <label className={`cloud-drop${blocked ? ' disabled' : ''}`} data-lift={feeling && !blocked ? '' : undefined} data-drag={dragging || undefined} onDragOver={dragOver} onDragLeave={dragLeave} onDrop={dropped}>
+      <input type="file" multiple disabled={Boolean(blocked)} accept="audio/*,.aiff,.aif,.flac,.mp3,.m4a,.wav,.ogg,.opus" onChange={selected} />
+      <span className="cloud-drop-icon"><Icon name="plus" size="hero" /></span>
+      <strong>{files.length ? `${countOf(files.length, 'file')} selected` : 'Choose music files'}</strong>
+      <small>MP3, FLAC, WAV, AIFF, M4A, AAC and Ogg audio</small>
+    </label>
+  );
+  const actions = (
+    <div className="cloud-upload-actions">
+      <button className="primary" disabled={!files.length || uploading || Boolean(blocked)} onClick={() => void begin()}>{uploading ? 'Uploading…' : 'Start upload'}</button>
+      {progress && <span role="status">{progress}</span>}
+    </div>
+  );
+  // each file's line arrives as its upload ends, and an accepted one ticks (feel motion only)
+  const results = items.length > 0 && <ul className="cloud-upload-list" aria-label={perFile ? 'Each file’s result' : undefined} data-stagger={moving || undefined}>{items.map((item, index) => <li key={`${item.name}-${index}`} data-outcome={perFile ? item.outcome : undefined} style={moving ? ({ '--i': index } as CSSProperties) : undefined}><Truncate text={item.name} /><b>{moving && item.outcome === 'added' && <UploadTick />}{item.status}</b>{item.detail && <small>{item.detail}</small>}</li>)}</ul>;
   return (
-    <section className="cloud-upload-panel">
-      <div className="cloud-upload-intro"><p className="cloud-eyebrow">Private library</p><h2>Add your tracks</h2><p>Files transfer directly to private object storage. SelectaDJ checks the actual audio format, file size and duration before accepting an upload.</p></div>
-      {blocked && <p className="cloud-inline-error" role="status">{blocked}</p>}
-      <UnfinishedUploads api={api} workspaceId={workspaceId} sessions={unfinished} onChanged={() => void loadUnfinished()} />
-      <label className={`cloud-drop${blocked ? ' disabled' : ''}`} data-lift={feeling && !blocked ? '' : undefined} data-drag={dragging || undefined} onDragOver={dragOver} onDragLeave={dragLeave} onDrop={dropped}>
-        <input type="file" multiple disabled={Boolean(blocked)} accept="audio/*,.aiff,.aif,.flac,.mp3,.m4a,.wav,.ogg,.opus" onChange={selected} />
-        <span className="cloud-drop-icon"><Icon name="plus" size="hero" /></span>
-        <strong>{files.length ? `${countOf(files.length, 'file')} selected` : 'Choose music files'}</strong>
-        <small>MP3, FLAC, WAV, AIFF, M4A, AAC and Ogg audio</small>
-      </label>
-      <div className="cloud-upload-actions">
-        <button className="primary" disabled={!files.length || uploading || Boolean(blocked)} onClick={() => void begin()}>{uploading ? 'Uploading…' : 'Start upload'}</button>
-        {progress && <span role="status">{progress}</span>}
-      </div>
-      {/* each file's line arrives as its upload ends, and an accepted one ticks (feel motion only) */}
-      {items.length > 0 && <ul className="cloud-upload-list" aria-label={perFile ? 'Each file’s result' : undefined} data-stagger={moving || undefined}>{items.map((item, index) => <li key={`${item.name}-${index}`} data-outcome={perFile ? item.outcome : undefined} style={moving ? ({ '--i': index } as CSSProperties) : undefined}><Truncate text={item.name} /><b>{moving && item.outcome === 'added' && <UploadTick />}{item.status}</b>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}
+    <section className="cloud-upload-panel" data-columns={side ? '' : undefined}>
+      {side ? (
+        <>
+          <div className="cloud-upload-main">
+            <div className="cloud-upload-intro"><p className="cloud-eyebrow">Private library</p><h2>Add your tracks</h2></div>
+            {blockedLine}{drop}{actions}{results}
+          </div>
+          <div className="cloud-upload-side">
+            {side}
+            <section className="cloud-upload-about" aria-labelledby={aboutId}><h3 id={aboutId}>What happens to uploads</h3><p>{about}</p></section>
+            {unfinishedList}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="cloud-upload-intro"><p className="cloud-eyebrow">Private library</p><h2>Add your tracks</h2><p>{about}</p></div>
+          {blockedLine}{unfinishedList}{drop}{actions}{results}
+        </>
+      )}
       {rights !== null && (
         <ConfirmDialog
           title="Confirm the upload rights"

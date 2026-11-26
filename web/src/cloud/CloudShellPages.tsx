@@ -129,7 +129,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   }
   if (newMember) {
     return (
-      <main className="page" id="main">
+      <main className="page" id="main" data-page-width="reading">
         <h1 className="display small">Welcome to SelectaDJ</h1>
         <OnboardingSpine request={media} workspaceId={workspaceId} deps={spineDeps} onDone={() => { setSpine(false); setSpineAsked(false); refreshStatus(); }} />
       </main>

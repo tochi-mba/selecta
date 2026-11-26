@@ -51,7 +51,8 @@ import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './deviceMusicGate';
 import { DeviceMusicLabs } from './labs/DeviceMusicLabs';
 import { ReconciliationPanel } from './migration/ReconciliationPanel';
-import { morePanelFor, RENEWING_WORDS, shellNoticesFor } from './cloudAppPlaces';
+import { accountNotices, morePanelFor, RENEWING_WORDS } from './cloudAppPlaces';
+import { NoticeStack } from './NoticeStack';
 import { navigate, useLocationText } from '../router';
 import { Action, LiveRegion, Section } from '../ui/controls';
 import { Toaster } from '../ui/toasts';
@@ -749,10 +750,10 @@ export function CloudApp() {
     danger={[(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={signOutEverywhere} onDelete={deleteAccount} />]}
   /> : null;
   const billing = account && <SettingsLayout current="billing" places={places}><Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} error={checkoutError} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} /></SettingsLayout>;
-  const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => { void refreshAccount(); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
+  const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => { void refreshAccount(); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }} perFile={flagOn(LIBRARY_STATES_FLAG)} side={flagOn('cloud.page_layout') ? <StorageMeter account={account} /> : undefined} />;
   // The account places behind More, and the account's notices for a shared shell's banner (cloudAppPlaces.tsx)
   const morePanel = morePanelFor({ account, api, settingsPanel, billing, uploads, places });
-  const shellNotices = shellNoticesFor({
+  const { all: shellNotices, groups: noticeGroups } = accountNotices({
     account, connectionBanner: flagOn(OFFLINE_SHELL) && !localFirst, exact, go: goShell, problem, onRetry: () => void retryAccount(),
     onBillingPage: place === PATHS.billing, portalBusy: busy('portal'), onPortal: () => void openPortal(), renewing, polling: stream === 'polling' && !connectionDown,
   });
@@ -763,7 +764,7 @@ export function CloudApp() {
   if (account && localFirst) {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
-        <CloudShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
+        <CloudShell api={api} account={account} more={morePanel} notices={shellNotices} accountNotices={noticeGroups} feedback={shellFeedback} onSignOut={signOutHere} />
         {signOutAsk && <ConfirmDialog title="Sign out?" body={signOutAsk} confirmLabel="Sign out" cancelLabel="Cancel" onConfirm={() => void leave()} onClose={() => setSignOutAsk(null)} />}
       </Suspense>
     );
@@ -786,7 +787,7 @@ export function CloudApp() {
           account={account}
           signedIn={{ email: user.email, plan: planName(account), onSignOut: signOutHere, onStaffConsole: showsAdmin(account) ? openAdmin : undefined }}
           page={hostedPage}
-          notices={<>{shellNotices}{shellFeedback}</>}
+          notices={flagOn('cloud.page_layout') ? <NoticeStack {...noticeGroups} info={<>{noticeGroups.info}{shellFeedback}</>} /> : <>{shellNotices}{shellFeedback}</>}
           dock={singleAudioOwner(account) ? (view) => <CloudTransportDock api={api} account={account} page={dockPage(view)} reload={libraryVersion} /> : undefined}
           footer={<footer className="cloud-footer">SelectaDJ Cloud · Your originals remain private to your workspace.<CloudCredit /></footer>}
         />
