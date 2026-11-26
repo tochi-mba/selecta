@@ -42,7 +42,10 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, ca
   const whereHeld = useRef<WhereHeld | null>(null);
   // ADR-0475 R8: songs the device R1 would choose holds now, which a mix made here may use
   const mixableIds = useRef<ReadonlySet<number> | null>(null);
+  // cloud.one_mixer: a saved file reads songs through the player's resolver (set below)
+  const resolveNow = useRef<(() => Promise<MediaResolver>) | null>(null);
   const sources = useMemo<AvailabilitySources>(() => ({
+    resolver: async () => (await resolveNow.current?.()) ?? null,
     controller: () => controllerLink.current,
     holders: () => whereHeld.current,
     mixable: () => mixableIds.current,
@@ -128,6 +131,7 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, ca
     book,
   })));
   }, [openStore, coexisting, catalogue, api, workspaceId, book, media, on]);
+  resolveNow.current = resolver;
   return { sources, request, media, resolver, programme, controllerLink, whereHeld, mixableIds };
 }
 
