@@ -50,12 +50,12 @@ export const HELP: Record<AdminPage, PageHelp> = {
       ['As of', 'The page reads again every 30 seconds while it is open. If a read fails, the last good numbers stay with their time.'],
     ],
     tasks: [
-      ['Jobs are waiting with no worker', 'Look at Worker gateway and Autoscaler under Around the workers: each says what to do. Until the autoscaler runs, workers start only by hand (doc hosted-mode-walkthrough, section 5).'],
+      ['Jobs are waiting with no worker', 'Look at Worker gateway and Autoscaler under Around the workers: each says what to do. Until the autoscaler runs, workers start only by hand (doc cloud-library-walkthrough, section 5).'],
       ['A pool keeps failing', 'Pause the pool so it stops burning attempts, open Jobs filtered to its failed jobs, read the error, fix the cause, then Resume and Retry failed jobs of that type.'],
       ['Customers have waited for hours', 'Fix the worker first. If the work is no longer wanted, Cancel jobs waiting too long: it waits 15 minutes and can be cancelled.'],
       ['Set a budget', 'Cost, Set budget: the monthly figure and when to warn. Needs a billing role.'],
     ],
-    runbook: 'https://github.com/tochi-mba/selecta/blob/main/docs/engineering/hosted-mode-walkthrough.md',
+    runbook: 'https://github.com/tochi-mba/selecta/blob/main/docs/engineering/cloud-library-walkthrough.md',
   },
   ai: {
     purpose: 'Lucy’s model routing per plan, the deployments behind it, spend against the ceiling, and Lucy’s emergency switches.',

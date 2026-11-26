@@ -81,7 +81,7 @@ For an account with the `cloud.hosted_media` grant, flag `cloud.hosted_render` (
 - **Export.** `POST /api/hosted/mixes/export` makes one `export.render` job; `GET /api/hosted/exports/{job_id}` gives its state, estimate and a signed link to the FLAC.
 - Every job names its stored inputs in `input_ref["objects"]`, which the worker gateway signs and the dev worker reads (the business horizon's jobs now do too).
 
-Measured differences from the local app and the operator runbook: [hosted-mode-walkthrough.md](../engineering/hosted-mode-walkthrough.md).
+Measured differences from the local app and the operator runbook: [cloud-library-walkthrough.md](../engineering/cloud-library-walkthrough.md).
 
 ---
 

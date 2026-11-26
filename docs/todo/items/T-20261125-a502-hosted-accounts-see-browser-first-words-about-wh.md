@@ -6,7 +6,7 @@ status: done
 priority: normal
 who: claude
 created: 2026-11-25
-source: docs/engineering/hosted-mode-walkthrough.md
+source: docs/engineering/cloud-library-walkthrough.md
 commit: fbd98d09
 ---
 

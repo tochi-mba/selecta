@@ -2,7 +2,7 @@
 
 The first export (version 1) downloaded every original, decoded it and ran `render.setmix`, which
 chose and rendered every transition again: about 3 to 7 minutes of engine work per hand-off, and
-a file that could differ from what played (docs/engineering/hosted-mode-walkthrough.md,
+a file that could differ from what played (docs/engineering/cloud-library-walkthrough.md,
 section 9). This one renders nothing. Its input is the timeline the web player plays
 (`hosted_render.mix_state`, `web/src/cloud/hosted/timelinePlayer.ts`): song parts cut from each
 song's lossless playback file at the seam cue points, the rendered seam clips between them, and

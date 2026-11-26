@@ -1,4 +1,8 @@
-# Hosted Cloud mode: walkthrough, comparison with the local app, and the staging runbook
+# Cloud library: walkthrough, comparison with the Desktop app, and the staging runbook
+
+Words: this record was written as "hosted mode"; it is a Cloud account's music **in your cloud
+library**, worked on by the **cloud studio**, and "the local app" is **Desktop**
+([glossary](../glossary.md)). The body keeps the words it was written in.
 
 Written 2026-11-25 on branch `hosted/render`. Hosted mode is the `cloud.hosted_media` staff grant (ADR-0455, ADR-0456): songs are uploaded to object storage and workers run the engine. The owner's bar: it should render as well as the **local app**, because the server runs the same engine.
 

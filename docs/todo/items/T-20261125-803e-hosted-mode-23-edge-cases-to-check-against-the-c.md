@@ -10,7 +10,7 @@ source: edge-case review with the owner, 2026-11-25
 commit: c6593fe3
 ---
 
-Every case checked against the code on 2026-11-25 (branch `hosted/edges`). Handled: the code and a test prove it. Fixed: a real gap, fixed with a test in this change. Filed: a real gap that is large or needs a decision, now its own item. The same table, with a few sentences on each gap, is section 10 of `docs/engineering/hosted-mode-walkthrough.md`.
+Every case checked against the code on 2026-11-25 (branch `hosted/edges`). Handled: the code and a test prove it. Fixed: a real gap, fixed with a test in this change. Filed: a real gap that is large or needs a decision, now its own item. The same table, with a few sentences on each gap, is section 10 of `docs/engineering/cloud-library-walkthrough.md`.
 
 | # | Case | Outcome | Evidence |
 |---|---|---|---|

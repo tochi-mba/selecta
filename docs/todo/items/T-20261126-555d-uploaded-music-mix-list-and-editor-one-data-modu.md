@@ -6,7 +6,7 @@ status: open
 priority: normal
 who: claude
 created: 2026-11-26
-source: docs/engineering/hosted-mode-walkthrough.md section 12 (one brain, Phase 6)
+source: docs/engineering/cloud-library-walkthrough.md section 12 (one brain, Phase 6)
 commit:
 ---
 

@@ -55,7 +55,7 @@ WORKER_SEEN_S = 180.0
 URL_TTL_S = 900
 # Until a workspace has finished analyses of its own, the estimate uses this (seconds per job),
 # measured on the dev worker with real 3 to 4 minute songs
-# (docs/engineering/hosted-mode-walkthrough.md). Transitions have first guesses by kind
+# (docs/engineering/cloud-library-walkthrough.md). Transitions have first guesses by kind
 # (`hosted_estimate.SEAM_FIRST_GUESS_S`); an export's time comes from its own progress.
 FIRST_GUESS_S = {ANALYSE: 20.0}
 
