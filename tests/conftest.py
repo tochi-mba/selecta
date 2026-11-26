@@ -67,6 +67,11 @@ def pytest_configure(config: pytest.Config) -> None:
     from invariant_gate import InvariantGate
 
     config.pluginmanager.register(InvariantGate(), "selecta-invariant-gate")
+    import engine_store_on
+
+    if engine_store_on.wanted():
+        # pytest_configure is historic, so the plugin's own runs on registering
+        config.pluginmanager.register(engine_store_on.EngineStoreOn(), "selecta-engine-store-on")
 
 
 @pytest.hookimpl(hookwrapper=True)
