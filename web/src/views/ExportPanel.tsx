@@ -13,6 +13,7 @@ import { words } from '../copy';
 import { Meter } from '../ui/Meter';
 import { DrawnTick, RollingCount, useFeelOn } from './feelPieces';
 import { ExportShape, MomentLayer, plainCount, useReachedMoment } from './feelLocal';
+import { ExportElsewhere } from './exportElsewhere';
 
 /** Is this job a file of the mix exactly as it is now? */
 function sameVersion(job: ExportJob, mix: MixItem[]): boolean {
@@ -64,6 +65,9 @@ export function ExportPanel(props: {
   const passed = (index: number) => feel && reached > index;
   const [celebrating, celebrated] = useReachedMoment(!!file);
   const [pressed, setPressed] = useState<string | null>(null);
+  // a shell's other way to make the file (cloud.one_mixer); recommended, Save it steps back
+  const Elsewhere = useContext(ExportElsewhere);
+  const [elsewhereFirst, setElsewhereFirst] = useState(false);
 
   const start = async () => {
     if (starting.current) return;
@@ -169,8 +173,9 @@ export function ExportPanel(props: {
           {feel && <ExportShape shape={file.shape} />}
         </p>
       )}
+      {Elsewhere && <Elsewhere mix={mix} onFirst={setElsewhereFirst} />}
       {(!file || changedSince) && (
-        <Action className="primary" disabled={going || mix.length < 2 || blocked} working="Starting export…" run={start}>
+        <Action className={Elsewhere && elsewhereFirst ? undefined : 'primary'} disabled={going || mix.length < 2 || blocked} working="Starting export…" run={start}>
           {mine?.state === 'encoding' ? 'Saving the file…' : going ? `Rendering ${mine?.seams_ready} of ${mine?.seams_total}…` : 'Save it'}
         </Action>
       )}
