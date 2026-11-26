@@ -35,7 +35,8 @@
         "GET /api/discoveries",
         "POST /api/discoveries/{discovery_id}/hear",
         "GET /api/discoveries/{discovery_id}/hear/{step}",
-        "POST /api/discoveries/{discovery_id}/review"
+        "POST /api/discoveries/{discovery_id}/review",
+        "POST /api/discoveries/sweep"
       ],
       "surfaces": ["discover.harmonic", "mixes", "overlay.palette"],
       "words": ["Harmonic matches", "Songs that might share chords"],

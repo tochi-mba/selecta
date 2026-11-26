@@ -7,9 +7,10 @@ the idea cards (`planning_routes`). A studio reports the seams it rendered, the 
 them, and the planner learns from both (`seams_routes`). The account's mixes and drafts answer
 the Desktop's own mix routes (`mixes_routes`, also behind `cloud.account_mixes`; see
 docs/engineering/engine-store-mixes.md), and its song requests the Desktop's request routes
-(`requests_routes`, the same flags; docs/engineering/engine-store-requests.md). A studio renders
-and audits; nothing
-here hears audio. Every route needs the `cloud.brain` flag (refused as `flag_off` while it is
+(`requests_routes`, the same flags; docs/engineering/engine-store-requests.md), and its harmonic
+discovery the Desktop's sweep over stored song facts (`discovery_routes`;
+docs/engineering/engine-store-discovery.md). A studio renders and audits; nothing here hears
+audio. Every route needs the `cloud.brain` flag (refused as `flag_off` while it is
 off; the seam verdict and ratings routes also keep their Desktop owners) and works in the
 caller's own workspace through the engine store, whatever `core.engine_store` says: that flag
 guards how Desktop opens its library file. See docs/engineering/cloud-planning.md and
@@ -45,6 +46,7 @@ def install_routes(
     the Cloud's own artifact store (the private derived bucket, keyed by workspace). `rules` is
     the flag rules cache, for the seam routes a Desktop flag owns (`seams_routes`)."""
     from selecta.cloud_brain import (
+        discovery_routes,
         facts_routes,
         mixes_routes,
         planning_routes,
@@ -71,15 +73,17 @@ def install_routes(
             principal_for=principal_for,
             rules=rules,
         )
-    # requests plan from song facts (the artifacts) and edit the account's mix (the flags)
-    requests_routes.install(
-        app,
-        engine=engine,
-        current_claims=current_claims,
-        principal_for=principal_for,
-        artifacts=artifacts,
-        rules=rules,
-    )
+    # requests plan from song facts (the artifacts) and edit the account's mix (the flags);
+    # discovery compares stored per-bar arrays and keeps its Desktop owner flag
+    for routes in (requests_routes, discovery_routes):
+        routes.install(
+            app,
+            engine=engine,
+            current_claims=current_claims,
+            principal_for=principal_for,
+            artifacts=artifacts,
+            rules=rules,
+        )
 
 
 __all__ = ["FLAG", "install_routes"]

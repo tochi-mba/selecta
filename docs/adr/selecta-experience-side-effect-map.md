@@ -134,6 +134,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/mix/{position}/studio/tune` | Arranges or fine-tunes a Studio grid |
 | `POST /api/mix/{position}/studio/use` | Renders the chosen grid and makes it the seam |
 | `POST /api/discoveries/{discovery_id}/review` | Saves a verdict on a harmonic match |
+| `POST /api/discoveries/sweep` | Cloud account: compares named songs' stored facts and saves the harmonic links found (`cloud_brain/discovery_routes.py`) |
 | `POST /api/listening/{trial}/response` | Saves a blind study answer (Learning) |
 
 ### Library (`src/selecta/routes/library.py`) - Library, Workspace

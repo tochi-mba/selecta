@@ -1,8 +1,8 @@
 """What the account export carries of the engine's tables: song facts, corrections, ratings, the
 other file hashes a song is known by, the seams (records, who rendered them, their history and
-the member's verdicts), the mixes (the current mix, drafts, their Undo) and the song requests
-(asked, the bridges agreed to, which songs of the mix a request put there), plus each song's
-stored arrays. No clip is in Cloud to export.
+the member's verdicts), the mixes (the current mix, drafts, their Undo), the song requests
+(asked, the bridges agreed to, which songs of the mix a request put there) and discovery (the
+links found and the pairs compared), plus each song's stored arrays. No clip is in Cloud to export.
 
 Called by the account export (`routes/cloud_export.py`) inside its own workspace transaction, so
 the fail-closed policy on the engine tables sees the workspace. Account deletion needs nothing
@@ -27,6 +27,7 @@ FEATURES_FOLDER = "song-facts/features"
 def kept(conn: Any, workspace_id: str) -> dict[str, list[dict[str, Any]]]:
     """Every engine row of this workspace, as plain values."""
     from selecta.engine_store.schema import (
+        DISCOVERY_TABLES,
         REQUEST_TABLES,
         analysis,
         drafts,
@@ -105,14 +106,15 @@ def kept(conn: Any, workspace_id: str) -> dict[str, list[dict[str, Any]]]:
             .where(mix_imports.c.workspace_id == workspace_id)
             .order_by(mix_imports.c.source, mix_imports.c.source_id)
         ),
-        # the account's song requests (engine_store.requests): asked, agreed bridges, marks
+        # the account's song requests (engine_store.requests): asked, agreed bridges, marks;
+        # and discovery (engine_store.discovery): links found, pairs compared
         **{
             table.name: rows(
                 sa.select(table)
                 .where(table.c.workspace_id == workspace_id)
                 .order_by(*[c for c in table.primary_key.columns if c.name != "workspace_id"])
             )
-            for table in REQUEST_TABLES
+            for table in (*REQUEST_TABLES, *DISCOVERY_TABLES)
         },
         "other_file_hashes": rows(
             sa.select(local_song_hashes)
