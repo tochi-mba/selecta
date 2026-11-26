@@ -8,10 +8,11 @@ import {
 } from '../dsp/crossfade';
 import { applySends, canMakeEffects, makeReturns, type EffectReturn } from '../dsp/seamEffects';
 import { applyMoves, canMakeMoves, makeMovesChain, type MovesChain } from '../dsp/seamMoves';
-import type { SeamEvent, SeamSchedule, SeamStems, SeamStretch, StretchedClip } from '../dsp/seams';
+import type { RenderedClip, SeamEvent, SeamSchedule, SeamStems, SeamStretch, StretchedClip } from '../dsp/seams';
 import { warpAt, type StemLayer } from '../dsp/stemMoves/types';
 import { rampSourceSeconds } from '../dsp/stretchLimits';
 import type { EngineGraph } from './graph';
+import { bSecondAt, renderedJoins, renderedProblem } from './renderedSeam';
 import { entryRamp, START_LEAD, unusable } from './schedulerChecks';
 import type { EngineStore } from './state';
 
@@ -69,7 +70,11 @@ export type SchedulerTimers = {
 };
 
 /** What a seam provider is asked: the outgoing and incoming songs, decoded. */
-export type SeamRequest = { fromIndex: number; from: AudioBuffer; toIndex: number; to: AudioBuffer };
+export type SeamRequest = {
+  fromIndex: number; from: AudioBuffer; toIndex: number; to: AudioBuffer;
+  /** The linear level each song plays at here, so a clip rendered ahead is made at the same. */
+  fromLevel?: number; toLevel?: number;
+};
 /** Builds the dsp/seams.ts schedule for one transition (from the analysis it holds), or null
  * when it has none prepared. Times in the schedule are on the outgoing song's own timeline. */
 export type SeamProvider = ((request: SeamRequest) => SeamSchedule | null | Promise<SeamSchedule | null>) & {
@@ -141,7 +146,11 @@ type Clip = { source: AudioBufferSourceNode; gain: GainNode; hand: GainNode };
  * EQ or filter moves and the context can build it; neutral until a schedule moves it. */
 /** One stem of a stem move: its source, move chain, fader and echo returns. */
 type StemVoice = { source: AudioBufferSourceNode; gain: GainNode; moves?: MovesChain };
-type Layer = { source: AudioBufferSourceNode; gain: GainNode; moves?: MovesChain; clip?: Clip; stems?: StemVoice[] };
+/** A rendered seam's clip (renderedSeam.ts): it carries its songs' levels already, so it goes
+ * straight to the deck, past the layer's fader and level. */
+type Rendered = { source: AudioBufferSourceNode; gain: GainNode };
+/** `level` is the gain the song really plays at (1 when unmeasured), for a rendered seam's check. */
+type Layer = { source: AudioBufferSourceNode; gain: GainNode; level: number; moves?: MovesChain; clip?: Clip; stems?: StemVoice[]; rendered?: Rendered };
 /** While a stretched clip plays, where in the song the listener is; native B's own clock
  * (`startedAt`, `offset`) is exact from `until` on. */
 type Entering = { until: number; position(now: number): number };
@@ -225,13 +234,14 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     } else {
       gain.connect(index % 2 === 0 ? deps.graph.deckA : deps.graph.deckB);
     }
-    const made: Layer = { source, gain, moves };
+    const made: Layer = { source, gain, moves, level: levelled ? level : 1 };
     layers.add(made);
     source.onended = () => {
       letRing(source);
       source.disconnect();
       dropClip(made);
       dropStems(made);
+      dropRendered(made);
       moves?.dispose();
       gain.disconnect();
       levelled?.disconnect();
@@ -351,7 +361,16 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     });
   };
 
+  const dropRendered = (made: Layer) => {
+    if (!made.rendered) return;
+    stopSource(made.rendered.source);
+    made.rendered.source.disconnect();
+    made.rendered.gain.disconnect();
+    made.rendered = undefined;
+  };
+
   const stopAt = (made: Layer, when: number) => {
+    if (made.rendered) stopSource(made.rendered.source, when);
     stopSource(made.source, when);
     if (made.clip) stopSource(made.clip.source, when);
     for (const voice of made.stems ?? []) stopSource(voice.source, when);
@@ -364,6 +383,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     made.source.disconnect();
     dropClip(made);
     dropStems(made);
+    dropRendered(made);
     made.moves?.dispose();
     made.gain.disconnect();
     layers.delete(made);
@@ -475,6 +495,58 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     };
   };
 
+  /** Why a rendered clip cannot be played into this song from here, or null: the clip's own
+   * checks (renderedSeam.ts) and whether its joins are still ahead of the clock. */
+  const renderedRefusal = (rendered: RenderedClip, from: Current, made: Layer, to: AudioBuffer, now: number): string | null => {
+    const problem = renderedProblem(rendered, from.source.buffer as AudioBuffer, to, { a: from.level, b: made.level }, context.sampleRate);
+    if (problem) return problem;
+    const joins = renderedJoins(from.startedAt - from.offset, rendered);
+    if (!(joins.clipAt > now + START_LEAD)) return 'it was ready too late to start on time';
+    if (from.entering && joins.clipAt < from.entering.until) return 'it starts before the current song has handed over from its own entry';
+    if (!(joins.clipAt < from.startedAt + (from.duration - from.offset))) return 'it starts after the current song has ended';
+    return null;
+  };
+
+  /** Native A, the clip, native B, each join a linear crossfade on whole samples from A's origin
+   * (render/engine.py `in_context`). The clip carries both songs' levels, so it bypasses B's
+   * fader and level; native A and native B keep theirs, which the clip was rendered at. */
+  const playRendered = (from: Current, made: Layer, rendered: RenderedClip, out: AudioNode): Entered => {
+    const rate = rendered.sampleRate;
+    const joins = renderedJoins(from.startedAt - from.offset, rendered);
+    const audio = context.createBuffer(rendered.channels.length, rendered.channels[0].length, rate);
+    rendered.channels.forEach((channel, index) => audio.copyToChannel(channel as Float32Array<ArrayBuffer>, index));
+    const source = context.createBufferSource();
+    source.buffer = audio;
+    const gain = context.createGain();
+    source.connect(gain);
+    gain.connect(out);
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+    };
+    made.rendered = { source, gain };
+    // A at 1 on the join's first sample and 0 on its last; the clip the other way round
+    from.gain.gain.setValueAtTime(1, joins.clipAt);
+    from.gain.gain.linearRampToValueAtTime(0, joins.clipAt + joins.ramp);
+    stopAt(from, joins.aStopAt);
+    gain.gain.setValueAtTime(0, joins.clipAt);
+    gain.gain.linearRampToValueAtTime(1, joins.clipAt + joins.ramp);
+    gain.gain.setValueAtTime(1, joins.tailAt);
+    gain.gain.linearRampToValueAtTime(0, joins.tailAt + joins.ramp);
+    source.start(joins.clipAt);
+    stopSource(source, joins.clipEndAt + 0.02);
+    // native B under the clip's last join, from the sample the join stands for
+    made.gain.gain.setValueAtTime(0, joins.tailAt);
+    made.gain.gain.linearRampToValueAtTime(1, joins.tailAt + joins.ramp);
+    made.source.start(joins.tailAt, joins.bOffset);
+    return {
+      at: joins.switchAt,
+      startedAt: joins.bStartedAt,
+      offset: rendered.bEndSample / rate,
+      entering: { until: joins.bStartedAt, position: (now) => bSecondAt(rendered, now - joins.clipAt) },
+    };
+  };
+
   /** A 3 s equal-power crossfade that ends with the current song, or starts now if that is
    * already too close. */
   const fadeInto = (from: Current, made: Layer, buffer: AudioBuffer, now: number): Entered => {
@@ -519,7 +591,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       let providerReason: string | undefined;
       if (deps.seam) {
         try {
-          schedule = await deps.seam({ fromIndex: current.index, from: current.source.buffer as AudioBuffer, toIndex: nextIndex, to: buffer });
+          schedule = await deps.seam({ fromIndex: current.index, from: current.source.buffer as AudioBuffer, toIndex: nextIndex, to: buffer, fromLevel: current.level, toLevel: level });
         } catch (error) {
           providerReason = `the seam could not be prepared: ${(error as Error | null)?.message || 'unknown reason'}`;
         }
@@ -531,7 +603,15 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       const seamAt = endAt - SEAM_FADE;
       const made = layer(buffer, nextIndex, level);
       let entered: Entered;
-      let problem = schedule ? unusable(schedule, from, buffer, now, { moves: canMakeMoves(context), effects: canMakeEffects(context) }) : null;
+      // a clip rendered ahead that cannot play here as made gives way to the live schedule it carries
+      if (schedule?.rendered) {
+        const refused = renderedRefusal(schedule.rendered, from, made, buffer, now);
+        if (refused) {
+          providerReason = `the prepared transition could not be used: ${refused}`;
+          schedule = schedule.instead ?? null;
+        }
+      }
+      let problem = schedule && !schedule.rendered ? unusable(schedule, from, buffer, now, { moves: canMakeMoves(context), effects: canMakeEffects(context) }) : null;
       let audio: Map<StemLayer, AudioBuffer> | undefined;
       if (schedule?.stems && !problem && seamAt > now + START_LEAD) {
         try {
@@ -554,6 +634,9 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         made.source.start(at);
         entered = { at, startedAt: at, offset: 0 };
         transition = { kind: 'late_fade', implementation: CROSSFADE_IMPLEMENTATION, reason: 'the next song was ready too late for a seam' };
+      } else if (schedule?.rendered) {
+        entered = playRendered(from, made, schedule.rendered, nextIndex % 2 === 0 ? deps.graph.deckA : deps.graph.deckB);
+        transition = { kind: 'seam_schedule', implementation: schedule.rendered.implementation, seamKind: schedule.kind, reason: schedule.reason };
       } else if (schedule && !problem) {
         entered = applySchedule(schedule, from, made, nextIndex % 2 === 0 ? deps.graph.deckA : deps.graph.deckB, audio);
         transition = { kind: 'seam_schedule', implementation: schedule.implementation, seamKind: schedule.kind, reason: schedule.reason };
@@ -591,6 +674,8 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         gain: planned.gain,
         moves: planned.moves,
         clip: planned.clip,
+        rendered: planned.rendered,
+        level: planned.level,
         index: planned.index,
         startedAt: planned.startedAt,
         offset: planned.offset,
@@ -689,6 +774,12 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
             voice.gain.gain.cancelScheduledValues(now);
             voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
             voice.gain.gain.linearRampToValueAtTime(0, now + fade);
+          }
+          const clip = made.rendered?.gain.gain;
+          if (clip) {
+            clip.cancelScheduledValues(now);
+            clip.setValueAtTime(clip.value, now);
+            clip.linearRampToValueAtTime(0, now + fade);
           }
           stopAt(made, now + fade + 0.02);
           layers.delete(made);

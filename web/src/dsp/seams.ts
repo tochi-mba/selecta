@@ -114,7 +114,32 @@ export interface SeamSchedule {
   stems?: SeamStems;
   /** With planning from the account on (cloud/accountSeams.ts): who chose this move, the account's
    * planner or this device, and when the device chose, why the account's choice wasn't used. */
-  chosenBy?: { by: 'account' | 'device'; note?: string };
+  chosenBy?: { by: 'account' | 'account-rendered' | 'device'; note?: string };
+  /** cloud.device_render: the planner's choice rendered ahead of time on this device, played
+   * between native A and native B (engine/renderedSeam.ts). The schedule's own fields describe
+   * the same span for surfaces; the clip is never kept in a seam record. */
+  rendered?: RenderedClip;
+  /** With `rendered`: the live schedule that plays if the clip cannot be used after all. */
+  instead?: SeamSchedule;
+}
+
+/** A transition rendered ahead of time (render/engine.ts `inContext`): native A up to
+ * `aStartSample`, the clip, then native B from `bEndSample`, each join a 30 ms linear
+ * crossfade. Samples are at `sampleRate`, which is the decode's and the sound card's. */
+export interface RenderedClip {
+  channels: Float32Array[];
+  sampleRate: number;
+  /** A's sample the clip's first sample stands for. */
+  aStartSample: number;
+  /** B's sample that follows the clip's last one. */
+  bEndSample: number;
+  /** The linear level each song was rendered at; its native parts must play at the same. */
+  levels: { a: number; b: number };
+  /** Clip seconds where the listener's attention moves to B (the script's overlap end). */
+  switchAt: number;
+  /** B's warp, clip seconds to B's own seconds, for B's place while the clip plays. */
+  bWarp: { output: number[]; source: number[] };
+  implementation: string;
 }
 
 /** A stem move's plan (stemMoves/types.ts) and the stems it plays. The events of the schedule
