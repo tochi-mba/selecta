@@ -1,4 +1,5 @@
 import { ReactNode, Ref, useContext, useRef } from 'react';
+import type { PlaceCounts } from '../api';
 import { HolderContext } from '../devices/controller';
 import { Icon } from '../ui/Icon';
 import { SearchField } from '../ui/primitives';
@@ -16,29 +17,34 @@ export type LibraryBrowserChrome = {
 
 const figure = (value: number | undefined) => (Number.isFinite(value) ? (value as number).toLocaleString() : null);
 
-export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAside }: {
+export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAside, places }: {
   songs: number | undefined;
   playable: number | undefined;
   setAside: number | undefined;
   action: ReactNode;
   onSetAside: () => void;
+  /** library.places: "N songs · X on this device · Y in your cloud library" */
+  places?: PlaceCounts;
 }) {
   const total = figure(songs);
   const here = figure(playable);
   // ADR-0475 R6: where the music is, when that is another of this person's devices
   const holder = useContext(HolderContext);
+  const rolled = (value: number) => <b><RollingCount value={value} format={(count) => count.toLocaleString()} /></b>;
   return (
     <header className="page-header" data-remote={holder ? '' : undefined}>
       <div className="page-header-text">
         <h1 className="display small">Library</h1>
         {/* I83: with another device holding music, the Library is the whole account's */}
-        <p className="page-lead">{holder ? 'Your songs, and where each one plays.' : 'Your songs, and which of them can play on this device.'}</p>
+        <p className="page-lead">{places ? 'Your songs, and where each one is kept.' : holder ? 'Your songs, and where each one plays.' : 'Your songs, and which of them can play on this device.'}</p>
         <p className="lw-stats">
           {/* the counts roll as an import adds songs (the same words without motion) */}
           {total !== null && <span className="lw-total"><b><RollingCount value={songs as number} format={(count) => count.toLocaleString()} /></b> {songs === 1 ? 'song' : 'songs'}</span>}
           {holder && <span data-testid="library-holder">{songs !== undefined && holder.songs >= songs ? <>All on <b>{holder.name}</b></> : <><b>{holder.songs.toLocaleString()}</b> on {holder.name}</>}</span>}
+          {places && <span data-testid="library-here">{rolled(places.here)} on this device</span>}
+          {places && <span data-testid="library-cloud">{rolled(places.cloud)} in your cloud library</span>}
           {/* a remote with none of the music says nothing about it here; the line below says it */}
-          {here !== null && (holder ? playable !== 0 && <span><b>{here}</b> on this device</span> : <span><b><RollingCount value={playable as number} format={(count) => count.toLocaleString()} /></b> ready to play here</span>)}
+          {!places && here !== null && (holder ? playable !== 0 && <span><b>{here}</b> on this device</span> : <span><b><RollingCount value={playable as number} format={(count) => count.toLocaleString()} /></b> ready to play here</span>)}
           {!!setAside && Number.isFinite(setAside) && (
             <button type="button" className="link" onClick={onSetAside}><b>{setAside.toLocaleString()}</b> set aside</button>
           )}
@@ -49,11 +55,13 @@ export function BrowserLibraryHead({ songs, playable, setAside, action, onSetAsi
   );
 }
 
-export function BrowserLibraryToolbar({ typed, onTyped, filters, filter, onFilter, sorts, sort, onSort, cards, onCards, cardsOffered }: {
+export function BrowserLibraryToolbar({ typed, onTyped, filters, filter, pressed = (name) => filter === name, onFilter, sorts, sort, onSort, cards, onCards, cardsOffered }: {
   typed: string;
   onTyped: (value: string) => void;
   filters: { name: string; label: string }[];
   filter: string;
+  /** library.places: a place and Set aside can both be pressed */
+  pressed?: (name: string) => boolean;
   onFilter: (name: string) => void;
   sorts: { name: string; label: string }[];
   sort: string;
@@ -70,7 +78,7 @@ export function BrowserLibraryToolbar({ typed, onTyped, filters, filter, onFilte
       <SearchField label="Search your library" value={typed} onChange={onTyped} placeholder="Search songs and artists" />
       <div className="lw-chips" role="group" aria-label="Show" ref={strip}>
         {filters.map((option) => (
-          <button key={option.name} type="button" aria-pressed={filter === option.name} onClick={() => onFilter(option.name)}>{option.label}</button>
+          <button key={option.name} type="button" aria-pressed={pressed(option.name)} onClick={() => onFilter(option.name)}>{option.label}</button>
         ))}
         <span className={INDICATOR_CLASS} aria-hidden="true" />
       </div>
