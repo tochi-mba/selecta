@@ -1,10 +1,10 @@
 """A seam the cloud studio rendered (`cloud.hosted_render`), kept in the seam tables with
 provenance `worker`, so the planner's memory and the member's verdicts cover it too.
 
-`record_worker_seam` is the adapter. Nothing calls it yet: the call belongs in the hosted
-session (`src/selecta/hosted_render.py`), where a finished seam artifact is first found; see the
-to-do item "Hosted seams should also be kept in the seam tables". The hosted plane keeps its own
-artifact rows as before; this only adds the seam's facts, never its audio.
+`record_worker_seam` is the adapter. The hosted session calls it where a finished seam artifact
+is first found (`hosted_render.mix_state` through `hosted_brain.keep_seams`, behind
+`cloud.brain`). The hosted plane keeps its own artifact rows as before; this only adds the seam's
+facts, never its audio.
 """
 
 from __future__ import annotations
