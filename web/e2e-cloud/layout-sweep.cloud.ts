@@ -99,7 +99,9 @@ async function longUpload(page: Page, state: 'progress' | 'result' = 'progress')
   if (state === 'progress') await page.route('**/api/uploads/*/parts', () => { /* held, so "Uploading ..." stays on screen */ });
   else await page.route('**/api/uploads/plan', (route) => route.fulfill({ json: { uploads: [{ index: 0, name: LONG_FILE, refused: 'This file is longer than your plan allows.' }] } }));
   const picker = page.getByLabel(/Choose music files/);
-  if (!(await picker.count()) || !(await picker.isEnabled())) return;
+  // every Add music page has the picker; over the storage limit it waits, disabled
+  await expect(picker).toBeAttached();
+  if (!(await picker.isEnabled())) return;
   await picker.setInputFiles({ name: LONG_FILE, mimeType: 'audio/wav', buffer: wav() });
   await page.getByRole('button', { name: 'Start upload' }).click();
   const shown = state === 'result' ? page.locator('.cloud-upload-list li') : page.getByText(LONG_FILE);
@@ -112,7 +114,7 @@ async function sweepUploads(page: Page, testInfo: TestInfo, id: string, options:
   const problems = await sweep(page, testInfo, id, options);
   // only the held parts go: the account answer this person gets must stay
   await page.unroute('**/api/uploads/*/parts');
-  await page.reload();
+  await opened(page, new URL(page.url()).pathname);
   await longUpload(page, 'result');
   return [...problems, ...(await sweep(page, testInfo, `${id} results`, options))];
 }
