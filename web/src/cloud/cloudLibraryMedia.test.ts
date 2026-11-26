@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
+import { cloudLibraryResolver, matchAsset, readCloudLibraryAssets, type CloudLibraryAsset } from './cloudLibraryMedia';
 
-const assets: HostedAsset[] = [
+const assets: CloudLibraryAsset[] = [
   { id: 'a1', name: 'Song 1.wav', sha256: 'aa' },
   { id: 'a2', name: 'Burial - Archangel.mp3', sha256: 'bb' },
   { id: 'a3', name: 'Intro.flac', sha256: 'cc' },
@@ -34,9 +34,9 @@ describe('the hosted resolver', () => {
       if (path.startsWith('/assets?')) return { assets: [assets[1]], next_cursor: null };
       return { url: `https://signed.example/${path}` };
     }) as never;
-    expect((await readHostedAssets(api, 'ws')).map((asset) => asset.id)).toEqual(['a1', 'a2']);
+    expect((await readCloudLibraryAssets(api, 'ws')).map((asset) => asset.id)).toEqual(['a1', 'a2']);
     const fetchBytes = vi.fn(async () => new ArrayBuffer(4));
-    const resolve = hostedResolver(api, 'ws', { songs: () => [{ song_id: 7, artist: 'Burial', title: 'Archangel' }], fetchBytes });
+    const resolve = cloudLibraryResolver(api, 'ws', { songs: () => [{ song_id: 7, artist: 'Burial', title: 'Archangel' }], fetchBytes });
     const track = await resolve(7);
     expect(track?.source).toBe('hosted');
     expect(calls.some((path) => path.includes('playback-url'))).toBe(false);

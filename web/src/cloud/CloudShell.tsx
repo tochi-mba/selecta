@@ -30,7 +30,7 @@ import { RequestsContext, RequestsPanel, useRequests, type RequestRow } from '..
 import type { View, ViewProps } from '../views/shared';
 import { planName, type Account, type Api } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
-import { forgetHostedAssets, hostedAssets, hostedResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './hostedMedia';
+import { forgetCloudLibraryAssets, cloudLibraryAssets, cloudLibraryResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './cloudLibraryMedia';
 import { isHostedAccount } from './deviceMusicGate';
 import { CloudLibrary } from './CloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
@@ -262,7 +262,7 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
       return found;
     },
     hosted: coexisting ? async (songs) => {
-      const listing = hostedAssets(api, workspaceId); // read again after an upload (hostedMedia.ts)
+      const listing = cloudLibraryAssets(api, workspaceId); // read again after an upload (cloudLibraryMedia.ts)
       const assets = await listing;
       return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
     } : undefined,
@@ -310,7 +310,7 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
         }).catch(() => undefined);
       }
     }, { sharedCache: on('cloud.content_cache') }), workspaceId),
-    hosted: coexisting ? hostedResolver(api, workspaceId, {
+    hosted: coexisting ? cloudLibraryResolver(api, workspaceId, {
       songs: () => programme.current,
       shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
     }) : null,
@@ -337,7 +337,7 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
   refreshStatusRef.current = refreshStatus;
   // an upload accepted (or a stored song changed): read the hosted copies and the catalogue again
   useEffect(() => {
-    const changed = () => { forgetHostedAssets(workspaceId); refreshStatus(); };
+    const changed = () => { forgetCloudLibraryAssets(workspaceId); refreshStatus(); };
     window.addEventListener(LIBRARY_CHANGED_EVENT, changed);
     return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, changed);
   }, [workspaceId, refreshStatus]);

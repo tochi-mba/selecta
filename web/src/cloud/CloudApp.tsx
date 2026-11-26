@@ -45,7 +45,7 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
-import { LIBRARY_CHANGED_EVENT } from './hostedMedia';
+import { LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { WorkspaceNameOffer } from './WorkspaceNameOffer';
 import { setProblemReporter, SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';

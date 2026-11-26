@@ -30,7 +30,7 @@ const OWN_CLIENTS = [
   // it reports to (cloud.offline_shell)
   'cloud/connection.ts',
   'devcloud/authkit.tsx',
-  'cloud/hostedMedia.ts', 'devices/audioSpeaker.ts',
+  'cloud/cloudLibraryMedia.ts', 'devices/audioSpeaker.ts',
   // the hosted mix player: fetches the signed R2 links its timeline hands it, never the API
   'cloud/hosted/timelinePlayer.ts',
   // the site's own index.html, read to learn whether a newer build is live (not an API call)

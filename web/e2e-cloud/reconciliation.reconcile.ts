@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { inflateRawSync } from 'node:zlib';
-import { reconcile, type HostedAsset, type LocalSong } from '../src/cloud/migration/ReconciliationPanel';
+import { reconcile, type CloudLibraryAsset, type LocalSong } from '../src/cloud/migration/ReconciliationPanel';
 import { runImport, type Request } from '../src/media/importer';
 import type { MediaStore, StoredSong } from '../src/media/store';
 import { listener } from './cloud';
@@ -95,7 +95,7 @@ test('export, local re-import and identity matching give a truthful report, writ
   expect(summary).toMatchObject({ imported: 4, failed: 0, cancelled: false, paused: false });
 
   // -- report: the panel's own reads, and the app's own matching ------------------------------
-  const assets = (await api<{ assets: HostedAsset[] }>('/api/assets?limit=100', { method: 'GET' })).assets;
+  const assets = (await api<{ assets: CloudLibraryAsset[] }>('/api/assets?limit=100', { method: 'GET' })).assets;
   const songs = (await api<{ songs: LocalSong[] }>('/api/local-media/songs?limit=100', { method: 'GET' })).songs;
   const rows = reconcile(assets, songs);
   const matched = rows.filter((row) => row.kind === 'matched');
@@ -119,7 +119,7 @@ test('export, local re-import and identity matching give a truthful report, writ
   const r2 = ((await (await request.get('/test/r2/log')).json()) as { requests: { method: string }[] }).requests;
   expect(r2.filter((entry) => entry.method !== 'GET')).toEqual([]);
   expect(calls.filter((call) => !call.startsWith('GET ') && !call.startsWith('POST /api/local-media/'))).toEqual([]);
-  expect((await api<{ assets: HostedAsset[] }>('/api/assets?limit=100')).assets.map((asset) => asset.id).sort()).toEqual([...hostedIds].sort());
+  expect((await api<{ assets: CloudLibraryAsset[] }>('/api/assets?limit=100')).assets.map((asset) => asset.id).sort()).toEqual([...hostedIds].sort());
 
   // -- the catalogue in the local-first shell: the `cloud.local_media` marks the flag sweep
   // checks for (flags.cloud.ts), shown here with the flag really on.

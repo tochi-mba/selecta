@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { MixItem } from '../api';
-import { hostedResolver } from '../cloud/hostedMedia';
+import { cloudLibraryResolver } from '../cloud/cloudLibraryMedia';
 import { useLocalFirstPlayer } from '../cloud/deviceMusicPlayer';
 import { QueueSources } from '../cloud/QueueSources';
 import type { Api } from '../devices/usePlaybackDevice';
@@ -32,7 +32,7 @@ export function RuntimeHarness({ api, workspaceId }: { api: Api; workspaceId: st
     const device: MediaResolver = async (songId) => (songId === 1
       ? { id: 1, data: async () => (await fetch(`/test/wav?seconds=${SECONDS}`)).arrayBuffer() }
       : null);
-    const made = makeCoexistingResolver({ device, hosted: hostedResolver(api, workspaceId, { songs: () => RUNTIME_MIX }), book });
+    const made = makeCoexistingResolver({ device, hosted: cloudLibraryResolver(api, workspaceId, { songs: () => RUNTIME_MIX }), book });
     return async () => made;
   }, [api, workspaceId, book]);
   const { player, seams } = useLocalFirstPlayer({ api, workspaceId, mix: RUNTIME_MIX, remoteControl: false, resolver });

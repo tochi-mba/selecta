@@ -15,12 +15,12 @@ import { EmptyState } from '../DeviceMusicEmpty';
  * paths below start at the route (`/assets`, `/local-media/songs`). */
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
-export type HostedAsset = { id: string; name: string; sha256: string | null; size?: number };
+export type CloudLibraryAsset = { id: string; name: string; sha256: string | null; size?: number };
 export type LocalSong = { id: number; content_sha256: string; title: string; artist: string; duplicate_of?: number | null };
 
 export type ReconciledRow =
-  | { kind: 'matched'; asset: HostedAsset; song: LocalSong; reason: string }
-  | { kind: 'hosted_only'; asset: HostedAsset; reason: string }
+  | { kind: 'matched'; asset: CloudLibraryAsset; song: LocalSong; reason: string }
+  | { kind: 'hosted_only'; asset: CloudLibraryAsset; reason: string }
   | { kind: 'device_only'; song: LocalSong; reason: string };
 
 /** Safety stop for a runaway cursor: 100 pages of 100 is 10,000 items each side. */
@@ -38,7 +38,7 @@ const REASONS = {
 const normal = (text: string) => text.toLowerCase().replace(/\.[a-z0-9]{2,5}$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
 /** Match hosted assets to local songs by content hash. Pure, so it can be tested on its own. */
-export function reconcile(assets: HostedAsset[], songs: LocalSong[]): ReconciledRow[] {
+export function reconcile(assets: CloudLibraryAsset[], songs: LocalSong[]): ReconciledRow[] {
   const byHash = new Map<string, LocalSong>();
   for (const song of songs) {
     const hash = song.content_sha256.toLowerCase();
@@ -73,12 +73,12 @@ export function reconcile(assets: HostedAsset[], songs: LocalSong[]): Reconciled
 
 type PageResult<T> = { items: T[]; truncated: boolean };
 
-async function allAssets(request: Request): Promise<PageResult<HostedAsset>> {
-  const found: HostedAsset[] = [];
+async function allAssets(request: Request): Promise<PageResult<CloudLibraryAsset>> {
+  const found: CloudLibraryAsset[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const query: string = cursor ? `?limit=${PAGE}&cursor=${encodeURIComponent(cursor)}` : `?limit=${PAGE}`;
-    const answer: { assets: HostedAsset[]; next_cursor?: string | null } = await request(`/assets${query}`, { method: 'GET' });
+    const answer: { assets: CloudLibraryAsset[]; next_cursor?: string | null } = await request(`/assets${query}`, { method: 'GET' });
     found.push(...answer.assets);
     cursor = answer.next_cursor ?? null;
     if (!cursor) break;

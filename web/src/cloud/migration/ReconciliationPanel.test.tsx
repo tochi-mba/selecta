@@ -1,13 +1,13 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { HostedAsset, LocalSong, reconcile, ReconciliationPanel } from './ReconciliationPanel';
+import { CloudLibraryAsset, LocalSong, reconcile, ReconciliationPanel } from './ReconciliationPanel';
 
 const A = 'a'.repeat(64);
 const B = 'b'.repeat(64);
 const C = 'c'.repeat(64);
 
-const assets: HostedAsset[] = [
+const assets: CloudLibraryAsset[] = [
   { id: 'as-1', name: 'Track One.mp3', sha256: A.toUpperCase() },
   { id: 'as-2', name: 'Night Drive.flac', sha256: B },
   { id: 'as-3', name: 'Mystery.wav', sha256: null },
