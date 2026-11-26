@@ -9,7 +9,6 @@ import { navigate, parseRoute, useLocationText } from '../router';
 import { describeRoute, destinationsFor, moreDestinationsFor, moreRouteOf, type MoreDestinationId, type ShellRoute } from '../shell/manifest';
 import { Shell } from '../shell/Shell';
 import { useMediaKeys } from '../shell/useMediaKeys';
-import { ControllerNotices } from '../devices/ControllerNotices';
 import { setJobsSource } from '../state/jobs';
 import { Drawer, Section } from '../ui/controls';
 import { showToast } from '../ui/toasts';
@@ -37,9 +36,7 @@ import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult
 import { ROOM_REQUEST_EVENT } from './deviceMusicRequests';
 import { useRoomRounds, addable, askWords, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
-import { CutoverNotice } from './migration/CutoverNotice';
 import { browserStorage, onboardingFinished, onboardingPutOff, recordImportOutcome } from './onboarding/state';
-import { ImportChip } from './ImportChip';
 import { bindImportWorkspace, endImportSession, useImportShellView } from './importSession';
 import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
@@ -47,14 +44,10 @@ import { provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
 import { startFactsUploader } from './factsUploader';
 import { waveformBook } from './sharedWaveforms';
 import { onReconnect } from './connection';
-import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
 import { useAccountMix } from './useAccountMix';
 import { setTabBusy } from './accountTabs';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
-import { OtherTabLine } from '../devices/OtherTabLine';
-import { ChangedFromLine } from '../devices/ChangedFromLine';
-import { PlayNoticeLine } from '../devices/PlayNoticeLine';
 import { footerWords } from './hosted/HostedMakeAMix';
 import { browserFlags } from './browserFlags';
 import { sendingOn } from './accountFacts';
@@ -66,6 +59,7 @@ import { placingOn } from './accountPlacements';
 import { RoomOpenLine } from './RoomOpenLine';
 import { useCloudShellMedia } from './cloudShellMedia';
 import { CloudShellPages } from './CloudShellPages';
+import { CloudShellNotices } from './CloudShellNotices';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -302,8 +296,6 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     };
   }, [lucyTransport]);
 
-  // cloud.offline_playback: said once when playing offline ended because another device took over
-  const [takeoverSeen, setTakeoverSeen] = useState('');
   // Listen's waveforms for the visit: from the audio the engine decoded to play each song, else its file
   const [waveforms] = useState(waveformBook);
   const { player, refusal, device: playback, seams: scheduled, prefetch, output } = useLocalFirstPlayer({
@@ -739,7 +731,9 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
         more={moreItems}
         account={onSignOut ? { email: account.user.email, plan: planName(account), onSignOut } : undefined}
         status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? <RoomOpenLine room={room} path={roomsPlace.path} waiting={roomWaiting} add={roomAdd} /> : undefined}
-        banner={<>{playback.view?.speaker === 'here' && <ChangedFromLine change={playback.changedFrom} nameOf={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null} />}{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} storedBytes={account.entitlement.storage_used_bytes} />}{feedback}</>}
+        banner={<CloudShellNotices account={account} workspaceId={workspaceId} on={on} playback={playback} deviceName={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null}
+          asked={askedBanner} accountMix={accountMix.banner} where={where} playNoticeShown={!(route.page === 'listen' && (remote || !followsHere))} onPlayHere={() => void shellPlayer.togglePause()}
+          offlineShell={offlineShell} servedFrom={servedFrom} offlineReadOnly={offlineReadOnly} notices={notices} feedback={feedback} />}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}><CloudShellPages at={{
