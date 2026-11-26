@@ -673,8 +673,11 @@
   .cloud-spine-step .cloud-actions { width: 100%; }
   .cloud-library-row { padding: var(--space-3); gap: var(--space-2); }
   .cloud-library-row button { padding: var(--space-dense) var(--space-2); }
+  /* each action as wide as its words, sharing the row when both fit and each taking a row of its
+     own when not, so "Manage storage" never breaks onto two lines */
   .cloud-over-quota-actions button,
-  .cloud-spine-step .cloud-actions > * { flex: 1; }
+  .cloud-spine-step .cloud-actions > * { flex: 1 1 auto; }
+  .cloud-over-quota-actions button { white-space: nowrap; }
   .cloud-danger-row > button,
   .cloud-current-plan > button,
   .cloud-confirm .cloud-actions > button { flex: 1 1 100%; }
