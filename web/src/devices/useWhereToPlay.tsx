@@ -132,7 +132,8 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     if (now.kind === 'ask') { setAsking(now); return true; }
     // the server's report can lag this device's own music: never say none is open from here, nor
     // when this device can play the mix's songs in the cloud library
-    const cloudHere = !!latest.current.situation?.cloud && playsHere(latest.current.situation);
+    const seen = latest.current.situation;
+    const cloudHere = seen?.cloud ? playsHere(seen) : false;
     if (nobodyOpenWrong(latest.current.playableHere || cloudHere, false)) return false;
     setNotice({ deviceId: null, text: NOBODY_OPEN, actions: [{ label: 'Connect music here', run: () => navigate('/library') }] });
     return true;

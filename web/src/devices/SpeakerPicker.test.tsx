@@ -30,6 +30,16 @@ describe('the speaker picker', () => {
     expect(screen.getAllByText('Suggested')).toHaveLength(1);
   });
 
+  it('cloud.catalogue_play: a device with none of these songs itself says, in the row, that it plays them from the cloud library', () => {
+    const cloudOptions = pickerOrder({ devices: [device('Phone', { songs: 0 }), device('Laptop')], speaker: null, defaultId: null, thisDeviceId: 'Phone', mixIds: [1, 2, 3], ids: new Map([['Laptop', new Set([1, 2, 3])]]), cloud: { ids: new Set([1, 2, 3]), songs: 3 } });
+    open({ options: cloudOptions, suggested: 'Phone' });
+    const radios = screen.getAllByRole('radio');
+    expect(radios[0]).toHaveAccessibleName('Phone: This device · All 3 songs · From your cloud library');
+    expect(radios[1]).toHaveAccessibleName('Laptop: All 3 songs');
+    // visible text, not a tooltip, so a touch screen shows it
+    expect(screen.getByText('This device · All 3 songs · From your cloud library')).toBeVisible();
+  });
+
   it('Confirm plays on the chosen device and passes the default tick', async () => {
     const { onChoose } = open();
     await userEvent.click(screen.getAllByRole('radio')[1]);
