@@ -58,7 +58,7 @@ test('the strip’s lens at its right end, and Listen playing into a hand-off', 
   await resetMix(request);
   // a hand-off is drawn once its transition is made; on a busy machine this may not finish, and
   // then the card says it is preparing, which is measured instead
-  await allRendered(request, 150_000).catch(() => undefined);
+  await allRendered(request, 280_000).catch(() => undefined);
   await withLongTitles(page);
   await withDepth(page);
   await opened(page, '/listen');
@@ -77,11 +77,14 @@ test('the strip’s lens at its right end, and Listen playing into a hand-off', 
   await expect(playButton(page)).toHaveText('Pause', { timeout: 30_000 }).catch(() => undefined);
   const intoTheSeam = async () => {
     if (await page.locator('.handoff.active').isVisible().catch(() => false)) return;
-    const mark = await page.locator('.now .strip .seam-mark').first().boundingBox().catch(() => null);
-    const box = await strip.boundingBox().catch(() => null);
-    if (!mark || !box) return;
-    await page.mouse.click(mark.x + mark.width / 2 + 1, box.y + box.height / 2);
-    await page.locator('.handoff.active').waitFor({ timeout: 4_000 }).catch(() => undefined);
+    // Listen's own "Jump to the transition", else a press on the strip at the seam's mark
+    if (!(await pressIfThere(page, page.getByRole('button', { name: 'Jump to the transition' })))) {
+      const mark = await page.locator('.now .strip .seam-mark').first().boundingBox().catch(() => null);
+      const box = await strip.boundingBox().catch(() => null);
+      if (!mark || !box) return;
+      await page.mouse.click(mark.x + mark.width / 2 + 1, box.y + box.height / 2);
+    }
+    await page.locator('.handoff.active').waitFor({ timeout: 6_000 }).catch(() => undefined);
   };
   problems.push(...(await sweep(page, testInfo, 'route.listen hand-off', { prepare: intoTheSeam })));
   await playButton(page).click().catch(() => undefined);
