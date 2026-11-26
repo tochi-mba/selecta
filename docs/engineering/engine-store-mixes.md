@@ -18,7 +18,7 @@ them), `mix.py` (every rule, unchanged), `cloud_brain/mixes_routes.py`,
 | `preferences` | a named JSON value | hand-made, adopted; the store touches only the mix's keys | created; only the mix's keys |
 | `mix_imports` | one recipe or Cloud mix already brought in | not created | created |
 | `playback_skips` | a skip and how far in | made by `lib0007mixes` (its route made it on the fly) | not created |
-| `song_requests`, `request_bridge_approvals`, `request_marks`, `request_routes` | requests and their bridges | made by `lib0008requests`, adopted | not yet (to-do T-20261126-c4c2) |
+| `song_requests`, `request_bridge_approvals`, `request_marks`, `request_routes` | requests and their bridges | made by `lib0008requests`, adopted | created by `es0479req01` ([engine-store-requests.md](engine-store-requests.md)) |
 
 Adopting in place adds `workspace_id` (default `local`) and its index; no row is copied or
 rewritten and every key stays. `queue.position` and `preferences.key` stay the Desktop keys: a
@@ -53,9 +53,9 @@ old path is the same statements on the same connection.
   REPLACE`, `lastrowid`, PRAGMA or `json_array_length`; a put-back deletes and inserts).
 - A caller with uncommitted writes on its own connection (`conn.in_transaction`) stays on the old
   path for that call: a store read would not see its writes and a store write would wait behind
-  its lock. `requests.insert_ready` (its own `BEGIN IMMEDIATE`), `lucy.commit` and the scan's
-  queue renumbering write the same tables raw and commit; they are on the same file, so the
-  store reads their commits.
+  its lock. `lucy.commit` and the scan's queue renumbering write the same tables raw and commit;
+  they are on the same file, so the store reads their commits. `requests.insert_ready` writes
+  the queue through `StoreMixes` in its own store write with the flag on.
 - `settle_chain` reads, and writes only a seam that must change, each as its own write, as before.
 
 `tests/test_engine_store_mixes.py` runs every operation on a synthetic library (a current mix, a
@@ -115,7 +115,7 @@ answer), without changing either row here.
 
 ## Still on the old path
 
-- Every read and write in `requests.py` and `routes/song_requests.py`; Cloud request tables and
-  routes (to-do T-20261126-c4c2). `seam_book` (discovery links) is not adopted.
+- Requests moved in their own slice: [engine-store-requests.md](engine-store-requests.md).
+  `seam_book` (discovery links) moves with discovery (to-do T-20261126-bf59).
 - Other readers of these tables keep raw `sqlite3`: `session.py`, `lucy`, `library/relink.py`,
   `library/scan.py`, `cli.py`, `backup.py`'s checks. They read the same tables on the same file.

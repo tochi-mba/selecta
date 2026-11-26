@@ -166,13 +166,29 @@ it. In Cloud a device saves a song's facts through `engine_store.facts_store.sav
 provenance (`analysis.implementation`, `analysis.source`), and `load_songs` reads many songs in
 one transaction (docs/engineering/cloud-planning.md).
 
-## Not moved yet
+## Slices moved, and what is still on raw `sqlite3`
 
-- The other hand-made table: `seam_book`; and `preferences` beyond the mix's own keys.
-- Seams moved in Phase 7 step 1: [engine-store-seams.md](engine-store-seams.md) has the tables,
-  the import, the two writers and what still reads the files.
-- Mixes moved in Phase 7 steps 2 and 3 (`queue`, `drafts`, the mix's `preferences`, the request
-  tables' DDL): [engine-store-mixes.md](engine-store-mixes.md) has the tables, how an edit is one
-  write, the Cloud routes and the recipe import.
-- Whole-file tools that copy rows between library files (`homes.py`, `recovery.py`) and the
-  backup's own read-only checks keep using `sqlite3`: they work on files, not on a workspace.
+Moved (each with its own page): ratings and song facts (above); seams, Phase 7 step 1
+([engine-store-seams.md](engine-store-seams.md)); mixes, steps 2 and 3
+([engine-store-mixes.md](engine-store-mixes.md)); requests, step 3
+([engine-store-requests.md](engine-store-requests.md)). Each keeps its old path, statement for
+statement, for the flag off: `requests.py` (its `_sqlite_` bodies, 28 calls) and
+`mix_backend.SqliteMixes` (25) are that path, not work left.
+
+Still on the library's raw connection on 2026-11-26, the remaining work of Phase 7. Counts are
+`.execute`/`.executemany` calls in modules that import `sqlite3`, plus Desktop routes handed the
+library connection; Cloud modules' SQLAlchemy calls are not counted.
+
+| Area | Modules (calls) |
+|---|---|
+| Hand-made schema and start-up steps | `db.py` (27), `local_upgrade.py` (4) |
+| Library scan, search and files | `library/scan.py` (16), `library/relink.py` (8), `library/search_cache.py` (4), `routes/library.py` (23), `cache_care.py` (12) |
+| Discovery (`seam_book`, `discovery_comparisons`; to-do T-20261126-bf59) | `discovery/sweep.py` (5), `discovery/search.py` (2), `routes/discover.py` (5) |
+| The listening study | `listening.py` (15), `eval/ratings.py` (2), `eval/feedback.py` (1) |
+| Lucy's tables on the Desktop | `lucy/conversations.py` (31), `lucy/memory.py` (17), `lucy/commit.py` (15), `lucy/proposals.py` (12), `lucy/permissions.py` (7), `lucy/events.py` (6), `lucy/schema.py` (3), `lucy/readiness.py` (2), `lucy/context.py`, `lucy/catalog.py` (1 each), `routes/lucy.py` (12), `lucy/agent.py` (9) |
+| Mix and request routes' own reads | `routes/helpers.py` (5), `routes/mixes.py` (2), `routes/edit.py` (3), `routes/system.py` (4), `session.py` (1) |
+| Analysis, planning and workers reading songs | `analysis/pipeline.py` (3), `analysis/song.py` (3), `eta.py` (3), `planner/wordreel.py` (2), `planner/ready.py`, `planner/reel.py`, `planner/gridcheck.py`, `stems.py`, `lyrics/lrclib.py`, `workers/local_seams.py`, `workers/local_analysis.py`, `api.py` (1 each) |
+| Whole-file tools (work on files, not a workspace) | `homes.py` (14), `recovery.py` (9), `backup.py` (8) |
+| Development only | `devstack/identity_store.py` (32) |
+
+`preferences` beyond the mix's own keys is read on the old path too.
