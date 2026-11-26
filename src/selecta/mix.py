@@ -221,6 +221,10 @@ def add_pair(
 
 
 @_reads
+def _read_rows(m: Mixes, draft: int | None = None) -> list:
+    return _rows(m, draft)
+
+
 def read_mix(
     conn: Conn,
     store: SeamStore,
@@ -228,8 +232,9 @@ def read_mix(
     rows: list | None = None,
     status: Callable[[str], dict] | None = None,
 ) -> list[dict]:
-    """The songs in order. Each one after the first carries the seam that leads into it."""
-    rows = _rows(conn, draft) if rows is None else rows
+    """The songs in order. Each one after the first carries the seam that leads into it.
+    Given `rows` it reads nothing, so it opens no transaction (a list of many drafts)."""
+    rows = _read_rows(conn, draft) if rows is None else rows
     status = status or store.status
     mix: list[dict] = []
     entered: float | None = 0.0

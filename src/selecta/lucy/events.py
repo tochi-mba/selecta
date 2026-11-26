@@ -151,6 +151,12 @@ def since(
     A gap means events the client never saw were compacted away; replaying the rest would draw a
     wrong picture, so the client is told to take the snapshot and continue from its cursor.
     """
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            pruned = stored.pruned_through(tx, conversation)
+            found = stored.after(tx, conversation, after, limit) if pruned is not None else []
+        return _since(after, pruned, found)
     row = conn.execute(
         "SELECT pruned_through FROM lucy_conversations WHERE id=?", (conversation,)
     ).fetchone()

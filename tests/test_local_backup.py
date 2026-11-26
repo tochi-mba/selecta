@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from selecta import backup, db
+from selecta import backup, db, flags
 from selecta.api import create_app
 from selecta.backup import (
     ACTIVATING,
@@ -373,7 +373,10 @@ def test_previewing_says_what_a_restore_replaces_and_what_it_leaves_alone(client
     assert preview.status_code == 200
     body = preview.json()
     assert body["token"] == hashlib.sha256(data).hexdigest()
-    assert body["counts"] == {"songs": 2, "drafts": 1, "ratings": 1, "seam_history": 1}
+    expected = {"songs": 2, "drafts": 1, "ratings": 1, "seam_history": 1}
+    if flags.on("core.engine_store"):  # a library with the store on carries its seam tables
+        expected.update(seams=0, seam_verdicts=0)
+    assert body["counts"] == expected
     assert "Original audio" in body["skips"]
 
 

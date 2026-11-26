@@ -493,6 +493,12 @@
    "owner": "web/src/cloud/LocalFirstShell.tsx"
   },
   {
+   "id": "site.overlay.cloud.activity",
+   "title": "Activity",
+   "kind": "drawer",
+   "owner": "web/src/cloud/DeviceActivity.tsx"
+  },
+  {
    "id": "site.overlay.business.add-venue",
    "title": "Add a venue",
    "kind": "dialog",

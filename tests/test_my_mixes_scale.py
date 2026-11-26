@@ -13,6 +13,8 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 from mix_scale import MIXES, REVISIONS, make_mixes
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 from selecta import db, mix
 from selecta.api import create_app
@@ -54,13 +56,33 @@ def statements(monkeypatch):
     seen: list[str] = []
     real = db.connect
 
+    def kept(sql: str) -> None:
+        # the store's routing probes on the caller's connection are left out (T-20261126-3582)
+        if sql != "PRAGMA database_list" and "engine_version" not in sql:
+            seen.append(sql)
+
     def traced(path):
         conn = real(path)
-        conn.set_trace_callback(seen.append)
+        conn.set_trace_callback(kept)
         return conn
 
     monkeypatch.setattr(db, "connect", traced)
-    return seen
+
+    # with core.engine_store on the mix reads and writes go through the store's engine
+    def through_store(_conn, _cursor, statement, *_rest):
+        if statement != "BEGIN":  # a transaction's start, which the old path's count left out
+            seen.append(statement)
+
+    event.listen(Engine, "before_cursor_execute", through_store)
+    yield seen
+    event.remove(Engine, "before_cursor_execute", through_store)
+
+
+def _clears_every_draft(sql: str) -> bool:
+    """An UPDATE that clears the line on every draft, whichever path wrote it."""
+    if not sql.startswith("UPDATE drafts SET line"):
+        return False
+    return "IS NOT NULL" not in sql and "id =" not in sql and "id=" not in sql
 
 
 def _plan(conn, sql, params=()):
@@ -152,11 +174,14 @@ def test_deleting_or_playing_a_draft_leaves_the_other_drafts_rows_alone(home, cl
     """Clearing the render line used to rewrite every draft, revisions and all."""
     _path, ids = home
     assert client.delete(f"/api/drafts/{ids[270]}").status_code == 200
-    assert "UPDATE drafts SET line=NULL" not in statements
-    assert any("SET line=NULL WHERE line IS NOT NULL" in sql for sql in statements)
+    assert not [sql for sql in statements if _clears_every_draft(sql)]
+    assert any(
+        sql.startswith("UPDATE drafts SET line") and "line IS NOT NULL" in sql
+        for sql in statements
+    ), statements
     assert client.post(f"/api/drafts/restore?id={ids[270]}").status_code == 200
     assert client.post(f"/api/drafts/{ids[271]}/play").status_code == 200
-    assert "UPDATE drafts SET line=NULL" not in statements
+    assert not [sql for sql in statements if _clears_every_draft(sql)]
 
 
 def test_the_lean_list_has_the_same_drafts_in_the_same_order(client, statements):

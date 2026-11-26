@@ -17,6 +17,7 @@ import pytest
 from selecta import db, flags, local_upgrade
 from selecta.api import create_app
 from selecta.config import Settings
+from selecta.engine_store import library
 
 # db.SCHEMA as of commit 7b51a70 ("Build web app planner discovery and evaluation").
 OLD_SCHEMA = """
@@ -216,6 +217,7 @@ def test_only_the_last_few_copies_are_kept(tmp_path):
     for _ in range(local_upgrade.KEEP + 2):
         path = old_library(tmp_path / "old.sqlite")
         db.connect(path).close()
+        library.forget(path)  # the store keeps idle connections to a file it has opened
         path.unlink()
         for leftover in tmp_path.glob("old.sqlite-*"):
             leftover.unlink()
@@ -223,6 +225,8 @@ def test_only_the_last_few_copies_are_kept(tmp_path):
 
 
 def test_a_schema_change_bumps_the_local_schema_version(tmp_path):
+    # the hand-made schema alone: the engine store's chain has its own versions
+    flags.use("-core.engine_store")
     conn = db.connect(tmp_path / "fresh.sqlite")
     shape = "\n".join(
         row[0]

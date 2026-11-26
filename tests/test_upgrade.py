@@ -7,7 +7,7 @@ import shutil
 import pytest
 from fastapi.testclient import TestClient
 
-from selecta import db, mix
+from selecta import db, flags, mix
 from selecta.api import create_app
 from selecta.config import ANALYSIS_VERSION, Settings
 
@@ -46,11 +46,14 @@ def _what_it_holds(client, draft):
 
 @pytest.fixture
 def old_library(tmp_path):
-    """As it would be on disk before corrections existed."""
+    """As it would be on disk before corrections existed, so before the engine store too: made
+    with core.engine_store off, which is what stamps a file."""
+    flags.use("-core.engine_store")
     settings, conn, draft = _library(tmp_path / "home")
     conn.execute("DROP TABLE song_overrides")
     conn.commit()
     conn.close()
+    flags.use(None)
     return settings, draft
 
 
