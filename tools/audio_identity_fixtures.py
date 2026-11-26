@@ -15,9 +15,12 @@ Both test suites read `tests/fixtures/audio_identity/manifest.json` and these fi
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -384,13 +387,27 @@ def main() -> int:
     built += other_files()
     entries = []
     wrong = []
+    scratch = Path(tempfile.mkdtemp(prefix="audio-identity-"))
     for name, group, data, want in built:
-        path = OUT / name
+        # The repo ignores audio file names on purpose (it is public), so the bytes travel in
+        # the manifest as base64 and the file only ever exists in a temporary folder.
+        path = scratch / name
         path.write_bytes(data)
+        # also beside the manifest, where the folder is let back into git for these made-up files
+        (OUT / name).write_bytes(data)
         got = audio_id(path)
         if got != want:
             wrong.append(f"{name}: expected {want}, the Python implementation says {got}")
-        entries.append({"file": name, "group": group, "audio_id": want, "size": len(data)})
+        entries.append(
+            {
+                "file": name,
+                "group": group,
+                "audio_id": want,
+                "size": len(data),
+                "bytes": base64.b64encode(data).decode("ascii"),
+            }
+        )
+    shutil.rmtree(scratch, ignore_errors=True)
     groups: dict[str, set[str | None]] = {}
     for entry in entries:
         if entry["group"]:

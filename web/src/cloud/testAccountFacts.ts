@@ -5,15 +5,18 @@ import type { StoredSong } from '../media';
  * index entry that carries every private thing a real one does (a title, a file name, a folder
  * path), so a test can prove none of it is ever sent. */
 
-/** A steady 4/4 song: `bars` bars at `bpm` from `offset` seconds, every bar array filled. */
-export function measuredSong({ bpm = 120, bars = 64, offset = 0.25 }: { bpm?: number; bars?: number; offset?: number } = {}): SongFacts {
+/** A steady 4/4 song: `bars` bars at `bpm` from `offset` seconds, every bar array filled, its
+ * beats from `beatSource` (the interim source unless a test names Beat This). */
+export function measuredSong(
+  { bpm = 120, bars = 64, offset = 0.25, beatSource = 'web-onset-comb-beats-1' }: { bpm?: number; bars?: number; offset?: number; beatSource?: string } = {},
+): SongFacts {
   const period = 60 / bpm;
   const beats = Float64Array.from({ length: bars * 4 }, (_, index) => offset + index * period);
   const duration = offset + bars * 4 * period + 2;
   return {
     implementation: 'web-dsp-1',
     analysis_version: 3,
-    beat_source: 'web-onset-comb-beats-1',
+    beat_source: beatSource,
     beat_confidence: 0.8,
     sample_rate: 44100,
     duration_s: duration,

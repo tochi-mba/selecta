@@ -293,6 +293,7 @@ def install(
                 body.stems,
                 None if body.energy_arc is None else [p / 100 for p in body.energy_arc],
                 body.seed,
+                memory=_memory(store),
             )
         except planning.PlanningRefused as error:
             error.extra.update(not_measured=missing, never_play=left_out)
@@ -309,6 +310,15 @@ def install(
         store = store_for(request, claims)
         found, missing = songs_of(store, list(dict.fromkeys(body.songs)), playable=True)
         return {"ideas": planning.ideas(found, body.language), "not_measured": missing}
+
+
+def _memory(store: EngineStore):
+    """What this workspace's seams and verdicts teach the planner, as Desktop's seam history
+    teaches its own (`planner_core.memory.SeamMemory`)."""
+    from selecta.engine_store import seams
+    from selecta.planner_core.memory import SeamMemory
+
+    return SeamMemory.from_states(seams.records(store))
 
 
 def _never(store: EngineStore, ids: list[int]) -> set[int]:

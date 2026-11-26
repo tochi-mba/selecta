@@ -1,10 +1,11 @@
 /** Where a song's beats come from before the grid is built.
  *
  * On the Desktop the beats come from the neural tracker, Beat This (`beats.py::BeatTracker`),
- * and everything after it is deterministic and ported (`grid.ts`). Until Beat This runs in the
- * browser (its model must be exported and licensed separately), the browser's own lightweight
- * estimate stands in, behind this interface, and every measurement records which source gave
- * its beats, so facts from this source can be told from neural ones and measured again later.
+ * and everything after it is deterministic and ported (`grid.ts`). The browser runs the same
+ * tracker (`beatThis/source.ts`, `web-beatthis-small0-1`) where its model is on this device and
+ * fast enough; elsewhere its own lightweight estimate below stands in. Every measurement records
+ * which source gave its beats, so the account can rank them and a song measured with the
+ * lighter source is measured again once the tracker is here.
  */
 
 import { BROWSER_BEATS_IMPLEMENTATION } from './deviceAnalysisIds';
@@ -25,7 +26,13 @@ export interface BeatEstimate {
 export interface BeatSource {
   implementation: string;
   /** Beats of a mono signal. `hints.onsetEnvelope`, when given, is the onset envelope of the
-   * same signal at 22,050 Hz, so a source that reads it need not compute it again. */
+   * same signal at 22,050 Hz, so a source that reads it need not compute it again. A neural
+   * source answers later (its model runs asynchronously). */
+  beats(samples: Float32Array, sampleRate: number, hints?: { onsetEnvelope?: Float32Array }): BeatEstimate | Promise<BeatEstimate>;
+}
+
+/** A source that answers at once, which `measureSong` needs. */
+export interface SyncBeatSource extends BeatSource {
   beats(samples: Float32Array, sampleRate: number, hints?: { onsetEnvelope?: Float32Array }): BeatEstimate;
 }
 
@@ -44,9 +51,9 @@ function envelopeAt(env: Float32Array, frame: number): number {
 /** The browser's tempo estimate (`tempo.ts`, the same autocorrelation the transition planner
  * uses on a minute of audio) over the whole song's onset envelope, then the phase that puts the
  * most onset strength on the beats, and downbeats every fourth beat from the strongest of the
- * four bar phases. It assumes four beats to the bar; `grid.ts::fitBars` still reads a 3/4 song's
- * meter only from downbeats, so a waltz measured this way reads as 4/4 until Beat This lands. */
-export const browserBeatSource: BeatSource = {
+ * four bar phases. It assumes four beats to the bar; `grid.ts::fitBars` reads a 3/4 song's
+ * meter only from downbeats, so a waltz measured this way reads as 4/4 (Beat This reads 3/4). */
+export const browserBeatSource: SyncBeatSource = {
   implementation: BROWSER_BEATS_IMPLEMENTATION,
   beats(samples, sampleRate, hints) {
     const env = hints?.onsetEnvelope ?? onsetEnvelope(sampleRate === ONSET_SR ? samples : resample(samples, sampleRate, ONSET_SR));

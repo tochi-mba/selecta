@@ -109,19 +109,19 @@ async function existingFile(root: ModelDirectory, name: string): Promise<File | 
 
 type Marker = { implementation: string; sha256: string; bytes: number; verifiedAt: number };
 
-function readMarker(): Marker | null {
+function readMarker(key = MARKER_KEY): Marker | null {
   try {
-    const raw = localStorage.getItem(MARKER_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as Marker) : null;
   } catch {
     return null;
   }
 }
 
-function writeMarker(marker: Marker | null): void {
+function writeMarker(marker: Marker | null, key = MARKER_KEY): void {
   try {
-    if (marker) localStorage.setItem(MARKER_KEY, JSON.stringify(marker));
-    else localStorage.removeItem(MARKER_KEY);
+    if (marker) localStorage.setItem(key, JSON.stringify(marker));
+    else localStorage.removeItem(key);
   } catch {
     // Without storage the file is re-hashed on the next check instead of trusted.
   }
@@ -146,6 +146,11 @@ export interface StemModelManagerOptions {
   fetchImpl?: typeof fetch;
   hash?: (file: Blob) => Promise<string>;
   now?: () => number;
+  /** Another model kept the same way (the beat tracker, analysis/beatThis/model.ts): its OPFS
+   * file name, its verified marker and the word its messages use. Default: the stem splitter. */
+  fileName?: (sha256: string) => string;
+  markerKey?: string;
+  noun?: string;
 }
 
 /** Owns the model file on this device. One download runs at a time; `state` is for the UI. */
@@ -157,6 +162,9 @@ export class StemModelManager {
   private readonly fetchImpl: typeof fetch;
   private readonly hash: (file: Blob) => Promise<string>;
   private readonly now: () => number;
+  private readonly fileName: (sha256: string) => string;
+  private readonly markerKey: string;
+  private readonly noun: string;
   private running: { controller: AbortController; discard: boolean } | null = null;
 
   constructor(options: StemModelManagerOptions = {}) {
@@ -165,6 +173,9 @@ export class StemModelManager {
     this.fetchImpl = options.fetchImpl ?? ((...args) => fetch(...args));
     this.hash = options.hash ?? ((file) => fileSha256(file));
     this.now = options.now ?? Date.now;
+    this.fileName = options.fileName ?? stemModelFileName;
+    this.markerKey = options.markerKey ?? MARKER_KEY;
+    this.noun = options.noun ?? 'splitter';
   }
 
   /** Look at what is on disk now. A file whose size matches but has no verified marker is
@@ -175,7 +186,7 @@ export class StemModelManager {
     if (!validArtefact(artefact)) return this.settle({ kind: 'failed', why: 'not_published' });
     const root = await this.root();
     if (!root) return this.settle({ kind: 'failed', why: 'unavailable', detail: 'this browser gives no private file storage' });
-    const file = await existingFile(root, stemModelFileName(artefact.sha256));
+    const file = await existingFile(root, this.fileName(artefact.sha256));
     if (!file || file.size === 0) return this.settle({ kind: 'absent' });
     if (file.size < artefact.bytes) return this.settle({ kind: 'absent', partialBytes: file.size });
     return this.verify(root, artefact, file);
@@ -218,12 +229,12 @@ export class StemModelManager {
   /** Delete the model from this device ("remove the splitter"). */
   async remove(): Promise<StemModelState> {
     this.cancel();
-    writeMarker(null);
+    writeMarker(null, this.markerKey);
     const artefact = this.artefact;
     const root = await this.root();
     if (root && validArtefact(artefact)) {
       try {
-        await root.removeEntry(stemModelFileName(artefact.sha256));
+        await root.removeEntry(this.fileName(artefact.sha256));
       } catch {
         // Already gone.
       }
@@ -237,7 +248,7 @@ export class StemModelManager {
   }
 
   private async verify(root: ModelDirectory, artefact: StemModelArtefact, file: File): Promise<StemModelState> {
-    const marker = readMarker();
+    const marker = readMarker(this.markerKey);
     if (marker && marker.sha256 === artefact.sha256 && marker.bytes === file.size &&
         marker.implementation === artefact.implementation && file.size === artefact.bytes) {
       return this.settle({ kind: 'ready' });
@@ -249,15 +260,15 @@ export class StemModelManager {
       digest = '';
     }
     if (digest !== artefact.sha256) {
-      writeMarker(null);
+      writeMarker(null, this.markerKey);
       try {
-        await root.removeEntry(stemModelFileName(artefact.sha256));
+        await root.removeEntry(this.fileName(artefact.sha256));
       } catch {
         // Nothing to remove.
       }
-      return this.settle({ kind: 'failed', why: 'checksum', detail: 'the downloaded splitter did not match its published fingerprint' });
+      return this.settle({ kind: 'failed', why: 'checksum', detail: `the downloaded ${this.noun} did not match its published fingerprint` });
     }
-    writeMarker({ implementation: artefact.implementation, sha256: artefact.sha256, bytes: artefact.bytes, verifiedAt: this.now() });
+    writeMarker({ implementation: artefact.implementation, sha256: artefact.sha256, bytes: artefact.bytes, verifiedAt: this.now() }, this.markerKey);
     return this.settle({ kind: 'ready' });
   }
 
@@ -267,7 +278,7 @@ export class StemModelManager {
     signal: AbortSignal,
     run: { discard: boolean },
   ): Promise<StemModelState> {
-    const name = stemModelFileName(artefact.sha256);
+    const name = this.fileName(artefact.sha256);
     const total = artefact.bytes;
     let existing = (await existingFile(root, name))?.size ?? 0;
     if (existing >= total) {
@@ -309,7 +320,7 @@ export class StemModelManager {
         if (received + value.byteLength > total) {
           await writable.abort?.();
           writable = null;
-          return this.discardAs(root, name, { kind: 'failed', why: 'checksum', detail: 'the download is larger than the published splitter' });
+          return this.discardAs(root, name, { kind: 'failed', why: 'checksum', detail: `the download is larger than the published ${this.noun}` });
         }
         await writable.write(value);
         received += value.byteLength;
@@ -330,7 +341,7 @@ export class StemModelManager {
     } catch (error) {
       if (isQuota(error)) {
         await writable?.abort?.().catch(() => undefined);
-        return this.settle({ kind: 'failed', why: 'storage_full', detail: 'this browser has no room left for the splitter' });
+        return this.settle({ kind: 'failed', why: 'storage_full', detail: `this browser has no room left for the ${this.noun}` });
       }
       // Commit what arrived, so a resume does not fetch it twice.
       try {
@@ -349,7 +360,7 @@ export class StemModelManager {
   }
 
   private async discardAs(root: ModelDirectory, name: string, state: StemModelState): Promise<StemModelState> {
-    writeMarker(null);
+    writeMarker(null, this.markerKey);
     try {
       await root.removeEntry(name);
     } catch {
@@ -363,10 +374,11 @@ export class StemModelManager {
 export async function readStemModelBytes(
   sha256: string,
   root: () => Promise<ModelDirectory | null> = defaultRoot,
+  fileName: (sha256: string) => string = stemModelFileName,
 ): Promise<ArrayBuffer | null> {
   if (!SHA256.test(sha256)) return null;
   const directory = await root();
   if (!directory) return null;
-  const file = await existingFile(directory, stemModelFileName(sha256));
+  const file = await existingFile(directory, fileName(sha256));
   return file ? file.arrayBuffer() : null;
 }

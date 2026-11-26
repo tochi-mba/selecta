@@ -32,8 +32,10 @@ def save(
     rating: int,
     tags: list[str],
     seam_id: int | None = None,
+    seam_key: str | None = None,
 ) -> int:
-    """Record one rating; returns its id."""
+    """Record one rating; returns its id. `seam_key` names the rendered seam it was given to,
+    when the caller knows it, so a grade can be joined to that seam's facts (`seams.key`)."""
     if rating not in range(1, 6):
         raise ValueError("rating must be 1..5")
     with store.write() as connection:
@@ -44,6 +46,7 @@ def save(
                 {
                     "workspace_id": store.workspace_id,
                     "seam_id": seam_id,
+                    "seam_key": seam_key,
                     "song_a": a,
                     "song_b": b,
                     "method": method,

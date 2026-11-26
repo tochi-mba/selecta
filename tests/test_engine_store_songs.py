@@ -256,7 +256,11 @@ def test_the_migration_meets_an_existing_column_and_runs_once(home):
     after = _rows(home.db_path)
     assert {row["workspace_id"] for table in FACTS for row in after[table]} == {"local"}
     assert _hashes(home.db_path) == {1: "kept", 2: None, 3: None}
-    assert _rows(home.db_path, ("workspace_id", "content_hash", "audio_id")) == before
+    # every column the library migrations add is new and empty (lib0005 adds provenance)
+    added = ("workspace_id", "content_hash", "audio_id", "implementation", "source")
+    assert {row.get("source") for row in after["analysis"]} == {None}
+    assert {row.get("implementation") for row in after["analysis"]} == {None}
+    assert _rows(home.db_path, added) == before
     schema, rows = _schema(home.db_path), _rows(home.db_path)
     db._CHECKED.clear()  # the full check again, as a new process would
     _start(home.db_path)

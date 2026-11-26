@@ -434,6 +434,9 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     // ADR-0478: covers and details from SelectaDJ's own catalogue (and "Wrong cover?") are the
     // server's, gated there by library.art_lookup and the account's own lookup setting
     if (route.startsWith('/catalog/')) return cloud<T>(path, init);
+    // ADR-0479: a Good or Bad on a transition the account knows, and every one given, are the
+    // account's (cloud.brain; the server says when it is off)
+    if ((method === 'POST' && /^\/seams\/[0-9A-Za-z_-]+\/rate$/.test(route)) || (method === 'GET' && route === '/memory/ratings')) return cloud<T>(path, init);
     const neverAnswer = setNever(method, route, init);
     if (neverAnswer) return (await neverAnswer) as T;
     throw notHereYet(path);

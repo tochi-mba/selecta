@@ -95,7 +95,8 @@ describe('sending song measurements to the account', () => {
     const body = put.body as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual([...FACTS_FIELDS].sort());
     expect(Object.keys(body.arrays as object).sort()).toEqual([...FACTS_ARRAYS].sort());
-    expect(body).toMatchObject({ content_sha256: shaOf(1), implementation: 'web-dsp-1', bpm: 120, constant_tempo: true, key_agrees_chroma: true, beats_per_bar: 4 });
+    // the analysis port and the beat source together, so the account can rank them
+    expect(body).toMatchObject({ content_sha256: shaOf(1), implementation: 'web-dsp-1+web-onset-comb-beats-1', bpm: 120, constant_tempo: true, key_agrees_chroma: true, beats_per_bar: 4 });
     const arrays = body.arrays as Record<string, { dtype: string; shape: number[]; data: string }>;
     expect(arrays.beats).toMatchObject({ dtype: '<f8', shape: [256] });
     expect(arrays.bar_starts).toMatchObject({ dtype: '<i4', shape: [64] });
@@ -111,15 +112,19 @@ describe('sending song measurements to the account', () => {
   it('skips songs the account holds from a better or the same measurement, and sends over a lower one', async () => {
     const account = fakeAccount({ has: {
       1: { implementation: 'python-beatthis-3', source: 'worker' },
-      2: { implementation: 'web-dsp-1', source: 'device' },
+      2: { implementation: 'web-dsp-1+web-onset-comb-beats-1', source: 'device' },
       3: { implementation: 'web-old-0', source: 'device' },
+      // an older client's measurement, before the beat source was named: ranks below this one
+      5: { implementation: 'web-dsp-1', source: 'device' },
+      // another device measured with Beat This: ranks above this device's interim beats
+      6: { implementation: 'web-dsp-1+web-beatthis-small0-1', source: 'device' },
     } });
-    const songs = [heldSong(1, shaOf(1)), heldSong(2, shaOf(2)), heldSong(3, shaOf(3)), heldSong(4, shaOf(4))];
+    const songs = [1, 2, 3, 4, 5, 6].map((id) => heldSong(id, shaOf(id)));
     const { waits, memory } = start(account, songs, songs.map((song) => [song.identity.content_sha256, measuredSong()]));
     await vi.waitFor(() => expect(waits.holding()).toBe(1));
-    expect(account.puts().map((call) => call.path)).toEqual(['/song-facts/3', '/song-facts/4']);
+    expect(account.puts().map((call) => call.path)).toEqual(['/song-facts/3', '/song-facts/4', '/song-facts/5']);
     // the skipped ones are remembered as done too, so the next pass reads nothing for them
-    expect(Object.keys(memory.kept).sort()).toEqual(['1', '2', '3', '4']);
+    expect(Object.keys(memory.kept).sort()).toEqual(['1', '2', '3', '4', '5', '6']);
   });
 
   it('treats 409 outranked as done and never sends a song twice', async () => {
@@ -140,6 +145,17 @@ describe('sending song measurements to the account', () => {
     const { waits } = start(account, [heldSong(5, shaOf(5))], [[shaOf(5), measuredSong()]], memory);
     await vi.waitFor(() => expect(waits.holding()).toBe(1));
     expect(account.puts().map((call) => call.path)).toEqual(['/song-facts/5']);
+  });
+
+  it('sends a song again once Beat This measured it, over this device\'s own interim measurement', async () => {
+    const account = fakeAccount({ has: { 8: { implementation: 'web-dsp-1+web-onset-comb-beats-1', source: 'device' } } });
+    const memory = memoryOf({ 8: `${factsVersion()}:${shaOf(8)}` });
+    const { waits } = start(account, [heldSong(8, shaOf(8))], [[shaOf(8), measuredSong({ beatSource: 'web-beatthis-small0-1' })]], memory);
+    await vi.waitFor(() => expect(waits.holding()).toBe(1));
+    const puts = account.puts();
+    expect(puts.map((call) => call.path)).toEqual(['/song-facts/8']);
+    expect((puts[0].body as { implementation: string }).implementation).toBe('web-dsp-1+web-beatthis-small0-1');
+    expect(memory.kept['8']).toBe(`web-dsp-1+web-beatthis-small0-1:${shaOf(8)}`);
   });
 
   it('backs off after an error that can heal, without marking the song sent', async () => {

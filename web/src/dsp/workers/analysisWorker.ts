@@ -6,7 +6,8 @@
  * waits on a worker.
  *
  * `analyse` is exported as a pure function so tests exercise the exact code the worker runs
- * without needing a Worker runtime.
+ * without needing a Worker runtime. `analyseRequest` adds the neural beat tracker, which runs
+ * asynchronously (onnxruntime-web), for a `song` asked with `beatModel`.
  */
 
 import { detectOnsets } from '../analysis/onsets';
@@ -15,8 +16,11 @@ import { estimateTempo, type TempoEstimate } from '../analysis/tempo';
 import { integratedLoudness, samplePeakDb } from '../loudness';
 import { tonalProfile, type TonalProfile } from '../analysis/tonalProfile';
 import { browserBeatSource } from '../analysis/beatSource';
+import { readBeatModelBytes } from '../analysis/beatThis/model';
+import { loadBeatRuntime, type BeatRuntime } from '../analysis/beatThis/runtime';
+import { beatThisSource } from '../analysis/beatThis/source';
 import { FEATURE_SR } from '../analysis/features';
-import { measureSong, type SongFacts } from '../analysis/song';
+import { measureSong, measureSongAsync, type SongFacts } from '../analysis/song';
 
 /** `profile` (whole-song tonal profile, cloud.browser_harmonic) is only run when asked for. */
 /** `loudness` (the whole song's level, cloud.seam_lead) reads `channels`, not `pcm`. */
@@ -33,6 +37,9 @@ export interface AnalysisRequest {
   tasks?: AnalysisTask[];
   /** Every channel of the song, for `loudness` and `song`; transferred, not copied. */
   channels?: Float32Array[];
+  /** `song` with the neural beat tracker: the fingerprint of the verified model kept in this
+   * browser's private storage (analysis/beatThis/gate.ts chose it). */
+  beatModel?: { sha256: string };
 }
 
 export interface AnalysisResponse {
@@ -46,6 +53,10 @@ export interface AnalysisResponse {
   peakDb?: number;
   /** The whole song's facts (`song`). */
   facts?: SongFacts;
+  /** With `beatModel`: how long the neural tracker took, for this device's benchmark. */
+  beatMs?: number;
+  /** With `beatModel`: why the interim source measured instead. */
+  beatFallback?: string;
   error?: string;
 }
 
@@ -87,6 +98,54 @@ export function analyse(request: AnalysisRequest): AnalysisResponse {
   return response;
 }
 
+const SHA256 = /^[0-9a-f]{64}$/;
+
+async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** The runtime over the verified model in private storage, checked again by hash here: a file
+ * changed on disk since it was verified is refused. */
+export async function loadVerifiedBeatRuntime(sha256: string): Promise<BeatRuntime> {
+  const bytes = await readBeatModelBytes();
+  if (!bytes) throw new Error('the beat model is not in this browser\'s storage');
+  if ((await sha256Hex(bytes)) !== sha256) throw new Error('the beat model in storage does not match its fingerprint');
+  return loadBeatRuntime(new Uint8Array(bytes));
+}
+
+let runtime: { sha256: string; loading: Promise<BeatRuntime> } | null = null;
+
+/** A pause between chunks, so the worker answers other messages during a long song. */
+const breath = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/** `analyse`, with a `song` measured by the neural tracker when `beatModel` names it. A model
+ * that will not load or run falls back to the interim source for this song, and says why. */
+export async function analyseRequest(
+  request: AnalysisRequest,
+  load: (sha256: string) => Promise<BeatRuntime> = loadVerifiedBeatRuntime,
+): Promise<AnalysisResponse> {
+  const tasks = new Set<AnalysisTask>(request.tasks ?? []);
+  const sha = request.beatModel?.sha256;
+  if (!tasks.has('song') || !request.channels?.length || typeof sha !== 'string' || !SHA256.test(sha)) return analyse(request);
+  const response: AnalysisResponse = { id: request.id };
+  try {
+    if (!runtime || runtime.sha256 !== sha) runtime = { sha256: sha, loading: load(sha) };
+    const loaded = await runtime.loading;
+    const measured = await measureSongAsync(request.channels, request.sampleRate, beatThisSource(loaded.run, breath));
+    response.facts = measured.facts;
+    response.beatMs = measured.beatMs;
+    if (tasks.has('profile') && request.pcm.length === 0) response.profile = tonalProfile(measured.detail.mono22k, FEATURE_SR);
+    if (tasks.has('profile') && !response.profile) response.profile = tonalProfile(request.pcm, request.sampleRate);
+    return response;
+  } catch (problem) {
+    runtime = null;
+    const fallback = analyse({ ...request, beatModel: undefined });
+    fallback.beatFallback = problem instanceof Error ? problem.message : String(problem);
+    return fallback;
+  }
+}
+
 type WorkerScope = {
   onmessage: ((event: MessageEvent<AnalysisRequest>) => void) | null;
   postMessage: (message: AnalysisResponse) => void;
@@ -113,6 +172,6 @@ if (typeof scope.postMessage === 'function' && scope.window === undefined) {
     // empty origin; anything bearing an origin did not come from that page.
     if (event.origin !== '') return;
     const request = trustedRequest(event);
-    if (request) (scope as WorkerScope).postMessage(analyse(request));
+    if (request) void analyseRequest(request).then((response) => (scope as WorkerScope).postMessage(response));
   };
 }

@@ -13,8 +13,16 @@ from selecta import flags
 
 
 def save_rating(
-    conn: sqlite3.Connection, a: int, b: int, method: str, rating: int, tags: list[str]
+    conn: sqlite3.Connection,
+    a: int,
+    b: int,
+    method: str,
+    rating: int,
+    tags: list[str],
+    seam_key: str | None = None,
 ) -> None:
+    """One 1 to 5 grade. `seam_key` (the rendered seam graded, when known) is kept only with
+    `core.engine_store` on, where the library has `ratings.seam_key`."""
     if rating not in range(1, 6):
         raise ValueError("rating must be 1..5")
     if flags.on("core.engine_store"):
@@ -25,7 +33,7 @@ def save_rating(
         # the store's write from waiting behind the caller's own lock
         if conn.in_transaction:
             conn.commit()
-        stored.save(library.store_of(conn), a, b, method, rating, tags)
+        stored.save(library.store_of(conn), a, b, method, rating, tags, seam_key=seam_key)
         return
     conn.execute(
         "INSERT INTO ratings(song_a,song_b,method,rating,tags) VALUES(?,?,?,?,json(?))",

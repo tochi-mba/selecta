@@ -1,5 +1,6 @@
-"""What the account export carries of the engine's tables: song facts, corrections, ratings and
-the other file hashes a song is known by, plus each song's stored arrays.
+"""What the account export carries of the engine's tables: song facts, corrections, ratings, the
+other file hashes a song is known by and the seams (records, who rendered them, their history and
+the member's verdicts), plus each song's stored arrays. No clip is in Cloud to export.
 
 Called by the account export (`routes/cloud_export.py`) inside its own workspace transaction, so
 the fail-closed policy on the engine tables sees the workspace. Account deletion needs nothing
@@ -23,7 +24,15 @@ FEATURES_FOLDER = "song-facts/features"
 
 def kept(conn: Any, workspace_id: str) -> dict[str, list[dict[str, Any]]]:
     """Every engine row of this workspace, as plain values."""
-    from selecta.engine_store.schema import analysis, ratings, song_overrides
+    from selecta.engine_store.schema import (
+        analysis,
+        ratings,
+        seam_attestations,
+        seam_history,
+        seam_verdicts,
+        seams,
+        song_overrides,
+    )
     from selecta.local_media.hashes_schema import local_song_hashes
     from selecta.local_media.schema import local_songs
 
@@ -53,6 +62,24 @@ def kept(conn: Any, workspace_id: str) -> dict[str, list[dict[str, Any]]]:
         ),
         "ratings": rows(
             sa.select(ratings).where(ratings.c.workspace_id == workspace_id).order_by(ratings.c.id)
+        ),
+        "seams": rows(
+            sa.select(seams).where(seams.c.workspace_id == workspace_id).order_by(seams.c.key)
+        ),
+        "seam_attestations": rows(
+            sa.select(seam_attestations)
+            .where(seam_attestations.c.workspace_id == workspace_id)
+            .order_by(seam_attestations.c.id)
+        ),
+        "seam_history": rows(
+            sa.select(seam_history)
+            .where(seam_history.c.workspace_id == workspace_id)
+            .order_by(seam_history.c.id)
+        ),
+        "seam_verdicts": rows(
+            sa.select(seam_verdicts)
+            .where(seam_verdicts.c.workspace_id == workspace_id)
+            .order_by(seam_verdicts.c.id)
         ),
         "other_file_hashes": rows(
             sa.select(local_song_hashes)

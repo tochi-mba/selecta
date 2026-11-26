@@ -81,6 +81,9 @@ STRICT: tuple[tuple[re.Pattern[str], str | None, Rule], ...] = (
     (re.compile(r"^/api/planning/"), "POST", Rule("planning", 60, 20)),
     # A device sends each song's facts once, as it measures them.
     (re.compile(r"^/api/song-facts/\d+$"), "PUT", Rule("song_facts", 300, 100)),
+    # A device reports each seam it rendered once, a few ahead of the music (cloud_brain).
+    (re.compile(r"^/api/seams/[^/]+$"), "PUT", Rule("seam_reports", 300, 100)),
+    (re.compile(r"^/api/seams/[^/]+/rate$"), "POST", Rule("seam_verdicts", 120, 30)),
 )
 
 WORDS = "That's a lot of requests at once. Wait {seconds} and try again."

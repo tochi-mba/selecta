@@ -3,10 +3,13 @@
 A signed-in device saves the facts it measured for the account's songs (`facts_routes`), and the
 planner core runs over those facts to answer what Desktop's planner answers: the ranked ways from
 one song into the next with their scripts, the repair rule's next step, the order of a mix and
-the idea cards (`planning_routes`). A studio renders and audits; nothing here hears audio. Every
-route belongs to the `cloud.brain` flag (refused as `flag_off` while it is off) and works in the
+the idea cards (`planning_routes`). A studio reports the seams it rendered, the member rates
+them, and the planner learns from both (`seams_routes`). A studio renders and audits; nothing
+here hears audio. Every route needs the `cloud.brain` flag (refused as `flag_off` while it is
+off; the seam verdict and ratings routes also keep their Desktop owners) and works in the
 caller's own workspace through the engine store, whatever `core.engine_store` says: that flag
-guards how Desktop opens its library file. See docs/engineering/cloud-planning.md.
+guards how Desktop opens its library file. See docs/engineering/cloud-planning.md and
+docs/engineering/engine-store-seams.md.
 """
 
 from __future__ import annotations
@@ -32,10 +35,12 @@ def install_routes(
     principal_for: Callable[..., Any],
     object_client_factory: Callable[[], ObjectClient],
     buckets: Buckets,
+    rules: Any = None,
 ) -> None:
-    """Mount the song facts and planning routes, with features read and written through the
-    Cloud's own artifact store (the private derived bucket, keyed by workspace)."""
-    from selecta.cloud_brain import facts_routes, planning_routes
+    """Mount the song facts, planning and seam routes, with features read and written through
+    the Cloud's own artifact store (the private derived bucket, keyed by workspace). `rules` is
+    the flag rules cache, for the seam routes a Desktop flag owns (`seams_routes`)."""
+    from selecta.cloud_brain import facts_routes, planning_routes, seams_routes
 
     def artifacts() -> R2ArtifactStore:
         return R2ArtifactStore(object_client_factory(), buckets)
@@ -48,6 +53,13 @@ def install_routes(
             principal_for=principal_for,
             artifacts=artifacts,
         )
+    seams_routes.install(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        principal_for=principal_for,
+        rules=rules,
+    )
 
 
 __all__ = ["FLAG", "install_routes"]

@@ -13,10 +13,15 @@ when the app starts (`api.create_app`), after the usual upgrade backup.
 The counts below read the staged copy read-only with plain `sqlite3`, not through the engine
 store: the store opens files for writing, and a backup being checked must never be changed.
 
-`work.sqlite`, the durable job store, is deliberately not in the backup yet. It holds jobs and
-leases, not the library: restoring an old one would bring back finished or fenced work, and
-Desktop's audio jobs only move onto it with the seams slice, which decides what of it is worth
-keeping (docs/todo, "work.sqlite in backups").
+With the flag on, the seam tables (`engine_store.seams`) are in the library file, so a backup
+carries every seam's record, history, verdicts and attestations; the `seam-history` files are
+bundled as before. After a restore the app's start runs the seam import again
+(`engine_store.seam_import`), which brings the tables in step with the files it finds.
+
+`work.sqlite`, the durable job store, is never backed up. It holds jobs, leases and their
+order, not results: a finished seam's lasting state is its record (the files, and with the flag
+on the library's seam tables), and a restored old job store would bring back finished or fenced
+work. A seam whose job is lost is simply asked for again.
 """
 
 from __future__ import annotations
@@ -81,11 +86,16 @@ def _check_database(path: Path) -> dict[str, int]:
             }
             if not _REQUIRED_TABLES.issubset(tables):
                 raise BackupError("This backup is missing required data tables.")
-            return {
+            counts = {
                 "songs": conn.execute("SELECT COUNT(*) FROM songs").fetchone()[0],
                 "drafts": conn.execute("SELECT COUNT(*) FROM drafts").fetchone()[0],
                 "ratings": conn.execute("SELECT COUNT(*) FROM ratings").fetchone()[0],
             }
+            # a library that has had core.engine_store on carries its seam tables too
+            for table in ("seams", "seam_verdicts"):
+                if table in tables:
+                    counts[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
+            return counts
         finally:
             conn.close()
     except sqlite3.DatabaseError as problem:

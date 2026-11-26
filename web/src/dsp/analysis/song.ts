@@ -10,7 +10,7 @@
  * Pure: no DOM, no Web Audio, nothing sent anywhere. Runs in the analysis worker.
  */
 
-import type { BeatEstimate, BeatSource } from './beatSource';
+import type { BeatEstimate, BeatSource, SyncBeatSource } from './beatSource';
 import { DEVICE_ANALYSIS_IMPLEMENTATION, PYTHON_ANALYSIS_VERSION } from './deviceAnalysisIds';
 import { extractFeatures, FEATURE_SR, frameFeatures, type FrameFeatures, type SongFeatures } from './features';
 import { barTimes, buildGrid, type BeatGrid } from './grid';
@@ -183,10 +183,27 @@ export function analyseSong(
 
 /** Measure a song with a beat source: the source hears the 22,050 Hz mono and reuses the onset
  * envelope the grid is refined against, so the expensive steps run once. */
-export function measureSong(channels: Float32Array[], sampleRate: number, source: BeatSource): { facts: SongFacts; detail: SongDetail } {
+export function measureSong(channels: Float32Array[], sampleRate: number, source: SyncBeatSource): { facts: SongFacts; detail: SongDetail } {
   const prepared = prepareSignal(channels, sampleRate);
   const envelope = onsetEnvelope(prepared.mono22k);
   const beats = source.beats(prepared.mono22k, FEATURE_SR, { onsetEnvelope: envelope });
   return analyseSong(channels, sampleRate, beats, prepared, envelope);
+}
+
+/** `measureSong` with any source, the neural one included (it hears the same 22,050 Hz mono
+ * `beats.py::BeatTracker.raw` hears). `beatMs` is how long the source took, for the device's
+ * benchmark (beatThis/gate.ts). */
+export async function measureSongAsync(
+  channels: Float32Array[],
+  sampleRate: number,
+  source: BeatSource,
+  now: () => number = () => performance.now(),
+): Promise<{ facts: SongFacts; detail: SongDetail; beatMs: number }> {
+  const prepared = prepareSignal(channels, sampleRate);
+  const envelope = onsetEnvelope(prepared.mono22k);
+  const started = now();
+  const beats = await source.beats(prepared.mono22k, FEATURE_SR, { onsetEnvelope: envelope });
+  const beatMs = now() - started;
+  return { ...analyseSong(channels, sampleRate, beats, prepared, envelope), beatMs };
 }
 

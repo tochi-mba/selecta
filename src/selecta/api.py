@@ -293,6 +293,10 @@ def create_app(
         from selecta.engine_store import song_hashes
 
         song_hashes.start_in_background(settings.db_path)
+        # the seam files' records into the seam tables: repeatable, and it changes no file
+        from selecta.engine_store import seam_import
+
+        seam_import.start_in_background(settings.db_path, settings.home)
 
     if prepare_links:
         store.prepare_links = True

@@ -41,6 +41,9 @@ COLUMNS = {
     ),
 }
 TABLES = tuple(COLUMNS)
+# Columns a later revision adds where missing (`es0479seam01`). A database built from scratch
+# gets them here with the rest, as `es0479song01` does for `analysis`.
+LATER = {"ratings": ("seam_key",)}
 POLICY = "workspace_isolation"
 # No coalesce and no '' branch: an unset or empty workspace matches no row.
 RULE = "(workspace_id = current_setting('app.workspace_id', true))"
@@ -49,7 +52,10 @@ RULE = "(workspace_id = current_setting('app.workspace_id', true))"
 def _tables():
     # only this revision's tables: a later slice adds its own tables in its own migration
     mine = tuple(table for table in schema.ENGINE_TABLES if table.name in COLUMNS)
-    declared = {table.name: tuple(table.c.keys()) for table in mine}
+    declared = {
+        table.name: tuple(name for name in table.c.keys() if name not in LATER.get(table.name, ()))
+        for table in mine
+    }
     if declared != COLUMNS or tuple(declared) != TABLES:
         raise RuntimeError("The engine store schema changed; add a new migration")
     return mine

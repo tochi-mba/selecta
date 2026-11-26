@@ -29,7 +29,8 @@ export function hasWebGpu(): boolean {
   return typeof navigator !== 'undefined' && !!(navigator as Navigator & { gpu?: unknown }).gpu;
 }
 
-async function defaultImport(): Promise<OrtLike> {
+/** onnxruntime-web's portable WASM build, the one every model here runs on. */
+export async function importOrtWasm(): Promise<OrtLike> {
   // Cloudflare Pages rejects the WebGPU/JSEP and Asyncify binaries because each exceeds its
   // 25 MiB per-file limit. The portable WASM build is 14 MiB and keeps local stem splitting
   // available; callers can still inject a WebGPU-capable runtime when hosted elsewhere.
@@ -37,7 +38,7 @@ async function defaultImport(): Promise<OrtLike> {
 }
 
 export async function loadStemRuntime(model: Uint8Array, options: StemRuntimeOptions = {}): Promise<StemRuntime> {
-  const ort = await (options.importOrt ?? defaultImport)();
+  const ort = await (options.importOrt ?? importOrtWasm)();
   ort.env.wasm.numThreads = 1;
   ort.env.wasm.proxy = false;
   const tryWebGpu = options.webgpu ?? hasWebGpu();

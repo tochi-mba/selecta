@@ -92,6 +92,19 @@ def _decodable(clip: Path, duration: float) -> bool:
         return False
 
 
+def _records(store: Any):
+    """Each finished seam this Desktop can play, as (its `seam.json` path, its record or None to
+    read the file). With `core.engine_store` on, the seams the table says the Desktop studio
+    rendered (`seam_mirror.ready`); otherwise every record file in the render folder."""
+    from selecta import seam_mirror
+
+    settings = getattr(store, "settings", None)
+    mirrored = seam_mirror.ready(settings) if settings is not None else None
+    if mirrored is None:
+        return ((meta, None) for meta in store.root.glob("*/seam.json"))
+    return ((folder / "seam.json", record) for record, folder in mirrored)
+
+
 def ready_inventory(store: Any, songs: dict[int, Any]) -> tuple[dict[int, list[ReadyEdge]], dict]:
     """One O(cached seams) directory scan; never traverse song pairs or read SeamMemory.
 
@@ -100,10 +113,10 @@ def ready_inventory(store: Any, songs: dict[int, Any]) -> tuple[dict[int, list[R
     """
     adjacency: dict[int, list[ReadyEdge]] = defaultdict(list)
     scanned = 0
-    for meta in store.root.glob("*/seam.json"):
+    for meta, state in _records(store):
         scanned += 1
         try:
-            state = json.loads(meta.read_text(encoding="utf-8"))
+            state = state if state is not None else json.loads(meta.read_text(encoding="utf-8"))
             requested = state["request"]
             if not isinstance(requested, dict):
                 continue

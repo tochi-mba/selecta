@@ -1,4 +1,4 @@
-import { DEVICE_ANALYSIS_IMPLEMENTATION, factsVersion } from '../dsp/analysis/deviceAnalysisIds';
+import { deviceRank, factsVersion } from '../dsp/analysis/deviceAnalysisIds';
 import type { SongFacts } from '../dsp/analysis/song';
 import { seamWorkIdle } from '../dsp/seamWork';
 import type { StoredSong } from '../media';
@@ -15,9 +15,10 @@ import { provenHashes } from './tonalProfiles';
  * With `cloud.brain` and `cloud.device_analysis` both named on by the server, one song at a time
  * in the background: each song this device measured (cloud/songFacts.ts) that the account lacks,
  * or holds from an implementation that ranks lower, is saved with `PUT /api/song-facts/{id}`.
+ * The implementation names the beat source too (`web-dsp-1+web-beatthis-small0-1`), so a song
+ * measured again with the neural tracker outranks its interim measurement and is sent again.
  * What was sent is remembered here, per song and per measurement version, in this workspace's own
- * store on this device, so nothing is sent twice and a song measured again at a newer version is
- * sent again. A transition being prepared comes first; an error waits longer each time; offline
+ * store on this device, so nothing is sent twice. A transition being prepared comes first; an error waits longer each time; offline
  * waits for the connection. Nothing here touches playback, and nothing the member sees changes.
  */
 
@@ -68,13 +69,17 @@ type Outcome = 'saved' | 'done' | 'later' | 'stop';
 const statusOf = (error: unknown) => (error as { status?: number } | null)?.status ?? 0;
 const codeOf = (error: unknown) => (error as { code?: string } | null)?.code ?? '';
 
-/** Whether the account's measurement for a song already stands over this device's. A worker's
- * beats a device's, and a Python analysis ranks above the browser port (engine_store/facts.py
- * `wins`); an implementation this device doesn't know ranks below. */
-export function accountHolds(account: Measured | undefined): 'better' | 'same' | 'none' {
+/** Whether the account's measurement for a song already stands over this device's `implementation`.
+ * A worker's beats a device's, a Python analysis ranks above the browser port, and among the
+ * browser's the neural tracker ranks above the interim source above plain `web-dsp-1`
+ * (engine_store/facts.py `wins` and `RANK`); an implementation this device doesn't know ranks below. */
+export function accountHolds(account: Measured | undefined, implementation: string): 'better' | 'same' | 'none' {
   if (!account) return 'none';
   if (account.source !== 'device' || /^python-/.test(account.implementation)) return 'better';
-  return account.implementation === DEVICE_ANALYSIS_IMPLEMENTATION ? 'same' : 'none';
+  const theirs = deviceRank(account.implementation);
+  const ours = deviceRank(implementation);
+  if (theirs > ours) return 'better';
+  return theirs === ours ? 'same' : 'none';
 }
 
 /** Start sending in the background. Returns the stop function. */
@@ -114,7 +119,6 @@ export function startFactsUploader(options: UploaderOptions): () => void {
 
   const pass = async (): Promise<void> => {
     const sent = await memory.read();
-    const version = factsVersion();
     let unsaved = 0;
     const keep = async (force = false) => {
       if (unsaved && (force || unsaved >= KEEP_EVERY)) { unsaved = 0; await memory.write(sent); }
@@ -127,12 +131,15 @@ export function startFactsUploader(options: UploaderOptions): () => void {
       for (const song of songs) {
         if (stopped || !sendingOn()) return;
         const sha = song.identity.content_sha256;
-        const mark = `${version}:${sha}`;
         const before = sent[String(song.songId)];
-        if (before === mark || later.has(song.songId) || !proven.has(sha)) continue;
+        if (later.has(song.songId) || !proven.has(sha)) continue;
         const facts = await read(sha);
         if (!facts) continue;
-        const holds = accountHolds(account.get(song.songId));
+        // the best measurement here: the neural tracker's once it has measured the song
+        const version = factsVersion(facts.beat_source);
+        const mark = `${version}:${sha}`;
+        if (before === mark) continue;
+        const holds = accountHolds(account.get(song.songId), version);
         // the account's own is better, or the same port measured these same bytes (a measurement is
         // a pure function of them) and this device never sent an older version of its own
         if (holds === 'better' || (holds === 'same' && before === undefined)) {

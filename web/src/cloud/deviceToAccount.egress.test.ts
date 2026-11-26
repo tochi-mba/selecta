@@ -6,9 +6,12 @@ import { forgetAccountMeasured } from './accountFacts';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
+import { reportSeam } from './seamReports';
 import { planningCalls } from './studioWiring';
+import type { MadeSeam } from '../dsp/render/seamMaker';
 import { BETWEEN_SONGS_MS, startFactsUploader } from './factsUploader';
 import { heldSong, measuredSong, PRIVATE_WORDS, shaOf } from './testAccountFacts';
+import { beatModelManager } from '../dsp/analysis/beatThis/model';
 
 // The privacy contract for the device-to-account requests (docs/engineering/device-to-account.md,
 // "Exactly which fields leave the device"): every request this code makes is one of the routes
@@ -23,11 +26,18 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['POST', /^\/planning\/candidates$/],
   // cloud.device_render: one more option's script, by index; the clips themselves never leave
   ['POST', /^\/planning\/candidates\/script$/],
+  // cloud.device_render with cloud.brain: a report of a clip this device made, never the clip
+  ['PUT', /^\/seams\/[0-9a-f]{20}$/],
 ];
+
+/** The one request that is not to the account: the beat tracker's model file, fetched from
+ * SelectaDJ's own site at its content-hashed path (docs/engineering/device-beats.md). */
+const MODEL_PATH = /^\/models\/beat-this\/web-beatthis-small0-1\/[0-9a-f]{64}\.onnx$/;
 
 /** A path in any of its shapes: a drive, a backslash, two or more slash-separated names, or an
  * audio file's name. Base64 array data (which may hold slashes) is checked apart. */
 const PATH_LIKE = /[A-Za-z]:\\|\\|\b[\w .-]+\/[\w .-]+\/|\.(mp3|flac|wav|m4a|aac|ogg|opus|aiff?)\b/i;
+const ROUTE_LEAK = /[A-Za-z]:\\|\\|\.(mp3|flac|wav|m4a|aac|ogg|opus|aiff?)\b/i;
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 /** More numbers than a beat grid could ever have: a second of audio at 8 kHz. */
 const AUDIO_SIZED = 8_000;
@@ -76,9 +86,9 @@ function numbersIn(value: unknown): number {
 
 function holdsTheContract(call: Captured) {
   expect(ALLOWED.some(([method, path]) => method === call.method && path.test(call.path)), `${call.method} ${call.path}`).toBe(true);
-  // The request path needs no PATH_LIKE check: each ALLOWED pattern is anchored and its only
-  // varying parts are digits, so a path that matched carries no name. (PATH_LIKE's "two slash-
-  // separated names" would flag the route /planning/candidates/script itself.)
+  // a route has slashes of its own and is pinned by ALLOWED; what it must never carry is a
+  // drive, a backslash or an audio file name
+  expect(call.path).not.toMatch(ROUTE_LEAK);
   if (call.body === undefined) return;
   expect(() => assertNoPath(call.body)).not.toThrow();
   const words = texts(call.body);
@@ -141,5 +151,78 @@ describe('what the device-to-account requests carry', () => {
     calls.forEach(holdsTheContract);
     expect(calls[0].body).toEqual({ a: 1, b: 2, leave_after: 30, scripts: 8 });
     expect(calls[1].body).toEqual({ a: 1, b: 2, leave_after: 30, option: 9, fingerprint: 'f'.repeat(64) });
+  });
+});
+
+describe('the seam report', () => {
+  it('names the clip by its length and hash and carries nothing of its audio, path or name', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true, 'cloud.device_render': true });
+    localStorage.setItem('selecta.device.ws-egress', 'device-1');
+    const { calls, request } = capturing();
+    // ten seconds of stereo audio: far more numbers than any report may carry
+    const channels = [new Float32Array(441_000).fill(0.25), new Float32Array(441_000).fill(-0.25)];
+    const made = {
+      status: 'clip', move: 'bass_swap_blend', option: 2, passed: true, nearMiss: false, fellBack: false, beatsAligned: true,
+      facts: { passed: true, failures: [] }, attempts: [], tookMs: 900, implementation: 'web-render-1+wsola-stretch-v1',
+      rendered: { channels, sampleRate: 44_100, aStartSample: 4_410_000, bEndSample: 441_000, levels: { a: 1, b: 1 }, switchAt: 5, bWarp: { output: [0], source: [0] }, implementation: 'web-render-1+wsola-stretch-v1' },
+    } as unknown as MadeSeam;
+    const option = { move: 'bass_swap_blend', bars: 8, exit_cue: [64, 120, 'phrase', 1, 0], entry_cue: [8, 15, 'phrase', 1, 0] } as const;
+    const answer = { fingerprint: 'a'.repeat(64), options: [{ index: 2, option: { ...option, exit_cue: [...option.exit_cue], entry_cue: [...option.entry_cue] } }] } as never;
+    try {
+      const key = await reportSeam(request, 'ws-egress', made, { a: 1, b: 2 }, answer);
+      expect(key).toMatch(/^[0-9a-f]{20}$/);
+      // sent once: the same clip again sends nothing
+      expect(await reportSeam(request, 'ws-egress', made, { a: 1, b: 2 }, answer)).toBeNull();
+    } finally {
+      localStorage.removeItem('selecta.device.ws-egress');
+      localStorage.removeItem('selecta.seams.reported.ws-egress');
+    }
+    expect(calls).toHaveLength(1);
+    calls.forEach(holdsTheContract);
+    const body = calls[0].body as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual([
+      'a', 'a_source_start', 'audit', 'b', 'b_source_end', 'bars', 'clip_seconds', 'clip_sha256', 'device_id', 'entry_bar', 'exit_bar',
+      'fell_back', 'fingerprint', 'implementation', 'move', 'near_miss', 'option', 'passed', 'tried',
+    ]);
+    expect(body.clip_seconds).toBe(10);
+    expect(body.clip_sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(body).length).toBeLessThan(2_000);
+  });
+
+  it('is not sent with cloud.brain off', async () => {
+    setFlags({ 'cloud.device_analysis': true, 'cloud.device_render': true });
+    localStorage.setItem('selecta.device.ws-egress', 'device-1');
+    const { calls, request } = capturing();
+    const made = { option: 0, rendered: { channels: [new Float32Array(4)], sampleRate: 44_100 } } as unknown as MadeSeam;
+    try {
+      expect(await reportSeam(request, 'ws-egress', made, { a: 1, b: 2 }, { fingerprint: 'a'.repeat(64) })).toBeNull();
+    } finally {
+      localStorage.removeItem('selecta.device.ws-egress');
+    }
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('the beat model fetch', () => {
+  it('is one GET of the model file from this site, with nothing about a song', async () => {
+    const fetched: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchImpl = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      fetched.push({ url: String(url), init });
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+    const noFiles = async () => ({
+      getFileHandle: async () => { throw Object.assign(new Error('missing'), { name: 'NotFoundError' }); },
+      removeEntry: async () => undefined,
+    });
+    const state = await beatModelManager({ fetchImpl, root: noFiles }).download();
+    expect(state).toMatchObject({ kind: 'failed', why: 'network' });
+    expect(fetched).toHaveLength(1);
+    const url = new URL(fetched[0].url);
+    expect(url.origin).toBe(location.origin);
+    expect(url.pathname).toMatch(MODEL_PATH);
+    expect(url.search).toBe('');
+    expect(fetched[0].init?.method ?? 'GET').toBe('GET');
+    expect(fetched[0].init?.body).toBeUndefined();
+    expect(fetched[0].url).not.toMatch(ROUTE_LEAK);
   });
 });

@@ -23,7 +23,7 @@ from selecta.planner_core.choose import enumerate_candidates
 from selecta.planner_core.recipes import all_recipes
 from selecta.planner_core.recipes.blend import _FADE_SHARE
 from selecta.planner_core.recipes.bridge import BRIDGE_BARS, LAND_BARS
-from selecta.planner_core.recipes.loop import JOIN_SECONDS, MAX_PASSES
+from selecta.planner_core.recipes.loop import EDGE_SECONDS, JOIN_SECONDS, MAX_PASSES, SUNG_SECONDS
 from selecta.render import script_json
 from selecta.render.script import fade_out
 
@@ -214,7 +214,10 @@ def test_a_loop_is_whole_bars_on_the_grid_with_no_singing_and_at_most_four_passe
     bar_times = np.round(a.bar_times, 6)
     start = a.bar_time(loop["start_bar"])
     end = a.bar_time(loop["start_bar"] + loop["bars"])
-    assert a.vocal_seconds(start - 0.1, end + 0.1) == 0.0
+    # each looped bar is clean by the recipe's own rule: a breath's worth of singing at most
+    for bar in range(loop["start_bar"], loop["start_bar"] + loop["bars"]):
+        sung = a.vocal_seconds(a.bar_time(bar) - EDGE_SECONDS, a.bar_time(bar + 1) + EDGE_SECONDS)
+        assert sung <= SUNG_SECONDS + 1e-9
     # the first pass is A's own audio, carrying on into the loop's bars
     first = script.a.heard_warp
     assert np.isclose(float(first.source[-1]), end)

@@ -22,7 +22,7 @@ they agree.
 | Mono | `stereo.mean(axis=1)`, float32 | `toMono` | Sum in float32, halve |
 | Resample | `soxr.resample(mono, 44100, 22050, quality="HQ")` | `resample.ts` | See "Resampling" |
 | Onset envelope | `librosa.onset.onset_strength(sr=22050, hop_length=128, n_fft=1024, aggregate=np.median)` | `onsetEnvelope.ts` | Below |
-| Beats | Beat This `small0`, 50 frames a second | `BeatSource` | Not ported in this step; see "Beats" |
+| Beats | Beat This `small0`, 50 frames a second | `beatThis/` (`beatThisSource`) | Same network in ONNX; see "Beats" and device-beats.md |
 | Grid | `beats.build_grid` | `grid.ts` | Below |
 | Features | `features.extract` | `features.ts` | Below |
 | Sections | `features.find_sections` | `sections.ts` | Float64 throughout |
@@ -182,21 +182,25 @@ by 0.01 when a peak sits on a histogram edge, and a grid argmax between near-equ
 
 ## Beats
 
-Beat This is not ported here: its model must be exported and licensed first (ADR-0459). Until
-then `beatSource.ts::browserBeatSource` stands in: the browser's autocorrelation tempo
-(`tempo.ts`) over the whole song's onset envelope, the phase that puts the most onset strength
-on the beats, and downbeats every fourth beat from the strongest bar phase. It assumes 4/4, so
-a waltz measured this way reads as 4/4, and it does not follow tempo changes. The stored
-version names it, so Beat This in the browser measures every song again; the account's allowlist
-takes only `web-dsp-1`, so what is sent does not name it yet (to-do "The account cannot tell
-measurements from the interim beat source").
+The browser runs the Desktop's own tracker: Beat This `small0` exported to ONNX, with the
+spectrogram, chunking and peak picking ported (`beatThis/`). The recipe, the export, the measured
+agreement (every beat and downbeat identical to the Desktop tracker on the golden songs) and the
+rules for when a device uses it are in [device-beats.md](device-beats.md).
+
+Where the tracker is not in use (its Tier 3 review is open, its file is not on this device, or the
+device is too slow), `beatSource.ts::browserBeatSource` stands in: the browser's
+autocorrelation tempo (`tempo.ts`) over the whole song's onset envelope, the phase that puts the
+most onset strength on the beats, and downbeats every fourth beat from the strongest bar phase.
+It assumes 4/4, so a waltz measured this way reads as 4/4, and it does not follow tempo changes.
 
 ## Implementation ids
 
-- `web-dsp-1`: this port (`deviceAnalysisIds.ts`); in the account's allowlist,
-  `engine_store/facts.py::DEVICE_IMPLEMENTATIONS`.
-- `web-onset-comb-beats-1`: the interim beat source. Stored as derived kind `analysis`,
-  version `web-dsp-1+web-onset-comb-beats-1`.
+- `web-dsp-1`: this port (`deviceAnalysisIds.ts`).
+- `web-beatthis-small0-1`: the neural beat source; `web-onset-comb-beats-1`: the interim one.
+- Stored as derived kind `analysis` under `web-dsp-1+<beat source>`, and sent to the account
+  under the same id (`engine_store/facts.py::DEVICE_IMPLEMENTATIONS`, ranked in `RANK`:
+  plain `web-dsp-1` from older clients, then the interim source, then Beat This, then the
+  Python analysis). Reads prefer the Beat This record.
 
 ## Cost
 
@@ -216,6 +220,6 @@ full spectrogram never held. No timing was measured in this change.
 
 ## Next
 
-1. Beat This in ONNX (export, licence review, per-device benchmark), as a `BeatSource`.
+1. The owner's steps for Beat This in the browser (device-beats.md, "What the owner does").
 2. A listening check of plans from device facts against Desktop facts for the same songs. The
    facts are now sent (docs/engineering/device-to-account.md).
