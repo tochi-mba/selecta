@@ -3,6 +3,7 @@ import { equalPowerIn } from '../dsp/crossfade';
 import { LIMITER_IMPLEMENTATION, limiterCoefficients, process as limit } from '../dsp/limiter';
 import { LIMIT_BLOCK_SECONDS, renderMix, RenderTrack } from './render';
 import { bufferOfSeconds, FakeAudioBuffer, FakeOfflineAudioContext } from './testAudio';
+import type { RenderedClip } from '../dsp/seams';
 
 /** Tracks of n seconds as n-kilobyte fake files; the fake decode reads that back. */
 const tracksOf = (...seconds: number[]): RenderTrack[] =>
@@ -323,5 +324,59 @@ describe('the render limiter yields inside a chunk', () => {
     });
     expect(result).toMatchObject({ ok: false, reason: 'cancelled' });
     expect('chunks' in result).toBe(false);
+  });
+});
+
+describe('writing the transitions made ahead (T-20261126-96d3)', () => {
+  const RATE = 44100;
+  const seam = Math.trunc(0.03 * RATE);
+  const clipOf = (levels: { a: number; b: number }): RenderedClip => ({
+    channels: [new Float32Array(RATE * 2), new Float32Array(RATE * 2)], sampleRate: RATE,
+    aStartSample: 30 * RATE, bEndSample: 5 * RATE, levels, switchAt: 1, bWarp: { output: [0, 2], source: [3, 5] }, implementation: 'web-render-1',
+  });
+  const clipBuffer = (clip: RenderedClip) => {
+    const made = new FakeAudioBuffer(clip.channels.length, clip.channels[0].length, clip.sampleRate);
+    return made as unknown as AudioBuffer;
+  };
+  type Made = { context: FakeOfflineAudioContext };
+  const capture = (made: Made[]) => (channels: number, frames: number, rate: number) => {
+    const context = new FakeOfflineAudioContext(channels, frames, rate);
+    made.push({ context });
+    return context as unknown as OfflineAudioContext;
+  };
+
+  it('plays native A, the clip and native B as the scheduler joins them, each song at its level', async () => {
+    const made: Made[] = [];
+    const result = await renderMix({
+      tracks: tracksOf(40, 40), decode, chunkSeconds: 200, createOfflineContext: capture(made), clipBuffer,
+      level: async (index) => (index === 1 ? 0.5 : 1),
+      joins: async (index, _from, _to, levels) => (index === 0 ? clipOf(levels) : null),
+    });
+    expect(result.ok).toBe(true);
+    const [{ context }] = made;
+    const [a, clip, b] = context.madeSources;
+    const clipAt = 30;
+    const tailAt = clipAt + (2 * RATE - seam) / RATE;
+    expect(a.started[0]).toMatchObject({ when: 0, offset: 0 });
+    expect(clip.started[0].when).toBeCloseTo(clipAt, 6);
+    expect(b.started[0].when).toBeCloseTo(tailAt, 6);
+    expect(b.started[0].offset).toBeCloseTo((5 * RATE - seam) / RATE, 6);
+    // A falls linearly to 0 over the join; B rises to its own level, 0.5
+    const [aGain, , bGain] = context.madeGains;
+    expect(aGain.events.at(-1)).toMatchObject({ type: 'ramp', value: 0 });
+    expect(bGain.events.at(-1)?.value).toBeCloseTo(0.5, 6);
+    if (result.ok) expect(result.durationSeconds).toBeCloseTo(tailAt + 40 - (5 * RATE - seam) / RATE, 2);
+  });
+
+  it('keeps the crossfade where a clip does not fit these songs at these levels', async () => {
+    const made: Made[] = [];
+    const result = await renderMix({
+      tracks: tracksOf(40, 40), decode, chunkSeconds: 200, createOfflineContext: capture(made), clipBuffer,
+      level: async () => 1,
+      joins: async () => clipOf({ a: 1, b: 0.25 }),
+    });
+    expect(result.ok).toBe(true);
+    expect(made[0].context.madeSources).toHaveLength(2);
+    if (result.ok) expect(result.durationSeconds).toBeCloseTo(80 - 0.03, 2);
   });
 });

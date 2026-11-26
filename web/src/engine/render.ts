@@ -1,6 +1,8 @@
 import { CURVE_STEPS, equalPowerIn, equalPowerOut } from '../dsp/crossfade';
 import { LIMITER_IMPLEMENTATION, limiterCoefficients, process as limit } from '../dsp/limiter';
 import { interpolatorPhases } from '../dsp/loudness';
+import type { RenderedClip } from '../dsp/seams';
+import { renderedJoins, renderedProblem } from './renderedSeam';
 import { SEAM_FADE } from './scheduler';
 import type { PcmChunk } from './wav';
 
@@ -15,6 +17,12 @@ import type { PcmChunk } from './wav';
  * chunk edges with enough overlap that the result is the same as limiting the whole mix at once.
  * Inside a chunk the limiter runs in blocks of about two seconds with the same overlap, yielding to
  * the page and checking for a cancel between blocks, so a long export never freezes the page.
+ *
+ * With `joins` and `level` (T-20261126-96d3), the mix is written the way the browser plays it: each
+ * song at its own level, and a boundary that has a transition made ahead plays native A, the clip
+ * and native B, joined exactly as the scheduler joins them (renderedSeam.ts renderedJoins, checked
+ * by renderedProblem first). A boundary without one, or whose clip does not fit, keeps the
+ * crossfade.
  *
  * On completion the output is validated (duration within tolerance, no NaN or infinity, peak at
  * or below the ceiling) before anyone is told it succeeded. Every failure, including one thrown
@@ -72,6 +80,12 @@ export type RenderOptions = {
   createOfflineContext?: (channels: number, frames: number, sampleRate: number) => OfflineAudioContext;
   /** Hands control back to the event loop between limiter blocks; a resolved promise in tests. */
   yieldToLoop?: () => Promise<void>;
+  /** The linear level song `index` plays at (engine/level.ts); 1 when absent. */
+  level?: (index: number, buffer: AudioBuffer) => Promise<number>;
+  /** The transition made ahead from song `index` into the next, at these levels, or null. */
+  joins?: (index: number, from: AudioBuffer, to: AudioBuffer, levels: { a: number; b: number }) => Promise<RenderedClip | null>;
+  /** A clip's samples as an AudioBuffer; the real constructor by default, a fake in tests. */
+  clipBuffer?: (clip: RenderedClip) => AudioBuffer;
 };
 
 export const RENDER_CHUNK_SECONDS = 30;
@@ -97,14 +111,37 @@ const pcmChunk = (data: Float32Array[], sampleRate: number): PcmChunk => ({
   getChannelData: (channel: number) => data[channel],
 });
 
-/** The gain of a track `u` seconds in, given its fades: equal-power, as at every live seam. */
-const envelope = (u: number, duration: number, fadeIn: number, fadeOut: number): number => {
-  if (fadeIn > 0 && u < fadeIn) return equalPowerIn(Math.max(0, u / fadeIn));
-  if (fadeOut > 0 && duration - u < fadeOut) return equalPowerOut(1 - Math.max(0, (duration - u) / fadeOut));
-  return 1;
+/** A fade on one side of a placed part, in mix seconds: equal power, as at every live seam, or
+ * linear, as a rendered join is (renderedSeam.ts). */
+type Fade = { kind: 'power' | 'linear'; at: number; length: number };
+
+const sideGain = (fade: Fade | null, time: number, rising: boolean): number => {
+  if (!fade) return 1;
+  const share = fade.length > 0 ? (time - fade.at) / fade.length : time >= fade.at ? 1 : 0;
+  const u = Math.min(1, Math.max(0, share));
+  if (fade.kind === 'linear') return rising ? u : 1 - u;
+  return rising ? equalPowerIn(u) : equalPowerOut(u);
 };
 
-type Placed = { index: number; buffer: AudioBuffer; start: number; end: number };
+/** A song (or a clip) placed in the mix: it plays from `offset` of its buffer at `start`, until
+ * `end`, at `level`, with its fades. `enteredUntil`: where its own way in ends. */
+type Placed = { index: number; buffer: AudioBuffer; start: number; end: number; offset: number; level: number; fadeIn: Fade | null; fadeOut: Fade | null; enteredUntil: number };
+
+const gainAt = (placed: Placed, time: number): number => placed.level * sideGain(placed.fadeIn, time, true) * sideGain(placed.fadeOut, time, false);
+
+/** The times a fade's curve is drawn through: CURVE_STEPS inside an equal-power fade, its two
+ * ends for a linear one. */
+const fadePoints = (fade: Fade | null): number[] => {
+  if (!fade || fade.length <= 0) return [];
+  if (fade.kind === 'linear') return [fade.at, fade.at + fade.length];
+  return Array.from({ length: CURVE_STEPS + 1 }, (_, step) => fade.at + (fade.length * step) / CURVE_STEPS);
+};
+
+const defaultClipBuffer = (clip: RenderedClip): AudioBuffer => {
+  const made = new AudioBuffer({ numberOfChannels: clip.channels.length, length: clip.channels[0].length, sampleRate: clip.sampleRate });
+  clip.channels.forEach((channel, index) => made.copyToChannel(channel as Float32Array<ArrayBuffer>, index));
+  return made;
+};
 
 class Stop extends Error {
   constructor(readonly failure: RenderFailure) {
@@ -153,6 +190,27 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
   const held: Placed[] = [];
   let nextTrack = 0;
   let layoutEnd = 0;
+  let last: Placed | null = null;
+  const joining = !!options.joins;
+  const lastStarts = (): number => (last as Placed | null)?.start ?? Infinity;
+
+  /** The clip from `from` into the next song, joined as the scheduler joins it, or null when it
+   * can't be played as made here (the crossfade then stands in). */
+  const joinWith = (from: Placed, buffer: AudioBuffer, level: number, clip: RenderedClip | null): { clip: Placed; next: Omit<Placed, 'end' | 'index' | 'buffer'> } | null => {
+    if (!clip) return null;
+    if (renderedProblem(clip, from.buffer, buffer, { a: from.level, b: level }, sampleRate)) return null;
+    const joins = renderedJoins(from.start - from.offset, clip);
+    const fromEnd = from.start + from.buffer.duration - from.offset;
+    if (joins.clipAt < from.enteredUntil || joins.clipAt >= fromEnd) return null;
+    from.end = Math.min(fromEnd, joins.aStopAt);
+    from.fadeOut = { kind: 'linear', at: joins.clipAt, length: joins.ramp };
+    const made = (options.clipBuffer ?? defaultClipBuffer)(clip);
+    return {
+      clip: { index: -1, buffer: made, start: joins.clipAt, end: joins.clipEndAt, offset: 0, level: 1, fadeIn: { kind: 'linear', at: joins.clipAt, length: joins.ramp }, fadeOut: { kind: 'linear', at: joins.tailAt, length: joins.ramp }, enteredUntil: joins.clipAt },
+      next: { start: joins.tailAt, offset: joins.bOffset, level, fadeIn: { kind: 'linear', at: joins.tailAt, length: joins.ramp }, fadeOut: null, enteredUntil: joins.bStartedAt },
+    };
+  };
+
   const decodeNext = async (): Promise<void> => {
     checkCancel();
     const index = nextTrack;
@@ -164,8 +222,25 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
       throw new Stop({ ok: false, reason: 'decode_failed', detail: `Track ${track.id} could not be read: ${why(error)}.` });
     }
     checkCancel();
-    const start = index === 0 ? 0 : Math.max(0, layoutEnd - crossfade);
-    const end = start + buffer.duration;
+    const level = options.level ? await options.level(index, buffer).catch(() => 1) : 1;
+    const from = last;
+    let clip: RenderedClip | null = null;
+    if (from && options.joins) {
+      try { clip = await options.joins(index - 1, from.buffer, buffer, { a: from.level, b: level }); } catch { clip = null; }
+      checkCancel();
+    }
+    const joined = from ? joinWith(from, buffer, level, clip) : null;
+    let placed: Placed;
+    if (joined) {
+      held.push(joined.clip);
+      placed = { index, buffer, ...joined.next, end: joined.next.start + buffer.duration - joined.next.offset };
+    } else {
+      const start = from ? Math.max(0, layoutEnd - crossfade) : 0;
+      const fade = from && crossfade > 0 ? crossfade : 0;
+      if (from && fade) from.fadeOut = { kind: 'power', at: from.end - fade, length: fade };
+      placed = { index, buffer, start, end: start + buffer.duration, offset: 0, level, fadeIn: fade ? { kind: 'power', at: start, length: fade } : null, fadeOut: null, enteredUntil: start + fade };
+    }
+    const end = placed.end;
     if (end > maxSeconds) {
       throw new Stop({
         ok: false,
@@ -173,7 +248,8 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
         detail: `The mix runs past ${Math.round(maxSeconds / 60)} minutes, which is more than this device can export at once.`,
       });
     }
-    held.push({ index, buffer, start, end });
+    held.push(placed);
+    last = placed;
     layoutEnd = end;
     nextTrack += 1;
   };
@@ -242,7 +318,8 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
     const t0 = chunk * chunkSeconds;
     let t1 = t0 + chunkSeconds;
     // Decode until the layout covers this chunk or the set is fully placed.
-    while (nextTrack < tracks.length && layoutEnd - crossfade < t1) await decodeNext();
+    // with transitions made ahead, a song's way out is known before any of it is written
+    while (nextTrack < tracks.length && (layoutEnd - crossfade < t1 || (joining && lastStarts() < t1))) await decodeNext();
     const allPlaced = nextTrack >= tracks.length;
     if (allPlaced) t1 = Math.min(t1, layoutEnd);
     if (t1 <= t0) break;
@@ -250,36 +327,28 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
     let made: AudioBuffer;
     try {
       const offline = makeOffline(channels, frames, sampleRate);
-      const lastIndex = tracks.length - 1;
       for (const placed of held) {
-        const { buffer, start, end, index } = placed;
+        const { buffer, start, end, offset } = placed;
         const from = Math.max(start, t0);
         const to = Math.min(end, t1);
         if (to <= from) continue;
-        const duration = buffer.duration;
-        const fadeIn = index === 0 ? 0 : crossfade;
-        const fadeOut = index === lastIndex ? 0 : crossfade;
         const source = offline.createBufferSource();
         source.buffer = buffer;
         const gain = offline.createGain();
         source.connect(gain);
         gain.connect(offline.destination);
-        // The equal-power envelope as gain points: CURVE_STEPS inside each fade, then the
-        // chunk edges, all clipped to this chunk.
+        // The envelope as gain points: each fade's own points, then the chunk edges, all
+        // clipped to this chunk.
         const points = new Set<number>([from, to]);
-        for (const [fadeFrom, length] of [[start, fadeIn], [end - fadeOut, fadeOut]] as const) {
-          if (length <= 0) continue;
-          for (let step = 0; step <= CURVE_STEPS; step += 1) {
-            const time = fadeFrom + (length * step) / CURVE_STEPS;
-            if (time > from && time < to) points.add(time);
-          }
+        for (const time of [...fadePoints(placed.fadeIn), ...fadePoints(placed.fadeOut)]) {
+          if (time > from && time < to) points.add(time);
         }
         const ordered = [...points].sort((a, b) => a - b);
-        gain.gain.setValueAtTime(envelope(from - start, duration, fadeIn, fadeOut), from - t0);
+        gain.gain.setValueAtTime(gainAt(placed, from), from - t0);
         for (const point of ordered.slice(1)) {
-          gain.gain.linearRampToValueAtTime(envelope(point - start, duration, fadeIn, fadeOut), point - t0);
+          gain.gain.linearRampToValueAtTime(gainAt(placed, point), point - t0);
         }
-        source.start(from - t0, from - start, to - from);
+        source.start(from - t0, offset + (from - start), to - from);
       }
       made = await offline.startRendering();
     } catch (error) {
