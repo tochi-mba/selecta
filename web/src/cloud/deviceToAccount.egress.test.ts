@@ -9,6 +9,7 @@ import { DEFAULT_STEERING } from './recipeStore';
 import { planningCalls } from './studioWiring';
 import { BETWEEN_SONGS_MS, startFactsUploader } from './factsUploader';
 import { heldSong, measuredSong, PRIVATE_WORDS, shaOf } from './testAccountFacts';
+import { beatModelManager } from '../dsp/analysis/beatThis/model';
 
 // The privacy contract for the device-to-account requests (docs/engineering/device-to-account.md,
 // "Exactly which fields leave the device"): every request this code makes is one of the routes
@@ -24,6 +25,10 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   // cloud.device_render: one more option's script, by index; the clips themselves never leave
   ['POST', /^\/planning\/candidates\/script$/],
 ];
+
+/** The one request that is not to the account: the beat tracker's model file, fetched from
+ * SelectaDJ's own site at its content-hashed path (docs/engineering/device-beats.md). */
+const MODEL_PATH = /^\/models\/beat-this\/web-beatthis-small0-1\/[0-9a-f]{64}\.onnx$/;
 
 /** A path in any of its shapes: a drive, a backslash, two or more slash-separated names, or an
  * audio file's name. Base64 array data (which may hold slashes) is checked apart. */
@@ -142,5 +147,29 @@ describe('what the device-to-account requests carry', () => {
     calls.forEach(holdsTheContract);
     expect(calls[0].body).toEqual({ a: 1, b: 2, leave_after: 30, scripts: 8 });
     expect(calls[1].body).toEqual({ a: 1, b: 2, leave_after: 30, option: 9, fingerprint: 'f'.repeat(64) });
+  });
+});
+
+describe('the beat model fetch', () => {
+  it('is one GET of the model file from this site, with nothing about a song', async () => {
+    const fetched: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchImpl = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      fetched.push({ url: String(url), init });
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+    const noFiles = async () => ({
+      getFileHandle: async () => { throw Object.assign(new Error('missing'), { name: 'NotFoundError' }); },
+      removeEntry: async () => undefined,
+    });
+    const state = await beatModelManager({ fetchImpl, root: noFiles }).download();
+    expect(state).toMatchObject({ kind: 'failed', why: 'network' });
+    expect(fetched).toHaveLength(1);
+    const url = new URL(fetched[0].url);
+    expect(url.origin).toBe(location.origin);
+    expect(url.pathname).toMatch(MODEL_PATH);
+    expect(url.search).toBe('');
+    expect(fetched[0].init?.method ?? 'GET').toBe('GET');
+    expect(fetched[0].init?.body).toBeUndefined();
+    expect(fetched[0].url).not.toMatch(ROUTE_LEAK);
   });
 });
