@@ -183,6 +183,16 @@ def test_load_song_never_reads_the_waveform_or_raw_beats(settings, conn, monkeyp
         return real(settings_, song_id, names)
 
     monkeypatch.setattr("selecta.analysis.song.load_features", watching)
+    # with core.engine_store on, the store's song read opens the features file itself
+    from selecta.engine_store import songs as stored
+
+    real_read = stored.read_features
+
+    def reading(path, names=None):
+        asked.append(names)
+        return real_read(path, names)
+
+    monkeypatch.setattr(stored, "read_features", reading)
     song = load_song(conn, settings, 1)
     assert asked == [SONG_ARRAYS]
     assert not {"peaks", "raw_beats", "raw_downbeats"} & set(SONG_ARRAYS)
