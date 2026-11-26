@@ -105,9 +105,11 @@ describe('what the browser shell switches off', () => {
 
   it('keeps every other decision whatever the account has', () => {
     const all = browserFlags(true, true, { measured: true, accountMixes: true });
-    for (const id of ['requests.bridges', 'editor.energy_horizon', 'seam_inspector', 'app.activity', 'export', 'lyrics.lookup', 'mixes.shaping.feel', 'mixes.shaping.stem_moves']) {
+    for (const id of ['requests.bridges', 'editor.energy_horizon', 'seam_inspector', 'export', 'lyrics.lookup', 'mixes.shaping.feel', 'mixes.shaping.stem_moves']) {
       expect(all[id], id).toBe(false);
     }
-    expect(Object.keys(NOT_IN_THE_BROWSER)).toHaveLength(12);
+    expect(Object.keys(NOT_IN_THE_BROWSER)).toHaveLength(11);
+    // the Activity drawer shows this device's own work (DeviceActivity.tsx)
+    expect(all['app.activity']).toBeUndefined();
   });
 });

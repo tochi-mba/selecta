@@ -16,8 +16,6 @@ export const NOT_IN_THE_BROWSER = {
   // them (cloud.device_render with cloud.brain): it shows the clips this device made
   // (seamInspection.ts). Without, each transition can still be rated and its move chosen.
   seam_inspector: false,
-  // The Activity drawer lists the app's own jobs (T-20261126-36c7).
-  'app.activity': false,
   // Export writes audio files from the app's renders; the account's data download is in Account.
   export: false,
   // Lucy: on below with lucy.cloud_conversation (ADR-0476).

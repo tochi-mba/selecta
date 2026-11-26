@@ -136,6 +136,20 @@ export interface ChooseOptions {
 }
 
 let shared: StemModelManager | null = null;
+const sharedListeners = new Set<() => void>();
+/** The beat model's manager once the profiler has asked for it, for the Activity drawer. */
+export const beatModelNow = (): StemModelManager | null => shared;
+export function onBeatModel(listener: () => void): () => void {
+  sharedListeners.add(listener);
+  return () => { sharedListeners.delete(listener); };
+}
+function sharedManager(): StemModelManager {
+  if (!shared) {
+    shared = beatModelManager();
+    for (const listener of [...sharedListeners]) listener();
+  }
+  return shared;
+}
 
 /** The source the next song is measured with. Never throws. */
 export async function chooseBeatSource(options: ChooseOptions = {}): Promise<BeatSourceChoice> {
@@ -146,7 +160,7 @@ export async function chooseBeatSource(options: ChooseOptions = {}): Promise<Bea
   const speed = beatCalibrationState(readBeatCalibration(store), BEAT_MODEL_ARTEFACT.sha256, now);
   if (speed.supported === false) return interim(speed.reason);
   if (recentFailure(store, now)) return interim(BEATS_FAILED_REASON);
-  const manager = options.manager ?? (shared ??= beatModelManager());
+  const manager = options.manager ?? sharedManager();
   try {
     let state = await manager.refresh();
     if (state.kind === 'absent' && options.fetch) {

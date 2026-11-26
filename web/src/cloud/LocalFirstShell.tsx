@@ -85,6 +85,7 @@ import { browserFlags } from './browserFlags';
 import { sendingOn } from './accountFacts';
 import { accountMixesOn } from './accountMixes';
 import { inspectorOn } from './seamInspection';
+import { DeviceActivityDrawer } from './DeviceActivity';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -707,6 +708,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const requestsPlayback = useMemo(() => (remote ? { mix: remoteMix, player: remote.player, onMix: NOT_THIS_MIX } : { mix: data.mix, player: shellPlayer, onMix: setMixData }), [data.mix, remote?.player, remoteMix, setMixData, shellPlayer, !!remote]);
   const songRequests = useRequests(requestsPlayback, notify, request);
   const [requesting, setRequesting] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const refreshRoomRequests = useRef(songRequests.refresh);
   refreshRoomRequests.current = songRequests.refresh;
   useEffect(() => {
@@ -929,6 +931,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         stage={false} next={remote ? undefined : data.mix[now.position + 1]}
         waitingRequests={on('requests') ? waitingCount(roomShown, songRequests.requests) : 0}
         onRequests={() => setRequesting(true)}
+        onActivity={() => setActivityOpen(true)}
         onHelp={controls.onHelp}
         onCommands={controls.onCommands}
         mode="cloud"
@@ -955,6 +958,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           <RequestsPanel />
         </Drawer>
       )}
+      {activityOpen && on('app.activity') && <DeviceActivityDrawer workspaceId={workspaceId} titleOf={(id) => data.mix.find((item) => item.song_id === id)?.title ?? null} onClose={() => setActivityOpen(false)} />}
       {controls.overlays}
     </BytesContext.Provider>
     </StemSurfacesContext.Provider>

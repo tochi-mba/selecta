@@ -19,6 +19,19 @@ export function tonalActivity(): TonalActivity {
   return now;
 }
 
+/** Songs still waiting to be measured in this pass, and whether the next one also times the
+ * neural beat finder on this device (the Activity drawer, T-20261126-36c7). */
+let left = 0;
+let timing = false;
+export function setTonalLeft(count: number, timingBeats = timing): void {
+  if (count === left && timingBeats === timing) return;
+  left = Math.max(0, count);
+  timing = timingBeats;
+  for (const listener of listeners) listener();
+}
+export const tonalLeft = (): number => left;
+export const timingBeats = (): boolean => timing;
+
 export function onTonalActivity(listener: () => void): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
