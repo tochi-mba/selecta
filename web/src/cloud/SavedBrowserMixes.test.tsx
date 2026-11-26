@@ -1,8 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MixData } from '../api';
-import type { Recipe, RecipeStore, RecipeSummary } from './recipeStore';
+import { setFlags } from '../flags';
+import type { Recipe, RecipeSong, RecipeStore, RecipeSummary } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
 
 function store(names: string[]) {
@@ -73,5 +74,57 @@ describe('saved browser mixes, laid out like local drafts', () => {
     expect(recipes.current()).toBeNull();
     // under motion the row folds away first, then the list is read again and it says so (ADR-0477)
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Deleted Friday.'));
+  });
+});
+
+describe('making a saved mix current shows and plays that mix', () => {
+  afterEach(() => { cleanup(); setFlags(null); });
+
+  const song = (song_id: number, in_library = true): RecipeSong => ({ song_id, id: `s${song_id}`, title: `Song ${song_id}`, artist: null, duration: 200, sha256: null, in_library, available_on: 1 });
+  /** Sunday is a recipe of songs 4, 5 and a song since gone; the account's own current mix is 1, 2. */
+  function world() {
+    let current: string | null = 'mix-1';
+    let account = { mix: [1, 2], name: 'Account mix' };
+    const sunday: Recipe = { mix_id: 'mix-2', name: 'Sunday', number: 1, parent: null, revision: 'r', songs: [song(4), song(5), song(9, false)], seams: [] };
+    const recipes = {
+      current: () => current,
+      setCurrent: vi.fn((next: string | null) => { current = next; }),
+      read: async () => sunday,
+      list: async () => [{ mix_id: 'mix-1', name: 'Friday', revision: 'r', number: 1, songs: 2, updated_at: Date.now() / 1000 }, { mix_id: 'mix-2', name: 'Sunday', revision: 'r', number: 1, songs: 3, updated_at: Date.now() / 1000 }],
+    } as unknown as RecipeStore;
+    const asked: string[] = [];
+    // the shell's request: with account mixes the account answers GET /mix with its own mix
+    const request = vi.fn(async (path: string, init?: RequestInit) => {
+      asked.push(`${init?.method ?? 'GET'} ${path}`);
+      if (init?.method === 'PUT') {
+        const body = JSON.parse(String(init.body)) as { song_ids: number[]; name: string };
+        account = { mix: body.song_ids, name: body.name };
+      }
+      return { mix: account.mix.map((song_id, position) => ({ position, song_id })), name: account.name, can_undo: false } as unknown as MixData;
+    });
+    const setMixData = vi.fn();
+    const playFrom = vi.fn();
+    render(<SavedBrowserMixes workspaceId="ws" recipes={recipes} request={request as never} setMixData={setMixData} refreshStatus={() => undefined}
+      player={{ playFrom } as never} notify={vi.fn()} />);
+    return { recipes, asked, setMixData, playFrom };
+  }
+
+  it('with account mixes, the saved mix becomes the account’s current mix before it is read back', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true });
+    const { recipes, asked, setMixData, playFrom } = world();
+    await userEvent.click(await screen.findByRole('button', { name: 'Play Sunday' }));
+    await waitFor(() => expect(playFrom).toHaveBeenCalledWith(0));
+    // each song once, those still in the library, under the saved mix's own name
+    expect(asked).toEqual(['PUT /mix/order', 'GET /mix']);
+    expect(setMixData).toHaveBeenCalledWith(expect.objectContaining({ name: 'Sunday', mix: [{ position: 0, song_id: 4 }, { position: 1, song_id: 5 }] }));
+    expect(recipes.current()).toBe('mix-2');
+  });
+
+  it('without them, the recipe pointer is what the mix is read from, as before', async () => {
+    const { recipes, asked, playFrom } = world();
+    await userEvent.click(await screen.findByRole('button', { name: 'Play Sunday' }));
+    await waitFor(() => expect(playFrom).toHaveBeenCalledWith(0));
+    expect(asked).toEqual(['GET /mix']);
+    expect(recipes.current()).toBe('mix-2');
   });
 });
