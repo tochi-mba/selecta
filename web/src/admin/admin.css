@@ -88,6 +88,9 @@
 .admin-tone-bad { color: var(--danger); }
 .admin-health, .admin-list, .admin-checklist, .admin-plain, .admin-links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .admin-health li, .admin-checklist li { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: baseline; }
+/* the checklist's Mark done buttons line up at the end of a readable row, not after each item's own words */
+.admin-checklist { max-width: 56rem; }
+.admin-checklist li > button:last-child { margin-inline-start: auto; }
 .admin-health li > span:first-child { min-width: 12rem; }
 .admin-numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-2) var(--space-4); margin: 0; }
 .admin-numbers dt { font-size: var(--text-sm); color: var(--text-soft); }
