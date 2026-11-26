@@ -4,6 +4,7 @@ import { setFlags } from '../flags';
 import { assertNoPath } from '../media/identity';
 import { forgetAccountMeasured } from './accountFacts';
 import { accountMixes } from './accountMixes';
+import { accountRequests } from './accountRequests';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
@@ -37,6 +38,10 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['POST', /^\/mix\/move$/],
   ['PUT', /^\/mix\/order(\?draft=\d+)?$/],
   ['POST', /^\/mix\/\d+\/seam$/],
+  // cloud.account_mixes: the member's own requests, by catalogue song id and request id only
+  ['GET', /^\/requests$/],
+  ['POST', /^\/requests$/],
+  ['DELETE', /^\/requests\/\d+$/],
 ];
 
 /** The one request that is not to the account: the beat tracker's model file, fetched from
@@ -242,6 +247,24 @@ describe('the mixes kept with the account', () => {
     const { calls, request } = capturing();
     expect(accountMixes(request).answer('GET', '/mix', '', undefined)).toBeUndefined();
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe('the requests kept with the account', () => {
+  it('carry a catalogue song id or a request id, never a path or audio', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true });
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => {
+      const answer = await capture(path, init);
+      return path === '/requests' && !init?.method ? { requests: [] } : answer;
+    }) as typeof capture;
+    const requests = accountRequests(request);
+    await requests.ask(5);
+    await requests.list();
+    await requests.letGo(12);
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['POST /requests', 'GET /requests', 'DELETE /requests/12']);
+    calls.forEach(holdsTheContract);
+    expect(calls[0].body).toEqual({ song_id: 5 });
   });
 });
 
