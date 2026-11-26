@@ -5,6 +5,12 @@ ADR-0479 ("One storage layer for Desktop and Cloud") moves the engine's relation
 says what that layer is, the rules it keeps, and how a slice of state moves onto it. The code is
 `src/selecta/engine_store/`; the flag is `core.engine_store` (off by default, both modes).
 
+Status, 2026-11-26: every slice of the Desktop library is on the store with the flag on (ratings,
+song facts, seams, mixes, requests, discovery, the listening study, the library itself and
+Lucy's tables), and what still runs raw `sqlite3` is the deliberate remainder listed at the end:
+the hand-made schema and `connect`, the upgrade backup, the whole-file tools and a few small
+reads with a reason. The flag stays off until it has been proved on a copy of a real library.
+
 ## What it is
 
 `EngineStore(engine, workspace_id)` is the only door to an engine table. A slice (ratings, then
@@ -174,14 +180,19 @@ Moved (each with its own page): ratings and song facts (above); seams, Phase 7 s
 ([engine-store-requests.md](engine-store-requests.md)); discovery with its links (`seam_book`) and
 the listening study, step 4 ([engine-store-discovery.md](engine-store-discovery.md)); the library:
 scan, song writes, relink, Library routes, cache care and the scattered library reads, step 5
-([engine-store-library.md](engine-store-library.md)).
+([engine-store-library.md](engine-store-library.md)); Lucy's Desktop tables, the last group
+([engine-store-lucy.md](engine-store-lucy.md)).
 
 Each keeps its old path, statement for statement, for the flag off and for a caller holding
 writes of its own; these calls are that path, not work left: `requests.py` (its `_sqlite_`
 bodies, 28), `mix_backend.SqliteMixes` (25), `listening.py` (16), `discovery/sweep.py` (5),
 `routes/discover.py` (3), `discovery/search.py` (1), `eval/ratings.py` (2), `library/scan.py`
 (13), `routes/library.py` (7: priority and correction), `db.py`'s song helpers (6),
-`analysis/pipeline.py` (2), `analysis/song.py` (3, a caller with writes pending).
+`analysis/pipeline.py` (2), `analysis/song.py` (3, a caller with writes pending), and Lucy's:
+`lucy/conversations.py` (32), `lucy/runs.py` (18), `lucy/memory.py` (17), `lucy/commit.py`
+(15), `lucy/proposals.py` (12), `lucy/permissions.py` (7), `lucy/events.py` (6),
+`lucy/readiness.py` (1), and `lucy/schema.py`'s run-time DDL (3), which a file past
+`lib0011lucy` never reaches.
 
 The library slice also runs SQLite-only statements over Desktop-only tables on a store
 connection (`library_rows.Rows`, through `store.read()` or `store.write()`): the Library page and
@@ -195,9 +206,8 @@ Still on raw `sqlite3` with the flag on, on 2026-11-26. Counts are `.execute`/`.
 
 | Area | Modules (calls) |
 |---|---|
-| Hand-made schema and `connect` (with its start-up steps, `_legacy_kinds_renamed` kept on purpose) | `db.py` (17) |
+| Hand-made schema and `connect` (with its start-up steps, `_legacy_kinds_renamed` kept on purpose) | `db.py` (18) |
 | The upgrade backup and stamp | `local_upgrade.py` (4) |
 | Whole-file tools (copy and check whole files; must not open the store for writing) | `homes.py` (14), `recovery.py` (9), `backup.py` (8) |
-| Lucy's tables on the Desktop | `lucy/conversations.py` (31), `lucy/memory.py` (17), `lucy/commit.py` (15), `lucy/proposals.py` (12), `lucy/permissions.py` (7), `lucy/events.py` (6), `lucy/schema.py`, `lucy/readiness.py` (2 each), `lucy/context.py`, `lucy/catalog.py` (1 each), `routes/lucy.py` (12), `lucy/agent.py` (10) |
 | Development only | `devstack/identity_store.py` (32) |
 | Left with a reason (to-do T-20261126-1e71) | `cache_care.tidy_database` (10: page counts, incremental vacuum, `VACUUM`, which no transaction may hold), `api.py`'s `/api/ready` probe (1, read-only), `workers/local_seams.py`, `workers/local_analysis.py` (1 each, read-only, `work.sqlite`, not the library), `engine_store/library.py` (3: the stamp and file name the store is found by) |
