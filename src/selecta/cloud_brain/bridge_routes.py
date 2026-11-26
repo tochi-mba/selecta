@@ -39,8 +39,11 @@ from selecta.engine_store import EngineStore, facts_store
 from selecta.identity.tokens import Claims
 from selecta.storage.artifacts import ArtifactStore
 
-MOST_SONGS = 1_000
-"""Songs one search looks at besides the mix's stretch and the requests (see the module)."""
+MOST_SONGS = 250
+"""Songs one search looks at besides the mix's stretch and the requests (see the module). Each
+song's arrays are read and the planner scores its ways in: 500 synthetic songs searched whole
+took about 12 s on a developer machine, capped at 250 about 8 s. The planner itself tries the
+songs nearest in tempo first (`request_planner.TOP_STEPS`), so the cap keeps those."""
 BATCH = 100
 """Songs whose arrays are read in one store transaction."""
 
