@@ -19,6 +19,7 @@ from selecta import jobs as engine_jobs
 from selecta.work import provenance, proxies
 from selecta.work.ports import ArtifactOutput
 from selecta.workers import audio_handlers, cloud
+from selecta.workers import context as worker_context
 from selecta.workers.context import InputInvalid
 
 FFMPEG = shutil.which("ffmpeg")
@@ -163,7 +164,7 @@ def test_a_cancel_while_ffmpeg_runs_stops_it_and_kills_it_if_it_lingers(
 ):
     path, digest = original
     made = []
-    monkeypatch.setattr(audio_handlers.subprocess, "Popen",
+    monkeypatch.setattr(worker_context.subprocess, "Popen",
                         lambda *a, **k: made.append(StuckProcess()) or made[-1])
     ctx = Context(tmp_path, path, stop_after=3)
     with pytest.raises(engine_jobs.Interrupted):
@@ -181,7 +182,7 @@ def test_a_stopped_ffmpeg_that_exits_when_asked_is_not_killed(tmp_path, original
             return 0
 
     made = []
-    monkeypatch.setattr(audio_handlers.subprocess, "Popen",
+    monkeypatch.setattr(worker_context.subprocess, "Popen",
                         lambda *a, **k: made.append(Polite()) or made[-1])
     with pytest.raises(engine_jobs.Interrupted):
         audio_handlers.playback_proxy(job({"source_sha256": digest, "sample_rate": 44_100}),

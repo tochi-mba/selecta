@@ -285,6 +285,8 @@ EVERY_FIELD = {
     "price_minor": 0,
     "currency": "GBP",
     "invoice_terms": "net 30",
+    "multiplier_milli": 1000,  # the Lucy usage multiplier and cutover (ADR-0477 to ADR-0484)
+    "when": "cancel",
     # the redesigned console (doc 07b)
     "body": "A staff note",
     "text": "A status banner",

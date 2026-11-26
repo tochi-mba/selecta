@@ -669,6 +669,7 @@ def main(argv: list[str] | None = None) -> None:
             }
         )
         print(case["name"], "written")
+    # one line, like the other measured files: the repair table is over 2,000 lines indented
     _write(args.out / "repair.json", json.dumps(repair_cases(), separators=(",", ":")))
     manifest = {
         "about": "Fixtures for the browser renderer and audit; docs/engineering/device-render.md",

@@ -10,13 +10,11 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import subprocess
-import threading
 from collections.abc import Mapping
 
 from selecta.work.model import Job
 from selecta.work.provenance import build as build_provenance
-from selecta.workers.context import Handler, InputInvalid, JobContext
+from selecta.workers.context import Handler, InputInvalid, JobContext, run_tool
 
 PROXY_VERSION = 2  # equals work/proxies.py; 2 is fixed 4096-sample frames (see there)
 
@@ -49,21 +47,7 @@ def playback_proxy(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict
         "-ar", str(rate), "-c:a", "flac", "-sample_fmt", "s32", "-bits_per_raw_sample",
         "24", "-frame_size", "4096", "-threads", "1", str(output),
     ]
-    with subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as process:
-        try:
-            while process.poll() is None:
-                ctx.check_in()
-                threading.Event().wait(0.1)
-            if process.returncode != 0:
-                raise InputInvalid("The original could not be decoded into a playback file.")
-        finally:
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
+    run_tool(command, ctx, "The original could not be decoded into a playback file.")
     ctx.check_in()
     hashed = {"source_sha256": source_hash, "sample_rate": rate,
               "proxy_version": PROXY_VERSION, "codec": "flac", "bits": 24}

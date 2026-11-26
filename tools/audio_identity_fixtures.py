@@ -393,6 +393,8 @@ def main() -> int:
         # the manifest as base64 and the file only ever exists in a temporary folder.
         path = scratch / name
         path.write_bytes(data)
+        # also beside the manifest, where the folder is let back into git for these made-up files
+        (OUT / name).write_bytes(data)
         got = audio_id(path)
         if got != want:
             wrong.append(f"{name}: expected {want}, the Python implementation says {got}")

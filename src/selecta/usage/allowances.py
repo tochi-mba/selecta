@@ -48,6 +48,8 @@ class Period(enum.StrEnum):
 PERIODS = {
     "analysis_song": Period.DAY,
     "speculative_cpu_seconds": Period.DAY,
+    # hosted transition rendering, seconds a day per plan (`selecta.hosted_caps`)
+    "transition_cpu_seconds": Period.DAY,
     "stem_preview_window": Period.DAY,
     "export": Period.MONTH,
     "lucy_turn.everyday": Period.MONTH,
@@ -64,6 +66,10 @@ def limit_for(plan: Plan, kind: str) -> float | None:
         return plan.analysis_songs_per_day
     if kind == "speculative_cpu_seconds":
         return plan.speculative_cpu_minutes_per_day * 60
+    if kind == "transition_cpu_seconds":
+        from selecta.hosted_caps import transition_seconds
+
+        return transition_seconds(plan)
     if kind == "stem_preview_window":
         return plan.stem_preview_windows_per_day if plan.stems is StemAccess.PREVIEW else None
     if kind == "export":
