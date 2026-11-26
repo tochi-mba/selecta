@@ -76,6 +76,16 @@ def known() -> frozenset[str]:
     return frozenset(rev.revision for rev in script.walk_revisions("base", "heads"))
 
 
+@cache
+def includes(stamp: str, revision: str) -> bool:
+    """Whether a file stamped at `stamp` has had `revision` (False for a stamp this app doesn't
+    know)."""
+    if stamp not in known():
+        return False
+    script = ScriptDirectory.from_config(_config())
+    return any(rev.revision == revision for rev in script.iterate_revisions(stamp, "base"))
+
+
 def stamp_of(conn: sqlite3.Connection) -> str | None:
     """The engine stamp on an open library connection, or None when it has none."""
     has_table = conn.execute(
@@ -194,6 +204,7 @@ __all__ = [
     "engine_for",
     "forget",
     "head",
+    "includes",
     "stamp_of",
     "store_for",
     "store_of",

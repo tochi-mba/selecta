@@ -7,7 +7,7 @@ import sqlite3
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 
-from selecta import db
+from selecta import db, flags
 
 
 class PlacementChanged(ValueError):
@@ -28,24 +28,41 @@ def custom_seam(raw: str | None) -> bool:
     return settings.get("move", "auto") != "auto"
 
 
-def initialise(conn: sqlite3.Connection) -> None:
-    conn.execute("""CREATE TABLE IF NOT EXISTS song_requests (
+DDL = (
+    """CREATE TABLE IF NOT EXISTS song_requests (
         id INTEGER PRIMARY KEY,
         song_id INTEGER NOT NULL,
         status TEXT NOT NULL DEFAULT 'waiting',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )""")
-    conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS one_waiting_request_per_song
-        ON song_requests(song_id) WHERE status='waiting' """)
-    conn.execute("""CREATE TABLE IF NOT EXISTS request_bridge_approvals (
+    )""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS one_waiting_request_per_song
+        ON song_requests(song_id) WHERE status='waiting' """,
+    """CREATE TABLE IF NOT EXISTS request_bridge_approvals (
         request_id INTEGER PRIMARY KEY, signature TEXT NOT NULL
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS request_marks (
+    )""",
+    """CREATE TABLE IF NOT EXISTS request_marks (
         song_id INTEGER PRIMARY KEY, kind TEXT NOT NULL, for_song INTEGER
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS request_routes (
+    )""",
+    """CREATE TABLE IF NOT EXISTS request_routes (
         request_id INTEGER PRIMARY KEY, songs TEXT NOT NULL
-    )""")
+    )""",
+)
+
+
+def initialise(conn: sqlite3.Connection) -> None:
+    """Make the request tables if they aren't there. With `core.engine_store` on, the library
+    migration `lib0008requests` has made them, so nothing is created at run time."""
+    if flags.on("core.engine_store") and _made_by_the_migration(conn):
+        return
+    for statement in DDL:
+        conn.execute(statement)
+
+
+def _made_by_the_migration(conn: sqlite3.Connection) -> bool:
+    from selecta.engine_store import library
+
+    stamp = library.stamp_of(conn)
+    return stamp is not None and library.includes(stamp, "lib0008requests")
 
 
 def choose_bridge(
