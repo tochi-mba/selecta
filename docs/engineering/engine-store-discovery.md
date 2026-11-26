@@ -74,9 +74,12 @@ minute), a review shares `mix_edits`. Bodies forbid unknown fields; an id in a p
 the workspace check; a song of another workspace is simply unmeasured. The account export
 carries both tables; account deletion removes their rows with the workspace's id.
 
-Not in Cloud: hearing a discovery (`/hear`) renders a four-step audition from the audio files,
-which the server never holds, and the browser does not call the sweep in its spare time.
-Both are to-do T-20261126-9a31. Word links in Cloud stay `GET /api/local-media/links`, from the
+In a browser (web/src/cloud/accountDiscoveries.ts, T-20261126-9a31) Harmonic matches calls the
+sweep in spare time, one call at a time and at most one every 15 s, naming at most 40 measured
+songs that play on that device, every pair of 20-song blocks in turn; it lists the account's links
+whose songs both play there and plays each from the device's own files at the stretches the link
+names, as recorded. The Desktop's `/hear` (a four-step audition with a chord guide and a key
+shift, rendered from the audio files) has no Cloud route: the server never holds audio. Word links in Cloud stay `GET /api/local-media/links`, from the
 catalogue's lyrics, which write nothing.
 
 ## The listening study

@@ -67,8 +67,12 @@ after the workspace check; `consider` and `insert` share the `planning` rate lim
 | `POST /api/requests/consider?device_id=` | settle what is in the mix, plan the rest from song facts |
 | `POST /api/requests/insert?device_id=` | put a ready placement in, against the exact mix |
 
-Searching every song for a bridge (`/bridges`) and hearing a handover ahead (`/hear`) stay
-Desktop's: the first reads every song's arrays on each search, the second renders on the server.
+Searching every song for a bridge (`POST /api/requests/{request_id}/bridges`) is
+`cloud_brain/bridge_routes.py`: the Desktop's `request_planner.bridge_options` over the account's
+measured songs, at most 250 a search (those nearest the request's tempo when there are more, said
+as `capped`), arrays read 100 at a time, 6 searches a minute; a browser names the songs that play
+on it. Hearing a handover ahead (`/hear`) stays Desktop's: it renders on the server, and in Cloud
+the device makes a bridge's transitions once it is chosen.
 
 ## What "ready" means in Cloud
 
