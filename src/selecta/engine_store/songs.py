@@ -119,7 +119,8 @@ def _audio_column(where: _Songs) -> Any:
     return where.audio_id if _audio_ids_on() else sa.null()
 
 
-def _facts(store: EngineStore, connection: sa.Connection, song_id: int):
+def _facts_query(store: EngineStore):
+    """A song's identity joined with its analysis, for this workspace's live songs."""
     where = _songs(store)
     joined = where.table.join(
         analysis,
@@ -129,34 +130,35 @@ def _facts(store: EngineStore, connection: sa.Connection, song_id: int):
         ),
     )
     return (
-        connection.execute(
-            sa.select(
-                where.id.label("id"),
-                where.path.label("path"),
-                where.artist.label("artist"),
-                where.title.label("title"),
-                where.genre.label("genre"),
-                where.duration.label("duration"),
-                where.content_hash.label("content_hash"),
-                _audio_column(where).label("audio_id"),
-                analysis.c.version,
-                analysis.c.bpm,
-                analysis.c.constant_tempo,
-                analysis.c.grid_confidence,
-                analysis.c.beats_per_bar,
-                analysis.c.camelot,
-                analysis.c.key_confidence,
-                analysis.c.lufs,
-                analysis.c.peak_db,
-                analysis.c.energy,
-                analysis.c.sections,
-            )
-            .select_from(joined)
-            .where(store.mine(where.table), where.id == song_id, where.live)
+        sa.select(
+            where.id.label("id"),
+            where.path.label("path"),
+            where.artist.label("artist"),
+            where.title.label("title"),
+            where.genre.label("genre"),
+            where.duration.label("duration"),
+            where.content_hash.label("content_hash"),
+            _audio_column(where).label("audio_id"),
+            analysis.c.version,
+            analysis.c.bpm,
+            analysis.c.constant_tempo,
+            analysis.c.grid_confidence,
+            analysis.c.beats_per_bar,
+            analysis.c.camelot,
+            analysis.c.key_confidence,
+            analysis.c.lufs,
+            analysis.c.peak_db,
+            analysis.c.energy,
+            analysis.c.sections,
         )
-        .mappings()
-        .first()
+        .select_from(joined)
+        .where(store.mine(where.table), where.live)
     )
+
+
+def _facts(store: EngineStore, connection: sa.Connection, song_id: int):
+    where = _songs(store)
+    return connection.execute(_facts_query(store).where(where.id == song_id)).mappings().first()
 
 
 def _lyric(store: EngineStore, connection: sa.Connection, song_id: int):
@@ -251,6 +253,72 @@ def load_song(
     return build_song(row, features, lyric, corrected)
 
 
+def load_songs(
+    store: EngineStore,
+    artifacts: ArtifactStore,
+    song_ids: list[int],
+    *,
+    legacy: Path | None = None,
+) -> tuple[list[SongInfo], list[int]]:
+    """Many songs at once, read in one transaction rather than one per song: the `SongInfo` of
+    each analysed song, in the order asked, and the ids that have no usable facts (not in this
+    workspace's library, never measured, no known duration, or no stored arrays)."""
+    wanted = list(dict.fromkeys(int(song_id) for song_id in song_ids))
+    if not wanted:
+        return [], []
+    where = _songs(store)
+    lyric_table = where.lyrics
+    with store.read() as connection:
+        rows = {
+            int(row["id"]): row
+            for row in connection.execute(_facts_query(store).where(where.id.in_(wanted)))
+            .mappings()
+            .all()
+        }
+        lyrics_of = {
+            int(row["song_id"]): row
+            for row in connection.execute(
+                sa.select(lyric_table.c.song_id, lyric_table.c.status, lyric_table.c.synced).where(
+                    store.mine(lyric_table), lyric_table.c.song_id.in_(list(rows))
+                )
+            )
+            .mappings()
+            .all()
+        }
+        corrections = {
+            int(row["song_id"]): row
+            for row in connection.execute(
+                sa.select(song_overrides.c.song_id, song_overrides.c.bpm, song_overrides.c.camelot)
+                .where(store.mine(song_overrides), song_overrides.c.song_id.in_(list(rows)))
+            )
+            .mappings()
+            .all()
+        }
+    found: list[SongInfo] = []
+    missing: list[int] = []
+    for song_id in wanted:
+        row = rows.get(song_id)
+        if row is None or row["duration"] is None:
+            missing.append(song_id)
+            continue
+        try:
+            features = _arrays(
+                store,
+                artifacts,
+                song_id,
+                row["content_hash"],
+                row["version"],
+                SONG_ARRAYS,
+                legacy,
+                row["audio_id"],
+            )
+        except ArtifactMissing:
+            missing.append(song_id)
+            continue
+        found.append(build_song(row, features, lyrics_of.get(song_id), corrections.get(song_id)))
+    return found, missing
+
+
 def load_features(
     store: EngineStore,
     artifacts: ArtifactStore,
@@ -279,4 +347,11 @@ def load_features(
     return _arrays(store, artifacts, song_id, content_hash, version, names, legacy, audio_id)
 
 
-__all__ = ["FEATURES_KIND", "audio_features_key", "features_key", "load_features", "load_song"]
+__all__ = [
+    "FEATURES_KIND",
+    "audio_features_key",
+    "features_key",
+    "load_features",
+    "load_song",
+    "load_songs",
+]
