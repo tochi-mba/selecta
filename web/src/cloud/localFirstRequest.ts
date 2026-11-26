@@ -10,6 +10,7 @@ import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscover
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 import { requestsFamily } from './localFirstRequests';
 import { askToMake, forgetRatings, inspectorOn, seamOptions, withInspection } from './seamInspection';
+import { exportFamily, exportStudio } from './localExport';
 import { readCached, writeCached } from './offlineCache';
 import { canHeal, classify } from './resilientRequest';
 import { groupVersions, hereBySong, linkBySong, rememberGrouping, setBySong, whereBySong, type Grouping } from './songVersions';
@@ -404,11 +405,20 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);
+  // T-20261126-96d3: a mix saved as a file on this device, with the transitions playback plays
+  const exports = sources.workspaceId ? exportFamily({
+    workspaceId: sources.workspaceId,
+    cloud,
+    studio: exportStudio(sources.workspaceId, cloud),
+    mix: (draft) => adapted<MixData>(draft === null ? '/mix' : `/mix?draft=${draft}`),
+  }) : null;
   // T-20261126-827e: the Seam Inspector's reads, from the transitions this device made
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const method = (init?.method ?? 'GET').toUpperCase();
     const [route, query = ''] = path.split('?');
     const workspaceId = sources.workspaceId;
+    const exportAnswer = exports?.answer(method, route, new URLSearchParams(query), init);
+    if (exportAnswer) return (await exportAnswer) as T;
     if (!workspaceId || !inspectorOn()) return answered<T>(path, init);
     if (method === 'GET' && route === '/mix') return withInspection(await answered<MixData>(path, init), workspaceId, cloud) as Promise<T>;
     const seamAt = /^\/mix\/(\d+)\/(options|render)$/.exec(route);

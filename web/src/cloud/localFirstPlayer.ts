@@ -583,7 +583,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     songHere: async (songId) => {
       const found = await (await resolver())?.(songId);
       if (!found?.held || (found.source ?? 'device') !== 'device') return null;
-      return { song: found.held, decoded: async () => (await speakerNow.current?.decodedSource({ id: found.id, data: found.data })) ?? null };
+      return { song: found.held, data: found.data, decoded: async () => (await speakerNow.current?.decodedSource({ id: found.id, data: found.data })) ?? null };
     },
   }), [workspaceId, resolver]);
   useEffect(() => () => studio.dispose(), [studio]);

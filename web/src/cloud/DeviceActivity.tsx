@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { beatModelNow, onBeatModel } from '../dsp/analysis/beatThis/gate';
+import { flagOn } from '../flags';
 import { ActivityPanel } from '../ui/ActivityPanel';
+import { ExportJobs } from '../views/ExportJobs';
 import { Drawer } from '../ui/controls';
 import type { StudioActivity } from './deviceStudio';
 import { uploadActivity, type UploadActivity } from './factsUploader';
@@ -104,12 +106,15 @@ export function DeviceWorkRows({ workspaceId, titleOf }: { workspaceId: string; 
   );
 }
 
-/** The Activity drawer: this device's work, then the recent changes with their Undo. */
+/** The Activity drawer: this device's work, the recent changes with their Undo, and the mixes
+ * being saved as files here. */
 export function DeviceActivityDrawer({ workspaceId, titleOf, onClose }: { workspaceId: string; titleOf: (songId: number) => string | null; onClose: () => void }) {
+  const activity = flagOn('app.activity');
   return (
-    <Drawer title="Activity" onClose={onClose}>
-      <DeviceWorkRows workspaceId={workspaceId} titleOf={titleOf} />
-      <ActivityPanel />
+    <Drawer title={activity ? 'Activity' : 'Exports'} onClose={onClose}>
+      {activity && <DeviceWorkRows workspaceId={workspaceId} titleOf={titleOf} />}
+      {activity && <ActivityPanel />}
+      {flagOn('export') && <ExportJobs />}
     </Drawer>
   );
 }

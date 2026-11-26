@@ -86,6 +86,7 @@ import { sendingOn } from './accountFacts';
 import { accountMixesOn } from './accountMixes';
 import { inspectorOn } from './seamInspection';
 import { DeviceActivityDrawer } from './DeviceActivity';
+import { localExportOn } from './localExport';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -225,6 +226,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const measuredHere = sendingOn();
   const accountMixesHere = accountMixesOn();
   const studioHere = inspectorOn();
+  const exportHere = localExportOn();
   const offlineShell = on('cloud.offline_shell');
   // where the library shown came from: null from the server, or this device's kept copy
   const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
@@ -382,10 +384,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   useState(() => setJobsSource(false));
   useEffect(() => {
     setJobsSource(false);
-    setFlags(browserFlags(browserHarmonic, lucyHere, { measured: measuredHere, accountMixes: accountMixesHere, studio: studioHere }));
+    setFlags(browserFlags(browserHarmonic, lucyHere, { measured: measuredHere, accountMixes: accountMixesHere, studio: studioHere, localExport: exportHere }));
     // Cloud has no jobs server at all, so the source stays off when this shell unmounts.
     return () => { setFlags(null); };
-  }, [browserHarmonic, lucyHere, measuredHere, accountMixesHere, studioHere]);
+  }, [browserHarmonic, lucyHere, measuredHere, accountMixesHere, studioHere, exportHere]);
   // ADR-0476: Lucy's page asks the account's API, and reads her events by asking. Set while
   // rendering, because the page's own first read runs in an effect before this shell's do.
   const lucyTransport = useMemo(() => (lucyHere ? { request: cloud, base: '/lucy-cloud', pollMs: LUCY_POLL_MS, device: () => registeredDeviceId(workspaceId) } : null), [lucyHere, cloud, workspaceId]);
@@ -958,7 +960,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           <RequestsPanel />
         </Drawer>
       )}
-      {activityOpen && on('app.activity') && <DeviceActivityDrawer workspaceId={workspaceId} titleOf={(id) => data.mix.find((item) => item.song_id === id)?.title ?? null} onClose={() => setActivityOpen(false)} />}
+      {activityOpen && (on('app.activity') || on('export')) && <DeviceActivityDrawer workspaceId={workspaceId} titleOf={(id) => data.mix.find((item) => item.song_id === id)?.title ?? null} onClose={() => setActivityOpen(false)} />}
       {controls.overlays}
     </BytesContext.Provider>
     </StemSurfacesContext.Provider>

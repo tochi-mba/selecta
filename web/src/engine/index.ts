@@ -18,8 +18,8 @@ import { loadStretchEvidence, type StretchEvidence } from '../dsp/stretchLoader'
  * The usual path: in a press handler, `engine.openContext({ fromUserGesture: true })`, wake it,
  * `await engine.probe(context.context)`, then `engine.createSpeaker({ audio, probe, resolve,
  * queueLength })` for usePlaybackDevice, and `engine.roster({ probe, limiter })` for what the
- * device may honestly claim. Member exports go through `exportFile` (WAV only until the vetted
- * WASM FLAC encoder is available); FLAC codec modules stay internal to validation and harness use.
+ * device may honestly claim. Member exports go through `exportFile` (FLAC from SelectaDJ's own
+ * TypeScript encoder, checked by a full decode, or WAV; cloud/localExport.ts in the browser shell).
  */
 
 export type { EngineContext, EngineContextOptions } from './context';

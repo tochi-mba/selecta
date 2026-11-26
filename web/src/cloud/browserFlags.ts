@@ -16,7 +16,8 @@ export const NOT_IN_THE_BROWSER = {
   // them (cloud.device_render with cloud.brain): it shows the clips this device made
   // (seamInspection.ts). Without, each transition can still be rated and its move chosen.
   seam_inspector: false,
-  // Export writes audio files from the app's renders; the account's data download is in Account.
+  // Saving a mix as a file: on below with cloud.local_export, written on this device
+  // (localExport.ts) with the transitions playback plays.
   export: false,
   // Lucy: on below with lucy.cloud_conversation (ADR-0476).
   lucy: false,
@@ -43,6 +44,8 @@ export type BrowserReach = {
   /** cloud.device_render and cloud.brain: this device makes transitions and the account keeps
    * them, so the Seam Inspector works here. */
   studio?: boolean;
+  /** cloud.local_export: a mix can be saved as a file on this device. */
+  localExport?: boolean;
 };
 
 /** What this shell turns off, with Harmonic matches off too unless the browser's own version
@@ -57,5 +60,6 @@ export function browserFlags(browserHarmonic: boolean, lucyHere = false, reach: 
   }
   if (reach.accountMixes) delete off['editor.locks'];
   if (reach.studio) delete off.seam_inspector;
+  if (reach.localExport) delete off.export;
   return off;
 }

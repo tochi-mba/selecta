@@ -476,6 +476,8 @@ export type ExportJob = {
   quiet_seconds: number;
   /** The finished file's peak level, 0 to 1, in even slices, measured while it was verified. */
   shape?: number[] | null;
+  /** Cloud in the browser: the finished file, kept in this tab's memory (localExport.ts). */
+  url?: string;
 };
 
 /** What Selecta can say about a folder before reading it, from GET /api/folders/check. */

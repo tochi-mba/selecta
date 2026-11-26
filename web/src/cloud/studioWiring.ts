@@ -27,7 +27,7 @@ export type StudioWiring = {
   facts?(sha: string): Promise<SongFacts | null>;
   /** A song by catalogue id when its file is on this device: the file's hash and its decode, the
    * speaker's own. For a request's transitions, whose song is not in the mix yet. */
-  songHere?(songId: number): Promise<{ song: StudioSong; decoded(): Promise<AudioBuffer | null> } | null>;
+  songHere?(songId: number): Promise<{ song: StudioSong; decoded(): Promise<AudioBuffer | null>; data(): Promise<ArrayBuffer> } | null>;
 };
 
 // the account's request for each workspace whose player made a studio, so the Listening Room can
@@ -40,6 +40,8 @@ export const planningAccess = (workspaceId: string): Request | null => access.ge
 type Kept = { studio: DeviceStudio; songHere: StudioWiring['songHere'] };
 const studios = new Map<string, Kept>();
 export const studioOf = (workspaceId: string): DeviceStudio | null => studios.get(workspaceId)?.studio ?? null;
+/** The player's way to a song on this device by catalogue id, for the export (T-20261126-96d3). */
+export const songsHere = (workspaceId: string): StudioWiring['songHere'] | null => studios.get(workspaceId)?.songHere ?? null;
 /** Subscribed to by the Activity drawer, told when a player makes or ends its studio. */
 const studioListeners = new Set<() => void>();
 export function onStudios(listener: () => void): () => void {
