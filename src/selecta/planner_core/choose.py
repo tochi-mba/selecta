@@ -259,6 +259,15 @@ def enumerate_candidates(
     return sorted(candidates, key=lambda c: -c.score)
 
 
+def exits_after(a: SongInfo, leave_after: float | None) -> list[Cue] | None:
+    """Every place A could finish once it has played for long enough, or None for no limit. The
+    Desktop seam request's `leave_after`, here so Cloud planning narrows A's exits the same way."""
+    if leave_after is None:
+        return None
+    found = [cue for cue in a.exit_cues() if a.bar_time(cue.bar) >= leave_after]
+    return found or a._exit_cues_after(leave_after, True)
+
+
 def styles_for_language(language: str, stems: str = "sometimes") -> set[str] | None:
     """Translate human-facing intent into a recipe family, not one compulsory effect.
 

@@ -35,6 +35,7 @@ from selecta.planner.wordreel import (
     ride_lengths,
     ride_lines,
 )
+from selecta.planner_core.choose import exits_after
 from selecta.planner_core.repair import TIGHTEN, closer, take_step
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.render.intertwine import can_intertwine, intertwine_windows, render_intertwined
@@ -217,12 +218,8 @@ def _stem_audit(rendered: Rendered, cache: SongCache) -> tuple[Rendered, AuditRe
     return tighten_beats(rendered, cache, spans)
 
 
-def _exits_after(a: SongInfo, leave_after: float | None) -> list | None:
-    """Every place A could finish once it has played for long enough, or None for no limit."""
-    if leave_after is None:
-        return None
-    found = [cue for cue in a.exit_cues() if a.bar_time(cue.bar) >= leave_after]
-    return found or a._exit_cues_after(leave_after, True)
+# in the planner core, so Cloud planning narrows A's exits the same way
+_exits_after = exits_after
 
 
 def _too_soon(script: TransitionScript, request: SeamRequest) -> bool:
