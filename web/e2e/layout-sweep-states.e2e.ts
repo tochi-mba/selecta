@@ -113,7 +113,9 @@ test('the editor with the Seam Inspector open, and the Studio', async ({ page, r
   const problems = await sweepStates(page, testInfo, 'route.edit', [inspector]);
   // the Studio opens inside the inspector, and stays open across widths
   await pressIfThere(page, page.getByRole('tab', { name: 'Studio' }));
-  await pressIfThere(page, page.getByRole('button', { name: 'Open the Studio' }));
+  const studio = page.getByRole('button', { name: 'Open the Studio' });
+  await studio.waitFor({ timeout: 10_000 }).catch(() => undefined);
+  await studio.click({ timeout: 10_000 }).catch(() => undefined);
   await page.locator('.studio-cell').first().waitFor({ timeout: 60_000 }).catch(() => undefined);
   await pressIfThere(page, page.getByRole('group', { name: 'Studio editor mode' }).getByRole('button', { name: 'Detailed grid' }));
   problems.push(...(await sweep(page, testInfo, 'route.edit studio')));
