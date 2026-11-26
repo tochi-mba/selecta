@@ -174,6 +174,37 @@ def test_the_cloud_mixes_import_maps_files_to_catalogue_songs_by_hash(cloud, mon
     assert [(row["name"], row["song_ids"]) for row in drafts] == [("Uploaded", [a, b])]
 
 
+def test_the_account_mix_routes_bring_cloud_mixes_in_on_first_use_once(cloud, monkeypatch):
+    """Wired as the recipes are: the first use of the routes imports, later uses find nothing
+    new, and another workspace's routes never see Alice's Cloud mix."""
+    from selecta import cloud_mixes
+    from selecta.mix_contract import SongRef, new_contract
+
+    client, (a, *_rest) = cloud["client"], cloud["ids"]
+    alice = _workspace(cloud)
+    with cloud["engine"].connect() as connection:
+        sha = connection.exec_driver_sql(
+            "SELECT content_sha256 FROM local_songs WHERE id = ?", (a,)
+        ).scalar_one()
+    contract = new_contract(
+        "cm-2", "From uploads", "cloud", [SongRef(source="cloud", id="asset-1", title="One",
+                                                  sha256=sha)]
+    )
+    looked: list[str] = []
+
+    def revisions(_conn, workspace):
+        looked.append(workspace)
+        return [(contract, 1.0)] if workspace == alice else []
+
+    monkeypatch.setattr(cloud_mixes, "_all_revisions", revisions)
+    drafts = client.get("/api/drafts", headers=_auth(ALICE)).json()["drafts"]
+    assert [(row["name"], row["song_ids"]) for row in drafts] == [("From uploads", [a])]
+    again = client.get("/api/drafts", headers=_auth(ALICE)).json()["drafts"]
+    assert len(again) == 1  # once: nothing new is made on the next use
+    assert client.get("/api/drafts", headers=_auth(BOB)).json()["drafts"] == []
+    assert set(looked) == {alice, next(ws for ws in looked if ws != alice)}
+
+
 def test_with_the_flag_off_the_routes_answer_flag_off(cloud):
     flags.use("")
     answer = cloud["client"].get("/api/mix", headers=_auth(ALICE))
