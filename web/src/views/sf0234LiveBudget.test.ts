@@ -10,18 +10,21 @@ type Fs = { readFileSync(path: string, encoding: 'utf8'): string };
 const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
 const fs = node.getBuiltinModule('node:fs') as Fs;
 const now = fs.readFileSync(`${node.cwd()}/src/views/Now.tsx`, 'utf8');
+// the lyric lines moved out of Now.tsx into their own component, which Now draws
+const lyrics = fs.readFileSync(`${node.cwd()}/src/views/ListenLyrics.tsx`, 'utf8');
 
-function openingTag(marker: string): string {
-  const at = now.indexOf(marker);
-  expect(at, `${marker} is in Now.tsx`).toBeGreaterThan(-1);
-  const start = now.lastIndexOf('<', at);
-  const end = now.indexOf('>', at);
-  return now.slice(start, end + 1);
+function openingTag(marker: string, source = now, name = 'Now.tsx'): string {
+  const at = source.indexOf(marker);
+  expect(at, `${marker} is in ${name}`).toBeGreaterThan(-1);
+  const start = source.lastIndexOf('<', at);
+  const end = source.indexOf('>', at);
+  return source.slice(start, end + 1);
 }
 
 describe('SF-0234-05 live announcement budget', () => {
   it('keeps the following lyric line out of live speech', () => {
-    expect(openingTag('className={`lyrics ${focus')).toContain('aria-live="off"');
+    expect(now).toContain('<Lyrics ');
+    expect(openingTag('className={`lyrics ${focus', lyrics, 'ListenLyrics.tsx')).toContain('aria-live="off"');
   });
 
   it('keeps the bar countdown a silent timer', () => {

@@ -10,8 +10,17 @@ import { TimeoutError } from './resilientRequest';
 
 export type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
-/** Who measured one song in the account (`facts_store.measured`). */
-export type Measured = { implementation: string; source: string };
+/** Who measured one song in the account (`facts_store.measured`), and, from a server that says
+ * them, its tempo, key and energy and the member's own tempo and key. */
+export type Measured = {
+  implementation: string;
+  source: string;
+  bpm?: number | null;
+  camelot?: string | null;
+  energy?: number | null;
+  override_bpm?: number | null;
+  override_camelot?: string | null;
+};
 
 /** Sending measurements needs both flags, each named on by the server: an older server that
  * mentions neither would otherwise read as on (flags.ts `flagListed`). */
@@ -34,8 +43,13 @@ async function readAll(request: Request): Promise<Map<number, Measured>> {
   const found = new Map<number, Measured>();
   let after = 0;
   for (;;) {
-    const page = await request<{ songs: { song_id: number; implementation: string; source: string }[]; next?: number | null }>(`/song-facts?after=${after}&limit=${PAGE}`);
-    for (const song of page.songs) found.set(song.song_id, { implementation: song.implementation, source: song.source });
+    const page = await request<{ songs: (Measured & { song_id: number })[]; next?: number | null }>(`/song-facts?after=${after}&limit=${PAGE}`);
+    for (const song of page.songs) {
+      found.set(song.song_id, {
+        implementation: song.implementation, source: song.source, bpm: song.bpm, camelot: song.camelot,
+        energy: song.energy, override_bpm: song.override_bpm, override_camelot: song.override_camelot,
+      });
+    }
     // a cursor that doesn't move on would ask for the same page for ever
     if (page.next === undefined || page.next === null || !(page.next > after) || !page.songs.length) break;
     after = page.next;
@@ -60,6 +74,19 @@ export function noteMeasured(workspaceId: string, songId: number, measured: Meas
   if (!known) return;
   const next = known.list.then((list) => list.set(songId, measured));
   // a failed read stays failed: one saved song is not the account's whole list
+  next.catch(() => undefined);
+  known.list = next;
+}
+
+/** The member corrected a song's tempo or key here (null puts it back to what was measured). */
+export function noteCorrection(workspaceId: string, songId: number, bpm: number | null, camelot: string | null): void {
+  const known = kept.get(workspaceId);
+  if (!known) return;
+  const next = known.list.then((list) => {
+    const song = list.get(songId);
+    if (song) list.set(songId, { ...song, override_bpm: bpm, override_camelot: camelot });
+    return list;
+  });
   next.catch(() => undefined);
   known.list = next;
 }

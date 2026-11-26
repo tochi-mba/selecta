@@ -448,11 +448,13 @@ def add_routes(app, ctx) -> None:
                 position = min(body.position + 2, len(order))
             locked = [index for index, item in enumerate(items) if item[2]]
             position = max(position, (max(locked) + 1) if locked else 0)
-            mix.remember(conn, f"adding {song.title}")
-            mix.add_song(conn, row["song_id"], position)
-            if position + 1 < len(order) + 1:
-                mix.set_seam(conn, position + 1, {"move": "auto"})
-            song_requests.mark_added(conn, request_id, row["song_id"])
+            # Undo, the song, its seam and the request's mark: one write with the store on
+            with mix.editing(conn) as mixes:
+                mix.remember(mixes, f"adding {song.title}")
+                mix.add_song(mixes, row["song_id"], position)
+                if position + 1 < len(order) + 1:
+                    mix.set_seam(mixes, position + 1, {"move": "auto"})
+                song_requests.mark_added(mixes, request_id, row["song_id"])
             return mix_payload(conn)
 
     @app.post("/api/requests/insert")

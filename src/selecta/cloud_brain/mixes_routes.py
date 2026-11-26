@@ -12,8 +12,8 @@ are checked against the workspace's catalogue on every write.
 
 Each route keeps its Desktop flag as owner and also needs `cloud.brain` and `cloud.account_mixes`
 for the account (refused as `flag_off` otherwise), except `PUT /api/mix/order`, which Desktop has
-no route for and `cloud.account_mixes` owns. The first use in a workspace brings its recipes in
-(`engine_store.mix_import`), once.
+no route for and `cloud.account_mixes` owns. The first use in a workspace brings its recipes and
+its uploaded-music Cloud mixes (`/cloud-mixes`) in as drafts (`engine_store.mix_import`), once.
 """
 
 from __future__ import annotations
@@ -254,6 +254,9 @@ def install(
                     cloud_gate.require(connection, principal, flag_id, rules)
         store = EngineStore(engine, principal.workspace.id)
         mix_import.import_recipes(store)
+        # an uploaded-music account's /cloud-mixes come in as drafts the same way, once; the
+        # Cloud mix revisions themselves are never changed
+        mix_import.import_cloud_mixes(store)
         return store
 
     def reading(request: Request, claims: Claims):

@@ -28,7 +28,7 @@ describe('UF-0379-01/07 drafts that share a name', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Edit Party (draft 7)' }));
     expect(openDraft).toHaveBeenCalledWith(7);
     fireEvent.click(screen.getByRole('button', { name: 'Play Party (draft 3)' }));
-    await waitFor(() => expect(playDraft).toHaveBeenCalledWith(3));
+    await waitFor(() => expect(playDraft).toHaveBeenCalledWith(3, 0, expect.any(Element)));
     expect(screen.getByText('Draft 3')).toBeInTheDocument();
     expect(screen.getByText('Draft 7')).toBeInTheDocument();
     // a unique name stays plain

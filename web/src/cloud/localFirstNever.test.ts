@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Request } from '../api';
 import { chooseSongs, pickCard, type PlayableSong } from './localFirstMixes';
-import { asLibrarySong, localFirstRequest, NOT_HERE_YET, type CatalogueSong } from './localFirstRequest';
+import { asLibrarySong, localFirstRequest, ONLY_IN_THE_APP, type CatalogueSong } from './localFirstRequest';
 
 // "Never play" in browser-first Cloud (ADR-0475): the Library's row toggle and batch actions keep
 // it for the account through /api/local-media/songs/never, rows show it, and a mix SelectaDJ
@@ -59,7 +59,7 @@ describe('the Library batch actions', () => {
     const { cloud } = cloudWith([song(1, 'One')]);
     const request = localFirstRequest(cloud, {});
     await expect(request('/library/batch', { method: 'POST', body: JSON.stringify({ action: 'prioritize', entries: [] }) }))
-      .rejects.toThrow(NOT_HERE_YET);
+      .rejects.toThrow(ONLY_IN_THE_APP);
   });
 
   it('reads the catalogue again after a change, so the rows show it at once', async () => {

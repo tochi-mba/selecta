@@ -217,6 +217,14 @@ READS_BY_ID_OR_HASH = {
     "src/selecta/engine_store/facts_store.py": "a song's facts, by id or by content hash",
     "src/selecta/cloud_brain/export.py": "the account's own export: every measured song's hash",
     "src/selecta/cloud_brain/planning_routes.py": "never-play for the songs a plan names, by id",
+    "src/selecta/cloud_brain/mixes_routes.py": "checks the song ids a mix write names, by id",
+    "src/selecta/cloud_brain/seams_routes.py": "the songs a seam or a rating names, by id",
+    "src/selecta/engine_store/library_migrations/versions/lib0006seams.py": "a comment",
+    "src/selecta/engine_store/mix_import.py": "an imported mix's songs, by id or content hash",
+    "src/selecta/engine_store/mixes.py": "a mix's or the queue's songs, by id",
+    "src/selecta/catalog/schema.py": "foreign key from a song's catalogue link",
+    "src/selecta/catalog/service.py": "one song's tags for its lookup, and linked songs, by id",
+    "src/selecta/rooms/session_now_playing.py": "the song now playing in a room, by id",
 }
 
 

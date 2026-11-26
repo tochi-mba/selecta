@@ -119,13 +119,15 @@ What the customer now sees on Make a Mix > Your hosted mix: "Analysing on Select
 
 ## 4. Still worse than the local app, and why
 
-1. **Blends never survive on the server** (no vocal information: no lyrics, no stems). Needs the Demucs and lyrics decisions. With Demucs allowed, the server could run the local app's vocal sense and stem moves; this needs a stems handler for the gpu pool, which does not exist yet.
+Updated 2026-11-26 for the one brain (section 12).
+
+1. **Blends never survive on the server without lyrics** (no stems, no ears for voices). With `cloud.hosted_brain` on the planner core no longer offers a blend it can't check (so no minutes are spent on renders the audit refuses), and a song whose lyrics a device found now reaches the worker and can earn an 8 or 16 bar blend. Songs with no lyrics still get only a cut, an echo out or a reverb wash. The rest needs a stems handler with a licence-cleared separator (the owner chose a Spleeter-class one; Demucs stays behind its gate): specification in to-do T-20261126-fdde.
 2. **Key detection** is chroma, wrong on 3 of 7 songs against S-KEY. Needs a licensed or trained key model.
-3. **No stems at all**, so no stem-assisted transitions, no Studio.
+3. **No stems at all**, so no stem-assisted transitions, no Studio (T-20261126-fdde).
 4. **Play waits for the whole mix.** The local app starts as soon as the first transition is ready; the hosted card enables Play only when every part is ready or failed. Progressive play needs the timeline to stay stable while later seams land (a later seam changes where the song before it ends).
-5. **Slow blends near the runtime limit** (326 to 442 s of a 600 s limit here; one timed out).
+5. ~~**Slow blends near the runtime limit** (326 to 442 s of a 600 s limit here; one timed out).~~ With `cloud.hosted_brain` on (section 12): at most 6 renders a seam (5 takes and the cut) against up to 46 on the older path, and no blend is rendered for a pair whose vocals are unknown. Off, unchanged.
 6. ~~**Export re-chooses its transitions** instead of joining the heard seams.~~ Fixed (section 9): the export joins the parts the player plays.
-7. **No rating memory or mix-wide move variety** on the server.
+7. **Rating memory and move variety on the server**: with `cloud.hosted_brain` the mix's order learns from the account's seams and Good and Bad verdicts (`SeamMemory` from the seam tables), and every rendered hosted seam is now kept in those tables (`cloud.brain`), so verdicts on uploaded-music mixes count. Each seam's own move choice still has no memory (the Desktop's `choose_transition` has none either).
 8. ~~Hosted accounts still see browser-first words and the browser mixer alongside the server mix.~~ Fixed (section 8): Make a Mix is the hosted mix, the browser mixer one press away, and the footer says where uploads live.
 9. **Queued work has no time limit**: with no worker it waits, by design (nothing a customer paid for is dropped). The status says it is waiting for a worker and gives no estimate, and after 15 minutes operators get a `work.queue_stuck` alert (section 7).
 
@@ -423,3 +425,27 @@ The grant gates new processing, not a customer's files. `GET /api/stored/exports
 ### 11.6 Long tracks (T-20261125-4c09)
 
 `hosted_limits.py`: a song over 30 minutes never gets a job; its row says at once "This song is 1 hour 2 minutes long. SelectaDJ's servers prepare songs of up to 30 minutes for mixes, so it stays in your library and plays on its own, but can't join a server mix." with no Try again. Within the limit, analysis may run 1.2 times the song's length (never under 1,200 s) and a playback file 0.3 times (never under 180 s); an export over 4 hours (about 2.8 GB) is refused before any job. A real 60-minute track on a real worker was not run.
+## 12. Uploaded music on the one brain (2026-11-26, ADR-0479 Phase 6)
+
+Branch `feat/one-brain-8`. Everything here ran as unit and route tests on SQLite with synthetic numbers (no audio rendered, no real worker, no upload, no PostgreSQL); listening is in `one-brain-listening.md`.
+
+**Facts (`hosted_facts`, `cloud.brain`, default on).** A worker has no database, so the analysis handler now saves what the facts need and the server writes them: the analysis file carries the drum pattern pair (`pattern_bars`, `swing_bars`) beside the other arrays, and the job result carries the stored original's audio id when `library.audio_identity` is on. The first time `plan_mix` or `mix_state` reads a finished analysis whose catalogue song (an upload joins the catalogue under its own hash, `storage.catalogue_link`) has no facts, it calls `engine_store.facts_store.record_worker_analysis` with provenance `worker`, so `engine_store.songs.load_song` reads the upload like any other song. The same call is the backfill for older uploads: lazy, one query to find the songs without facts, at most 60 analysis files read per call and the rest on the next, nothing analysed again. A new job type was not used: catalogue jobs are claimed by workers, and workers have no database.
+
+**Planning (`cloud.hosted_brain`, default off).** With the flag on:
+- the order is `cloud_brain.planning.order`, the function `POST /api/planning/order` calls, over the songs' stored facts, with the account's seam memory and Never play; with fewer songs than an idea needs (6) it keeps the older order (`planner.beam.plan_set`);
+- each `seam.render` job says `"brain": "core"` and carries each side's tempo and key correction and lyrics from the engine store; its hash adds those, so it is a new seam and a correction makes another;
+- the worker (`workers.engine_core`) builds each song with `analysis.song.build_song`, the engine store's own builder, and runs `planner.choose.choose_transition`: `enumerate_candidates`, render, audit, `repair.next_step`, at most 5 takes, then the fallback cut, one decoded copy of each song shared by every take. `analysis.vocal_sense` is bound off for the loop, because no separator runs in Cloud.
+
+With the flag off every job, hash and answer is the older one (`tests/test_hosted_brain.py` checks the job against the worker's hash written out). The business kiosk is unchanged: its horizon seams carry no mark and keep `workers.engine_seams`. Neither the kiosk nor the hosted path ever called `mix_contract.plan_seam`; that to-do (T-20261126-b1c6) now says only contracts' own seams use it.
+
+**Renders per seam, worst case.** Older path (`engine_seams.best_seam`): 5 moves x 4 placements x (a take and a beat-tightening re-render), then the cut's own loop of up to 6: 46. Core path: 6.
+
+**Which moves hosted can play.** No lyrics (most uploads): cut on one, echo out, reverb wash, ranked by the core. Lyrics known through a device: also bass swap and filter sweep blends of 8 or 16 bars, and the delay throw. Never on the server: stem moves (vocal ride, strip and land, intertwined stems), word moves, the Studio, bridges that need stems. What a stems handler must provide for the rest: to-do T-20261126-fdde (inputs, outputs, artifact keys).
+
+**Seams kept (`hosted_brain.keep_seams`, `cloud.brain`).** Each rendered hosted seam, either path, goes into the seam tables once with a worker attestation (the attempt's worker id, the clip's hash and length, the audit verdict the artifact already carries), so Good and Bad, seam memory and the calibration report include uploaded-music mixes.
+
+**Mixes (`cloud.account_mixes`, default off).** The account mix routes bring each `/cloud-mixes` mix in as a draft on first use, once, as recipes are; no revision is changed. The browser still reads `/cloud-mixes`: its calls are inline in `MakeCloudMix.tsx`, so the switch waits for one data module (T-20261126-555d).
+
+**The local versus Cloud map** (`GET /api/cloud-mixes/capabilities`) is computed from the account's flags; no row says "not yet": the Studio lanes are Desktop only and Cloud needs sign-in, both said as decisions.
+
+**Not run here.** PostgreSQL (row security on the facts and seam writes is the engine store's, already tested in CI), a real worker rendering a core seam, a real upload, the dev cloud stack.

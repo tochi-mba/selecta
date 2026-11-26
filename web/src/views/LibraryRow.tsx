@@ -205,7 +205,7 @@ export const LibraryRow = memo(function LibraryRow({
       <small className="facts song-columns">
         {/* S4-0091-05: the spaces between facts are dropped by the flex layout but keep NVDA from
             running them together ("120 BPM8A1:30Ready") when it reads the row as one line */}
-        {/* a browser library is never analysed, so its rows don't say "not yet" about every song */}
+        {/* a browser library shows tempo and key only for songs the account has measured */}
         {measured && <><span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>{' '}</>}
         {/* LX-0344-03: an unknown key says so, rather than leaving a bare dash */}
         {measured && <><span>{song.camelot ?? (song.bpm !== null ? 'Key unknown' : 'No key yet')}</span>{' '}</>}
@@ -221,7 +221,7 @@ export const LibraryRow = memo(function LibraryRow({
       </div>
       <div className="song-actions">
         {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" limit={0} disabled={building || searching} run={() => actions.start(song)}>Start a mix</Action>}
-        {facts.canAnalyse && measured && (
+        {facts.canAnalyse && measured && !browser && (
           <Action disabled={queued} working="Asking…" run={() => actions.analyse(song)}>
             {song.readiness?.status === 'needs_attention' && !queued ? 'Try analysing again' : lineWords(linePlace)}
             {eta !== undefined && `, ${etaWords(eta)}`}

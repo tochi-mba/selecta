@@ -7,8 +7,8 @@ Two older Cloud mix models fold into the Desktop's model, one way:
   move a member chose for a seam kept as that seam's `{"move": ...}`. The account's current recipe
   (`local_current_mix`) becomes the current mix, once, and only when the current mix is empty.
 - **Cloud mixes** (`cloud_mixes`, `/cloud-mixes`, uploaded music): each one's latest revision
-  becomes a draft whose songs are the catalogue songs with the same content hash. Written and
-  tested; nothing calls it yet (to-do T-20261126-b7c1).
+  becomes a draft whose songs are the catalogue songs with the same content hash, on the first
+  use of the account mix routes, as recipes are.
 
 The rule: `mix_imports` records each source once, so running again changes nothing, and a draft
 that was deleted is never brought back. Nothing here changes or deletes a recipe or a Cloud mix
@@ -155,10 +155,18 @@ def _current_from_recipe(connection: Connection, store: EngineStore, mixes: Stor
 def import_cloud_mixes(store: EngineStore) -> dict[str, int]:
     """Bring each Cloud mix (`/cloud-mixes`) not yet imported in as a draft. Its songs are
     uploaded files (`assets`); each becomes the catalogue song with the same content hash, and a
-    file with none is left out and counted. Not called by any route yet."""
+    file with none is left out and counted. The account mix routes call it on each use
+    (`cloud_brain.mixes_routes`, behind `cloud.account_mixes`): cheap when there is nothing
+    new, one look and no write."""
     from selecta import cloud_mixes
     from selecta.local_media.schema import local_songs
 
+    with store.read() as connection:
+        known = _imported(connection, store, CLOUD_MIX)
+        revisions = cloud_mixes._all_revisions(connection, store.workspace_id)
+        held_ids = {contract.mix_id for contract, _at in revisions}
+    if held_ids <= known:
+        return {"drafts": 0, "songs_left_out": 0}
     made = skipped = 0
     with store.write() as connection:
         mixes = StoreMixes(connection, store)

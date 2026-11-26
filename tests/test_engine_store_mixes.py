@@ -194,8 +194,11 @@ def test_the_migration_keeps_every_row_and_adopts_in_place(home):
     assert _rows(home.db_path) == before
 
 
-def test_every_operation_through_the_store_matches_the_old_path(home, tmp_path):
+def test_every_operation_through_the_store_matches_the_old_path(home, tmp_path, monkeypatch):
     _synthetic(home.db_path)
+    # One still clock for both runs: drafts listed newest first tie on the same second and fall
+    # back to the id, so a second ticking over mid-run in one run only can't reorder the lists.
+    monkeypatch.setattr("selecta.engine_store.mixes.now", lambda: "2099-01-01 00:00:00")
     old = tmp_path / "old.sqlite"
     shutil.copy(home.db_path, old)
     flags.use("")
@@ -282,3 +285,27 @@ def test_backup_and_restore_carry_the_mixes_and_bring_an_older_one_forward(home,
     finally:
         conn.close()
     library.forget(older)
+
+
+def test_request_tables_come_from_the_migration_and_no_ddl_runs_with_the_flag_on(home):
+    from selecta import requests as song_requests
+    from selecta.engine_store.library_migrations.versions import lib0008requests
+
+    assert lib0008requests.DDL == song_requests.DDL  # the migration pins today's statements
+    _synthetic(home.db_path)
+    flags.use("")
+    conn = db.connect(home.db_path)
+    song_requests.add_request(conn, 1)  # the old path makes its tables on first use
+    conn.close()
+    flags.use(FLAG_ON)
+    conn = db.connect(home.db_path)
+    statements: list[str] = []
+    conn.set_trace_callback(statements.append)
+    song_requests.add_request(conn, 2)
+    assert [row["song_id"] for row in song_requests.read_requests(conn)] == [1, 2]
+    conn.set_trace_callback(None)
+    assert not [text for text in statements if text.lstrip().upper().startswith("CREATE")]
+    for table in lib0008requests.TABLES:
+        names = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        assert "workspace_id" in names
+    conn.close()

@@ -298,7 +298,79 @@ mix_imports = sa.Table(
 
 MIX_TABLES = (queue, drafts, preferences, mix_imports)
 
-ENGINE_TABLES = (ratings, analysis, song_overrides, *SEAM_TABLES, *MIX_TABLES)
+# The requests slice (`engine_store.requests`, docs/engineering/engine-store-requests.md). On
+# Desktop the tables `requests.DDL` made, adopted in place by `lib0008requests`; in Cloud made
+# by `es0479req01`. Desktop keeps `request_marks.song_id` as its key (one workspace per file);
+# Cloud's key includes the workspace, and its songs are the workspace's catalogue songs.
+
+# A song asked for: `status` is waiting, scheduled (it joined the mix) or cancelled. At most one
+# waiting request per song. `created_at` is UTC `YYYY-MM-DD HH:MM:SS`.
+song_requests = sa.Table(
+    "song_requests",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("song_id", sa.Integer, nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="waiting"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.UniqueConstraint("workspace_id", "id", name="uq_song_requests_workspace_id"),
+    _of_a_song("song_requests"),
+)
+sa.Index(
+    "ix_song_requests_one_waiting",
+    song_requests.c.workspace_id,
+    song_requests.c.song_id,
+    unique=True,
+    sqlite_where=song_requests.c.status == "waiting",
+    postgresql_where=song_requests.c.status == "waiting",
+)
+
+
+def _of_a_request(table: str) -> sa.ForeignKeyConstraint:
+    # Cloud only: an answer about a request is that workspace's request's, and goes with it
+    return sa.ForeignKeyConstraint(
+        ["workspace_id", "request_id"],
+        ["song_requests.workspace_id", "song_requests.id"],
+        name=f"fk_{table}_request",
+        ondelete="CASCADE",
+    )
+
+
+# Yes or no to an extra song for this request: `signature` is "yes" or "no".
+request_bridge_approvals = sa.Table(
+    "request_bridge_approvals",
+    metadata,
+    sa.Column("request_id", sa.Integer, primary_key=True, autoincrement=False),
+    sa.Column("signature", sa.Text, nullable=False),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    _of_a_request("request_bridge_approvals"),
+)
+
+# The exact songs someone agreed to for a request, a JSON list in playing order.
+request_routes = sa.Table(
+    "request_routes",
+    metadata,
+    sa.Column("request_id", sa.Integer, primary_key=True, autoincrement=False),
+    sa.Column("songs", sa.Text, nullable=False),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    _of_a_request("request_routes"),
+)
+
+# A song in the current mix that a request put there: kind "requested", or "bridge" with
+# `for_song` the requested song it leads to.
+request_marks = sa.Table(
+    "request_marks",
+    metadata,
+    sa.Column("workspace_id", Id, primary_key=True),
+    sa.Column("song_id", sa.Integer, primary_key=True, autoincrement=False),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("for_song", sa.Integer, nullable=True),
+    _of_a_song("request_marks"),
+)
+
+REQUEST_TABLES = (song_requests, request_bridge_approvals, request_routes, request_marks)
+
+ENGINE_TABLES = (ratings, analysis, song_overrides, *SEAM_TABLES, *MIX_TABLES, *REQUEST_TABLES)
 """Every engine table Cloud has, for the migrations and the fail-closed policy."""
 
 library_metadata = sa.MetaData()
@@ -325,6 +397,8 @@ songs = sa.Table(
     # A hash of the audio alone (`library.audio_identity`, docs/engineering/audio-identity.md):
     # the same after a tag edit. Filled beside `content_hash`; null for a format it can't place.
     sa.Column("audio_id", sa.String(67), nullable=True),
+    # another file of an earlier song: a version, never a song of its own (`requests` skips it)
+    sa.Column("duplicate_of", sa.Integer, nullable=True),
 )
 
 lyrics = sa.Table(
@@ -355,6 +429,7 @@ __all__ = [
     "ENGINE_TABLES",
     "LIBRARY_TABLES",
     "MIX_TABLES",
+    "REQUEST_TABLES",
     "SEAM_TABLES",
     "analysis",
     "drafts",
@@ -365,10 +440,14 @@ __all__ = [
     "preferences",
     "queue",
     "ratings",
+    "request_bridge_approvals",
+    "request_marks",
+    "request_routes",
     "seam_attestations",
     "seam_history",
     "seam_verdicts",
     "seams",
     "song_overrides",
+    "song_requests",
     "songs",
 ]

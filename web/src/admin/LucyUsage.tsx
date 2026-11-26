@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { DataTable } from '../ui/DataTable';
 import { AdminFetch, when } from './adminApi';
 import { Failure, Panel, useLoad } from './parts';
@@ -43,6 +43,7 @@ export function LucyAllowance({ workspaceId, email, state }: { workspaceId: stri
   const ctx = useConsole();
   const [factor, setFactor] = useState('');
   const [invalid, setInvalid] = useState(false);
+  const problem = useId();
   const [last, setLast] = useState('');
   if (!workspaceId) {
     return <section className="admin-config" aria-label="Lucy allowance"><h3>Lucy allowance</h3><p className="admin-note">No workspace yet.</p></section>;
@@ -94,11 +95,11 @@ export function LucyAllowance({ workspaceId, email, state }: { workspaceId: stri
       {state && <p className="admin-note">Now: {allowanceWords(state)} A switch applies only while the account has the lucy.usage_windows flag. Reload to see a change.</p>}
       <div className="admin-inline-form">
         <label>Factor (0 to 100; 1 is the plan’s own allowance)
-          <input value={factor} inputMode="decimal" autoComplete="off" aria-invalid={invalid || undefined} onChange={(event) => { setFactor(event.target.value); setInvalid(false); }} />
+          <input value={factor} inputMode="decimal" autoComplete="off" aria-invalid={invalid || undefined} aria-describedby={invalid ? problem : undefined} onChange={(event) => { setFactor(event.target.value); setInvalid(false); }} />
         </label>
         <ActionButton permission={NEEDS} onPress={setTo}>Set factor…</ActionButton>
       </div>
-      {invalid && <p className="admin-error" role="alert">Type a number from 0 to 100, with at most three decimal places.</p>}
+      {invalid && <p id={problem} className="admin-error" role="alert">Type a number from 0 to 100, with at most three decimal places.</p>}
       <div className="admin-actions">
         <ActionButton permission={NEEDS} danger onPress={off}>Switch Lucy off…</ActionButton>
         <ActionButton permission={NEEDS} onPress={plan}>Back to the plan’s allowance…</ActionButton>

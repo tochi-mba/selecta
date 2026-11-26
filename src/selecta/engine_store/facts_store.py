@@ -215,6 +215,11 @@ def save(
 def measured(store: EngineStore, after: int = 0, limit: int = 500) -> dict[str, Any]:
     """Which of this workspace's songs have facts, by song id, a page at a time."""
     limit = max(1, min(int(limit), MAX_PAGE))
+    # the member's own tempo and key ride along, so a browser Library shows what is in use
+    corrected = sa.and_(
+        song_overrides.c.song_id == analysis.c.song_id,
+        store.mine(song_overrides),
+    )
     with store.read() as connection:
         rows = (
             connection.execute(
@@ -224,7 +229,13 @@ def measured(store: EngineStore, after: int = 0, limit: int = 500) -> dict[str, 
                     analysis.c.implementation,
                     analysis.c.source,
                     analysis.c.analysed_at,
+                    analysis.c.bpm,
+                    analysis.c.camelot,
+                    analysis.c.energy,
+                    song_overrides.c.bpm.label("override_bpm"),
+                    song_overrides.c.camelot.label("override_camelot"),
                 )
+                .select_from(analysis.outerjoin(song_overrides, corrected))
                 .where(store.mine(analysis), analysis.c.song_id > after)
                 .order_by(analysis.c.song_id)
                 .limit(limit + 1)
@@ -240,6 +251,11 @@ def measured(store: EngineStore, after: int = 0, limit: int = 500) -> dict[str, 
                 "implementation": implementation_of(row).implementation,
                 "source": implementation_of(row).source,
                 "measured_at": row["analysed_at"],
+                "bpm": row["bpm"],
+                "camelot": row["camelot"],
+                "energy": row["energy"],
+                "override_bpm": row["override_bpm"],
+                "override_camelot": row["override_camelot"],
             }
             for row in page
         ]
@@ -314,6 +330,13 @@ def _hosted(path: Path) -> tuple[SongFacts, float]:
                 )
             },
         }
+        # the drum pattern and swing, kept only as the pair `facts.check` accepts; a worker
+        # analysis made before it saved them simply has none
+        if "pattern_bars" in data.files and "swing_bars" in data.files:
+            arrays.update(
+                pattern_bars=data["pattern_bars"].astype(np.float32),
+                swing_bars=data["swing_bars"].astype(np.float32),
+            )
     facts = SongFacts(
         bpm=summary["bpm"],
         constant_tempo=bool(summary["constant_tempo"]),
@@ -369,10 +392,13 @@ def record_worker_analysis(
     content_sha256: str,
     path: Path,
     implementation: str | None = None,
+    audio_id: str | None = None,
 ) -> int | None:
     """Also keep a worker's finished analysis of an uploaded file as the facts of the catalogue
     song with the same bytes, if this workspace has one; returns its id, else None. A device
-    measurement of that song gives way to it (`facts.wins`); a refusal is the same as None."""
+    measurement of that song gives way to it (`facts.wins`); a refusal is the same as None.
+    `audio_id` is the one the worker worked out from the stored original, if any: it is also
+    accepted as naming the song (`save`)."""
     song_id = song_with_hash(store, content_sha256)
     if song_id is None:
         return None
@@ -380,7 +406,15 @@ def record_worker_analysis(
     if implementation is not None:
         facts = replace(facts, implementation=implementation)
     try:
-        save(store, artifacts, song_id, facts, content_sha256=content_sha256, duration=duration)
+        save(
+            store,
+            artifacts,
+            song_id,
+            facts,
+            content_sha256=content_sha256,
+            audio_id=audio_id,
+            duration=duration,
+        )
     except FactsRefused:
         return None
     return song_id

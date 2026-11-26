@@ -794,7 +794,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {!!committedRows?.length && !cardLayout && (
         <div className="library-column-head" aria-hidden="true">
           <span>{browser ? 'Song' : 'Song and artist'}</span>
-          <span>{analysisAvailable ? 'Tempo · Key · Length' : 'Length'}</span>
+          <span>{analysisAvailable || committedRows.some((one) => one.bpm !== null) ? 'Tempo · Key · Length' : 'Length'}</span>
           <span>{browser ? 'Plays here' : 'Mix readiness'}</span>
           <span>{browser ? '' : 'Actions'}</span>
         </div>
@@ -808,7 +808,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}
             current={now.phase !== 'idle' && mix[now.position]?.song_id === song.id}
             linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
-            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} browser={!!browser}
+            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable || song.bpm !== null} browser={!!browser}
             art={on('library.art_embedded')} mark={marking && query ? query : ''} />
         ))}
       </ul>
@@ -825,7 +825,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </p>
       )}
       {tail}
-      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable}
+      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable || shownDetails.bpm !== null} analysedHere={analysisAvailable}
         onPlayNext={holder?.speaking && now.phase !== 'idle' ? (song) => add(song, now.position + 1) : undefined} />}
       {confirmBatch && <Dialog title={batchWords(confirmBatch.action, confirmBatch.songs.length).title} onClose={() => setConfirmBatch(null)}
         footer={<>

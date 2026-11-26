@@ -1,8 +1,9 @@
 """Where `mix.py` reads and writes: the library's raw `sqlite3` connection, or the engine store.
 
 `SqliteMixes` is the old path: the very statements `mix.py` ran before the mixes slice, each
-committing where it committed. With `core.engine_store` off it is the only path, so nothing about
-a library file or its writes changes.
+committing where it committed (draft times now come from `engine_store.mixes.now`, written in
+CURRENT_TIMESTAMP's own form, so both paths share one clock). With `core.engine_store` off it is
+the only path, so nothing about a library file or its writes changes.
 
 With the flag on, `opened` gives `engine_store.mixes.StoreMixes` over one store transaction on the
 same library file (`library.store_of`): a whole edit is one write, a read sees the last commit.
@@ -22,6 +23,7 @@ from collections.abc import Iterator, Sequence
 from typing import Any
 
 from selecta import db, flags
+from selecta.engine_store import mixes as store_mixes
 from selecta.engine_store.mixes import Mixes, NoSuchDraft
 
 FLAG = "core.engine_store"
@@ -105,7 +107,7 @@ class SqliteMixes(Mixes):
 
     def write_draft_items(self, draft: int, items: str) -> None:
         self.conn.execute(
-            "UPDATE drafts SET items=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (items, draft)
+            "UPDATE drafts SET items=?, updated_at=? WHERE id=?", (items, store_mixes.now(), draft)
         )
         self.conn.commit()
 
@@ -130,7 +132,7 @@ class SqliteMixes(Mixes):
 
     def set_draft_name(self, draft: int, name: str) -> None:
         self.conn.execute(
-            "UPDATE drafts SET name=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (name, draft)
+            "UPDATE drafts SET name=?, updated_at=? WHERE id=?", (name, store_mixes.now(), draft)
         )
         self.conn.commit()
 
@@ -151,14 +153,20 @@ class SqliteMixes(Mixes):
         return None if row is None else row["id"]
 
     def insert_draft(self, name: str, items: str) -> int:
-        cursor = self.conn.execute("INSERT INTO drafts(name,items) VALUES(?,?)", (name, items))
+        stamp = store_mixes.now()
+        cursor = self.conn.execute(
+            "INSERT INTO drafts(name,items,created_at,updated_at) VALUES(?,?,?,?)",
+            (name, items, stamp, stamp),
+        )
         self.conn.commit()
         return int(cursor.lastrowid)
 
     def put_back(self, saved: dict) -> None:
+        stamp = store_mixes.now()
         self.conn.execute(
-            "INSERT OR REPLACE INTO drafts(id,name,items,history,line) VALUES(?,?,?,?,?)",
-            (saved["id"], saved["name"], saved["items"], saved["history"], None),
+            "INSERT OR REPLACE INTO drafts(id,name,items,history,line,created_at,updated_at) "
+            "VALUES(?,?,?,?,?,?,?)",
+            (saved["id"], saved["name"], saved["items"], saved["history"], None, *[stamp] * 2),
         )
 
     def delete_draft_row(self, draft: int) -> None:

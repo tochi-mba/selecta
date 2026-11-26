@@ -45,7 +45,14 @@ BF_FLAGS = frozenset(
 )
 
 EVERY_PLAN_FLAGS = frozenset({"cloud.uploads", "devices.remote_control", "account.data_export"})
-PREMIUM_FLAGS = EVERY_PLAN_FLAGS | {"rooms", "rooms.votes", "rooms.display", "lucy.deep_plan"}
+# ADR-0488 (owner-approved build plan, 2026-11-25): what a room does together comes with Rooms,
+# on every Premium subscription, v1 included. Only included features were added; no limit moved.
+ROOM_SOCIAL_FLAGS = {
+    "rooms.keeps", "rooms.reactions", "rooms.rounds", "rooms.dedications", "rooms.recap"
+}
+PREMIUM_FLAGS = EVERY_PLAN_FLAGS | ROOM_SOCIAL_FLAGS | {
+    "rooms", "rooms.votes", "rooms.display", "lucy.deep_plan"
+}
 
 
 # v1 is untouched: a field-by-field snapshot of the accepted catalogue, in literals on purpose.

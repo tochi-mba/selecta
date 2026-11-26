@@ -314,12 +314,12 @@
    the fade is tied to the box's own scroll position (a scroll timeline, not a clock), so at the
    start there is no fade at the start, and a box with nothing to scroll has none at all. Its
    scrollbar is slim. Where the browser cannot tie an animation to scrolling, nothing changes. */
-@property --edge-start {
+@property --scroll-fade-start {
   syntax: '<length>';
   inherits: false;
   initial-value: 0px;
 }
-@property --edge-end {
+@property --scroll-fade-end {
   syntax: '<length>';
   inherits: false;
   initial-value: 0px;
@@ -330,21 +330,21 @@
 @supports (animation-timeline: scroll()) {
   /* a mask also clips the box's own focus ring, so while the table has the keyboard it has no fade */
   :where(:root[data-feel~='depth']) .data-table-wrap:not(:focus-visible) {
-    mask-image: linear-gradient(to right, transparent 0, currentColor var(--edge-start), currentColor calc(100% - var(--edge-end)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, currentColor var(--scroll-fade-start), currentColor calc(100% - var(--scroll-fade-end)), transparent 100%);
     animation: feel-scroll-edge linear both;
     animation-timeline: scroll(self inline);
   }
   :where(:root[data-feel~='depth']) :is(.overlay-body, .palette-list) {
-    mask-image: linear-gradient(to bottom, transparent 0, currentColor var(--edge-start), currentColor calc(100% - var(--edge-end)), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, currentColor var(--scroll-fade-start), currentColor calc(100% - var(--scroll-fade-end)), transparent 100%);
     animation: feel-scroll-edge linear both;
     animation-timeline: scroll(self block);
   }
 }
 @keyframes feel-scroll-edge {
-  0% { --edge-start: 0px; --edge-end: var(--space-5); }
-  8% { --edge-start: var(--space-5); }
-  92% { --edge-end: var(--space-5); }
-  100% { --edge-start: var(--space-5); --edge-end: 0px; }
+  0% { --scroll-fade-start: 0px; --scroll-fade-end: var(--space-5); }
+  8% { --scroll-fade-start: var(--space-5); }
+  92% { --scroll-fade-end: var(--space-5); }
+  100% { --scroll-fade-start: var(--space-5); --scroll-fade-end: 0px; }
 }
 
 /* ---------- Keycaps ----------

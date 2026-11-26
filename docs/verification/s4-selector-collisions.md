@@ -1,8 +1,8 @@
 # Selecta 4.0 selector-collision inventory (S4-0091-04)
 
-Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.selector_collisions --write`; `tests/test_s4_selector_collisions.py` fails when it falls behind. Load order: `styles/boot.css`, `style.css`, `styles/shell.css`, `styles/polish.css`, `styles/foundation.css`, `styles/cloud-ui.css`, `styles/cloud-shell.css`, `styles/listening.css`, `styles/creation.css`, `styles/operations.css`, `styles/music-objects.css`, `styles/glossary.css`, `styles/palette.css`, `styles/icons.css`, `styles/depth.css`, `styles/typography.css`. The proposed owner is the earliest sheet that styles the class unscoped, else the earliest that styles it. Verdicts for the seven shared class names are in `docs/adr/completion/css-ownership.md`. Rules inside media queries count, so a responsive refinement shows here too; each row is for review, not a defect.
+Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.selector_collisions --write`; `tests/test_s4_selector_collisions.py` fails when it falls behind. Load order: `styles/boot.css`, `style.css`, `styles/shell.css`, `styles/polish.css`, `styles/foundation.css`, `styles/cloud-ui.css`, `styles/cloud-shell.css`, `styles/listening.css`, `styles/creation.css`, `styles/operations.css`, `styles/music-objects.css`, `styles/glossary.css`, `styles/palette.css`, `styles/icons.css`, `styles/depth.css`, `styles/feel.css`, `styles/feel-scene.css`, `styles/feel-music.css`, `styles/feel-parts.css`, `styles/feel-components.css`, `styles/feel-shell.css`, `styles/feel-entry.css`, `styles/feel-listen.css`, `styles/feel-library.css`, `styles/feel-rooms.css`, `styles/feel-account.css`, `styles/feel-local.css`, `styles/typography.css`. The proposed owner is the earliest sheet that styles the class unscoped, else the earliest that styles it. Verdicts for the seven shared class names are in `docs/adr/completion/css-ownership.md`. Rules inside media queries count, so a responsive refinement shows here too; each row is for review, not a defect.
 
-## Identical selectors in more than one sheet (170)
+## Identical selectors in more than one sheet (180)
 
 | Selector | Sheets, in load order | Wins the cascade |
 |---|---|---|
@@ -163,24 +163,35 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `button:focus-visible` | style.css, styles/polish.css | styles/polish.css |
 | `button[aria-pressed='true']` | style.css, styles/polish.css | styles/polish.css |
 | `input:focus-visible` | style.css, styles/polish.css | styles/polish.css |
-| `media (forced-colors: active)` | styles/polish.css, styles/listening.css, styles/creation.css, styles/operations.css, styles/music-objects.css, styles/glossary.css, styles/palette.css, styles/depth.css | styles/depth.css |
+| `media (forced-colors: active)` | styles/polish.css, styles/listening.css, styles/creation.css, styles/operations.css, styles/music-objects.css, styles/glossary.css, styles/palette.css, styles/depth.css, styles/feel.css, styles/feel-music.css, styles/feel-parts.css, styles/feel-components.css, styles/feel-shell.css, styles/feel-listen.css, styles/feel-library.css, styles/feel-rooms.css, styles/feel-account.css, styles/feel-local.css | styles/feel-local.css |
+| `media (forced-colors: none)` | styles/feel-components.css, styles/feel-shell.css | styles/feel-shell.css |
+| `media (hover: hover) and (pointer: fine)` | styles/polish.css, styles/feel.css, styles/feel-components.css, styles/feel-shell.css, styles/feel-entry.css, styles/feel-listen.css, styles/feel-library.css, styles/feel-account.css | styles/feel-account.css |
 | `media (max-width: 1024px)` | style.css, styles/polish.css, styles/creation.css, styles/operations.css | styles/operations.css |
 | `media (max-width: 1040px)` | styles/polish.css, styles/listening.css | styles/listening.css |
 | `media (max-width: 420px)` | styles/shell.css, styles/polish.css, styles/listening.css | styles/listening.css |
 | `media (max-width: 520px)` | style.css, styles/shell.css, styles/foundation.css, styles/listening.css | styles/listening.css |
-| `media (max-width: 560px)` | style.css, styles/shell.css, styles/polish.css | styles/polish.css |
+| `media (max-width: 560px)` | style.css, styles/shell.css, styles/polish.css, styles/feel-listen.css, styles/feel-local.css | styles/feel-local.css |
 | `media (max-width: 620px)` | style.css, styles/polish.css, styles/listening.css, styles/creation.css, styles/operations.css | styles/operations.css |
-| `media (max-width: 760px)` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/creation.css | styles/creation.css |
-| `media (min-width: 761px)` | styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css | styles/cloud-shell.css |
-| `media (pointer: coarse)` | styles/cloud-ui.css, styles/creation.css, styles/operations.css, styles/glossary.css, styles/palette.css, styles/icons.css | styles/icons.css |
+| `media (max-width: 760px)` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/creation.css, styles/feel-shell.css, styles/feel-local.css | styles/feel-local.css |
+| `media (max-width: 900px)` | styles/feel-entry.css, styles/feel-account.css | styles/feel-account.css |
+| `media (min-width: 761px)` | styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/feel-shell.css | styles/feel-shell.css |
+| `media (min-width: 769px)` | styles/boot.css, styles/feel-entry.css | styles/feel-entry.css |
+| `media (pointer: coarse)` | styles/cloud-ui.css, styles/creation.css, styles/operations.css, styles/glossary.css, styles/palette.css, styles/icons.css, styles/feel-library.css | styles/feel-library.css |
+| `media (prefers-reduced-motion: no-preference)` | styles/feel-scene.css, styles/feel-shell.css, styles/feel-library.css | styles/feel-library.css |
 | `media (prefers-reduced-motion: reduce)` | styles/boot.css, style.css, styles/shell.css, styles/polish.css, styles/foundation.css | styles/foundation.css |
+| `media (prefers-reduced-transparency: no-preference)` | styles/feel-components.css, styles/feel-shell.css | styles/feel-shell.css |
 | `select` | style.css, styles/polish.css | styles/polish.css |
 | `select:focus-visible` | style.css, styles/polish.css | styles/polish.css |
+| `starting-style` | styles/feel-listen.css, styles/feel-library.css | styles/feel-library.css |
+| `supports (animation-timeline: view())` | styles/boot.css, styles/feel-entry.css | styles/feel-entry.css |
+| `supports (backdrop-filter: blur(var(--blur-glass)))` | styles/feel-components.css, styles/feel-shell.css | styles/feel-shell.css |
+| `supports (color: oklch(from red l c h))` | styles/feel-listen.css, styles/feel-local.css | styles/feel-local.css |
 
-## Classes styled by more than one sheet (251)
+## Classes styled by more than one sheet (305)
 
 | Class | Sheets, in load order | Proposed owner |
 |---|---|---|
+| `.account-caret` | styles/cloud-shell.css, styles/feel-shell.css | styles/cloud-shell.css |
 | `.action-labels` | styles/polish.css, styles/listening.css, styles/icons.css | styles/polish.css |
 | `.active` | style.css, styles/depth.css | style.css |
 | `.add-gap` | style.css, styles/creation.css | style.css |
@@ -188,152 +199,193 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.artist` | style.css, styles/shell.css, styles/listening.css | style.css |
 | `.artists` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.attention` | style.css, styles/polish.css | style.css |
+| `.beat-pips` | style.css, styles/feel-listen.css | style.css |
 | `.big` | style.css, styles/cloud-ui.css, styles/listening.css | style.css |
 | `.brand` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.brand-mark` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
-| `.button` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css | style.css |
+| `.brand-word` | styles/shell.css, styles/feel-shell.css | styles/shell.css |
+| `.button` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/feel.css, styles/feel-components.css, styles/feel-local.css | style.css |
 | `.can-seek` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.card` | style.css, styles/polish.css, styles/depth.css | style.css |
 | `.cards` | style.css, styles/listening.css | style.css |
-| `.carry-on` | style.css, styles/listening.css, styles/depth.css | style.css |
+| `.carry-on` | style.css, styles/listening.css, styles/depth.css, styles/feel-listen.css, styles/feel-library.css | style.css |
 | `.carry-on-words` | styles/listening.css, styles/typography.css | styles/listening.css |
 | `.chips` | style.css, styles/polish.css, styles/listening.css, styles/operations.css | style.css |
 | `.choice` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/operations.css | styles/shell.css |
+| `.cloud-actions` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
 | `.cloud-footer` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
-| `.cloud-import-chip` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.cloud-import-chip` | styles/shell.css, styles/cloud-shell.css, styles/feel-shell.css | styles/shell.css |
 | `.coming` | style.css, styles/music-objects.css | style.css |
 | `.content` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/cloud-shell.css | styles/shell.css |
 | `.context-actions` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
-| `.context-bar` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
+| `.context-bar` | styles/shell.css, styles/cloud-shell.css, styles/icons.css, styles/feel-scene.css, styles/feel-shell.css | styles/shell.css |
 | `.context-button` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
-| `.context-counted` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.context-counted` | styles/shell.css, styles/cloud-shell.css, styles/feel-shell.css | styles/shell.css |
 | `.context-request` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.correct-field` | styles/shell.css, styles/operations.css | styles/shell.css |
-| `.count` | style.css, styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/icons.css | styles/polish.css |
+| `.count` | style.css, styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/icons.css, styles/feel-shell.css | styles/polish.css |
 | `.countdown-meta` | style.css, styles/typography.css | style.css |
 | `.countdown-number` | style.css, styles/polish.css, styles/listening.css, styles/typography.css | style.css |
-| `.countdown-track` | style.css, styles/listening.css | style.css |
-| `.crumbs` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.countdown-track` | style.css, styles/listening.css, styles/feel-listen.css | style.css |
+| `.cover-art` | styles/listening.css, styles/operations.css, styles/feel-listen.css, styles/feel-library.css, styles/feel-rooms.css, styles/feel-account.css, styles/feel-local.css | styles/listening.css |
+| `.cover-art-image` | styles/operations.css, styles/feel-library.css, styles/feel-account.css, styles/feel-local.css | styles/operations.css |
+| `.crumbs` | styles/shell.css, styles/cloud-shell.css, styles/feel-shell.css | styles/shell.css |
 | `.cue-row` | style.css, styles/creation.css | style.css |
-| `.current-word` | style.css, styles/foundation.css | style.css |
+| `.current-word` | style.css, styles/foundation.css, styles/feel-listen.css | style.css |
+| `.data-table` | styles/foundation.css, styles/feel-components.css | styles/foundation.css |
+| `.data-table-empty` | styles/foundation.css, styles/feel-components.css | styles/foundation.css |
+| `.data-table-wrap` | styles/foundation.css, styles/feel-components.css | styles/foundation.css |
 | `.destructive` | styles/polish.css, styles/foundation.css, styles/cloud-ui.css | styles/polish.css |
 | `.discoveries` | style.css, styles/polish.css | style.css |
-| `.discovery` | style.css, styles/operations.css | style.css |
+| `.discovery` | style.css, styles/operations.css, styles/feel-account.css | style.css |
 | `.discovery-steps` | style.css, styles/operations.css | style.css |
 | `.display` | style.css, styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/listening.css, styles/operations.css, styles/music-objects.css | style.css |
 | `.done` | style.css, styles/foundation.css | style.css |
-| `.draft` | style.css, styles/polish.css, styles/listening.css | style.css |
+| `.draft` | style.css, styles/polish.css, styles/listening.css, styles/feel-library.css | style.css |
 | `.draft-actions` | style.css, styles/listening.css | style.css |
-| `.draft-list` | style.css, styles/listening.css, styles/creation.css | style.css |
+| `.draft-list` | style.css, styles/listening.css, styles/creation.css, styles/feel-library.css | style.css |
 | `.draft-name` | style.css, styles/listening.css | style.css |
 | `.draft-progress` | style.css, styles/music-objects.css | style.css |
+| `.draft-seams` | styles/music-objects.css, styles/feel-library.css | styles/music-objects.css |
 | `.drafts-head` | style.css, styles/listening.css | style.css |
 | `.edit-inspector` | styles/shell.css, styles/creation.css, styles/depth.css | styles/shell.css |
 | `.editor` | style.css, styles/creation.css | style.css |
 | `.editor-scope` | styles/creation.css, styles/depth.css, styles/typography.css | styles/creation.css |
-| `.empty-state` | styles/polish.css, styles/cloud-ui.css, styles/listening.css | styles/polish.css |
+| `.empty-state` | styles/polish.css, styles/cloud-ui.css, styles/listening.css, styles/feel-components.css | styles/polish.css |
+| `.empty-state-icon` | styles/cloud-ui.css, styles/feel-components.css | styles/cloud-ui.css |
+| `.energy-arc-preview` | style.css, styles/feel-library.css | style.css |
 | `.energy-arc-stops` | style.css, styles/listening.css | style.css |
 | `.energy-overview` | styles/creation.css, styles/music-objects.css | styles/music-objects.css |
 | `.energy-overview-unknown` | styles/creation.css, styles/music-objects.css | styles/music-objects.css |
 | `.exit-stage` | style.css, styles/listening.css | style.css |
-| `.eyebrow` | style.css, styles/polish.css, styles/listening.css | style.css |
+| `.export-job` | styles/operations.css, styles/feel-local.css | styles/operations.css |
+| `.export-stages` | styles/polish.css, styles/feel-local.css | styles/polish.css |
+| `.eyebrow` | style.css, styles/polish.css, styles/listening.css, styles/feel-listen.css | style.css |
 | `.facts` | style.css, styles/polish.css | style.css |
 | `.failed` | style.css, styles/music-objects.css | style.css |
-| `.field` | styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/listening.css, styles/operations.css, styles/glossary.css | styles/foundation.css |
-| `.field-help` | styles/polish.css, styles/cloud-ui.css, styles/glossary.css | styles/polish.css |
+| `.feel-flash` | styles/feel.css, styles/feel-library.css | styles/feel.css |
+| `.feel-indicator` | styles/feel-parts.css, styles/feel-components.css, styles/feel-shell.css, styles/feel-account.css | styles/feel-parts.css |
+| `.feel-pop` | styles/feel.css, styles/feel-shell.css | styles/feel.css |
+| `.feel-tick` | styles/feel.css, styles/feel-rooms.css | styles/feel.css |
+| `.field` | styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/listening.css, styles/operations.css, styles/glossary.css, styles/feel-components.css | styles/foundation.css |
+| `.field-help` | styles/polish.css, styles/cloud-ui.css, styles/glossary.css, styles/feel-components.css | styles/polish.css |
+| `.first-handoff` | styles/polish.css, styles/feel-listen.css | styles/polish.css |
 | `.focus` | style.css, styles/listening.css | style.css |
 | `.folder-list` | styles/shell.css, styles/operations.css | styles/shell.css |
+| `.gate-actions` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
+| `.gate-button` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
+| `.gate-card` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
 | `.grip` | style.css, styles/polish.css, styles/creation.css | style.css |
 | `.handoff` | style.css, styles/listening.css | style.css |
 | `.handoff-next` | style.css, styles/listening.css | style.css |
 | `.health-attention` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.hero` | style.css, styles/polish.css, styles/listening.css | style.css |
-| `.hint` | style.css, styles/polish.css, styles/cloud-ui.css, styles/listening.css, styles/operations.css, styles/glossary.css, styles/typography.css | style.css |
+| `.hint` | style.css, styles/polish.css, styles/cloud-ui.css, styles/listening.css, styles/operations.css, styles/glossary.css, styles/feel-components.css, styles/typography.css | style.css |
 | `.how` | style.css, styles/listening.css | style.css |
-| `.icon` | styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
-| `.icon-button` | styles/foundation.css, styles/cloud-ui.css | styles/foundation.css |
+| `.icon` | styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/operations.css, styles/icons.css | styles/shell.css |
+| `.icon-button` | styles/foundation.css, styles/cloud-ui.css, styles/feel-components.css | styles/foundation.css |
 | `.in-seam` | style.css, styles/listening.css | style.css |
-| `.inspector` | styles/shell.css, styles/polish.css, styles/creation.css, styles/music-objects.css | styles/shell.css |
+| `.incoming` | styles/music-objects.css, styles/feel-library.css | styles/music-objects.css |
+| `.inspector` | styles/shell.css, styles/polish.css, styles/creation.css, styles/music-objects.css, styles/feel-library.css | styles/shell.css |
 | `.inspector-head` | styles/shell.css, styles/creation.css | styles/shell.css |
 | `.inspector-identity` | styles/creation.css, styles/typography.css | styles/creation.css |
 | `.inspector-pair` | styles/shell.css, styles/polish.css, styles/creation.css, styles/music-objects.css | styles/shell.css |
-| `.inspector-tabs` | styles/shell.css, styles/polish.css | styles/shell.css |
+| `.inspector-resize` | styles/shell.css, styles/feel.css | styles/shell.css |
+| `.inspector-tabs` | styles/shell.css, styles/polish.css, styles/feel-components.css | styles/shell.css |
 | `.is-current` | styles/creation.css, styles/depth.css | styles/creation.css |
 | `.is-draft` | styles/creation.css, styles/depth.css | styles/creation.css |
+| `.job-list` | styles/shell.css, styles/feel-local.css | styles/shell.css |
 | `.keys` | style.css, styles/shell.css | style.css |
-| `.lede` | style.css, styles/polish.css, styles/listening.css, styles/typography.css | style.css |
+| `.lede` | style.css, styles/polish.css, styles/listening.css, styles/feel-components.css, styles/feel-account.css, styles/typography.css | style.css |
 | `.library` | styles/shell.css, styles/polish.css, styles/operations.css | styles/shell.css |
-| `.library-cards` | styles/operations.css, styles/music-objects.css | styles/operations.css |
+| `.library-batch-check` | styles/operations.css, styles/feel-library.css | styles/operations.css |
+| `.library-cards` | styles/operations.css, styles/music-objects.css, styles/feel-library.css | styles/operations.css |
 | `.library-count` | styles/shell.css, styles/typography.css | styles/shell.css |
 | `.library-density` | styles/polish.css, styles/operations.css | styles/polish.css |
 | `.library-find` | styles/shell.css, styles/polish.css, styles/operations.css | styles/shell.css |
 | `.library-layout` | styles/polish.css, styles/music-objects.css | styles/polish.css |
-| `.library-rows` | styles/operations.css, styles/music-objects.css, styles/depth.css | styles/operations.css |
+| `.library-rows` | styles/operations.css, styles/music-objects.css, styles/depth.css, styles/feel-library.css | styles/operations.css |
 | `.limit` | style.css, styles/operations.css | style.css |
 | `.line-controls` | style.css, styles/listening.css | style.css |
 | `.line-place` | style.css, styles/listening.css | style.css |
-| `.link` | style.css, styles/glossary.css | style.css |
-| `.link-card` | style.css, styles/operations.css | style.css |
-| `.link-handoff` | style.css, styles/operations.css | style.css |
+| `.link` | style.css, styles/glossary.css, styles/feel.css | style.css |
+| `.link-card` | style.css, styles/operations.css, styles/feel-account.css | style.css |
+| `.link-handoff` | style.css, styles/operations.css, styles/feel-account.css | style.css |
+| `.listen-identity` | styles/listening.css, styles/feel-listen.css, styles/feel-local.css | styles/listening.css |
+| `.lit` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
+| `.long` | styles/creation.css, styles/feel-library.css | styles/creation.css |
 | `.lost` | styles/polish.css, styles/creation.css | styles/polish.css |
-| `.lyrics` | style.css, styles/foundation.css, styles/listening.css | style.css |
+| `.lyrics` | style.css, styles/foundation.css, styles/listening.css, styles/feel-listen.css | style.css |
 | `.menu` | styles/shell.css, styles/listening.css, styles/creation.css | styles/shell.css |
-| `.menu-list` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/creation.css, styles/depth.css | styles/shell.css |
-| `.meter` | styles/foundation.css, styles/cloud-ui.css | styles/foundation.css |
-| `.meter-fill` | styles/foundation.css, styles/cloud-ui.css | styles/foundation.css |
+| `.menu-list` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/creation.css, styles/depth.css, styles/feel-components.css | styles/shell.css |
+| `.meter` | styles/foundation.css, styles/cloud-ui.css, styles/feel-components.css | styles/foundation.css |
+| `.meter-fill` | styles/foundation.css, styles/cloud-ui.css, styles/feel-components.css | styles/foundation.css |
+| `.meter-track` | styles/foundation.css, styles/feel-components.css | styles/foundation.css |
 | `.metrics` | style.css, styles/polish.css, styles/operations.css | style.css |
-| `.mini` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.mini` | styles/shell.css, styles/cloud-shell.css, styles/feel-scene.css, styles/feel-shell.css | styles/shell.css |
 | `.mini-next` | styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css | styles/shell.css |
 | `.mini-progress` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.mini-requests` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
-| `.mini-song` | styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/typography.css | styles/shell.css |
+| `.mini-song` | styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/feel-shell.css, styles/typography.css | styles/shell.css |
 | `.mix` | styles/shell.css, styles/creation.css | styles/shell.css |
-| `.mix-head` | style.css, styles/polish.css, styles/creation.css, styles/typography.css | style.css |
+| `.mix-head` | style.css, styles/polish.css, styles/creation.css, styles/feel-library.css, styles/typography.css | style.css |
 | `.mix-quick` | styles/polish.css, styles/listening.css | styles/polish.css |
 | `.mixes` | styles/shell.css, styles/polish.css, styles/listening.css | styles/shell.css |
 | `.more-nav-workspace` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
-| `.music-seam-diagram` | styles/music-objects.css, styles/depth.css | styles/music-objects.css |
+| `.music-seam-diagram` | styles/music-objects.css, styles/depth.css, styles/feel-library.css | styles/music-objects.css |
+| `.music-seam-lines` | styles/music-objects.css, styles/feel-library.css | styles/music-objects.css |
 | `.music-visualizer` | style.css, styles/listening.css | style.css |
-| `.nav` | styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
+| `.nav` | styles/shell.css, styles/polish.css, styles/cloud-shell.css, styles/icons.css, styles/feel.css, styles/feel-scene.css, styles/feel-shell.css | styles/shell.css |
+| `.nav-account-menu` | styles/cloud-shell.css, styles/feel-shell.css | styles/cloud-shell.css |
 | `.nav-collapse` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
 | `.nav-context` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
 | `.nav-foot` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
-| `.nav-label` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
-| `.nav-more-mobile` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
+| `.nav-label` | styles/shell.css, styles/cloud-shell.css, styles/icons.css, styles/feel-shell.css | styles/shell.css |
+| `.nav-more-mobile` | styles/shell.css, styles/cloud-shell.css, styles/feel-shell.css | styles/shell.css |
 | `.nav-request` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
-| `.next-song` | style.css, styles/polish.css, styles/listening.css | style.css |
-| `.next-up` | style.css, styles/listening.css, styles/typography.css | style.css |
-| `.notice` | style.css, styles/listening.css | style.css |
-| `.now` | style.css, styles/shell.css, styles/polish.css, styles/listening.css, styles/creation.css, styles/music-objects.css, styles/icons.css | styles/listening.css |
+| `.next-song` | style.css, styles/polish.css, styles/listening.css, styles/feel-listen.css | style.css |
+| `.next-up` | style.css, styles/listening.css, styles/feel-listen.css, styles/typography.css | style.css |
+| `.notice` | style.css, styles/listening.css, styles/feel-local.css | style.css |
+| `.now` | style.css, styles/shell.css, styles/polish.css, styles/listening.css, styles/creation.css, styles/music-objects.css, styles/icons.css, styles/feel-listen.css, styles/feel-local.css | styles/listening.css |
 | `.off` | styles/foundation.css, styles/palette.css | styles/foundation.css |
-| `.on` | style.css, styles/foundation.css, styles/creation.css, styles/palette.css, styles/depth.css | style.css |
+| `.on` | style.css, styles/foundation.css, styles/creation.css, styles/palette.css, styles/depth.css, styles/feel-shell.css, styles/feel-listen.css | style.css |
 | `.on-stage` | styles/shell.css, styles/polish.css | styles/shell.css |
-| `.open` | style.css, styles/shell.css, styles/creation.css | style.css |
-| `.over` | style.css, styles/shell.css, styles/creation.css | style.css |
-| `.overlay` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
-| `.overlay-body` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/creation.css | styles/shell.css |
+| `.open` | style.css, styles/shell.css, styles/creation.css, styles/feel-library.css | style.css |
+| `.other` | styles/music-objects.css, styles/feel-parts.css | styles/music-objects.css |
+| `.over` | style.css, styles/shell.css, styles/creation.css, styles/feel-library.css | style.css |
+| `.overlay` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/feel-components.css, styles/feel-shell.css, styles/feel-library.css | styles/shell.css |
+| `.overlay-body` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/creation.css, styles/feel-components.css | styles/shell.css |
 | `.overlay-close` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
-| `.overlay-dialog` | styles/shell.css, styles/cloud-ui.css, styles/glossary.css | styles/shell.css |
-| `.overlay-drawer` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
+| `.overlay-dialog` | styles/shell.css, styles/cloud-ui.css, styles/glossary.css, styles/feel-components.css | styles/shell.css |
+| `.overlay-drawer` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/feel-components.css, styles/feel-shell.css | styles/shell.css |
 | `.overlay-foot` | styles/shell.css, styles/foundation.css, styles/cloud-ui.css | styles/shell.css |
-| `.overlay-head` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/typography.css | styles/shell.css |
-| `.overlay-panel` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/glossary.css, styles/depth.css | styles/shell.css |
-| `.overlay-sheet` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/creation.css | styles/shell.css |
+| `.overlay-head` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/feel-shell.css, styles/feel-library.css, styles/typography.css | styles/shell.css |
+| `.overlay-panel` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/glossary.css, styles/depth.css, styles/feel-components.css, styles/feel-shell.css, styles/feel-library.css | styles/shell.css |
+| `.overlay-sheet` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/creation.css, styles/feel-components.css, styles/feel-shell.css | styles/shell.css |
 | `.overlay-workspace` | styles/shell.css, styles/creation.css | styles/shell.css |
 | `.page` | style.css, styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/creation.css, styles/operations.css | style.css |
 | `.palette-button` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
-| `.palette-item` | styles/foundation.css, styles/palette.css, styles/depth.css | styles/foundation.css |
+| `.palette-item` | styles/foundation.css, styles/palette.css, styles/depth.css, styles/feel-shell.css | styles/foundation.css |
+| `.palette-keys` | styles/palette.css, styles/feel-shell.css | styles/palette.css |
+| `.palette-list` | styles/foundation.css, styles/feel-components.css, styles/feel-shell.css | styles/foundation.css |
 | `.panel` | style.css, styles/polish.css, styles/depth.css | style.css |
-| `.phrase` | style.css, styles/operations.css | style.css |
+| `.pe-sheet` | styles/feel-shell.css, styles/feel-library.css | styles/feel-shell.css |
+| `.peaks` | style.css, styles/feel-listen.css | style.css |
+| `.phrase` | style.css, styles/operations.css, styles/feel-account.css | style.css |
 | `.pill` | style.css, styles/listening.css | style.css |
+| `.play-morph` | styles/feel-listen.css, styles/feel-rooms.css | styles/feel-listen.css |
+| `.played` | style.css, styles/feel-listen.css | style.css |
+| `.playhead` | style.css, styles/feel-listen.css | style.css |
 | `.playing` | style.css, styles/polish.css, styles/creation.css, styles/depth.css | style.css |
-| `.popover-panel` | styles/foundation.css, styles/cloud-ui.css, styles/depth.css | styles/foundation.css |
+| `.popover-panel` | styles/foundation.css, styles/cloud-ui.css, styles/depth.css, styles/feel-components.css | styles/foundation.css |
 | `.preview` | style.css, styles/shell.css | style.css |
-| `.primary` | styles/boot.css, style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/listening.css, styles/creation.css | style.css |
+| `.primary` | styles/boot.css, style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/listening.css, styles/creation.css, styles/feel.css, styles/feel-components.css, styles/feel-entry.css, styles/feel-local.css | style.css |
 | `.problem` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/listening.css, styles/depth.css | styles/shell.css |
 | `.prominent` | styles/listening.css, styles/depth.css | styles/listening.css |
-| `.quiet` | styles/boot.css, style.css, styles/cloud-ui.css, styles/listening.css | styles/boot.css |
+| `.quiet` | styles/boot.css, style.css, styles/cloud-ui.css, styles/listening.css, styles/feel-entry.css | styles/boot.css |
+| `.readiness-steps` | styles/polish.css, styles/feel-local.css | styles/polish.css |
 | `.ready` | style.css, styles/music-objects.css | style.css |
+| `.rename-draft` | styles/listening.css, styles/feel-library.css | styles/listening.css |
 | `.report` | style.css, styles/icons.css | style.css |
 | `.request-approve` | style.css, styles/listening.css | style.css |
 | `.request-cancel` | style.css, styles/listening.css | style.css |
@@ -348,9 +400,10 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.requested` | style.css, styles/depth.css | style.css |
 | `.requests` | style.css, styles/foundation.css, styles/depth.css | style.css |
 | `.requests-head` | style.css, styles/foundation.css | style.css |
-| `.round` | style.css, styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css | style.css |
-| `.row` | style.css, styles/polish.css, styles/listening.css, styles/operations.css | style.css |
-| `.seam` | style.css, styles/shell.css, styles/creation.css | style.css |
+| `.round` | style.css, styles/shell.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/feel-shell.css | style.css |
+| `.row` | style.css, styles/polish.css, styles/listening.css, styles/operations.css, styles/feel-local.css | style.css |
+| `.scan-reveals` | styles/polish.css, styles/feel-local.css | styles/polish.css |
+| `.seam` | style.css, styles/shell.css, styles/creation.css, styles/feel-library.css | style.css |
 | `.seam-actions` | style.css, styles/creation.css | style.css |
 | `.seam-line` | style.css, styles/shell.css | style.css |
 | `.seam-name` | style.css, styles/creation.css | style.css |
@@ -358,32 +411,36 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.seam-visual-bars` | style.css, styles/shell.css | style.css |
 | `.seam-visual-caption` | style.css, styles/shell.css | style.css |
 | `.seam-visual-label` | style.css, styles/shell.css | style.css |
-| `.search-field` | styles/foundation.css, styles/operations.css | styles/foundation.css |
+| `.search-field` | styles/foundation.css, styles/operations.css, styles/feel-components.css | styles/foundation.css |
 | `.section-title` | style.css, styles/cloud-ui.css, styles/listening.css | style.css |
-| `.selected` | styles/creation.css, styles/music-objects.css, styles/depth.css | styles/creation.css |
-| `.setup-steps` | styles/foundation.css, styles/listening.css | styles/foundation.css |
-| `.shell` | styles/shell.css, styles/cloud-shell.css, styles/listening.css | styles/shell.css |
+| `.selected` | styles/creation.css, styles/music-objects.css, styles/depth.css, styles/feel-library.css | styles/creation.css |
+| `.setup-scan` | styles/listening.css, styles/feel-local.css | styles/listening.css |
+| `.setup-steps` | styles/foundation.css, styles/listening.css, styles/feel-entry.css | styles/foundation.css |
+| `.shell` | styles/shell.css, styles/cloud-shell.css, styles/listening.css, styles/feel-shell.css, styles/feel-listen.css, styles/feel-library.css, styles/feel-account.css, styles/feel-local.css | styles/shell.css |
 | `.shell-banners` | styles/shell.css, styles/cloud-shell.css | styles/shell.css |
-| `.skeleton` | styles/shell.css, styles/polish.css, styles/listening.css | styles/shell.css |
+| `.skeleton` | styles/shell.css, styles/polish.css, styles/listening.css, styles/feel-components.css | styles/shell.css |
+| `.skeleton-content` | styles/polish.css, styles/feel-components.css | styles/polish.css |
 | `.skeleton-library` | styles/polish.css, styles/operations.css | styles/operations.css |
 | `.small` | styles/boot.css, style.css, styles/polish.css, styles/cloud-ui.css, styles/operations.css | styles/boot.css |
 | `.soft` | style.css, styles/typography.css | style.css |
-| `.song` | style.css, styles/shell.css, styles/polish.css, styles/creation.css, styles/depth.css | style.css |
-| `.song-actions` | style.css, styles/polish.css, styles/creation.css, styles/operations.css, styles/music-objects.css | style.css |
+| `.song` | style.css, styles/shell.css, styles/polish.css, styles/creation.css, styles/depth.css, styles/feel-library.css | style.css |
+| `.song-actions` | style.css, styles/polish.css, styles/creation.css, styles/operations.css, styles/music-objects.css, styles/feel-library.css | style.css |
+| `.song-catalog-thumb` | styles/operations.css, styles/feel-local.css | styles/operations.css |
 | `.song-columns` | styles/operations.css, styles/music-objects.css | styles/operations.css |
 | `.song-detail-artist` | styles/shell.css, styles/polish.css, styles/operations.css, styles/typography.css | styles/shell.css |
+| `.song-details-identity` | styles/operations.css, styles/feel-library.css | styles/operations.css |
 | `.song-facts` | styles/shell.css, styles/operations.css, styles/typography.css | styles/shell.css |
-| `.song-motif` | styles/operations.css, styles/music-objects.css | styles/music-objects.css |
+| `.song-motif` | styles/operations.css, styles/music-objects.css, styles/feel-library.css, styles/feel-account.css, styles/feel-local.css | styles/music-objects.css |
 | `.song-name` | style.css, styles/shell.css, styles/polish.css, styles/operations.css, styles/music-objects.css, styles/depth.css | style.css |
-| `.song-open` | styles/shell.css, styles/operations.css, styles/music-objects.css | styles/music-objects.css |
+| `.song-open` | styles/shell.css, styles/operations.css, styles/music-objects.css, styles/feel-library.css | styles/music-objects.css |
 | `.song-readiness` | styles/shell.css, styles/polish.css, styles/operations.css | styles/shell.css |
-| `.song-row` | style.css, styles/operations.css, styles/music-objects.css, styles/depth.css | style.css |
+| `.song-row` | style.css, styles/operations.css, styles/music-objects.css, styles/depth.css, styles/feel-library.css | style.css |
 | `.song-select` | styles/creation.css, styles/music-objects.css | styles/creation.css |
 | `.song-why` | styles/operations.css, styles/music-objects.css | styles/operations.css |
 | `.stack` | style.css, styles/polish.css | style.css |
-| `.stage` | style.css, styles/shell.css, styles/polish.css, styles/listening.css | style.css |
+| `.stage` | style.css, styles/shell.css, styles/polish.css, styles/listening.css, styles/feel-listen.css, styles/feel-local.css | style.css |
 | `.start` | style.css, styles/polish.css, styles/listening.css | style.css |
-| `.status` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css, styles/creation.css, styles/operations.css, styles/typography.css | styles/shell.css |
+| `.status` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css, styles/creation.css, styles/operations.css, styles/feel-library.css, styles/typography.css | styles/shell.css |
 | `.status-blocked` | styles/shell.css, styles/polish.css | styles/shell.css |
 | `.status-failed` | styles/shell.css, styles/polish.css | styles/shell.css |
 | `.status-needs-action` | styles/shell.css, styles/polish.css | styles/shell.css |
@@ -392,10 +449,10 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.steer` | style.css, styles/listening.css | style.css |
 | `.story-song` | styles/creation.css, styles/depth.css | styles/creation.css |
 | `.story-tag` | styles/creation.css, styles/depth.css | styles/creation.css |
-| `.strip` | style.css, styles/polish.css, styles/listening.css | style.css |
+| `.strip` | style.css, styles/polish.css, styles/listening.css, styles/feel-listen.css | style.css |
 | `.stuck` | style.css, styles/depth.css | style.css |
 | `.studio` | style.css, styles/creation.css | style.css |
-| `.studio-cell` | style.css, styles/polish.css, styles/creation.css, styles/music-objects.css | style.css |
+| `.studio-cell` | style.css, styles/polish.css, styles/creation.css, styles/music-objects.css, styles/feel.css, styles/feel-library.css | style.css |
 | `.studio-grid` | style.css, styles/polish.css, styles/creation.css | style.css |
 | `.studio-head` | style.css, styles/creation.css, styles/typography.css | style.css |
 | `.studio-lane` | style.css, styles/polish.css, styles/creation.css | style.css |
@@ -403,22 +460,22 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.studio-pair` | styles/creation.css, styles/music-objects.css | styles/creation.css |
 | `.studio-ruler` | style.css, styles/creation.css | styles/creation.css |
 | `.studio-side` | style.css, styles/creation.css | style.css |
-| `.sung` | style.css, styles/listening.css | style.css |
-| `.tabs` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
+| `.sung` | style.css, styles/listening.css, styles/feel-listen.css | style.css |
+| `.tabs` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/feel-components.css | styles/shell.css |
 | `.theme-menu` | styles/foundation.css, styles/cloud-shell.css | styles/foundation.css |
 | `.thumbs` | style.css, styles/polish.css | style.css |
 | `.time` | style.css, styles/polish.css, styles/listening.css | style.css |
-| `.timeline` | style.css, styles/shell.css, styles/polish.css, styles/creation.css, styles/depth.css | style.css |
+| `.timeline` | style.css, styles/shell.css, styles/polish.css, styles/creation.css, styles/depth.css, styles/feel-library.css | style.css |
 | `.toast-close` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/icons.css | styles/polish.css |
-| `.toast-row` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/icons.css, styles/depth.css | styles/shell.css |
+| `.toast-row` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/icons.css, styles/depth.css, styles/feel-components.css | styles/shell.css |
 | `.toast-where` | styles/shell.css, styles/cloud-ui.css | styles/shell.css |
-| `.toasts` | styles/shell.css, styles/polish.css, styles/cloud-ui.css | styles/shell.css |
-| `.tooltip` | styles/shell.css, styles/cloud-ui.css | styles/shell.css |
-| `.tooltip-anchor` | styles/shell.css, styles/listening.css | styles/shell.css |
-| `.transport` | style.css, styles/polish.css, styles/listening.css | style.css |
+| `.toasts` | styles/shell.css, styles/polish.css, styles/cloud-ui.css, styles/feel-components.css | styles/shell.css |
+| `.tooltip` | styles/shell.css, styles/cloud-ui.css, styles/feel-components.css | styles/shell.css |
+| `.tooltip-anchor` | styles/shell.css, styles/listening.css, styles/feel-components.css | styles/shell.css |
+| `.transport` | style.css, styles/polish.css, styles/listening.css, styles/feel-listen.css | style.css |
 | `.transport-more` | styles/shell.css, styles/listening.css | styles/shell.css |
-| `.ui-icon` | styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/icons.css | styles/polish.css |
-| `.vibe-card` | styles/polish.css, styles/listening.css, styles/music-objects.css, styles/typography.css | styles/listening.css |
+| `.ui-icon` | styles/polish.css, styles/foundation.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/icons.css, styles/feel-components.css, styles/feel-shell.css, styles/feel-listen.css, styles/feel-library.css, styles/feel-account.css, styles/feel-local.css | styles/polish.css |
+| `.vibe-card` | styles/polish.css, styles/listening.css, styles/music-objects.css, styles/feel-listen.css, styles/typography.css | styles/listening.css |
 | `.vibe-card-detail` | styles/polish.css, styles/listening.css | styles/polish.css |
 | `.vibe-card-facts` | styles/listening.css, styles/typography.css | styles/listening.css |
 | `.vibe-filters` | styles/listening.css, styles/typography.css | styles/listening.css |
@@ -428,7 +485,14 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.view-options` | styles/polish.css, styles/listening.css | styles/polish.css |
 | `.volume` | styles/shell.css, styles/cloud-shell.css, styles/icons.css | styles/shell.css |
 | `.waiting` | style.css, styles/music-objects.css | style.css |
-| `.warn` | style.css, styles/polish.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/operations.css | style.css |
+| `.warn` | style.css, styles/polish.css, styles/cloud-ui.css, styles/cloud-shell.css, styles/listening.css, styles/operations.css, styles/feel-components.css | style.css |
+| `.welcome` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
+| `.welcome-art` | styles/boot.css, styles/feel-entry.css, styles/feel-local.css | styles/boot.css |
+| `.welcome-art-head` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
+| `.welcome-benefit-icon` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
+| `.welcome-benefits` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
+| `.welcome-steps` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
+| `.welcome-word` | styles/boot.css, styles/feel-entry.css | styles/boot.css |
 | `.why` | style.css, styles/typography.css | style.css |
 | `.wide` | style.css, styles/shell.css | style.css |
 | `.wrap` | style.css, styles/polish.css | style.css |

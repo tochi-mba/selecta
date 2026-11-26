@@ -117,8 +117,8 @@ def _desktop_library(bind) -> bool:
 
 def upgrade() -> None:
     bind = op.get_bind()
-    if _desktop_library(bind):
-        return
+    # On a Desktop library file the library's own tables are left as they are; only the ones it
+    # lacks are made, as es0479rate01 does, so the file matches the declared tables afterwards.
     there = set(sa.inspect(bind).get_table_names())
     made = [table for table in _tables() if table.name not in there]
     for table in made:

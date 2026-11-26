@@ -16,6 +16,11 @@ const row = (id: number, title: string) => ({
 
 beforeEach(() => window.history.pushState({}, '', '/library'));
 
+
+// Search marks the matched words in their own element, so a name can span several nodes: this
+// finds the innermost element whose whole text is exactly `words`.
+const wholeText = (words: string) => (_: string, element: Element | null) =>
+  element?.textContent === words && ![...element.children].some((child) => child.textContent === words);
 describe('LX-0349-05 the open song read by its ID', () => {
   it('asks once when the answer does not hold that song, however often the list changes', async () => {
     const calls = fakeBackend({
@@ -32,11 +37,11 @@ describe('LX-0349-05 the open song read by its ID', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Details for Alpha' }));
     const search = screen.getByRole('searchbox', { name: 'Search your library' });
     await userEvent.type(search, 'x');
-    await screen.findByText('Other x', {}, { timeout: 3000 });
+    await screen.findByText(wholeText('Other x'), {}, { timeout: 3000 });
     await userEvent.type(search, 'y');
-    await screen.findByText('Other xy', {}, { timeout: 3000 });
+    await screen.findByText(wholeText('Other xy'), {}, { timeout: 3000 });
     await userEvent.type(search, 'z');
-    await screen.findByText('Other xyz', {}, { timeout: 3000 });
+    await screen.findByText(wholeText('Other xyz'), {}, { timeout: 3000 });
     await new Promise((done) => setTimeout(done, 50));
     const lookups = () => calls.filter((call) => /[?&]limit=1(&|$)/.test(call.path)).length;
     await waitFor(() => expect(lookups()).toBeGreaterThan(0));

@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
+import { fetchBytes } from '../api';
 import { useFlag } from '../flags';
 import { artSupported, makeArt, type ArtSize } from './artWorker';
 
@@ -92,7 +93,8 @@ function keep(src: string, entry: Redrawn): void {
 async function redraw(src: string): Promise<Redrawn> {
   const now = Date.now();
   try {
-    const response = await fetch(src);
+    // the local server's own address, through the one byte reader every local page uses
+    const response = await fetchBytes(src.replace(/^\/api(?=\/)/, ''));
     // 204: the file has no usable picture, so the tile is right for the server's cache time
     if (response.status !== 200) return { small: null, large: null, until: now + (response.status === 204 || response.status === 404 ? KEEP_MS : RETRY_MS) };
     const bytes = new Uint8Array(await response.arrayBuffer());

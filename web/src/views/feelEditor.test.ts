@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
+import { feelOff } from '../test/feel';
 import { expandSeam, flyFrame, flyInto } from './feelEditor';
 
 // Plan 3.7: a chosen suggestion flies into its gap, and an opened transition's diagram grows into
-// the inspector. With the feel off (the default here) both simply let the change happen.
+// the inspector. With the feel off (feelOff; tests otherwise run with it on) both simply let the
+// change happen.
 
 describe('the fly into the gap', () => {
   it('starts from the suggestion, centre to centre, at its size', () => {
@@ -15,6 +17,7 @@ describe('the fly into the gap', () => {
   });
 
   it('looks for no row while the motion part is off', () => {
+    feelOff();
     const find = vi.fn(() => null);
     const frame = vi.spyOn(window, 'requestAnimationFrame');
     flyInto({ left: 0, top: 0, width: 10, height: 10 } as DOMRect, find);
@@ -26,6 +29,7 @@ describe('the fly into the gap', () => {
 
 describe('opening a transition', () => {
   it('opens it at once while the motion part is off', () => {
+    feelOff();
     const update = vi.fn();
     const row = document.createElement('li');
     row.innerHTML = '<div class="music-seam-diagram"></div>';

@@ -9,12 +9,14 @@ can never be written twice under different ids. An edit adds a revision; it neve
 
 Songs are the workspace's own live Cloud assets, checked in the same transaction. A seam is
 planned from tempo and key only where a `song_facts` artifact for that file exists (keyed by the
-file's SHA-256); no Cloud analysis worker writes those yet, so today most Cloud seams are honest
-plain crossfades (`basis="unanalysed"`). Nothing here renders audio or touches original bytes.
+file's SHA-256); otherwise it is an honest plain crossfade (`basis="unanalysed"`), and the player
+or the hosted server works out each transition itself. Nothing here renders audio or touches
+original bytes.
 
-`CAPABILITIES` is the local versus Cloud map (AV-0418-01): what each side really does today,
-with the source that does it. Tests hold every row to an existing source file and every Cloud
-"available" row to a route the Cloud app really serves.
+`CAPABILITIES` is the local versus Cloud map (AV-0418-01): what each side does, with the source
+that does it; `capability_map` gives each row as the asking account has it, from its flags. A
+Cloud row is `available`, `partial` (the note says which part), `desktop_only` or
+`needs_sign_in`, the last two product decisions, never a promise of later work.
 """
 
 from __future__ import annotations
@@ -58,18 +60,23 @@ class CloudMixError(Exception):
 class Capability:
     id: str
     label: str
-    local: str  # "available", "partial" or "not_yet"
+    local: str  # one of `STATES`
     cloud: str
     local_source: str
     cloud_source: str | None
     note: str
 
 
+STATES = ("available", "partial", "desktop_only", "needs_sign_in")
+"""What a side does: all of it, some of it (the note says which), the Desktop app's alone by
+design, or not without an account, by design. Nothing here is a promise of later work."""
+
+
 CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "plan_mix", "Make a mix from your songs", "available", "available",
         "src/selecta/planner/reel.py", "src/selecta/cloud_mixes.py",
-        "Cloud mixes keep the order you choose; the local planner can also choose the order.",
+        "Cloud mixes keep the order you choose; with uploaded songs SelectaDJ can also choose it.",
     ),
     Capability(
         "shared_contract", "One mix contract", "available", "available",
@@ -84,35 +91,69 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "tempo_key_seams", "Seams planned from tempo and key", "available", "partial",
         "src/selecta/planner/choose.py", "src/selecta/mix_contract.py",
-        "The Cloud plans from tempo and key only for songs with analysis facts; "
-        "no Cloud analysis worker writes those yet, so most Cloud seams are plain crossfades.",
+        "A saved Cloud mix plans from tempo and key where a song's measurements are known, and "
+        "a plain crossfade otherwise; each transition is then worked out as the mix plays.",
     ),
     Capability(
         "rendered_seams", "Rendered, beat-matched transitions", "available", "partial",
         "src/selecta/seam_worker.py", "src/selecta/hosted_render.py",
-        "Hosted accounts (cloud.hosted_render): the server orders the mix with the local planner "
-        "and renders each transition the local app's way, without stem moves. Others: local only.",
+        "With uploaded songs, SelectaDJ's servers render each transition, without stem moves. "
+        "With music on your devices, transitions are worked out in your browser as it plays.",
     ),
     Capability(
-        "seam_tools", "Editor, Seam Inspector and Studio lanes", "available", "not_yet",
+        "seam_tools", "Editor, Seam Inspector and Studio lanes", "available", "desktop_only",
         "src/selecta/studio.py", None,
-        "The advanced creative tools stay in the local app.",
+        "The Seam Inspector and Studio lanes are part of the Desktop app.",
     ),
     Capability(
         "mix_export", "Export a finished mix", "available", "partial",
         "src/selecta/export_validation.py", "src/selecta/hosted_render.py",
-        "Hosted accounts can export a server mix to one FLAC (export.render); its transitions are "
-        "chosen again by the export renderer, not the seams heard.",
+        "Your browser can export a mix it plays. With uploaded songs, SelectaDJ's servers export "
+        "the mix exactly as it plays, as one lossless file.",
     ),
     Capability(
-        "no_account", "Works with no account", "available", "not_yet",
+        "no_account", "Works with no account", "available", "needs_sign_in",
         "src/selecta/api.py", None,
-        "The local app needs no account and never uploads; the Cloud needs sign-in by design.",
+        "SelectaDJ Cloud keeps your music and mixes with your account, so it needs you signed "
+        "in. The Desktop app needs no account and never uploads.",
     ),
 )
 
 
+def _flag(flag_id: str) -> bool:
+    from selecta import flags
+
+    return flags.on(flag_id)
+
+
+def _as_it_is(cap: Capability) -> Capability:
+    """A row as this account has it now: from its flags (the Cloud app binds each request's
+    answers), so a row never claims what the account can't do or hides what it can."""
+    from dataclasses import replace
+
+    hosted = _flag("cloud.hosted_render") and _flag("cloud.hosted_media")
+    if cap.id == "rendered_seams":
+        if not hosted:
+            return replace(cap, cloud="partial", note=(
+                "Transitions are worked out in your browser as the mix plays; uploading your "
+                "songs lets SelectaDJ's servers render them ahead."))
+        how = ("chosen and checked by the same planner as the Desktop app"
+               if _flag("cloud.hosted_brain") else "placed the Desktop app's way")
+        return replace(cap, note=(
+            f"With uploaded songs, SelectaDJ's servers render each transition, {how}, without "
+            "stem moves. With music on your devices, they are worked out in your browser."))
+    if cap.id == "seam_tools" and _flag("cloud.account_mixes") and _flag("cloud.brain"):
+        return replace(cap, cloud="partial", cloud_source="src/selecta/cloud_brain/mixes_routes.py",
+                       note="Choose each transition's move in your mix; the Seam Inspector and "
+                       "Studio lanes are part of the Desktop app.")
+    if cap.id == "mix_export" and not hosted:
+        return replace(cap, note="Your browser can export a mix it plays; uploading your songs "
+                       "lets SelectaDJ's servers export it as one lossless file.")
+    return cap
+
+
 def capability_map() -> list[dict[str, Any]]:
+    """The local versus Cloud map for this account, each row computed from its flags."""
     return [
         {
             "id": cap.id,
@@ -121,7 +162,7 @@ def capability_map() -> list[dict[str, Any]]:
             "cloud": cap.cloud,
             "note": cap.note,
         }
-        for cap in CAPABILITIES
+        for cap in map(_as_it_is, CAPABILITIES)
     ]
 
 

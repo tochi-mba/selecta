@@ -7,7 +7,10 @@ each placed by `seam_making._bar_cue_render`, which tries up to four placements 
 beats of each take before the audit. The first take that passes plays. A near miss is kept only
 when not even a clean cut passes, and the cut comes from `planner.choose.choose_transition`.
 
-What the server can't do yet, and the local app can, is said in the result (`skipped`):
+This is the path while `cloud.hosted_brain` is off. With it on, the job says `"brain": "core"`
+and the worker takes the planner core's loop instead (`workers.engine_core`).
+
+What the server can't do, and the local app can, is said in the result (`skipped`):
 
 - stem moves (vocal ride, strip and land, intertwined stems, word moves) need Demucs, which the
   licence register keeps from loading in cloud mode while it is under review

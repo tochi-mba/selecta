@@ -35,6 +35,7 @@ describe('Cloud media contexts (AV-0419-01)', () => {
     expect(mediaCount('const a = <audio src={x} />;')).toBe(1);
     expect(mediaCount('const a = new Audio();')).toBe(1);
     expect(mediaCount('const c = new AudioContext();')).toBe(1);
+    expect(mediaCount('const M = (globalThis as G).AudioContext; const c = new M();')).toBe(1);
     expect(mediaCount("document.createElement('video')")).toBe(1);
     expect(mediaCount('// a comment about an <audio> element\nconst x = 1;')).toBe(0);
   });

@@ -252,12 +252,12 @@
 @media (hover: hover) and (pointer: fine) {
   :where(:root[data-feel~='depth']) .library-rows:not(.library-cards) > .song-row:hover:not(.selected) {
     background-color: color-mix(in srgb, var(--surface-selected) 50%, transparent);
-    box-shadow: inset var(--space-hair) 0 0 var(--selected);
+    box-shadow: inset var(--marker) 0 0 var(--selected);
   }
 }
 :where(:root[data-feel~='depth']) .library-rows:not(.library-cards) > .song-row:focus-within:not(.selected) {
   background-color: color-mix(in srgb, var(--surface-selected) 50%, transparent);
-  box-shadow: inset var(--space-hair) 0 0 var(--selected);
+  box-shadow: inset var(--marker) 0 0 var(--selected);
 }
 
 /* What a search matched, marked in the title and artist (views/feelLibrary.tsx Matched: the mark
@@ -303,15 +303,15 @@
 .feel-row-bars { display: none; }
 :where(:root[data-feel~='music']) .song-open:has(> .feel-row-bars) { position: relative; }
 :where(:root[data-feel~='music']) .feel-row-bars {
-  display: block;
+  /* flex, so the bars sit with no line box around them */
+  display: flex;
   position: absolute;
   inset-block-end: var(--space-hair);
   inset-inline-start: var(--space-hair);
   padding: var(--space-hair);
   border-radius: var(--radius-hair);
-  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
   font-size: var(--text-xs);
-  line-height: 0;
   pointer-events: none;
 }
 

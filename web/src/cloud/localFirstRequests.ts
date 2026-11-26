@@ -2,6 +2,7 @@ import { ApiError, type MixData, type Request } from '../api';
 import type { RequestRow } from '../views/Requests';
 import type { PlayableSong } from './localFirstMixes';
 import { askerOf, openRoomId } from '../rooms/useRoomSession';
+import { accountRequests, accountRequestsOn, type AccountRequest } from './accountRequests';
 import { addedOnReturn, comingUp, notHereWords, notOnSpeaker, playsOn, programmeWithNext, speakerHolds, type ControllerLink, type WhereHeld } from '../devices/controller';
 
 /** The requests route family of the local-first adapter (ADR-0462 "one adapter per route family"):
@@ -16,8 +17,10 @@ import { addedOnReturn, comingUp, notHereWords, notOnSpeaker, playsOn, programme
  * ahead are refused with that reason. The panel shows these rows as one short Waiting list
  * (views/BrowserRequests.tsx): who asked, Add next, Dismiss.
  *
- * Where it is kept: this browser's own requests in localStorage per workspace, next to the
- * recipe store's current-mix pointer, so they survive a reload. Room requests stay on the server
+ * Where it is kept: with `cloud.brain` and `cloud.account_mixes`, the member's own requests are
+ * kept with the account (accountRequests.ts), so they wait on every device; otherwise, or when
+ * the account can't be reached, in localStorage per workspace, next to the recipe store's
+ * current-mix pointer, so they survive a reload. Room requests stay on the server
  * (`/api/room-requests`, kept by the Cloud planner `BrowserPlanner`) and are told about on the
  * workspace event stream (`requests.room`), which CloudApp passes on as `ROOM_REQUEST_EVENT`.
  */
@@ -39,7 +42,8 @@ export type RoomRequest = {
   room_pick?: boolean; add_now?: boolean;
 };
 type LocalRequest = { id: number; song_id: number; at: number };
-type Saved = { next: number; local: LocalRequest[]; room: Record<string, number> };
+// `account`: the account's request id to the number its row has here, as `room` does
+type Saved = { next: number; local: LocalRequest[]; room: Record<string, number>; account: Record<string, number> };
 
 // every `requests.room` event moves this on, so the next read asks the server again
 let roomVersion = 0;
@@ -66,10 +70,10 @@ function load(workspaceId: string): Saved {
   try {
     const saved = JSON.parse(window.localStorage.getItem(queueKey(workspaceId)) ?? 'null') as Partial<Saved> | null;
     if (saved && Array.isArray(saved.local)) {
-      return { next: Number(saved.next) || 1, local: saved.local.filter((row) => Number.isInteger(row?.id) && Number.isInteger(row?.song_id)), room: saved.room ?? {} };
+      return { next: Number(saved.next) || 1, local: saved.local.filter((row) => Number.isInteger(row?.id) && Number.isInteger(row?.song_id)), room: saved.room ?? {}, account: saved.account ?? {} };
     }
   } catch { /* nothing kept here: start empty */ }
-  return { next: 1, local: [], room: {} };
+  return { next: 1, local: [], room: {}, account: {} };
 }
 function save(workspaceId: string, saved: Saved) {
   try { window.localStorage.setItem(queueKey(workspaceId), JSON.stringify(saved)); } catch { /* kept for this visit only */ }
@@ -137,6 +141,12 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     return rooms;
   };
   const roomChanged = () => { rooms = null; };
+  // the member's own requests kept with the account; any failure leaves this browser's own list
+  const account = accountRequests(cloud);
+  const accountRows = async (): Promise<AccountRequest[]> => {
+    if (!accountRequestsOn()) return [];
+    try { return await account.list(); } catch { return []; }
+  };
   // the last song list read, so a dropped connection keeps the panel's titles on screen
   let lastSongs: PlayableSong[] | null = null;
   const knownSongs = async (): Promise<PlayableSong[]> => {
@@ -149,8 +159,8 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
   };
 
   /** Every waiting request, this browser's own first, then the room's in the order they came. */
-  const rows = async (): Promise<{ rows: RequestRow[]; saved: Saved; room: RoomRequest[] }> => {
-    const [all, handed] = await Promise.all([knownSongs(), roomRequests()]);
+  const rows = async (asked?: AccountRequest[]): Promise<{ rows: RequestRow[]; saved: Saved; room: RoomRequest[] }> => {
+    const [all, handed, own] = await Promise.all([knownSongs(), roomRequests(), asked ?? accountRows()]);
     // a room that has closed takes its unplayed requests with it: the server lists open rooms
     // only, and once this browser knows which room is open (or that none is) it holds to that
     const openNow = openRoomId();
@@ -161,8 +171,11 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     for (const asked of room) {
       kept[asked.id] = saved.room[asked.id] ?? saved.next++;
     }
-    const changed = JSON.stringify(kept) !== JSON.stringify(saved.room);
+    const mine: Record<string, number> = {};
+    for (const asked of own) mine[String(asked.id)] = saved.account[String(asked.id)] ?? saved.next++;
+    const changed = JSON.stringify(kept) !== JSON.stringify(saved.room) || JSON.stringify(mine) !== JSON.stringify(saved.account);
     saved.room = kept;
+    saved.account = mine;
     if (changed) save(workspaceId, saved);
     const link = controller?.() ?? null;
     const places = holders?.() ?? null;
@@ -195,6 +208,7 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     const shown = link ? room.filter((asked) => !sentToSpeaker.has(asked.id)) : room;
     return {
       rows: [
+        ...own.map((asked) => row(mine[String(asked.id)], asked.song_id)),
         ...saved.local.map((asked) => row(asked.id, asked.song_id)),
         ...shown.map((asked) => row(kept[asked.id], asked.song_id, asked)),
       ],
@@ -209,13 +223,22 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     const handed = await roomRequests();
     const openNow = openRoomId();
     const waiting = openNow === undefined ? handed.length : handed.filter((asked) => asked.room_id === openNow).length;
-    if (!waiting && !load(workspaceId).local.length) return { requests: [] as RequestRow[] };
-    return { requests: (await rows()).rows };
+    const own = await accountRows();
+    if (!waiting && !own.length && !load(workspaceId).local.length) return { requests: [] as RequestRow[] };
+    return { requests: (await rows(own)).rows };
   };
 
   /** Let a request go: this browser's own is forgotten, a room's is reported to the room. */
   const finish = async (id: number, outcome: 'played' | 'dismiss') => {
     const { saved, room } = await rows();
+    const kept = Object.entries(saved.account).find(([, number]) => number === id)?.[0];
+    if (kept) {
+      // the account's own: let go there, on every device (played or dismissed alike)
+      await account.letGo(Number(kept));
+      delete saved.account[kept];
+      save(workspaceId, saved);
+      return true;
+    }
     const local = saved.local.find((asked) => asked.id === id);
     if (local) {
       saved.local = saved.local.filter((asked) => asked.id !== id);
@@ -238,6 +261,12 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     const { rows: now, saved } = await rows();
     // asked for already: the list as it is, never a second row for the same song
     if (!now.some((row) => row.song_id === song.id)) {
+      if (accountRequestsOn()) {
+        try {
+          await account.ask(song.id);
+          return await list();
+        } catch { /* the account can't take it now: this browser keeps it */ }
+      }
       saved.local.push({ id: saved.next, song_id: song.id, at: Date.now() });
       saved.next += 1;
       save(workspaceId, saved);
@@ -262,7 +291,9 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
       lastSent = { order: order.join(','), before, index: change.song_index };
     }
     const { saved, room } = await rows();
-    if (saved.local.some((own) => own.id === asked.id)) {
+    if (Object.values(saved.account).includes(asked.id)) {
+      await finish(asked.id, 'played').catch(() => undefined);
+    } else if (saved.local.some((own) => own.id === asked.id)) {
       saved.local = saved.local.filter((own) => own.id !== asked.id);
       save(workspaceId, saved);
     } else {
@@ -373,7 +404,7 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
       }
       if (/^\/requests\/\d+\/(bridges|bridge)$/.test(route)) return Promise.reject(refuse(NO_BRIDGES, 'flag_off'));
       if (/^\/requests\/\d+\/hear$/.test(route)) return Promise.reject(refuse(NOTHING_TO_HEAR, 'flag_off'));
-      return Promise.reject(refuse('SelectaDJ can’t do that with requests in your browser yet.', 'flag_off', 404));
+      return Promise.reject(refuse('In your browser, a request can be asked for, added next or dismissed.', 'flag_off', 404));
     },
   };
 }

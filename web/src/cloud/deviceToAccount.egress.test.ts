@@ -4,9 +4,11 @@ import { setFlags } from '../flags';
 import { assertNoPath } from '../media/identity';
 import { forgetAccountMeasured } from './accountFacts';
 import { accountMixes } from './accountMixes';
+import { accountRequests } from './accountRequests';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
+import { localFirstRequest } from './localFirstRequest';
 import { reportSeam } from './seamReports';
 import { planningCalls } from './studioWiring';
 import type { MadeSeam } from '../dsp/render/seamMaker';
@@ -37,6 +39,15 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['POST', /^\/mix\/move$/],
   ['PUT', /^\/mix\/order(\?draft=\d+)?$/],
   ['POST', /^\/mix\/\d+\/seam$/],
+  // locks, with the account keeping the mix: a position, and no body at all
+  ['POST', /^\/mix\/\d+\/lock$/],
+  // cloud.brain with cloud.device_analysis: the member's own tempo and key for one song
+  ['PUT', /^\/song-facts\/\d+\/correction$/],
+  ['DELETE', /^\/song-facts\/\d+\/correction$/],
+  // cloud.account_mixes: the member's own requests, by catalogue song id and request id only
+  ['GET', /^\/requests$/],
+  ['POST', /^\/requests$/],
+  ['DELETE', /^\/requests\/\d+$/],
 ];
 
 /** The one request that is not to the account: the beat tracker's model file, fetched from
@@ -242,6 +253,46 @@ describe('the mixes kept with the account', () => {
     const { calls, request } = capturing();
     expect(accountMixes(request).answer('GET', '/mix', '', undefined)).toBeUndefined();
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe('the requests kept with the account', () => {
+  it('carry a catalogue song id or a request id, never a path or audio', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true });
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => {
+      const answer = await capture(path, init);
+      return path === '/requests' && !init?.method ? { requests: [] } : answer;
+    }) as typeof capture;
+    const requests = accountRequests(request);
+    await requests.ask(5);
+    await requests.list();
+    await requests.letGo(12);
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['POST /requests', 'GET /requests', 'DELETE /requests/12']);
+    calls.forEach(holdsTheContract);
+    expect(calls[0].body).toEqual({ song_id: 5 });
+  });
+});
+
+describe('a correction from Song details', () => {
+  it('carries a tempo and a key, and nothing about the file', async () => {
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => (path.startsWith('/local-media/') ? { songs: [] } : capture(path, init))) as typeof capture;
+    const adapted = localFirstRequest(request, { workspaceId: 'w1' });
+    await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ bpm: 121.5, camelot: '8A', clear: [] }) });
+    await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ clear: ['bpm', 'camelot'] }) });
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['PUT /song-facts/4/correction', 'DELETE /song-facts/4/correction']);
+    calls.forEach(holdsTheContract);
+    expect(calls[0].body).toEqual({ bpm: 121.5, camelot: '8A' });
+    expect(calls[1].body).toBeUndefined();
+  });
+
+  it('a lock names a position and carries nothing', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true });
+    const { calls, request } = capturing();
+    await accountMixes(request).answer('POST', '/mix/2/lock', '', { method: 'POST' });
+    expect(calls).toEqual([{ method: 'POST', path: '/mix/2/lock', body: undefined }]);
+    calls.forEach(holdsTheContract);
   });
 });
 

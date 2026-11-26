@@ -152,7 +152,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     } else if (body.action === 'energy_arc') {
       next = { ...now, energy_arc: Array.isArray(body.value) ? (body.value as number[]) : null };
     } else {
-      throw refuse('SelectaDJ can’t change that in your browser yet.', 'flag_off', 404);
+      throw refuse('That setting works in the SelectaDJ app on a computer. Here you can choose the ending, the mix language and the energy shape.', 'flag_off', 404);
     }
     store.setSteering(next);
     return next;
@@ -187,7 +187,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
 
   // the move into one song (cloud.browser_moves): the same route local mode's editor posts to
   const chooseMove = async (position: number, init?: RequestInit): Promise<MixData> => {
-    if (!browserMovesOn()) throw refuse('SelectaDJ can’t change transitions in your browser yet.', 'flag_off', 404);
+    if (!browserMovesOn()) throw refuse('In this browser SelectaDJ picks each transition for you.', 'flag_off', 404);
     const body = JSON.parse(String(init?.body ?? '{}')) as { move?: string };
     const move = body.move ?? 'auto';
     if (!(browserMovesAllowed() as string[]).includes(move)) {
@@ -222,7 +222,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
 
   const saveCopy = async (init?: RequestInit): Promise<{ name: string }> => {
     const body = JSON.parse(String(init?.body ?? '{}')) as { name?: string; copy_current?: boolean };
-    if (!body.copy_current) throw refuse('SelectaDJ can’t make that kind of draft in your browser yet.', 'flag_off', 404);
+    if (!body.copy_current) throw refuse('In a browser, Save a copy copies the current mix. Make a Mix starts a new one.', 'flag_off', 404);
     const id = store.current();
     if (!id) throw refuse('There is no current browser mix to copy. Press Play on Make a Mix first.', 'no_mix', 404);
     // a tidy "… copy" name from the current one; if it cannot be read, the server names the copy

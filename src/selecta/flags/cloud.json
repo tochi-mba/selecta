@@ -129,6 +129,17 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.hosted_brain": {
+      "label": "Uploaded-music mixes from SelectaDJ's own planner",
+      "about": "For a hosted account, a server mix of uploaded songs is ordered and each transition chosen by the same planner the Desktop app uses (selecta.hosted_brain, workers.engine_core): the songs' measurements come from the account's song facts, every way into the next song is weighed and ranked, and each transition is rendered, checked and repaired by the Desktop's own rule, at most five takes and a clean cut. Off: the older order and move choice, exactly as before. Off until it has been listened to.",
+      "requires": ["cloud.hosted_render", "cloud.brain"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Changes which transitions the server renders for a hosted mix, not any screen: the hosted card looks and works the same either way"
+    },
     "cloud.local_first": {
       "label": "Browser-first personal Cloud",
       "about": "Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455).",
@@ -274,7 +285,7 @@
     },
     "cloud.account_mixes": {
       "label": "Your mixes in one place",
-      "about": "The account's mixes come from one place on every device: the current mix and every draft are kept with the account in the same form the Desktop app keeps them (ADR-0479, docs/engineering/engine-store-mixes.md), and the browser reads and changes them through the Desktop's own mix routes, which also need cloud.brain. The first time an account uses them, its saved browser mixes are copied in as drafts once; nothing about them is changed or removed. Mixes hold catalogue song ids and transition choices, never audio or file paths. Off until it has been tried on a real account: the browser keeps its saved browser mixes as before, and these routes answer flag_off.",
+      "about": "The account's mixes come from one place on every device: the current mix and every draft are kept with the account in the same form the Desktop app keeps them (ADR-0479, docs/engineering/engine-store-mixes.md), and the browser reads and changes them through the Desktop's own mix routes, which also need cloud.brain. The account's song requests are kept with it the same way and answer the Desktop's request routes, since a request joins the account's mix. The first time an account uses them, its saved browser mixes are copied in as drafts once; nothing about them is changed or removed. Mixes hold catalogue song ids and transition choices, never audio or file paths. Off until it has been tried on a real account: the browser keeps its saved browser mixes as before, and these routes answer flag_off.",
       "routes": [
         "PUT /api/mix/order"
       ],
