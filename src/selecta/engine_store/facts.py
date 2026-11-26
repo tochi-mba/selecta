@@ -56,13 +56,23 @@ def python_implementation(version: int = ANALYSIS_VERSION) -> str:
 # never share a key with the Python analysis's (`ANALYSIS_VERSION`, single digits). Add a new
 # device implementation here, and to `RANK`.
 DEVICE_IMPLEMENTATIONS: dict[str, int] = {
-    # the browser's deterministic measurements (web/src/dsp, docs/engineering/device-analysis.md)
+    # the browser's deterministic measurements (web/src/dsp, docs/engineering/device-analysis.md),
+    # as clients sent them before they named their beat source
     "web-dsp-1": 1001,
+    # the same, with the beat source named: the interim onset comb, then Beat This itself
+    "web-dsp-1+web-onset-comb-beats-1": 1002,
+    "web-dsp-1+web-beatthis-small0-1": 1003,
 }
 
 # Lowest first. A measurement from a higher implementation replaces a lower one from the same
-# source; an implementation not listed ranks below all of these.
-RANK: tuple[str, ...] = ("web-dsp-1", python_implementation())
+# source; an implementation not listed ranks below all of these. The browser's Beat This ranks
+# above its interim beats and below SelectaDJ's own Python analysis.
+RANK: tuple[str, ...] = (
+    "web-dsp-1",
+    "web-dsp-1+web-onset-comb-beats-1",
+    "web-dsp-1+web-beatthis-small0-1",
+    python_implementation(),
+)
 
 # Limits, from what the Python analysis can produce (analysis/beats.py, features.py, key.py).
 MAX_SONG_SECONDS = 2 * 3600.0
