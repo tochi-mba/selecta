@@ -497,9 +497,13 @@ def _scan(
             store, report, root, songs, subtitled, known, seen, files, careful, unreadable
         )
     classify(songs, subtitled, root)
+    # a re-tagged or replaced file keeps the person's choice too (T-20261126-05d1)
+    chosen = _music_choices(conn, [song["path"] for song in songs if "id" not in song])
 
     for song in songs:
         override = song.get("music_override")
+        if override is None:
+            override = chosen.get(song["path"])
         if override is not None:
             song["is_music"] = int(override)
             song["set_aside_reason"] = None if override else "you set this aside"
@@ -540,6 +544,21 @@ def set_aside_summary(conn: sqlite3.Connection) -> list[sqlite3.Row]:
 
 UNCHANGED = "\x00unchanged"
 """Marks an unchanged file's place in the scan's list until its stored row is read."""
+
+
+def _music_choices(conn: sqlite3.Connection, paths: list[str]) -> dict[str, int]:
+    """The person's music choice for files read again (their rows already exist by path)."""
+    found: dict[str, int] = {}
+    for start in range(0, len(paths), 500):
+        part = paths[start : start + 500]
+        marks = ",".join("?" for _ in part)
+        rows = conn.execute(
+            f"SELECT path, music_override FROM songs WHERE path IN ({marks}) "  # noqa: S608
+            "AND music_override IS NOT NULL",
+            part,
+        )
+        found.update({row[0]: int(row[1]) for row in rows})
+    return found
 
 
 def _finish_through_store(

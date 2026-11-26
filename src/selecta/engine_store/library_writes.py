@@ -116,15 +116,15 @@ def save_scanned(
     unchanged: set[str],
     settle: Callable[[dict[str, Any], int | None], None],
 ) -> None:
-    """The scan's last step, `SCAN_BATCH` songs per write. Each unchanged file's override is read
-    inside the write that saves it, so a choice made while the scan ran is never lost, and
-    `settle(record, override)` applies the scanner's rule before the row is written."""
+    """The scan's last step, `SCAN_BATCH` songs per write. Each file's override is read inside
+    the write that saves it, so a choice made while the scan ran is never lost, and a re-tagged or
+    replaced file keeps it too (T-20261126-05d1); `settle(record, override)` applies the
+    scanner's rule before the row is written. `unchanged` is kept for the callers' shape."""
+    del unchanged
     for start in range(0, len(records), SCAN_BATCH):
         batch = records[start : start + SCAN_BATCH]
         with library_rows.write(store) as connection:
-            overrides = music_overrides(
-                connection, store, [song["path"] for song in batch if song["path"] in unchanged]
-            )
+            overrides = music_overrides(connection, store, [song["path"] for song in batch])
             for song in batch:
                 settle(song, overrides.get(song["path"]))
                 _upsert_song(connection, store, song)

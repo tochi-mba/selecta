@@ -411,3 +411,33 @@ def test_a_restore_closes_the_stores_connections_before_it_replaces_the_file(hom
     # without `library.forget` in the restore, Windows refuses to replace the open file
     assert backup.activate_pending_restore(home) is True
     assert _rows(home.db_path) == kept
+
+
+def test_a_changed_file_keeps_the_persons_music_choice_on_both_paths(home, tmp_path):
+    # T-20261126-05d1: a re-tagged or replaced file used to be classified afresh
+    root = tmp_path / "music"
+    _prepared(home, root)
+    conn = sqlite3.connect(home.db_path)
+    conn.execute("UPDATE songs SET music_override=0 WHERE title IN ('Two','Three')")
+    conn.commit()
+    conn.close()
+    _change(root)
+    copy = tmp_path / "copy.sqlite"
+    _copy(home.db_path, copy)
+    flags.use("")
+    old = db.connect(copy)
+    scan_folder(old, root)
+    old.close()
+    flags.use(FLAG_ON)
+    conn = db.connect(home.db_path)
+    scan_folder(conn, root)
+    conn.close()
+    for path in (home.db_path, copy):
+        check = sqlite3.connect(path)
+        rows = check.execute(
+            "SELECT is_music,set_aside_reason FROM songs WHERE path LIKE '%two.flac' "
+            "OR path LIKE '%three.flac'"
+        ).fetchall()
+        check.close()
+        assert rows == [(0, "you set this aside"), (0, "you set this aside")], path
+    assert _rows(home.db_path) == _rows(copy)
