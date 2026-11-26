@@ -6,7 +6,7 @@ import type { ControllerLink, WhereHeld } from '../devices/controller';
 import type { Api } from './api';
 import { registeredDeviceId } from './ConnectMusic';
 import { catalogueCopy, catalogueHeld, cloudLibraryAssets, cloudLibraryResolver, matchAsset, serverSaysCopies } from './cloudLibraryMedia';
-import { deviceMusicRequest, mediaRequest, type AvailabilitySources, type DeviceMusicRequest } from './deviceMusicRequest';
+import { deviceMusicRequest, mediaRequest, type AvailabilitySources, type CloudSongs, type DeviceMusicRequest } from './deviceMusicRequest';
 import type { RecipeStore } from './recipeStore';
 import { profilesBySong, type TonalStore } from './tonalProfiles';
 import { withVersions } from './songVersions';
@@ -133,14 +133,14 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, ca
 
 /** cloud.catalogue_play: every file of each song in the cloud library, read again with each
  * status, so choosing where the music plays counts them; null when off or not read yet. */
-export function useCloudSongs(request: DeviceMusicRequest, enabled: boolean, status: unknown): ReadonlySet<number> | null {
-  const [songs, setSongs] = useState<ReadonlySet<number> | null>(null);
+export function useCloudSongs(request: DeviceMusicRequest, enabled: boolean, status: unknown): CloudSongs | null {
+  const [songs, setSongs] = useState<CloudSongs | null>(null);
   useEffect(() => {
     if (!enabled) { setSongs(null); return undefined; }
     let live = true;
     void request.cloudSongs?.().then((found) => {
-      // the same songs again keep the same set, so nothing downstream draws again for nothing
-      if (live) setSongs((was) => (was && was.size === found.size && [...found].every((id) => was.has(id)) ? was : found));
+      // the same songs again keep the same answer, so nothing downstream draws again for nothing
+      if (live) setSongs((was) => (was && was.songs === found.songs && was.ids.size === found.ids.size && [...found.ids].every((id) => was.ids.has(id)) ? was : found));
     }, () => undefined);
     return () => { live = false; };
   }, [request, enabled, status]);

@@ -312,8 +312,10 @@ export function withMeasured(mix: MixData, measured: ReadonlyMap<number, Measure
  * (cloud.catalogue_play): a song's upload by catalogue id, and every file of a song with one. */
 export type DeviceMusicRequest = Request & {
   cloudAssetOf: (songId: number) => Promise<string | null>;
-  cloudSongs: () => Promise<ReadonlySet<number>>;
+  cloudSongs: () => Promise<CloudSongs>;
 };
+/** The songs in the cloud library: every file id of each, and how many songs. */
+export type CloudSongs = { ids: ReadonlySet<number>; songs: number };
 
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
 export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources = {}): DeviceMusicRequest {
@@ -679,11 +681,12 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     const rows = ids.flatMap((id) => grouping.files.filter((file) => file.id === id));
     return rows.length ? sources.cloudCopy(rows, grouping.files) : null;
   };
-  // every file of each song with a cloud copy, so a mix naming any version is matched
-  const cloudSongs = async (): Promise<ReadonlySet<number>> => {
+  // every file of each song with a cloud copy, so a mix naming any version is matched; and how
+  // many songs that is
+  const cloudSongs = async (): Promise<CloudSongs> => {
     const grouping = await grouped();
     const hosted = setBySong(grouping, (await sources.hosted?.(grouping.files).catch(() => null)) ?? new Set());
-    return new Set(grouping.files.filter((file) => hosted.has(grouping.primaryOf(file.id))).map((file) => file.id));
+    return { ids: new Set(grouping.files.filter((file) => hosted.has(grouping.primaryOf(file.id))).map((file) => file.id)), songs: hosted.size };
   };
   return Object.assign(adapted as Request, { cloudAssetOf, cloudSongs });
 }
