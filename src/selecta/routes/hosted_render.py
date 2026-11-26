@@ -24,7 +24,7 @@ from selecta.admin.state import DbWorkControls
 from selecta.authz.roles import WorkspaceAction
 from selecta.business.weight import business_policy
 from selecta.identity.tokens import Claims
-from selecta.storage.artifacts import Buckets
+from selecta.storage.artifacts import Buckets, R2ArtifactStore
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.work.cloud_ports import CloudJobEntitlements
 from selecta.work.store import JobStore
@@ -111,11 +111,15 @@ def install_routes(
         if isinstance(count, bool) or not isinstance(count, int) or not 2 <= count <= 60:
             raise HTTPException(400, detail={"code": "invalid_count"})
         pool: dict[str, int] = {}
+        client = object_client_factory()
         try:
+            # the engine store's artifacts: song facts kept from each analysis (hosted_facts)
             songs = hosted_render.plan_mix(engine, found.workspace.id, read_object, count=count,
-                                           pool=pool)
+                                           pool=pool, artifacts=R2ArtifactStore(client, buckets))
         except R2Error as error:
             raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
+        finally:
+            getattr(client, "close", lambda: None)()
         # `considered` of `analysed`: a library over 60 recordings is sampled for each plan
         return {"songs": songs, **pool}
 

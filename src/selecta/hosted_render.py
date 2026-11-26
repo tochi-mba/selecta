@@ -38,7 +38,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
-from selecta import hosted_caps, hosted_limits, hosted_status
+from selecta import hosted_brain, hosted_caps, hosted_limits, hosted_status
 from selecta.config import ANALYSIS_VERSION
 from selecta.persistence import db_now, transaction
 from selecta.scheduling.policy import Lane
@@ -69,10 +69,13 @@ def analysis_hash(sha256: str) -> str:
     return _hash({"source_sha256": sha256, "analysis": ANALYSIS_VERSION})
 
 
-def seam_hash(a_sha256: str, b_sha256: str, style: str | None) -> str:
+def seam_hash(a_sha256: str, b_sha256: str, style: str | None,
+              core: dict[str, str] | None = None) -> str:
+    """`core` is what a planner-core seam adds (`workers.engine_core.hash_part`); without it
+    the hash is exactly the older one, so every seam made before stays found."""
     return _hash(
         {"a": a_sha256, "b": b_sha256, "style": style, "analysis": ANALYSIS_VERSION,
-         "render": RENDER_VERSION}
+         "render": RENDER_VERSION, **(core or {})}
     )
 
 
@@ -494,28 +497,46 @@ def planning_pool(ready: Sequence[tuple[dict, Any]], *, pick=None) -> list[tuple
 
 def plan_mix(engine: Engine, workspace_id: str, read_object: Callable[[str, Path], Path],
              ids: Sequence[str] | None = None, count: int = 12,
-             pool: dict[str, int] | None = None) -> list[dict[str, Any]]:
+             pool: dict[str, int] | None = None, artifacts=None) -> list[dict[str, Any]]:
     """The local planner's order and moves for the analysed songs, each recording once
     (`one_per_recording`; module notes), chosen from `planning_pool`. With `pool`, it is
     filled with `considered` (the songs the plan chose from) and `analysed` (every analysed
-    recording), so the page can say plainly when a large library was sampled."""
+    recording), so the page can say plainly when a large library was sampled.
+
+    `artifacts` is the engine store's artifact store: with it, each analysed song's facts are
+    kept (`hosted_facts`, `cloud.brain`), and with `cloud.hosted_brain` the order is the planner
+    core's from those facts (`hosted_brain.plan_order`) whenever it can plan one."""
+    from selecta import flags, hosted_facts
     from selecta.planner.beam import plan_set
     from selecta.workers.engine_handlers import song_from_analysis
 
     with transaction(engine, workspace_id) as conn:
         songs = _songs(conn, workspace_id, ids)
-        ready = []
+        ready, audio_ids = [], {}
         for song in songs:
-            row = _artifact(conn, workspace_id, "analysis", analysis_hash(song["sha256"]))
+            digest = analysis_hash(song["sha256"])
+            row = _artifact(conn, workspace_id, "analysis", digest)
             key = _first_key(row["keys"]) if row is not None else None
             if key:
                 ready.append((song, key))
+                if artifacts is not None and flags.on(hosted_facts.FLAG):
+                    job = _latest_job(conn, workspace_id, ANALYSE, digest)
+                    audio_ids[song["id"]] = ((job["result"] if job is not None else None)
+                                             or {}).get("audio_id")
     recordings = one_per_recording(ready)
     ready = planning_pool(recordings)
     if pool is not None:
         pool.update(considered=len(ready), analysed=len(recordings))
     if len(ready) < 2:
         return [{"asset_id": song["id"], "move": None} for song, _key in ready]
+    hosted_facts.keep(engine, workspace_id,
+                      [(song["sha256"], key, audio_ids.get(song["id"])) for song, key in ready],
+                      read_object, artifacts)
+    if artifacts is not None and hosted_brain.on():
+        planned_core = hosted_brain.plan_order(
+            engine, workspace_id, [song for song, _key in ready], count, artifacts)
+        if planned_core:
+            return planned_core
     infos, by_number = [], {}
     with tempfile.TemporaryDirectory(prefix="selecta-plan-") as folder:
         for number, (song, key) in enumerate(ready, start=1):
@@ -610,7 +631,10 @@ def _cues(row) -> tuple[float, float, float] | None:
         return None
 
 
-def _seam_spec(workspace_id: str, a: dict, b: dict, move: str | None, lane, created_by):
+def _seam_spec(workspace_id: str, a: dict, b: dict, move: str | None, lane, created_by,
+               facts: tuple[dict, dict] | None = None):
+    """`facts` (each side's correction and lyrics, `hosted_brain.side_facts`) marks a
+    planner-core seam (`cloud.hosted_brain`); without it the job is exactly the older one."""
     def side(song: dict, analysis_key: str) -> dict:
         name = song["display_name"] or "Untitled"
         artist, _, title = name.rpartition(" - ")
@@ -619,13 +643,32 @@ def _seam_spec(workspace_id: str, a: dict, b: dict, move: str | None, lane, crea
                 "title": Path(title or name).stem[:120], "artist": (artist or None)}
 
     sa_, sb = side(a, a["analysis_key"]), side(b, b["analysis_key"])
+    core = None
+    if facts is not None:
+        from selecta.workers.engine_core import MARK, hash_part
+
+        sa_["facts"], sb["facts"] = facts
+        core = hash_part(sa_, sb)
+    digest = seam_hash(a["sha256"], b["sha256"], move, core)
+    input_ref = {"style": move, "a": sa_, "b": sb, "objects": _objects(
+        sa_["source_key"], sa_["analysis_key"], sb["source_key"], sb["analysis_key"]),
+        "output": _output("seam", digest)}
+    if core is not None:
+        input_ref["brain"] = MARK
     return JobSpec(
         workspace_id=workspace_id, type=SEAM, lane=lane, created_by=created_by,
-        idempotency_key=f"hosted-seam:{seam_hash(a['sha256'], b['sha256'], move)}",
-        input_ref={"style": move, "a": sa_, "b": sb, "objects": _objects(
-            sa_["source_key"], sa_["analysis_key"], sb["source_key"], sb["analysis_key"]),
-            "output": _output("seam", seam_hash(a["sha256"], b["sha256"], move))},
+        idempotency_key=f"hosted-seam:{digest}", input_ref=input_ref,
     )
+
+
+def _core_part(facts: dict[str, dict] | None, a: dict, b: dict):
+    """(the seam's hash part, its sides' facts) for a planner-core seam, or (None, None)."""
+    if facts is None:
+        return None, None
+    from selecta.workers.engine_core import hash_part
+
+    pair = (facts.get(a["sha256"].lower()) or {}, facts.get(b["sha256"].lower()) or {})
+    return hash_part({"facts": pair[0]}, {"facts": pair[1]}), pair
 
 
 def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dict[str, Any]],
@@ -648,12 +691,18 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
     prepare_songs(engine, work, workspace_id, ids, retry=retry, created_by=created_by)
     with transaction(engine, workspace_id) as conn:
         # only this workspace's own live songs: anyone else's id reads as a missing song
-        own = [song["id"] for song in _songs(conn, workspace_id, ids)]
+        mine = _songs(conn, workspace_id, ids)
+    own = [song["id"] for song in mine]
+    # cloud.hosted_brain: each seam is the planner core's, built from the engine store's facts
+    brain = (hosted_brain.side_facts(engine, workspace_id, [s["sha256"] for s in mine])
+             if hosted_brain.on() and mine else None)
     playback = {p.asset_id: p for p in proxies.prepare(
         work.store, workspace_id, own, need="mix", created_by=created_by)} if own else {}
     with transaction(engine, workspace_id) as conn:
         by_id = {song["id"]: song for song in _songs(conn, workspace_id, ids)}
         songs = [by_id[i] for i in ids if i in by_id]
+        analysed: list[tuple[str, str, str | None]] = []
+        rendered: list[dict[str, Any]] = []
         for song in songs:
             digest = analysis_hash(song["sha256"])
             row = _artifact(conn, workspace_id, "analysis", digest)
@@ -667,11 +716,19 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
                 song["file_sha256"] = made["checksum"] if made is not None else None
             elif prepared is not None and prepared.status == "direct":
                 song["file_sha256"] = song["sha256"]
+            if song["analysis_key"]:
+                analysed.append((song["sha256"], song["analysis_key"],
+                                 ((job["result"] if job is not None else None) or {})
+                                 .get("audio_id")))
         seams, wanted = [], []
         for index in range(len(songs) - 1):
             a, b, move = songs[index], songs[index + 1], moves[index + 1]
-            digest = seam_hash(a["sha256"], b["sha256"], move)
+            core, pair = _core_part(brain, a, b)
+            digest = seam_hash(a["sha256"], b["sha256"], move, core)
             row = _artifact(conn, workspace_id, "seam", digest)
+            if row is not None:
+                rendered.append({"a_sha256": a["sha256"], "b_sha256": b["sha256"],
+                                 "digest": digest, "row": row})
             job = _latest_job(conn, workspace_id, SEAM, f"hosted-seam:{digest}")
             state = _state(row, job)
             # a failed transition is tried again only on Try again (it plays as a plain change
@@ -681,7 +738,7 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
             if row is None and not (a["analysis_key"] and b["analysis_key"]):
                 state = {"state": "waiting_for_analysis"}
             elif why is not None:
-                wanted.append((index, a, b, move, job))
+                wanted.append((index, a, b, move, job, pair))
                 state = {"state": "queued"}
             result = (job["result"] if job is not None else None) or {}
             seams.append({"index": index, "planned_move": move, **state, "row": row,
@@ -689,13 +746,14 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
                           "fell_back": result.get("fell_back"), "checks": result.get("checks")})
         slots = fleet.pool_slots(conn, "cpu-heavy", db_now(conn) - WORKER_SEEN_S)
         durations = hosted_estimate.Durations(conn, workspace_id, FIRST_GUESS_S)
+    _keep_in_store(engine, workspace_id, analysed, rendered, read_object, client, buckets)
     capped = False
-    for index, a, b, move, old in wanted:
+    for index, a, b, move, old, pair in wanted:
         lane = Lane.INTERACTIVE if index < 2 else Lane.STANDARD
         # a first job for a hand-off takes this account's measured seconds for the move from
         # today's transition allowance (hosted_caps); a renewal or Try again takes nothing
         refused, by_allowance = _make_paid(
-            engine, work, _seam_spec(workspace_id, a, b, move, lane, created_by), old,
+            engine, work, _seam_spec(workspace_id, a, b, move, lane, created_by, pair), old,
             hosted_caps.TRANSITIONS, durations.expected(SEAM, move))
         capped = capped or by_allowance
         if refused:
@@ -715,6 +773,22 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
         left = {**left, "estimate_s": 0, "estimate_why": None}
     extra = {"allowance_used": paused} if paused else {}
     return {**timeline, **left, "worker_seen": slots > 0, **extra}
+
+
+def _keep_in_store(engine, workspace_id, analysed, rendered, read_object, client, buckets):
+    """The engine store's copy of what the workers made (`cloud.brain`): each analysed song's
+    facts the first time (`hosted_facts.keep`, also the backfill for older uploads) and each
+    rendered seam (`hosted_brain.keep_seams`). Never changes what the mix answers."""
+    from selecta import flags, hosted_facts
+
+    if not flags.on(hosted_facts.FLAG):
+        return
+    if client is not None and read_object is not None:
+        from selecta.storage.artifacts import R2ArtifactStore
+
+        hosted_facts.keep(engine, workspace_id, analysed, read_object,
+                          R2ArtifactStore(client, buckets))
+    hosted_brain.keep_seams(engine, workspace_id, rendered)
 
 
 def _timeline(workspace_id, songs, seams, playback, client, buckets, *, files=False):
