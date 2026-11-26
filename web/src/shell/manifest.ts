@@ -31,7 +31,9 @@ export type DestinationRequirements = {
   capability?: string;
 };
 export type Destination = { id: DestinationId; label: string; path: string; icon: IconName; about: string; requires?: DestinationRequirements };
-export type MoreDestination = { id: MoreDestinationId; label: string; path: string; about: string; requires: DestinationRequirements };
+/** `relabel`: another label while a flag is on (library.places calls uploading "Upload music",
+ * as the Library's Add music now holds every way to add songs). */
+export type MoreDestination = { id: MoreDestinationId; label: string; path: string; about: string; requires: DestinationRequirements; relabel?: { flag: FlagId; label: string } };
 export type DestinationContext = {
   mode: ShellMode;
   feature: (id: FlagId) => boolean;
@@ -70,13 +72,14 @@ export const MORE_DESTINATIONS: readonly MoreDestination[] = [
   { id: 'devices', label: 'Devices', path: '/account/devices', about: 'The browsers signed in to play, and which one is the speaker', requires: { modes: ['cloud'], flag: 'devices' } },
   { id: 'rooms', label: 'Rooms', path: '/rooms', about: 'Host a request room for your guests', requires: { modes: ['cloud'], flag: 'rooms' } },
   { id: 'workspace', label: 'This device', path: '/workshop', about: 'The music connected on this device and the storage it uses', requires: { modes: ['cloud'], experience: 'local_first' } },
-  { id: 'uploads', label: 'Add music', path: '/upload', about: 'Upload tracks to your cloud library', requires: { modes: ['cloud'], flag: 'cloud.uploads', experience: 'hosted' } },
+  { id: 'uploads', label: 'Add music', path: '/upload', about: 'Upload tracks to your cloud library', requires: { modes: ['cloud'], flag: 'cloud.uploads', experience: 'hosted' }, relabel: { flag: 'library.places', label: 'Upload music' } },
   // tools.listening_room: judging transitions by ear, on this device's own music (listening-room/)
   { id: 'listening_room', label: 'Listening Room', path: '/listening-room', about: 'Hear transitions from your mix two ways, without knowing which is which, and say which sounds better', requires: { modes: ['cloud'], flag: 'tools.listening_room', experience: 'local_first' } },
 ];
 
 export function moreDestinationsFor(context: DestinationContext): MoreDestination[] {
-  return MORE_DESTINATIONS.filter((destination) => destinationVisible(destination, context));
+  return MORE_DESTINATIONS.filter((destination) => destinationVisible(destination, context))
+    .map((destination) => (destination.relabel && context.feature(destination.relabel.flag) ? { ...destination, label: destination.relabel.label } : destination));
 }
 
 /** A More destination opened by its address, for the Cloud shell; null for any other address. */
