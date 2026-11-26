@@ -625,10 +625,10 @@ def world(tmp_path, monkeypatch):
 
     # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`, the upload dry run
     # behind `storage.upload_identity`, removing from the cloud library behind
-    # `library.places` and one cloud hand-off behind `cloud.studio_seams`; on here for the same
-    # reason.
+    # `library.places`, one cloud hand-off behind `cloud.studio_seams` and the export by
+    # catalogue song behind `cloud.one_mixer`; on here for the same reason.
     flags.use("+business.orgs +business.zones +library.art_embedded +library.art_lookup"
-              " +storage.upload_identity +library.places +cloud.studio_seams")
+              " +storage.upload_identity +library.places +cloud.studio_seams +cloud.one_mixer")
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)
