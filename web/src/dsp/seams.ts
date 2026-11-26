@@ -112,6 +112,9 @@ export interface SeamSchedule {
   stretch?: SeamStretch;
   /** A stem move (stemSchedule.ts): the recipe's plan and, once prepared, its per-stem audio. */
   stems?: SeamStems;
+  /** With planning from the account on (cloud/accountSeams.ts): who chose this move, the account's
+   * planner or this device, and when the device chose, why the account's choice wasn't used. */
+  chosenBy?: { by: 'account' | 'device'; note?: string };
 }
 
 /** A stem move's plan (stemMoves/types.ts) and the stems it plays. The events of the schedule

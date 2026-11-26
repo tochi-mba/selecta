@@ -79,6 +79,13 @@ export async function askWithin<T>(request: Request, path: string, init: Request
   }
 }
 
+/** `work`'s answer, or a TimeoutError once `ms` have passed with none. */
+export function answerWithin<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new TimeoutError()), ms); });
+  return Promise.race([work, limit]).finally(() => { if (timer !== undefined) clearTimeout(timer); });
+}
+
 /** Test seam, and sign-out: forget every list. */
 export function forgetAccountMeasured(): void {
   kept.clear();

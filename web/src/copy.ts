@@ -183,3 +183,7 @@ export const BANNED_CLAIMS: readonly string[] = [
   'plays your apple music',
   'sound is guaranteed',
 ];
+
+/** A transition the account's planner chose (cloud/accountSeams.ts), as the editor says why it
+ * played: the same words whatever the move, because the move's own name is said beside them. */
+export const PLANNED_TRANSITION_WHY = 'Planned from how both songs are built: their beats, bars, key and energy.';

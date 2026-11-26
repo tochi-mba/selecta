@@ -1,5 +1,5 @@
 import type { Status } from '../api';
-import { accountMeasured, askWithin, planningOn, type Request } from './accountFacts';
+import { accountMeasured, answerWithin, askWithin, planningOn, type Request } from './accountFacts';
 
 /** A browser mix's order from the account's planner (docs/engineering/device-to-account.md).
  *
@@ -66,7 +66,7 @@ export function accountOrderPlanner(request: Request, workspaceId: string, withi
     if (!planningOn() || ids.length < 2) return null;
     try {
       const started = Date.now();
-      const account = await askWithinList(request, workspaceId, within);
+      const account = await answerWithin(accountMeasured(request, workspaceId), within);
       const measured = ids.filter((id) => account.has(id) && !choices.never?.has(id));
       if (measured.length < ORDER_NEEDS || measured.length > ORDER_MOST) return null;
       const left = within - (Date.now() - started);
@@ -81,11 +81,4 @@ export function accountOrderPlanner(request: Request, workspaceId: string, withi
       return null;
     }
   };
-}
-
-/** The account's measured list, within the same bound as the whole order. */
-function askWithinList(request: Request, workspaceId: string, within: number): Promise<Map<number, unknown>> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const limit = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), within); });
-  return Promise.race([accountMeasured(request, workspaceId), limit]).finally(() => { if (timer !== undefined) clearTimeout(timer); });
 }

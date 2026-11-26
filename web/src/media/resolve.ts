@@ -18,6 +18,9 @@ export type ResolvedTrack = {
   data: () => Promise<ArrayBuffer>;
   /** Which path answered; device when absent (the plain device resolver). */
   source?: MusicSource;
+  /** The file on this device that answered: its catalogue song id (a version's own id when the
+   * song has several) and the content hash its bytes are checked against before they play. */
+  held?: { songId: number; sha: string };
 };
 
 /** The contract injected into the engine: null means unavailable on this device right now. */
@@ -39,12 +42,14 @@ export function makeResolver(
   return async (songId) => {
     const session = store.sessionFile(songId);
     const song = await store.get(songId);
+    const held = song ? { held: { songId, sha: song.identity.content_sha256 } } : {};
     if (session) {
       // A song whose hash came from the fingerprint memo is checked once against the bytes
       // before they first play (ADR-0469 memo rule); a picked file this import hashed itself is not.
-      if (song?.fingerprint !== 'remembered') return { id: songId, data: () => session.arrayBuffer() };
+      if (song?.fingerprint !== 'remembered') return { id: songId, ...held, data: () => session.arrayBuffer() };
       return {
         id: songId,
+        ...held,
         data: async () => {
           const bytes = await session.arrayBuffer();
           if (await bytesSha256(bytes) !== song.identity.content_sha256) {
@@ -67,6 +72,7 @@ export function makeResolver(
         const expected = song.identity.content_sha256;
         return {
           id: songId,
+          ...held,
           data: async () => {
             // The bytes are read for decoding anyway; hashing them proves they are still the
             // song the catalogue registered, so a file edited in place never plays as it.
@@ -95,7 +101,7 @@ export function makeResolver(
     // registered song.
     // A remembered hash is not yet proven, so it never names shared cached bytes.
     const bytes = song ? await readSongBytes(song, song.fingerprint ? { ...scope, shared: false } : scope, cache) : null;
-    if (bytes) return { id: songId, data: async () => bytes };
+    if (bytes) return { id: songId, ...held, data: async () => bytes };
     return null;
   };
 }

@@ -30,6 +30,7 @@ import { isStemMove, withStemMove, type StemReading, type StemStretcher } from '
 import { rampCurve, timeStretch } from './stretch';
 import type { StretchRamp } from './stretchLimits';
 import { spawnStretchWorker, stretchInWorker, STRETCH_TIMEOUT_MS } from './workers/stretchSpawn';
+import type { AccountSeamAnswer, AccountSeamAsk } from '../cloud/accountSeams';
 
 /** At most this much of each song is analysed for one seam. */
 export const ANALYSE_SECONDS = 60;
@@ -296,6 +297,9 @@ export type WorkerSeamProviderOptions = SeamProviderOptions & {
    * (up to PATIENT_FACTOR times its calibrated time) and counted, and never shrinks the horizon:
    * one busy moment no longer ends beatmatching for the rest of the visit. */
   patient?: () => boolean;
+  /** The account's planner (cloud/accountSeams.ts), asked before this device chooses: its plan
+   * on the songs' measured grids, why it declined, or null when it wasn't asked. */
+  planned?: (ask: AccountSeamAsk) => Promise<AccountSeamAnswer>;
 };
 
 /** Production seam provider. It performs onset and tempo analysis in a module worker and only
@@ -384,9 +388,16 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
         if (response.error || !response.tempo) throw new Error(response.error || 'tempo analysis returned no result');
         return timingFromAnalysis(buffer, facts, offset, response);
       };
+      // the account's plan comes on the songs' measured grids, so nothing is analysed for it
+      const answer = await options.planned?.({
+        fromIndex: request.fromIndex, toIndex: request.toIndex, fromSeconds: request.from.duration, toSeconds: request.to.duration,
+        settings, abilities: options.abilities(), allowed: options.allowed?.(),
+      }).catch(() => null) ?? null;
+      const plan = answer && 'schedule' in answer ? answer : null;
+      const chosenBy = plan ? plan.schedule.chosenBy : answer && 'declined' in answer ? { by: 'device' as const, note: answer.declined } : undefined;
       // an injected analysis (tests, diagnostics) stands in for the worker's
-      const a = options.timing ? options.timing(request.from, 'tail') : await analyse(request.from, 'tail');
-      const b = options.timing ? options.timing(request.to, 'head') : await analyse(request.to, 'head');
+      const a = plan ? plan.scripted.a : options.timing ? options.timing(request.from, 'tail') : await analyse(request.from, 'tail');
+      const b = plan ? plan.scripted.b : options.timing ? options.timing(request.to, 'head') : await analyse(request.to, 'head');
       const afterAnalysis = budgetState();
       if (!afterAnalysis.supported) throw new Error(afterAnalysis.reason ?? 'worker budget exhausted');
       if (disposed) return fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, 'seam preparation stopped');
@@ -394,7 +405,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
         ? [sources.a, sources.b].map((source) => options.sourceSafe?.(source) ?? { ok: true as const }).find((ability) => !ability.ok)
         : undefined;
       const abilities = options.abilities();
-      const scripted: ScriptRequest = {
+      const scripted: ScriptRequest = plan ? plan.scripted : {
         a, b,
         // a stem move's fallback is the move SelectaDJ would pick without stems
         move: isStemMove(settings.move) ? 'auto' : settings.move,
@@ -404,14 +415,15 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
         abilities,
         allowed: options.allowed?.(),
       };
-      let schedule: SeamSchedule = unsafe && !unsafe.ok
+      let schedule: SeamSchedule = plan && !(unsafe && !unsafe.ok) ? plan.schedule : unsafe && !unsafe.ok
         ? {
             ...fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, `mixed-source seam: ${unsafe.reason}`),
             style: settings.move || 'blend',
             degraded: [{ wanted: settings.move || 'blend', instead: 'fade' as const, reason: `one music path is not seam-safe: ${unsafe.reason}` }],
           }
         : scriptSeam(scripted);
-      if (options.stems && !(unsafe && !unsafe.ok)) {
+      // the planner's choice is played as planned; stems are weighed only when this device chooses
+      if (options.stems && !plan && !(unsafe && !unsafe.ok)) {
         const stretchStem: StemStretcher = async (channels, sampleRate, ramp) => {
           try {
             if (!stretcher) stretcher = makeStretcher();
@@ -450,6 +462,8 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
           schedule = unstretched(scripted, problem);
         }
       }
+      // who chose it, said on the record for the Listening Room and the seam inspector
+      if (chosenBy && !schedule.chosenBy) schedule = { ...schedule, chosenBy };
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule: recordable(schedule) });
       return schedule;
     } catch (problem) {
