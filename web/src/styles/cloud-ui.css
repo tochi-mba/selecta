@@ -158,6 +158,10 @@
 :where(:root[data-cloud='on']) .banner > .ui-icon { color: var(--tone); }
 :where(:root[data-cloud='on']) .banner > :is(p, span, div):not(.ui-icon) { flex: 1 1 200px; min-width: 0; margin: 0; }
 :where(:root[data-cloud='on']) .banner > :is(button, a.button) { flex: none; min-height: 32px; padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
+/* a finger's target on a touch screen */
+@media (pointer: coarse), (max-width: 760px) {
+  :where(:root[data-cloud='on']) .banner > :is(button, a.button) { min-height: var(--control-height); }
+}
 :where(:root[data-cloud='on']) .badge { --tone: var(--text-soft); display: inline-flex; align-items: center; gap: var(--icon-gap-dense); padding: 0 var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--tone) 16%, transparent); color: var(--tone); font: var(--weight-label) var(--text-xs) / 1.83 var(--body); white-space: nowrap; }
 :where(:root[data-cloud='on']) .badge:not([data-tone]) { background: var(--surface-control); color: var(--text); }
 :where(:root[data-cloud='on']) .badge[data-tone='accent'] { background: var(--primary-fill); color: var(--primary-ink); }
