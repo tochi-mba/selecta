@@ -160,7 +160,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | Route | Side effect |
 |---|---|
 | `POST /api/requests/consider` | Plans pending requests into the mix |
-| `POST /api/requests/{request_id}/bridges` | Searches for bridge songs (no mix change) |
+| `POST /api/requests/{request_id}/bridges` | Searches for bridge songs (no mix change); for a Cloud account over its stored song facts, nothing stored (`cloud_brain/bridge_routes.py`) |
 | `POST /api/requests/{request_id}/bridge` | Records consent to a bridge song |
 | `POST /api/requests/{request_id}/hear` | Renders the route so it can be heard first |
 | `POST /api/requests/{request_id}/add` | Forces a request in without a clean route |

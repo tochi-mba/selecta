@@ -51,6 +51,7 @@ BRAIN_SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/requests"): {"song_id": 1},
     ("DELETE", "/api/requests/{request_id}"): None,
     ("POST", "/api/requests/{request_id}/bridge"): {"allow": False},
+    ("POST", "/api/requests/{request_id}/bridges"): {},
     ("POST", "/api/requests/{request_id}/add"): {},
     ("POST", "/api/requests/consider"): {
         "order": [1], "position": 0, "phase": "playing", "seconds_left": 60.0,
