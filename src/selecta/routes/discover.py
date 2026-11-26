@@ -22,7 +22,7 @@ from selecta.arrange import (
     what_changed,
 )
 from selecta.discovery.hearing import STEPS, audition_folder, make_audition
-from selecta.discovery.search import spread_out
+from selecta.discovery.search import spread_out, store_of
 from selecta.eta import combine, still_to_go
 from selecta.routes.files import audio_file
 from selecta.seams import STUDIO_SESSION
@@ -44,13 +44,22 @@ def add_routes(app, ctx) -> None:
     @app.get("/api/discoveries")
     def discoveries(limit: int = 40) -> list[dict]:
         with connect() as conn:
-            rows = conn.execute(
-                "SELECT d.*,a.artist artist_a,a.title title_a,b.artist artist_b,b.title title_b "
-                "FROM seam_book d JOIN songs a ON a.id=d.song_a JOIN songs b ON b.id=d.song_b "
-                "WHERE d.kind='harmonic_sequence_candidate' AND a.is_music=1 AND b.is_music=1 "
-                "AND a.duplicate_of IS NULL AND b.duplicate_of IS NULL "
-                "ORDER BY d.score DESC,d.id"
-            ).fetchall()
+            stored = store_of(conn)
+            if stored is not None:
+                from selecta.engine_store import discovery
+
+                rows = discovery.listed(stored)
+            else:
+                rows = conn.execute(
+                    # the columns named, so an adopted table's workspace_id stays out of it
+                    "SELECT d.id,d.song_a,d.song_b,d.kind,d.payload,d.score,d.status,"
+                    "a.artist artist_a,a.title title_a,b.artist artist_b,"
+                    "b.title title_b FROM seam_book d JOIN songs a ON a.id=d.song_a "
+                    "JOIN songs b ON b.id=d.song_b "
+                    "WHERE d.kind='harmonic_sequence_candidate' AND a.is_music=1 AND b.is_music=1 "
+                    "AND a.duplicate_of IS NULL AND b.duplicate_of IS NULL "
+                    "ORDER BY d.score DESC,d.id"
+                ).fetchall()
         found = [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
         wanted = max(0, min(limit, 200))
         waiting = [row for row in found if row["status"] == "new"]
@@ -59,16 +68,23 @@ def add_routes(app, ctx) -> None:
 
     def discovery_at(discovery_id: int):
         with connect() as conn:
-            row = conn.execute(
-                "SELECT * FROM seam_book WHERE id=? AND kind='harmonic_sequence_candidate'",
-                (discovery_id,),
-            ).fetchone()
+            stored = store_of(conn)
+            if stored is not None:
+                from selecta.engine_store import discovery
+
+                row = discovery.harmonic_link(stored, discovery_id)
+            else:
+                row = conn.execute(
+                    "SELECT song_a,song_b,payload FROM seam_book "
+                    "WHERE id=? AND kind='harmonic_sequence_candidate'",
+                    (discovery_id,),
+                ).fetchone()
             if row is None:
                 raise HTTPException(404, "Discovery not found")
             return (
-                analysed_or_404(conn, row["song_a"]),
-                analysed_or_404(conn, row["song_b"]),
-                json.loads(row["payload"]),
+                analysed_or_404(conn, row[0]),
+                analysed_or_404(conn, row[1]),
+                json.loads(row[2]),
             )
 
     @app.post("/api/discoveries/{discovery_id}/hear")
@@ -179,6 +195,13 @@ def add_routes(app, ctx) -> None:
         if body.verdict not in {"new", "approved", "rejected"}:
             raise HTTPException(400, "Choose approved, rejected, or new")
         with connect() as conn:
+            stored = store_of(conn)
+            if stored is not None:
+                from selecta.engine_store import discovery
+
+                if not discovery.review(stored, discovery_id, body.verdict):
+                    raise HTTPException(404, "Discovery not found")
+                return {"id": discovery_id, "status": body.verdict}
             changed = conn.execute(
                 "UPDATE seam_book SET status=? WHERE id=? AND kind='harmonic_sequence_candidate'",
                 (body.verdict, discovery_id),

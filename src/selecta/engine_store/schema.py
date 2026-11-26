@@ -370,7 +370,54 @@ request_marks = sa.Table(
 
 REQUEST_TABLES = (song_requests, request_bridge_approvals, request_routes, request_marks)
 
-ENGINE_TABLES = (ratings, analysis, song_overrides, *SEAM_TABLES, *MIX_TABLES, *REQUEST_TABLES)
+# The discovery slice (`engine_store.discovery`, docs/engineering/engine-store-discovery.md). On
+# Desktop the hand-made `seam_book` and the sweep's `discovery_comparisons`, adopted in place by
+# `lib0009discovery`, keeping their own keys (one workspace per file); Cloud's include it.
+
+# A link found between two songs: a word link, an ordered harmonic sequence or a tonal cousin.
+# `payload` is the link's JSON as found; `status` is new, approved or rejected.
+seam_book = sa.Table(
+    "seam_book",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("song_a", sa.Integer, nullable=False),
+    sa.Column("song_b", sa.Integer, nullable=False),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("payload", sa.Text, nullable=False),
+    sa.Column("score", sa.Float, nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="new"),
+    sa.UniqueConstraint(
+        "workspace_id", "song_a", "song_b", "kind", "payload", name="uq_seam_book_link"
+    ),
+    *_of_two_songs("seam_book"),
+)
+sa.Index("ix_seam_book_kind", seam_book.c.workspace_id, seam_book.c.kind, seam_book.c.score)
+
+# A pair the exhaustive sweep has compared, with both songs' fingerprints when it did, so a pair
+# whose features change is compared again. Written in the same write as the pair's links.
+discovery_comparisons = sa.Table(
+    "discovery_comparisons",
+    metadata,
+    sa.Column("workspace_id", Id, primary_key=True),
+    sa.Column("song_a", sa.Integer, primary_key=True, autoincrement=False),
+    sa.Column("song_b", sa.Integer, primary_key=True, autoincrement=False),
+    sa.Column("fingerprint_a", sa.Text, nullable=False),
+    sa.Column("fingerprint_b", sa.Text, nullable=False),
+    *_of_two_songs("discovery_comparisons"),
+)
+
+DISCOVERY_TABLES = (seam_book, discovery_comparisons)
+
+ENGINE_TABLES = (
+    ratings,
+    analysis,
+    song_overrides,
+    *SEAM_TABLES,
+    *MIX_TABLES,
+    *REQUEST_TABLES,
+    *DISCOVERY_TABLES,
+)
 """Every engine table Cloud has, for the migrations and the fail-closed policy."""
 
 library_metadata = sa.MetaData()
@@ -426,12 +473,14 @@ playback_skips = sa.Table(
 LIBRARY_TABLES = (songs, lyrics, playback_skips)
 
 __all__ = [
+    "DISCOVERY_TABLES",
     "ENGINE_TABLES",
     "LIBRARY_TABLES",
     "MIX_TABLES",
     "REQUEST_TABLES",
     "SEAM_TABLES",
     "analysis",
+    "discovery_comparisons",
     "drafts",
     "library_metadata",
     "lyrics",
@@ -444,6 +493,7 @@ __all__ = [
     "request_marks",
     "request_routes",
     "seam_attestations",
+    "seam_book",
     "seam_history",
     "seam_verdicts",
     "seams",

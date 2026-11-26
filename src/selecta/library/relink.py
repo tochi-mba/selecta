@@ -65,15 +65,24 @@ def _references(conn: sqlite3.Connection, ids: set[int]) -> dict[str, int]:
             f"SELECT COUNT(*) FROM ratings WHERE song_a IN ({marks}) OR song_b IN ({marks})",  # noqa: S608
             twice=True,
         )
+    from selecta.discovery.search import store_of
+
+    found = store_of(conn)
+    if found is not None:
+        from selecta.engine_store import discovery
+
+        discoveries = discovery.count_touching(found, ids)
+    else:
+        discoveries = count(
+            f"SELECT COUNT(*) FROM seam_book WHERE song_a IN ({marks}) OR song_b IN ({marks})",  # noqa: S608
+            twice=True,
+        )
     return {
         "current_mix": count(f"SELECT COUNT(*) FROM queue WHERE song_id IN ({marks})"),  # noqa: S608
         "drafts": in_drafts,
         "ratings": rated,
         "corrections": count(f"SELECT COUNT(*) FROM song_overrides WHERE song_id IN ({marks})"),  # noqa: S608
-        "discoveries": count(
-            f"SELECT COUNT(*) FROM seam_book WHERE song_a IN ({marks}) OR song_b IN ({marks})",
-            twice=True,
-        ),  # noqa: S608
+        "discoveries": discoveries,
     }
 
 
