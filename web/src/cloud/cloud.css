@@ -374,7 +374,7 @@
    by side once the window is wide enough; one column, files first, below that */
 .cloud-upload-panel[data-columns] .cloud-upload-intro { max-width: none; }
 .cloud-upload-main,
-.cloud-upload-side { display: grid; gap: var(--space-4); align-content: start; min-width: 0; }
+.cloud-upload-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-content: start; min-width: 0; }
 .cloud-upload-about { padding: var(--space-cozy) var(--space-4); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); background: var(--surface-control); }
 .cloud-upload-about h3 { margin: 0 0 var(--space-1); font-size: var(--text-md); }
 .cloud-upload-about p { margin: 0; color: var(--text-soft); }
@@ -404,7 +404,7 @@
 .cloud-upload-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-cozy); min-width: 0; color: var(--text-soft); }
 /* "Uploading {file name}: part 2 of 9" breaks inside a long name rather than widen the page */
 .cloud-upload-actions > span { min-width: 0; overflow-wrap: anywhere; }
-.cloud-upload-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2); }
+.cloud-upload-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 .cloud-upload-list li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -425,8 +425,11 @@
 }
 .cloud-unfinished h3 { margin: 0 0 var(--space-1); font-size: var(--text-md); }
 .cloud-unfinished p { margin: 0 0 var(--space-2); color: var(--text-soft); }
-.cloud-unfinished ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
-.cloud-unfinished li { display: flex; justify-content: space-between; gap: var(--space-3); overflow-wrap: anywhere; }
+.cloud-unfinished ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+.cloud-unfinished li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); overflow-wrap: anywhere; }
+/* a long file name is cut short beside its part count and Remove, never pushing them off the page */
+.cloud-unfinished li > .truncate { flex: 1 1 auto; }
+.cloud-unfinished li > :not(.truncate) { flex: none; }
 .cloud-unfinished small { color: var(--text-soft); }
 
 /* the hosted library */
