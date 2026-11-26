@@ -239,6 +239,16 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.one_mixer": {
+      "label": "One Make a Mix for songs in both places",
+      "about": "For an account with songs on its devices and in its cloud library, Make a Mix is the same mixer everyone has: the mix it makes becomes the current mix, so Listen, the editor, My Mixes and the mini player follow it, and Listen says when transitions are being got ready without holding up the music. Saving a mix as a file takes songs from both places, reading cloud songs to this device only; songs only on another device are left out by name. When every song is in the cloud library, the file can also be made there. Off: such an account keeps its separate cloud library card, and a file is saved only from songs on this device.",
+      "requires": ["cloud.local_first", "cloud.stored_media"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.catalogue_play": {
       "label": "Phones and other devices play cloud songs",
       "about": "A song in your cloud library plays on any device you are signed in on: it is found by the song itself, never by this device's own files or by its name, and its link is signed again when it runs out. Choosing where the music plays counts those songs as on every signed-in device, so a phone with no music of its own can play them here. Off, songs in the cloud library are matched as before.",
