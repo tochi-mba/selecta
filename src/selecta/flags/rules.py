@@ -165,6 +165,8 @@ def problems(
             found.append(f"rule {position} isn't a Rule")
             continue
         found += [f"rule {position}: {problem}" for problem in rule.problems]
+        if rule.kind == RuleKind.FOLLOWS and rule.params.get("flag") == flag_id:
+            found.append(f"rule {position}: a flag can't follow itself")
         if flag.kind == "experiment" and rule.kind == RuleKind.KILL_SWITCH:
             found.append(
                 f"rule {position}: an experiment can't have a kill switch; end the experiment"

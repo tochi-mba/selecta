@@ -48,6 +48,7 @@ function describe(rule: Rule) {
   if (rule.kind === 'users') return `${p.on ? 'On' : 'Off'} for ${(p.ids as string[]).length} users`;
   if (rule.kind === 'percentage') return `${p.percent}% rollout${p.plans ? ` of ${(p.plans as string[]).join(', ')}` : ''}`;
   if (rule.kind === 'schedule') return `${p.on === false ? 'Off' : 'On'} ${p.from ? `from ${when(p.from as number)}` : ''} ${p.until ? `until ${when(p.until as number)}` : ''}`.trim();
+  if (rule.kind === 'follows') return `${p.on === false ? 'Off' : 'On'} wherever ${String(p.flag)} is on`;
   return rule.kind;
 }
 
