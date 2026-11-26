@@ -69,10 +69,13 @@ describe('the planner move table', () => {
     expect(liveMoveFor('reverb_wash')).toEqual({ live: 'reverb_wash', beatmatched: false });
     expect(liveMoveFor('tempo_ramp')).toBeNull();
     expect(liveMoveFor('delay_throw')).toBeNull();
+    // loops and tempo walks only play from the planner's rendered script
+    expect(liveMoveFor('loop_room')).toBeNull();
+    expect(liveMoveFor('tempo_bridge')).toBeNull();
     expect(liveMoveFor('word_cut')).toBeNull();
     expect(liveMoveFor('toString')).toBeNull();
-    // every recipe in planner_core/recipes/__init__.py all_recipes has a row
-    expect(Object.keys(PLANNER_MOVES).sort()).toEqual(['bass_swap_blend', 'cut_on_one', 'delay_throw', 'echo_out', 'filter_sweep', 'reverb_wash', 'tempo_ramp']);
+    // every recipe in planner_core/recipes/__init__.py all_recipes has a row, the flagged ones too
+    expect(Object.keys(PLANNER_MOVES).sort()).toEqual(['bass_swap_blend', 'cut_on_one', 'delay_throw', 'echo_out', 'filter_sweep', 'loop_room', 'reverb_wash', 'tempo_bridge', 'tempo_ramp']);
   });
 });
 
