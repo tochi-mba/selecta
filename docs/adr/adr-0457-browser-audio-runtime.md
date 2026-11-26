@@ -1,6 +1,8 @@
 # ADR-0457 - Browser audio runtime
 
 > Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+>
+> Uploads from this device: [ADR-0489](adr-0489-uploading-songs-from-this-device-to-the-cloud-library.md). A song played from the cloud library only plays on this device from the cloud library, not from its file.
 
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 4/8 Implemented; 4/8 In progress.

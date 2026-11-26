@@ -1,6 +1,8 @@
 # ADR-0455 - Browser-first Cloud: goal and two Cloud modes
 
 > Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+>
+> Uploads from this device: [ADR-0489](adr-0489-uploading-songs-from-this-device-to-the-cloud-library.md) lets a member with the cloud library grant choose to upload device songs; the no-audio-egress rule here still holds for every account without it.
 
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 5/7 Implemented; 1/7 In progress; 1/7 Not started.

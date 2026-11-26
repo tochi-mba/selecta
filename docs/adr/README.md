@@ -28,6 +28,12 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 ---
 
+# SelectaDJ - Uploading songs from this device (2026-11-26)
+
+**Proposed; the owner made its decisions on 2026-11-26:** [ADR-0489](adr-0489-uploading-songs-from-this-device-to-the-cloud-library.md), phase 6 of the plan "Cloud with music in two places", behind `cloud.move_to_cloud`. A member with the cloud library grant can upload songs from this device to the cloud library, after one sheet that says what the batch would do and, once per wording, a short rights statement. The upload joins the same song, the file on the device is never touched, the song plays from the cloud library only after the upload is verified (or from both, by choice), and "Play from this device again" undoes it. Accounts without the grant see nothing new. It narrows ADR-0455, 0457, 0458 and 0465. 3 of 7 tasks implemented and 4 in progress; 0 independently Verified.
+
+---
+
 # Selecta Room Social ADR (2026-11-25)
 
 **Proposed; the owner approved the build plan on 2026-11-25:** [ADR-0488](adr-0488-room-social-features.md), programme prefix RS. Five things a room can do together, in party rooms and venue rooms: pick the next song, keep the songs you liked, reactions that teach the DJ, dedications from a fixed list, and tonight in numbers. Phones send only taps, votes and picks from a list (ADR-0416's no-free-text rule holds), and every feature works with phones alone; a paired screen only adds a shared view. 1 of 12 tasks implemented and 11 in progress (built and tested on the server, not yet walked in a browser); 0 independently Verified. Baseline main `ae460274`.

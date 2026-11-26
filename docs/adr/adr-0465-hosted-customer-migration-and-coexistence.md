@@ -1,6 +1,8 @@
 # ADR-0465 - Hosted customer migration and coexistence
 
 > Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+>
+> Correction (2026-11-26, [ADR-0489](adr-0489-uploading-songs-from-this-device-to-the-cloud-library.md)): this record describes one direction, from the cloud library to a device (export, then re-import). ADR-0489 adds the other: a member with the cloud library can upload songs from this device, and each upload joins the song it came from. Every such upload has the same content hash as a device song, so the reconciliation panel (BF-0465-02) calls each one "Matched" on your device, which is wrong for a song now played from the cloud library only. Its wording is to be fixed (to-do T-20261126-761a).
 
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 5/6 implemented in code; 0/6 in progress; 1/6 not started. Required regression and seeded integration tests plus real hosted-account evidence remain pending.
