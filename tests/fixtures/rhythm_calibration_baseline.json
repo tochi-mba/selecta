@@ -1,0 +1,9088 @@
+{
+ "four into four": [
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   16,
+   0.9579,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   16,
+   0.9407,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   16,
+   0.9291,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   16,
+   0.9288,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   16,
+   0.911,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   0,
+   16,
+   0.9079,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   16,
+   0.8995,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   32,
+   0.897,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   16,
+   0.8907,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   16,
+   0.8791,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   16,
+   0.8788,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   16,
+   0.8767,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   16,
+   0.8652,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   16,
+   0.861,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   16,
+   0.8537,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   16,
+   0.8495,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   32,
+   0.847,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   16,
+   0.8355,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   16,
+   0.8267,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   16,
+   0.8152,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   16,
+   0.8037,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   16,
+   0.7855,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "four into broken": [
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   16,
+   0.9583,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   16,
+   0.9404,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   16,
+   0.9291,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   16,
+   0.9287,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   16,
+   0.9095,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   0,
+   16,
+   0.9083,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   16,
+   0.8988,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   32,
+   0.8968,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   16,
+   0.8904,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   16,
+   0.8791,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   16,
+   0.8787,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   16,
+   0.8766,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   16,
+   0.8653,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   16,
+   0.8595,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   16,
+   0.8533,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   16,
+   0.8488,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   32,
+   0.8467,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   16,
+   0.8343,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   16,
+   0.8266,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   16,
+   0.8153,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   16,
+   0.8033,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   16,
+   0.7843,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "four into swung": [
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   16,
+   0.9587,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   16,
+   0.9402,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   16,
+   0.9295,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   16,
+   0.9284,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   16,
+   0.9103,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   0,
+   16,
+   0.9088,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   16,
+   0.899,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   32,
+   0.8969,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   16,
+   0.8902,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   16,
+   0.8795,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   16,
+   0.8784,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   16,
+   0.8764,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   16,
+   0.8655,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   16,
+   0.8603,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   16,
+   0.8535,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   16,
+   0.849,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   32,
+   0.8469,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   16,
+   0.8347,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   16,
+   0.8264,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   16,
+   0.8155,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   16,
+   0.8035,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   16,
+   0.7847,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "broken into four, 3 percent": [
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   16,
+   0.9399,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   16,
+   0.9353,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   16,
+   0.9287,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   16,
+   0.91,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   16,
+   0.9046,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   16,
+   0.8988,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   16,
+   0.8899,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   0,
+   16,
+   0.8853,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   16,
+   0.8787,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   32,
+   0.8768,
+   [
+    "outro into song start",
+    "B enters on A's phrase line"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   16,
+   0.8767,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   16,
+   0.86,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   16,
+   0.8546,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   16,
+   0.8542,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   16,
+   0.8488,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   16,
+   0.8455,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   16,
+   0.8352,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   16,
+   0.8267,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   32,
+   0.8265,
+   [
+    "outro into verse",
+    "B enters on A's phrase line"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   16,
+   0.8042,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   16,
+   0.7955,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   16,
+   0.7852,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "four into broken half time": [
+  [
+   "bass_swap_blend",
+   32,
+   8,
+   16,
+   0.9437,
+   [
+    "after chorus into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   16,
+   0.9285,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   16,
+   0.9258,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   32,
+   0.9258,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   16,
+   0.9145,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   32,
+   0.9142,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   16,
+   0.9101,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   16,
+   0.899,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   32,
+   0.8959,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   8,
+   16,
+   0.8937,
+   [
+    "after chorus into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   32,
+   0.8844,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   16,
+   0.8788,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   0,
+   16,
+   0.8785,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   16,
+   0.8758,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   32,
+   0.8662,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   16,
+   0.8645,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   16,
+   0.861,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   16,
+   0.8601,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   16,
+   0.8506,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   16,
+   0.8495,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   16,
+   0.849,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   12,
+   16,
+   0.8393,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   16,
+   0.8307,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   16,
+   0.8287,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   16,
+   0.811,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   16,
+   0.8006,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   16,
+   0.7995,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   12,
+   16,
+   0.7893,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   16,
+   0.7807,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "no pattern into broken": [
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   16,
+   0.9582,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   16,
+   0.9406,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   16,
+   0.9291,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   16,
+   0.9286,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   16,
+   0.9108,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   0,
+   16,
+   0.9082,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   16,
+   0.8994,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   32,
+   0.8969,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   16,
+   0.8906,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   16,
+   0.8791,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   16,
+   0.8786,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   16,
+   0.8769,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   16,
+   0.8649,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   16,
+   0.8608,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   16,
+   0.8541,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   16,
+   0.8494,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   32,
+   0.847,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   16,
+   0.8353,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   16,
+   0.8269,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   16,
+   0.8149,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   16,
+   0.8041,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   16,
+   0.7853,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "four into four, 5 percent": [
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "four into four, grid 0.7": [
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "four into four, 4 keys": [
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   16,
+   0.8888,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   16,
+   0.871,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   16,
+   0.8595,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   16,
+   0.8588,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   16,
+   0.841,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   0,
+   16,
+   0.8388,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   16,
+   0.8295,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   32,
+   0.827,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   16,
+   0.821,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   16,
+   0.8095,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   16,
+   0.8088,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   16,
+   0.8071,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   16,
+   0.7956,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.7937,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   16,
+   0.791,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   16,
+   0.7844,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.7837,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   16,
+   0.7795,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   32,
+   0.777,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   16,
+   0.7655,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7637,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   16,
+   0.7571,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   16,
+   0.7456,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.736,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   16,
+   0.7344,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.726,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7245,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   16,
+   0.7155,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7145,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.706,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.6945,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6538,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6438,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.636,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6338,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.626,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6245,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6238,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6238,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6238,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.616,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6145,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6138,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.606,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.606,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.606,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6045,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6038,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.596,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.5945,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.5945,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.5945,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.5938,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.586,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.5845,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.576,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5745,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ],
+ "rap, four into broken": [
+  [
+   "filter_sweep",
+   32,
+   0,
+   16,
+   0.9289,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   8,
+   8,
+   0.9288,
+   [
+    "after chorus into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   16,
+   0.9089,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   8,
+   8,
+   0.9088,
+   [
+    "after chorus into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   8,
+   0.9,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   16,
+   0.8998,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   0,
+   8,
+   0.8993,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   16,
+   0.8993,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   16,
+   0.8988,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   8,
+   0.8986,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   8,
+   0.88,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   16,
+   0.8798,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   0,
+   8,
+   0.8793,
+   [
+    "after chorus into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   16,
+   0.8793,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   16,
+   0.8788,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   8,
+   0.8786,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   0,
+   8,
+   0.87,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   0,
+   8,
+   0.8694,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   16,
+   0.8692,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   16,
+   0.8687,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   0,
+   8,
+   0.85,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   0,
+   8,
+   0.8494,
+   [
+    "outro into song start",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   16,
+   0.8492,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   16,
+   0.8487,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns",
+    "B's chorus lands as A leaves"
+   ]
+  ],
+  [
+   "filter_sweep",
+   32,
+   24,
+   8,
+   0.8452,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   16,
+   0,
+   0.8445,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   8,
+   16,
+   0.8348,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   8,
+   16,
+   0.8348,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   12,
+   8,
+   0.8342,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   8,
+   0.8341,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   32,
+   24,
+   8,
+   0.8252,
+   [
+    "after chorus into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   24,
+   8,
+   0.8183,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   24,
+   8,
+   0.8156,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   8,
+   16,
+   0.8148,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   8,
+   16,
+   0.8148,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   16,
+   0,
+   0.8145,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   12,
+   8,
+   0.8142,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   8,
+   0.8141,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   12,
+   16,
+   0.8109,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   16,
+   0,
+   0.8045,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   24,
+   8,
+   0.7983,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   24,
+   8,
+   0.7956,
+   [
+    "outro into verse",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   16,
+   0.7913,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   12,
+   16,
+   0.7909,
+   [
+    "outro into before chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   16,
+   0,
+   0.7845,
+   [
+    "after chorus into chorus",
+    "one voice hands straight to the next",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "filter_sweep",
+   40,
+   16,
+   8,
+   0.7768,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "filter_sweep",
+   48,
+   16,
+   8,
+   0.7758,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   16,
+   0,
+   0.775,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   16,
+   0,
+   0.7748,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   16,
+   0.7713,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   40,
+   16,
+   8,
+   0.7568,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "bass_swap_blend",
+   48,
+   16,
+   8,
+   0.7558,
+   [
+    "outro into chorus",
+    "B enters on A's phrase line",
+    "vocals take turns"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   16,
+   0,
+   0.745,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   16,
+   0,
+   0.7448,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   16,
+   0,
+   0.735,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   16,
+   0,
+   0.7348,
+   [
+    "outro into chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   16,
+   0,
+   0.715,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   16,
+   0,
+   0.7147,
+   [
+    "outro into chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   24,
+   0,
+   0.7045,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   12,
+   0,
+   0.6845,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   8,
+   0,
+   0.6845,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   24,
+   0,
+   0.675,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   24,
+   0,
+   0.6747,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   32,
+   0,
+   0,
+   0.6745,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   24,
+   0,
+   0.6745,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   24,
+   0,
+   0.6645,
+   [
+    "after chorus into verse"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   12,
+   0,
+   0.655,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   8,
+   0,
+   0.655,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   12,
+   0,
+   0.6547,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   8,
+   0,
+   0.6547,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   12,
+   0,
+   0.6545,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   8,
+   0,
+   0.6545,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   48,
+   0,
+   0,
+   0.645,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   24,
+   0,
+   0.645,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "cut_on_one",
+   40,
+   0,
+   0,
+   0.6447,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   24,
+   0,
+   0.6447,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   32,
+   0,
+   0,
+   0.6445,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   12,
+   0,
+   0.6445,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   8,
+   0,
+   0.6445,
+   [
+    "after chorus into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   24,
+   0,
+   0.6445,
+   [
+    "after chorus into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   24,
+   0,
+   0.635,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   24,
+   0,
+   0.6347,
+   [
+    "outro into verse"
+   ]
+  ],
+  [
+   "delay_throw",
+   32,
+   0,
+   0,
+   0.6345,
+   [
+    "after chorus into song start"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   12,
+   0,
+   0.625,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   8,
+   0,
+   0.625,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   12,
+   0,
+   0.6247,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   8,
+   0,
+   0.6247,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   12,
+   0,
+   0.6245,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   8,
+   0,
+   0.6245,
+   [
+    "after chorus into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   48,
+   0,
+   0,
+   0.615,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   12,
+   0,
+   0.615,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   8,
+   0,
+   0.615,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   24,
+   0,
+   0.615,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "echo_out",
+   40,
+   0,
+   0,
+   0.6147,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   12,
+   0,
+   0.6147,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   8,
+   0,
+   0.6147,
+   [
+    "outro into before chorus"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   24,
+   0,
+   0.6147,
+   [
+    "outro into verse",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   32,
+   0,
+   0,
+   0.6145,
+   [
+    "after chorus into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "delay_throw",
+   48,
+   0,
+   0,
+   0.605,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "delay_throw",
+   40,
+   0,
+   0,
+   0.6047,
+   [
+    "outro into song start"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   12,
+   0,
+   0.595,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   8,
+   0,
+   0.595,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   12,
+   0,
+   0.5947,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   8,
+   0,
+   0.5947,
+   [
+    "outro into before chorus",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   48,
+   0,
+   0,
+   0.585,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ],
+  [
+   "reverb_wash",
+   40,
+   0,
+   0,
+   0.5847,
+   [
+    "outro into song start",
+    "a moment worth marking"
+   ]
+  ]
+ ]
+}
