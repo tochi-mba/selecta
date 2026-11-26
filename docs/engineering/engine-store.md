@@ -75,8 +75,8 @@ every slice has moved; after that the engine chain is the only version.
 A backup is a copy of the whole library file, so `engine_version` travels with the rows it
 describes. With the flag on, a backup stamped by a newer app is refused. After a restore is
 activated, `api.create_app` opens the library once, so an older backup is brought forward on
-start, behind the usual upgrade backup. `work.sqlite` is not backed up yet; see the to-do item
-"work.sqlite in backups".
+start, behind the usual upgrade backup, and the seam import runs again. `work.sqlite` is never
+backed up: it holds jobs and leases, not results ([engine-store-seams.md](engine-store-seams.md)).
 
 ## Flags per request and per job
 
@@ -169,8 +169,7 @@ one transaction (docs/engineering/cloud-planning.md).
 ## Not moved yet
 
 - The other hand-made tables: `preferences`, `seam_book`, `drafts`, `queue`.
-- A seam's Good and Bad (`POST /api/seams/{key}/rate`, `GET /api/memory/ratings`). They live in
-  the seam's record files, not in `ratings`, and move with the seams slice; Cloud has no keyed
-  seam records to rate yet, so neither route is mounted in Cloud.
+- Seams moved in Phase 7 step 1: [engine-store-seams.md](engine-store-seams.md) has the tables,
+  the import, the two writers and what still reads the files.
 - Whole-file tools that copy rows between library files (`homes.py`, `recovery.py`) and the
   backup's own read-only checks keep using `sqlite3`: they work on files, not on a workspace.
