@@ -33,6 +33,9 @@
   :root[data-nav='down'] { --feel-scene-from-x: 0px; --feel-scene-from-y: var(--space-loose); }
   :root[data-nav='up'] { --feel-scene-from-x: 0px; --feel-scene-from-y: calc(-1 * var(--space-loose)); }
   :root[data-nav='jump'] { --feel-scene-from-x: 0px; --feel-scene-from-y: 0px; }
+  /* Right-to-left, deeper is to the left: forward arrives from the left and Back from the right. */
+  :root[data-nav='forward']:dir(rtl) { --feel-scene-from-x: calc(-1 * var(--space-loose)); }
+  :root[data-nav='back']:dir(rtl) { --feel-scene-from-x: var(--space-loose); }
 
   /* The frame that stays: it takes its new place at once and never fades, so the rail, the header
      and the playing dock do not blink. Only the new snapshot is drawn, and it is live. */

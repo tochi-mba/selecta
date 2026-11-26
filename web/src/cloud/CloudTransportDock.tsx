@@ -118,7 +118,9 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
       )}
       {track && (
         <section className="cloud-card cloud-library-player" aria-label="Player">
-          {custom && <CoverArt seed={track.id} size="small" />}
+          {/* the playing file's own picture kept on this device where it has one (its content hash
+              is the key), the same tile as its Library row otherwise */}
+          {custom && <CoverArt seed={track.id} songKey={player.queue[player.index]?.id === track.id ? player.queue[player.index]?.sha256 ?? undefined : undefined} size="small" />}
           <div>
             <p className="cloud-eyebrow">Now playing from your library</p>
             <strong data-testid="now-playing">{track.name}</strong>

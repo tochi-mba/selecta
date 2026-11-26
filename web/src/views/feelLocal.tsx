@@ -1,6 +1,7 @@
 import { CSSProperties, RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BlendArt } from '../cloud/BlendArt';
 import { feelCalm, feelOn } from '../feel/root';
+import { flashOnce } from '../feel/flashOnce';
 import { Moment, type MomentKind } from '../feel/moment';
 import { useApi } from '../requestContext';
 import { CoverArt } from './CoverArt';
@@ -84,11 +85,7 @@ export function useFlashOn(ref: RefObject<HTMLElement | null>, done: boolean | n
     if (before !== false || done !== true) return;
     const element = ref.current;
     if (!element || !feelOn('motion') || feelCalm()) return;
-    element.classList.remove('feel-flash');
-    // read layout once so the class added again starts its animation afresh
-    void element.offsetWidth;
-    element.classList.add('feel-flash');
-    element.addEventListener('animationend', () => element.classList.remove('feel-flash'), { once: true });
+    flashOnce(element);
   }, [done]);
 }
 
@@ -97,8 +94,7 @@ export function useFlashOnArrival(ref: RefObject<HTMLElement | null>, fresh: boo
   useLayoutEffect(() => {
     const element = ref.current;
     if (!fresh || !element || !feelOn('motion') || feelCalm()) return;
-    element.classList.add('feel-flash');
-    element.addEventListener('animationend', () => element.classList.remove('feel-flash'), { once: true });
+    flashOnce(element);
   }, []);
 }
 

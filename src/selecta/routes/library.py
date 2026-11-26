@@ -816,12 +816,16 @@ def add_routes(app, ctx) -> None:
             "Cache-Control": art.CACHE_CONTROL,
             "X-Content-Type-Options": "nosniff",
         }
-        if _matches(request.headers.get("if-none-match"), headers["ETag"]):
-            return Response(status_code=304, headers=headers)
         try:
             data = cover.path.read_bytes()
         except OSError:
             return none
+        # Checked before the 304 too, so a moving or oversized picture kept before the rule (and
+        # still held by a browser) is replaced by the generated tile (T-20261125-4054).
+        if not art.servable(data):
+            return none
+        if _matches(request.headers.get("if-none-match"), headers["ETag"]):
+            return Response(status_code=304, headers=headers)
         return Response(data, media_type=cover.mime, headers=headers)
 
     @app.post("/api/songs/{song_id}/analyse")

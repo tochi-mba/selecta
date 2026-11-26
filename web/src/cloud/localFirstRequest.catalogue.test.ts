@@ -10,6 +10,8 @@ function catalogue(total: number) {
   const pages: string[] = [];
   const cloud = vi.fn(async (path: string, init?: RequestInit) => {
     if ((init?.method ?? 'GET') !== 'GET') return {} as never;
+    // only the catalogue's pages are counted: a status read also asks what rooms loved (ADR-0488)
+    if (!path.startsWith('/local-media/songs')) return { marks: [] } as never;
     pages.push(path);
     const after = Number(new URL(`http://x${path}`).searchParams.get('after'));
     const songs: CatalogueSong[] = [];

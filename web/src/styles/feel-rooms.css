@@ -124,6 +124,10 @@
   inset: 0;
   animation: feel-speaker-pulse var(--motion-spring-glide) var(--spring-gentle) both;
 }
+/* the pulse runs toward the new speaker at the inline end, so right-to-left it runs the other way */
+:where(:root[data-feel~='motion']) .speaker-moved-pulse:dir(rtl) {
+  --feel-pulse-dir: -1;
+}
 :where(:root[data-feel~='motion']) .speaker-moved-pulse > i {
   position: absolute;
   inset-block: 0;
@@ -167,7 +171,7 @@
   from { opacity: 0; }
 }
 @keyframes feel-speaker-pulse {
-  from { transform: translateX(-100%); }
+  from { transform: translateX(calc(-100% * var(--feel-pulse-dir, 1))); }
   to { transform: translateX(0); }
 }
 @keyframes feel-beacon {

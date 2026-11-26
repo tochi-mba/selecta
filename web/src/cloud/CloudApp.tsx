@@ -28,7 +28,7 @@ import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
-import { checkoutBody, checkoutProblem, Consent, consentVersionFor, useCheckoutReturn } from './checkout';
+import { checkoutBody, checkoutProblem, Consent, consentVersionFor, rememberPlanBeforeCheckout, useCheckoutReturn } from './checkout';
 import { CloudTransportDock, singleAudioOwner } from './CloudTransportDock';
 import { ACCOUNT_STATES_FLAG, BUSINESS_FLAG, BUSINESS_JOIN_PATH, isBusinessPath, resolveRoute } from './cloudRoutes';
 import { parseBusinessPath } from '../business/context';
@@ -530,6 +530,7 @@ export function CloudApp() {
           method: 'POST', headers: { 'Idempotency-Key': idempotencyKey() },
           body: JSON.stringify(checkoutBody(plan, interval, consent, consentVersion, checkout === 'cancelled')),
         }, account.workspace.id);
+        rememberPlanBeforeCheckout(account.entitlement.plan);
         window.location.assign(result.url);
       } catch (problem) {
         // said beside the button that was pressed (Billing's hint line), not in a banner far above
@@ -830,7 +831,7 @@ export function CloudApp() {
           <button className="cloud-delete-account" onClick={() => setConfirmingDelete(true)} disabled={busy('delete')}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className={account ? 'cloud-eyebrow' : 'cloud-eyebrow cloud-caps'}>{account?.workspace.name ?? 'Your workspace'}</p><h1 ref={titleRef} tabIndex={-1}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className={account ? 'cloud-eyebrow' : 'cloud-eyebrow cloud-caps'}>{account?.workspace.name ?? 'Your workspace'}</p><h1 ref={titleRef} tabIndex={-1}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div>{/* the plan is said only once the account says it, never guessed */}{account && <span className="cloud-plan-chip">{planName(account)} plan</span>}</header>
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         <OverQuotaBanner account={account} go={choosePage} />

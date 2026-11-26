@@ -178,11 +178,13 @@ def install_routes(
                 raise HTTPException(
                     status_code=400, detail={"code": "invalid_choice", "message": str(error)}
                 ) from error
-        if fetch is not None:
-            service.queue_cover_fetch(engine, workspace_id, user_id, fetch)
+        # The cover is fetched only for a person who allows lookups (T-20261125-c9ae); otherwise
+        # the choice is still kept, and the song shows the generated tile until a cover exists.
+        queued = fetch is not None and service.queue_cover_fetch(
+            engine, workspace_id, user_id, fetch)
         with transaction(engine, workspace_id) as conn:
             return {"song": service.art_for_songs(conn, workspace_id, [song_id])[0],
-                    "cover_pending": fetch is not None}
+                    "cover_pending": queued}
 
     @app.get("/api/catalog/settings")
     def catalog_settings(request: Request,
@@ -196,7 +198,11 @@ def install_routes(
             claims: Claims = Depends(current_claims)):  # noqa: B008
         workspace_id, user_id = who(request, claims, WorkspaceAction.LIBRARY_READ)
         with transaction(engine, workspace_id) as conn:
-            return {"lookups": service.set_allowed(conn, user_id, body.lookups)}
+            saved = service.set_allowed(conn, user_id, body.lookups)
+        if not saved:
+            # Lookups this person queued must not leave after they said no (T-20261125-c9ae).
+            service.cancel_lookups(engine, user_id)
+        return {"lookups": saved}
 
     @app.get("/api/admin/catalog/art")
     def admin_catalog_art_search(

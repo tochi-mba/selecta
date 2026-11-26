@@ -100,6 +100,19 @@
   background: radial-gradient(ellipse at top, var(--ambient-tint), transparent 70%);
   transition: --ambient-hue var(--motion-slow) var(--motion-ease);
 }
+/* During a hand-over (feel/hue.ts travelAmbient) the song coming in has a second layer over this
+   one, each tinted once, and the two cross-fade by opacity. Easing the hue itself repainted the
+   whole screen every frame for the whole hand-over; opacity on a layer of its own is compositor
+   work. Each step eases over the step's own length, so the fade follows the music smoothly. */
+:where(:root[data-feel~='ambient']) :where(.ambient-layer[data-ambient='travel']) {
+  transition: opacity var(--motion-clock) var(--motion-ease);
+  will-change: opacity;
+}
+/* The hand-over is over: the layer takes the new song's hue at once, since the fade already
+   showed the change (feel/hue.ts endTravel). */
+:where(:root[data-feel~='ambient']) :where(.ambient-layer[data-ambient='settle']) {
+  transition: none;
+}
 
 /* ---- forced colours: borders and outlines carry every state ----------------------------------- */
 
