@@ -17,7 +17,7 @@ import time
 from typing import Any
 
 from selecta import mix
-from selecta.lucy import catalog, events, planning, proposals, readiness
+from selecta.lucy import backing, catalog, events, planning, proposals, readiness
 from selecta.lucy import settings as lucy_settings
 from selecta.lucy.ids import now_iso
 from selecta.lucy.intent import Constraint
@@ -36,6 +36,10 @@ class CommitError(Exception):
 
 
 def _conversation_of(conn: sqlite3.Connection, revision: dict) -> str | None:
+    if backing.store_of(conn) is not None:
+        from selecta.lucy import commit_store
+
+        return commit_store.conversation_of(conn, revision)
     row = conn.execute(
         "SELECT conversation_id FROM lucy_proposals WHERE id=?", (revision["proposal"],)
     ).fetchone()
@@ -81,9 +85,12 @@ def issue(conn: sqlite3.Connection, app: Any, revision_id: str, digest: str, act
     if action not in ACTIONS:
         raise CommitError("Choose to save as a draft, or to save and play.", "bad_action", 400)
     revision = proposals.get_revision(conn, revision_id)
-    current = conn.execute(
-        "SELECT current_revision FROM lucy_proposals WHERE id=?", (revision["proposal"],)
-    ).fetchone()
+    if backing.store_of(conn) is not None:
+        current = {"current_revision": proposals.current_id(conn, revision["proposal"])}
+    else:
+        current = conn.execute(
+            "SELECT current_revision FROM lucy_proposals WHERE id=?", (revision["proposal"],)
+        ).fetchone()
     if current is None or current["current_revision"] != revision_id:
         raise CommitError(
             "Only the current revision can be approved. Make this one current first.", "not_current"
@@ -93,6 +100,12 @@ def issue(conn: sqlite3.Connection, app: Any, revision_id: str, digest: str, act
     checked = preflight(conn, app, revision)
     token = secrets.token_urlsafe(24)
     expires = int(time.time()) + APPROVAL_SECONDS
+    store = backing.store_of(conn)
+    if store is not None:
+        from selecta.lucy import commit_store
+
+        commit_store.issue(store, token, revision_id, digest, action, expires)
+        return {"token": token, "expires_at": expires, "action": action, "preflight": checked}
     conn.execute(
         "INSERT INTO lucy_approvals(token,revision_id,hash,action,expires_at,created_at) "
         "VALUES(?,?,?,?,?,?)",
@@ -143,6 +156,11 @@ def commit(
 ) -> dict:
     if not key or len(key) > 100:
         raise CommitError("A commit needs an idempotency key.", "bad_key", 400)
+    store = backing.store_of(conn)
+    if store is not None:
+        from selecta.lucy import commit_store
+
+        return commit_store.commit(conn, store, app, token, key, confirm_play)
     known = conn.execute("SELECT * FROM lucy_commits WHERE idempotency_key=?", (key,)).fetchone()
     if known is not None:
         return _shape(reconcile(conn, known), True)
@@ -265,6 +283,11 @@ def reconcile(conn: sqlite3.Connection, row: sqlite3.Row) -> sqlite3.Row:
     never assume a failure meant no effect (LU-326-07, LU-334-03)."""
     if row["status"] != "pending":
         return row
+    store = backing.store_of(conn)
+    if store is not None:
+        from selecta.lucy import commit_store
+
+        return commit_store.reconcile(conn, store, row)
     created = row["created_at"]
     from datetime import datetime
 
@@ -307,5 +330,10 @@ def reconcile(conn: sqlite3.Connection, row: sqlite3.Row) -> sqlite3.Row:
 
 
 def status_of(conn: sqlite3.Connection, key: str) -> dict | None:
+    store = backing.store_of(conn)
+    if store is not None:
+        from selecta.lucy import commit_store
+
+        return commit_store.status_of(conn, store, key)
     row = conn.execute("SELECT * FROM lucy_commits WHERE idempotency_key=?", (key,)).fetchone()
     return None if row is None else _shape(reconcile(conn, row), True)
