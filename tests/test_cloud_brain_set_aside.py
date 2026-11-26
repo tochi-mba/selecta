@@ -23,7 +23,9 @@ def _catalogue(client, token=ALICE) -> dict[int, dict]:
 
 def test_set_aside_is_kept_apart_from_tempo_and_key(cloud):  # noqa: F811
     client, song = cloud["client"], cloud["ids"][0]
-    fix = client.put(f"/api/song-facts/{song}/correction", headers=_auth(ALICE), json={"bpm": 121.0})
+    fix = client.put(
+        f"/api/song-facts/{song}/correction", headers=_auth(ALICE), json={"bpm": 121.0}
+    )
     assert fix.status_code == 200, fix.text
     aside = client.put(
         f"/api/song-facts/{song}/correction", headers=_auth(ALICE), json={"is_music": False}
@@ -33,7 +35,8 @@ def test_set_aside_is_kept_apart_from_tempo_and_key(cloud):  # noqa: F811
     assert _catalogue(client)[song]["set_aside"] is True
     assert "set_aside" not in _catalogue(client)[cloud["ids"][1]]
     # clearing tempo and key keeps the mark
-    assert client.delete(f"/api/song-facts/{song}/correction", headers=_auth(ALICE)).status_code == 200
+    cleared = client.delete(f"/api/song-facts/{song}/correction", headers=_auth(ALICE))
+    assert cleared.status_code == 200
     assert _catalogue(client)[song]["set_aside"] is True
     # null clears the mark
     cleared = client.put(
@@ -59,7 +62,9 @@ def test_the_mark_is_strict_and_the_accounts_own(cloud):  # noqa: F811
 
 def test_the_planner_leaves_a_set_aside_song_out(cloud):  # noqa: F811
     client, ids = cloud["client"], cloud["ids"]
-    client.put(f"/api/song-facts/{ids[0]}/correction", headers=_auth(ALICE), json={"is_music": False})
+    client.put(
+        f"/api/song-facts/{ids[0]}/correction", headers=_auth(ALICE), json={"is_music": False}
+    )
     order = client.post(
         "/api/planning/order", headers=_auth(ALICE), json={"songs": ids, "count": 6, "seed": 7}
     )

@@ -357,6 +357,7 @@ def test_every_lucy_operation_through_the_store_matches_the_old_path(home, tmp_p
     flags.use(FLAG_ON)
     _reset(one_clock)
     conn = schema.ensure(db.connect(home.db_path))
+    assert backing.made_by_the_migration(conn)  # so `ensure` ran no DDL
     assert backing.store_of(conn) is not None
     said_new = _every_operation(conn)
     conn.close()

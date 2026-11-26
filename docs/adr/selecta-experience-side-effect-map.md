@@ -314,8 +314,8 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `PUT /api/song-facts/{song_id}` | Saves the facts a device measured for one catalogue song (the `analysis` row and its features artifact), unless a measurement that outranks them is stored (ADR-0479) |
 | `PUT /api/mix/order` | Cloud only (`cloud.account_mixes`): replaces the account's current mix, or a draft, with these catalogue songs in this order, keeping each chosen seam whose two songs stay together, after remembering it for Undo (ADR-0479) |
 | `PUT /api/seams/{key}` | Keeps a transition a device rendered (its pair, option, audit verdict, implementation, clip length and hash; never audio) and that device's attestation (Cloud, ADR-0479) |
-| `PUT /api/song-facts/{song_id}/correction` | Sets the member's tempo and key for a catalogue song (`song_overrides`); both null clears it |
-| `DELETE /api/song-facts/{song_id}/correction` | Clears the member's tempo and key correction for a catalogue song |
+| `PUT /api/song-facts/{song_id}/correction` | Sets the member's tempo and key for a catalogue song (`song_overrides`), and with `is_music` its set-aside mark (false sets it aside, kept out of planned mixes; null clears it; a body naming only `is_music` leaves tempo and key); nothing left clears the row |
+| `DELETE /api/song-facts/{song_id}/correction` | Clears the member's tempo and key correction for a catalogue song; a set-aside mark stays |
 | `POST /api/planning/candidates` | None: ranks the transitions between two of the account's songs and builds their scripts; nothing is stored |
 | `POST /api/planning/candidates/script` | None: builds one more ranked option's script; nothing is stored |
 | `POST /api/planning/next-step` | None: the repair rule's next step for the options and attempts sent; reads and stores nothing |
