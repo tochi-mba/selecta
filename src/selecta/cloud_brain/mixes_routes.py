@@ -40,6 +40,7 @@ MOST_SONGS = 200  # mix_contract.MAX_SONGS: the most a Cloud mix has ever held
 MOST_DRAFTS = 500
 MOST_OVERLAP_BARS = 64  # routes/edit.py
 WORKED_OUT_LIVE = "Worked out in your browser as the mix plays."
+PREPARED_IN_CLOUD = "Prepared in your cloud library."
 SongId = Field(gt=0, lt=2**31)
 
 
@@ -85,15 +86,37 @@ class MixChanged(Exception):
     """The page's view of the mix (`x-mix-order`) is no longer the mix."""
 
 
-def cloud_state(key: str) -> dict:
-    """A seam in a Cloud account's mix: nothing is rendered ahead, so none, with the words."""
-    return {"status": "none", "key": key, "why": WORKED_OUT_LIVE}
+def cloud_state(key: str, prepared: bool = False) -> dict:
+    """A seam in a Cloud account's mix: nothing on these tables is rendered ahead, so none, with
+    the words: prepared in the cloud library when the cloud studio made it, else live."""
+    return {"status": "none", "key": key, "why": PREPARED_IN_CLOUD if prepared else WORKED_OUT_LIVE}
+
+
+def _states(mixes: StoreMixes):
+    """`cloud_state` for each seam key, `prepared` when its record has a worker attestation (the
+    cloud studio rendered it). One read of those keys, on the first seam asked about."""
+    from selecta.engine_store import seams as stored
+    from selecta.engine_store.schema import seam_attestations as made
+
+    attested: set[str] | None = None
+
+    def state(key: str) -> dict:
+        nonlocal attested
+        if attested is None:
+            # a hosted session's own seams ("w" keys, hosted_seams.worker_seam_key) are never a
+            # mix's, so they are left out of the read
+            attested = set(mixes.connection.execute(sa.select(made.c.key).where(
+                mixes.store.mine(made), made.c.studio == stored.WORKER,
+                made.c.key.notlike("w%"))).scalars())
+        return cloud_state(key, key in attested)
+
+    return state
 
 
 def payload(mixes: StoreMixes, draft: int | None = None) -> dict:
     """`GET /api/mix` as Desktop answers it, without what only Desktop has (an estimate, a place
     in the render line, request marks)."""
-    items = mix.read_mix(mixes, None, draft, status=cloud_state)
+    items = mix.read_mix(mixes, None, draft, status=_states(mixes))
     answer = {
         "mix": items,
         "name": mix.mix_name(mixes, draft),
@@ -109,8 +132,9 @@ def drafts_payload(mixes: StoreMixes) -> dict:
     rows = mix.all_drafts(mixes)
     loaded = mix.rows_for_drafts(mixes, {row["id"]: row["items"] for row in rows})
     summaries = []
+    state = _states(mixes)
     for row in rows:
-        items = mix.read_mix(mixes, None, row["id"], loaded[row["id"]], cloud_state)
+        items = mix.read_mix(mixes, None, row["id"], loaded[row["id"]], state)
         states = [item["seam"]["state"] for item in items[1:]]
         stored = mix._stored(row)
         summaries.append(
@@ -177,7 +201,7 @@ def _room_for(mixes: StoreMixes, draft: int | None, more: int) -> None:
 
 def _told(mixes: StoreMixes, request: Request, answer: dict) -> dict:
     """Every open device hears that the current mix is now `answer`'s."""
-    return mix_current.told(mixes, answer, request.headers.get(mix_current.DEVICE_HEADER))
+    return mix_current.told(mixes, answer, request.query_params.get(mix_current.DEVICE_PARAM))
 
 
 def _a_new_draft(mixes: StoreMixes) -> None:

@@ -459,7 +459,7 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
   // the account's planner orders a new mix when it can (accountOrder.ts); otherwise today's order
   const planOrder = sources.workspaceId ? accountOrderPlanner(cloud, sources.workspaceId) : undefined;
   // cloud.account_mixes: the account's own mix and draft routes answer first (accountMixes.ts)
-  const account = accountMixes(cloud);
+  const account = accountMixes(cloud, sources.workspaceId);
   // the account's idea cards on Make a Mix, built by its planner (accountIdeas.ts)
   const ideas = sources.workspaceId ? accountIdeas(cloud, sources.workspaceId) : undefined;
   const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder, account, ideas) : null;
@@ -532,7 +532,8 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     // ADR-0475 I84: another device is playing, so a song added from the Library joins its
     // programme (next, or at the end), the same signed press a request uses
     const link = sources.controller?.() ?? null;
-    if (link && method === 'POST' && route === '/mix/songs') {
+    // (a song added to a draft is the draft's, never the speaker's)
+    if (link && method === 'POST' && route === '/mix/songs' && !new URLSearchParams(query).has('draft')) {
       const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number; song_ids?: number[]; position?: number };
       const songId = Number(body.song_id ?? body.song_ids?.[0]);
       // I88: several chosen songs go in at once, in order, those the speaker has (the bar said so)
@@ -569,7 +570,7 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
         if (!fallsBack(problem)) throw problem;
       }
     } else if (addsHere && sources.recipes) {
-      const added = await addPlayable(init);
+      const added = await addPlayable(init, query);
       if (added !== undefined) return added as T;
     }
     const mixAnswer = mixes?.answer(method, route, new URLSearchParams(query), init);
@@ -604,13 +605,14 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
   };
   /** POST /mix/songs through the account (cloud.account_mixes): the song must be one this
    * device can play, as the browser's own mixes ask. Undefined when the account doesn't answer. */
-  const addPlayable = async (init?: RequestInit): Promise<unknown> => {
+  const addPlayable = async (init?: RequestInit, query = ''): Promise<unknown> => {
     if (!accountMixesOn()) return undefined;
     const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number };
     const song = (await playable()).find((one) => one.id === Number(body.song_id));
     if (!song || !song.playable) throw new ApiError('Choose a song that plays on this device.', 400, 'not_playable', 'device-music:mix');
     try {
-      return await account.answer('POST', '/mix/songs', '', init);
+      // `?draft=` adds to that draft, not to the current mix
+      return await account.answer('POST', '/mix/songs', query, init);
     } catch (problem) {
       if (!fallsBack(problem)) throw problem;
       return undefined;

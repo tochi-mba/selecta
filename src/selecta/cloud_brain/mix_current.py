@@ -20,7 +20,8 @@ from selecta.engine_store.mixes import StoreMixes
 from selecta.flags.matching import Rule, RuleKind
 from selecta.local_media.current_mix import TOPIC
 
-DEVICE_HEADER = "x-device-id"
+# the query parameter a change names its device by, as `/requests/insert` does
+DEVICE_PARAM = "device_id"
 # Account mixes for every account with the cloud library and for no other. Saved as the rules of
 # `cloud.account_mixes`, it decides once the build carries `+cloud.account_mixes`, whose default
 # stays off (engine-store-mixes.md, "Turning it on").
@@ -66,4 +67,4 @@ def told(mixes: StoreMixes, answer: dict, device_id: str | None) -> dict:
     return answer
 
 
-__all__ = ["DEVICE_HEADER", "WITH_THE_CLOUD_LIBRARY", "device_name", "told"]
+__all__ = ["DEVICE_PARAM", "WITH_THE_CLOUD_LIBRARY", "device_name", "told"]
