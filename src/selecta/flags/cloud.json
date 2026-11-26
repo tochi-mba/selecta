@@ -92,6 +92,18 @@
       "kind": "release",
       "owner": "storage"
     },
+    "storage.upload_identity": {
+      "label": "Uploads join the song they are for",
+      "about": "Uploading a song that is already in your library adds the file to that same song, matched by its file, an older copy of it or its audio, so its measurements, corrections, mixes and ratings stay with it; an unsure match becomes another version of the song. Also adds a check that says what a batch of uploads would do before anything is sent. Off: an upload finds its song by the exact file only, as before.",
+      "routes": ["POST /api/uploads/preview"],
+      "requires": ["cloud.uploads"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "storage",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Song identity and a dry run underneath uploads; it adds no page or control of its own."
+    },
     "cloud.stored_media": {
       "label": "Stored media",
       "about": "List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the cloud library grant, so nobody's library goes dark (ADR-0456).",

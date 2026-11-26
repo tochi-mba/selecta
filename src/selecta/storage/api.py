@@ -20,6 +20,7 @@ from selecta.business import terms, upload_rights
 from selecta.business.content.store import record_upload_tag
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
+from selecta.storage import upload_identity, upload_preview
 from selecta.storage.artifacts import Buckets
 from selecta.storage.audio_check import Rejected
 from selecta.storage.failures import storage_failure
@@ -59,6 +60,18 @@ class UploadFileInput(BaseModel):
     size: int = Field(gt=0)
     content_type: str | None = Field(default=None, max_length=127)
     sha256: str | None = Field(default=None, min_length=64, max_length=64)
+    # The catalogue song this file is for and its audio id (`storage.upload_identity`); with
+    # the flag off both are dropped unread.
+    song_id: int | None = Field(default=None, gt=0)
+    audio_id: str | None = Field(default=None, max_length=67)
+
+
+def _file_spec(item: UploadFileInput) -> FileSpec:
+    values = item.model_dump()
+    if not upload_identity.on():
+        values.pop("song_id")
+        values.pop("audio_id")
+    return FileSpec(**values)
 
 
 class PlanUploadsRequest(BaseModel):
@@ -107,13 +120,17 @@ class _LimitsAdapter(PlanLimitsPort):
 
 class _DuplicateAdapter(DuplicatePort):
     def find_by_sha256(self, conn: Connection, workspace_id: str, sha256: str) -> str | None:
-        return conn.execute(
+        found = conn.execute(
             select(assets.c.id)
             .where(assets.c.workspace_id == workspace_id)
             .where(assets.c.sha256 == sha256)
             .where(assets.c.deleted_at.is_(None))
             .limit(1)
         ).scalar_one_or_none()
+        if found is None and upload_identity.on():
+            # the same song already uploaded under another of its file hashes
+            found = upload_identity.cloud_copy_of_hash(conn, workspace_id, sha256)
+        return found
 
 
 def _session_json(session: UploadSession) -> dict[str, Any]:
@@ -129,6 +146,8 @@ def _session_json(session: UploadSession) -> dict[str, Any]:
         "expires_at": session.expires_at,
         "duplicate_of": session.duplicate_of,
         "error": session.error,
+        # only an upload that named its song (storage.upload_identity) says which
+        **({"song_id": session.song_id} if session.song_id is not None else {}),
     }
 
 
@@ -140,6 +159,7 @@ def _planned_json(result: PlannedFile) -> dict[str, Any]:
         "duplicate_of": result.duplicate_of,
         "same_as": result.same_as,
         "session": _session_json(result.session) if result.session else None,
+        **({"refusal_code": result.refusal_code} if result.refusal_code else {}),
     }
 
 
@@ -290,7 +310,7 @@ def install_routes(
                     results = uploads.plan_batch(
                         conn,
                         workspace_id,
-                        [FileSpec(**item.model_dump()) for item in body.files],
+                        [_file_spec(item) for item in body.files],
                         uploaded_by=uploaded_by,
                         venue_id=venue_id,
                     )
@@ -304,6 +324,10 @@ def install_routes(
         except (R2Error, ValueError) as error:
             raise map_error(error) from error
         return {"uploads": [_planned_json(item) for item in results]}
+
+    upload_preview.install(app, engine=engine, current_claims=current_claims,
+                           workspace=workspace, refuse_if_restricted=refuse_if_restricted,
+                           limits=_LimitsAdapter())
 
     @app.get("/api/uploads")
     def list_uploads(
@@ -416,12 +440,14 @@ def install_routes(
                             )
                         code = error.code if rejected else "unreadable_audio"
                         return _outcome_json(outcome, rejection_code=code)
+                    audio_id = upload_identity.audio_id_of(staged_path)
                     with transaction(engine, workspace_id) as conn:
                         outcome = uploads.accept(
                             conn,
                             session_id,
                             audio_probe,
                             workspace_id=workspace_id,
+                            audio_id=audio_id,
                         )
                         if outcome.asset_id and audio_probe.explicit_tag:
                             record_upload_tag(
@@ -437,6 +463,8 @@ def install_routes(
             raise map_error(error) from error
         if outcome.asset_id:
             _analyse_upload(workspace_id, outcome.asset_id)
+        if outcome.error == upload_identity.MISMATCH_WORDS:
+            return _outcome_json(outcome, rejection_code=upload_identity.MISMATCH)
         return _outcome_json(outcome)
 
     def _analyse_upload(workspace_id: str, asset_id: str) -> None:

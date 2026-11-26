@@ -41,6 +41,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.persistence import db_now, lock_rows, new_id
+from selecta.storage import upload_identity as identity
 from selecta.storage.artifacts import DEFAULT_BUCKETS, MAX_URL_TTL, Buckets
 from selecta.storage.keys import original_key, staging_key
 from selecta.storage.names import DEFAULT_CONTENT_TYPE, content_type, display_name, sha256_hex
@@ -117,6 +118,9 @@ class FileSpec:
     size: int
     content_type: str | None = None
     sha256: str | None = None
+    # The catalogue song it is for and its audio id, read only with storage.upload_identity.
+    song_id: int | None = None
+    audio_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +141,7 @@ class UploadSession:
     created_at: float
     updated_at: float
     expires_at: float
+    song_id: int | None = None
 
     @property
     def part_count(self) -> int:
@@ -164,6 +169,7 @@ class PlannedFile:
     refused: str | None = None
     duplicate_of: str | None = None
     same_as: str | None = None
+    refusal_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -281,9 +287,17 @@ class Uploads:
                 results.append(PlannedFile(index, name, refused=refusal))
                 continue
             sha = sha256_hex(spec.sha256)
-            duplicate_of = same_as = None
+            duplicate_of = same_as = song_id = None
+            if spec.song_id is not None and identity.on():
+                song_id = identity.plan_song(conn, workspace_id, spec.song_id, sha,
+                                             identity.clean_audio_id(spec.audio_id))
+                if song_id is None:
+                    results.append(PlannedFile(index, name, refused=identity.MISMATCH_WORDS,
+                                               refusal_code=identity.MISMATCH))
+                    continue
+                duplicate_of = identity.cloud_copy(conn, workspace_id, song_id)
             if sha:
-                if self.duplicates is not None:
+                if self.duplicates is not None and duplicate_of is None:
                     duplicate_of = self.duplicates.find_by_sha256(conn, workspace_id, sha)
                 same_as = in_batch.get(sha) or self._live_session_with(conn, workspace_id, sha)
             session_id = new_id()
@@ -304,6 +318,7 @@ class Uploads:
                 created_at=now,
                 updated_at=now,
                 expires_at=now + SESSION_TTL,
+                song_id=song_id,
             )
             try:
                 # A savepoint per file: a refused reservation undoes just this file's session.
@@ -452,11 +467,13 @@ class Uploads:
     # -- 4. accept or reject ----------------------------------------------------------------
 
     def accept(
-        self, conn: Connection, session_id: str, probe: Probe, *, workspace_id: str | None = None
+        self, conn: Connection, session_id: str, probe: Probe, *, workspace_id: str | None = None,
+        audio_id: str | None = None,
     ) -> Outcome:
         """Keep a validated file: copy it to the originals bucket, record the asset, and turn
         the reservation into committed usage. The asset takes the session's id, so a retry
-        copies to the same key and finds the same row."""
+        copies to the same key and finds the same row. `audio_id` is the one the server read
+        from the staged bytes (`storage.upload_identity`)."""
         session = self._load(conn, session_id, workspace_id, lock=True)
         if session.status is Status.ACCEPTED:
             return Outcome(session, asset_id=session.id)
@@ -477,6 +494,11 @@ class Uploads:
                 f"{_minutes_text(limits.max_duration_s)} limit."
             )
             return self._finish(conn, session, Status.REJECTED, reason)
+        if session.song_id is not None and identity.on():
+            reason = identity.accept_refusal(
+                conn, session.workspace_id, session.song_id, probe.sha256, audio_id)
+            if reason:
+                return self._finish(conn, session, Status.REJECTED, reason)
         asset_id = session.id
         key = original_key(session.workspace_id, asset_id)
         if not self._copy_to_originals(session, key, probe):
@@ -511,7 +533,7 @@ class Uploads:
         register_upload(
             conn, session.workspace_id, sha256=probe.sha256, file_name=session.display_name,
             duration_s=float(probe.duration_s), codec=probe.format,
-            sample_rate=int(probe.sample_rate),
+            sample_rate=int(probe.sample_rate), song_id=session.song_id, audio_id=audio_id,
         )
         if session.reservation_id:
             self.quota.commit(conn, session.reservation_id)
