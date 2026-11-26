@@ -1,4 +1,4 @@
-import { expect, Page, test } from '@playwright/test';
+import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { rewriteJson } from '../e2e/helpers';
 import { LONG_FILE, LONG_TITLE, sweep, verdict } from '../e2e/layoutSweep';
 import { listener } from './cloud';
@@ -108,52 +108,57 @@ async function opened(page: Page, path: string, heading?: string | RegExp) {
   await expect(page.getByRole('navigation', { name: 'Main' }).or(page.getByRole('navigation', { name: 'Cloud workspace' })).first()).toBeVisible();
   // a place this account lacks says so under its own heading, which is fine to measure too
   await expect(page.getByRole('heading', { level: 1, name: heading }).or(page.locator('main h1')).first()).toBeVisible();
-  // the library's first read and the notices settle
-  await page.waitForLoadState('networkidle').catch(() => undefined);
+  // the library's first read and the notices settle; the event stream never goes quiet, so this
+  // waits a few seconds at most
+  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined);
 }
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 });
 
+/** A local-first member with the long title on this device too, so the Library and the mixes draw
+ * it as playable. */
+async function localFirstMember(page: Page, request: APIRequestContext, name: string, layout: boolean) {
+  const user = listener(name);
+  const made = await seeded(request, user, { songs: 1, local_songs: 3, local_titles: [LONG_TITLE, 'Second song', 'Third song'] });
+  await connectOnThisDevice(page, made.workspace_id, [{ songId: made.local_songs[0], title: LONG_TITLE, audio: true }]);
+  await page.addInitScript((who) => localStorage.setItem('selecta-e2e-user', who), user);
+  await amend(page, { localFirst: true, layout });
+  return user;
+}
+
 for (const layout of [false, true]) {
   const label = layout ? 'layout-on' : 'layout-off';
-  test(`the local-first shell's places, with cloud.page_layout ${layout ? 'on' : 'off'}`, async ({ page, request }, testInfo) => {
-    test.setTimeout(420_000);
-    const user = listener(`sweep-local-${label}`);
-    const made = await seeded(request, user, { songs: 1, local_songs: 3, local_titles: [LONG_TITLE, 'Second song', 'Third song'] });
-    // the long title is on this device too, so the Library and the mixes draw it as playable
-    await connectOnThisDevice(page, made.workspace_id, [{ songId: made.local_songs[0], title: LONG_TITLE, audio: true }]);
-    await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
-    await amend(page, { localFirst: true, layout });
-    const problems: string[] = [];
-    for (const [id, path, heading] of LOCAL_FIRST) {
+  for (const [id, path, heading] of LOCAL_FIRST) {
+    test(`${id} ${path} in the local-first shell, cloud.page_layout ${layout ? 'on' : 'off'}`, async ({ page, request }, testInfo) => {
+      await localFirstMember(page, request, `sweep-${label}`, layout);
       await opened(page, path, heading);
       if (path === '/upload') await longUpload(page);
-      problems.push(...(await sweep(page, testInfo, id, { frame: layout && id !== 'cloud.local.missing', label })));
-    }
-    // many notices at once: over the storage limit as well as the cutover note
+      await verdict(testInfo, await sweep(page, testInfo, id, { frame: layout && id !== 'cloud.local.missing', label }));
+    });
+  }
+
+  test(`many notices at once in the local-first shell, cloud.page_layout ${layout ? 'on' : 'off'}`, async ({ page, request }, testInfo) => {
+    const user = await localFirstMember(page, request, `sweep-notices-${label}`, layout);
+    // over the storage limit as well as the cutover note
     const quota = await request.post('/test/quota', { data: { user, limit_bytes: 1 } });
     expect(quota.ok(), await quota.text()).toBeTruthy();
     await opened(page, '/library', 'Library');
-    problems.push(...(await sweep(page, testInfo, 'site.cloud.local.library over quota', { frame: layout, label })));
-    await verdict(testInfo, problems);
+    await verdict(testInfo, await sweep(page, testInfo, 'site.cloud.local.library over quota', { frame: layout, label }));
   });
 
-  test(`the hosted shell's pages, with cloud.page_layout ${layout ? 'on' : 'off'}`, async ({ page, request }, testInfo) => {
-    test.setTimeout(300_000);
-    const user = listener(`sweep-hosted-${label}`);
-    await seeded(request, user, { songs: 2 });
-    await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
-    await amend(page, { localFirst: false, layout });
-    const problems: string[] = [];
-    for (const [id, path] of HOSTED_SHELL) {
+  for (const [id, path] of HOSTED_SHELL) {
+    test(`${id} ${path} in the hosted shell, cloud.page_layout ${layout ? 'on' : 'off'}`, async ({ page, request }, testInfo) => {
+      const user = listener(`sweep-hosted-${label}`);
+      await seeded(request, user, { songs: 2 });
+      await page.addInitScript((who) => localStorage.setItem('selecta-e2e-user', who), user);
+      await amend(page, { localFirst: false, layout });
       await opened(page, path);
       if (path === '/upload') await longUpload(page);
-      problems.push(...(await sweep(page, testInfo, id, { frame: layout, label })));
-    }
-    await verdict(testInfo, problems);
-  });
+      await verdict(testInfo, await sweep(page, testInfo, id, { frame: layout, label }));
+    });
+  }
 }
 
 test('the legacy rail pages', async ({ page, request }, testInfo) => {

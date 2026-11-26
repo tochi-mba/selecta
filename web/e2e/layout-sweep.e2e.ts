@@ -55,7 +55,7 @@ for (const [id, path] of ROUTES) {
   test(`${id} (${path}) fits every width`, async ({ page }, testInfo) => {
     await page.goto(path);
     await expect(page.locator('main h1, main [role="heading"][aria-level="1"]').first()).toBeVisible();
-    await page.waitForLoadState('networkidle').catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined);
     await verdict(testInfo, await sweep(page, testInfo, id));
   });
 }
