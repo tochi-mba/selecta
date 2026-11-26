@@ -161,7 +161,15 @@
 .cloud-card p:not(.cloud-eyebrow),
 .cloud-plan-card p:not(.cloud-eyebrow) { color: var(--text-soft); font-size: var(--text-sm); }
 .cloud-card-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+.cloud-card-heading > * { min-width: 0; }
 .cloud-card-heading h2 small { font: var(--type-meta); color: var(--text-soft); }
+/* two actions side by side in a card keep a gap between them */
+.cloud-card > button + button { margin-inline-start: var(--space-2); }
+/* the older Library's counts: each name over its value, side by side */
+.cloud-library-overview { display: flex; flex-wrap: wrap; align-items: start; gap: var(--space-3) var(--space-6); margin: var(--space-4) 0; }
+.cloud-library-overview > div { display: grid; gap: var(--space-1); min-width: 0; }
+.cloud-library-overview .cloud-eyebrow { margin: 0; }
+.cloud-library-overview button { justify-self: start; }
 .cloud-locked {
   display: flex;
   align-items: center;

@@ -684,9 +684,16 @@ main.page h1[tabindex='-1']:focus { outline: none; }
    left edge and the top bar stay put. (`:has(> main.page)` outranks every page's own width.) */
 :root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page) { --page-max: var(--page-frame); }
 :root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'])) { --page-max: var(--content-browse); }
+/* the settings pages (Account, Plan & billing, Devices) are exactly as wide as their section list
+   and cards (cloud/account.css), so they sit centred rather than heavy on the left */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page .acct-layout) { --page-max: calc(13rem + var(--space-6) + 46rem + 2 * var(--page-gutter)); }
 :root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page[data-page-width='reading']) { --page-max: var(--content-reading); }
-:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) > :is(.page, .cloud-footer) { margin-inline: auto; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) > :is(.page, .cloud-footer),
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page .acct-layout) > :is(.page, .cloud-footer) { margin-inline: auto; }
 :root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > .shell-banners { max-width: var(--page-frame); }
+/* on a centred page the notices line up with the page's own edges, not the wider frame's */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) > .shell-banners,
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page .acct-layout) > .shell-banners { max-width: var(--page-max); margin-inline: auto; }
 :where(:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > main.page) p { max-width: 70ch; }
 
 /* Cloud notices (connection, account, import progress): one stack on the page column, in the
@@ -740,6 +747,8 @@ dl.keys dd { overflow-wrap: anywhere; }
 @media (max-width: 520px) {
   .tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); column-gap: var(--space-1); }
   .tabs a { display: flex; align-items: center; justify-content: center; text-align: center; padding-inline: var(--space-2); overflow-wrap: anywhere; }
+  /* four tabs (Cloud's Workspace) make two even rows of two, not three and one left alone */
+  .tabs:has(> a:nth-of-type(4):last-of-type) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* The Cloud frame's own look (side bar groups, account menu, top bar, phone bar, More sheet, mini
