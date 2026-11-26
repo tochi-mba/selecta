@@ -8,7 +8,8 @@ for the flag off.
 
 The summary says how many store transactions ran (`EngineStore.read` and `write`) and how many
 statements Selecta's own modules ran on a raw `sqlite3` connection outside the modules that stay
-raw on purpose (docs/engineering/engine-store.md, the remainder table). Set
+raw on purpose (docs/engineering/engine-store.md, the remainder table) while the flag was on;
+statements run while a test had turned it off are counted apart. Set
 `SELECTA_TEST_ENGINE_STORE_COUNTS` to a file path to have the counts written there as JSON.
 """
 
@@ -65,6 +66,8 @@ class EngineStoreOn:
     def __init__(self) -> None:
         self.store = 0
         self.old: collections.Counter[str] = collections.Counter()
+        # statements run while a test had the flag off (the store's own proofs do), kept apart
+        self.off = 0
         self._lock = threading.Lock()
         self._undo: list[tuple[object, str, object]] = []
 
@@ -131,21 +134,31 @@ class EngineStoreOn:
         module = _caller()
         if module is None or any(_within(module, raw) for raw in RAW_ON_PURPOSE):
             return
+        from selecta import flags
+
+        try:
+            on = flags.on(FLAG)
+        except Exception:  # a test's own broken flag setting: count it as off
+            on = False
         with self._lock:
-            self.old[module] += 1
+            if on:
+                self.old[module] += 1
+            else:
+                self.off += 1
 
     # report
 
     def pytest_terminal_summary(self, terminalreporter) -> None:
         total = sum(self.old.values())
-        line = f"engine store on: {self.store} store, {total} old"
+        line = f"engine store on: {self.store} store, {total} old ({self.off} with the flag off)"
         terminalreporter.write_line(line)
         for module, count in self.old.most_common(12):
             terminalreporter.write_line(f"  old {count:6d} {module}")
         target = os.environ.get(COUNTS_ENV)
         if target:
             with open(target, "w", encoding="utf-8") as handle:
-                json.dump({"store": self.store, "old": dict(self.old)}, handle, indent=1)
+                counts = {"store": self.store, "old": dict(self.old), "off": self.off}
+                json.dump(counts, handle, indent=1)
 
 
 def _within(module: str, package: str) -> bool:
