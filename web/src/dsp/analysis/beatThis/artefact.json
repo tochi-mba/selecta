@@ -1,0 +1,46 @@
+{
+ "implementation": "web-beatthis-small0-1",
+ "file": "beat-this-small0.onnx",
+ "sha256": "221565e9ab7c825bac98266b618ff3b78df0a6bf3f67272b90f0a86da14f1ac4",
+ "bytes": 10527297,
+ "path": "/models/beat-this/web-beatthis-small0-1/221565e9ab7c825bac98266b618ff3b78df0a6bf3f67272b90f0a86da14f1ac4.onnx",
+ "opset": 17,
+ "dtype": "float32",
+ "inputs": {
+  "spect": "float32 [1, T, 128], T from 1 to 1500"
+ },
+ "outputs": {
+  "beat": "float32 [1, T]",
+  "downbeat": "float32 [1, T]"
+ },
+ "source": {
+  "package": "beat-this 1.1.0 (https://github.com/CPJKU/beat_this)",
+  "checkpoint": "small0",
+  "url": "https://cloud.cp.jku.at/public.php/dav/files/7ik4RrBKTS273gp/small0.ckpt",
+  "sha256": "6074be2c4d490c5f6101fcc374a1ec72ae93456e23bb6019783b849f5dc7d47b",
+  "bytes": 8451101
+ },
+ "licence": {
+  "code": "MIT (CPJKU beat_this LICENSE, 2024 Institute of Computational Perception)",
+  "weights": "MIT: the README releases the code and the published weights under MIT",
+  "register": "docs/saas/licence-register.md (beat_this.small0)",
+  "tier3Record": "docs/verification/bf-tier3-beat-this-2026-11-26.md"
+ },
+ "tools": {
+  "torch": "2.15.0+cpu",
+  "onnx": "1.23.2",
+  "onnxruntime": "1.32.0"
+ },
+ "equivalence": {
+  "lengths": [
+   1500,
+   1212,
+   1405,
+   600,
+   37,
+   1
+  ],
+  "maxAbsLogit": 5.0067901611328125e-06,
+  "tolerance": 0.001
+ }
+}
