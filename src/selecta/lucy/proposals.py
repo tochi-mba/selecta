@@ -16,7 +16,9 @@ import json
 import sqlite3
 from typing import Any
 
-from selecta.lucy import events
+from selecta.engine_store.lucy import events as log
+from selecta.engine_store.lucy import proposals as stored
+from selecta.lucy import backing, events
 from selecta.lucy.ids import content_hash, new_id, now_iso
 
 REVISION_KINDS = {"plan", "revise", "restore", "branch", "variant"}
@@ -59,6 +61,13 @@ def snapshot_hash(snapshot: dict) -> str:
 
 
 def ensure_proposal(conn: sqlite3.Connection, conversation: str) -> str:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            there, found = stored.proposal_of(tx, conversation)
+            if not there:
+                raise NotFound(conversation)
+            return found or stored.ensure(tx, conversation)
     row = conn.execute(
         "SELECT proposal_id FROM lucy_conversations WHERE id=?", (conversation,)
     ).fetchone()
@@ -79,7 +88,17 @@ def ensure_proposal(conn: sqlite3.Connection, conversation: str) -> str:
     return proposal
 
 
+def _found(row: Any, key: str) -> Any:
+    if row is None:
+        raise NotFound(key)
+    return row
+
+
 def _proposal(conn: sqlite3.Connection, proposal: str) -> sqlite3.Row:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            return _found(stored.proposal(tx, proposal), proposal)
     row = conn.execute("SELECT * FROM lucy_proposals WHERE id=?", (proposal,)).fetchone()
     if row is None:
         raise NotFound(proposal)
@@ -103,6 +122,36 @@ def add_revision(
     caller saw it. Nothing partial is ever visible (LU-324-07)."""
     if kind not in REVISION_KINDS:
         raise ValueError(kind)
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            row = _found(stored.proposal(tx, proposal), proposal)
+            if make_current and row["current_revision"] != expected_current:
+                raise StaleRevision(expected_current, row["current_revision"])
+            number = stored.next_number(tx, proposal)
+            revision = new_id("revision")
+            frozen = {**snapshot, "revision": revision, "number": number}
+            digest = snapshot_hash(frozen)
+            stored.add_revision(
+                tx,
+                id=revision,
+                proposal_id=proposal,
+                number=number,
+                parent_id=parent if parent is not None else row["current_revision"],
+                branch=branch,
+                kind=kind,
+                hash=digest,
+                snapshot=json.dumps(frozen, ensure_ascii=False),
+                turn_id=turn,
+                summary=summary,
+                created_at=now_iso(),
+            )
+            if make_current:
+                stored.make_current(tx, proposal, revision)
+            found = _shape(stored.revision(tx, revision))
+            log.append(tx, row["conversation_id"], "proposal.revision",
+                       _revision_event(proposal, found, make_current, snapshot), turn=turn)
+        return found
     if conn.in_transaction:
         conn.commit()
     conn.execute("BEGIN IMMEDIATE")
@@ -148,23 +197,31 @@ def add_revision(
         conn,
         row["conversation_id"],
         "proposal.revision",
-        {
-            "proposal": proposal,
-            "revision": revision,
-            "number": number,
-            "kind": kind,
-            "branch": branch,
-            "hash": digest,
-            "current": make_current,
-            "summary": summary,
-            "songs": len(snapshot.get("songs", [])),
-        },
+        _revision_event(proposal, found, make_current, snapshot),
         turn=turn,
     )
     return found
 
 
+def _revision_event(proposal: str, found: dict, make_current: bool, snapshot: dict) -> dict:
+    return {
+        "proposal": proposal,
+        "revision": found["id"],
+        "number": found["number"],
+        "kind": found["kind"],
+        "branch": found["branch"],
+        "hash": found["hash"],
+        "current": make_current,
+        "summary": found["summary"],
+        "songs": len(snapshot.get("songs", [])),
+    }
+
+
 def get_revision(conn: sqlite3.Connection, revision: str) -> dict:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            return _shape(_found(stored.revision(tx, revision), revision))
     row = conn.execute("SELECT * FROM lucy_revisions WHERE id=?", (revision,)).fetchone()
     if row is None:
         raise NotFound(revision)
@@ -196,10 +253,16 @@ def current(conn: sqlite3.Connection, proposal: str | None) -> dict | None:
 
 def history(conn: sqlite3.Connection, proposal: str) -> list[dict]:
     """Every revision, newest first, without their full snapshots."""
-    current_id = _proposal(conn, proposal)["current_revision"]
-    rows = conn.execute(
-        "SELECT * FROM lucy_revisions WHERE proposal_id=? ORDER BY number DESC", (proposal,)
-    ).fetchall()
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            current_id = _found(stored.proposal(tx, proposal), proposal)["current_revision"]
+            rows = stored.revisions(tx, proposal)
+    else:
+        current_id = _proposal(conn, proposal)["current_revision"]
+        rows = conn.execute(
+            "SELECT * FROM lucy_revisions WHERE proposal_id=? ORDER BY number DESC", (proposal,)
+        ).fetchall()
     listed = []
     for row in rows:
         shaped = _shape(row)
@@ -220,6 +283,16 @@ def set_current(
     found = get_revision(conn, revision)
     if found["proposal"] != proposal:
         raise NotFound(revision)
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            row = _found(stored.proposal(tx, proposal), proposal)
+            if row["current_revision"] != expected_current:
+                raise StaleRevision(expected_current, row["current_revision"])
+            stored.make_current(tx, proposal, revision)
+            log.append(tx, row["conversation_id"], "proposal.current",
+                       {"proposal": proposal, "revision": revision, "number": found["number"]})
+        return found
     if conn.in_transaction:
         conn.commit()
     conn.execute("BEGIN IMMEDIATE")
@@ -379,3 +452,16 @@ def summary_text(change: dict) -> str:
 
 def snapshot_of(conn: sqlite3.Connection, revision: str) -> dict[str, Any]:
     return get_revision(conn, revision)["snapshot"]
+
+
+def conversation_of(conn: sqlite3.Connection, proposal: str) -> str:
+    """The conversation a proposal belongs to (NotFound when the proposal isn't there)."""
+    return _proposal(conn, proposal)["conversation_id"]
+
+
+def current_id(conn: sqlite3.Connection, proposal: str) -> str | None:
+    """The revision a proposal points at now, or None when it has none (or isn't there)."""
+    try:
+        return _proposal(conn, proposal)["current_revision"]
+    except NotFound:
+        return None
