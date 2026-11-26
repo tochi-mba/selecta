@@ -55,6 +55,22 @@ def hosted_media_decision(
 ) -> targeting.Decision | None:
     """The targeting decision for `cloud.hosted_media` in this workspace, or None when the
     workspace or its owner is gone (no account, so no grant to speak of)."""
+    return workspace_decision(
+        conn, workspace_id, HOSTED_MEDIA, rules=rules, build_states=build_states
+    )
+
+
+def workspace_decision(
+    conn: Connection,
+    workspace_id: str,
+    flag_id: str,
+    *,
+    rules: RulesCache | RuleSnapshot | None = None,
+    build_states: Mapping[str, flags.State] | None = None,
+) -> targeting.Decision | None:
+    """One flag's targeting decision as this workspace's owner gets it, the same way as the
+    grant, for work with a workspace but no signed-in person (a room guest's search, say).
+    None when the workspace or its owner is gone."""
     owner = conn.execute(
         sa.select(users.c.id, users.c.created_at, users.c.deleted_at)
         .select_from(workspaces.join(users, workspaces.c.owner_user_id == users.c.id))
@@ -75,7 +91,7 @@ def hosted_media_decision(
         account_age_days=max(0.0, (now - float(owner.created_at)) / 86_400),
     )
     return targeting.decide(
-        HOSTED_MEDIA,
+        flag_id,
         context,
         build_states=flags.effective() if build_states is None else build_states,
         rules=_snapshot(conn, rules),
@@ -121,4 +137,5 @@ __all__ = [
     "hosted_media_decision",
     "hosted_media_granted",
     "hosted_media_predicate",
+    "workspace_decision",
 ]
