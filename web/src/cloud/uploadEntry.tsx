@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useState, useSyncExternalStore } from 'react';
+import type { LibrarySong } from '../api';
 import { useFlag } from '../flags';
 import type { MediaStore } from '../media/store';
 import { Icon } from '../ui/Icon';
@@ -69,6 +70,32 @@ export function useUploadToCloud({ request, openStore, onStarted }: {
     ? <UploadToCloudSheet request={request} songs={songs} start={start} onClose={() => setSongs(null)} onStarted={onStarted} />
     : null;
   return { available, open, sheet, problem };
+}
+
+type UploadParts = { request: Request; openStore: () => Promise<MediaStore>; onStarted?: (count: number) => void };
+
+/** One upload action as a button, hosting its own sheet: for the Library's selection bar ("Upload
+ * to your cloud library") and its On this device list ("Upload all N shown"). */
+export function UploadSongsButton({ action, className, ...parts }: UploadParts & { action: UploadAction; className?: string }) {
+  const upload = useUploadToCloud(parts);
+  if (!upload.available) return null;
+  return (
+    <>
+      <button type="button" className={className} onClick={() => void upload.open(action.songIds)}><Icon name="plus" size="toolbar" />{action.label}</button>
+      {upload.problem && <span className="hint" role="status">{upload.problem}</span>}
+      {upload.sheet}
+    </>
+  );
+}
+
+/** A song's details: "Upload to your cloud library" for a song whose file is on this device and
+ * that has no cloud copy. Given to the Library's places chrome as `uploadActions`
+ * (views/LibraryPlaces.tsx), which SongPlaces draws. */
+export function songUploadActions(parts: UploadParts): (song: Pick<LibrarySong, 'id' | 'places'>) => ReactNode {
+  return function SongUpload(song) {
+    const [action] = uploadActionsFor({ song: song.id, onDevice: () => !!song.places?.device, inCloud: () => !!song.places?.cloud });
+    return action ? <div className="row wrap"><UploadSongsButton action={action} {...parts} /></div> : null;
+  };
 }
 
 /** Workspace > Sources: "Upload everything on this device". */

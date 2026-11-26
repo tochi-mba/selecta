@@ -220,8 +220,10 @@ export function renderDetail(mix: { worker_seen?: boolean; estimate_s?: number |
   return left ? `${left} ${opens}` : opens;
 }
 
-/** The footer's promise about where music lives: a hosted account keeps its uploads with SelectaDJ. */
-export function footerWords(hosted: boolean): string {
+/** The footer's promise about where music lives: a hosted account keeps its uploads with SelectaDJ.
+ * `uploading` (cloud.move_to_cloud, which needs the grant): songs can be uploaded from a device. */
+export function footerWords(hosted: boolean, uploading = false): string {
+  if (hosted && uploading) return 'SelectaDJ Cloud. Songs you upload to your cloud library are copied there and kept privately in your SelectaDJ storage; the file on your device stays as it is. Music you connect on a device stays there.';
   return hosted
     ? 'SelectaDJ Cloud. Songs you upload are kept privately in your SelectaDJ storage; music you connect on a device stays there.'
     : 'SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.';

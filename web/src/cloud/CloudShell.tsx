@@ -759,7 +759,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
           lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive,
           remote, playWays, holdings, where, followsHere, newest, songOrder, playOn,
         }} /></Section></HolderContext.Provider>
-        <footer className="cloud-footer">{footerWords(coexisting)}</footer>
+        <footer className="cloud-footer">{footerWords(coexisting, on('cloud.move_to_cloud'))}</footer>
       </Shell>
       {requesting && on('requests') && (
         <Drawer title="Requests" onClose={() => setRequesting(false)}>

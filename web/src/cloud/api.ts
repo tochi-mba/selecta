@@ -1,4 +1,4 @@
-import { MUSIC_HOME_START, musicHomeOf, type MusicHome } from '../copy';
+import { musicHomeOf, musicHomeStart, type MusicHome } from '../copy';
 import { accountFlagOn, type FlagId } from '../flags';
 import { userLocale } from '../ui/format';
 import type { LucyWindows } from './lucyUsage';
@@ -53,9 +53,10 @@ export type MusicHomeCopy = {
  * Keyed by the account snapshot rather than scattering flag checks and jargon through pages. The
  * cloud library is described as available, never legacy or deprecated.
  */
-export function musicHomeCopy(account: Pick<Account, 'experience'> | null): MusicHomeCopy {
+export function musicHomeCopy(account: (Pick<Account, 'experience'> & Partial<Pick<Account, 'features'>>) | null): MusicHomeCopy {
   const source = musicHomeOf(account?.experience?.local_first === true, account?.experience?.hosted === true);
-  return { ...MUSIC_HOME_START[source], source };
+  // cloud.move_to_cloud (it needs the cloud library grant): uploads from this device are copies
+  return { ...musicHomeStart(source, accountFlagOn('cloud.move_to_cloud', account?.features)), source };
 }
 export type Asset = { id: string; name: string; size: number; sha256: string | null; format: string | null; duration_seconds: number | null; sample_rate: number | null; channels: number | null; created_at: number };
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
