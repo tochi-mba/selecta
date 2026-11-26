@@ -149,8 +149,8 @@ clips in its memory map, and when the browser runs short it evicts clips before 
   the 120 s budget is not measured on a slower device.
 - Rendering the seam after next decodes that song early: three decoded songs at once, as the cache
   already allowed. The Listening Room has its own studio and worker while it is used.
-- The safety thresholds were reasoned, not heard (T-20261126-4031). Export does not play the clips
-  (T-20261126-96d3).
+- The safety thresholds were reasoned, not heard (T-20261126-4031). Export writes the same clips
+  playback plays (web/src/cloud/localExport.ts, render.ts `joins`; T-20261126-96d3, done).
 
 ## Listening to it
 
