@@ -89,6 +89,11 @@ STRICT: tuple[tuple[re.Pattern[str], str | None, Rule], ...] = (
     (re.compile(r"^/api/(mix|drafts)(/|$)"), "POST", Rule("mix_edits", 120, 40)),
     (re.compile(r"^/api/(mix|drafts)(/|$)"), "PUT", Rule("mix_edits", 120, 40)),
     (re.compile(r"^/api/(mix|drafts)(/|$)"), "DELETE", Rule("mix_edits", 120, 40)),
+    # A Cloud account's song requests (cloud_brain.requests_routes): the look plans from stored
+    # facts, so it shares the planning bucket; the rest are a press each, like a mix edit.
+    (re.compile(r"^/api/requests/(consider|insert)$"), "POST", Rule("planning", 60, 20)),
+    (re.compile(r"^/api/requests(/|$)"), "POST", Rule("mix_edits", 120, 40)),
+    (re.compile(r"^/api/requests(/|$)"), "DELETE", Rule("mix_edits", 120, 40)),
 )
 
 WORDS = "That's a lot of requests at once. Wait {seconds} and try again."

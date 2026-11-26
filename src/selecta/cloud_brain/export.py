@@ -1,6 +1,7 @@
 """What the account export carries of the engine's tables: song facts, corrections, ratings, the
 other file hashes a song is known by, the seams (records, who rendered them, their history and
-the member's verdicts) and the mixes (the current mix, drafts, their Undo), plus each song's
+the member's verdicts), the mixes (the current mix, drafts, their Undo) and the song requests
+(asked, the bridges agreed to, which songs of the mix a request put there), plus each song's
 stored arrays. No clip is in Cloud to export.
 
 Called by the account export (`routes/cloud_export.py`) inside its own workspace transaction, so
@@ -26,6 +27,7 @@ FEATURES_FOLDER = "song-facts/features"
 def kept(conn: Any, workspace_id: str) -> dict[str, list[dict[str, Any]]]:
     """Every engine row of this workspace, as plain values."""
     from selecta.engine_store.schema import (
+        REQUEST_TABLES,
         analysis,
         drafts,
         mix_imports,
@@ -103,6 +105,15 @@ def kept(conn: Any, workspace_id: str) -> dict[str, list[dict[str, Any]]]:
             .where(mix_imports.c.workspace_id == workspace_id)
             .order_by(mix_imports.c.source, mix_imports.c.source_id)
         ),
+        # the account's song requests (engine_store.requests): asked, agreed bridges, marks
+        **{
+            table.name: rows(
+                sa.select(table)
+                .where(table.c.workspace_id == workspace_id)
+                .order_by(*[c for c in table.primary_key.columns if c.name != "workspace_id"])
+            )
+            for table in REQUEST_TABLES
+        },
         "other_file_hashes": rows(
             sa.select(local_song_hashes)
             .where(local_song_hashes.c.workspace_id == workspace_id)
