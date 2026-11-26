@@ -7,6 +7,7 @@ import type { MediaResolver } from '../media';
 import { exportFamily, forgetExports, type ExportDeps } from './localExport';
 import { catalogueCopy, catalogueHeld, cloudLibraryAssets, cloudLibraryResolver, forgetCloudLibraryAssets, serverSaysCopies } from './cloudLibraryMedia';
 import { deviceMusicRequest, type CatalogueSong } from './deviceMusicRequest';
+import { removeFromCloud } from './libraryPlacesChrome';
 
 // The cloud library's requests from the browser: every request this code makes is one of the
 // routes listed here, and no body carries audio, a file or folder name, or a path. Extend ALLOWED
@@ -26,6 +27,8 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['GET', /^\/local-media\/songs\?after=\d+&limit=\d+$/],
   ['GET', /^\/assets\?limit=\d+(&cursor=[A-Za-z0-9_-]+)?$/],
   ['GET', /^\/assets\/[A-Za-z0-9][A-Za-z0-9_-]{0,63}\/playback-url$/],
+  // library.places: removing songs from the cloud library, by catalogue song ids alone
+  ['POST', /^\/assets\/remove$/],
 ];
 
 const FLAGS = { 'cloud.local_export': true, 'cloud.one_mixer': true, 'cloud.hosted_render': true, 'cloud.device_render': false };
@@ -51,7 +54,7 @@ function heldTo(sent: readonly Sent[]) {
     expect(one.body).not.toMatch(/\.(mp3|flac|wav|m4a|aiff?)\b|Users|Music/i);
     if (!one.body) continue;
     assertNoPath(JSON.parse(one.body));
-    expect(Object.keys(JSON.parse(one.body))).toEqual(['songs']);
+    expect(Object.keys(JSON.parse(one.body))).toEqual([one.path === '/assets/remove' ? 'song_ids' : 'songs']);
   }
 }
 
@@ -149,5 +152,46 @@ describe('the cloud library’s requests (cloud.catalogue_play)', () => {
     expect(sent.map((one) => `${one.method} ${one.path}`)).toEqual(['GET /local-media/songs?after=0&limit=1000', 'GET /assets/up-7/playback-url']);
     heldTo(sent);
     expect(fetched).toHaveLength(1);
+  });
+});
+
+// library.places (Phase 2): the Library reads where songs are kept from the catalogue alone, never
+// by listing the uploads, and removing songs from the cloud library sends catalogue ids only.
+describe('the cloud library’s requests (library.places)', () => {
+  const rows: CatalogueSong[] = [
+    { id: 7, title: 'Archangel', artist: 'Burial', content_sha256: 'b'.repeat(64), cloud: { asset_id: 'up-7', bytes: 8, format: 'mp3', copies: 1 } },
+    { id: 8, title: 'Archangel', artist: 'Burial', duplicate_of: 7, cloud: null },
+    { id: 9, title: 'C:\Music\Near Dark.flac', artist: 'Burial', cloud: null },
+  ];
+
+  it('a Library read asks for the catalogue and nothing else', async () => {
+    const sent: Sent[] = [];
+    const cloud = (async (path: string, init?: RequestInit) => {
+      sent.push({ method: (init?.method ?? 'GET').toUpperCase(), path, body: typeof init?.body === 'string' ? init.body : '' });
+      return { songs: rows, next: null };
+    }) as Request;
+    const request = deviceMusicRequest(cloud, { workspaceId: 'ws-1', rooms: false, places: true, hosted: async (songs) => new Set(songs.filter((one) => one.cloud).map((one) => one.id)) });
+    await request('/library?state=cloud&sort=largest');
+    await request('/status');
+    expect(sent.map((one) => `${one.method} ${one.path}`)).toEqual(['GET /local-media/songs?after=0&limit=1000']);
+    heldTo(sent);
+  });
+
+  it('removing songs sends their catalogue ids, every version of each, and nothing more', async () => {
+    const sent: Sent[] = [];
+    const cloud = (async (path: string, init?: RequestInit) => {
+      sent.push({ method: (init?.method ?? 'GET').toUpperCase(), path, body: typeof init?.body === 'string' ? init.body : '' });
+      if (path === '/assets/remove') return { songs: (JSON.parse(String(init?.body)).song_ids as number[]).map((id) => ({ id, found: true, removed: id === 7 ? 1 : 0, left_nowhere: false })), bytes_released: 8 };
+      return { songs: rows, next: null };
+    }) as Request;
+    const request = deviceMusicRequest(cloud, { workspaceId: 'ws-remove', rooms: false, places: true });
+    await request('/library');
+    sent.length = 0;
+    const answer = await removeFromCloud(cloud, 'ws-remove', [7, 9]);
+    expect(sent.map((one) => `${one.method} ${one.path}`)).toEqual(['POST /assets/remove']);
+    expect(JSON.parse(sent[0].body)).toEqual({ song_ids: [7, 8, 9] });
+    heldTo(sent);
+    // the answer is the songs the Library shows, a grouped song's versions folded into it
+    expect(answer.songs).toEqual([{ id: 7, found: true, removed: 1, left_nowhere: false }, { id: 9, found: true, removed: 0, left_nowhere: false }]);
   });
 });
