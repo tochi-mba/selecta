@@ -31,7 +31,7 @@ the engine store, and answers `403 flag_off` while `cloud.brain` is off. They do
 `PUT /api/song-facts/{song_id}`, `Content-Type: application/json` (anything else is 415):
 
 ```json
-{"content_sha256": "64 hex", "audio_id": "a1:64 hex", "implementation": "web-dsp-1",
+{"content_sha256": "64 hex", "audio_id": "a1:64 hex", "implementation": "web-dsp-1+web-beatthis-small0-1",
  "bpm": 122.0, "constant_tempo": true, "grid_confidence": 0.91, "beats_per_bar": 4,
  "key": "A minor", "camelot": "8A", "key_confidence": 0.7, "key_agrees_chroma": true,
  "lufs": -9.1, "peak_db": -0.3, "energy": 0.62,
@@ -43,7 +43,9 @@ the engine store, and answers `403 flag_off` while `cloud.brain` is off. They do
 - `content_sha256` or `audio_id` (at least one) must be this song's: its catalogue hash, a hash it
   is also known by (`local_song_hashes`), or its audio id. Otherwise 409 `song_mismatch`.
 - `implementation` must be on the server's device allowlist,
-  `engine_store.facts.DEVICE_IMPLEMENTATIONS` (today `web-dsp-1`); add a new one there and to `RANK`.
+  `engine_store.facts.DEVICE_IMPLEMENTATIONS`: `web-dsp-1` (clients that sent no beat source),
+  `web-dsp-1+web-onset-comb-beats-1` and `web-dsp-1+web-beatthis-small0-1` (the port with its beat
+  source, docs/engineering/device-beats.md); add a new one there and to `RANK`.
 - Answer: `{song_id, implementation, source: "device", measured_at, replaced}`. The time is the
   server's, never the device's.
 
@@ -81,7 +83,8 @@ holds facts for at most 20,000 songs (the catalogue's device report limit): 409 
 Storage: the `analysis` row, and the arrays as an `.npz` under
 `engine_store.songs.features_key(workspace, catalogue hash, version)` in the private derived
 bucket, so `engine_store.songs.load_song` reads exactly what was saved. A device implementation's
-`version` is its own (1001 for `web-dsp-1`), so it never shares a key with the Python analysis.
+`version` is its own (1001 for `web-dsp-1`, 1002 with the interim beat source, 1003 with Beat
+This), so it never shares a key with the Python analysis.
 Facts stay in the account's workspace, never in `shared_derivations`.
 
 ## Which measurement wins
@@ -92,7 +95,9 @@ where null means the app's own Python analysis at the row's version). One functi
 
 1. A `worker` measurement beats a `device` one.
 2. From the same source, the higher-ranked implementation wins (`RANK`, lowest first:
-   `web-dsp-1`, then `python-beatthis-3`; anything unlisted ranks lowest).
+   `web-dsp-1`, `web-dsp-1+web-onset-comb-beats-1`, `web-dsp-1+web-beatthis-small0-1`, then
+   `python-beatthis-3`; anything unlisted ranks lowest). So a song the browser measures again with
+   Beat This replaces its interim measurement, and never a worker's or the Python analysis's.
 3. At equal rank, the newer wins.
 
 A losing write is 409 `outranked` and changes nothing. Whether the fit gates (`planner_core.fit`)

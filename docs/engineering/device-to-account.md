@@ -20,13 +20,15 @@ workspace. Once per pass (every five minutes) it reads `GET /api/song-facts` pag
 page (kept ten minutes, and updated as it saves), then walks this device's song index:
 
 - only hashes the index proved from the bytes (`tonalProfiles.ts::provenHashes`);
-- only songs measured here at the current version (`songFacts(sha)`);
-- skipped when the account's measurement ranks higher (a worker's, or `python-*`), or when it is the
-  same port's and this device never sent an older version of its own (a measurement is a pure
-  function of the bytes, so another device's is the same numbers);
+- only songs measured here (`songFacts(sha)`: the Beat This record when there is one, else the
+  interim source's), sent as `web-dsp-1+<beat source>`;
+- skipped when the account's measurement ranks higher (a worker's, `python-*`, or a device's with
+  a better beat source), or when it is the same implementation's and this device never sent an
+  older version of its own (a measurement is a pure function of the bytes, so another device's is
+  the same numbers);
 - skipped when remembered as sent: song id to `version:sha`, kept in the workspace's own answers
-  store on this device (`offlineCache.ts`, forgotten with the workspace). A new measurement version
-  sends the song again.
+  store on this device (`offlineCache.ts`, forgotten with the workspace). A song measured again
+  with Beat This has a new version, so it is sent again and outranks its interim measurement.
 
 One song at a time, 1.5 s apart, each after any transition being prepared (`seamWork.ts`), each
 `PUT /api/song-facts/{song_id}` bounded to 30 s. `409 outranked` and `song_mismatch`, `422` and
@@ -42,7 +44,7 @@ for the next visit; `403` stops the pass; anything else (offline, slow, 5xx, 429
 | Sent | From the stored measurement | Wire form |
 |---|---|---|
 | `content_sha256` | the hash this device computed from the file's bytes | 64 hex |
-| `implementation` | `web-dsp-1` (the port; the beat source is not on the wire, see to-do) | text |
+| `implementation` | `web-dsp-1+<beat source>`: `web-dsp-1+web-beatthis-small0-1` or `web-dsp-1+web-onset-comb-beats-1` | text |
 | `bpm`, `grid_confidence`, `key_confidence`, `lufs`, `peak_db`, `energy` | `row.*` | numbers |
 | `constant_tempo`, `key_agrees_chroma` | `row.*` (0 or 1) | true or false |
 | `beats_per_bar`, `key`, `camelot` | `row.*` | as stored |
@@ -139,7 +141,6 @@ energy." when the account chose it. Make a Mix's busy state may last up to 12 s 
 
 ## Next
 
-- Beat This in the browser replaces the interim beat source; the account then needs an
-  implementation id that names the beat source (to-do "The account cannot tell measurements from
-  the interim beat source").
+- Beat This in the browser (docs/engineering/device-beats.md) waits on the owner's steps
+  (to-do T-20261126-7164); until then devices measure and send with the interim beat source.
 - Idea cards from `/api/planning/ideas` (to-do), and versions in the order (to-do).
