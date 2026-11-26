@@ -40,6 +40,8 @@ class PairRequest(BaseModel):
     b: int = Field(gt=0)
     move: str | None = Field(default=None, max_length=32)
     leave_after: float | None = Field(default=None, ge=0, le=MAX_SONG_SECONDS)
+    # the member's transition feel (`mixes.shaping.feel`): with no move named, that feel's moves
+    language: Language | None = None
 
     @model_validator(mode="after")
     def two_songs(self) -> PairRequest:
@@ -207,7 +209,9 @@ def install(
         store = store_for(request, claims)
         a, b = pair(store, body)
         try:
-            return planning.candidates(a, b, body.move, body.leave_after, body.scripts)
+            return planning.candidates(
+                a, b, body.move, body.leave_after, body.scripts, body.language
+            )
         except planning.PlanningRefused as error:
             raise _refused(error) from None
 
@@ -222,7 +226,7 @@ def install(
         a, b = pair(store, body)
         try:
             return planning.one_script(
-                a, b, body.option, body.fingerprint, body.move, body.leave_after
+                a, b, body.option, body.fingerprint, body.move, body.leave_after, body.language
             )
         except planning.PlanningRefused as error:
             raise _refused(error) from None
