@@ -395,6 +395,10 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/uploads/preview"): {
         "files": [{"name": "song.flac", "size": 10, "sha256": "a" * 64, "song_id": 1}]
     },
+    # the upload rights statement (cloud.move_to_cloud): read and kept for the caller's own
+    # workspace only; `test_cloud_upload_rights.py` checks one workspace's record is not another's
+    ("GET", "/api/uploads/rights"): None,
+    ("POST", "/api/uploads/rights"): {"version": "2026-11-26", "wording_sha256": "a" * 64},
     ("GET", "/api/uploads"): None,
     ("GET", "/api/uploads/{session_id}"): None,
     ("POST", "/api/uploads/{session_id}/parts"): {"part_numbers": [1]},
