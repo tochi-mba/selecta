@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 from test_cloud_auth import onboard, world  # noqa: F401
 
 from selecta.api_cloud import create_cloud_app
+from selecta.business import event_scope
 from selecta.identity import accounts, sessions
 from selecta.identity.tokens import BadSignature, Claims
 from selecta.persistence import transaction
@@ -142,18 +143,34 @@ def stream_until_closed(client) -> tuple[list[str], float]:
     return topics, time.monotonic() - started
 
 
-def later(seconds: float, action) -> threading.Thread:
+def once_streaming(monkeypatch, action) -> tuple[threading.Thread, threading.Event]:
+    """Run `action` once the stream has fetched its first events, which it does only after every
+    check made before it opens (the flag middleware's and the route's own). A guessed half second
+    was not enough on a slow CI runner with the engine store on, where the middleware also
+    resolves the account for its flag answers: the revocation landed first, and the stream
+    answered 401 instead of opening."""
+    streaming = threading.Event()
+    zone_filter = event_scope.zone_filter
+
+    def first_fetch(*args, **kwargs):
+        streaming.set()
+        return zone_filter(*args, **kwargs)
+
+    monkeypatch.setattr(event_scope, "zone_filter", first_fetch)
+
     def run() -> None:
-        time.sleep(seconds)
+        streaming.wait(10)
         action()
 
     thread = threading.Thread(target=run, daemon=True)
     thread.start()
-    return thread
+    return thread, streaming
 
 
 @pytest.mark.parametrize("how", ["cut_off", "session_id", "deletion"])
-def test_an_open_event_stream_closes_once_its_sign_in_is_revoked(streaming, cloud_engine, how):
+def test_an_open_event_stream_closes_once_its_sign_in_is_revoked(
+    streaming, cloud_engine, how, monkeypatch
+):
     user_id = streaming.user_id
 
     def revoke() -> None:
@@ -167,9 +184,10 @@ def test_an_open_event_stream_closes_once_its_sign_in_is_revoked(streaming, clou
             else:
                 accounts.start_account_deletion(conn, user_id, requested_by=user_id, reason="test")
 
-    thread = later(0.5, revoke)
+    thread, opened = once_streaming(monkeypatch, revoke)
     topics, took = stream_until_closed(streaming)
     thread.join()
+    assert opened.is_set(), "the stream no longer fetches through zone_filter; move the hook"
     assert topics[-1:] == ["session.revoked"]
     # Woken by the next fallback poll (2 s without notifications), far inside the token's minute.
     assert took < 15
