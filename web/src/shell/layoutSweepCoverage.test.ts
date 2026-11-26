@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import inventory from '../../../docs/adr/mp-0272-surface-inventory.json' with { type: 'json' };
-import cloudSweep from '../../e2e-cloud/layout-sweep.cloud.ts?raw';
+import cloudMain from '../../e2e-cloud/layout-sweep.cloud.ts?raw';
+import cloudSites from '../../e2e-cloud/layout-sweep-sites.cloud.ts?raw';
 import localSweep from '../../e2e/layout-sweep.e2e.ts?raw';
 import { DESTINATIONS, MORE_DESTINATIONS } from './manifest';
 
@@ -19,6 +20,10 @@ function skipped(spec: string): Map<string, string> {
 function swept(spec: string): string {
   return spec.replace(/const SKIPPED: Record<string, string> = \{[\s\S]*?\n\};/, '');
 }
+
+// the main Cloud sweep holds the SKIPPED table; the staff console and the business app are drawn by
+// the sites sweep beside it
+const cloudSweep = `${cloudMain}\n${cloudSites}`;
 
 const routes = inventory.routes as { id: string; path: string }[];
 const surfaces = (inventory.sites as unknown as { surfaces: { id: string; site: string }[] }).surfaces;

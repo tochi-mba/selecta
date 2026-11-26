@@ -1,9 +1,9 @@
-import { APIRequestContext, Browser, BrowserContext, expect, Page, test, TestInfo } from '@playwright/test';
-import { rewriteJson } from '../e2e/helpers';
-import { LONG_FILE, LONG_TITLE, sweep, verdict } from '../e2e/layoutSweep';
+import { Browser, BrowserContext, expect, Page, test, TestInfo } from '@playwright/test';
+import { LONG_FILE, sweep, verdict } from '../e2e/layoutSweep';
 import { listener } from './cloud';
 import { endRooms } from './helpers';
-import { connectOnThisDevice, seeded } from './localFirst';
+import { seeded } from './localFirst';
+import { amend, localFirstMember, opened } from './sweepMembers';
 
 // The Cloud layout sweep (plan "two places", phase 1; e2e/layoutSweep.ts says what is measured).
 // Every Cloud surface in docs/adr/mp-0272-surface-inventory.json and every place in the shell's
@@ -11,7 +11,9 @@ import { connectOnThisDevice, seeded } from './localFirst';
 // song title and file name. The two shared shells are swept with cloud.page_layout off and on
 // (the account answer is amended in the browser, as the other local-first specs do); with it on
 // each page must also fill the frame or sit centred in it. web/src/shell/layoutSweepCoverage.test.ts
-// fails when a surface is neither here nor in SKIPPED with its reason.
+// fails when a surface is neither here nor in SKIPPED with its reason. The states a route alone does
+// not reach are in layout-sweep-states.cloud.ts, and the staff console, the business app, a joined
+// guest and a paired display in layout-sweep-sites.cloud.ts.
 
 /** The local-first shell's places: its four destinations, Workspace and everything in More. */
 const LOCAL_FIRST: [id: string, path: string, heading: string | RegExp][] = [
@@ -46,23 +48,9 @@ const LEGACY: [id: string, path: string][] = [
   ['site.cloud.not-found', '/an-old-link'],
 ];
 
-/** Surfaces not swept here, and why. */
+/** Surfaces not swept here, and why. The staff console and the business app are swept in
+ * layout-sweep-sites.cloud.ts. */
 const SKIPPED: Record<string, string> = {
-  'site.admin.overview': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.customers': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.billing': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.jobs': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.workers': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.ai': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.flags': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.content': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.covers': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.emergency': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.security': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.communications': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.system': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.admin.pilots': 'the staff console has its own frame, not the Cloud page layout; bf-accessibility.cloud.ts checks each console page for sideways scroll at 320 px',
-  'site.business.app': 'needs a business organisation this server does not seed; its parts are swept through the business harness (site.business.harness)',
 };
 
 /** A short real WAV, so the upload plan sees an audio file. */
@@ -74,21 +62,6 @@ function wav(seconds = 1): Buffer {
   bytes.writeUInt32LE(16, 16); bytes.writeUInt16LE(1, 20); bytes.writeUInt16LE(1, 22); bytes.writeUInt32LE(rate, 24);
   bytes.writeUInt32LE(rate * 2, 28); bytes.writeUInt16LE(2, 32); bytes.writeUInt16LE(16, 34); bytes.write('data', 36); bytes.writeUInt32LE(frames * 2, 40);
   return bytes;
-}
-
-/** The account answer this person gets: local-first or the hosted shell, with the layout flag. */
-async function amend(page: Page, { localFirst, layout }: { localFirst: boolean; layout: boolean }) {
-  await page.route('**/api/account', (route) => rewriteJson(route, (account) => ({
-    ...account,
-    experience: { ...(account.experience ?? {}), local_first: localFirst, hosted: true },
-    features: {
-      ...account.features,
-      ...(localFirst
-        ? { 'cloud.local_first': true, 'cloud.local_media': true, 'cloud.progressive_import': true, 'cloud.offline_shell': true, 'cloud.workspace': true, 'cloud.mix_outbox': true }
-        : { 'cloud.hosted_shell': true }),
-      'cloud.page_layout': layout,
-    },
-  })));
 }
 
 /** Add music with a long unbroken file name: `progress`, the upload's parts never answer, so
@@ -129,30 +102,9 @@ const withMenu = (page: Page, opener: string) => ({
   after: async () => { await page.keyboard.press('Escape'); },
 });
 
-async function opened(page: Page, path: string, heading?: string | RegExp) {
-  await page.goto(path);
-  await expect(page.getByRole('navigation', { name: 'Main' }).or(page.getByRole('navigation', { name: 'Cloud workspace' })).first()).toBeVisible();
-  // a place this account lacks says so under its own heading, which is fine to measure too
-  await expect(page.getByRole('heading', { level: 1, name: heading }).or(page.locator('main h1')).first()).toBeVisible();
-  // the library's first read and the notices settle; the event stream never goes quiet, so this
-  // waits a few seconds at most
-  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined);
-}
-
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 });
-
-/** A local-first member with the long title on this device too, so the Library and the mixes draw
- * it as playable. */
-async function localFirstMember(page: Page, request: APIRequestContext, name: string, layout: boolean) {
-  const user = listener(name);
-  const made = await seeded(request, user, { songs: 1, local_songs: 3, local_titles: [LONG_TITLE, 'Second song', 'Third song'] });
-  await connectOnThisDevice(page, made.workspace_id, [{ songId: made.local_songs[0], title: LONG_TITLE, audio: true }]);
-  await page.addInitScript((who) => localStorage.setItem('selecta-e2e-user', who), user);
-  await amend(page, { localFirst: true, layout });
-  return user;
-}
 
 for (const layout of [false, true]) {
   const label = layout ? 'layout-on' : 'layout-off';
