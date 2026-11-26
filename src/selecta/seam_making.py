@@ -118,6 +118,16 @@ def _why_unavailable(move: str, a: SongInfo, b: SongInfo, has_link: bool) -> str
             if gap < 0.05:
                 return "The tempos are already close, so a normal blend does this better."
             return f"A {gap:.0%} tempo gap is too wide, or a vocal or key would clash."
+        if move == "loop_room":
+            if gap > 0.045:
+                return f"The songs are {gap:.0%} apart in tempo, too far to play together."
+            return "A already has clean bars to blend over, or none clean enough to loop."
+        if move == "tempo_bridge":
+            if gap <= 0.045:
+                return "The tempos are close enough for a normal blend."
+            if gap > 0.08:
+                return f"A {gap:.0%} tempo gap is too wide to walk without it being heard."
+            return "A has no clean, steady phrase to carry the walk, or a key would clash."
         if folded_gap(a, b) > MAX_FOLDED_GAP:
             return f"The songs are {folded_gap(a, b):.0%} apart in tempo, too far to cut across."
         return "B has no strong place to land at a level that matches A."

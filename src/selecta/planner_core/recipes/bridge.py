@@ -4,14 +4,14 @@ Overlaps more than 4.5 percent apart in tempo were liked once in 10, and the old
 `tempo_ramp`, which stretched both songs over a short overlap, 0 times in 3. A DJ bridges such a
 gap slowly instead: sixteen bars, never four, with the outgoing song stripped to something the ear
 doesn't track for pitch, the tempo walked steadily to the next song's, and then the next song
-brought in at its own speed (transition-craft-2.md 4.5, technique-catalogue.md).
+brought in at its own speed (transition-craft-2.md section 4, technique-catalogue.md).
 
 Bar by bar: one bar of A as it is; then sixteen bars of A's clean phrase (looped where the song
-has no sixteen clean bars of its own, through `recipes.loop`) with its bass out, its mids down
-and a highpass up, each bar a step closer to B's tempo, every step the same size; then eight bars
-where B enters on that phrase line at its native speed, untouched, A still at B's tempo under it
-and fading out. Pitch never moves: every change of speed is a time-stretch, never varispeed. Only
-A is ever stretched, and never by more than `MAX_STRETCH`.
+has no sixteen clean bars of its own, through `recipes.loop`) with its bass nearly out, its
+mids down and a highpass up, each bar a step closer to B's tempo, every step the same size; then
+eight bars where B enters on that phrase line at its native speed, untouched, A still at B's
+tempo under it and fading out. Pitch never moves: every change of speed is a time-stretch, never
+varispeed. Only A is ever stretched, and never by more than `MAX_STRETCH`.
 
 Without stems this is the whole move, and it plays in every studio. A stem form, A's drums alone
 over the bridge, waits on stem lanes the planner core may not import (docs/todo).
@@ -48,11 +48,15 @@ LEAD_BARS = 1
 TAIL_BARS = 2
 BASS_OUT_BARS = 1
 STRIP_BARS = 2
-STRIPPED_MID = 0.6
-STRIPPED_HIGHPASS_HZ = 300.0
+STRIPPED_LOW = 0.3
+STRIPPED_MID = 0.8
+STRIPPED_HIGHPASS_HZ = 150.0
 LANDING_HIGHPASS_HZ = 1200.0
-"""How far A is stripped: bass out over the first bar, mids down about 4 dB and a highpass up to
-300 Hz over two, then rising on as B takes over. Provisional until rated."""
+"""How far A is stripped: its low band down about 10 dB over the first bar and gone on the beat
+before B arrives, mids down about 2 dB and a highpass up to 150 Hz over two bars, then rising on
+as B takes over. Stripped harder (low band out, highpass 300 Hz) the synthetic design pair left
+15 s under the audit's quiet-time floor; a lighter strip let A's kick through under B's and the
+beat check read 19 to 30 ms. Provisional until rated."""
 
 
 def _stretch(a: SongInfo, b: SongInfo) -> float:
@@ -141,9 +145,19 @@ def _bar_lines(
     return SideA(outputs, bar_sources, natural), b_warp, arrival, end, duration
 
 
-def _strip(start: float, bar: float, arrival: float, end: float) -> tuple[Curve, Curve, Curve]:
-    """A's low band, mid band and highpass over the bridge and the landing."""
-    low = Curve([(start, 1.0), (start + bar * BASS_OUT_BARS, 0.0)])
+def _strip(
+    start: float, beat: float, bar: float, arrival: float, end: float
+) -> tuple[Curve, Curve, Curve]:
+    """A's low band, mid band and highpass over the bridge and the landing. What is left of A's
+    low end goes on the beat before B arrives, so only one kick ever plays."""
+    low = Curve(
+        [
+            (start, 1.0),
+            (start + bar * BASS_OUT_BARS, STRIPPED_LOW),
+            (arrival - beat, STRIPPED_LOW),
+            (arrival, 0.0),
+        ]
+    )
     mid = Curve([(start, 1.0), (start + bar * STRIP_BARS, STRIPPED_MID)])
     points = []
     for i in range(25):
@@ -177,7 +191,7 @@ def tempo_bridge(
     period = 60.0 / b.bpm
     bar = period * a.beats_per_bar
     span = (end - arrival) * _FADE_SHARE
-    low, mid, highpass = _strip(start, bar, arrival, end)
+    low, mid, highpass = _strip(start, period, bar, arrival, end)
     gain = fade_out(end - span, end)
     first, extras, vocal_gain = a_parts(a, side, gain, low, mid, highpass)
     # the audit steps beats from the overlap's start, so it starts a whole number of B's beats
