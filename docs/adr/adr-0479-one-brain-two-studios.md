@@ -175,3 +175,23 @@ Each audio phase ends at a listening stop. Only the owner can judge sound.
   intertwined stems are scripts rendered by `render()` and audited with vocal spans from their
   own voice stems, with the pocket nudge and beat tightening; word and ride moves fold half and
   double time. The old stem mixes stay for flag off until the owner's listening stop.
+
+### Status by phase, 2026-11-26
+
+Nothing below has been listened to; [one-brain-listening.md](../engineering/one-brain-listening.md)
+is the one list of what to hear, with each flag and its default.
+
+| Phase | Built | Flag (default) | Not built, and where it is filed |
+|---|---|---|---|
+| 1 | Seams planned when their song starts, loudness gain, deadline retries | `cloud.seam_lead` (on) | |
+| 2 | Script JSON, source resolver, stem moves through `render()` | `render.one_engine` (on) | |
+| 3 | Engine store, fail-closed tenancy, flag context, ratings, song reads | `core.engine_store` (off) | |
+| 4 | Planner core with a purity check; Cloud facts and planning routes; audio identity | `cloud.brain` (on), `library.audio_identity` (on) | |
+| 5 | Device measurement and Beat This ports, renderer, audit and repair ports, clips made ahead, export from the same clips | `cloud.device_analysis`, `cloud.device_render` (off); `cloud.local_export` (on) | Beat This hosting and its signed record T-20261126-7164; stems T-20261125-03a3; a better stretcher T-20261126-afe7 |
+| 6 | Uploaded music on the planner core with the repair loop; worker facts and seams recorded | `cloud.hosted_brain` (off) | Stems and vocal sensing T-20261126-fdde; one shell T-20261126-73f9 |
+| 7 | Seams, mixes, requests, discovery and bridges, listening study, library, Lucy on the store; their Cloud routes; the suite run with the flag on, in CI as `python-store-on` | `core.engine_store` (off), `cloud.account_mixes` (off) | The owner's proof on a copy of their library ([steps](../engineering/one-brain-listening.md)); the deliberate remainder in [engine-store.md](../engineering/engine-store.md) |
+| 8 | Loop and blend, tempo bridge, rhythm fit, ratings calibration | `move.loop_room`, `move.tempo_bridge`, `planner.rhythm_fit`, `planner.calibrated_gates` (all off) | Band weave T-20261126-4918; tonal owner T-20261126-ff7f |
+| 9 | Member copy says where a song lives; a guard against the retired names; one glossary; the safe code renames | | Retiring the older rail, the uploaded-music pages and two players T-20261126-73f9 |
+
+For music on the device, [cloud-device-features.md](../engineering/cloud-device-features.md)
+lists every Desktop feature and what a Cloud account gets.
