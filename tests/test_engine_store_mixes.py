@@ -194,8 +194,11 @@ def test_the_migration_keeps_every_row_and_adopts_in_place(home):
     assert _rows(home.db_path) == before
 
 
-def test_every_operation_through_the_store_matches_the_old_path(home, tmp_path):
+def test_every_operation_through_the_store_matches_the_old_path(home, tmp_path, monkeypatch):
     _synthetic(home.db_path)
+    # One still clock for both runs: drafts listed newest first tie on the same second and fall
+    # back to the id, so a second ticking over mid-run in one run only can't reorder the lists.
+    monkeypatch.setattr("selecta.engine_store.mixes.now", lambda: "2099-01-01 00:00:00")
     old = tmp_path / "old.sqlite"
     shutil.copy(home.db_path, old)
     flags.use("")

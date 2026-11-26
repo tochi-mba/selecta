@@ -13,6 +13,10 @@ from selecta import db, mix
 from selecta.api import create_app
 from selecta.config import ANALYSIS_VERSION, Settings
 from selecta.eta import JobClock, mix_time_left, time_ahead
+
+# Imported before any fixture swaps load_song: a module imported while it is swapped binds the
+# fake for good (`from ... import load_song`) and hands it to every later test in the process.
+from selecta.planner import reel  # noqa: F401
 from selecta.seams import LATER, LINE, MIX, PREPARING, REQUEST, URGENT, SeamRequest, SeamStore
 
 
