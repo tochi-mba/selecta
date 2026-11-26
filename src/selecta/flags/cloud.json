@@ -104,6 +104,16 @@
       "cloud_surface_kind": "headless",
       "cloud_surface_reason": "Song identity and a dry run underneath uploads; it adds no page or control of its own."
     },
+    "cloud.move_to_cloud": {
+      "label": "Upload songs from this device",
+      "about": "A member with a cloud library can upload songs from this device to it, one song at a time, carrying on after a reload or a closed tab, and then play them from the cloud library only: the song leaves this device's list, the file on this device stays exactly as it is, folder checks never add it back, and each song can play from this device again. The build ships it on; an account without the cloud library still sees nothing, because it needs the cloud library grant, uploads and uploads joining their song. Off, nothing about it is shown.",
+      "requires": ["cloud.hosted_media", "cloud.uploads", "storage.upload_identity"],
+      "surfaces": ["cloud.library"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "storage"
+    },
     "cloud.stored_media": {
       "label": "Stored media",
       "about": "List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the cloud library grant, so nobody's library goes dark (ADR-0456).",
