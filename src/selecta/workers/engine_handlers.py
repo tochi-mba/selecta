@@ -146,14 +146,30 @@ def normalise(source: Path, output: Path, ffmpeg: str = "ffmpeg",
 class _CheckedSource:
     """One source downloaded, checked against its SHA-256 and normalised for the engine."""
 
-    def __init__(self, ctx: JobContext, ref: Any, selector: str, ffmpeg: str):
+    def __init__(self, ctx: JobContext, ref: Any, selector: str, ffmpeg: str,
+                 identify: bool = False):
         self.sha256 = _source_hash(ref, f"song {selector!r}")
         original = _fetch(ctx, ref.get("source_key"), selector, f"{selector}.original")
         if _sha256_of(original, ctx) != self.sha256:
             raise InputInvalid("A source checksum does not match the job.")
         ctx.check_in()
+        # the stored original's audio id (library.audio_identity), so the server can match the
+        # song by its audio as a device does; worked out before the original is let go
+        self.audio_id = _audio_id(original) if identify else None
         self.path = normalise(original, ctx.scratch / f"{selector}.flac", ffmpeg, ctx)
         original.unlink(missing_ok=True)
+
+
+def _audio_id(path: Path) -> str | None:
+    from selecta import flags
+    from selecta.library.audio_identity import audio_id
+
+    if not flags.on("library.audio_identity"):
+        return None  # off: no audio id is computed, sent or stored (audio-identity.md)
+    try:
+        return audio_id(path)
+    except OSError:
+        return None
 
 
 # --- analyse.song --------------------------------------------------------------------------------
@@ -173,7 +189,7 @@ def analyse(
     if not isinstance(ref, Mapping):
         raise InputInvalid("Analysis input must be an object.")
     ctx.check_in()
-    source = _CheckedSource(ctx, ref, "source", ffmpeg)
+    source = _CheckedSource(ctx, ref, "source", ffmpeg, identify=True)
     try:
         stereo = audio.decode(source.path)
     except audio.DecodeError as error:
@@ -201,8 +217,16 @@ def analyse(
         "duration": stereo.shape[0] / SAMPLE_RATE,
     }
     output = ctx.scratch / "analysis.npz"
+    # the drum pattern and swing, as the Desktop saves them (`features.rhythm_bars`); they only
+    # travel as a pair, and a file without them reads as no opinion on rhythm
+    rhythm = (
+        {"pattern_bars": features.pattern_bars.astype(np.float16),
+         "swing_bars": features.swing_bars.astype(np.float16)}
+        if features.pattern_bars is not None and features.swing_bars is not None else {}
+    )
     np.savez_compressed(
         output,
+        **rhythm,
         beats=grid.beats,
         bar_starts=grid.bar_starts.astype(np.int32),
         raw_beats=grid.raw_beats.astype(np.float32),
@@ -223,7 +247,7 @@ def analyse(
     )
     artifact = ctx.publish("analysis", input_hash, output, "analysis.npz", provenance=provenance)
     ctx.progress(3, 3)
-    return {
+    found = {
         "input_hash": input_hash,
         "keys": artifact.keys,
         "bpm": summary["bpm"],
@@ -233,6 +257,11 @@ def analyse(
         "peak_db": summary["peak_db"],
         "checksum": artifact.checksum,
     }
+    if source.audio_id:
+        # a worker has no database: the server keeps the song's facts from this file and
+        # matches the song by this id too (hosted_facts)
+        found["audio_id"] = source.audio_id
+    return found
 
 
 # --- seam.render ---------------------------------------------------------------------------------
@@ -284,11 +313,16 @@ def song_from_analysis(
     )
 
 
-def _song(ctx: JobContext, side: Any, name: str, number: int, ffmpeg: str) -> SongInfo:
+def _song(ctx: JobContext, side: Any, name: str, number: int, ffmpeg: str,
+          core: bool = False) -> SongInfo:
     if not isinstance(side, Mapping):
         raise InputInvalid(f"Song {name!r} must be an object.")
     source = _CheckedSource(ctx, side, name, ffmpeg)
     analysis = _fetch(ctx, side.get("analysis_key"), f"{name}_analysis", f"{name}.npz")
+    if core:
+        from selecta.workers.engine_core import song_from_facts
+
+        return song_from_facts(analysis, source.path, number, side)
     return song_from_analysis(analysis, source.path, number, side)
 
 
@@ -297,7 +331,7 @@ def _versions() -> dict[str, int]:
 
 
 def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
-    from selecta.workers.engine_seams import ENGINE, best_seam
+    from selecta.workers import engine_core, engine_seams
 
     ref = job.input_ref
     if not isinstance(ref, Mapping):
@@ -305,18 +339,25 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
     style = ref.get("style")
     if style is not None and not isinstance(style, str):
         raise InputInvalid("A seam style must be a name.")
+    # `cloud.hosted_brain` on the server: the planner core's loop (engine_core); a job without
+    # the mark (every kiosk seam, and hosted seams with the flag off) renders as before
+    core = ref.get("brain") == engine_core.MARK
     ctx.check_in()
-    a = _song(ctx, ref.get("a"), "a", 1, ffmpeg)
-    b = _song(ctx, ref.get("b"), "b", 2, ffmpeg)
+    a = _song(ctx, ref.get("a"), "a", 1, ffmpeg, core)
+    b = _song(ctx, ref.get("b"), "b", 2, ffmpeg, core)
     ctx.progress(1, 2)
-    # The local app's own move choice (engine_seams): blends and effects placed and
-    # beat-tightened as the local app places them, falling back to a clean cut.
-    take = best_seam(a, b, style)
+    if core:
+        take, engine_name = engine_core.core_seam(a, b, style), engine_core.ENGINE
+    else:
+        # The local app's own move choice (engine_seams): blends and effects placed and
+        # beat-tightened as the local app places them, falling back to a clean cut.
+        take, engine_name = engine_seams.best_seam(a, b, style), engine_seams.ENGINE
     ctx.check_in()
     output = ctx.scratch / "seam.flac"
     sf.write(output, take.rendered.audio, SAMPLE_RATE, subtype="PCM_24")
     hashes = {"a": ref["a"]["source_sha256"], "b": ref["b"]["source_sha256"]}
-    input_hash = _hash({**hashes, "style": style, **_versions()})
+    extra = engine_core.hash_part(ref["a"], ref["b"]) if core else {}
+    input_hash = _hash({**hashes, "style": style, **_versions(), **extra})
     # Where native playback of A hands over to the clip and of B takes over after it, so a
     # player that plays the songs and the clip as separate files can join them (ADR-0446).
     cues = {
@@ -328,7 +369,7 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
         inputs=hashes,
         versions=_versions(),
         settings={
-            "style": style or "auto", "cues": cues, "engine": ENGINE, "move": take.move,
+            "style": style or "auto", "cues": cues, "engine": engine_name, "move": take.move,
             "passed": bool(take.report.passed), "fell_back": take.fell_back,
         },
     )
@@ -339,7 +380,7 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
         "keys": artifact.keys,
         "style": take.rendered.script.style,
         "move": take.move,
-        "engine": ENGINE,
+        "engine": engine_name,
         "why": take.why[:300],
         "audit_passed": bool(take.report.passed),
         "fell_back": take.fell_back,

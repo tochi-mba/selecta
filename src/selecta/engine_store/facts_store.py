@@ -314,6 +314,13 @@ def _hosted(path: Path) -> tuple[SongFacts, float]:
                 )
             },
         }
+        # the drum pattern and swing, kept only as the pair `facts.check` accepts; a worker
+        # analysis made before it saved them simply has none
+        if "pattern_bars" in data.files and "swing_bars" in data.files:
+            arrays.update(
+                pattern_bars=data["pattern_bars"].astype(np.float32),
+                swing_bars=data["swing_bars"].astype(np.float32),
+            )
     facts = SongFacts(
         bpm=summary["bpm"],
         constant_tempo=bool(summary["constant_tempo"]),
@@ -369,10 +376,13 @@ def record_worker_analysis(
     content_sha256: str,
     path: Path,
     implementation: str | None = None,
+    audio_id: str | None = None,
 ) -> int | None:
     """Also keep a worker's finished analysis of an uploaded file as the facts of the catalogue
     song with the same bytes, if this workspace has one; returns its id, else None. A device
-    measurement of that song gives way to it (`facts.wins`); a refusal is the same as None."""
+    measurement of that song gives way to it (`facts.wins`); a refusal is the same as None.
+    `audio_id` is the one the worker worked out from the stored original, if any: it is also
+    accepted as naming the song (`save`)."""
     song_id = song_with_hash(store, content_sha256)
     if song_id is None:
         return None
@@ -380,7 +390,15 @@ def record_worker_analysis(
     if implementation is not None:
         facts = replace(facts, implementation=implementation)
     try:
-        save(store, artifacts, song_id, facts, content_sha256=content_sha256, duration=duration)
+        save(
+            store,
+            artifacts,
+            song_id,
+            facts,
+            content_sha256=content_sha256,
+            audio_id=audio_id,
+            duration=duration,
+        )
     except FactsRefused:
         return None
     return song_id
