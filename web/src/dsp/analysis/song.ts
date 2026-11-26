@@ -12,7 +12,7 @@
 
 import type { BeatEstimate, BeatSource } from './beatSource';
 import { DEVICE_ANALYSIS_IMPLEMENTATION, PYTHON_ANALYSIS_VERSION } from './deviceAnalysisIds';
-import { extractFeatures, FEATURE_SR, frameFeatures, type SongFeatures } from './features';
+import { extractFeatures, FEATURE_SR, frameFeatures, type FrameFeatures, type SongFeatures } from './features';
 import { barTimes, buildGrid, type BeatGrid } from './grid';
 import { roundHalfEven, pyRound } from './numeric';
 import { onsetEnvelope } from './onsetEnvelope';
@@ -79,6 +79,8 @@ export interface SongDetail {
   envelope: Float32Array;
   grid: BeatGrid | null;
   features: SongFeatures | null;
+  /** The frame-level values the bar features were averaged from. */
+  frames: FrameFeatures | null;
   lufs: number;
   peakDb: number;
 }
@@ -138,14 +140,16 @@ export function analyseSong(
     sample_rate: sampleRate,
     duration_s: duration,
   };
-  const detail: SongDetail = { mono22k: prepared.mono22k, envelope, grid: null, features: null, lufs, peakDb };
+  const detail: SongDetail = { mono22k: prepared.mono22k, envelope, grid: null, features: null, frames: null, lufs, peakDb };
   const grid = buildGrid(beats.beats, beats.downbeats, envelope);
   if (!grid || grid.barStarts.length < 4) {
     return { facts: { ...base, row: null, arrays: null, error: 'no steady beat found' }, detail };
   }
-  const features = extractFeatures(prepared.mono22k, barTimes(grid), duration, frameFeatures(prepared.mono22k));
+  const frames = frameFeatures(prepared.mono22k);
+  const features = extractFeatures(prepared.mono22k, barTimes(grid), duration, frames);
   detail.grid = grid;
   detail.features = features;
+  detail.frames = frames;
   const key = chromaKey(features.chromaProfile);
   const row: AnalysisRow = {
     bpm: pyRound(grid.bpm, 2),
