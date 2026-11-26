@@ -28,6 +28,8 @@ export type HostedView = 'home' | 'listen' | 'mixes' | 'library' | { more: MoreD
  * and it is what drops My Mixes from the shared navigation. */
 export const NOT_IN_HOSTED = {
   'cloud.local_first': false,
+  // this is the shell an account gets with cloud.one_shell off (an old server never names it)
+  'cloud.one_shell': false,
   // the browser Workspace belongs to browser-first Cloud, so the hosted rail has none
   'cloud.workspace': false,
   requests: false,

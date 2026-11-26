@@ -634,12 +634,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const batch = on('library.batch') && (on('library.priority') || on('library.never_play'));
   // List and cards trade places by gliding the rows on screen; with motion off it just changes
   const changeLayout = (layout: 'list' | 'cards') => void flip(visibleRows(listRef.current, ':scope > li'), () => flushSync(() => setPrefs({ libraryLayout: layout })));
+  // cloud.one_shell: with no music on this account's devices, no place chip names this device
+  const chipsFor = (now: NonNullable<typeof placed>) => placeChips(now, places?.otherDevices ?? false).filter((chip) => !browser?.cloudOnly || chip.name !== 'here');
 
   return (
     <main className={`page library density${browser ? ' library-browser' : ''}`} id="main">
       {browser && (
         <BrowserLibraryHead songs={counts.music} playable={counts.ready} setAside={counts.set_aside} action={browser.action}
-          places={places ? status.places : undefined}
+          places={places ? status.places : undefined} cloudOnly={browser.cloudOnly}
           onSetAside={() => setAddressQuery({ show: 'set_aside', aside: null, pages: null }, { push: true })} />
       )}
       {!browser && <header className="library-head">
@@ -663,8 +665,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {lead}
       {browser && (
         <BrowserLibraryToolbar typed={typed} onTyped={setTyped}
-          filters={placed ? placeChips(placed, places?.otherDevices ?? false) : visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => ({ name: option.name, label: option.name === 'all' ? 'All' : option.name === 'ready' ? 'On this device' : option.label }))}
-          pressed={placed ? (name) => placeChips(placed, places?.otherDevices ?? false).some((chip) => chip.name === name && chip.pressed) : undefined}
+          filters={placed ? chipsFor(placed) : visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => ({ name: option.name, label: option.name === 'all' ? 'All' : option.name === 'ready' ? (browser.cloudOnly ? 'Plays here' : 'On this device') : option.label }))}
+          pressed={placed ? (name) => chipsFor(placed).some((chip) => chip.name === name && chip.pressed) : undefined}
           filter={filter} onFilter={(name) => setAddressQuery(placed ? { ...pressPlace(placed, name), pages: null } : { show: name === 'all' ? null : name, pages: null }, { push: true })}
           sorts={placed ? placeSorts(SORTS.filter((option) => option.name !== 'tempo'), placed) : SORTS.filter((option) => analysisAvailable || option.name !== 'tempo')} sort={sort}
           onSort={(name) => setAddressQuery({ sort: name === 'title' ? null : name, pages: null }, { push: true })}

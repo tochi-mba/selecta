@@ -46,14 +46,14 @@ const STEPS: { id: Step; label: string }[] = [
   { id: 'listen', label: 'Listen' },
 ];
 
-function StepsToAMix({ at }: { at: Step }) {
+function StepsToAMix({ at, first }: { at: Step; first?: string }) {
   const here = STEPS.findIndex((step) => step.id === at);
   return (
     <ol className="setup-steps" aria-label="Steps to a playing mix">
       {STEPS.map((step, index) => (
         <li key={step.id} className={index < here ? 'done' : undefined} aria-current={index === here ? 'step' : undefined}>
           {index < here && <span className="setup-step-mark"><Icon name="check" size="compact" /></span>}
-          <span className="setup-step-label">{step.label}</span>
+          <span className="setup-step-label">{step.id === 'connect' && first ? first : step.label}</span>
           {index < here && <span className="visually-hidden"> (done)</span>}
         </li>
       ))}
@@ -66,8 +66,10 @@ const chooseAgain = (connected: number) => `This browser lets go of your music w
 
 /** One guided empty page: what the page is for, why it is empty in one line, the one action
  * that fills it, and where that sits in the three steps. */
-function MusicEmpty({ page, title, lead, at, heading, children, actions, current }: {
+function MusicEmpty({ page, title, lead, at, heading, children, actions, current, first }: {
   page: string; title: string; lead: string; at: Step; heading: string; children: string; actions: ReactNode; current?: ReactNode;
+  /** the first step's name when it is not Connect music (Upload music, cloud only) */
+  first?: string;
 }) {
   const id = useId();
   return (
@@ -84,7 +86,7 @@ function MusicEmpty({ page, title, lead, at, heading, children, actions, current
         <h2 id={id}>{heading}</h2>
         <p>{children}</p>
         <div className="empty-state-actions">{actions}</div>
-        <StepsToAMix at={at} />
+        <StepsToAMix at={at} first={first} />
       </section>
     </main>
   );
@@ -93,12 +95,32 @@ function MusicEmpty({ page, title, lead, at, heading, children, actions, current
 /** `connected` is how many songs are in the catalogue; ideas need songs this browser can open.
  * `current` is the current mix's card, when there is one: it stays in view even while too few
  * songs can play here to make a new mix. */
-export function MixesEmpty({ connected, checking, current, onSetUp }: {
+/** cloud.one_shell, cloud only: songs come from uploading, never from a folder on this device. */
+export type CloudOnlyEmpty = { upload: string | null };
+
+/** Uploading as the way to fill an empty page, for an account with no music on its devices. */
+function CloudOnlyMusicEmpty({ shared, cloudOnly, connected, starting }: {
+  shared: { page: string; title: string; lead: string; current?: ReactNode };
+  cloudOnly: CloudOnlyEmpty; connected: number; starting: string;
+}) {
+  const upload = cloudOnly.upload;
+  return (
+    <MusicEmpty {...shared} at="connect" first="Upload music" heading={connected === 0 ? `Upload songs to ${starting}` : `Upload more songs to ${starting}`}
+      actions={upload ? <PageLink to={upload} className="button primary big">Upload music</PageLink> : <PageLink to="/library" className="button primary big">See your library</PageLink>}>
+      {connected === 0 ? 'Songs you upload are kept in your cloud library and play on all your devices.' : 'A mix needs at least two songs in your cloud library.'}
+    </MusicEmpty>
+  );
+}
+
+export function MixesEmpty({ connected, checking, current, onSetUp, cloudOnly }: {
   connected: number; checking?: { checked: number; total: number | null }; current?: ReactNode;
   /** given while getting started is unfinished (Finish later): opens it again where it was left */
   onSetUp?: () => void;
+  /** cloud.one_shell: no music on this account's devices, so the way forward is uploading */
+  cloudOnly?: CloudOnlyEmpty;
 }) {
   const shared = { page: 'mixes', title: 'Make a Mix', lead: 'Choose a length and press Play. SelectaDJ lines up your songs and blends each one into the next.', at: 'connect' as const, current };
+  if (cloudOnly) return <CloudOnlyMusicEmpty shared={shared} cloudOnly={cloudOnly} connected={connected} starting="make a mix" />;
   const setUp = onSetUp && <button type="button" className="quiet" onClick={onSetUp}>Finish setting up</button>;
   if (checking) {
     return (
@@ -117,10 +139,12 @@ export function MixesEmpty({ connected, checking, current, onSetUp }: {
 
 /** `playable` is how many songs this browser can open now; `saved` how many mixes the account
  * holds (null before the server has said). */
-export function ListenEmpty({ connected, playable = connected, saved = null }: { connected: number; playable?: number; saved?: number | null }) {
+export function ListenEmpty({ connected, playable = connected, saved = null, cloudOnly }: { connected: number; playable?: number; saved?: number | null; cloudOnly?: CloudOnlyEmpty }) {
   const canMix = playable >= 2;
   const shared = { page: 'listen-idle', title: 'Listen', lead: 'What’s playing, what’s next and each transition as it happens.' };
   const mine = !!saved && <PageLink to="/mixes/mine" className="button big">My Mixes</PageLink>;
+  // cloud.one_shell: no music on this account's devices, so the way forward is uploading
+  if (!canMix && cloudOnly) return <CloudOnlyMusicEmpty shared={shared} cloudOnly={cloudOnly} connected={connected} starting="start listening" />;
   if (!canMix) {
     return (
       <MusicEmpty {...shared} at="connect" heading={connected === 0 ? 'Connect your music to start listening' : 'Choose your music again to listen'}

@@ -1,5 +1,6 @@
 import { ApiError, type MixData, type Request } from '../api';
 import { flagListed } from '../flags';
+import { oneMixerOn } from './musicHomes';
 import type { CatalogueSong } from './deviceMusicRequest';
 import type { ExportState } from './hosted/hostedWords';
 
@@ -15,8 +16,8 @@ import type { ExportState } from './hosted/hostedWords';
  *   are being made moves them along, as playing it would);
  * - `GET /exports/cloud/{job}`: how far the file has got. */
 
-/** With `cloud.one_mixer` and the cloud studio both named on. */
-export const cloudFileOn = (): boolean => flagListed('cloud.one_mixer') && flagListed('cloud.hosted_render');
+/** With `cloud.one_mixer` (or the cloud-only shell, musicHomes.ts) and the cloud studio named on. */
+export const cloudFileOn = (): boolean => oneMixerOn() && flagListed('cloud.hosted_render');
 
 /** The server's answer: an export's state, or `preparing` with the mix's counts. */
 export type CloudFileState = ExportState & {

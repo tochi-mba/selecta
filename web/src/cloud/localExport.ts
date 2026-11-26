@@ -6,6 +6,7 @@ import { createLevels, type Levels } from '../engine/level';
 import { flagListed, flagOn } from '../flags';
 import type { MediaResolver } from '../media';
 import { cloudFileFamily } from './cloudFileExport';
+import { oneMixerOn } from './musicHomes';
 import { deviceRenderOn, SEAM_BUDGET_MS, type DeviceStudio, type StudioSong } from './deviceStudio';
 import { makeDeviceStudio, songsHere } from './studioWiring';
 
@@ -34,8 +35,8 @@ import { makeDeviceStudio, songsHere } from './studioWiring';
 
 /** With `cloud.local_export` named on by the server. */
 export const localExportOn = (): boolean => flagListed('cloud.local_export');
-/** With `cloud.one_mixer` named on: songs in the cloud library are saved too. */
-export const bothPlacesOn = (): boolean => flagListed('cloud.one_mixer');
+/** With `cloud.one_mixer` named on, or the cloud-only shell: songs in the cloud library are saved too. */
+export const bothPlacesOn = (): boolean => oneMixerOn();
 
 export const NOT_HERE = (title: string) => `${title} isn’t on this device, so this mix can’t be saved as a file here.`;
 export const ON_DEVICE = (title: string, device: string) => `${title} is only on ${device}, so it was left out of this file.`;

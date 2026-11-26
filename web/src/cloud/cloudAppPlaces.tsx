@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { RoomPanel } from '../rooms/RoomPanel';
 import type { MoreDestinationId } from '../shell/manifest';
-import { flagOn } from '../flags';
+import { flagListed, flagOn } from '../flags';
+import { CloudSongProblems } from './CloudSongProblems';
 import { SettingsLayout } from './AccountLayout';
 import type { AccountProblem } from './accountStates';
 import type { Account, Api, Page } from './api';
@@ -18,16 +19,21 @@ export const RENEWING_WORDS = 'Renewing your sign-in. Everything on this page is
 
 /** The account places behind More, one drawing for both shared shells (CloudShell and
  * HostedShell). Kept out of CloudApp.tsx so it stays under the file-length cap. */
-export function morePanelFor({ account, api, settingsPanel, billing, uploads, places }: {
+export function morePanelFor({ account, api, settingsPanel, billing, uploads, places, oneShell = false }: {
   account: Account | null;
   api: Api;
   settingsPanel: ReactNode;
   billing: ReactNode;
   uploads: ReactNode;
   places: Parameters<typeof SettingsLayout>[0]['places'];
+  /** cloud.one_shell: Upload music also lists the songs that could not be analysed, with Try
+   * again, which the older Make a Mix card held */
+  oneShell?: boolean;
 }): (id: MoreDestinationId) => ReactNode {
   return (id) => {
     if (!account) return null;
+    const songProblems = oneShell && account.experience?.hosted === true && flagListed('cloud.hosted_render');
+    if (id === 'uploads' && songProblems) return <>{uploads}<CloudSongProblems api={api} workspaceId={account.workspace.id} /></>;
     switch (id) {
       case 'account': return settingsPanel;
       case 'billing': return billing;

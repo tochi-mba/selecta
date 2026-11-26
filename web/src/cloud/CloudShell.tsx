@@ -64,6 +64,7 @@ import { CloudShellPages } from './CloudShellPages';
 import { CloudShellNotices, otherTabNote } from './CloudShellNotices';
 import type { NoticeGroups } from './NoticeStack';
 import { useCloudUploadQueue } from './uploadQueueWiring';
+import { CLOUD_ONLY_FOOTER, NOT_WITHOUT_DEVICE_MUSIC, setShellHomes, type MusicHomes } from './musicHomes';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -87,9 +88,13 @@ const PUBLISH_RETRY_MS = 10_000;
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 const LUCY_POLL_MS = 500;
 
-export function CloudShell({ api, account, more, notices, accountNotices, feedback, onSignOut, offlineReadOnly = false }: {
+export function CloudShell({ api, account, more, notices, accountNotices, feedback, onSignOut, offlineReadOnly = false, musicHomes }: {
   api: Api;
   account: Account;
+  /** cloud.one_shell: where this account's music lives. With `device` false the shell is cloud
+   * only: no device sweeps, folder checks, Connect music or This device, adding music is
+   * uploading and songs play from the cloud library. Absent, the shell is as it was. */
+  musicHomes?: MusicHomes;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */
   more: (id: MoreDestinationId) => ReactNode;
   /** The account's notices (suspended, account problem, over quota, paused live updates), drawn
@@ -106,6 +111,12 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
 }) {
   const workspaceId = account.workspace.id;
   const on = useFlags();
+  // cloud.one_shell: music on this account's devices, unless the profile says there is none
+  const devicesHere = musicHomes?.device !== false;
+  // said while drawing, as Lucy's transport is, so request code reads the same profile
+  setShellHomes(musicHomes ?? null);
+  useEffect(() => () => setShellHomes(null), []);
+  const experience = musicHomes ? { local_first: musicHomes.device, hosted: account.experience?.hosted === true } : account.experience ?? null;
   const cloud = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, workspaceId), [api, workspaceId]) as Request;
   // One song index per workspace (ADR-0469): a different account in this browser opens its own.
   const store = useRef<{ workspaceId: string; opened: Promise<MediaStore> } | null>(null);
@@ -117,12 +128,14 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // Device first, hosted fallback (ADR-0465): only a grandfathered account with stored media
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
-  const coexisting = isHostedAccount(account) && on('cloud.stored_media');
+  // (cloud only: the cloud library is the account's one place, so its songs always play from it)
+  const coexisting = (devicesHere ? isHostedAccount(account) : musicHomes?.cloud === true) && on('cloud.stored_media');
   // library.places: the Library says where songs are kept, for an account with a cloud library
   // (the grant, or songs still stored after it was taken away); nothing new for anyone else
   const placesOn = on('library.places') && on('cloud.stored_media') && holdsHostedStorage(account);
-  // cloud.catalogue_play: cloud songs found by catalogue id, and counted on every device
-  const cataloguePlay = coexisting && flagListed('cloud.catalogue_play');
+  // cloud.catalogue_play: cloud songs found by catalogue id, and counted on every device; cloud
+  // only, always, since a name or this device's files can never find them
+  const cataloguePlay = coexisting && (flagListed('cloud.catalogue_play') || !devicesHere);
   // BF-0462-04: the Library says where each song can play from, against this device's own
   // connected files and, for a grandfathered account, its hosted copies
   // Probing every handle means opening every file, which at thousands of songs cannot happen
@@ -139,6 +152,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // what Workspace says about the sweep: running now, and when it last looked at the files
   const [fileCheck, setFileCheck] = useState<{ running: boolean; at: number | null }>({ running: false, at: null });
   const sweepLapsed = useCallback((forceReport = false): Promise<void> => {
+    // cloud only: no files on this device to look at or report
+    if (!devicesHere) return Promise.resolve();
     if (forceReport) forceSweepPending.current = true;
     if (sweeping.current) return sweeping.current;
 
@@ -188,7 +203,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     })();
     sweeping.current = task;
     return task;
-  }, [on, openStore, workspaceId]);
+  }, [on, openStore, workspaceId, devicesHere]);
   const recipes = useMemo(() => recipeStore(cloud, workspaceId), [cloud, workspaceId]);
   // How many mixes the account has saved, from the server: a mix made on another device means
   // Make a Mix is past its first run here too, and Workspace counts them. null until it answers.
@@ -200,7 +215,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     return () => { live = false; };
   }, [recipes]);
   // Harmonic matches (cloud.browser_harmonic): key profiles measured here, kept in this browser
-  const browserHarmonic = on('cloud.browser_harmonic');
+  // (from this device's own files, so never in the cloud-only profile)
+  const browserHarmonic = devicesHere && on('cloud.browser_harmonic');
   const lucyHere = accountFlagOn('lucy.cloud_conversation') && accountFlagOn('lucy');
   // corrections, the energy shape and locks, from the account (browserFlags.ts)
   const measuredHere = sendingOn();
@@ -216,7 +232,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   const roomsHere = on('rooms') && !account.feature_locks.rooms;
   // where each song can play from, the adapted request and the resolver (cloudShellMedia.ts)
   const { sources, request, media, resolver, programme, controllerLink, whereHeld, mixableIds } = useCloudShellMedia({
-    api, cloud, workspaceId, on, coexisting, places: placesOn, catalogue: cataloguePlay, openStore, lapsed, refreshStatus: refreshStatusRef, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed: setServedFrom, book,
+    api, cloud, workspaceId, on, coexisting, places: placesOn, catalogue: cataloguePlay, devices: devicesHere, openStore, lapsed, refreshStatus: refreshStatusRef, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed: setServedFrom, book,
   });
   mediaRef.current = media;
 
@@ -290,10 +306,12 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   useState(() => setJobsSource(false));
   useEffect(() => {
     setJobsSource(false);
-    setFlags(browserFlags(browserHarmonic, lucyHere, { measured: measuredHere, accountMixes: accountMixesHere, studio: studioHere, localExport: exportHere, placing: placingHere }));
+    const off = browserFlags(browserHarmonic, lucyHere, { measured: measuredHere, accountMixes: accountMixesHere, studio: studioHere, localExport: exportHere, placing: placingHere });
+    // cloud.one_shell, cloud only: the places that belong to a device's music are gone too
+    setFlags(devicesHere ? off : { ...off, ...NOT_WITHOUT_DEVICE_MUSIC });
     // Cloud has no jobs server at all, so the source stays off when this shell unmounts.
     return () => { setFlags(null); };
-  }, [browserHarmonic, lucyHere, measuredHere, accountMixesHere, studioHere, exportHere, placingHere]);
+  }, [browserHarmonic, lucyHere, measuredHere, accountMixesHere, studioHere, exportHere, placingHere, devicesHere]);
   // ADR-0476: Lucy's page asks the account's API, and reads her events by asking. Set while
   // rendering, because the page's own first read runs in an effect before this shell's do.
   const lucyTransport = useMemo(() => (lucyHere ? { request: cloud, base: '/lucy-cloud', pollMs: LUCY_POLL_MS, device: () => registeredDeviceId(workspaceId) } : null), [lucyHere, cloud, workspaceId]);
@@ -366,8 +384,9 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     if (!browserHarmonic) return undefined;
     return startTonalProfiler({ store: tonal, openMedia: openStore, resolve: deviceTrack, playing: () => playingNow.current() });
   }, [browserHarmonic, tonal, openStore, deviceTrack]);
-  // the measurements made here go to the account when both flags say so (factsUploader.ts)
-  useEffect(() => startFactsUploader({ request: cloud, workspaceId, openMedia: openStore }), [cloud, workspaceId, openStore]);
+  // the measurements made here go to the account when both flags say so (factsUploader.ts);
+  // cloud only, nothing is measured here
+  useEffect(() => (devicesHere ? startFactsUploader({ request: cloud, workspaceId, openMedia: openStore }) : undefined), [cloud, workspaceId, openStore, devicesHere]);
   // a song the engine has not decoded yet (the strip's first song, say) is decoded from its own file
   const waveformOf = useCallback((songId: number) => waveforms.of(songId, {
     resolve: resolveTrack, openStore, shared: sharedDerived,
@@ -454,10 +473,10 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
 
   const path = useLocationText().split('?')[0];
   // With the browser Workspace (cloud.workspace), /workshop is that page and More has no This device
-  const workspacePage = on('cloud.workspace');
+  const workspacePage = devicesHere && on('cloud.workspace');
   const moreRoute = moreRouteOf(path);
   const route: ShellRoute = (moreRoute && !(workspacePage && moreRoute.id === 'workspace') ? moreRoute : null) ?? parseRoute(path);
-  const moreItems = moreDestinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null }).filter((place) => !(workspacePage && place.id === 'workspace'));
+  const moreItems = moreDestinationsFor({ mode: 'cloud', feature: on, experience }).filter((place) => !(workspacePage && place.id === 'workspace'));
   const connected = status?.counts.music ?? 0;
   // Finish later is remembered on this browser: the spine then opens only when asked for
   const [spine, setSpine] = useState(() => !onboardingFinished(workspaceId) && !onboardingPutOff(workspaceId));
@@ -465,7 +484,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // frozen at the first status: songs landing mid-import must not unmount the spine under the member
   const startedEmpty = useRef<boolean | null>(null);
   if (status !== null && startedEmpty.current === null) startedEmpty.current = connected === 0;
-  const newMember = spine && (startedEmpty.current === true || spineAsked);
+  // the getting-started spine connects a device's music, so the cloud-only profile has none
+  const newMember = devicesHere && spine && (startedEmpty.current === true || spineAsked);
 
   const notify = useCallback<ViewProps['notify']>((message, undo) => {
     showToast(message, typeof undo === 'function' ? { undo } : {});
@@ -492,7 +512,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     // cloud.catalogue_play: a mix with songs in the cloud library plays here without a folder
     const inCloud = cataloguePlay ? (cloudSongs ?? await request.cloudSongs().catch(() => null))?.ids : undefined;
     if (!mix.mix.some((item) => here?.get(item.song_id) === 'here' || inCloud?.has(item.song_id))) {
-      showToast(`${ask.asker_name} asked to play here. Choose your music folder again to play.`, { actions: [{ label: 'Choose music', run: () => navigate('/library') }] });
+      if (!devicesHere) showToast(`${ask.asker_name} asked to play here, but none of that mix’s songs is in your cloud library.`);
+      else showToast(`${ask.asker_name} asked to play here. Choose your music folder again to play.`, { actions: [{ label: 'Choose music', run: () => navigate('/library') }] });
       return 'needs_music';
     }
     if (!pressed && !soundAllowedHere()) { setAskedToPlay(ask); return 'needs_gesture'; }
@@ -512,7 +533,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     const from = seen ? movedFrom(seen.session, mix.mix, lastSeen ?? playback.serverNow()) : null;
     void shellPlayer.playFrom(from?.song_index ?? 0, from ? from.offset_ms / 1000 : 0);
     return 'starting';
-  }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources, cataloguePlay, cloudSongs]);
+  }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources, cataloguePlay, cloudSongs, devicesHere]);
   // what "Play on {device}" would play when this device has no current mix of its own: the
   // account's newest saved mix, read while Listen shows that card
   const [newest, setNewest] = useState<{ mix_id: string; name: string; songs: number; ids?: number[] } | null>(null);
@@ -706,7 +727,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // Ctrl K, the single keys and their help, for what this shell really has (W5's server-free
   // subset); the media keys and what the OS shows as playing drive the browser player.
   const places = [
-    ...destinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null }),
+    ...destinationsFor({ mode: 'cloud', feature: on, experience }),
     ...moreItems,
   ].map((place) => ({ id: place.id, label: place.label, path: place.path, about: place.id === 'workspace' && 'icon' in place ? 'Your library at a glance, connecting music, this browser’s storage and diagnostics' : place.about }));
   const controls = useServerFreeControls({ places, player: shellPlayer, now, hasMix: data.mix.length > 0, hasNext: data.mix.length > now.position + 1 });
@@ -721,16 +742,17 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   const spineDeps = useMemo(() => ({
     importMusic: importRunnerFor({ request: media, openStore, workspaceId }),
   }), [media, openStore, workspaceId]);
-  useImportCarryOn({ request: media, openStore, workspaceId, watch: { onAvailabilityChanged: () => sweepLapsed(true), playing: () => playingNow.current() } });
+  // (cloud only: no folders to watch and no import to carry on)
+  useImportCarryOn({ request: media, openStore, workspaceId, enabled: devicesHere, watch: { onAvailabilityChanged: () => sweepLapsed(true), playing: () => playingNow.current() } });
   // cloud.move_to_cloud: the upload queue carries on after a reload; the current mix goes first
-  useCloudUploadQueue({ on: on('cloud.move_to_cloud'), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
-  const connect =<ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
+  useCloudUploadQueue({ on: devicesHere && on('cloud.move_to_cloud'), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
+  const connect = devicesHere ? <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} /> : null;
   // library.places: what the Library knows about where songs are kept (views/LibraryPlaces.tsx)
   const libraryPlaces = useLibraryPlaces({
     on: placesOn, cloud, workspaceId, accountId: account.user.id, canUpload: isHostedAccount(account) && on('cloud.uploads'),
     offline: servedFrom !== null || offlineReadOnly, otherDevices: !!holdings.devices?.some((one) => one.device_id !== playback.device?.id),
     // cloud.move_to_cloud: a song's details offer "Upload to your cloud library"
-    fromDevice: on('cloud.move_to_cloud') ? { request: media, openStore } : null,
+    fromDevice: devicesHere && on('cloud.move_to_cloud') ? { request: media, openStore } : null,
   });
 
   return (
@@ -760,7 +782,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
         status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? <RoomOpenLine room={room} path={roomsPlace.path} waiting={roomWaiting} add={roomAdd} /> : undefined}
         banner={<CloudShellNotices account={account} workspaceId={workspaceId} on={on} playback={playback} deviceName={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null}
           asked={askedBanner} accountMix={accountMix.banner} where={where} playNoticeShown={!(route.page === 'listen' && (remote || !followsHere))} onPlayHere={() => void shellPlayer.togglePause()}
-          onListen={route.page === 'listen'} offlineShell={offlineShell} servedFrom={servedFrom} offlineReadOnly={offlineReadOnly} notices={notices} accountNotices={accountNotices} feedback={feedback} />}
+          onListen={route.page === 'listen'} offlineShell={offlineShell} servedFrom={servedFrom} offlineReadOnly={offlineReadOnly} notices={notices} accountNotices={accountNotices} feedback={feedback} deviceMusic={devicesHere} />}
         // cloud.page_layout: another tab playing is said in the mini player, off Listen
         playerNote={on('cloud.page_layout') && route.page !== 'listen' ? otherTabNote(playback, () => void shellPlayer.togglePause()) : undefined}
       >
@@ -769,9 +791,9 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
           api, cloud, request, media, workspaceId, on, route, moreItems, more, shared, status, statusProblem, setStatusProblem, refreshStatus, refreshMix,
           data, mixProblem, setMixData, shellPlayer, now, playback, refusal, output, notify, openStore, connect, sweepLapsed, stems, recipes, deviceTrack, book,
           lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive,
-          remote, playWays, holdings, where, followsHere, newest, songOrder, playOn,
+          remote, playWays, holdings, where, followsHere, newest, songOrder, playOn, devicesHere,
         }} /></Section></LibraryPlacesContext.Provider></HolderContext.Provider>
-        <footer className="cloud-footer">{footerWords(coexisting, flagListed('cloud.move_to_cloud'))}</footer>
+        <footer className="cloud-footer">{devicesHere ? footerWords(coexisting, flagListed('cloud.move_to_cloud')) : CLOUD_ONLY_FOOTER}</footer>
       </Shell>
       {requesting && on('requests') && (
         <Drawer title="Requests" onClose={() => setRequesting(false)}>

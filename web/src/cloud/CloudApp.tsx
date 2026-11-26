@@ -52,6 +52,7 @@ import { isHostedAccount } from './deviceMusicGate';
 import { DeviceMusicLabs } from './labs/DeviceMusicLabs';
 import { ReconciliationPanel } from './migration/ReconciliationPanel';
 import { accountNotices, morePanelFor, RENEWING_WORDS } from './cloudAppPlaces';
+import { musicHomesFor, oneShellFor } from './musicHomes';
 import { NoticeStack } from './NoticeStack';
 import { navigate, useLocationText } from '../router';
 import { Action, LiveRegion, Section } from '../ui/controls';
@@ -607,10 +608,14 @@ export function CloudApp() {
   // the address too, never a page that doesn't match it.
   const routedPage = route.kind === 'page' ? route.page : null;
   const localFirst = account !== null && deviceMusicDecided(account);
+  // `cloud.one_shell`: every account in the Cloud shell, with music on devices only where it is
+  // decided on; `cloud.local_first` off then means cloud only, never the older pages
+  const oneShell = account !== null && oneShellFor(account);
+  const cloudShell = localFirst || oneShell;
   // `cloud.hosted_shell`: every other account's pages in the shared shell, which routes them itself.
   // The server decides every registry flag in the account's snapshot; this one moves the whole
   // frame, so it is drawn only when decided on, never because an answer did not mention it.
-  const hostedShell = account !== null && !localFirst && account.features['cloud.hosted_shell'] === true && flagOn('cloud.hosted_shell');
+  const hostedShell = account !== null && !cloudShell && account.features['cloud.hosted_shell'] === true && flagOn('cloud.hosted_shell');
   // The shared shells move with the router, not choosePage, so a message about one page is not
   // left standing on the next.
   const place = useLocationText().split('?')[0];
@@ -720,7 +725,7 @@ export function CloudApp() {
   // which they serve from More (Account, Plan & billing, Add music) or their own pages.
   const goShell = (next: Page) => navigate(PATHS[next]);
   // the shared shells have no rail, so the account page says who is signed in and offers leaving
-  const framed = localFirst || hostedShell;
+  const framed = cloudShell || hostedShell;
   // Account, Plan & billing and Devices share one section list; the legacy frame has no pages for it.
   const lucySettings = !!account && accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features);
   const labsShown = !!account && (flagOn('cloud.local_first_labs') || account.experience?.local_first === true);
@@ -749,24 +754,25 @@ export function CloudApp() {
       flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>,
       venueSetup && <VenueSetup api={api} workspaceId={account.workspace.id} />,
     ]}
-    danger={[(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={signOutEverywhere} onDelete={deleteAccount} />]}
+    danger={[(exact || hostedShell || oneShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={signOutEverywhere} onDelete={deleteAccount} />]}
   /> : null;
   const billing = account && <SettingsLayout current="billing" places={places}><Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} error={checkoutError} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} /></SettingsLayout>;
   const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => { void refreshAccount(); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }} perFile={flagOn(LIBRARY_STATES_FLAG)} side={flagOn('cloud.page_layout') ? <StorageMeter account={account} /> : undefined} />;
   // The account places behind More, and the account's notices for a shared shell's banner (cloudAppPlaces.tsx)
-  const morePanel = morePanelFor({ account, api, settingsPanel, billing, uploads, places });
+  const morePanel = morePanelFor({ account, api, settingsPanel, billing, uploads, places, oneShell });
   const { all: shellNotices, groups: noticeGroups } = accountNotices({
-    account, connectionBanner: flagOn(OFFLINE_SHELL) && !localFirst, exact, go: goShell, problem, onRetry: () => void retryAccount(),
+    account, connectionBanner: flagOn(OFFLINE_SHELL) && !cloudShell, exact, go: goShell, problem, onRetry: () => void retryAccount(),
     onBillingPage: place === PATHS.billing, portalBusy: busy('portal'), onPortal: () => void openPortal(), renewing, polling: stream === 'polling' && !connectionDown,
   });
   const shellFeedback = <Feedback error={problem && error === problem.message ? '' : error} notice={notice} />;
 
   // ADR-0462/0463: an account with the local-first experience, and `cloud.local_first` on, gets the
-  // shared shell. With either off, everything below renders exactly as before.
-  if (account && localFirst) {
+  // shared shell. With either off, everything below renders exactly as before. `cloud.one_shell`:
+  // every account gets it, in one place in the tree, so the Labs switch only changes its homes.
+  if (account && cloudShell) {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
-        <CloudShell api={api} account={account} more={morePanel} notices={shellNotices} accountNotices={noticeGroups} feedback={shellFeedback} onSignOut={signOutHere} />
+        <CloudShell api={api} account={account} more={morePanel} notices={shellNotices} accountNotices={noticeGroups} feedback={shellFeedback} onSignOut={signOutHere} musicHomes={oneShell ? musicHomesFor(account, localFirst) : undefined} />
         {signOutAsk && <ConfirmDialog title="Sign out?" body={signOutAsk} confirmLabel="Sign out" cancelLabel="Cancel" onConfirm={() => void leave()} onClose={() => setSignOutAsk(null)} />}
       </Suspense>
     );
