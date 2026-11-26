@@ -31,6 +31,7 @@ import { rampCurve, timeStretch } from './stretch';
 import type { StretchRamp } from './stretchLimits';
 import { spawnStretchWorker, stretchInWorker, STRETCH_TIMEOUT_MS } from './workers/stretchSpawn';
 import type { AccountSeamAnswer, AccountSeamAsk } from '../cloud/accountSeams';
+import { settleRendered } from '../cloud/renderedPlan';
 
 /** At most this much of each song is analysed for one seam. */
 export const ANALYSE_SECONDS = 60;
@@ -182,7 +183,7 @@ export type SeamProviderOptions = {
   stems?: StemReading;
 };
 
-export type SeamRequestLike = { fromIndex: number; from: PcmLike; toIndex: number; to: PcmLike };
+export type SeamRequestLike = { fromIndex: number; from: PcmLike; toIndex: number; to: PcmLike; fromLevel?: number; toLevel?: number };
 
 /** B's input window and the ramp for a schedule's stretched entry: the clip's lead-in starts
  * up to CLIP_CONTEXT_SECONDS before B's entry and its tail runs as far past the handover. */
@@ -219,6 +220,7 @@ export function recordable(schedule: SeamSchedule): SeamSchedule {
     kept = { ...kept, stretch };
   }
   if (kept.stems?.buffers) kept = { ...kept, stems: { plan: kept.stems.plan } };
+  if (kept.rendered) kept = { ...kept, rendered: { ...kept.rendered, channels: [] } };
   return kept;
 }
 
@@ -389,10 +391,13 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
         return timingFromAnalysis(buffer, facts, offset, response);
       };
       // the account's plan comes on the songs' measured grids, so nothing is analysed for it
-      const answer = await options.planned?.({
+      const asked = await options.planned?.({
         fromIndex: request.fromIndex, toIndex: request.toIndex, fromSeconds: request.from.duration, toSeconds: request.to.duration,
         settings, abilities: options.abilities(), allowed: options.allowed?.(),
+        from: request.from as AudioBuffer, to: request.to as AudioBuffer, fromLevel: request.fromLevel, toLevel: request.toLevel,
       }).catch(() => null) ?? null;
+      // a clip rendered ahead that does not fit these very songs gives way before it is recorded
+      const answer = settleRendered(asked, request);
       const plan = answer && 'schedule' in answer ? answer : null;
       const chosenBy = plan ? plan.schedule.chosenBy : answer && 'declined' in answer ? { by: 'device' as const, note: answer.declined } : undefined;
       // an injected analysis (tests, diagnostics) stands in for the worker's

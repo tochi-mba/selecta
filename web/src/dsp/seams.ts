@@ -121,6 +121,20 @@ export interface SeamSchedule {
   rendered?: RenderedClip;
   /** With `rendered`: the live schedule that plays if the clip cannot be used after all. */
   instead?: SeamSchedule;
+  /** With `rendered`: how the device studio got there, for the seam's record (no audio). */
+  studio?: StudioNote;
+}
+
+/** The studio's loop for one seam (dsp/render/seamMaker.ts): the move it played, whether that
+ * passed its checks, and each option it tried or stepped over, with the checks that failed. */
+export interface StudioNote {
+  move: string;
+  passed: boolean;
+  nearMiss: boolean;
+  fellBack: boolean;
+  tookMs: number;
+  implementation: string;
+  attempts: { option: number | 'fallback'; move: string; passed: boolean | null; failed: string[]; skipped?: string; tightened?: boolean; ms: number }[];
 }
 
 /** A transition rendered ahead of time (render/engine.ts `inContext`): native A up to

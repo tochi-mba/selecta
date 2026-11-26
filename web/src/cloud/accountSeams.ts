@@ -6,6 +6,8 @@ import { LEAVE_AFTER_SECONDS, type SeamSchedule, type TrackTiming } from '../dsp
 import { accountMeasured, answerWithin, askWithin, planningOn, type Request } from './accountFacts';
 import { liveMoveFor } from './plannerMoves';
 import { songFacts } from './songFacts';
+import { renderedPlan, renderWaitMs } from './renderedPlan';
+import { deviceRenderOn, type DeviceStudio } from './deviceStudio';
 
 /** Each transition from the account's planner, played by the live engine (docs/engineering/
  * device-to-account.md).
@@ -20,6 +22,11 @@ import { songFacts } from './songFacts';
  * for the next; none left, a failed or slow call, or an exit already too close, and the device
  * chooses as before. The repair loop (`next-step`) is never asked: nothing is rendered and heard
  * ahead of time in the live engine, so there is no audit for it to read.
+ *
+ * With cloud.device_render on, the planner's choice is first asked of this device's studio
+ * (deviceStudio.ts), which renders, checks and repairs it ahead of time; a clip ready in time is
+ * played between the two songs (`account-rendered`), with the live plan above kept as what plays
+ * instead if the clip cannot be used after all. No clip in time, and everything is as above.
  */
 
 /** The account's list and the candidates together may take this long; a slower answer is late. */
@@ -49,6 +56,11 @@ export type AccountSeamAsk = {
   settings: { move?: string | null; exit_bar?: number | null; entry_bar?: number | null };
   abilities: SeamAbilities;
   allowed?: readonly string[];
+  /** The two decoded songs and the levels they play at, for a clip rendered ahead. */
+  from?: AudioBuffer;
+  to?: AudioBuffer;
+  fromLevel?: number;
+  toLevel?: number;
 };
 
 export type AccountSeamSources = {
@@ -63,6 +75,8 @@ export type AccountSeamSources = {
   /** Which mix position is playing and how far into it, or null when unknown. */
   heard?(): { index: number; seconds: number } | null;
   within?: number;
+  /** This device's studio (cloud.device_render); without it nothing is rendered ahead. */
+  studio?: DeviceStudio | null;
 };
 
 /** A song's timing from its measured beat grid, for the live engine. */
@@ -133,19 +147,33 @@ export function accountSeamPlanner(sources: AccountSeamSources): (ask: AccountSe
       if (!account.has(songA) || !account.has(songB)) return { declined: 'a song is not measured in the account yet' };
       const left = within - (Date.now() - started);
       if (left <= 0) return { declined: 'the account took too long to answer' };
-      const answer = await askWithin<CandidatesAnswer>(sources.request, '/planning/candidates', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ a: songA, b: songB, leave_after: LEAVE_AFTER_SECONDS, scripts: 0 }),
-      }, left);
+      // with the studio on, one answer (with scripts) serves the clip and the live plan
+      const studio = sources.studio && deviceRenderOn() && ask.from && ask.to && shaA && shaB ? sources.studio : null;
+      const answer = studio
+        ? await answerWithin(studio.candidates(songA, songB), left)
+        : await askWithin<CandidatesAnswer>(sources.request, '/planning/candidates', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ a: songA, b: songB, leave_after: LEAVE_AFTER_SECONDS, scripts: 0 }),
+        }, left);
       const ranked = [...(answer?.options ?? []).slice(0, CANDIDATES_TRIED).map((entry) => entry.option), ...(answer?.fallback ? [answer.fallback.option] : [])];
       const heard = sources.heard?.() ?? null;
       let late = false;
+      let live: PlannedSeam | null = null;
       for (const option of ranked) {
         if (!option || typeof option.move !== 'string' || !Array.isArray(option.exit_cue) || !Array.isArray(option.entry_cue)) continue;
         const planned = playAsPlanned(option, a, b, ask, heard);
         if (planned === 'late') { late = true; continue; }
-        if (planned) return planned;
+        if (planned) { live = planned; break; }
       }
+      if (studio && answer) {
+        const levels = { a: ask.fromLevel ?? 1, b: ask.toLevel ?? 1 };
+        const made = await studio.clipFor({ a: { songId: songA, sha: shaA! }, b: { songId: songB, sha: shaB! }, from: ask.from!, to: ask.to!, levels }, renderWaitMs(answer, a, heard, ask));
+        const plan = made?.status === 'clip' ? renderedPlan(made, live, a, b, ask) : null;
+        if (plan) return plan;
+        const note = made ? `not rendered: ${made.status === 'none' ? made.reason : 'it could not be played here'}` : 'not rendered in time';
+        if (live) return { ...live, schedule: { ...live.schedule, chosenBy: { by: 'account', note } } };
+      }
+      if (live) return live;
       return { declined: late ? 'the planned exit was too close to prepare' : 'no planned move plays here as planned' };
     } catch (problem) {
       return { declined: `the account could not be asked: ${problem instanceof Error ? problem.message : String(problem)}` };

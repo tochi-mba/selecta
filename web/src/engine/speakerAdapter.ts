@@ -204,6 +204,21 @@ export class BrowserSpeaker implements Speaker {
     return result.ok ? { kind: 'buffer', buffer: result.buffer } : { kind: 'failed', error: result.error };
   }
 
+  /** A song at a mix position, decoded through the same capped cache the scheduler plays from, so
+   * a transition rendered ahead from it is made from the very samples that will play
+   * (cloud.device_render). Null when it cannot be read here. Tells no surface it was decoded. */
+  async decodedAt(index: number): Promise<AudioBuffer | null> {
+    if (this.disposed || !Number.isSafeInteger(index) || index < 0) return null;
+    try {
+      const source = await this.resolve(index);
+      if (!source || this.disposed) return null;
+      const result = await this.loader.load(source.id, source.data);
+      return result.ok ? result.buffer : null;
+    } catch {
+      return null;
+    }
+  }
+
   async start(songIndex: number, offsetMs: number, playing: boolean): Promise<void> {
     if (this.disposed) return;
     if (this.refused) {
