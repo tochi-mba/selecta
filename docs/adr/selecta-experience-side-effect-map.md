@@ -19,6 +19,12 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.dsp.stems.crashGuard` | local | `web/src/dsp/stems/gate.ts` | Written just before a stem split runs and removed after, so a page that loads with it still present knows the last split stopped the page | This device |
 | `selecta.dsp.stems.crashTripped` | local | `web/src/dsp/stems/gate.ts` | That a stem split stopped the page here, so stems stay off on this device until the member chooses to try again | This device |
 | `selecta.dsp.stems.calibration.` | local | `web/src/dsp/stems/gate.ts` | This device's stem-splitting benchmark (one entry per device identity), re-measured when missing or 30 days old | This device |
+| `selecta.dsp.beats.model` | local | `web/src/dsp/analysis/beatThis/model.ts` | Which neural beat tracker file this browser downloaded and checked (checksum and size), so a ready file is not downloaded again | This device |
+| `selecta.dsp.beats.calibration` | local | `web/src/dsp/analysis/beatThis/gate.ts` | This device's beat tracker benchmark (work per second of audio, which file, when), re-measured when missing or 30 days old | This device |
+| `selecta.dsp.beats.failure` | local | `web/src/dsp/analysis/beatThis/gate.ts` | When the neural beat tracker last failed to download or run here, so it is not tried again for a day | This device |
+| `selecta.checkout.planBefore` | session | `web/src/cloud/checkout.ts` | The plan this tab held when it left for Stripe checkout, so the return can tell a real upgrade from an old address; removed once the return is handled | Account |
+| `selecta.install.moments` | local | `web/src/cloud/installMoments.ts` | Which install offers (after an import, a first play, hosting a room) this device has shown or been told Not now, and the first visit, so an offer is not repeated | This device |
+| `selecta.guest.kept.v1` | local | `web/src/guest/social/keeps.ts` | The songs a guest kept with a heart, by room (title, artist, when), on their own phone only; at most 200 songs a room and 20 rooms, dropped after 90 days | Requests (guest rooms) |
 | `selecta.persist.asked` | local | `web/src/cloud/persistence.ts` | That the one storage-persistence ask after the first import has been made, so no browser re-asks on every import | Cloud storage card |
 | `selecta.` | local | `web/src/cloud/deviceData.ts` | A clearing prefix, not a key: Clear everything in this browser removes every `selecta.`-prefixed entry | Cloud device data |
 | `selecta.prefs` | local | `web/src/state/prefs.ts` | Theme, motion, density, rail and library layout choices | Shared foundation |
@@ -236,6 +242,8 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/lucy-cloud/messages/{message}/rating` | Keeps the person's thumbs up or down on one of Lucy's answers, for Lucy's evaluation; the latest press wins |
 | `POST /api/billing/checkout` | Opens a Stripe checkout |
 | `POST /api/billing/portal` | Opens the Stripe billing portal |
+| `POST /api/billing/lucy-packs/checkout` | Opens a Stripe checkout for a pack of extra Lucy usage, after the member accepts its terms; the pack is credited later by the Stripe webhook, never here |
+| `POST /api/billing/lucy-packs/confirm` | Records the member's yes to using extra Lucy usage this week |
 | `POST /api/webhooks/stripe` | Applies a Stripe billing event |
 
 ### Cloud playback and storage (`src/selecta/playback/api.py`, `src/selecta/storage/api.py`, `src/selecta/storage/playback_api.py`, `src/selecta/routes/cloud_assets.py`, `src/selecta/routes/cloud_proxy.py`) - Cloud playback
@@ -345,6 +353,15 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `DELETE /api/guest/rooms/{room_id}/requests/{request_id}/vote` | A guest takes a vote back |
 | `PUT /api/guest/rooms/{room_id}/nickname` | A guest changes nickname |
 | `POST /api/guest/rooms/{room_id}/leave` | A guest leaves |
+| `POST /api/guest/rooms/{room_id}/reactions` | A guest taps a reaction (love or blend) on a song the room played (ADR-0488) |
+| `DELETE /api/guest/rooms/{room_id}/reactions` | A guest takes a reaction back |
+| `POST /api/guest/rooms/{room_id}/rounds/{round_id}/vote` | A guest votes in the room's vote for the next song |
+| `PUT /api/guest/rooms/{room_id}/requests/{request_id}/dedication` | A guest puts one of the listed dedication lines on their own request |
+| `DELETE /api/guest/rooms/{room_id}/requests/{request_id}/dedication` | A guest takes the dedication off their request |
+| `POST /api/rooms/{room_id}/rounds` | The host opens a vote for the next song, or asks the speaker's browser to offer songs for one |
+| `POST /api/rooms/{room_id}/rounds/{round_id}/close` | Closes a vote whose time is up and keeps its result; before then changes nothing |
+| `POST /api/rooms/{room_id}/rounds/{round_id}/cancel` | The host calls off a vote |
+| `DELETE /api/rooms/{room_id}/requests/{request_id}/dedication` | The host takes a dedication off a request; the request stays |
 | `POST /api/display/pairings` | A display pairs with a room |
 
 ### Admin console (`src/selecta/admin/routes.py`, `src/selecta/admin/routes_controls.py`) - Cloud operations
@@ -381,6 +398,8 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/retry` | Asks Stripe to collect an open invoice again |
 | `POST /api/admin/customers/{user_id}/stripe/invoices/{invoice_id}/refund` | Refunds an invoice at Stripe (idempotent by action and target) |
 | `POST /api/admin/customers/{user_id}/portal-link` | Creates a Stripe billing portal link to send the customer |
+| `PUT /api/admin/ai/workspaces/{workspace_id}/multiplier` | Changes a workspace's Lucy allowance factor without discarding its usage (audited, with a reason) |
+| `PUT /api/admin/ai/workspaces/{workspace_id}/cutover` | Switches a workspace to the session and week Lucy allowance now, or takes the switch away (audited, ADR-0487) |
 | `POST /api/admin/customers/{user_id}/sign-ins/{session_id}/revoke` | Revokes one of the customer's WorkOS sessions |
 | `POST /api/admin/overrides/mass/dry-run` | Changes nothing: counts what a mass override would do (audited) |
 | `POST /api/admin/staff/roles` | Assigns a staff role (raises an escalation alert) |
@@ -465,6 +484,17 @@ These endpoints preserve separate Cloud, business and venue ownership. Each requ
 | `POST /api/zones/{zone_id}/room/pause` | Pauses a standing room's requests |
 | `POST /api/zones/{zone_id}/room/resume` | Resumes a standing room's requests |
 | `POST /api/zones/{zone_id}/room/rotate` | Rotates a standing room's guest code |
+| `POST /api/venue-rooms/{code}/reactions` | A venue-room guest taps a reaction on a song the room played (ADR-0488) |
+| `DELETE /api/venue-rooms/{code}/reactions` | A venue-room guest takes a reaction back |
+| `POST /api/venue-rooms/{code}/rounds/{round_id}/vote` | A venue-room guest votes for the next song |
+| `PUT /api/venue-rooms/{code}/requests/{request_id}/dedication` | A venue-room guest puts a listed dedication line on their request |
+| `DELETE /api/venue-rooms/{code}/requests/{request_id}/dedication` | A venue-room guest takes the dedication off their request |
+| `PATCH /api/zones/{zone_id}/room/social` | Staff change a standing room's choices: which features it offers (keeps, reactions, votes, dedications, recap), vote timing, hidden dedication lines and what its screen shows |
+| `POST /api/zones/{zone_id}/room/rounds` | Staff open a vote for the next song in a standing room |
+| `POST /api/zones/{zone_id}/room/rounds/{round_id}/cancel` | Staff call off a standing room's vote |
+| `DELETE /api/zones/{zone_id}/requests/{request_id}/dedication` | Staff take a dedication off a standing-room request |
+| `POST /api/zones/{zone_id}/room/displays` | Staff pair a screen with a standing room by the code it shows |
+| `DELETE /api/zones/{zone_id}/room/displays/{display_id}` | Staff unpair a standing room's screen |
 | `POST /api/zones/{zone_id}/venue-network` | Registers a venue network for abuse limits |
 | `PUT /api/business/crates/{crate_id}/songs` | Replaces a venue crate's song list |
 | `PUT /api/business/zones/{zone_id}/cache-report` | Updates a zone kiosk's cache readiness |

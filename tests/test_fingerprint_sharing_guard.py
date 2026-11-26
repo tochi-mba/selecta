@@ -31,6 +31,13 @@ SHARED_BY_FINGERPRINT: dict[str, str] = {
     "shared_derivations": "selecta.storage.schema",
 }
 
+# Platform tables whose hash column is only a checksum of public bytes the server fetched itself
+# (ADR-0478: covers from the Cover Art Archive). No tenant's bytes are hashed, and no row is
+# found by the hash, so nothing is shared by fingerprint. The checks below hold each to that.
+PUBLIC_CHECKSUM_ONLY: dict[str, str] = {
+    "catalog_art": "selecta.catalog",
+}
+
 
 def _hash_tables_without_workspace() -> dict[str, sa.Table]:
     load_all_tables()
@@ -43,9 +50,27 @@ def _hash_tables_without_workspace() -> dict[str, sa.Table]:
 
 def test_every_cross_tenant_hash_table_is_allowlisted():
     found = sorted(_hash_tables_without_workspace())
-    assert found == sorted(SHARED_BY_FINGERPRINT), (
+    assert found == sorted({**SHARED_BY_FINGERPRINT, **PUBLIC_CHECKSUM_ONLY}), (
         f"a content-keyed table without workspace_id must be a vetted shared derivation: {found}"
     )
+
+
+def test_public_checksum_tables_are_never_looked_up_by_their_hash():
+    """No index or key on the hash, and no code in the owning package filters or joins on it."""
+    tables = _hash_tables_without_workspace()
+    for name, package in PUBLIC_CHECKSUM_ONLY.items():
+        table = tables[name]
+        hashes = {c.name for c in table.c if HASH_COLUMN.search(c.name)}
+        for index in table.indexes:
+            assert not {c.name for c in index.columns} & hashes, f"{name} indexes its hash"
+        for constraint in table.constraints:
+            columns = {c.name for c in getattr(constraint, "columns", [])}
+            assert not columns & hashes, f"{name} has a key on its hash"
+        folder = ROOT / "src" / Path(*package.split("."))
+        for path in folder.rglob("*.py"):
+            text = path.read_text(encoding="utf-8")
+            for column in hashes:
+                assert f"{name}.c.{column}" not in text, f"{path.name} reads {name} by {column}"
 
 
 def test_allowlisted_tables_carry_no_user_entered_columns():
