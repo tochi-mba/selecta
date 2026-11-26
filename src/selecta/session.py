@@ -79,7 +79,9 @@ def queue(conn: sqlite3.Connection) -> list[dict]:
 
     with library_rows.reading(conn) as source:
         rows = source.execute(
-            "SELECT q.*, s.artist, s.title, s.duration FROM queue q "
+            # the columns named, so an adopted table's workspace_id stays out of it
+            "SELECT q.position, q.song_id, q.state, q.transition, q.reason, q.locked, q.seam, "
+            "s.artist, s.title, s.duration FROM queue q "
             "JOIN songs s ON s.id=q.song_id ORDER BY position"
         ).fetchall()
     return [dict(row) for row in rows]
