@@ -5,6 +5,8 @@ import { setFlags } from '../flags';
 import { assertNoPath } from '../media/identity';
 import type { MediaResolver } from '../media';
 import { exportFamily, forgetExports, type ExportDeps } from './localExport';
+import { catalogueCopy, catalogueHeld, cloudLibraryAssets, cloudLibraryResolver, forgetCloudLibraryAssets, serverSaysCopies } from './cloudLibraryMedia';
+import { deviceMusicRequest, type CatalogueSong } from './deviceMusicRequest';
 
 // The cloud library's requests from the browser: every request this code makes is one of the
 // routes listed here, and no body carries audio, a file or folder name, or a path. Extend ALLOWED
@@ -19,6 +21,11 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   // cloud.one_mixer: the export by catalogue song ids, and the job it made by its id
   ['POST', /^\/hosted\/mixes\/export$/],
   ['GET', /^\/hosted\/exports\/[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/],
+  // cloud.catalogue_play: the catalogue by page, the uploads by page (only when the server does
+  // not say each song's copy), and a signed link to one upload by its id
+  ['GET', /^\/local-media\/songs\?after=\d+&limit=\d+$/],
+  ['GET', /^\/assets\?limit=\d+(&cursor=[A-Za-z0-9_-]+)?$/],
+  ['GET', /^\/assets\/[A-Za-z0-9][A-Za-z0-9_-]{0,63}\/playback-url$/],
 ];
 
 const FLAGS = { 'cloud.local_export': true, 'cloud.one_mixer': true, 'cloud.hosted_render': true, 'cloud.device_render': false };
@@ -93,5 +100,54 @@ describe('the cloud library’s requests (cloud.one_mixer)', () => {
     setFlags({ ...FLAGS, 'cloud.one_mixer': false });
     await expect(family.answer('POST', '/exports/cloud', new URLSearchParams(), { method: 'POST' })).rejects.toMatchObject({ code: 'flag_off' });
     expect(sent).toEqual([]);
+  });
+});
+
+// cloud.catalogue_play (Phase 3): a phone plays a cloud song found by its catalogue id. It reads
+// the catalogue, and the uploads only when the server does not say each song's copy; it asks for
+// a signed link by the upload's id; the bytes come from that link alone, with nothing sent.
+describe('the cloud library’s requests (cloud.catalogue_play)', () => {
+  const fetched: { url: string; init?: RequestInit }[] = [];
+  beforeEach(() => {
+    fetched.length = 0;
+    vi.stubGlobal('fetch', vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => { fetched.push({ url: String(url), init }); return new Response(new ArrayBuffer(8)); }));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  function phone(rows: CatalogueSong[]) {
+    forgetCloudLibraryAssets();
+    const sent: Sent[] = [];
+    const note = (path: string, init?: RequestInit) => sent.push({ method: (init?.method ?? 'GET').toUpperCase(), path, body: typeof init?.body === 'string' ? init.body : '' });
+    const api = (async (path: string, init?: RequestInit) => {
+      note(path, init);
+      // a file name in an answer stays in the answer: no request below carries it
+      if (path.startsWith('/assets?')) return { assets: [{ id: 'up-1', name: 'C:\\Music\\Archangel.mp3', sha256: 'b'.repeat(64) }], next_cursor: null };
+      return { url: 'https://r2.test/signed?X-Amz-Signature=1', expires_in: 300 };
+    }) as never;
+    const cloud = (async (path: string, init?: RequestInit) => { note(path, init); return { songs: rows, next: null }; }) as Request;
+    const request = deviceMusicRequest(cloud, {
+      workspaceId: 'ws-phone',
+      hosted: (songs) => catalogueHeld(api, 'ws-phone', songs),
+      cloudCopy: async (found, all) => catalogueCopy(found, serverSaysCopies(all) ? null : await cloudLibraryAssets(api, 'ws-phone')),
+    });
+    return { sent, request, resolve: cloudLibraryResolver(api, 'ws-phone', { songs: () => [], assetOf: (songId) => request.cloudAssetOf(songId) }) };
+  }
+
+  it('by the song’s hash: the catalogue, the uploads, one signed link, and the bytes from that link alone', async () => {
+    const { sent, request, resolve } = phone([{ id: 7, title: 'Archangel', artist: 'Burial', content_sha256: 'b'.repeat(64) }]);
+    expect((await request.cloudSongs()).songs).toBe(1);
+    await (await resolve(7))!.data();
+    expect(sent.map((one) => `${one.method} ${one.path}`)).toEqual(['GET /local-media/songs?after=0&limit=1000', 'GET /assets?limit=100', 'GET /assets/up-1/playback-url']);
+    heldTo(sent);
+    expect(sent.every((one) => one.body === '')).toBe(true);
+    expect(fetched).toEqual([{ url: 'https://r2.test/signed?X-Amz-Signature=1', init: undefined }]);
+  });
+
+  it('with the server saying each song’s copy, the uploads are never listed', async () => {
+    const { sent, resolve } = phone([{ id: 7, title: 'Archangel', artist: 'Burial', content_sha256: 'b'.repeat(64), cloud: { asset_id: 'up-7', bytes: 8, format: 'mp3', copies: 1 } }]);
+    await (await resolve(7))!.data();
+    expect(sent.map((one) => `${one.method} ${one.path}`)).toEqual(['GET /local-media/songs?after=0&limit=1000', 'GET /assets/up-7/playback-url']);
+    heldTo(sent);
+    expect(fetched).toHaveLength(1);
   });
 });
