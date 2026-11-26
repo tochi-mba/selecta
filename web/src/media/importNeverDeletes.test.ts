@@ -27,7 +27,7 @@ describe('the import path never deletes or moves a member file', () => {
     // own IndexedDB store, never on a member handle
     // file artwork (ADR-0478, library.art_embedded) reads the picture through tags.ts and keeps it in
     // artStore.ts's own IndexedDB store; its `write(` (defined once, called twice) is that store's put, never a member handle
-    for (const name of ['importer.ts', 'identity.ts', 'tags.ts', 'importJournal.ts', 'journalledImport.ts', 'fingerprints.ts', 'art.ts', 'artWorker.ts']) {
+    for (const name of ['importer.ts', 'identity.ts', 'tags.ts', 'importJournal.ts', 'journalledImport.ts', 'fingerprints.ts', 'art.ts', 'artWorker.ts', 'audioIdentity.ts', 'breathe.ts']) {
       expect(code(source(name)).match(DESTRUCTIVE) ?? [], name).toEqual([]);
     }
     expect(code(source('artStore.ts')).match(DESTRUCTIVE) ?? []).toEqual(['write(', 'write(', 'write(']);
@@ -36,7 +36,10 @@ describe('the import path never deletes or moves a member file', () => {
     // The importer reaches only identity, the tag reader and the store (never a file-system helper).
     expect([...code(source('tags.ts')).matchAll(/from '([^']+)'/g)]).toEqual([]);
     const imports = [...code(source('importer.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
-    expect([...new Set(imports)].sort()).toEqual(['./art', './fingerprints', './identity', './importJournal', './journalledImport', './store', './tags']);
+    expect([...new Set(imports)].sort()).toEqual(['../flags', './art', './audioIdentity', './fingerprints', './identity', './importJournal', './journalledImport', './store', './tags']);
+    // the audio id (library.audio_identity) reads the file once beside its hash
+    const audio = [...code(source('audioIdentity.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
+    expect([...new Set(audio)].sort()).toEqual(['./breathe', './identity']);
     const journalled = [...code(source('journalledImport.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
     expect([...new Set(journalled)].sort()).toEqual(['./identity', './importJournal', './importer', './store']);
     const journal = [...code(source('importJournal.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
