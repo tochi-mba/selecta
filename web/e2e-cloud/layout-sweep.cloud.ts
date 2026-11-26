@@ -1,8 +1,8 @@
-import { APIRequestContext, expect, Page, test, TestInfo } from '@playwright/test';
+import { APIRequestContext, Browser, BrowserContext, expect, Page, test, TestInfo } from '@playwright/test';
 import { rewriteJson } from '../e2e/helpers';
 import { LONG_FILE, LONG_TITLE, sweep, verdict } from '../e2e/layoutSweep';
 import { listener } from './cloud';
-import { endRooms, hostWithRoom } from './helpers';
+import { endRooms } from './helpers';
 import { connectOnThisDevice, seeded } from './localFirst';
 
 // The Cloud layout sweep (plan "two places", phase 1; e2e/layoutSweep.ts says what is measured).
@@ -92,10 +92,12 @@ async function amend(page: Page, { localFirst, layout }: { localFirst: boolean; 
 }
 
 /** Add music with a long unbroken file name: `progress`, the upload's parts never answer, so
- * "Uploading {name}" stays while the page is measured (T-20261125-3d9f); `result`, they are refused,
- * so the file's own line in the results list carries the name. */
+ * "Uploading {name}" stays while the page is measured (T-20261125-3d9f); `result`, the plan turns
+ * the file down, so its own line in the results list carries the name (and the held upload from
+ * the first state is in the unfinished list). */
 async function longUpload(page: Page, state: 'progress' | 'result' = 'progress') {
-  await page.route('**/api/uploads/*/parts', (route) => (state === 'result' ? route.abort() : undefined));
+  if (state === 'progress') await page.route('**/api/uploads/*/parts', () => { /* held, so "Uploading ..." stays on screen */ });
+  else await page.route('**/api/uploads/plan', (route) => route.fulfill({ json: { uploads: [{ index: 0, name: LONG_FILE, refused: 'This file is longer than your plan allows.' }] } }));
   const picker = page.getByLabel(/Choose music files/);
   if (!(await picker.count()) || !(await picker.isEnabled())) return;
   await picker.setInputFiles({ name: LONG_FILE, mimeType: 'audio/wav', buffer: wav() });
@@ -108,7 +110,8 @@ async function longUpload(page: Page, state: 'progress' | 'result' = 'progress')
 async function sweepUploads(page: Page, testInfo: TestInfo, id: string, options: { frame?: boolean; label?: string }) {
   await longUpload(page, 'progress');
   const problems = await sweep(page, testInfo, id, options);
-  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  // only the held parts go: the account answer this person gets must stay
+  await page.unroute('**/api/uploads/*/parts');
   await page.reload();
   await longUpload(page, 'result');
   return [...problems, ...(await sweep(page, testInfo, `${id} results`, options))];
@@ -232,11 +235,27 @@ test('Rooms and devices on the harness, the gallery and the business harness', a
   await verdict(testInfo, problems);
 });
 
+/** Open a room as alice on the harness and say where guests join. The code is read from the
+ * page's words, which may say it twice (once for the eye, once for a screen reader). */
+async function openRoom(browser: Browser): Promise<{ context: BrowserContext; joinPath: string }> {
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const host = await context.newPage();
+  await host.goto('/harness?as=alice');
+  const current = host.getByTestId('room-code');
+  if (!(await current.isVisible().catch(() => false))) {
+    await host.getByLabel('Room name', { exact: true }).fill('Garden party');
+    await host.getByRole('button', { name: 'Open room' }).click();
+  }
+  await expect(current).toHaveText(/[2-9A-Z]{4}-[2-9A-Z]{4}/);
+  const code = /[2-9A-Z]{4}-[2-9A-Z]{4}/.exec((await current.textContent()) ?? '')![0];
+  return { context, joinPath: `/r/${code.replace('-', '')}` };
+}
+
 test('the guest page and the room display', async ({ browser, page }, testInfo) => {
   test.setTimeout(300_000);
   await endRooms(page);
   const problems: string[] = [];
-  const { context, joinPath } = await hostWithRoom(browser);
+  const { context, joinPath } = await openRoom(browser);
   try {
     await page.goto(joinPath);
     await expect(page.getByRole('button', { name: 'Join the room' })).toBeVisible();
