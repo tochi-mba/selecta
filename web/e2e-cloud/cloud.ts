@@ -55,6 +55,19 @@ export async function r2Log(request: APIRequestContext) {
   return ((await (await request.get('/test/r2/log')).json()) as { requests: { method: string; key: string; part?: number; serial?: number; status: number; time: number }[] }).requests;
 }
 
+/** Waits for the page's finite animations to end, so contrast is read from the settled page: at a
+ * wide window the rail opens and its words fade in one after another (feel-shell.css), and axe
+ * read the last ones half faded. Endless animations (playing bars) are left; 3 s at most. */
+async function settled(page: Page) {
+  await page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const ending = document.getAnimations()
+      .filter((animation) => Number.isFinite(Number(animation.effect?.getComputedTiming().endTime)))
+      .map((animation) => animation.finished.catch(() => undefined));
+    await Promise.race([Promise.all(ending), new Promise((resolve) => setTimeout(resolve, 3_000))]);
+  });
+}
+
 /** Accessibility, both themes, phone and desktop widths, nothing sticking out sideways. */
 export async function accessible(page: Page, where: string) {
   const found: string[] = [];
@@ -62,6 +75,7 @@ export async function accessible(page: Page, where: string) {
     await page.emulateMedia({ colorScheme: scheme });
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 });
+      await settled(page);
       const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
       for (const problem of violations) for (const node of problem.nodes) found.push(`${where} ${scheme} ${width}: ${problem.id} ${String(node.target)}`);
       const wide = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

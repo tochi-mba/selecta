@@ -42,7 +42,15 @@ test('with cloud.hosted_shell off, the legacy rail is byte for byte what it was'
   const user = listener('hosted-shell-off');
   await signedIn(page, request, user);
   await expect(page.locator('aside.cloud-rail')).toBeVisible();
-  expect(await page.locator('aside.cloud-rail').evaluate((rail) => rail.outerHTML)).toBe(legacyRail(`${user}@example.test`));
+  // the feel's sliding block (CloudRailFeel.tsx) is its own flags' part, pinned with the feel off in
+  // CloudApp.test.tsx; this server has the feel on, so its parts are taken out before comparing
+  const rail = await page.locator('aside.cloud-rail').evaluate((found) => {
+    const copy = found.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll('.feel-indicator').forEach((part) => part.remove());
+    for (const nav of copy.querySelectorAll('nav')) for (const name of ['data-indicator-shape', 'data-indicator', 'style']) nav.removeAttribute(name);
+    return copy.outerHTML;
+  });
+  expect(rail).toBe(legacyRail(`${user}@example.test`));
   await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
 
   // the rail's delete asks in the shared dialog, never the browser's own confirm
