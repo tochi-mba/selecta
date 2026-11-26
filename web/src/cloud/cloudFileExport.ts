@@ -1,5 +1,6 @@
 import { ApiError, type MixData, type Request } from '../api';
 import { flagListed } from '../flags';
+import type { CatalogueSong } from './deviceMusicRequest';
 import type { ExportState } from './hosted/hostedWords';
 
 /** "Make the file in your cloud library" (cloud.one_mixer). When every song of a mix is in the
@@ -9,7 +10,7 @@ import type { ExportState } from './hosted/hostedWords';
  * audio, no file name, no path (cloudLibrary.egress.test.ts).
  *
  * The shared Export panel asks the adapter, with `?draft=` for a draft:
- * - `GET /exports/cloud`: `{ offered }`, true when every song is in the cloud library;
+ * - `GET /exports/cloud`: `{ offered }`, true when every song has its own cloud copy;
  * - `POST /exports/cloud`: asks for the file, the server's answer (asking again while its parts
  *   are being made moves them along, as playing it would);
  * - `GET /exports/cloud/{job}`: how far the file has got. */
@@ -28,16 +29,38 @@ export const NOT_IN_CLOUD = (title: string) => `${title} isn’t in your cloud l
 const refuse = (message: string, code: string, status = 409) => new ApiError(message, status, code, 'device-music:export-cloud');
 const JOB = /^\/exports\/cloud\/([A-Za-z0-9][A-Za-z0-9_-]{0,63})$/;
 
+/** Of these song ids, those whose OWN catalogue row has a cloud copy: the rule the server's export
+ * uses (`cloud_copies`: the row's own hash and its other known hashes), never a row's union of
+ * versions and never a name. The server's own answer for the row when it gives one; else
+ * `cloudCopy` for that row alone (an upload with its own hash); else none, so nothing is offered
+ * that the server could refuse. */
+export async function ownCloudCopies(
+  files: readonly CatalogueSong[],
+  songIds: readonly number[],
+  cloudCopy?: (rows: readonly CatalogueSong[], all: readonly CatalogueSong[]) => Promise<string | null>,
+): Promise<ReadonlySet<number>> {
+  const rows = new Map(files.map((file) => [file.id, file]));
+  const server = files.some((file) => file.cloud !== undefined);
+  const found = new Set<number>();
+  for (const id of new Set(songIds)) {
+    const row = rows.get(id);
+    if (!row) continue;
+    const own = server ? !!row.cloud?.asset_id : !!(await cloudCopy?.([row], files).catch(() => null));
+    if (own) found.add(id);
+  }
+  return found;
+}
+
 export function cloudFileFamily(deps: {
   /** The account's API (paths without /api). */
   cloud: Request;
   /** The mix being saved: the current one, or the draft. */
   mix: (draft: number | null) => Promise<MixData>;
-  /** Every file id of the songs in the cloud library. */
-  inCloud: () => Promise<ReadonlySet<number>>;
+  /** Of these song ids, those with their own cloud copy (`ownCloudCopies`). */
+  inCloud: (songIds: readonly number[]) => Promise<ReadonlySet<number>>;
 }) {
   const away = async (mix: MixData) => {
-    const have = await deps.inCloud().catch(() => new Set<number>());
+    const have = await deps.inCloud(mix.mix.map((item) => item.song_id)).catch(() => new Set<number>());
     return mix.mix.find((item) => !have.has(item.song_id)) ?? null;
   };
   return {

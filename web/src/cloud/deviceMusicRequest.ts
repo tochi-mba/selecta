@@ -14,6 +14,7 @@ import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeSto
 import { requestsFamily } from './deviceMusicRequests';
 import { askToMake, forgetRatings, inspectorOn, seamOptions, withInspection } from './seamInspection';
 import { exportFamily, exportStudio } from './localExport';
+import { ownCloudCopies } from './cloudFileExport';
 import { readCached, writeCached } from './offlineCache';
 import { canHeal, classify } from './resilientRequest';
 import { libraryFamily } from './deviceMusicLibrary';
@@ -512,10 +513,11 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     studio: exportStudio(sources.workspaceId, cloud),
     mix: (draft) => adapted<MixData>(draft === null ? '/mix' : `/mix?draft=${draft}`),
     // cloud.one_mixer: cloud songs read as the player reads them, the device holding a song
-    // left out by name, and which songs the cloud library has
+    // left out by name, and which songs have their OWN cloud copy (never a row's union of
+    // versions: the server's export reads exactly that song)
     resolve: sources.resolver,
     heldBy: (songId) => { const where = holdersNow()?.(songId); return where?.online[0] ?? where?.before[0] ?? null; },
-    inCloud: sources.hosted ? async () => (await cloudSongs()).ids : undefined,
+    inCloud: sources.hosted ? async (songIds) => ownCloudCopies((await grouped()).files, songIds, sources.cloudCopy) : undefined,
   }) : null;
   // T-20261126-827e: the Seam Inspector's reads, from the transitions this device made
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {

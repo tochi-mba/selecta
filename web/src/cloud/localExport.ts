@@ -84,9 +84,9 @@ export type ExportDeps = {
   write?: typeof exportFile;
   decode?: (bytes: ArrayBuffer) => Promise<AudioBuffer>;
   level?: (buffer: AudioBuffer) => Promise<number>;
-  /** `cloud.one_mixer`: every file id of the songs in the cloud library, for "Make the file in
-   * your cloud library" (cloudFileExport.ts). */
-  inCloud?: () => Promise<ReadonlySet<number>>;
+  /** `cloud.one_mixer`: of these song ids, those with their OWN cloud copy (`ownCloudCopies`),
+   * for "Make the file in your cloud library" (cloudFileExport.ts). */
+  inCloud?: (songIds: readonly number[]) => Promise<ReadonlySet<number>>;
 };
 
 /** One transition per boundary, made ahead or now; null where none can be had (crossfade). */
