@@ -106,12 +106,8 @@ row's own words promise that place, which `/add`'s Desktop place (one later) wou
 failure keeps the request in this browser as before. Sent: a catalogue song id and a request id,
 never audio, a path or a name (`deviceToAccount.egress.test.ts`).
 
-## Bridges in discovery (`seam_book`): not moved
+## Discovery's links (`seam_book`)
 
-`seam_book` holds discovery's links, not a request's bridge. It is written inside discovery's
-sweep (`discovery/sweep.py`, `discovery/search.py._save`) on the sweep's own connection, in the
-same uncommitted transaction as `discovery_comparisons`, which marks a pair as compared. Moving
-`seam_book` alone would either split that transaction (a pair marked compared without its links,
-or links without the mark, after a crash) or make the store's write wait behind the sweep's own
-lock. It moves with the discovery slice, `discovery_comparisons` included; nothing in Cloud
-writes it (the browser finds its harmonic matches on the device). To-do T-20261126-bf59.
+`seam_book` holds discovery's links, not a request's bridge, and no request code reads it. It
+moved with the discovery slice, together with `discovery_comparisons`, so a compared pair's
+links and its mark are one store write ([engine-store-discovery.md](engine-store-discovery.md)).

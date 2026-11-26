@@ -171,24 +171,27 @@ one transaction (docs/engineering/cloud-planning.md).
 Moved (each with its own page): ratings and song facts (above); seams, Phase 7 step 1
 ([engine-store-seams.md](engine-store-seams.md)); mixes, steps 2 and 3
 ([engine-store-mixes.md](engine-store-mixes.md)); requests, step 3
-([engine-store-requests.md](engine-store-requests.md)). Each keeps its old path, statement for
-statement, for the flag off: `requests.py` (its `_sqlite_` bodies, 28 calls) and
-`mix_backend.SqliteMixes` (25) are that path, not work left.
+([engine-store-requests.md](engine-store-requests.md)); discovery with its links (`seam_book`) and
+the listening study, step 4 ([engine-store-discovery.md](engine-store-discovery.md)). Each keeps
+its old path, statement for statement, for the flag off; these calls are that path, not work
+left: `requests.py` (its `_sqlite_` bodies, 28), `mix_backend.SqliteMixes` (25), `listening.py`
+(16), `discovery/sweep.py` (5), `routes/discover.py` (3 of 4), `discovery/search.py` (1 of 2),
+`library/relink.py`'s discoveries count (1), `eval/ratings.py` (2).
 
 Still on the library's raw connection on 2026-11-26, the remaining work of Phase 7. Counts are
-`.execute`/`.executemany` calls in modules that import `sqlite3`, plus Desktop routes handed the
+`.execute`/`.executemany` lines in modules that import `sqlite3`, plus Desktop routes handed the
 library connection; Cloud modules' SQLAlchemy calls are not counted.
 
 | Area | Modules (calls) |
 |---|---|
-| Hand-made schema and start-up steps | `db.py` (27), `local_upgrade.py` (4) |
-| Library scan, search and files | `library/scan.py` (16), `library/relink.py` (8), `library/search_cache.py` (4), `routes/library.py` (23), `cache_care.py` (12) |
-| Discovery (`seam_book`, `discovery_comparisons`; to-do T-20261126-bf59) | `discovery/sweep.py` (5), `discovery/search.py` (2), `routes/discover.py` (5) |
-| The listening study | `listening.py` (15), `eval/ratings.py` (2), `eval/feedback.py` (1) |
-| Lucy's tables on the Desktop | `lucy/conversations.py` (31), `lucy/memory.py` (17), `lucy/commit.py` (15), `lucy/proposals.py` (12), `lucy/permissions.py` (7), `lucy/events.py` (6), `lucy/schema.py` (3), `lucy/readiness.py` (2), `lucy/context.py`, `lucy/catalog.py` (1 each), `routes/lucy.py` (12), `lucy/agent.py` (9) |
+| Hand-made schema and start-up steps (including `_legacy_kinds_renamed`, kept on purpose) | `db.py` (26), `local_upgrade.py` (4) |
+| Library scan, search and files | `library/scan.py` (16), `library/relink.py` (7), `library/search_cache.py` (4), `routes/library.py` (23), `cache_care.py` (12) |
+| Reading songs and lyrics for discovery | `discovery/search.lyric_links` (1), `routes/discover.py`'s `/api/links` names (1) |
+| Reading rated seams across data folders | `eval/feedback.py` (1, read-only) |
+| Lucy's tables on the Desktop | `lucy/conversations.py` (31), `lucy/memory.py` (17), `lucy/commit.py` (15), `lucy/proposals.py` (12), `lucy/permissions.py` (7), `lucy/events.py` (6), `lucy/schema.py`, `lucy/readiness.py` (2 each), `lucy/context.py`, `lucy/catalog.py` (1 each), `routes/lucy.py` (12), `lucy/agent.py` (10) |
 | Mix and request routes' own reads | `routes/helpers.py` (5), `routes/mixes.py` (2), `routes/edit.py` (3), `routes/system.py` (4), `session.py` (1) |
 | Analysis, planning and workers reading songs | `analysis/pipeline.py` (3), `analysis/song.py` (3), `eta.py` (3), `planner/wordreel.py` (2), `planner/ready.py`, `planner/reel.py`, `planner/gridcheck.py`, `stems.py`, `lyrics/lrclib.py`, `workers/local_seams.py`, `workers/local_analysis.py`, `api.py` (1 each) |
 | Whole-file tools (work on files, not a workspace) | `homes.py` (14), `recovery.py` (9), `backup.py` (8) |
-| Development only | `devstack/identity_store.py` (32) |
+| Development only | `devstack/identity_store.py` (31) |
 
 `preferences` beyond the mix's own keys is read on the old path too.
