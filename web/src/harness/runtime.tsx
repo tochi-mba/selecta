@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { MixItem } from '../api';
 import { hostedResolver } from '../cloud/hostedMedia';
-import { useLocalFirstPlayer } from '../cloud/localFirstPlayer';
+import { useLocalFirstPlayer } from '../cloud/deviceMusicPlayer';
 import { QueueSources } from '../cloud/QueueSources';
 import type { Api } from '../devices/usePlaybackDevice';
 import { makeCoexistingResolver, makeSourceBook, type MediaResolver } from '../media';

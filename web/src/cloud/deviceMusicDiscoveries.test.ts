@@ -3,7 +3,7 @@ import type { TonalProfile } from '../dsp/analysis/tonalProfile';
 import {
   AUDITION_S, camelotCompatible, COUSIN_SIMILARITY, discoveriesFamily, findMatches, HEAR_STEP_REFUSAL, MOST_PER_SONG, pairId, pairKey,
   rotations, type BrowserAudition, type BrowserDiscovery, type DiscoverySong, type ProfileProgress,
-} from './localFirstDiscoveries';
+} from './deviceMusicDiscoveries';
 import type { Verdict } from './tonalProfiles';
 
 // cloud.browser_harmonic: Harmonic matches answered in the browser from whole-song key profiles.

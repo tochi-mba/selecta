@@ -3,7 +3,7 @@ import type { LibraryPage, Request } from '../api';
 import { setFlags } from '../flags';
 import { forgetAccountMeasured } from './accountFacts';
 import { browserFlags, NOT_IN_THE_BROWSER } from './browserFlags';
-import { localFirstRequest, ONLY_IN_THE_APP, type CatalogueSong } from './localFirstRequest';
+import { deviceMusicRequest, ONLY_IN_THE_APP, type CatalogueSong } from './deviceMusicRequest';
 
 // A device-music Cloud account's Library shows the tempo and key its devices measured and saved
 // to the account, and Song details' corrections are kept there (cloud.brain with
@@ -36,7 +36,7 @@ describe('the Library from the account\'s measurements', () => {
   it('shows tempo, key and energy for a measured song and claims nothing for the rest', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true });
     const { cloud } = cloudWith([one]);
-    const page = await localFirstRequest(cloud, { workspaceId: 'w1' })<LibraryPage>('/library?state=all');
+    const page = await deviceMusicRequest(cloud, { workspaceId: 'w1' })<LibraryPage>('/library?state=all');
     const [first, second] = page.songs;
     expect(first).toMatchObject({ bpm: 123.6, camelot: '8A', detected_bpm: 123.6, detected_camelot: '8A', energy: 0.4, override_bpm: null });
     expect(second).toMatchObject({ bpm: null, camelot: null, energy: null });
@@ -45,14 +45,14 @@ describe('the Library from the account\'s measurements', () => {
   it('shows the member\'s correction as the tempo in use, with the measured one kept', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true });
     const { cloud } = cloudWith([{ ...one, override_bpm: 124, override_camelot: '9A' }]);
-    const page = await localFirstRequest(cloud, { workspaceId: 'w1' })<LibraryPage>('/library?state=all');
+    const page = await deviceMusicRequest(cloud, { workspaceId: 'w1' })<LibraryPage>('/library?state=all');
     expect(page.songs[0]).toMatchObject({ bpm: 124, camelot: '9A', detected_bpm: 123.6, detected_camelot: '8A', override_bpm: 124, override_camelot: '9A' });
   });
 
   it('asks nothing and shows nothing when a flag is off or unnamed', async () => {
     setFlags({ 'cloud.brain': true });
     const { cloud, calls } = cloudWith([one]);
-    const page = await localFirstRequest(cloud, { workspaceId: 'w1' })<LibraryPage>('/library?state=all');
+    const page = await deviceMusicRequest(cloud, { workspaceId: 'w1' })<LibraryPage>('/library?state=all');
     expect(page.songs[0].bpm).toBeNull();
     expect(calls.some((call) => call.path.startsWith('/song-facts'))).toBe(false);
   });
@@ -60,7 +60,7 @@ describe('the Library from the account\'s measurements', () => {
   it('a failed read leaves the Library as it was', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true });
     const { cloud } = cloudWith([one], true);
-    const page = await localFirstRequest(cloud, { workspaceId: 'w1' })<LibraryPage>('/library?state=all');
+    const page = await deviceMusicRequest(cloud, { workspaceId: 'w1' })<LibraryPage>('/library?state=all');
     expect(page.songs.map((row) => row.bpm)).toEqual([null, null]);
   });
 });
@@ -69,7 +69,7 @@ describe('corrections from Song details', () => {
   it('a tempo and key go to the account, and the Library reads them back', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true });
     const { cloud, calls } = cloudWith([one]);
-    const request = localFirstRequest(cloud, { workspaceId: 'w1' });
+    const request = deviceMusicRequest(cloud, { workspaceId: 'w1' });
     await request('/library?state=all');
     expect(await request('/songs/1/correct', { method: 'POST', body: JSON.stringify({ bpm: 124, camelot: '9A', clear: [] }) })).toEqual({ redone: 0 });
     expect(calls.filter((call) => call.path === '/song-facts/1/correction')).toEqual([{ method: 'PUT', path: '/song-facts/1/correction', body: { bpm: 124, camelot: '9A' } }]);
@@ -80,14 +80,14 @@ describe('corrections from Song details', () => {
   it('putting both back asks the account to forget the correction', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true });
     const { cloud, calls } = cloudWith([{ ...one, override_bpm: 124 }]);
-    await localFirstRequest(cloud, { workspaceId: 'w1' })('/songs/1/correct', { method: 'POST', body: JSON.stringify({ clear: ['bpm', 'camelot'] }) });
+    await deviceMusicRequest(cloud, { workspaceId: 'w1' })('/songs/1/correct', { method: 'POST', body: JSON.stringify({ clear: ['bpm', 'camelot'] }) });
     expect(calls.filter((call) => call.path === '/song-facts/1/correction').map((call) => call.method)).toEqual(['DELETE']);
   });
 
   it('"is it music?" is kept with the account, and the catalogue reads again', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true });
     const { cloud, calls } = cloudWith([one]);
-    const adapted = localFirstRequest(cloud, { workspaceId: 'w1' });
+    const adapted = deviceMusicRequest(cloud, { workspaceId: 'w1' });
     await adapted('/library?state=all');
     expect(await adapted('/songs/1/correct', { method: 'POST', body: JSON.stringify({ is_music: false }) })).toEqual({ redone: 0 });
     await adapted('/songs/1/correct', { method: 'POST', body: JSON.stringify({ clear: ['is_music'] }) });
@@ -100,8 +100,8 @@ describe('corrections from Song details', () => {
   it('a correction with the flags off is only in the app, said plainly', async () => {
     setFlags({ 'cloud.brain': true });
     const { cloud } = cloudWith([one]);
-    await expect(localFirstRequest(cloud, { workspaceId: 'w1' })('/songs/1/correct', { method: 'POST', body: JSON.stringify({ is_music: false }) })).rejects.toThrow(ONLY_IN_THE_APP);
-    await expect(localFirstRequest(cloud, { workspaceId: 'w1' })('/songs/1/correct', { method: 'POST', body: JSON.stringify({ bpm: 120 }) })).rejects.toThrow(ONLY_IN_THE_APP);
+    await expect(deviceMusicRequest(cloud, { workspaceId: 'w1' })('/songs/1/correct', { method: 'POST', body: JSON.stringify({ is_music: false }) })).rejects.toThrow(ONLY_IN_THE_APP);
+    await expect(deviceMusicRequest(cloud, { workspaceId: 'w1' })('/songs/1/correct', { method: 'POST', body: JSON.stringify({ bpm: 120 }) })).rejects.toThrow(ONLY_IN_THE_APP);
   });
 });
 

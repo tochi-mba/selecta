@@ -8,7 +8,7 @@ import { asLocalFirst, mediaDbName, openLocalFirst, seeded } from './localFirst'
 // handles in IndexedDB, made from files in the origin-private file system (the same handle
 // type a folder pick stores). "Needs permission again" cannot be produced here: a browser
 // never revokes permission on its own private files, so that state is covered by Vitest
-// (localFirstAvailability.test.ts) with a handle that asks again.
+// (deviceMusicAvailability.test.ts) with a handle that asks again.
 
 const row = (page: Page, title: string) => page.locator('li.song-row', { hasText: title });
 /** A browser row's one status chip (02889fe5): whether it plays here, or the step that makes it.

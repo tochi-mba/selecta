@@ -89,7 +89,7 @@ path and takes a pooled connection: under a millisecond, and nothing calls it in
 
 No Cloud scanner and no Cloud scan tables: a Cloud song arrives through the catalogue's own
 registration (`local_media`). The shared shell's Library calls in Cloud
-(`web/src/cloud/localFirstRequest.ts`) cover `GET /api/library`, `GET /api/status`, a tempo and
+(`web/src/cloud/deviceMusicRequest.ts`) cover `GET /api/library`, `GET /api/status`, a tempo and
 key correction, never play and the never/allow batch. These Library routes have no Cloud
 equivalent (to-do T-20261126-ed4c): `GET /api/songs`, `GET /api/songs/{id}` (details: peaks,
 bars, sections, lines), `/api/songs/{id}/audio` and `/art`, `POST /api/songs/{id}/analyse`,

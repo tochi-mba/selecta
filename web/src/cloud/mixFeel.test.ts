@@ -4,7 +4,7 @@ import { setFlags } from '../flags';
 import { accountOrderPlanner } from './accountOrder';
 import { DEFAULT_STEERING } from './recipeStore';
 import { feelFor, FEEL_PAIRS_KEPT, rememberFeel } from './mixFeel';
-import { withMeasured } from './localFirstRequest';
+import { withMeasured } from './deviceMusicRequest';
 import { planningCalls } from './studioWiring';
 
 // T-20261126-6f97: a mix ordered in a transition feel has its transitions made in that feel, and

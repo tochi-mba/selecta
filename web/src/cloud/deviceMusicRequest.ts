@@ -5,17 +5,17 @@ import { accountOrderPlanner } from './accountOrder';
 import { accountIdeas } from './accountIdeas';
 import { accountDiscoveries } from './accountDiscoveries';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
-import { linksFamily } from './localFirstLinks';
-import { mixFamily, type PlayableSong, type SongPlace } from './localFirstMixes';
+import { linksFamily } from './deviceMusicLinks';
+import { mixFamily, type PlayableSong, type SongPlace } from './deviceMusicMixes';
 import { MOVE_OFFER_EVENT, notOnSpeaker, playsOn, speakerHolds, type MoveOffer } from '../devices/controller';
-import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscoveries';
+import { discoveriesFamily, type DiscoveriesSources } from './deviceMusicDiscoveries';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
-import { requestsFamily } from './localFirstRequests';
+import { requestsFamily } from './deviceMusicRequests';
 import { askToMake, forgetRatings, inspectorOn, seamOptions, withInspection } from './seamInspection';
 import { exportFamily, exportStudio } from './localExport';
 import { readCached, writeCached } from './offlineCache';
 import { canHeal, classify } from './resilientRequest';
-import { libraryFamily } from './localFirstLibrary';
+import { libraryFamily } from './deviceMusicLibrary';
 import { isFirst } from './measuringControl';
 import { flagListed } from '../flags';
 import { groupVersions, hereBySong, linkBySong, rememberGrouping, setBySong, whereBySong, type Grouping } from './songVersions';
@@ -98,7 +98,7 @@ export type AvailabilitySources = {
   /** Harmonic matches from key profiles measured on this device (cloud.browser_harmonic);
    * without it `/discoveries` is refused as the app's alone. */
   tonal?: Omit<DiscoveriesSources, 'songs'>;
-  /** The workspace whose song requests this browser keeps (localFirstRequests.ts); with the
+  /** The workspace whose song requests this browser keeps (deviceMusicRequests.ts); with the
    * recipe store, Request a song works here. */
   workspaceId?: string;
   /** ADR-0475: the device that is playing when it is not this one; null when this device is the
@@ -281,7 +281,7 @@ export function withMeasured(mix: MixData, measured: ReadonlyMap<number, Measure
 }
 
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
-export function localFirstRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
+export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
   let catalogue: Promise<Grouping> | null = null;
   let lastGrouping: Grouping | null = null;
   let readAt = 0;

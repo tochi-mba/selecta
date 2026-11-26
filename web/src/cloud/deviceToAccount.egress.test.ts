@@ -10,8 +10,8 @@ import { accountIdeas } from './accountIdeas';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
-import { localFirstRequest } from './localFirstRequest';
-import { requestsFamily } from './localFirstRequests';
+import { deviceMusicRequest } from './deviceMusicRequest';
+import { requestsFamily } from './deviceMusicRequests';
 import { ACCOUNT_BASE, accountDiscoveries } from './accountDiscoveries';
 import { reportSeam } from './seamReports';
 import { planningCalls } from './studioWiring';
@@ -333,7 +333,7 @@ describe('a correction from Song details', () => {
   it('carries a tempo and a key, and nothing about the file', async () => {
     const { calls, request: capture } = capturing();
     const request = (async (path: string, init?: RequestInit) => (path.startsWith('/local-media/') ? { songs: [] } : capture(path, init))) as typeof capture;
-    const adapted = localFirstRequest(request, { workspaceId: 'w1' });
+    const adapted = deviceMusicRequest(request, { workspaceId: 'w1' });
     await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ bpm: 121.5, camelot: '8A', clear: [] }) });
     await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ clear: ['bpm', 'camelot'] }) });
     expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['PUT /song-facts/4/correction', 'DELETE /song-facts/4/correction']);
@@ -345,7 +345,7 @@ describe('a correction from Song details', () => {
   it('Is it music? carries one yes, no or none, and nothing about the file', async () => {
     const { calls, request: capture } = capturing();
     const request = (async (path: string, init?: RequestInit) => (path.startsWith('/local-media/') ? { songs: [] } : capture(path, init))) as typeof capture;
-    const adapted = localFirstRequest(request, { workspaceId: 'w1' });
+    const adapted = deviceMusicRequest(request, { workspaceId: 'w1' });
     await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ is_music: false }) });
     await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ is_music: true }) });
     expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['PUT /song-facts/4/correction', 'PUT /song-facts/4/correction']);

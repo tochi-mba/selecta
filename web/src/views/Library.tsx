@@ -619,7 +619,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const compact = preferences.density === 'compact';
   const on = useFlags();
   const cardLayout = preferences.libraryLayout === 'cards' && on('library.card_view');
-  // a browser that measures songs itself can measure one first (localFirstLibrary.ts)
+  // a browser that measures songs itself can measure one first (deviceMusicLibrary.ts)
   const measuresFirst = (song: LibrarySong) => !!browser && flagListed('cloud.browser_harmonic') && song.detected_bpm === null && song.availability === 'here';
   // batch actions need at least one thing they can do
   const batch = on('library.batch') && (on('library.priority') || on('library.never_play'));

@@ -1,6 +1,6 @@
 // What the member asked of this device's song measuring (tonalProfiles.ts): songs to measure
 // first, and a pause. The Desktop's "analyse this song now", its priority list and its start and
-// stop answer here in a browser (localFirstLibrary.ts). Kept apart from the profiler so reading
+// stop answer here in a browser (deviceMusicLibrary.ts). Kept apart from the profiler so reading
 // it pulls in no decoding or worker code. Song ids only; nothing here leaves the device.
 
 const PAUSED_KEY = 'selecta.measuring.paused';

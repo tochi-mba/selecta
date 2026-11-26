@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { MixData, MixItem, Request } from '../api';
 import type { RequestRow } from '../views/Requests';
-import type { PlayableSong } from './localFirstMixes';
-import { requestsFamily, type RoomRequest } from './localFirstRequests';
+import type { PlayableSong } from './deviceMusicMixes';
+import { requestsFamily, type RoomRequest } from './deviceMusicRequests';
 
 // Add next reports a guest's request as played, so the guest's page says so. Undo took the song
 // back out of the mix but left the room request played: the guest was told a song played that

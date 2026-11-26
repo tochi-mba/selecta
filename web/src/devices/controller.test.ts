@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MixData, Request } from '../api';
-import type { PlayableSong } from '../cloud/localFirstMixes';
-import { requestsFamily, type RoomRequest } from '../cloud/localFirstRequests';
-import { mixFamily } from '../cloud/localFirstMixes';
+import type { PlayableSong } from '../cloud/deviceMusicMixes';
+import { requestsFamily, type RoomRequest } from '../cloud/deviceMusicRequests';
+import { mixFamily } from '../cloud/deviceMusicMixes';
 import type { RecipeStore } from '../cloud/recipeStore';
 import type { RequestRow } from '../views/Requests';
 import { addedOnReturn, bestHolder, comingUp, musicHolder, notOnSpeaker, playsOn, programmeTurn, programmeWithNext, speakerHolds, type ControllerLink, type DeviceHolding } from './controller';

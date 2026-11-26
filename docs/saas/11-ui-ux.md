@@ -68,7 +68,7 @@ Every signed-in Cloud account is drawn by the same shared shell as local Selecta
 In the local-first shell (`devices.remote_control`) a device's Listen, Library and Requests are drawn by what each of the person's devices holds, not only this one ([§11A](11a-devices-and-rooms.md)):
 - **Listen** (`cloud/CloudShell.tsx`): `devices/RemoteListen.tsx` while another device plays (with the ways on when that device is away or a press finds nobody playing), `devices/ControllerListen.tsx` when nothing plays and this device has no music, the ordinary Listen otherwise. A Play button is never shown where it cannot work.
 - **Library** (`cloud/CloudLibrary.tsx`, `views/LibraryBrowser.tsx`, `views/LibraryRow.tsx`): "All on {device}" in the header, a per-row device status, the filters All, On this device, Can play now and Needs attention, one quiet line instead of the "connect your music" card when another device has the music, and, on a browser that cannot keep folder access (phones), one sentence saying so.
-- **Requests** (`cloud/localFirstRequests.ts`, `rooms/RoomRequests.tsx`, `views/BrowserRequests.tsx`): rows judged by the device that would play the song, counts of what this device can add, and "N requests waiting on a device" in the room line.
+- **Requests** (`cloud/deviceMusicRequests.ts`, `rooms/RoomRequests.tsx`, `views/BrowserRequests.tsx`): rows judged by the device that would play the song, counts of what this device can add, and "N requests waiting on a device" in the room line.
 
 ### 11.4 Honest status language
 

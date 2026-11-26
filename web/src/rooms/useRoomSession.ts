@@ -290,7 +290,7 @@ export function roomLine(session: RoomSession): string {
 }
 
 /** Who asked for an accepted room request, by its id, as the last read of the open room gave it.
- * The Requests drawer in the browser (localFirstRequests.ts) names the guest from this. */
+ * The Requests drawer in the browser (deviceMusicRequests.ts) names the guest from this. */
 export function askerOf(requestId: string): string | null {
   return askers.get(requestId) ?? null;
 }

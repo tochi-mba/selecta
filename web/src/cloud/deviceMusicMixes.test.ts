@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MixData, Request, SongRow, Status, VibeCard } from '../api';
-import { BROWSER_MIX_NEEDS, chooseSongs, mixFamily, mixNameFor, pickCard, PICK_NAME, type PlayableSong } from './localFirstMixes';
-import { localFirstRequest } from './localFirstRequest';
+import { BROWSER_MIX_NEEDS, chooseSongs, mixFamily, mixNameFor, pickCard, PICK_NAME, type PlayableSong } from './deviceMusicMixes';
+import { deviceMusicRequest } from './deviceMusicRequest';
 import { setFlags } from '../flags';
 import { asMixData, DEFAULT_STEERING, PICKED_LIVE, recipeStore, WORKED_OUT_LIVE, type Recipe } from './recipeStore';
 
@@ -164,7 +164,7 @@ describe('Make a Mix, MixSetup and My Mixes through the adapted request', () => 
   const adapted = () => {
     const fake = fakeCloud();
     const store = recipeStore(fake.cloud, 'ws-1');
-    const request = localFirstRequest(fake.cloud, { here: async () => new Map([[1, 'here'], [2, 'here'], [3, 'here']]), recipes: store });
+    const request = deviceMusicRequest(fake.cloud, { here: async () => new Map([[1, 'here'], [2, 'here'], [3, 'here']]), recipes: store });
     return { ...fake, store, request };
   };
 
@@ -179,7 +179,7 @@ describe('Make a Mix, MixSetup and My Mixes through the adapted request', () => 
     expect(calls).toContain('POST /local-media/recipes');
 
     // a new page (a reload, another tab) with the same storage finds the same mix
-    const again = localFirstRequest(fakeCloudWith(kept), { recipes: recipeStore(fakeCloudWith(kept), 'ws-1') });
+    const again = deviceMusicRequest(fakeCloudWith(kept), { recipes: recipeStore(fakeCloudWith(kept), 'ws-1') });
     const current = await again<MixData>('/mix');
     expect(current.mix.map((item) => item.song_id)).toEqual([1, 2, 3]);
   });
@@ -219,7 +219,7 @@ describe('Make a Mix, MixSetup and My Mixes through the adapted request', () => 
 
   it('needs two songs it can play before it makes a mix', async () => {
     const fake = fakeCloud();
-    const request = localFirstRequest(fake.cloud, { here: async () => new Map([[1, 'here']]), recipes: recipeStore(fake.cloud, 'ws-1') });
+    const request = deviceMusicRequest(fake.cloud, { here: async () => new Map([[1, 'here']]), recipes: recipeStore(fake.cloud, 'ws-1') });
     await expect(request('/vibes/pick/build?count=20', { method: 'POST', body: '{}' })).rejects.toMatchObject({ code: 'not_enough_songs' });
     expect(fake.kept.size).toBe(0);
   });
@@ -229,7 +229,7 @@ describe('the Edit page on a browser mix (editor parity with local mode)', () =>
   const editing = async () => {
     const fake = fakeCloud();
     const store = recipeStore(fake.cloud, 'ws-1');
-    const request = localFirstRequest(fake.cloud, { here: async () => new Map([[1, 'here'], [2, 'here'], [3, 'here']]), recipes: store });
+    const request = deviceMusicRequest(fake.cloud, { here: async () => new Map([[1, 'here'], [2, 'here'], [3, 'here']]), recipes: store });
     await request<MixData>('/vibes/pick/build?count=20', { method: 'POST', body: '{}' });
     const order = (data: MixData) => data.mix.map((item) => item.song_id);
     const guard = (ids: number[]) => ({ 'x-mix-order': ids.join(',') });

@@ -147,7 +147,7 @@ function promises(file: string, source: string): string[] {
 describe('no "not yet" in SelectaDJ', () => {
   it('scans the pages and the copy tables, so the scan is not vacuous', () => {
     expect(PROMISE_FILES.length).toBeGreaterThan(FILES.length);
-    expect(PROMISE_FILES).toContain('cloud/localFirstRequest.ts');
+    expect(PROMISE_FILES).toContain('cloud/deviceMusicRequest.ts');
     expect(PROMISE_FILES).toContain('cloud/browserFlags.ts');
   });
 

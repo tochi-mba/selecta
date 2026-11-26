@@ -4,7 +4,7 @@ import { browserMovesAllowed, browserMovesOn } from '../cloud/browserMoves';
 import type { DeviceStudio } from '../cloud/deviceStudio';
 import { makeDeviceStudio, planningAccess } from '../cloud/studioWiring';
 import { mediaDeviceId } from '../cloud/ConnectMusic';
-import { recallCalibration, rememberCalibration } from '../cloud/localFirstPlayer';
+import { recallCalibration, rememberCalibration } from '../cloud/deviceMusicPlayer';
 import * as provider from '../dsp/seamProvider';
 import type { SeamRecord, SeamSettingsLike, WorkerSeamProvider } from '../dsp/seamProvider';
 import type { SeamSchedule } from '../dsp/seams';
@@ -16,7 +16,7 @@ import type { Chooser, Label, LiveVariant, Played, Variant } from './session';
 
 /** Playing one Listening Room audition on this device's own engine (tools.listening_room).
  *
- * The room owns its engine, speaker and seam providers, built as cloud/localFirstPlayer.ts's
+ * The room owns its engine, speaker and seam providers, built as cloud/deviceMusicPlayer.ts's
  * startBrowserEngine builds the shell's, but with cloud.seam_lead's three options decided per
  * audition by the variant instead of by the flag. It never takes the device lease and never tells
  * the server anything: auditions are not playback of the mix.

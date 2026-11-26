@@ -14,7 +14,7 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 
 | Key | Storage | Written by | Holds | Owner |
 |---|---|---|---|---|
-| `selecta.dsp.calibration.` | local | `web/src/cloud/localFirstPlayer.ts` | This device's worker-analysis calibration (one entry per device identity), re-measured when missing or 30 days old | Listen |
+| `selecta.dsp.calibration.` | local | `web/src/cloud/deviceMusicPlayer.ts` | This device's worker-analysis calibration (one entry per device identity), re-measured when missing or 30 days old | Listen |
 | `selecta.dsp.stems.model` | local | `web/src/dsp/stems/model.ts` | Which stem splitter file this browser downloaded and checked (implementation, checksum, size, when), so a ready splitter is not downloaded again; removed when the member removes the splitter | This device |
 | `selecta.dsp.stems.crashGuard` | local | `web/src/dsp/stems/gate.ts` | Written just before a stem split runs and removed after, so a page that loads with it still present knows the last split stopped the page | This device |
 | `selecta.dsp.stems.crashTripped` | local | `web/src/dsp/stems/gate.ts` | That a stem split stopped the page here, so stems stay off on this device until the member chooses to try again | This device |
@@ -60,8 +60,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.onboarding.<workspace>` | local | `web/src/cloud/onboarding/state.ts` | How far local-first Cloud onboarding got, so an interrupted step resumes (Cloud, ADR-0463) | Cloud |
 | `selecta.venue.last-heard.<workspace>` | local | `web/src/cloud/venue/deps.ts` | When a person last confirmed hearing the venue check tone, shown only as history and never trusted as a current check (Cloud, ADR-0460) | Cloud |
 | `selecta.venue.record.<workspace>` | local | `web/src/cloud/venue/deps.ts` | The newest capability record measured on this device, filed under its full tuple (Cloud, ADR-0460) | Cloud |
-| `selecta-requests:<workspace>` | local | `web/src/cloud/localFirstRequests.ts` | The songs asked for under Request a song in a browser mix, and which room requests this browser has already placed, so a reload keeps the queue (Cloud, ADR-0462) | Requests |
-| `selecta-requests-room:<workspace>` | local | `web/src/cloud/localFirstRequests.ts` | The last room request list the server answered, so Request a song still shows it while the connection is down (Cloud, `cloud.offline_shell`) | Requests |
+| `selecta-requests:<workspace>` | local | `web/src/cloud/deviceMusicRequests.ts` | The songs asked for under Request a song in a browser mix, and which room requests this browser has already placed, so a reload keeps the queue (Cloud, ADR-0462) | Requests |
+| `selecta-requests-room:<workspace>` | local | `web/src/cloud/deviceMusicRequests.ts` | The last room request list the server answered, so Request a song still shows it while the connection is down (Cloud, `cloud.offline_shell`) | Requests |
 | `selecta.account-snapshot` | local | `web/src/cloud/offlineCache.ts` | The signed-in person's last account answer (user id, when, account), so a page opened offline still knows its workspace and features; forgotten with the workspace's device data (Cloud, `cloud.offline_shell`) | Cloud |
 | `selecta.cloud.verify-asked` | session | `web/src/cloud/Gate.tsx` | That the member pressed "I've verified my email", kept across the reload that follows, so a page that comes back unchanged can say the address still isn't verified (Cloud sign-in) | Cloud |
 | `selecta.controller.notices.seen` | local | `web/src/devices/ControllerNotices.tsx` | The ids of the last 60 remote-control notices this browser dismissed, so a dismissed notice stays dismissed across page loads (Cloud, `devices.remote_control`) | Cloud |

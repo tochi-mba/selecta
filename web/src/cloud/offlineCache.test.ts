@@ -5,7 +5,7 @@ import { CloudError } from './api';
 import { fakeIndexedDb, type FakeIndexedDb } from '../media/fakeIndexedDb';
 import { configureConnection } from './connection';
 import { forgetWorkspaceOnDevice } from './deviceData';
-import { localFirstRequest, mergeSongs, type CatalogueSong } from './localFirstRequest';
+import { deviceMusicRequest, mergeSongs, type CatalogueSong } from './deviceMusicRequest';
 import {
   CATALOGUE_DB_PREFIX, checkedAt, forgetAccountSnapshot, forgetCached, readCached, rememberAccount, rememberedAccount, writeCached,
 } from './offlineCache';
@@ -58,13 +58,13 @@ describe('the kept catalogue', () => {
       throw new CloudError('nope', 404);
     }) as Request;
     const sources = { workspaceId: 'ws-c3', offline: { deviceSongs: async () => [song(3)], onServed: (from: unknown) => served.push(from) } };
-    const first = localFirstRequest(cloud, sources);
+    const first = deviceMusicRequest(cloud, sources);
     expect((await first<Status>('/status')).counts.total).toBe(2);
     expect(served.at(-1)).toEqual({ cached: false });
     await vi.waitFor(async () => expect(await readCached('ws-c3', 'catalogue')).not.toBeNull());
 
     down = true;
-    const offline = localFirstRequest(cloud, sources);
+    const offline = deviceMusicRequest(cloud, sources);
     expect((await offline<Status>('/status')).counts.total).toBe(3);
     expect(served.at(-1)).toEqual({ cached: true, at: expect.any(Number) });
   });
@@ -72,7 +72,7 @@ describe('the kept catalogue', () => {
   it('a refusal or an ended sign-in still throws; nothing kept is served for it', async () => {
     await writeCached('ws-c4', 'catalogue', [song(1)]);
     const cloud = (async () => { throw new CloudError('Sign in', 401); }) as Request;
-    const request = localFirstRequest(cloud, { workspaceId: 'ws-c4', offline: {} });
+    const request = deviceMusicRequest(cloud, { workspaceId: 'ws-c4', offline: {} });
     await expect(request('/status')).rejects.toMatchObject({ status: 401 });
   });
 

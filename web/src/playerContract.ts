@@ -3,7 +3,7 @@ import type { NowState } from './player';
 /** The player as the shell and the shared views actually use it (ADR-0462).
  *
  * `SetPlayer` satisfies this structurally; no change to player.ts is needed. The Cloud local-first
- * shell satisfies it with `cloud/localFirstPlayer.ts`, which drives the browser engine (ADR-0457)
+ * shell satisfies it with `cloud/deviceMusicPlayer.ts`, which drives the browser engine (ADR-0457)
  * behind the same members. Every member here is one that Shell.tsx, VolumeControl, MiniPlayer,
  * Now.tsx or another shared view calls; App-only members (prepare, cue, pause, resume) are
  * deliberately absent, so a view can never depend on something only the local player has.

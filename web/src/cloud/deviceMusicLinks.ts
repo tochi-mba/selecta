@@ -1,7 +1,7 @@
 import { ApiError, Link, LinkList, MixData, Request } from '../api';
 import { flagOn } from '../flags';
 import { browserMovesOn, defaultBrowserMove } from './browserMoves';
-import { BROWSER_MIX_NEEDS, mixNameFor, type PlayableSong } from './localFirstMixes';
+import { BROWSER_MIX_NEEDS, mixNameFor, type PlayableSong } from './deviceMusicMixes';
 import { asMixData, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 
 /** The Word connections route family of the local-first adapter (ADR-0462 "one adapter per route

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MixData, Request } from '../api';
-import type { PlayableSong } from '../cloud/localFirstMixes';
-import { requestsFamily, type RoomRequest } from '../cloud/localFirstRequests';
+import type { PlayableSong } from '../cloud/deviceMusicMixes';
+import { requestsFamily, type RoomRequest } from '../cloud/deviceMusicRequests';
 import type { RequestRow } from '../views/Requests';
 import { addable, waitingCount } from '../rooms/useRoomSession';
 import { needsFolderAgain, notHereWords, NOWHERE_NOW, onlyOn, whereHeldFrom, type ControllerLink, type DeviceHolding, type WhereHeld } from './controller';
@@ -75,7 +75,7 @@ describe('request rows judged by every device (R4)', () => {
 
 describe('R5: search results placed by the device that would play them', () => {
   it('puts songs the speaker can play first, then songs on another device, then none, and says where', async () => {
-    const { mixFamily } = await import('../cloud/localFirstMixes');
+    const { mixFamily } = await import('../cloud/deviceMusicMixes');
     const store = { current: () => null, steering: () => ({}) } as never;
     const rank: Record<number, { rank: number; where: string | null }> = { 1: { rank: 2, where: 'On no device right now' }, 2: { rank: 1, where: 'Only on Tablet' }, 3: { rank: 0, where: 'Plays on Laptop' } };
     const family = mixFamily(store, async () => SONGS, () => true, (id) => rank[id] ?? { rank: 2, where: null });

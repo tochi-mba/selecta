@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ControllerLink } from '../devices/controller';
-import type { CatalogueSong } from './localFirstRequest';
+import type { CatalogueSong } from './deviceMusicRequest';
 import { groupVersions, hereBySong, linkBySong, rememberGrouping, setBySong, whereBySong, withVersions } from './songVersions';
 
 // ADR-0469 amendment 2: one song, however many files of it. The catalogue lists every file; the

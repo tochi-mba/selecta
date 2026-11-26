@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Request } from '../api';
-import { CATALOGUE_CHANGED_EVENT, CATALOGUE_KEEP_MS, localFirstRequest, readCatalogue, type CatalogueSong } from './localFirstRequest';
+import { CATALOGUE_CHANGED_EVENT, CATALOGUE_KEEP_MS, deviceMusicRequest, readCatalogue, type CatalogueSong } from './deviceMusicRequest';
 
 // The browser-first catalogue was kept for 3 s, and a waiting request polled every 4 s, so every
 // poll read every page of the catalogue again. It is now kept until a write or a library event
@@ -28,7 +28,7 @@ describe('the catalogue is read once and kept until it changes', () => {
     let now = 1_000;
     vi.spyOn(performance, 'now').mockImplementation(() => now);
     const { cloud, pages } = catalogue(250);
-    const request = localFirstRequest(cloud);
+    const request = deviceMusicRequest(cloud);
     await request('/status');
     const once = pages.length;
     expect(once).toBe(3);
@@ -42,7 +42,7 @@ describe('the catalogue is read once and kept until it changes', () => {
   it('reads again after a catalogue write through it, and after a library event', async () => {
     vi.spyOn(performance, 'now').mockReturnValue(5_000);
     const { cloud, pages } = catalogue(50);
-    const request = localFirstRequest(cloud);
+    const request = deviceMusicRequest(cloud);
     await request('/status');
     await request('/local-media/songs', { method: 'POST', body: '{}' });
     await request('/status');

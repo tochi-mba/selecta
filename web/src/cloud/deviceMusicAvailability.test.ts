@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { LibraryPage, Request } from '../api';
 import { capabilities } from '../state/capabilities';
 import { availabilityFacts } from '../state/availability';
-import { asLibrarySong, availabilityOf, libraryPage, localFirstRequest, type CatalogueSong } from './localFirstRequest';
+import { asLibrarySong, availabilityOf, libraryPage, deviceMusicRequest, type CatalogueSong } from './deviceMusicRequest';
 
 // BF-0462-04: the shared Library in local-first Cloud says where each catalogue song can play
 // from: here, needing permission again, a hosted copy, another device, or nowhere.
@@ -47,7 +47,7 @@ describe('the adapted request', () => {
     const cloud = vi.fn(async () => ({ songs: [song(1, 'Here'), song(2, 'Hosted', 0), song(3, 'Away')] })) as unknown as Request;
     const here = vi.fn(async () => new Map([[1, 'here' as const]]));
     const hosted = vi.fn(async (songs: readonly CatalogueSong[]) => new Set(songs.filter((one) => one.title === 'Hosted').map((one) => one.id)));
-    const request = localFirstRequest(cloud, { here, hosted });
+    const request = deviceMusicRequest(cloud, { here, hosted });
     const page = await request<LibraryPage>('/library?state=all');
     expect(page.songs.map((row) => [row.title, row.availability])).toEqual([['Away', 'elsewhere'], ['Here', 'here'], ['Hosted', 'hosted']]);
     await request<LibraryPage>('/library?state=all');
@@ -56,7 +56,7 @@ describe('the adapted request', () => {
 
   it('falls back to what the catalogue knows when this device cannot be read', async () => {
     const cloud = vi.fn(async () => ({ songs: [song(1, 'A')] })) as unknown as Request;
-    const request = localFirstRequest(cloud, { here: async () => { throw new Error('IndexedDB blocked'); } });
+    const request = deviceMusicRequest(cloud, { here: async () => { throw new Error('IndexedDB blocked'); } });
     const page = await request<LibraryPage>('/library');
     expect(page.songs[0].availability).toBe('elsewhere');
   });

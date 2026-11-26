@@ -2,7 +2,7 @@ import type { SeamSchedule } from '../dsp/seams';
 import type { PlayedSeam } from '../views/liveTransitions';
 import { playedKey } from '../views/liveTransitions';
 import { moveWords } from './browserMoves';
-import type { PlayedRecord } from './localFirstPlayer';
+import type { PlayedRecord } from './deviceMusicPlayer';
 
 const sentence = (text: string) => {
   const trimmed = text.trim().replace(/[.\s]*$/, '');

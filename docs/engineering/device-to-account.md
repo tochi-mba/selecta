@@ -63,7 +63,7 @@ sent: the account would refuse it, and nothing is clamped to fit.
 
 ## What is asked, and when
 
-**A mix's order** (`accountOrder.ts`, from `localFirstMixes.ts` when Make a Mix builds). The browser
+**A mix's order** (`accountOrder.ts`, from `deviceMusicMixes.ts` when Make a Mix builds). The browser
 chooses the songs by today's rule; when at least 6 of them (the planner's own least) and at most 60
 are measured in the account, `POST /api/planning/order` orders the measured ones with the member's
 choices: `idea: pick`, `count`, `start` and `end` when measured, and the steering's `language`,

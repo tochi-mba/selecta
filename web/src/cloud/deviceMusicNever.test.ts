@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Request } from '../api';
-import { chooseSongs, pickCard, type PlayableSong } from './localFirstMixes';
-import { asLibrarySong, localFirstRequest, ONLY_IN_THE_APP, type CatalogueSong } from './localFirstRequest';
+import { chooseSongs, pickCard, type PlayableSong } from './deviceMusicMixes';
+import { asLibrarySong, deviceMusicRequest, ONLY_IN_THE_APP, type CatalogueSong } from './deviceMusicRequest';
 
 // "Never play" in browser-first Cloud (ADR-0475): the Library's row toggle and batch actions keep
 // it for the account through /api/local-media/songs/never, rows show it, and a mix SelectaDJ
@@ -31,7 +31,7 @@ describe('Never play on a Library row', () => {
 
   it('the row toggle sets it from what the catalogue says now', async () => {
     const { cloud, calls } = cloudWith([song(7, 'Seven'), song(8, 'Eight', true)]);
-    const request = localFirstRequest(cloud, {});
+    const request = deviceMusicRequest(cloud, {});
     await request('/songs/7/never', { method: 'POST' });
     await request('/songs/8/never', { method: 'POST' });
     const writes = calls.filter((call) => call.path === '/local-media/songs/never');
@@ -45,7 +45,7 @@ describe('Never play on a Library row', () => {
 describe('the Library batch actions', () => {
   it('Never play and Allow in mixes go to the account, with what the page was showing', async () => {
     const { cloud, calls } = cloudWith([song(1, 'One'), song(2, 'Two')]);
-    const request = localFirstRequest(cloud, {});
+    const request = deviceMusicRequest(cloud, {});
     const batch = (action: string, entries: unknown) => request('/library/batch', { method: 'POST', body: JSON.stringify({ action, entries }) });
     await batch('never', [{ id: 1, expected: false }, { id: 2, expected: false }]);
     await batch('allow', [{ id: 1, expected: true }]);
@@ -57,14 +57,14 @@ describe('the Library batch actions', () => {
 
   it('analysis priority is only in the app where this browser does not measure songs', async () => {
     const { cloud } = cloudWith([song(1, 'One')]);
-    const request = localFirstRequest(cloud, {});
+    const request = deviceMusicRequest(cloud, {});
     await expect(request('/library/batch', { method: 'POST', body: JSON.stringify({ action: 'prioritize', entries: [] }) }))
       .rejects.toThrow(ONLY_IN_THE_APP);
   });
 
   it('reads the catalogue again after a change, so the rows show it at once', async () => {
     const { cloud, calls } = cloudWith([song(1, 'One')]);
-    const request = localFirstRequest(cloud, {});
+    const request = deviceMusicRequest(cloud, {});
     await request('/library?state=all');
     await request('/library/batch', { method: 'POST', body: JSON.stringify({ action: 'never', entries: [{ id: 1, expected: false }] }) });
     await request('/library?state=all');
