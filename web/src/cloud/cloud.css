@@ -366,8 +366,8 @@
 .cloud-device-check > label { display: grid; gap: var(--space-1); margin-top: var(--space-3); font: var(--type-label); }
 .cloud-device-check textarea { width: 100%; box-sizing: border-box; }
 
-/* uploads */
-.cloud-upload-panel { display: grid; gap: var(--space-4); }
+/* uploads: one column that never grows past the page, however long a file's name (T-20261125-3d9f) */
+.cloud-upload-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 .cloud-upload-intro { max-width: 40rem; }
 .cloud-upload-intro p:not(.cloud-eyebrow) { color: var(--text-soft); }
 /* cloud.page_layout: the files on the left, storage and what happens to uploads on the right, side
@@ -401,7 +401,9 @@
 .cloud-drop.disabled { cursor: not-allowed; opacity: 0.6; }
 .cloud-drop-icon { font-size: var(--text-2xl); color: var(--motif); }
 .cloud-drop small { color: var(--text-soft); }
-.cloud-upload-actions { display: flex; align-items: center; gap: var(--space-cozy); color: var(--text-soft); }
+.cloud-upload-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-cozy); min-width: 0; color: var(--text-soft); }
+/* "Uploading {file name}: part 2 of 9" breaks inside a long name rather than widen the page */
+.cloud-upload-actions > span { min-width: 0; overflow-wrap: anywhere; }
 .cloud-upload-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2); }
 .cloud-upload-list li {
   display: grid;

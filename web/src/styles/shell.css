@@ -679,10 +679,12 @@ main.page h1[tabindex='-1']:focus { outline: none; }
 .shell[data-mode='cloud'] .listen-empty { min-height: 0; }
 
 /* cloud.page_layout: a Cloud page fills the frame instead of being capped narrower, so a wide
-   window has no empty half; its text keeps a readable measure. Account, billing and onboarding keep
-   the reading width, centred in the frame. The frame's left edge and the top bar stay put. */
-:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content { --page-max: var(--page-frame); }
-:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) { --page-max: var(--content-reading); }
+   window has no empty half; its text keeps a readable measure. Account and billing keep the width
+   their side list needs and onboarding the reading width, each centred in the frame. The frame's
+   left edge and the top bar stay put. (`:has(> main.page)` outranks every page's own width.) */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page) { --page-max: var(--page-frame); }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'])) { --page-max: var(--content-browse); }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page[data-page-width='reading']) { --page-max: var(--content-reading); }
 :root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) > :is(.page, .cloud-footer) { margin-inline: auto; }
 :root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > .shell-banners { max-width: var(--page-frame); }
 :where(:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > main.page) p { max-width: 70ch; }
