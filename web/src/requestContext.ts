@@ -41,6 +41,6 @@ export function useBytes(): BytesRequest {
 /** A byte source for a shell with no local server: every ask gets a plain refusal, which every
  * caller already renders as "not available here" rather than a network error. */
 export const noBytesHere: BytesRequest = async () => new Response(
-  JSON.stringify({ detail: 'SelectaDJ can’t do that in your browser yet.', code: 'flag_off' }),
+  JSON.stringify({ detail: 'That works in the SelectaDJ app on a computer, not in a browser.', code: 'flag_off' }),
   { status: 404, headers: { 'content-type': 'application/json' } },
 );

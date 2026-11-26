@@ -1,4 +1,5 @@
 import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
+import { accountMeasured, noteCorrection, sendingOn, type Measured } from './accountFacts';
 import { accountMixes, accountMixesOn, fallsBack } from './accountMixes';
 import { accountOrderPlanner } from './accountOrder';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
@@ -17,8 +18,9 @@ import { groupVersions, hereBySong, linkBySong, rememberGrouping, setBySong, whe
  * The shared views ask in local mode's shapes (`/library`, `/status`, `/mix`). Cloud has no such
  * routes for a local-first account; it has the metadata-only catalogue (ADR-0458). This adapter
  * answers each family the views use from the catalogue, at the boundary, so no view learns which
- * mode it is in. A family Cloud cannot serve yet is refused with a plain reason (`flag_off`, which
- * the views already render as "not available here") rather than a fake success or a network 404.
+ * mode it is in. A family only the app on a computer serves is refused with a plain reason
+ * (`flag_off`, which the views already render as "not available here") rather than a fake success
+ * or a network 404. The shell hides those controls (browserFlags.ts), so the refusal is a backstop.
  */
 
 /** A catalogue row as `/api/local-media/songs` answers it. */
@@ -41,7 +43,8 @@ export type CatalogueSong = {
   versions?: number[];
 };
 
-export const NOT_HERE_YET = 'SelectaDJ can’t do that in your browser yet.';
+/** The refusal for a route only the SelectaDJ app on a computer answers. */
+export const ONLY_IN_THE_APP = 'That works in the SelectaDJ app on a computer, not in a browser.';
 // the server's largest page (local_media/api.py), so a big library is a few reads, not dozens
 const PAGE = 1000;
 /** How long one catalogue read is kept. A write through this adapter (`/local-media`, Never play)
@@ -55,8 +58,8 @@ export const CATALOGUE_CHANGED_EVENT = 'selecta:catalogue-changed';
 let catalogueChanges = 0;
 if (typeof window !== 'undefined') window.addEventListener(CATALOGUE_CHANGED_EVENT, () => { catalogueChanges += 1; });
 
-export function notHereYet(path: string): ApiError {
-  return new ApiError(NOT_HERE_YET, 404, 'flag_off', `local-first:${path.split('?')[0]}`);
+export function onlyInTheApp(path: string): ApiError {
+  return new ApiError(ONLY_IN_THE_APP, 404, 'flag_off', `local-first:${path.split('?')[0]}`);
 }
 
 /** Every catalogue song, page by page, however many pages there are (it used to stop silently at
@@ -84,7 +87,7 @@ export type AvailabilitySources = {
   /** Where browser mixes are kept (BF-0462-05); without it the current mix is empty. */
   recipes?: RecipeStore;
   /** Harmonic matches from key profiles measured on this device (cloud.browser_harmonic);
-   * without it `/discoveries` is refused as not here yet. */
+   * without it `/discoveries` is refused as the app's alone. */
   tonal?: Omit<DiscoveriesSources, 'songs'>;
   /** The workspace whose song requests this browser keeps (localFirstRequests.ts); with the
    * recipe store, Request a song works here. */
@@ -119,6 +122,9 @@ export type Availability = {
   files?: { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; rows: ReadonlyMap<number, CatalogueSong> };
   /** ADR-0488: how many rooms loved each song (the account's crowd marks), when Rooms is on. */
   loved?: ReadonlyMap<number, number>;
+  /** Tempo, key and energy measured on the member's devices and saved to the account, with
+   * their own corrections (cloud.brain and cloud.device_analysis); absent otherwise. */
+  facts?: ReadonlyMap<number, Measured>;
 };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
@@ -136,8 +142,9 @@ export function availabilityOf(song: CatalogueSong, known: Availability): SongAv
 /** ADR-0488: what rooms made of a song, said after how it plays; nothing when no room loved it. */
 const lovedWords = (rooms: number) => (rooms > 0 ? ` Loved in ${rooms} ${rooms === 1 ? 'room' : 'rooms'}.` : '');
 
-/** A catalogue song in the Library's shape. Nothing is analysed in the browser yet, so no tempo,
- * key or energy is claimed; where it can play from rides alongside as `availability`. */
+/** A catalogue song in the Library's shape. Tempo, key and energy are the account's measurements
+ * when it has them (`known.facts`), and are never claimed otherwise; where it can play from rides
+ * alongside as `availability`. */
 export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAILABILITY): LibrarySong {
   const availability = availabilityOf(song, known);
   const here = availability !== 'nowhere';
@@ -152,9 +159,8 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
   return {
     ...(versions ? { versions } : {}),
     id: song.id, artist: song.artist, title: song.title, genre: null,
-    duration: song.duration_s ?? 0, bpm: null, camelot: null,
-    detected_bpm: null, detected_camelot: null, override_bpm: null, override_camelot: null,
-    music_override: null, energy: null, grid_confidence: null, lyric_status: null,
+    duration: song.duration_s ?? 0, ...measuredOf(known.facts?.get(song.id)),
+    music_override: null, grid_confidence: null, lyric_status: null,
     never: song.never === true, priority: false, availability,
     // the availability line says where it is; readiness only says how far analysis has got
     // in a browser mix a song that plays here is ready: its transitions are worked out from the
@@ -171,6 +177,18 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
   };
 }
 
+/** A song's tempo and key in use (the member's correction first), and what was measured. */
+function measuredOf(facts: Measured | undefined) {
+  const bpm = facts?.bpm ?? null;
+  const camelot = facts?.camelot ?? null;
+  const overrideBpm = facts?.override_bpm ?? null;
+  const overrideKey = facts?.override_camelot ?? null;
+  return {
+    bpm: overrideBpm ?? bpm, camelot: overrideKey ?? camelot, detected_bpm: bpm, detected_camelot: camelot,
+    override_bpm: overrideBpm, override_camelot: overrideKey, energy: facts?.energy ?? null,
+  };
+}
+
 /** The Library page the views ask for, answered from the catalogue. */
 export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, known: Availability = NO_AVAILABILITY): LibraryPage {
   const query = (search.get('q') ?? '').trim().toLowerCase();
@@ -180,9 +198,8 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
   const start = Math.max(0, Number(search.get('after') ?? 0) || 0);
   const matching = songs
     .filter((song) => !query || `${song.title} ${song.artist} ${song.album ?? ''}`.toLowerCase().includes(query))
-    // nothing is measured in the browser, so every song is not analysed yet; ready means it plays
-    // here (a browser mix works its transitions out as it plays); needing attention is a song this
-    // device cannot play
+    // the browser's filters are about where a song plays: ready means it plays here (a browser mix
+    // works its transitions out as it plays); needing attention is a song this device cannot play
     .filter((song) => {
       if (state === 'all' || state === 'not_yet') return true;
       const where = availabilityOf(song, known);
@@ -323,6 +340,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     return {
       here: hereBySong(grouping, here), hosted: setBySong(grouping, hosted), elsewhere: await holders(),
       loved: await lovedNow(),
+      facts: await factsNow(),
       files: { here, rows: new Map(grouping.files.map((file) => [file.id, file])) },
     };
   };
@@ -360,6 +378,11 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     }
     return lovedKept;
   }
+  // the account's measurements, read once a session (accountFacts.ts); none when it is off or fails
+  const factsNow = async (): Promise<ReadonlyMap<number, Measured> | undefined> => {
+    if (!sources.workspaceId || !sendingOn()) return undefined;
+    return accountMeasured(cloud, sources.workspaceId).catch(() => undefined);
+  };
   // the account's planner orders a new mix when it can (accountOrder.ts); otherwise today's order
   const planOrder = sources.workspaceId ? accountOrderPlanner(cloud, sources.workspaceId) : undefined;
   // cloud.account_mixes: the account's own mix and draft routes answer first (accountMixes.ts)
@@ -453,9 +476,11 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     // ADR-0479: a Good or Bad on a transition the account knows, and every one given, are the
     // account's (cloud.brain; the server says when it is off)
     if ((method === 'POST' && /^\/seams\/[0-9A-Za-z_-]+\/rate$/.test(route)) || (method === 'GET' && route === '/memory/ratings')) return cloud<T>(path, init);
+    const corrected = correct(method, route, init);
+    if (corrected) return (await corrected) as T;
     const neverAnswer = setNever(method, route, init);
     if (neverAnswer) return (await neverAnswer) as T;
-    throw notHereYet(path);
+    throw onlyInTheApp(path);
   };
   /** POST /mix/songs through the account (cloud.account_mixes): the song must be one this
    * device can play, as the browser's own mixes ask. Undefined when the account doesn't answer. */
@@ -471,9 +496,29 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       return undefined;
     }
   };
+  /** Song details' tempo and key correction (`/songs/{id}/correct`), kept with the account's
+   * measurements (`PUT` or `DELETE /song-facts/{id}/correction`). Only tempo and key: whether a
+   * file is music is decided by the app reading a folder, and the browser hides that control. */
+  const correct = (method: string, route: string, init?: RequestInit): Promise<unknown> | undefined => {
+    const asked = method === 'POST' ? route.match(/^\/songs\/(\d+)\/correct$/) : null;
+    if (!asked || !sources.workspaceId || !sendingOn()) return undefined;
+    const songId = Number(asked[1]);
+    const workspaceId = sources.workspaceId;
+    const body = JSON.parse(String(init?.body ?? '{}')) as { bpm?: number; camelot?: string; is_music?: boolean };
+    if (body.is_music !== undefined) return Promise.reject(onlyInTheApp(route));
+    const bpm = typeof body.bpm === 'number' ? body.bpm : null;
+    const camelot = typeof body.camelot === 'string' && body.camelot ? body.camelot : null;
+    return (async () => {
+      if (bpm === null && camelot === null) await cloud(`/song-facts/${songId}/correction`, { method: 'DELETE' });
+      else await cloud(`/song-facts/${songId}/correction`, { method: 'PUT', body: JSON.stringify({ bpm, camelot }) });
+      noteCorrection(workspaceId, songId, bpm, camelot);
+      // the account remakes nothing here: the next mix plans with the new tempo and key
+      return { redone: 0 };
+    })();
+  };
   /** "Never play" from the Library's row toggle (`/songs/{id}/never`) and its batch actions
    * (`/library/batch`, never and allow), kept for the account (ADR-0475). Priority is an analysis
-   * setting and nothing is analysed in the browser, so those batch actions stay not here yet. */
+   * setting for the app's own analysis queue, so those batch actions are the app's alone. */
   const setNever = (method: string, route: string, init?: RequestInit): Promise<unknown> | undefined => {
     if (method !== 'POST') return undefined;
     const write = async (never: boolean, entries: { id: number; expected: boolean }[]) => {

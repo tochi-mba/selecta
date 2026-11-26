@@ -69,10 +69,13 @@ const lyricWords = (status: string | null) => (status === 'synced' ? 'Timed' : s
 /** Everything about one song, and the only place its details are worked out. The badge and the buttons
  * come from the same answer, and what was measured stays separate from what's in use, so a correction
  * can always be seen for what it is and taken back. */
-export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNever, measured = true, onPlayNext }: {
+export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNever, measured = true, analysedHere = true, onPlayNext }: {
   song: LibrarySong;
-  /** songs here are analysed (local mode); a browser library has no tempo, key or stems to show */
+  /** this song's tempo and key are known (local mode, or the account measured it for a browser) */
   measured?: boolean;
+  /** this computer's app analyses the library (local mode): stems, next steps and "Is it music?".
+   * A browser library is read on the member's devices, which never set a song aside. */
+  analysedHere?: boolean;
   onClose: () => void;
   onChanged: () => void;
   notify: ViewProps['notify'];
@@ -165,10 +168,10 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       {facts.reason && <p className="hint">{facts.reason}</p>}
       <SongPlaces song={song} onPlayNext={onPlayNext} />
-      {measured && nextStep(song.readiness?.status) && <p className="hint song-next-step">{nextStep(song.readiness?.status)}</p>}
+      {analysedHere && nextStep(song.readiness?.status) && <p className="hint song-next-step">{nextStep(song.readiness?.status)}</p>}
       {flagOn('library.capability_readiness') && (
         <dl className="song-facts song-capabilities" aria-label="What it’s ready for">
-          {capabilities(song, { lyrics: flagOn('lyrics.lookup') }).filter((item) => measured || item.name !== 'Stems').map((item) => (
+          {capabilities(song, { lyrics: flagOn('lyrics.lookup') }).filter((item) => analysedHere || item.name !== 'Stems').map((item) => (
             <div key={item.name}><dt>{item.name}</dt><dd><Status kind={item.kind}>{item.words}</Status></dd></div>
           ))}
         </dl>
@@ -187,7 +190,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       </dl>
       <SongVersions song={song} onChanged={onChanged} notify={notify} />
       {flagOn('library.related_links') && <SongRelated song={song} />}
-      {flagOn('library.corrections') && (
+      {flagOn('library.corrections') && measured && (
       <section className="stack">
         <h3>Correct it</h3>
         <p className="hint">If SelectaDJ got something wrong. What it measured is kept, so this can be put back, and analysing the song again won’t lose it. Transitions with this song may be made again, using what you enter here.</p>
@@ -263,7 +266,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
         </div>
       </section>
       )}
-      {flagOn('library.corrections') && (
+      {flagOn('library.corrections') && analysedHere && (
       <section className="stack">
         <h3>Is it music?</h3>
         <p className="hint">Something set aside never gets analysed or mixed. Your file isn’t touched either way.</p>

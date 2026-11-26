@@ -82,6 +82,8 @@ import { ChangedFromLine } from '../devices/ChangedFromLine';
 import { PlayNoticeLine } from '../devices/PlayNoticeLine';
 import { HostedMakeAMix, footerWords } from './hosted/HostedMakeAMix';
 import { browserFlags } from './browserFlags';
+import { sendingOn } from './accountFacts';
+import { accountMixesOn } from './accountMixes';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -217,6 +219,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // Harmonic matches (cloud.browser_harmonic): key profiles measured here, kept in this browser
   const browserHarmonic = on('cloud.browser_harmonic');
   const lucyHere = accountFlagOn('lucy.cloud_conversation') && accountFlagOn('lucy');
+  // corrections, the energy shape and locks, from the account (browserFlags.ts)
+  const measuredHere = sendingOn();
+  const accountMixesHere = accountMixesOn();
   const offlineShell = on('cloud.offline_shell');
   // where the library shown came from: null from the server, or this device's kept copy
   const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
@@ -374,10 +379,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   useState(() => setJobsSource(false));
   useEffect(() => {
     setJobsSource(false);
-    setFlags(browserFlags(browserHarmonic, lucyHere));
+    setFlags(browserFlags(browserHarmonic, lucyHere, { measured: measuredHere, accountMixes: accountMixesHere }));
     // Cloud has no jobs server at all, so the source stays off when this shell unmounts.
     return () => { setFlags(null); };
-  }, [browserHarmonic, lucyHere]);
+  }, [browserHarmonic, lucyHere, measuredHere, accountMixesHere]);
   // ADR-0476: Lucy's page asks the account's API, and reads her events by asking. Set while
   // rendering, because the page's own first read runs in an effect before this shell's do.
   const lucyTransport = useMemo(() => (lucyHere ? { request: cloud, base: '/lucy-cloud', pollMs: LUCY_POLL_MS, device: () => registeredDeviceId(workspaceId) } : null), [lucyHere, cloud, workspaceId]);

@@ -96,7 +96,7 @@ export function linksFamily(cloud: Request, store: RecipeStore | undefined, song
   };
 
   const pair = async (init?: RequestInit): Promise<MixData> => {
-    if (!store) throw refuse('There is nowhere to keep a browser mix here yet.', 'flag_off', 404);
+    if (!store) throw refuse('This browser keeps no mixes for this account, so a pair can’t be made into one here. Make a Mix works as usual.', 'flag_off', 404);
     const body = JSON.parse(String(init?.body ?? '{}')) as { a?: number; b?: number };
     const a = Number(body.a);
     const b = Number(body.b);
