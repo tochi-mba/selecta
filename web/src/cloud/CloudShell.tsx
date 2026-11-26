@@ -2,7 +2,7 @@ import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState 
 import { lazyPage as lazy } from '../ui/staleBuild';
 import type { MixData, Request, Status } from '../api';
 import { accountFlagOn, setFlags, useFlags } from '../flags';
-import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
+import { findLapsed, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
 import { useArtIndex } from './artIndex';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
@@ -29,7 +29,7 @@ import { RequestsContext, RequestsPanel, useRequests, type RequestRow } from '..
 import type { View, ViewProps } from '../views/shared';
 import { planName, type Account, type Api } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
-import { forgetCloudLibraryAssets, cloudLibraryAssets, cloudLibraryResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './cloudLibraryMedia';
+import { forgetCloudLibraryAssets, LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { isHostedAccount } from './deviceMusicGate';
 import { CloudLibrary } from './CloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
@@ -39,10 +39,10 @@ import { lucyTransport as currentLucyTransport, setLucyTransport } from '../lucy
 import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './DeviceMusicEmpty';
 import { useLocalFirstPlayer } from './deviceMusicPlayer';
 import { BROWSER_MIX_NEEDS } from './deviceMusicMixes';
-import { EMPTY_MIX, deviceMusicRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './deviceMusicRequest';
+import { EMPTY_MIX, mediaRequest, readCatalogue } from './deviceMusicRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
+import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, programmeTurn, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { DEVICE_REGISTERED } from '../devices/playbackWire';
 import { ControllerListen } from '../devices/ControllerListen';
@@ -65,10 +65,9 @@ import { bindImportWorkspace, endImportSession, useImportShellView } from './imp
 import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
-import { profilesBySong, provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
+import { provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
 import { startFactsUploader } from './factsUploader';
 import { waveformBook } from './sharedWaveforms';
-import { withVersions } from './songVersions';
 import { onReconnect } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
@@ -88,6 +87,7 @@ import { DeviceActivityDrawer } from './DeviceActivity';
 import { localExportOn } from './localExport';
 import { placingOn } from './accountPlacements';
 import { RoomOpenLine } from './RoomOpenLine';
+import { useCloudShellMedia } from './cloudShellMedia';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -139,7 +139,6 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     return store.current.opened;
   }, [workspaceId]);
   useArtIndex(openStore);
-  const resolving = useRef<Promise<MediaResolver> | null>(null);
   // Device first, hosted fallback (ADR-0465): only a grandfathered account with stored media
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
@@ -235,88 +234,11 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
   const sharedDerived = on('cloud.content_cache');
   const tonal = useMemo(() => tonalStore(workspaceId, sharedDerived ? { held: async () => provenHashes(await (await openStore()).all()) } : undefined), [workspaceId, sharedDerived, openStore]);
   const roomsHere = on('rooms') && !account.feature_locks.rooms;
-  // ADR-0475: the device that is playing when it is not this one, for the request adapter. Set
-  // further down each render, once the session is known; read by the adapter at each press.
-  const controllerLink = useRef<ControllerLink | null>(null);
-  const whereHeld = useRef<WhereHeld | null>(null);
-  // ADR-0475 R8: songs the device R1 would choose holds now, which a mix made here may use
-  const mixableIds = useRef<ReadonlySet<number> | null>(null);
-  const sources = useMemo<AvailabilitySources>(() => ({
-    controller: () => controllerLink.current,
-    holders: () => whereHeld.current,
-    mixable: () => mixableIds.current,
-    here: async () => {
-      const opened = await openStore();
-      const found = new Map<number, 'here' | 'reauth' | 'reconnect'>();
-      for (const song of await opened.all()) {
-        const why = lapsed.current.get(song.songId);
-        // a file the sweep found gone is not on this device; a lapsed permission asks again;
-        // a song picked without a durable handle plays only while this visit holds its file
-        if (why === 'missing' || why === 'changed' || song.availabilityIssue === 'changed') continue;
-        if (song.ref.kind !== 'handle' && !opened.sessionFile(song.songId)) {
-          found.set(song.songId, 'reconnect');
-          continue;
-        }
-        found.set(song.songId, why === 'permission' ? 'reauth' : 'here');
-      }
-      return found;
-    },
-    hosted: coexisting ? async (songs) => {
-      const listing = cloudLibraryAssets(api, workspaceId); // read again after an upload (cloudLibraryMedia.ts)
-      const assets = await listing;
-      return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
-    } : undefined,
-    // Make a Mix and My Mixes: recipes on the server, this browser's current mix and shaping here
-    recipes,
-    // Harmonic matches: answered from the profiles this browser measured, answers kept here
-    tonal: browserHarmonic ? {
-      profiles: async () => profilesBySong(tonal, await openStore()),
-      reviews: () => tonal.reviews(),
-      review: (pair, verdict) => tonal.review(pair, verdict),
-    } : undefined,
-    // Request a song: this browser's requests per workspace, and the room's from the server
-    workspaceId,
-    // an account without Rooms (off, or locked to a plan) never asks for a room's requests
-    rooms: roomsHere,
-    // cloud.offline_shell: the last catalogue is kept here and served, with this device's own
-    // songs, while SelectaDJ cannot be reached; the banner says the library is from this device
-    offline: offlineShell ? {
-      deviceSongs: async () => (await (await openStore()).all()).map((song) => ({
-        id: song.songId, content_sha256: song.identity.content_sha256, title: song.identity.title, artist: song.identity.artist,
-        album: song.identity.album ?? null, duration_s: song.identity.duration_s ?? null, available_on: 1,
-      })),
-      onServed: (from) => setServedFrom(from.cached ? { at: from.at } : null),
-    } : undefined,
-  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
-  const request = useMemo(() => deviceMusicRequest(cloud, sources), [cloud, sources]);
-  // imports register through the adapted request, so each landed batch reads a fresh catalogue
-  const media = useMemo(() => mediaRequest(request), [request]);
+  // where each song can play from, the adapted request and the resolver (cloudShellMedia.ts)
+  const { sources, request, media, resolver, programme, controllerLink, whereHeld, mixableIds } = useCloudShellMedia({
+    api, cloud, workspaceId, on, coexisting, openStore, lapsed, refreshStatus: refreshStatusRef, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed: setServedFrom, book,
+  });
   mediaRef.current = media;
-  const programme = useRef<MixData['mix']>([]);
-  const resolverFor = useRef<string | null>(null);
-  const resolver = useCallback(async () => {
-    if (resolverFor.current !== workspaceId) { resolverFor.current = workspaceId; resolving.current = null; }
-    return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
-    // any version of the song this device holds plays it (ADR-0469 amendment 2)
-    device: withVersions(makeResolver(opened, undefined, (songId, present, why) => {
-      if (present) lapsed.current.delete(songId);
-      else lapsed.current.set(songId, why ?? 'missing');
-      refreshStatusRef.current?.();
-      const reportingDevice = registeredDeviceId(workspaceId);
-      if (on('cloud.local_media') && reportingDevice) {
-        const snapshot = present ? { present: [songId], absent: [] } : { present: [], absent: [songId] };
-        void reportDeviceAvailability(media, reportingDevice, snapshot).then(() => {
-          refreshStatusRef.current?.();
-        }).catch(() => undefined);
-      }
-    }, { sharedCache: on('cloud.content_cache') }), workspaceId),
-    hosted: coexisting ? cloudLibraryResolver(api, workspaceId, {
-      songs: () => programme.current,
-      shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
-    }) : null,
-    book,
-  })));
-  }, [openStore, coexisting, api, workspaceId, book, media, on]);
 
   const [status, setStatus] = useState<Status | null>(null);
   const [statusProblem, setStatusProblem] = useState('');
