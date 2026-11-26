@@ -11,6 +11,8 @@ import { SongMotif } from '../ui/MusicObjects';
 import { CoverArt } from './CoverArt';
 import { DrawnTick, PlayingBars, useReadyPop } from './feelPieces';
 import { Matched } from './feelLibrary';
+import { LibraryPlacesContext } from './LibraryPlaces';
+import { PlaceChip } from './PlaceChip';
 
 /** What a Library row asks its page to do. The page passes one stable object, so a poll that leaves a
  * song's own facts alone does not re-render its row (MI-0162-04). */
@@ -92,8 +94,10 @@ const HERE: Record<string, { kind: StatusKind; words: string }> = {
 /** ADR-0475 R6 row status, when the person has another device with music: "This device", "On
  * {device}" (open, has the file), "On {device}, open {when}" (had it, not open now, with "Open SelectaDJ on {device} to play this."), or
  * "No device right now". Null leaves the plain availability words. */
-export function deviceChip(songId: number, availability: string, holder: MusicHolder | null): { kind: StatusKind; words: string; why: string; hint?: boolean } | null {
+export function deviceChip(songId: number, availability: string, holder: MusicHolder | null, cloudWords = false): { kind: StatusKind; words: string; why: string; hint?: boolean } | null {
   if (!holder) return null;
+  // library.places (T-20261125-67ba): a song in the cloud library is not on this device
+  if (availability === 'hosted' && cloudWords) return { kind: 'ready', words: 'In your cloud library', why: 'Your cloud library plays it on any of your devices.' };
   if (availability === 'here' || availability === 'hosted') return { kind: 'ready', words: 'This device', why: 'This device has the file, so it can play here.' };
   if (availability !== 'elsewhere' && availability !== 'nowhere') return null;
   const places = holder.places?.(songId);
@@ -124,6 +128,7 @@ export const LibraryRow = memo(function LibraryRow({
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
   const holder = useContext(HolderContext);
+  const placesChrome = useContext(LibraryPlacesContext);
   const [added, setAdded] = useState(false);
   const title = song.title ?? 'Untitled';
   const name = duplicate ? `${title} (song ${song.id})` : title;
@@ -138,8 +143,10 @@ export const LibraryRow = memo(function LibraryRow({
       ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
       : song.availability && HERE[song.availability]
         // ADR-0475 R6: the person has other devices, so say which one has the song, not "not here"
-        ? deviceChip(song.id, song.availability, holder) ?? { ...HERE[song.availability], why: song.availability === 'elsewhere' ? 'Choose your music folder in this browser to play it here.' : where?.reason ?? '' }
+        ? deviceChip(song.id, song.availability, holder, !!placesChrome) ?? { ...HERE[song.availability], why: song.availability === 'elsewhere' ? 'Choose your music folder in this browser to play it here.' : where?.reason ?? '' }
         : { kind: facts.kind, words: facts.words, why: facts.reason };
+    // library.places: where it is kept, and apart from that whether it can play here
+    const placed = placesChrome && song.places;
     return (
       <li data-library-page={page} className={`song-row lw-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`} data-lift="row">
         {selectable && <label className="library-batch-check lw-check">
@@ -157,9 +164,11 @@ export const LibraryRow = memo(function LibraryRow({
           </span>
         </button>
         <span className="lw-length">{clock(song.duration)}</span>
-        <span className="lw-state">
-          <Chip kind={chip.kind} title={chip.why || undefined} words={chip.words} />
-          {chip.why && chip.kind !== 'ready' && <small className="lw-why" data-hint={'hint' in chip && chip.hint ? '' : undefined}>{chip.why}</small>}
+        <span className={placed ? 'lw-state lw-places' : 'lw-state'}>
+          {placed ? <PlaceChip song={song} offline={placesChrome.offline} holder={holder} onOpen={() => actions.open(song.id)} aside={facts.setAside ? 'Set aside' : song.never ? 'Never played' : undefined} /> : <>
+            <Chip kind={chip.kind} title={chip.why || undefined} words={chip.words} />
+            {chip.why && chip.kind !== 'ready' && <small className="lw-why" data-hint={'hint' in chip && chip.hint ? '' : undefined}>{chip.why}</small>}
+          </>}
           {/* I84: what the row's tap did, said in the row itself for a moment */}
           {remoteNext && <span className={added || (current && holder?.speaking) ? 'lw-added' : 'lw-added lw-in-mix'} role="status">{added ? `Added to ${holder?.name}’s mix` : current && holder?.speaking ? `Playing now on ${holder.name}` : inMix ? 'In the mix' : ''}</span>}
         </span>

@@ -52,6 +52,7 @@ const paths = {
   phone: 'M8 3h8v18H8ZM11 18h2',
   tablet: 'M5 3h14v18H5ZM11 18h2',
   download: 'M12 4v11M7 11l5 5 5-5M5 20h14',
+  cloud: 'M7 18h10a4 4 0 0 0 .4-8 6 6 0 0 0-11.3 1.5A3.3 3.3 0 0 0 7 18Z',
 } as const;
 
 export type IconName = keyof typeof paths;
