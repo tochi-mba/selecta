@@ -78,6 +78,8 @@ export type MadeSeam = {
   passed: boolean;
   nearMiss: boolean;
   fellBack: boolean;
+  /** The script expects the two songs' beats to line up (a blend, not a cut). */
+  beatsAligned: boolean;
   attempts: TakeRecord[];
   tookMs: number;
   implementation: string;
@@ -229,7 +231,7 @@ export async function makeSeam(input: MakerInput): Promise<MadeSeam | NoSeam> {
     };
     return {
       status: 'clip', rendered, move, option, facts: made.facts, passed: made.facts.passed,
-      nearMiss: !made.facts.passed && goodEnough(made.facts), fellBack, attempts, tookMs: now() - started, implementation: made.implementation,
+      nearMiss: !made.facts.passed && goodEnough(made.facts), fellBack, beatsAligned: script.expectsBeatsAligned, attempts, tookMs: now() - started, implementation: made.implementation,
     };
   };
 

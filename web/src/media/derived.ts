@@ -28,8 +28,11 @@ const DERIVATIONS = 'derivations';
 const MEMO = 'memo';
 
 /** The kinds this store holds. Each is a pure function of the bytes. `analysis` is a song's
- * whole-song facts measured on this device (cloud/songFacts.ts, cloud.device_analysis). */
-export type DerivedKind = 'tonal' | 'waveform' | 'facts' | 'audio' | 'analysis';
+ * whole-song facts measured on this device (cloud/songFacts.ts, cloud.device_analysis). `clip` is
+ * a transition rendered from two songs' bytes (cloud/clipStore.ts, cloud.device_render): the
+ * largest rows and the cheapest to make again, so they are evicted first and never held in memory. */
+export type DerivedKind = 'tonal' | 'waveform' | 'facts' | 'audio' | 'analysis' | 'clip';
+const SPILLED: ReadonlySet<DerivedKind> = new Set(['clip']);
 
 /** The fingerprint memo's own version: bumped if what the identity key covers ever changes. */
 export const MEMO_VERSION = 'fp-v1';
@@ -163,8 +166,12 @@ export class DerivedStore {
         const store = this.db.transaction(name, 'readonly').objectStore(name);
         const [keys, values] = await Promise.all([settled(store.getAllKeys()), settled(store.getAll())]);
         if (!keys.length) continue;
-        const order = keys.map((key, index) => ({ key, used: Number((values[index] as { used?: number } | undefined)?.used ?? 0) }))
-          .sort((a, b) => a.used - b.used)
+        // rendered clips go before any measurement, oldest first
+        const order = keys.map((key, index) => {
+          const row = values[index] as { used?: number; kind?: DerivedKind } | undefined;
+          return { key, used: Number(row?.used ?? 0), clip: row?.kind && SPILLED.has(row.kind) ? 0 : 1 };
+        })
+          .sort((a, b) => a.clip - b.clip || a.used - b.used)
           .slice(0, count);
         const transaction = this.db.transaction(name, 'readwrite');
         const done = committed(transaction);
@@ -187,7 +194,7 @@ export class DerivedStore {
     const key = rowKey(kind, version, sha);
     const row = this.memory.get(key) ?? await this.read<DerivationRow>(DERIVATIONS, key);
     if (!row || row.version !== version || row.sha !== sha) return null;
-    this.memory.set(key, row);
+    if (!SPILLED.has(kind)) this.memory.set(key, row);
     const now = Date.now();
     if (now - row.used > TOUCH_EVERY_MS) {
       row.used = now;
@@ -214,8 +221,21 @@ export class DerivedStore {
     const now = Date.now();
     const row: DerivationRow = { kind, version, sha, value, at: now, used: now };
     const key = rowKey(kind, version, sha);
-    this.memory.set(key, row);
+    if (!SPILLED.has(kind)) this.memory.set(key, row);
     return this.write(DERIVATIONS, key, row);
+  }
+
+  /** Forget one derivation (a clip past its budget). A miss is fine: it was already gone. */
+  async delete(kind: DerivedKind, version: string, sha: string): Promise<void> {
+    const key = rowKey(kind, version, sha);
+    this.memory.delete(key);
+    if (!this.db) return;
+    try {
+      const transaction = this.db.transaction(DERIVATIONS, 'readwrite');
+      const done = committed(transaction);
+      transaction.objectStore(DERIVATIONS).delete(key);
+      await done;
+    } catch { /* gone or unreachable: the budget is counted again next time */ }
   }
 
   /** Where this browser keeps nothing, the memo keeps nothing either, even for the visit: a
