@@ -2,7 +2,7 @@
 
 One place that answers "is a device-music Cloud account as good as the Desktop app, and where
 is it not". A device-music account runs the Desktop's own shell in the browser
-(web/src/cloud/LocalFirstShell.tsx) through the request adapter (web/src/cloud/localFirstRequest.ts).
+(web/src/cloud/CloudShell.tsx) through the request adapter (web/src/cloud/localFirstRequest.ts).
 What the shell switches off is one table, web/src/cloud/browserFlags.ts; every row there is
 below, with what would switch it on.
 

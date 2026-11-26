@@ -73,7 +73,7 @@ import '../business/business.css';
 const AdminArea = lazy(() => import('../admin/AdminArea'));
 // The local-first shell (ADR-0462/0463) and the browser engine it carries load only for an account
 // that has the local-first experience with `cloud.local_first` on; everyone else never fetches it.
-const LocalFirstShell = lazy(() => import('./LocalFirstShell').then((module) => ({ default: module.LocalFirstShell })));
+const CloudShell = lazy(() => import('./CloudShell').then((module) => ({ default: module.CloudShell })));
 // The venue tablet posture flow (ADR-0460) carries the browser engine too, so it loads only with
 // `cloud.venue_tablet` on.
 const VenuePosture = lazy(() => import('./venue/VenuePosture').then((module) => ({ default: module.VenuePosture })));
@@ -654,7 +654,7 @@ export function CloudApp() {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
         {offlineMode && account
-          ? <LocalFirstShell api={api} account={account} more={() => <p className="needs-connection">This needs the internet. You’ll be signed in again when the connection is back.</p>} offlineReadOnly />
+          ? <CloudShell api={api} account={account} more={() => <p className="needs-connection">This needs the internet. You’ll be signed in again when the connection is back.</p>} offlineReadOnly />
           : <GateLoading label="Opening SelectaDJ…" />}
       </Suspense>
     );
@@ -783,7 +783,7 @@ export function CloudApp() {
   if (account && localFirst) {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
-        <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
+        <CloudShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
         {signOutAsk && <ConfirmDialog title="Sign out?" body={signOutAsk} confirmLabel="Sign out" cancelLabel="Cancel" onConfirm={() => void leave()} onClose={() => setSignOutAsk(null)} />}
       </Suspense>
     );

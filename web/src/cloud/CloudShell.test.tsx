@@ -34,7 +34,7 @@ vi.mock('./migration/CutoverNotice', () => ({
 const { CloudApp } = await import('./CloudApp');
 // The shell chunk has grown with the feel system (ADR-0477): load it once here so transforming it
 // is not counted against the first test that opens it; each test still goes through CloudApp's lazy import.
-await import('./LocalFirstShell');
+await import('./CloudShell');
 
 let account: Account;
 let songs: { id: number; title: string; artist: string; available_on: number }[] = [];

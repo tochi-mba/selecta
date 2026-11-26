@@ -114,7 +114,7 @@ const LUCY_POLL_MS = 500;
 const Lucy = lazy(() => import('../views/Lucy'));
 const ListeningRoom = lazy(() => import('../listening-room/ListeningRoom')); // tools.listening_room
 
-export function LocalFirstShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
+export function CloudShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
   api: Api;
   account: Account;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */

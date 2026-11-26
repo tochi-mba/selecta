@@ -36,7 +36,7 @@ const { importMarkerKey } = await import('./importSession');
 // The local-first shell is its own chunk and has grown with the feel system (ADR-0477): load it once
 // here so transforming it is not counted against the offline open below, which still waits on the
 // shell's own lazy import through CloudApp.
-await import('./LocalFirstShell');
+await import('./CloudShell');
 
 const localFirst = (): Account => ({
   ...cloudAccount(),
