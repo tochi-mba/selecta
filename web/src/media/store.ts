@@ -58,6 +58,30 @@ export function withSource(sources: readonly SongSource[] | undefined, source: S
   return [...(sources ?? []).filter((one) => one.folderId !== source.folderId || one.path !== source.path), source];
 }
 
+/** `cloud.move_to_cloud`: a song this device plays from the cloud library only. The member's file
+ * is never touched; its whole row is kept here, so "Play from this device again" puts it back, and
+ * folder checks skip its unchanged file. Kept only in this browser, never sent anywhere. */
+export type CloudOnlyRecord = {
+  songId: number;
+  /** The row as it was when the song left this device's list. */
+  row: StoredSong;
+  /** Its file's handle, or null where the browser gave none (chosen again on undo). */
+  handle: FileHandleLike | null;
+  /** Where watched folders hold its file now, so an unchanged file is not read again. */
+  sources: SongSource[];
+  at: number;
+  /** A changed file here registered to this same song: "This device has a newer copy". */
+  newerCopy?: { sha: string; at: number; handle: FileHandleLike | null };
+  /** Set while "Play from this device again" writes the row back: an interrupted undo finishes. */
+  restoring?: boolean;
+};
+
+/** The row a record puts back, with the places its file has now. */
+function rowOf(record: CloudOnlyRecord): StoredSong {
+  const { sources: _was, ...rest } = record.row;
+  return record.sources.length ? { ...rest, sources: record.sources } : rest;
+}
+
 /** Thrown where browser storage is full: the import pauses honestly instead of half-recording. */
 export class StorageFullError extends Error {
   constructor() {
@@ -77,8 +101,11 @@ export function isQuotaError(error: unknown): boolean {
 export const LEGACY_DB_NAME = 'selecta-media';
 /** Every SelectaDJ media database starts with this; "clear everything" deletes them all. */
 export const MEDIA_DB_PREFIX = 'selecta-media';
-const DB_VERSION = 1;
+// Version 2 adds IN_CLOUD_ONLY. The upgrade only creates what is missing, so a version 1 index
+// keeps every row; the store exists whatever the flag says, and stays empty until it is used.
+const DB_VERSION = 2;
 const SONGS = 'songs';
+const IN_CLOUD_ONLY = 'in_cloud_only';
 
 /** One song index per workspace (ADR-0469). Song ids are per-workspace server ids, so a shared
  * index would let one account's rows (titles, file handles) answer another account's ids. */
@@ -140,6 +167,14 @@ async function persistSong(db: IDBDatabase, song: StoredSong): Promise<void> {
   await done;
 }
 
+/** One write to one object store, durable once its transaction commits. */
+async function writeOne(db: IDBDatabase, name: string, write: (store: IDBObjectStore) => void): Promise<void> {
+  const transaction = db.transaction(name, 'readwrite');
+  const done = committed(transaction);
+  write(transaction.objectStore(name));
+  await done;
+}
+
 export class MediaStore {
   /** True where IndexedDB would not open or stopped taking writes: the index lives only in
    * memory for this visit, and the UI should say a re-import will be needed next time. */
@@ -154,6 +189,8 @@ export class MediaStore {
    * purpose: copying picked files into browser storage would be the second library the ADR
    * rejects. */
   private session = new Map<number, File>();
+  /** `cloud.move_to_cloud`: songs this device plays from the cloud library only, by song id. */
+  private cloudOnly = new Map<number, CloudOnlyRecord>();
   private revision = 0;
 
   /** Changes that affect which songs are locally reachable; used to cache handle sweeps. */
@@ -176,7 +213,9 @@ export class MediaStore {
       await disposeLegacyIndex();
       const opening = indexedDB.open(name, DB_VERSION);
       opening.onupgradeneeded = () => {
-        opening.result.createObjectStore(SONGS, { keyPath: 'songId' });
+        const made = opening.result;
+        if (!made.objectStoreNames.contains(SONGS)) made.createObjectStore(SONGS, { keyPath: 'songId' });
+        if (!made.objectStoreNames.contains(IN_CLOUD_ONLY)) made.createObjectStore(IN_CLOUD_ONLY, { keyPath: 'songId' });
       };
       store.db = await new Promise<IDBDatabase>((resolve, reject) => {
         opening.onsuccess = () => resolve(opening.result);
@@ -188,6 +227,7 @@ export class MediaStore {
       store.db.onversionchange = () => store.release();
       const rows = await settled(store.db.transaction(SONGS).objectStore(SONGS).getAll() as IDBRequest<StoredSong[]>);
       for (const row of rows) store.memory.set(row.songId, row);
+      await store.loadCloudOnly();
     } catch {
       store.db = null;
       store.degraded = true;
@@ -211,6 +251,13 @@ export class MediaStore {
   /** `availability`: the caller knows this write changes whether the song is reachable (a
    * re-grant writing the same row back), so the lapsed sweep must look again. */
   async put(song: StoredSong, options: { availability?: boolean } = {}): Promise<void> {
+    // cloud.move_to_cloud: a song played from the cloud library only stays out of this index,
+    // whatever import or folder check finds its file again
+    const excluded = this.cloudOnly.get(song.songId);
+    if (excluded) {
+      await this.foundAgain(excluded, song);
+      return;
+    }
     const previous = this.memory.get(song.songId);
     this.memory.set(song.songId, song);
     // Only a re-link changes availability (a new handle, or a cleared or raised issue). A plain
@@ -256,6 +303,107 @@ export class MediaStore {
 
   async all(): Promise<StoredSong[]> {
     return [...this.memory.values()];
+  }
+
+  // --- cloud.move_to_cloud: songs this device plays from the cloud library only ---------------
+
+  /** Read the records. A switch or an undo stopped between its two writes is finished here: a
+   * record wins over the row it was made from, unless it was being undone. Never throws: without
+   * the records the index still opens. */
+  private async loadCloudOnly(): Promise<void> {
+    const db = this.db;
+    if (!db) return;
+    let records: CloudOnlyRecord[];
+    try {
+      records = await settled(db.transaction(IN_CLOUD_ONLY).objectStore(IN_CLOUD_ONLY).getAll() as IDBRequest<CloudOnlyRecord[]>);
+    } catch {
+      return;
+    }
+    for (const record of records ?? []) {
+      if (record.restoring) {
+        if (!this.memory.has(record.songId)) {
+          const row = rowOf(record);
+          this.memory.set(record.songId, row);
+          try { await persistSong(db, row); } catch { /* kept in memory for this visit */ }
+        }
+        try { await writeOne(db, IN_CLOUD_ONLY, (store) => store.delete(record.songId)); } catch { /* finished next open */ }
+        continue;
+      }
+      this.cloudOnly.set(record.songId, record);
+      if (this.memory.delete(record.songId)) {
+        try { await writeOne(db, SONGS, (store) => store.delete(record.songId)); } catch { /* the record still wins next open */ }
+      }
+    }
+  }
+
+  /** Every song this device plays from the cloud library only. */
+  cloudOnlyRecords(): CloudOnlyRecord[] {
+    return [...this.cloudOnly.values()];
+  }
+
+  cloudOnlyRecord(songId: number): CloudOnlyRecord | null {
+    return this.cloudOnly.get(songId) ?? null;
+  }
+
+  isCloudOnly(songId: number): boolean {
+    return this.cloudOnly.has(songId);
+  }
+
+  /** Play this song from the cloud library only on this device. The record is written first and
+   * then the row leaves this index (the member's file is never touched), so a stop between the
+   * two still keeps the song out. Null when this device holds no such song, or when the record
+   * could not be kept (the song then stays on this device). */
+  async keepInCloudOnly(songId: number, at = Date.now()): Promise<CloudOnlyRecord | null> {
+    const row = this.memory.get(songId);
+    if (!row) return this.cloudOnly.get(songId) ?? null;
+    const record: CloudOnlyRecord = { songId, row, handle: row.ref.kind === 'handle' ? row.ref.handle : null, sources: row.sources ?? [], at };
+    if (this.db) {
+      try {
+        await writeOne(this.db, IN_CLOUD_ONLY, (store) => store.put(record));
+      } catch {
+        return null;
+      }
+    }
+    this.cloudOnly.set(songId, record);
+    await this.remove(songId);
+    return record;
+  }
+
+  /** "Play from this device again": the kept row goes back into this index and its record goes.
+   * A row with no handle comes back needing its file chosen again, as a picked file always does
+   * after a visit. Null when the song has no record here. */
+  async playHereAgain(songId: number): Promise<StoredSong | null> {
+    const record = this.cloudOnly.get(songId);
+    if (!record) return null;
+    const row = rowOf(record);
+    if (this.db) {
+      try { await writeOne(this.db, IN_CLOUD_ONLY, (store) => store.put({ ...record, restoring: true })); } catch { /* the row still goes back */ }
+    }
+    this.cloudOnly.delete(songId);
+    await this.put(row, { availability: true });
+    if (this.db) {
+      try { await writeOne(this.db, IN_CLOUD_ONLY, (store) => store.delete(songId)); } catch { /* finished next open */ }
+    }
+    return row;
+  }
+
+  /** A file of a song played from the cloud library only was found again by an import or a
+   * folder check. The song stays out of this index; the file's place is remembered, so the next
+   * check skips it, and different bytes are noted as a newer copy on this device. */
+  private async foundAgain(record: CloudOnlyRecord, song: StoredSong): Promise<void> {
+    const places = (song.sources ?? []).filter((one) => !record.sources.some((known) => known.folderId === one.folderId && known.path === one.path && known.size === one.size && known.modified === one.modified));
+    const sha = song.identity.content_sha256;
+    const newer = sha !== record.row.identity.content_sha256 && record.newerCopy?.sha !== sha;
+    if (!places.length && !newer) return;
+    let sources = record.sources;
+    for (const place of places) sources = withSource(sources, place);
+    const next: CloudOnlyRecord = {
+      ...record, sources,
+      ...(newer ? { newerCopy: { sha, at: Date.now(), handle: song.ref.kind === 'handle' ? song.ref.handle : null } } : {}),
+    };
+    this.cloudOnly.set(record.songId, next);
+    if (!this.db) return;
+    try { await writeOne(this.db, IN_CLOUD_ONLY, (store) => store.put(next)); } catch { /* kept in memory for this visit */ }
   }
 
   async remove(songId: number): Promise<void> {
@@ -322,6 +470,8 @@ export class MediaStore {
 
   /** Keep a freshly picked file reachable for this visit without copying it into storage. */
   attachSessionFile(songId: number, file: File): void {
+    // a song played from the cloud library only never plays from a file picked again here
+    if (this.cloudOnly.has(songId)) return;
     this.session.set(songId, file);
     this.touchAvailability();
   }

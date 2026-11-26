@@ -79,7 +79,8 @@ export async function connectOnThisDevice(page: Page, workspaceId: string, songs
     };
     const root = await navigator.storage.getDirectory();
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const opening = indexedDB.open(dbName, 1);
+      // no version: the index the app already upgraded (media/store.ts) opens as it is
+      const opening = indexedDB.open(dbName);
       opening.onupgradeneeded = () => opening.result.createObjectStore('songs', { keyPath: 'songId' });
       opening.onsuccess = () => resolve(opening.result);
       opening.onerror = () => reject(opening.error);
