@@ -38,7 +38,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Bridge songs for a request | Decision: absent | | T-20261126-ae4f |
 | Harmonic matches | Works from key profiles measured on the device | `cloud.browser_harmonic` | |
 | Lucy | Works from the account | `lucy`, `lucy.cloud_conversation` | |
-| Activity drawer | Decision: absent; the Workspace page shows the file check and imports | `cloud.workspace` | T-20261126-36c7 |
+| Activity drawer | Works: this device's own work (songs being measured and how many are left, measurements being saved to the account, the transition being prepared and how many wait, the beat finder being downloaded or timed) above the recent changes with Undo; each line shows only with the flag behind that work | `app.activity` (each line: `cloud.device_analysis`, `cloud.brain`, `cloud.device_render`) | |
 | Export of rendered audio | Decision: absent; Download my data is in Account | | |
 | Lyrics | Decision: absent (licence, ADR-0406) | | T-20261126-2cbe |
 
