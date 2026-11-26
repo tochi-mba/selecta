@@ -92,8 +92,12 @@ def test_an_accepted_request_reaches_the_host_s_list_and_the_workspace_stream(pa
     assert (entry["room_id"], entry["room_name"]) == (room_id, "Garden party")
     assert (entry["song_id"], entry["votes"]) == (5, 1)
     assert entry["handed_at"] is not None
+    # a guest asked for it: not a song the room voted in, so it waits its turn (ADR-0488)
+    assert (entry["room_pick"], entry["add_now"]) == (False, False)
     # songs and room names only: the host's list never says who asked
-    assert set(entry) == {"id", "room_id", "room_name", "song_id", "votes", "handed_at"}
+    assert set(entry) == {
+        "id", "room_id", "room_name", "song_id", "votes", "handed_at", "room_pick", "add_now"
+    }
 
     workspace_id = party.workspaces[ALICE]
     planner_id = browser_request_id(room_id, 5)

@@ -86,7 +86,8 @@ class Tombstone:
 @dataclass(frozen=True)
 class PhysicalTargets:
     """What to erase from R2 for one deletion: exact keys and whole prefixes, by bucket. Derived
-    artifacts made from a song are listed by the artifact manifest, not here."""
+    artifacts made from a song are listed by the artifact manifest, not here: the purge adds
+    them (`storage.maintenance.song_derivatives`)."""
 
     keys: dict[Bucket, list[str]] = field(default_factory=dict)
     prefixes: dict[Bucket, list[str]] = field(default_factory=dict)

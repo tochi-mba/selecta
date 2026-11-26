@@ -41,7 +41,7 @@ from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE
 from selecta.seam_kinds import RENDER_VERSION
 from selecta.work.model import Job
 from selecta.work.provenance import build as build_provenance
-from selecta.workers.context import Handler, InputInvalid, JobContext
+from selecta.workers.context import Handler, InputInvalid, JobContext, run_tool
 from selecta.workers.export_join import EXPORT_VERSION, render_export  # noqa: F401 - re-exported
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -91,11 +91,14 @@ def _fetch(ctx: JobContext, key: Any, selector: str | int, name: str) -> Path:
     return ctx.download_input(selector, destination)
 
 
-def normalise(source: Path, output: Path, ffmpeg: str = "ffmpeg") -> Path:
+def normalise(source: Path, output: Path, ffmpeg: str = "ffmpeg",
+              ctx: JobContext | None = None) -> Path:
     """The source as stereo 24-bit FLAC at the engine rate, reading local files only.
 
     Engine code then decodes this scratch copy with its own decoder, so an uploaded playlist or
-    container can never make it read from the network.
+    container can never make it read from the network. With `ctx` (every worker call) ffmpeg
+    runs under `run_tool`: stopped at once by a cancel or the job's runtime limit, so a file
+    that makes it hang never holds a worker past its job's limit.
     """
     command = [
         ffmpeg,
@@ -130,9 +133,13 @@ def normalise(source: Path, output: Path, ffmpeg: str = "ffmpeg") -> Path:
         "1",
         str(output),
     ]
-    result = subprocess.run(command, capture_output=True, check=False)
-    if result.returncode != 0 or not output.is_file() or output.stat().st_size == 0:
-        raise InputInvalid("The original could not be decoded.")
+    failure = "The original could not be decoded."
+    if ctx is not None:
+        run_tool(command, ctx, failure)
+    elif subprocess.run(command, capture_output=True, check=False).returncode != 0:
+        raise InputInvalid(failure)
+    if not output.is_file() or output.stat().st_size == 0:
+        raise InputInvalid(failure)
     return output
 
 
@@ -145,7 +152,7 @@ class _CheckedSource:
         if _sha256_of(original, ctx) != self.sha256:
             raise InputInvalid("A source checksum does not match the job.")
         ctx.check_in()
-        self.path = normalise(original, ctx.scratch / f"{selector}.flac", ffmpeg)
+        self.path = normalise(original, ctx.scratch / f"{selector}.flac", ffmpeg, ctx)
         original.unlink(missing_ok=True)
 
 

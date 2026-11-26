@@ -127,7 +127,8 @@ def downgrade() -> None:
     # A song the room voted in has no asker, so it cannot survive `guest_id` being required.
     op.execute("DELETE FROM room_requests WHERE guest_id IS NULL")
     with op.batch_alter_table("room_requests") as batch_op:
-        batch_op.drop_constraint("ck_room_requests_source", type_="check")
+        # op.f: the name is already final; without it the naming rule prefixes it a second time
+        batch_op.drop_constraint(op.f("ck_room_requests_source"), type_="check")
         batch_op.alter_column("guest_id", existing_type=Id, nullable=False)
         batch_op.drop_column("dedication_play_id")
         batch_op.drop_column("dedication")

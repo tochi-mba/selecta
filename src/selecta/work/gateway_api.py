@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from selecta.persistence import new_id
 from selecta.scheduling.policy import WorkerCaps
 from selecta.work.catalogue import POOLS, lookup
+from selecta.work.engine_build import MISMATCH, REFUSED_METRIC, engine_build
 from selecta.work.errors import CompletionRejected, JobCancelled, StaleLease
 from selecta.work.model import Attempt, ErrorClass, Job
 from selecta.work.ports import ArtifactOutput
@@ -43,6 +44,8 @@ class WorkerRegistration(BaseModel):
     speed_factor: float = Field(default=1.0, gt=0, le=100)
     job_types: set[str] | None = None
     region: str | None = Field(default=None, max_length=64)
+    engine_build: str | None = Field(default=None, max_length=64, pattern="^[A-Za-z0-9._-]+$")
+    """`work.engine_build.engine_build()` of the worker's image; None from older workers."""
 
 
 class AttemptRequest(BaseModel):
@@ -154,6 +157,25 @@ def install_routes(
             raise HTTPException(status_code=401, detail={"code": "invalid_worker_token"})
         return claims
 
+    expected_build = engine_build()
+
+    def refuse_build(pool: str, worker_build: str) -> HTTPException:
+        """A worker on another engine build: recorded for the Workers page, and 409."""
+        try:
+            from selecta.admin import read_models
+            from selecta.persistence import transaction
+
+            with transaction(store.engine) as connection:
+                read_models.report(connection, REFUSED_METRIC, 1.0, {
+                    "pool": pool, "worker_build": worker_build,
+                    "gateway_build": expected_build})
+        except Exception:  # noqa: BLE001 - recording must never turn a 409 into a 500
+            pass
+        return HTTPException(status_code=409, detail={
+            "code": MISMATCH, "worker_build": worker_build, "gateway_build": expected_build,
+            "message": "This worker runs a different engine build from the gateway; it "
+                       "should exit so its pool starts it again on the deployed image."})
+
     def registered_caps(claims: dict[str, Any]) -> WorkerCaps:
         worker_id = claims["sub"]
         with store.engine.connect() as connection:
@@ -163,6 +185,9 @@ def install_routes(
         if row is None or row.pool != claims.get("pool"):
             raise HTTPException(status_code=401, detail={"code": "worker_not_registered"})
         capabilities = dict(row.capabilities or {})
+        built = capabilities.get("engine_build")
+        if isinstance(built, str) and built != expected_build:
+            raise refuse_build(row.pool, built)
         try:
             caps = WorkerCaps(
                 pool=row.pool,
@@ -233,14 +258,24 @@ def install_routes(
                     raise HTTPException(
                         status_code=400, detail={"code": "worker_job_type_pool_mismatch"}
                     )
+        if body.engine_build is not None and body.engine_build != expected_build:
+            raise refuse_build(body.pool, body.engine_build)
         worker_id = f"worker-{new_id()}"
-        caps = WorkerCaps(**body.model_dump(), worker_id=worker_id)
+        caps = WorkerCaps(**body.model_dump(exclude={"engine_build"}), worker_id=worker_id)
         try:
             store.register_worker(caps, worker_id=worker_id)
         except (TypeError, ValueError) as error:
             raise HTTPException(status_code=400, detail={"code": "invalid_worker_caps"}) from error
+        if body.engine_build is not None:
+            # kept with the worker, so a gateway deployed later refuses its claims (module notes)
+            with store.engine.begin() as connection:
+                stored = connection.execute(sa.select(workers.c.capabilities).where(
+                    workers.c.id == worker_id)).scalar()
+                connection.execute(workers.update().where(workers.c.id == worker_id).values(
+                    capabilities={**dict(stored or {}), "engine_build": body.engine_build}))
         token = issue_worker_token(worker_id, body.pool)
-        return {"worker_id": worker_id, "token": token, "expires_in": token_ttl_s}
+        return {"worker_id": worker_id, "token": token, "expires_in": token_ttl_s,
+                "engine_build": expected_build}
 
     @app.post("/internal/workers/refresh")
     def refresh_worker_token(claims: dict[str, Any] = Depends(worker_claims)):  # noqa: B008

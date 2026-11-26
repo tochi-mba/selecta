@@ -1,7 +1,9 @@
 """HTTP routes for hosted Cloud processing (`selecta.hosted_render`), Cloud app only.
 
 Every route belongs to `cloud.hosted_render` (flags/cloud.json), which requires the
-`cloud.hosted_media` grant, so a browser-first account never reaches them. Reading needs
+`cloud.hosted_media` grant, so a browser-first account never reaches them, except
+`GET /api/stored/exports`: a customer's finished exports are theirs, so that list belongs to
+`cloud.stored_media` and stays open when the grant is switched off. Reading needs
 `mixes.read`; asking for work needs `mixes.edit`. A mix is named by its songs in order (and
 the planned move into each), so the same songs always mean the same rendered seams.
 """
@@ -108,11 +110,14 @@ def install_routes(
         count = body.get("count", 12)
         if isinstance(count, bool) or not isinstance(count, int) or not 2 <= count <= 60:
             raise HTTPException(400, detail={"code": "invalid_count"})
+        pool: dict[str, int] = {}
         try:
-            songs = hosted_render.plan_mix(engine, found.workspace.id, read_object, count=count)
+            songs = hosted_render.plan_mix(engine, found.workspace.id, read_object, count=count,
+                                           pool=pool)
         except R2Error as error:
             raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
-        return {"songs": songs}
+        # `considered` of `analysed`: a library over 60 recordings is sampled for each plan
+        return {"songs": songs, **pool}
 
     @app.post("/api/hosted/mixes/render")
     def hosted_render_mix(request: Request, body: dict = Body(...),  # noqa: B008
@@ -161,6 +166,21 @@ def install_routes(
         if state is None:
             raise HTTPException(404, detail={"code": "export_not_found"})
         return state
+
+    @app.get("/api/stored/exports")
+    def stored_exports(request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008
+        """The caller's workspace's finished hosted exports, with download links. Owned by
+        `cloud.stored_media`, so they stay reachable when the hosted grant is switched off
+        (`hosted_export.stored_exports`)."""
+        found = principal(request, claims, WorkspaceAction.MIXES_READ)
+        client = object_client_factory()
+        try:
+            return exports.stored_exports(engine, found.workspace.id, client=client,
+                                          buckets=buckets)
+        except R2Error as error:
+            raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
+        finally:
+            getattr(client, "close", lambda: None)()
 
 
 __all__ = ["install_routes"]

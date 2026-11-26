@@ -12,6 +12,12 @@ without rendering anything (`workers.export_join`).
 `export_status` reads the job: `progress` and `parts_done` / `parts_total` are real units (parts
 written, plus the upload as the last unit), and `estimate_s` is given only while the job is
 running and has written at least one part, from its own pace so far.
+
+A new export is what the plan pays for (`allow_export`): it takes one of the plan's exports this
+month (`Plan.exports_per_month`, the same counter the Plan & billing meter shows), and none is
+made while storage is over the plan's limit (`over_quota_read_only`), because a kept export
+counts against storage. Asking again for an export already made or already queued takes
+nothing, and a job that isn't made gives its export back.
 """
 
 from __future__ import annotations
@@ -32,6 +38,42 @@ from selecta.work.model import TERMINAL
 from selecta.work.schema import jobs
 
 NOT_READY = "The mix isn't ready yet: export opens once every part of it is ready."
+READ_ONLY = ("Your storage is over your plan's limit, so a new export can't be kept. Delete some "
+             "songs or exports, or move to a plan with more storage, to export again.")
+USED_UP = ("You've made this month's {limit} exports on your plan. More open on the 1st, or "
+           "move to a plan with more.")
+
+
+def allow_export(engine: Engine, workspace_id: str, created_by: str | None, *,
+                 charge: bool = True):
+    """(None, what was taken) when a new export may be made, else (the reason, None). With
+    `charge` false (the export was paid for by an earlier ask) only storage is checked."""
+    from selecta.billing import plans, stripe_sync
+    from selecta.identity.schema import users
+    from selecta.usage import allowances, quota
+
+    with transaction(engine, workspace_id) as conn:
+        if quota.usage(conn, workspace_id).read_only:
+            return READ_ONLY, None
+        if not charge:
+            return None, None
+        entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
+        plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
+        zone = conn.execute(sa.select(users.c.timezone).where(
+            users.c.id == created_by)).scalar() if created_by else None
+        limit = allowances.limit_for(plan, "export")
+        taken = allowances.try_consume(conn, workspace_id, "export", 1, limit,
+                                       timezone=zone or "UTC")
+    if not taken.ok:
+        return USED_UP.format(limit=int(limit or 0)), None
+    return None, taken
+
+
+def _give_back(engine: Engine, workspace_id: str, taken) -> None:
+    from selecta.usage import allowances
+
+    with transaction(engine, workspace_id) as conn:
+        allowances.give_back(conn, taken)
 
 
 def export_timeline(parts: Sequence[dict[str, Any]]) -> list[dict[str, Any]] | None:
@@ -75,6 +117,11 @@ def request_export(engine: Engine, work: Work, workspace_id: str, order: Sequenc
     timeline = export_timeline(mix["parts"]) if mix["complete"] else None
     if timeline is None:
         return {"state": "refused", "why": NOT_READY}
+    from selecta.hosted_limits import export_too_long
+
+    too_long = export_too_long(sum(float(part["seconds"]) for part in timeline))
+    if too_long:  # said before any job, never a job that runs into its limit (hosted_limits)
+        return {"state": "refused", "why": too_long}
     spec = export_spec(workspace_id, timeline, created_by)
     with transaction(engine, workspace_id) as conn:
         old = _latest_job(conn, workspace_id, EXPORT, spec.idempotency_key)
@@ -93,7 +140,26 @@ def request_export(engine: Engine, work: Work, workspace_id: str, order: Sequenc
     if old is not None and not broken and str(old["state"]) not in TERMINAL:
         return {"state": "queued", "job_id": old["id"], "parts_done": 0, "parts_total": total,
                 "progress": [0, total]}  # asked twice: still the one job
-    job_id, refused = hosted_render._make(work, spec, old if broken else None)
+    taken = None
+    # Only a first ask takes one of the plan's exports: a broken job's replacement, or the same
+    # export asked again after it failed or was cancelled, was paid for by that first ask.
+    paid = old is not None and (broken or str(old["state"]) != "succeeded")
+    why, taken = allow_export(engine, workspace_id, created_by, charge=not paid)
+    if why is not None:
+        return {"state": "refused", "why": why}
+    try:
+        if broken:
+            job_id, refused = hosted_render._make(work, spec, old)
+            created = True
+        else:
+            job_id, refused, created = work.submit_new(spec)
+    except Exception:
+        if taken is not None:
+            _give_back(engine, workspace_id, taken)
+        raise
+    if taken is not None and (refused or job_id is None or not created):
+        # nothing new was made (refused, or another device's press made this export first)
+        _give_back(engine, workspace_id, taken)
     if refused:
         return {"state": "refused", "why": refused}
     return {"state": "queued", "job_id": job_id or old["id"], "parts_done": 0,
@@ -130,4 +196,43 @@ def export_status(engine: Engine, workspace_id: str, job_id: str, *, client,
     return out
 
 
-__all__ = ["export_spec", "export_status", "export_timeline", "request_export"]
+def stored_exports(engine: Engine, workspace_id: str, *, client, buckets) -> dict[str, Any]:
+    """Every finished hosted export this workspace still keeps, newest first, each with a
+    15-minute download link: `{"exports": [{"id", "created_at", "size_bytes", "seconds",
+    "expires_at", "url"}]}`.
+
+    It belongs to `cloud.stored_media`, not the hosted grant (T-20261125-d37b): the grant gates
+    new processing, never a customer's access to files they already have, so with hosted
+    storage switched off for the account its exports stay downloadable until their plan's
+    retention ends them (`storage.export_expiry`). Originals download through
+    `GET /api/assets/{id}/playback-url?download=true`, also under `cloud.stored_media`."""
+    from selecta.storage.export_expiry import DAY_S, retention_days, shortened_at
+    from selecta.work.schema import artifacts
+
+    with transaction(engine, workspace_id) as conn:
+        rows = conn.execute(sa.select(
+            artifacts.c.id, artifacts.c["keys"], artifacts.c.size_bytes, artifacts.c.created_at,
+            artifacts.c.job_id).where(
+            artifacts.c.workspace_id == workspace_id, artifacts.c.kind == "export")
+            .order_by(artifacts.c.created_at.desc(), artifacts.c.id).limit(200)).all()
+        kept = retention_days(conn, workspace_id)
+        since = shortened_at(conn, workspace_id, kept[1]) if kept else None
+        results = {row.id: row.result for row in conn.execute(sa.select(jobs.c.id, jobs.c.result)
+                   .where(jobs.c.workspace_id == workspace_id,
+                          jobs.c.id.in_([r.job_id for r in rows if r.job_id])))}
+    out = []
+    for row in rows:
+        key = _first_key(row._mapping["keys"])
+        expires = None
+        if kept is not None:
+            expires = max(float(row.created_at), float(since or 0.0)) + kept[1] * DAY_S
+        result = results.get(row.job_id) or {}
+        out.append({"id": row.id, "created_at": float(row.created_at),
+                    "size_bytes": row.size_bytes, "seconds": result.get("seconds"),
+                    "expires_at": expires,
+                    "url": _sign(client, buckets, key, workspace_id) if key else None})
+    return {"exports": out}
+
+
+__all__ = ["export_spec", "export_status", "export_timeline", "request_export",
+           "stored_exports"]

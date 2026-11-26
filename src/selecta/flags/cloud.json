@@ -102,12 +102,14 @@
         "GET /api/assets/{asset_id}/playback-url",
         "POST /api/assets/{asset_id}/playback-proxy",
         "GET /api/assets/{asset_id}/playback-proxy",
-        "POST /api/storage/derived-playback-url"
+        "POST /api/storage/derived-playback-url",
+        "GET /api/stored/exports"
       ],
       "surfaces": ["cloud.library", "cloud.listen"],
       "modes": ["cloud"],
       "kind": "release",
-      "owner": "storage"
+      "owner": "storage",
+      "cli": ["storage"]
     },
     "cloud.hosted_render": {
       "label": "Hosted processing",
@@ -411,6 +413,28 @@
       "modes": ["cloud"],
       "kind": "ops",
       "owner": "storage"
+    },
+    "cloud.hosted_caps": {
+      "label": "Hosted daily caps",
+      "about": "A hosted account's first analysis of a song takes one of the plan's daily song analyses, and each new transition takes its measured seconds from the plan's daily transition time (selecta.hosted_caps). Off: nothing is counted or refused.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "playback"
+    },
+    "cloud.derived_gc": {
+      "label": "Derived files collector",
+      "about": "The maintenance leader deletes derived files no artifact row or live job names, from attempts that ended over 6 hours ago, and playback files unused for 30 days (storage.derived_gc). Off: the task runs dry and only reports, so an operator can read `selecta storage gc` first.",
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "ops",
+      "owner": "storage"
+    },
+    "cloud.operator_alerts": {
+      "label": "Operator alert email",
+      "about": "The maintenance leader emails SELECTA_ALERT_EMAIL when queued work is stuck, the worker gateway stops answering, the autoscaler fails or a pool reaches its daily spend ceiling: once an hour at most, and once when it clears (notify.operator_alerts).",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
     },
     "cloud.autoscale": {
       "label": "Worker autoscaling",

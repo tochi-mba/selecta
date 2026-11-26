@@ -416,6 +416,9 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/hosted/mixes/render"): {"songs": [{"asset_id": "tenant-a"}]},
     ("POST", "/api/hosted/mixes/export"): {"songs": [{"asset_id": "tenant-a"}]},
     ("GET", "/api/hosted/exports/{job_id}"): None,
+    # cloud.stored_media (open without the hosted grant): only the caller's own exports;
+    # `test_stored_exports_list_only_the_callers_own` checks it with Alice's real export
+    ("GET", "/api/stored/exports"): None,
     ("POST", "/api/devices"): {"name": "Browser", "kind": "laptop"},
     ("GET", "/api/devices"): None,
     ("PATCH", "/api/devices/{device_id}"): {"name": "Kitchen"},
@@ -673,6 +676,7 @@ def world(tmp_path, monkeypatch):
                 "display_id": new_id(),
                 "request_id": new_id(),
                 "guest_id": new_id(),
+                "round_id": new_id(),
                 "command_id": new_id(),
                 "ask_id": new_id(),
                 "zone_id": new_id(),

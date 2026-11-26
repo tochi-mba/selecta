@@ -6,7 +6,7 @@
       "about": "Rate a transition Good or Bad, and the planner learns from it.",
       "routes": ["POST /api/seams/{key}/rate"],
       "surfaces": ["listen", "edit", "overlay.inspector", "discover.words"],
-      "cli": ["ratings"]
+      "cli": ["ratings", "calibrate"]
     },
     "learning.memory": {
       "label": "What it's learned",

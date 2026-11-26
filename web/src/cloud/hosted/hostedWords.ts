@@ -194,6 +194,13 @@ export function analysedWords(done: number, recordings: number, failed: number):
   return `${head}${copies}${failed ? `; ${failed} could not be` : ''}.`;
 }
 
+/** A plan chooses from at most 60 recordings; a larger library is sampled at random for each plan
+ * (`considered` of `analysed` from `/hosted/mixes/plan`). Said only when it was sampled. */
+export function poolWords(pool: { considered?: number; analysed?: number } | null | undefined): string | null {
+  if (!pool?.considered || !pool.analysed || pool.considered >= pool.analysed) return null;
+  return `Planned from ${pool.considered} of your ${pool.analysed} analysed songs, picked at random. Make another mix picks again.`;
+}
+
 /** "About 3 minutes left.", only for a real estimate. */
 function leftWords(estimate: number | null | undefined): string | null {
   if (typeof estimate !== 'number' || !Number.isFinite(estimate) || estimate <= 0) return null;

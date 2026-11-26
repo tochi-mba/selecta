@@ -14,6 +14,8 @@ STAFF_ONLY = {
     ("GET", "/api/admin/workers"),
     # Staff hide or unhide a shared catalogue image (legal.takedowns.manage); no workspace data
     ("POST", "/api/admin/catalog/art/{art_id}/{command}"),
+    # Staff search the shared catalogue images to find one to hide: no workspace data
+    ("GET", "/api/admin/catalog/art"),
     # queue health per worker pool (routes/work_queue.py): platform counts, no workspace data
     ("GET", "/api/admin/work/queue"),
     ("POST", "/api/admin/workers/{worker_id}/{command}"),

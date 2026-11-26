@@ -69,6 +69,13 @@ STRICT: tuple[tuple[re.Pattern[str], str | None, Rule], ...] = (
      Rule("account_change", 10, 5)),
     (re.compile(r"^/api/account$"), "DELETE", Rule("account_change", 10, 5)),
     (re.compile(r"^/api/uploads/plan$"), "POST", Rule("upload_plan", 60, 20)),
+    # Hosted processing (cloud.hosted_render): planning reads up to 60 analyses from storage
+    # and runs the planner, so a few a minute; the mix and export routes are polled every 3 s
+    # by the hosted card (HostedMix.tsx POLL_MS), so room for several tabs and no more.
+    (re.compile(r"^/api/hosted/mixes/plan$"), "POST", Rule("hosted_plan", 10, 5)),
+    (re.compile(r"^/api/hosted/mixes/(render|export)$"), "POST", Rule("hosted_mix", 90, 30)),
+    (re.compile(r"^/api/hosted/songs/(prepare|[^/]+/retry)$"), "POST",
+     Rule("hosted_prepare", 30, 10)),
     (re.compile(r"/search(/|$)"), None, Rule("search", 120, 30)),
     # Planning is CPU work on the API process (cloud_brain); a studio asks once per seam.
     (re.compile(r"^/api/planning/"), "POST", Rule("planning", 60, 20)),

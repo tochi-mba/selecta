@@ -9,6 +9,8 @@
 *.aiff
 *.aif
 *.wma
+# the audio id fixtures are made-up bytes written by tools/audio_identity_fixtures.py, not music
+!tests/fixtures/audio_identity/*
 *.lrc
 
 *.pt

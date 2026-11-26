@@ -88,8 +88,10 @@ def test_new_bytes_with_a_known_audio_id_stay_the_same_song(party, audio_on):
     assert _hashes(party) == [(first["song_id"], SHA_B)]
     with transaction(party.engine, workspace) as conn:
         assert conn.execute(sa.select(analysis.c.bpm)).scalar_one() == 121.0
-    # the new bytes again, from another device, with or without the id: the same song
-    assert _register(party, ALICE, [song(SHA_B)])[0]["song_id"] == first["song_id"]
+    # the new bytes again, from another device, with or without the id: the same song (the
+    # same bytes carry the same tags, so that device reads the new title too)
+    again = song(SHA_B, title="Night Drive (new tags)")
+    assert _register(party, ALICE, [again])[0]["song_id"] == first["song_id"]
     listed = party.client.get("/api/local-media/songs", headers=auth(ALICE)).json()["songs"]
     assert [entry["title"] for entry in listed] == ["Night Drive (new tags)"]
 
