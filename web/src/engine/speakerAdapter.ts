@@ -203,7 +203,9 @@ export class BrowserSpeaker implements Speaker {
         // a picture of the song never stands in the way of playing it
       }
     }
-    return result.ok ? { kind: 'buffer', buffer: result.buffer } : { kind: 'failed', error: result.error };
+    // a song that must play at a given level (a cloud song next to its clip) says so
+    const level = 'level' in source && typeof source.level === 'number' ? { level: source.level } : {};
+    return result.ok ? { kind: 'buffer', buffer: result.buffer, ...level } : { kind: 'failed', error: result.error };
   }
 
   /** A song at a mix position, decoded through the same capped cache the scheduler plays from, so
