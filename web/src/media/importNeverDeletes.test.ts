@@ -14,6 +14,7 @@ import { bytesFile, captureRequest, fakeDirectory, fakeHandle } from './testFixt
 const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
 const fs = node.getBuiltinModule('node:fs') as { readFileSync(path: string, encoding: 'utf8'): string };
 const source = (name: string) => fs.readFileSync(`${node.cwd()}/src/media/${name}`, 'utf8');
+const cloudSource = (name: string) => fs.readFileSync(`${node.cwd()}/src/cloud/${name}`, 'utf8');
 /** Every call that could change or remove a file or directory the member owns. */
 const DESTRUCTIVE = /\b(removeEntry|remove|move|rename|unlink|rm|rmdir|truncate|createWritable|createSyncAccessHandle|write|deleteFile|deleteEntry)\s*\(/g;
 
@@ -105,5 +106,71 @@ describe('the import path never deletes or moves a member file', () => {
     for (const [at, handle] of files.entries()) {
       expect(await (await (handle as FileHandleLike).getFile()).text()).toBe(`song ${at}`);
     }
+  });
+});
+
+// cloud.move_to_cloud (plan 6b, 6d): uploading a song and playing it from the cloud library only
+// reads the member's file and takes the song's row out of this browser's index; nothing on the
+// way deletes, moves or writes the file, or takes the song out of the library.
+describe('uploading and cloud only never touch a member file', () => {
+  it('has no destructive call in the queue, its helpers or cloud only', () => {
+    for (const name of ['cloudUploadQueue.ts', 'cloudOnly.ts', 'cloudUploadPacing.ts', 'cloudUploadWords.ts', 'uploadQueueWiring.ts', 'uploadParts.ts']) {
+      expect(code(cloudSource(name)).match(DESTRUCTIVE) ?? [], name).toEqual([]);
+      // never the folder watch's "stop watching and remove its songs", never the library's remove
+      expect(code(cloudSource(name)), name).not.toMatch(/stopWatching|local-media\/songs|removeSongs/);
+    }
+    // the journal's one write( is its own IndexedDB transaction
+    const journal = code(cloudSource('cloudUploadJournal.ts'));
+    expect(new Set(journal.match(DESTRUCTIVE))).toEqual(new Set(['write(']));
+    expect(journal).toMatch(/function write\(db: IDBDatabase, name: string, change: \(store: IDBObjectStore\) => void\)[^]*?db\.transaction\(name, 'readwrite'\)/);
+    // a song leaves the index through MediaStore.remove only; the undo removes nothing
+    const store = code(source('store.ts'));
+    const keep = store.slice(store.indexOf('async keepInCloudOnly('), store.indexOf('async playHereAgain('));
+    expect(keep.match(DESTRUCTIVE)).toEqual(['remove(']);
+    expect(keep).toContain('await this.remove(songId)');
+    const undo = store.slice(store.indexOf('async playHereAgain('), store.indexOf('private async foundAgain('));
+    expect(undo.match(DESTRUCTIVE) ?? []).toEqual([]);
+    const found = store.slice(store.indexOf('private async foundAgain('), store.indexOf('async remove('));
+    expect(found.match(DESTRUCTIVE) ?? []).toEqual([]);
+  });
+
+  it('touches nothing but read members on any handle during a whole upload and its undo', async () => {
+    const { bindUploadQueue, endUploadQueue, startUpload, uploadSnapshot } = await import('../cloud/cloudUploadQueue');
+    const { playFromThisDeviceAgain } = await import('../cloud/cloudOnly');
+    const { fakeUploadServer } = await import('../cloud/testUploadServer');
+    const reached: string[] = [];
+    const READ = new Set(['kind', 'name', 'getFile', 'queryPermission', 'requestPermission', 'state', 'then', 'constructor', 'toJSON']);
+    const watched = <T extends object>(target: T, label: string): T => new Proxy(target, {
+      get(object, key, receiver) {
+        if (typeof key === 'string' && !READ.has(key)) reached.push(`${label}.${key}`);
+        return Reflect.get(object, key, receiver);
+      },
+      set(_object, key) { reached.push(`${label}.${String(key)} =`); return true; },
+      deleteProperty(_object, key) { reached.push(`delete ${label}.${String(key)}`); return true; },
+    });
+    const store = await MediaStore.open('ws-never-deletes');
+    const handles = [1, 2].map((id) => watched(fakeHandle(bytesFile(`upload ${id}`, `song-${id}.mp3`)), `song-${id}`));
+    for (const [at, handle] of handles.entries()) {
+      await store.put({ songId: at + 1, identity: { content_sha256: `h-upload ${at + 1}`, title: `Song ${at + 1}`, artist: 'A' }, ref: { kind: 'handle', handle }, importedAt: at });
+    }
+    const server = fakeUploadServer({ partSize: 3 });
+    const unbind = bindUploadQueue({
+      workspaceId: 'ws-never-deletes', api: server.api, openStore: async () => store, hasUploadConsent: async () => true, fetchImpl: server.fetchImpl,
+      hash: async (file) => `h-${await file.text()}`, retryDelay: () => 0,
+      pacing: { locks: () => null, online: () => true, battery: async () => null, connection: () => null, phone: () => false },
+    });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await expect.poll(() => uploadSnapshot().workspaceId).toBe('ws-never-deletes');
+      await startUpload({ songIds: [1, 2] });
+      await expect.poll(() => uploadSnapshot().phase, { timeout: 5_000 }).toBe('finished');
+      expect(store.cloudOnlyRecords()).toHaveLength(2);
+      expect(await playFromThisDeviceAgain(1, { openStore: async () => store })).toBe('restored');
+    } finally {
+      unbind();
+      await endUploadQueue();
+    }
+    expect(reached).toEqual([]);
+    for (const [at, handle] of handles.entries()) expect(await (await handle.getFile()).text()).toBe(`upload ${at + 1}`);
   });
 });

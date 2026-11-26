@@ -52,6 +52,47 @@ describe('planCheck', () => {
   });
 });
 
+// cloud.move_to_cloud: a song played from the cloud library only is never added back by a check
+describe('planCheck with songs played from the cloud library only', () => {
+  const kept = async (songId: number, sources: StoredSong['sources']) => {
+    const store = await MediaStore.open('ws-check-cloud-only');
+    await store.put(song(songId, sources, fakeHandle(bytesFile('x', 'kept.mp3'))));
+    await store.keepInCloudOnly(songId);
+    return store;
+  };
+
+  it('skips an unchanged file and counts it as excluded, never as missing', async () => {
+    const store = await kept(5, [{ folderId: 'f', path: 'kept.mp3', size: 10, modified: 100 }]);
+    const plan = await planCheck('f', [fact('kept.mp3', 10, 100)], await store.all(), undefined, store.cloudOnlyRecords());
+    expect(plan).toMatchObject({ fresh: [], known: 0, excluded: 1, missing: [], changed: [] });
+    // its file gone from the folder is not "missing" either: it is not this device's song now
+    const gone = await planCheck('f', [], await store.all(), undefined, store.cloudOnlyRecords());
+    expect(gone.missing).toEqual([]);
+  });
+
+  it('reads a changed file again; still that song, it stays out and is noted as a newer copy', async () => {
+    const store = await kept(5, [{ folderId: 'f', path: 'kept.mp3', size: 10, modified: 100 }]);
+    const plan = await planCheck('f', [fact('kept.mp3', 12, 300)], await store.all(), undefined, store.cloudOnlyRecords());
+    expect(plan.fresh.map((one) => one.path)).toEqual(['kept.mp3']);
+    expect(plan.excluded).toBe(0);
+    // the importer registers it, the account says it is the same song (its audio id), and the
+    // index keeps it out, remembering the new place so the next check skips it
+    await store.put({ ...song(5, [{ folderId: 'f', path: 'kept.mp3', size: 12, modified: 300 }], fakeHandle(bytesFile('y', 'kept.mp3'))), identity: { content_sha256: 'hash-retagged', title: 'Song 5', artist: 'Artist' } });
+    expect(await store.get(5)).toBeNull();
+    expect(store.cloudOnlyRecord(5)?.newerCopy?.sha).toBe('hash-retagged');
+    const again = await planCheck('f', [fact('kept.mp3', 12, 300)], await store.all(), undefined, store.cloudOnlyRecords());
+    expect(again).toMatchObject({ fresh: [], excluded: 1 });
+  });
+
+  it('imports a genuinely different song at that place as usual', async () => {
+    const store = await kept(5, [{ folderId: 'f', path: 'kept.mp3', size: 10, modified: 100 }]);
+    await store.put(song(6, [{ folderId: 'f', path: 'kept.mp3', size: 99, modified: 400 }], fakeHandle(bytesFile('z', 'kept.mp3'))));
+    expect((await store.get(6))?.songId).toBe(6);
+    expect(store.isCloudOnly(6)).toBe(false);
+    expect(store.cloudOnlyRecord(5)?.newerCopy).toBeUndefined();
+  });
+});
+
 describe('walking a folder', () => {
   it('finds audio files at their places and hands the page back as it goes, even for thousands', async () => {
     const many = Array.from({ length: YIELD_EVERY * 40 }, (_, index) => fakeHandle(bytesFile('x', `track-${index}.mp3`)));
