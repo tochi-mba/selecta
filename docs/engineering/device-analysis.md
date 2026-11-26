@@ -81,6 +81,28 @@ grid, else `1 - (std / mean of 8-beat spans) / 0.05`, clipped. `bpm = 60 / media
   `energy` is the mean of the louder half of the bars; `timbre` is 29 numbers (MFCC 1 to 13
   means and spreads, mean centroid, low share and flux).
 
+**Drum pattern and swing (`features.rhythm_bars`, 2026-11-26; not yet ported).** Two more
+bar arrays from the same STFT, worked out after everything above, so none of those values move
+and the fixtures in `web/src/dsp/golden/device-analysis/` are unchanged (regenerated to a
+scratch folder and diffed: identical; the tool does not emit the new arrays yet). For each of
+two bands, the low band (bins below 200 Hz) and the high band (bins at or above 2500 Hz): the
+band's power summed per frame, `10 log10(max(sum, 1e-10))`, and the positive rise from the
+frame before (the first frame against itself, so 0). Frame times are `f * 512 / 22050`, read
+30 ms late (`ONSET_LEAD_SECONDS`: a centred 2048-point frame starts rising that much before
+the hit). Each bar runs from its time to the next bar's (the last to the song's end) and is cut
+into 16 equal steps; step `k`'s value is the largest rise over frames `floor((c - s/2) / h -
+lead)` to `ceil((c + s/2) / h - lead)` (exclusive), where `c` is the step's start, `s` the step
+length, `h` the frame length and `lead` the 30 ms in frames. Each band's 16 values are divided
+by their largest (all 0 when the largest is under 1e-6). `pattern_bars` is bars by 32, low
+then high. `swing_bars`: the high band's rise sampled (linear interpolation over frame index,
+lead applied) at 48 phases `j / 48` of each beat (a bar is `beats_per_bar` equal beats),
+averaged over the bar's beats; among phases from 0.40 to 0.70 that are a peak (no lower than
+either neighbour, circularly), the highest, if it reaches a tenth of the profile's largest
+value; else 0.5. Stored as float16 on the Desktop, sent as float32 (`<f4`, bars by 32 within 0
+to 1, and bars within 0.4 to 0.7), optional and only as a pair (`engine_store.facts`). Songs
+analysed before have neither; the planner reads that as no opinion, and nothing re-analyses
+for it. The port is a to-do item (docs/todo).
+
 **Key.** The Desktop runs S-KEY and keeps the chroma key as a second opinion; without S-KEY,
 `analyse_audio` stores the chroma key with confidence 0.2 and `key_agrees_chroma` 1. S-KEY is
 not available to Cloud (ADR-0479, "Not decided here"), so the port stores exactly that

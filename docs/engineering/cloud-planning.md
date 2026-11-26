@@ -48,7 +48,9 @@ the engine store, and answers `403 flag_off` while `cloud.brain` is off. They do
   server's, never the device's.
 
 **Arrays.** Base64 of little-endian values, in exactly one type each, with a declared shape whose
-byte length must match. Only the seven the planner reads (`analysis.song.SONG_ARRAYS`); any other
+byte length must match. The seven the planner reads (`analysis.song.SONG_ARRAYS`), and
+optionally the drum pattern pair `pattern_bars` (`<f4`, bars by 32, 0 to 1) and `swing_bars`
+(`<f4`, bars, 0.4 to 0.7), both or neither (docs/engineering/device-analysis.md); any other
 name is 422 `unknown_array`. Each is a measurement, not sound:
 
 | Name | Type, shape | What it is |

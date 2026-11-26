@@ -216,6 +216,41 @@ tempo is heard at all; and, in both, whether B arrives on something. `selecta mo
 loop_room --register` (and `tempo_bridge`) renders pairs from the library against what the
 planner would otherwise pick, for the blind listening study.
 
+## 5b. Built: one drummer and the calibration job (2026-11-26)
+
+### One drummer (2.3), behind `planner.rhythm_fit`, off
+
+- **Measurement:** the stored bar arrays are bar-long averages with no sub-beat onset times, so
+  no pattern could be derived from them. `features.rhythm_bars` adds `pattern_bars` (each bar
+  cut into 16 steps: where the band below 200 Hz and the band above 2500 Hz get sharply louder,
+  each scaled to its own strongest step) and `swing_bars` (where the off-beat sits within the
+  beat). Songs analysed before have neither and get no opinion; nothing re-analyses for it.
+- **Comparison:** the mean pattern of A's bars before the exit against B's after the entry (a
+  double- or half-time song pooled to one pulse), the lower of the two bands' correlations, less
+  3 times any swing gap beyond 0.03. Below 0.45 the patterns fight. On synthetic grooves at
+  124 BPM: four on the floor against itself 1.00, against straight sixteenth hats 0.50, against a
+  broken beat 0.13, a swung groove 0.15, a swung two-step -0.20.
+- **The form:** the bass-swap blend trades the high band with the low band, on the nearest 4-bar
+  line: B's highs sit 20 dB down with its kick until the swap, A's go with its kick. Without stems
+  this is by frequency: hats and the snare's crack are above 2500 Hz, the kick below 200 Hz, and
+  the snare's body and the mids still overlap. Scored 6% down at the worst clash ("one song's
+  drums at a time"); any other overlap with fighting drums 15% down ("the drum patterns fight").
+- **Audit on synthetic pairs** (16 bars, real `render()` and `audit()`): four on the floor into a
+  broken beat and into a swung groove, and a broken beat into four on the floor, passed every
+  check in both forms; beat alignment read 2.9 ms in the one-drummer form against 0.0 ms plain.
+- **Not built:** the exact form with stems (A's drum stem out, B's in), filed in docs/todo.
+
+### Calibration (2.7)
+
+`selecta calibrate` re-fits the gates from the rated seams' saved facts and prints the evidence;
+applying it is the owner's call and behind `planner.calibrated_gates` (docs/engineering/
+calibration.md).
+
+### What to listen for
+
+Whether the one-drummer swap sounds like one groove handing to the next or like the drums
+dropping out for half the blend; whether B's dulled top end in the first half is missed.
+
 ## 6. Gaps
 
 - No listening test of per-band or per-bin handovers against a plain bass swap.
