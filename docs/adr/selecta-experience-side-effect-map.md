@@ -271,6 +271,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/zones/{zone_id}/playback/commands/{command_id}/ack` | Records delivery acknowledgement for a zone command, never that it was audible |
 | `POST /api/zones/{zone_id}/playback/hand-back` | Hands zone playback back and records the current position |
 | `POST /api/uploads/plan` | Plans an upload |
+| `POST /api/uploads/preview` | Nothing: a dry run of an upload batch that says what each file would do against the plan's limits and the storage left; creates and reserves nothing (`storage.upload_identity`) |
 | `POST /api/uploads/{session_id}/parts` | Signs upload parts |
 | `POST /api/uploads/{session_id}/complete` | Finishes an upload |
 | `DELETE /api/uploads/{session_id}` | Cancels an upload |

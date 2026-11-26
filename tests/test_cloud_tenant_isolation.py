@@ -390,6 +390,11 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     },
     ("POST", "/api/billing/lucy-packs/confirm"): None,
     ("POST", "/api/uploads/plan"): {"files": [{"name": "song.flac", "size": 10}]},
+    # the dry run (storage.upload_identity, forced on in `world`) reads only the caller's own
+    # songs and storage; `test_cloud_upload_identity.py` checks another account's song id
+    ("POST", "/api/uploads/preview"): {
+        "files": [{"name": "song.flac", "size": 10, "sha256": "a" * 64, "song_id": 1}]
+    },
     ("GET", "/api/uploads"): None,
     ("GET", "/api/uploads/{session_id}"): None,
     ("POST", "/api/uploads/{session_id}/parts"): {"part_numbers": [1]},
@@ -608,9 +613,10 @@ def world(tmp_path, monkeypatch):
     # their workspace checks rather than the flag guard (the conftest resets flags after).
     from selecta import flags
 
-    # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`; on here for the same
-    # reason.
-    flags.use("+business.orgs +business.zones +library.art_embedded +library.art_lookup")
+    # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`, and the upload
+    # dry run behind `storage.upload_identity`; on here for the same reason.
+    flags.use("+business.orgs +business.zones +library.art_embedded +library.art_lookup"
+              " +storage.upload_identity")
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)
