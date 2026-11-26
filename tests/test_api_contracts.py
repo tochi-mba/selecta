@@ -434,7 +434,12 @@ def test_the_library_is_read_again_when_a_correction_changes(settings, conn, mon
         loads.append(song_id)
         return SimpleNamespace(id=song_id, vocals_known=True, instrumental=False)
 
+    def load_songs(_store, _artifacts, song_ids, legacy=None):
+        # with core.engine_store on the changed songs are read together
+        return [load_song(None, None, song_id) for song_id in song_ids], []
+
     monkeypatch.setattr(reel, "load_song", load_song)
+    monkeypatch.setattr("selecta.engine_store.songs.load_songs", load_songs)
     reel.load_library(conn, settings)
     reel.load_library(conn, settings)
     assert loads == [1]
