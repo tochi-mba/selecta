@@ -142,11 +142,19 @@ def install_routes(
     def hosted_export(request: Request, body: dict = Body(...),  # noqa: B008
                       claims: Claims = Depends(current_claims)):  # noqa: B008
         """One export of the mix exactly as it plays (`hosted_export`): the same order and
-        moves as `/api/hosted/mixes/render`."""
+        moves as `/api/hosted/mixes/render`, or (`cloud.one_mixer`) songs by catalogue id."""
         found = principal(request, claims, WorkspaceAction.MIXES_EDIT)
-        order = _order(body)
+        try:
+            by_song = exports.songs_named(body.get("songs"))
+        except ValueError as error:
+            raise HTTPException(400, detail={"code": str(error)}) from error
+        order = _order(body) if by_song is None else []
         client = object_client_factory()
         try:
+            if by_song is not None:
+                return exports.request_song_export(
+                    engine, work, found.workspace.id, by_song, client=client, buckets=buckets,
+                    created_by=found.user.id, read_object=read_object)
             return exports.request_export(
                 engine, work, found.workspace.id, order, client=client, buckets=buckets,
                 created_by=found.user.id, read_object=read_object)
