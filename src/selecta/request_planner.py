@@ -16,6 +16,7 @@ import threading
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
+from functools import cache
 from pathlib import Path
 
 from selecta import flags
@@ -56,10 +57,12 @@ SAME_ARTIST_COST = 0.08
 _VERSION_NOTES = re.compile(r"[(\[].*?[)\]]")
 
 
+@cache
 def _rules() -> str:
     """Anything that decides what a pair can do. If it changes, nothing known about pairs stands.
     The fit limits, word rules and blend timing decide as much as the scorers, so they count too:
-    editing any of them used to leave the book quietly stale."""
+    editing any of them used to leave the book quietly stale. Read once per process: the files
+    can't change under a running app, and a book opened per request mustn't read them each time."""
     deciders = (beam, choose, fit, wordreel, timing, blend)
     sources = b"".join(Path(module.__file__).read_bytes() for module in deciders)
     return hashlib.sha1(sources + str(RULES_VERSION).encode()).hexdigest()[:16]
