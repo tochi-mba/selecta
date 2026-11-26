@@ -17,7 +17,12 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Library rows and Song details: tempo, key, energy | Works for songs the account has measured; others show length only | `cloud.brain`, `cloud.device_analysis` | |
 | Tempo and key corrections | Works: `PUT`/`DELETE /api/song-facts/{id}/correction`, read back from `GET /api/song-facts` | `cloud.brain`, `cloud.device_analysis` | |
 | "Is it music?" | Absent in a browser library; Never play keeps a song out of mixes. Needs no decision: a set-aside mark kept by the account, built on the engine store's library slice | | T-20261126-3f92 |
-| Analysis priority | Decision: absent; the device measures songs in spare time, one at a time | | |
+| Analysis priority, analyse this song now | Works on the device that measures: Measure this first in a Library row's menu (and the app's analyse, priority and priority batch routes, answered in web/src/cloud/localFirstLibrary.ts) puts the song next in this device's measuring. Kept on the device, not the account: once one device has measured a song every device has its measurements | `cloud.browser_harmonic`, `library.priority` | |
+| Start and stop analysis | Works: Pause measuring and Carry on measuring in Workspace (and the app's start and stop routes); a pause lasts across visits until the member carries on | `cloud.browser_harmonic` | |
+| Library song search (`GET /api/songs`), interrupted work | Works: the search answers from the Library rows; nothing is offered again after a reload because measuring picks up by itself | `cloud.local_first` | |
+| A song's audio, cover and waveform | Works from the device's own files: the player, the cover index and Listen's waveform read them; the app's server routes for them are not asked | `cloud.local_first` | |
+| Folders: add, check, relink, stop watching | Works as Music folders (Library and Workspace, Sources): the browser's own folder access; the app's folder routes read paths on a computer, so the adapter says they are the app's | `cloud.local_first` | |
+| Read a folder on the server (scan) | Decision: none in a browser by design; a song arrives through the catalogue's registration when Music folders adds it | | |
 | Song measurement (tempo, key, beats) | Works on the device, saved to the account | `cloud.device_analysis`, `cloud.brain` | |
 | Neural beats | Works on a device that passes the Beat This gate; others use the standard beat finder, said in plain words | `cloud.device_analysis` | |
 | Neural key, lyric timing | Decision: the standard key finder reads key; lyric timing waits on the owner's lyrics decision | | T-20261126-2cbe (owner: LRCLIB's written answer and legal advice, ADR-0406) |
