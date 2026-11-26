@@ -49,6 +49,28 @@ export function pairwiseSum(values: ArrayLike<number>, offset: number, count: nu
 
 const accumulators = new Float64Array(8);
 
+/** numpy's float64 pairwise sum (the same blocks as the float32 one, in double). */
+export function pairwiseSum64(values: ArrayLike<number>, offset: number, count: number): number {
+  if (count < 8) {
+    let total = 0;
+    for (let index = 0; index < count; index += 1) total += values[offset + index];
+    return total;
+  }
+  if (count <= 128) {
+    const r = accumulators;
+    for (let lane = 0; lane < 8; lane += 1) r[lane] = values[offset + lane];
+    let index = 8;
+    const whole = count - (count % 8);
+    for (; index < whole; index += 8) for (let lane = 0; lane < 8; lane += 1) r[lane] += values[offset + index + lane];
+    let total = r[0] + r[1] + (r[2] + r[3]) + (r[4] + r[5] + (r[6] + r[7]));
+    for (; index < count; index += 1) total += values[offset + index];
+    return total;
+  }
+  let half = Math.floor(count / 2);
+  half -= half % 8;
+  return pairwiseSum64(values, offset, half) + pairwiseSum64(values, offset + half, count - half);
+}
+
 /** `np.mean` of a float32 range: the pairwise sum over the count, in float32. */
 export function meanF32(values: ArrayLike<number>, offset = 0, count = values.length - offset, square = false): number {
   return f32(pairwiseSum(values, offset, count, square) / count);
