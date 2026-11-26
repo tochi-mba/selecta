@@ -108,9 +108,9 @@ those out, and then the allowance goes.
 
 ## What is next
 
-- Planning routes in Cloud over the engine store: build `SongInfo` from stored facts, build
-  `SeamMemory` from stored seam records, and call `plan_set` / `build_vibe` /
-  `enumerate_candidates` in the Cloud API.
+- Planning routes in Cloud over the engine store are built (`cloud.brain`,
+  docs/engineering/cloud-planning.md), with an empty `SeamMemory`; building it from stored seam
+  records waits for the seams slice.
 - The device job route: send the ranked candidates as scripts plus the rule's `Option`s to the
   member's browser, which renders, audits and posts `AuditFacts` back (or runs a port of
   `next_step` against the shared fixtures).

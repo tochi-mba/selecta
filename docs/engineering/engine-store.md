@@ -162,7 +162,9 @@ then reads in one transaction still sees its writes.
 These writers still use the raw library connection (to-do item "Song facts writers on Desktop
 still use the raw library connection"): `db.save_analysis`, `db.save_lyrics`, `db.upsert_song`,
 the correction route and the scan. Safe: same file, and each commits before a store read can see
-it. Cloud has no writer of song facts yet (to-do item "Nothing writes Cloud song facts").
+it. In Cloud a device saves a song's facts through `engine_store.facts_store.save`, with their
+provenance (`analysis.implementation`, `analysis.source`), and `load_songs` reads many songs in
+one transaction (docs/engineering/cloud-planning.md).
 
 ## Not moved yet
 
