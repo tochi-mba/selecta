@@ -3,6 +3,7 @@ import type { PlayerLike } from '../playerContract';
 import { reloadPrefs, setPrefs } from '../state/prefs';
 import { BAR_REST, MUSIC_MOTIONS, registerBeatTarget, resetBeatBus, startBeatBus, type BeatKind } from './beatBus';
 import type { Features } from './musicFeatures';
+import { readOutputDelay, resetOutputDelay } from './outputDelay';
 import { resetFeel, startFeel } from './root';
 
 /** FL-0477-04, the truth rule (ADR-0477 rule 4): chrome moves only on a measured kick or an
@@ -343,5 +344,53 @@ describe('FL-0477-04 registered targets', () => {
     frame(1000, kick());
     expect(on(elements[0])).toHaveLength(0);
     for (const element of elements.slice(1, 4)) expect(on(element)).toHaveLength(1);
+  });
+
+  it('a target the cap pushed out returns when a slot frees', () => {
+    const shell = (['ring', 'edge', 'bars', 'row'] as BeatKind[]).map((kind) => {
+      const element = target(kind, kind === 'bars');
+      stops.push(registerBeatTarget(element, kind));
+      return element;
+    });
+    // Listen's glow is the fifth kind and pushes the mini player's ring out
+    const glow = target('glow');
+    const closeListen = registerBeatTarget(glow, 'glow');
+    start();
+    frame(1000, kick());
+    expect(on(shell[0])).toHaveLength(0);
+    expect(on(glow)).toHaveLength(1);
+    closeListen();
+    frame(2000, kick());
+    expect(on(shell[0])).toHaveLength(1);
+  });
+
+  it('T-20261125-6dc8: delays each pulse by the speakers’ reported lag, and not at all when unreported', () => {
+    lasting = true;
+    const ring = target('ring');
+    stops.push(registerBeatTarget(ring, 'ring'));
+    start();
+    frame(1000, kick());
+    expect(on(ring)[0].options.delay).toBeUndefined();
+    on(ring)[0].playState = 'finished';
+    readOutputDelay({ getVisualTaps: () => ({ left: { context: { outputLatency: 0.2 } } }) });
+    frame(1500, kick());
+    expect(on(ring)[1].options.delay).toBe(200);
+    // still waiting out its delay, it does not hold back the next beat's pulse once that one would
+    // start after it has finished
+    frame(1500 + Number(on(ring)[1].options.duration) + 40, kick());
+    expect(on(ring)).toHaveLength(3);
+    resetOutputDelay();
+  });
+
+  it('a pushed-out target that let go or left the page stays gone', () => {
+    const ring = target('ring');
+    const letRingGo = registerBeatTarget(ring, 'ring');
+    for (const kind of ['edge', 'row', 'bars'] as BeatKind[]) stops.push(registerBeatTarget(target(kind, kind === 'bars'), kind));
+    const closeListen = registerBeatTarget(target('glow'), 'glow');
+    letRingGo();
+    closeListen();
+    start();
+    frame(1000, kick());
+    expect(on(ring)).toHaveLength(0);
   });
 });

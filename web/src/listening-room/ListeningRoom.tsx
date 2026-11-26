@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { holdNeutral } from '../feel/root';
 import { flagOn } from '../flags';
 import type { MediaResolver } from '../media';
 import { navigate } from '../router';
@@ -74,6 +75,8 @@ export default function ListeningRoom(props: ListeningRoomProps) {
   const { workspaceId, mix, mixName, mixId, loading, resolve, shellPlaying, pauseShell } = props;
   const room = useMemo(() => createAuditionRoom({ workspaceId, resolve }), [workspaceId, resolve]);
   useEffect(() => () => room.dispose(), [room]);
+  // judging by ear, blind, is neutral too (ADR-0477 rule 11): no mix tint, beat chrome or offers
+  useLayoutEffect(() => holdNeutral(), []);
   const [session, setSession] = useState<Session | null>(() => loadSession(storage(), workspaceId));
   const [resumed, setResumed] = useState(() => !!session);
   const [screen, setScreen] = useState<'start' | 'trial' | 'reveal'>('start');

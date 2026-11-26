@@ -7,10 +7,17 @@ import { hasArt, songKeyFor } from './artStore';
 // Covers and song details from SelectaDJ's own catalogue in Cloud (ADR-0478, FL-0478-04, flag
 // `library.art_lookup`). The second rung of the cover ladder: only for a song whose file has no
 // picture of its own. Every cover on a page asks through one batched read (`POST /catalog/art`),
-// and the answer is kept per song for the visit, so the person's "Wrong cover?" choice, once
-// saved, shows on every cover of that song at once. Images are only ever served from our own API
-// origin, never hot-linked from a third party, and nothing here talks to MusicBrainz or the
-// Cover Art Archive: the server does that, and only for accounts that allow it.
+// and the answer is kept per song, so the person's "Wrong cover?" choice, once saved, shows on
+// every cover of that song at once. Images are only ever served from our own API origin, never
+// hot-linked from a third party, and nothing here talks to MusicBrainz or the Cover Art Archive:
+// the server does that, and only for accounts that allow it.
+//
+// Answers do not last the whole visit (T-20261125-7375). A cover staff hide must leave a venue
+// display or a tab left open for days, so each answer is read again after `ANSWER_TTL_MS` (under
+// the image's own hour of browser cache). An image that will not load (404 once hidden) drops its
+// song back to the generated tile at once and is asked about again later, waiting longer each time
+// it fails. A read that failed (offline, a deploy) is retried with growing waits, sooner when the
+// browser comes back online, and never more than two reads at once for a page.
 
 export type CatalogImage = { id: string; url: string | null; sizes: Record<string, string>; hue: number | null; source: string };
 export type CatalogDetails = {
@@ -43,6 +50,16 @@ const GATHER_MS = 120;
 /** A song still being looked up is asked about again after this, a few times at most. */
 const PENDING_AGAIN_MS = 20_000;
 const PENDING_TRIES = 3;
+/** An answer is read again after this: half the hour the server lets a browser keep an image. */
+const ANSWER_TTL_MS = 30 * 60_000;
+/** A failed read is tried again after this, doubling each time up to `RETRY_MAX_MS`. */
+const RETRY_BASE_MS = 5_000;
+const RETRY_MAX_MS = 10 * 60_000;
+/** An image that failed to load is not shown again for this long, doubling up to `BROKEN_MAX_MS`. */
+const BROKEN_BASE_MS = 60_000;
+const BROKEN_MAX_MS = 60 * 60_000;
+/** Reads in flight at once for one page: a slow network must not pile requests on the API. */
+const READS_AT_ONCE = 2;
 
 const apiOrigin = (import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
 
@@ -61,18 +78,90 @@ type Book = {
   tries: Map<number, number>;
   timer: ReturnType<typeof setTimeout> | undefined;
   listeners: Map<number, Set<() => void>>;
+  /** when each song's answer was read, so it is read again once it is old */
+  readAt: Map<number, number>;
+  refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  /** reads in flight now */
+  reading: number;
+  /** songs whose last read failed, waiting for the retry */
+  failed: Set<number>;
+  failures: number;
+  retryTimer: ReturnType<typeof setTimeout> | undefined;
+  /** image addresses that failed to load: how often, and until when they are not shown */
+  broken: Map<string, { strikes: number; until: number }>;
 };
 
 /** One book per request, so two accounts or workspaces in one page never share an answer. */
 const books = new WeakMap<Request, Book>();
+/** Books with a retry waiting, so coming back online can run it at once. */
+const retrying = new Set<Book>();
 
 function bookFor(request: Request): Book {
   let book = books.get(request);
   if (!book) {
-    book = { request, songs: new Map(), asked: new Set(), waiting: new Set(), tries: new Map(), timer: undefined, listeners: new Map() };
+    book = {
+      request, songs: new Map(), asked: new Set(), waiting: new Set(), tries: new Map(), timer: undefined, listeners: new Map(),
+      readAt: new Map(), refreshTimer: undefined, reading: 0, failed: new Set(), failures: 0, retryTimer: undefined, broken: new Map(),
+    };
     books.set(request, book);
   }
   return book;
+}
+
+const listening = (book: Book, songId: number) => (book.listeners.get(songId)?.size ?? 0) > 0;
+
+/** Read the answers that are older than `ANSWER_TTL_MS` again: at once for songs on screen (one
+ * batched read), and on their next showing for the rest. The timer runs only while answers are
+ * kept, for the earliest one due. */
+function scheduleRefresh(book: Book): void {
+  if (book.refreshTimer !== undefined || !book.readAt.size) return;
+  const oldest = Math.min(...book.readAt.values());
+  const wait = Math.max(1_000, oldest + ANSWER_TTL_MS - Date.now());
+  book.refreshTimer = setTimeout(() => {
+    book.refreshTimer = undefined;
+    const now = Date.now();
+    for (const [songId, at] of [...book.readAt]) {
+      if (now - at < ANSWER_TTL_MS) continue;
+      book.readAt.delete(songId);
+      book.asked.delete(songId);
+      if (listening(book, songId)) gather(book, songId);
+    }
+    scheduleRefresh(book);
+  }, wait);
+}
+
+/** Try the songs whose read failed again, after a wait that doubles with each failure in a row and
+ * is spread a little, so many tabs do not come back in step. */
+function scheduleRetry(book: Book): void {
+  if (book.retryTimer !== undefined) return;
+  const wait = Math.min(RETRY_BASE_MS * 2 ** book.failures, RETRY_MAX_MS) * (0.75 + Math.random() * 0.5);
+  book.failures += 1;
+  retrying.add(book);
+  book.retryTimer = setTimeout(() => retryNow(book), wait);
+}
+
+function retryNow(book: Book): void {
+  if (book.retryTimer !== undefined) clearTimeout(book.retryTimer);
+  book.retryTimer = undefined;
+  retrying.delete(book);
+  const songs = [...book.failed];
+  book.failed.clear();
+  for (const songId of songs) {
+    book.asked.delete(songId);
+    if (listening(book, songId)) gather(book, songId);
+  }
+}
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  // back online: the waiting retries run now rather than at the end of their wait (once each)
+  window.addEventListener('online', () => { for (const book of [...retrying]) retryNow(book); });
+}
+
+/** The song as it may be shown: an image still in its failed-to-load wait is left out. */
+function withoutBroken(book: Book, song: CatalogSong): CatalogSong {
+  const url = song.art?.url;
+  const broken = url ? book.broken.get(url) : undefined;
+  return broken && broken.until > Date.now() ? { ...song, art: null } : song;
 }
 
 function tell(book: Book, songId: number): void {
@@ -83,7 +172,9 @@ function tell(book: Book, songId: number): void {
 
 function keep(book: Book, song: CatalogSong): void {
   if (!song || typeof song.song_id !== 'number') return;
-  book.songs.set(song.song_id, song);
+  book.songs.set(song.song_id, withoutBroken(book, song));
+  book.readAt.set(song.song_id, Date.now());
+  scheduleRefresh(book);
   tell(book, song.song_id);
   if (song.state !== 'pending') return;
   const tries = (book.tries.get(song.song_id) ?? 0) + 1;
@@ -103,18 +194,51 @@ function gather(book: Book, songId: number): void {
   if (book.timer === undefined) book.timer = setTimeout(() => { book.timer = undefined; readWaiting(book); }, GATHER_MS);
 }
 
-/** Read the waiting songs, in batches the server accepts. A refused read (the flag off for this
- * account, the server away) leaves those songs with their generated tile for this visit. */
+/** Read the waiting songs, in batches the server accepts, at most `READS_AT_ONCE` at a time; the
+ * rest wait for a read to finish. A failed read (the server away, a deploy, offline) leaves those
+ * songs with their tile, or their last answer, and asks again later (`scheduleRetry`). */
 function readWaiting(book: Book): void {
-  const ids = [...book.waiting];
-  book.waiting.clear();
-  for (let start = 0; start < ids.length; start += MAX_PER_ASK) {
-    const batch = ids.slice(start, start + MAX_PER_ASK);
+  while (book.waiting.size && book.reading < READS_AT_ONCE) {
+    const batch = [...book.waiting].slice(0, MAX_PER_ASK);
+    for (const id of batch) book.waiting.delete(id);
+    book.reading += 1;
     clientFor(book.request).post<{ songs?: CatalogSong[] }>('/catalog/art', { songs: batch.map((id) => ({ id })) }).then(
-      (answer) => { for (const song of answer?.songs ?? []) keep(book, song); },
-      () => { /* the tile stays, as it was before this rung existed */ },
-    );
+      (answer) => {
+        book.failures = 0;
+        for (const song of answer?.songs ?? []) keep(book, song);
+      },
+      () => {
+        // they stay "asked" until the retry, so covers mounting meanwhile do not each read again
+        for (const id of batch) book.failed.add(id);
+        scheduleRetry(book);
+      },
+    ).finally(() => {
+      book.reading -= 1;
+      if (book.waiting.size && book.timer === undefined) readWaiting(book);
+    });
   }
+}
+
+/** An image of the catalogue's would not load (hidden by staff since it was read, or storage
+ * trouble): every cover showing it drops to the generated tile at once, and the songs are read
+ * again once the wait is over, so a hidden image stays gone and a passing fault heals. */
+function imageFailed(book: Book, url: string): void {
+  const before = book.broken.get(url);
+  if (before && before.until > Date.now()) return;
+  const strikes = (before?.strikes ?? 0) + 1;
+  const wait = Math.min(BROKEN_BASE_MS * 2 ** (strikes - 1), BROKEN_MAX_MS);
+  book.broken.set(url, { strikes, until: Date.now() + wait });
+  const songs = [...book.songs.values()].filter((song) => song.art?.url === url);
+  for (const song of songs) {
+    book.songs.set(song.song_id, { ...song, art: null });
+    tell(book, song.song_id);
+  }
+  setTimeout(() => {
+    for (const song of songs) {
+      book.asked.delete(song.song_id);
+      if (listening(book, song.song_id)) gather(book, song.song_id);
+    }
+  }, wait);
 }
 
 /** Ask for a song's catalogue entry, unless its file has a picture of its own: the file always
@@ -175,7 +299,11 @@ export function catalogCoverFor(songId: number, waitMs = 8000): Promise<{ url: s
   const book = lastBook;
   if (!book || !flagOn('library.art_lookup') || !Number.isInteger(songId) || songId < 1) return Promise.resolve(null);
   const known = book.songs.get(songId);
-  if (known && known.state !== 'pending') return Promise.resolve(matchedCover(known));
+  const readAt = book.readAt.get(songId);
+  // an answer past its time is read again before it is handed to the lock screen
+  const fresh = readAt !== undefined && Date.now() - readAt < ANSWER_TTL_MS;
+  if (known && known.state !== 'pending' && fresh) return Promise.resolve(matchedCover(known));
+  if (!fresh) book.asked.delete(songId);
   return new Promise((resolve) => {
     const set = book.listeners.get(songId) ?? new Set<() => void>();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -187,7 +315,7 @@ export function catalogCoverFor(songId: number, waitMs = 8000): Promise<{ url: s
     };
     const listener = () => {
       const song = book.songs.get(songId);
-      if (song && song.state !== 'pending') finish();
+      if (song && song.state !== 'pending' && book.readAt.get(songId) !== readAt) finish();
     };
     set.add(listener);
     book.listeners.set(songId, set);
@@ -198,11 +326,18 @@ export function catalogCoverFor(songId: number, waitMs = 8000): Promise<{ url: s
 }
 
 /** The catalogue's cover for a song, for the cover ladder: only a confident match with a stored,
- * visible image, and never once the person chose the generated tile. */
-export function useCatalogArt(songId: number | null | undefined): { url: string; hue: number | null } | null {
+ * visible image, and never once the person chose the generated tile. `failed` is for the image
+ * that will not load: it drops the song (and every other cover showing that image) to the tile. */
+export function useCatalogArt(songId: number | null | undefined): { url: string; hue: number | null; failed: () => void } | null {
   const song = useCatalogSong(songId);
-  const url = song?.state === 'matched' ? catalogImageUrl(song.art?.url) : null;
-  return url ? { url, hue: song?.art?.hue ?? null } : null;
+  const request = useRequest();
+  const path = song?.state === 'matched' ? song.art?.url ?? null : null;
+  const url = catalogImageUrl(path);
+  const failed = useCallback(() => {
+    const book = books.get(request);
+    if (book && path) imageFailed(book, path);
+  }, [request, path]);
+  return url ? { url, hue: song?.art?.hue ?? null, failed } : null;
 }
 
 /** The releases a person may pick in "Wrong cover?". */
@@ -235,6 +370,9 @@ export async function chooseCover(request: Request, songId: number, choice: Cove
 export function forgetCatalogArt(request: Request): void {
   const book = books.get(request);
   if (book?.timer !== undefined) clearTimeout(book.timer);
+  if (book?.refreshTimer !== undefined) clearTimeout(book.refreshTimer);
+  if (book?.retryTimer !== undefined) clearTimeout(book.retryTimer);
+  if (book) retrying.delete(book);
   if (lastBook === book) lastBook = null;
   books.delete(request);
 }

@@ -1,6 +1,7 @@
 import { RefObject, useLayoutEffect, useRef } from 'react';
 import { publishAmbientHue } from '../feel/hue';
 import { feelCalm, feelOn } from '../feel/root';
+import { flashOnce } from '../feel/flashOnce';
 import { visibleRows } from '../views/feelPieces';
 
 /** How many work-tool roots are open right now; the profile stays on while any one is. */
@@ -71,11 +72,7 @@ export function useLiveFlash(listRef: RefObject<HTMLElement | null>, keys: reado
     const wanted = new Set(fresh);
     for (const row of visibleRows(listRef.current, '[data-live-key]')) {
       if (!wanted.has(row.dataset.liveKey ?? '')) continue;
-      row.classList.remove('feel-flash');
-      // read layout once so the class added again starts its animation afresh
-      void row.offsetWidth;
-      row.classList.add('feel-flash');
-      row.addEventListener('animationend', () => row.classList.remove('feel-flash'), { once: true });
+      flashOnce(row);
     }
     // the signature carries every change of the list; keys itself is a new array on each render
     // eslint-disable-next-line react-hooks/exhaustive-deps

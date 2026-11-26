@@ -1,6 +1,7 @@
 import type { PlayerLike } from '../playerContract';
 import { prefs } from '../state/prefs';
 import { createFeatureTracker, createFrameSource, MAX_FLASHES_PER_SECOND, type BeatGrid, type Features } from './musicFeatures';
+import { outputDelayMs } from './outputDelay';
 import { feelOn, onFeelChange } from './root';
 
 /** The beat bus (ADR-0477 rule 4): chrome that answers the measured music.
@@ -108,7 +109,8 @@ const BEAT_SHARE = 0.8;
 /** How often the energy envelope is written on the registered elements. */
 const ENERGY_MS = 250;
 
-type Target = { element: HTMLElement; kind: BeatKind; rest: number | null; running: Animation[]; energy: string };
+/** `endsAt`: when the last pulse's visible part ends, on the performance clock, delay included. */
+type Target = { element: HTMLElement; kind: BeatKind; rest: number | null; running: Animation[]; energy: string; endsAt: number };
 
 const targets = new Map<BeatKind, Target>();
 let player: PlayerLike | null = null;
@@ -187,13 +189,18 @@ function beatOf(features: Features): number | null {
   return kick ? kick.strength : null;
 }
 
-function play(target: Target, level: number, duration: number, bands: readonly number[]) {
+function play(target: Target, level: number, duration: number, bands: readonly number[], now: number) {
   const element = target.element;
   if (typeof element.animate !== 'function') return;
-  // one pulse per element at a time: a pulse still running is left to finish, never stacked
-  if (target.running.some((animation) => animation.playState === 'running')) return;
+  // the speakers' reported lag (Bluetooth, AirPlay), so the pulse lands when the kick is heard;
+  // 0 where the browser reports none, which leaves everything exactly as it was
+  const delay = outputDelayMs();
+  // one pulse per element at a time: a pulse still running is left to finish, never stacked. With
+  // a lag, a pulse still waiting out its delay is not in the way of one that will play after it.
+  if (target.running.some((animation) => animation.playState === 'running') && (delay === 0 || target.endsAt > now + delay)) return;
+  target.endsAt = now + delay + duration;
   const motion = MUSIC_MOTIONS[target.kind];
-  const options: KeyframeAnimationOptions = { duration, easing: EASE };
+  const options: KeyframeAnimationOptions = delay > 0 ? { duration, delay, easing: EASE } : { duration, easing: EASE };
   if (target.kind === 'bars') {
     // low, middle and high bands, one per bar
     const bars = Array.from(element.children).slice(0, 3) as HTMLElement[];
@@ -228,7 +235,7 @@ function pulse(features: Features, now: number) {
     if (subtle && !PLAYER_KINDS.includes(target.kind)) continue;
     const longest = MUSIC_MOTIONS[target.kind].maxMs;
     const duration = Math.round(beatMs !== null ? Math.min(longest, beatMs * BEAT_SHARE) : longest);
-    play(target, level, duration, features.bands);
+    play(target, level, duration, features.bands, now);
   }
 }
 
@@ -284,10 +291,30 @@ function evict(target: Target) {
  * one before it answers the beat again, so the mini player gets its ring back when Listen closes. */
 const waiting = new Map<BeatKind, HTMLElement[]>();
 
+/** Elements the four-target cap pushed out, oldest first. Without this a fifth kind (Listen's glow
+ * over the Shell's ring, edge, bars and playing row) silenced the ring for good, even after Listen
+ * closed; now each comes back as soon as a slot frees and its kind is free. */
+const displaced: { element: HTMLElement; kind: BeatKind }[] = [];
+
+const fresh = (element: HTMLElement, kind: BeatKind): Target => ({ element, kind, rest: null, running: [], energy: '', endsAt: 0 });
+
+/** Bring cap-displaced elements back while there is room, dropping any that left the page. */
+function refill() {
+  for (let index = 0; index < displaced.length && targets.size < MAX_TARGETS;) {
+    const held = displaced[index];
+    if (!held.element.isConnected) displaced.splice(index, 1);
+    else if (targets.has(held.kind)) index += 1;
+    else {
+      displaced.splice(index, 1);
+      targets.set(held.kind, fresh(held.element, held.kind));
+    }
+  }
+}
+
 /** Let an element answer the beat. One element per kind (the newest wins, and the one it replaced
- * returns when the newest lets go) and four at once at most (the oldest leaves). The element must
- * be decorative: the bus only ever changes its transform, its opacity and its --energy. Returns a
- * way to let it go, which settles it to rest. */
+ * returns when the newest lets go) and four at once at most (the oldest steps out and returns when
+ * a slot frees). The element must be decorative: the bus only ever changes its transform, its
+ * opacity and its --energy. Returns a way to let it go, which settles it to rest. */
 export function registerBeatTarget(element: HTMLElement, kind: BeatKind): () => void {
   const existing = targets.get(kind);
   if (existing) {
@@ -298,22 +325,29 @@ export function registerBeatTarget(element: HTMLElement, kind: BeatKind): () => 
   }
   if (targets.size >= MAX_TARGETS) {
     const oldest = targets.values().next().value;
-    if (oldest) evict(oldest);
+    if (oldest) {
+      displaced.push({ element: oldest.element, kind: oldest.kind });
+      evict(oldest);
+    }
   }
-  const target: Target = { element, kind, rest: null, running: [], energy: '' };
-  targets.set(kind, target);
+  targets.set(kind, fresh(element, kind));
   beatBusSync();
   return () => {
     const queue = waiting.get(kind);
-    if (targets.get(kind) !== target) {
-      // pushed aside earlier and never brought back: just forget it
+    const current = targets.get(kind);
+    // compared by element, because a target brought back is a new record for the same element
+    if (current?.element !== element) {
+      // pushed aside earlier and not answering now: just forget it
       if (queue) waiting.set(kind, queue.filter((held) => held !== element));
+      const index = displaced.findIndex((held) => held.element === element);
+      if (index >= 0) displaced.splice(index, 1);
       return;
     }
-    evict(target);
+    evict(current);
     let back = queue?.pop();
     while (back && !back.isConnected) back = queue?.pop();
-    if (back) targets.set(kind, { element: back, kind, rest: null, running: [], energy: '' });
+    if (back) targets.set(kind, fresh(back, kind));
+    refill();
     beatBusSync();
   };
 }
@@ -360,6 +394,8 @@ export function stopBeatBus() {
 export function resetBeatBus() {
   stopBeatBus();
   for (const target of [...targets.values()]) evict(target);
+  waiting.clear();
+  displaced.length = 0;
   grid = null;
   interval = FRAME_MS;
   cost = 0;

@@ -8,8 +8,16 @@
  *
  * `makeArt` and `dominantHue` are exported pure functions, so the page can run the same code at
  * idle time where workers are unavailable, and tests can call them without a Worker runtime.
- * This module imports nothing, so the worker bundle stays small.
+ * Its one import, `pictureHeader`, itself imports nothing, so the worker bundle stays small.
+ *
+ * The picture's size is read from its header before any decode (T-20261125-c6b3): a small file
+ * can declare a picture whose decode alone would exhaust the tab's memory, music included. A
+ * picture whose header does not read, or that is past the pixel budget, is refused quietly and
+ * the song keeps its generated tile. Where the browser can, the decode itself is made at about
+ * the larger cover size rather than at full size.
  */
+
+import { MAX_PICTURE_PIXELS, pictureHeader, withinPixelBudget, type PictureHeader } from './pictureHeader';
 
 export const ART_EDGES = { small: 96, large: 512 } as const;
 export type ArtSize = keyof typeof ART_EDGES;
@@ -20,8 +28,11 @@ export type MadeArt = { small: Blob; large: Blob; hue: number | null };
 export type ArtRequest = { id: number; mime: string; bytes: ArrayBuffer };
 export type ArtResponse = { id: number; art?: MadeArt; error?: string };
 
-/** A decoded picture past this many pixels is refused rather than drawn (a decompression bomb). */
-const MAX_PIXELS = 40_000_000;
+/** A decoded picture past this many pixels is refused rather than drawn (a decompression bomb).
+ * The header check refuses first; this stays as a second guard after the decode. */
+const MAX_PIXELS = MAX_PICTURE_PIXELS;
+/** Past this ratio of long to short side, no reduced decode is asked for (see `decodeOptions`). */
+const MAX_RESIZE_ASPECT = 4;
 /** The edge of the tiny copy the hue is read from. */
 const HUE_EDGE = 24;
 /** Too few coloured pixels to call a hue: a greyscale or near-black cover has none. */
@@ -101,12 +112,31 @@ function hueOf(bitmap: ImageBitmap): number | null {
   return dominantHue(drawn.context.getImageData(0, 0, width, height).data);
 }
 
-/** One picture, decoded once, made into both sizes and its hue. Null when it cannot be read. */
+/** Options that ask the decoder for a picture about the larger cover size instead of full size.
+ * Only the width is given, so the browser keeps the aspect ratio even when the file's own
+ * orientation turns the picture; the width is chosen so the short side is at least the larger
+ * cover edge either way round. A very long, thin picture gets no resize (its full decode is
+ * already within the pixel budget), since that width could then exceed the full picture. A browser
+ * that ignores the options decodes at full size, which the budget has already allowed. */
+export function decodeOptions(header: PictureHeader): ImageBitmapOptions | undefined {
+  const short = Math.min(header.width, header.height);
+  const aspect = Math.max(header.width, header.height) / short;
+  if (short <= ART_EDGES.large * 2 || aspect > MAX_RESIZE_ASPECT) return undefined;
+  return { resizeWidth: Math.ceil(ART_EDGES.large * aspect), resizeQuality: 'high' };
+}
+
+/** One picture, decoded once, made into both sizes and its hue. Null when it cannot be read or
+ * its header declares more pixels than the budget allows. */
 export async function makeArt(bytes: ArrayBuffer | Uint8Array, mime: string): Promise<MadeArt | null> {
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const header = pictureHeader(view);
+  if (!withinPixelBudget(header)) return null;
   if (!artSupported()) return null;
   let bitmap: ImageBitmap | null = null;
   try {
-    bitmap = await createImageBitmap(new Blob([bytes as BlobPart], { type: mime }));
+    const blob = new Blob([bytes as BlobPart], { type: mime });
+    const options = decodeOptions(header);
+    bitmap = options ? await createImageBitmap(blob, options) : await createImageBitmap(blob);
     if (bitmap.width * bitmap.height > MAX_PIXELS) return null;
     const small = await encode(bitmap, ART_EDGES.small, 0.8);
     const large = await encode(bitmap, ART_EDGES.large, 0.82);

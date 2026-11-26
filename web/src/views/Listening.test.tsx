@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { publishAmbientHue, resetAmbient } from '../feel/hue';
+import { feelNeutral, feelOn, resetFeel, startFeel } from '../feel/root';
 import { fakeBackend } from '../test/backend';
 import { Listening } from './Listening';
 
@@ -86,5 +88,23 @@ describe('answering a comparison', () => {
     expect(screen.getByRole('button', { name: 'Prefer A' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cannot judge' })).toBeEnabled();
     expect(screen.getByText('Listen to both to choose between them.')).toBeInTheDocument();
+  });
+});
+
+describe('ADR-0477 rule 11: the study is neutral', () => {
+  it('no ambient tint, beat chrome or celebration while it is open, all back after', () => {
+    const stop = startFeel();
+    const view = render(<Listening />);
+    expect(feelNeutral()).toBe(true);
+    for (const part of ['music', 'ambient', 'moments'] as const) expect(feelOn(part)).toBe(false);
+    // the paused mix's tint is taken away, not left behind the study
+    publishAmbientHue(200);
+    expect(document.querySelector('.ambient-layer')).toBeNull();
+    view.unmount();
+    expect(feelNeutral()).toBe(false);
+    expect(feelOn('ambient')).toBe(true);
+    resetAmbient();
+    stop();
+    resetFeel();
   });
 });
