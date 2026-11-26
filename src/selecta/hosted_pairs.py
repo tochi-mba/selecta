@@ -16,7 +16,9 @@ ones it always made (`tests/test_hosted_pairs.py` holds it to a recorded run).
 
 When the seam is ready the answer carries what the shared player needs to play it as a rendered
 clip (web/src/dsp/seams.ts `RenderedClip`): the clip's signed link and cue points, the level each
-song was rendered at, and each song's signed lossless file with its SHA-256.
+song was rendered at, and each song's signed lossless file with its SHA-256. While it is queued
+or running the answer already carries the levels it will be made at, so the player can start a
+song at that level before its next transition is ready.
 """
 
 from __future__ import annotations
@@ -188,7 +190,8 @@ def pair_state(engine: Engine, work, workspace_id: str, a_song_id: int, b_song_i
     (`ready`, `queued`, `running`, `waiting_for_analysis`, `failed` or `refused`, with `why`
     and, when refused, `code`: `allowance_used` or `not_admitted`), `planned_move`, `move`,
     `passed`, `fell_back`, `checks`, `files` ({a, b}, each `{url, sha256, sample_rate,
-    seconds}` or null while preparing) and, only when ready, `clip` and `levels`.
+    seconds}` or null while preparing), `levels` when ready, queued or running (each song's
+    loudness known) and, only when ready, `clip`.
     """
     from selecta import hosted_estimate
 
@@ -242,6 +245,10 @@ def _answer(workspace_id, songs, seam, playback, client, buckets, paused) -> dic
             answer.update(state="failed", why=NO_LEVEL)
         else:
             answer.update(clip=clip, levels=levels)
+    elif seam["state"] in ("queued", "running"):
+        # the level each song will be rendered at, so the player can start a song at it before
+        # its transition is made (a song plays from its start, its next transition comes later)
+        answer["levels"] = _song_levels(*songs)
     if paused:
         answer["allowance_used"] = paused
     return answer
@@ -280,6 +287,11 @@ def _levels(row, a: dict, b: dict) -> dict[str, float] | None:
     if isinstance(said, dict) and _finite(said.get("a_gain_db")) and _finite(
             said.get("b_gain_db")):
         return {"a_gain_db": float(said["a_gain_db"]), "b_gain_db": float(said["b_gain_db"])}
+    return _song_levels(a, b)
+
+
+def _song_levels(a: dict, b: dict) -> dict[str, float] | None:
+    """Each song's `SongInfo.gain_db` from its loudness, or None when either is unknown."""
     gains = [worker_gain_db(song.get("loudness")) for song in (a, b)]
     if None in gains:
         return None
