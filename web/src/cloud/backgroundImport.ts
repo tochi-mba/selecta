@@ -58,7 +58,9 @@ export const AWAY_WORDS = 'Checking carries on while you use other tabs, a littl
 let ours: string | null = null;
 let base: string | null = null;
 
-function showTitle(next: string | null): void {
+/** Put `next` in the tab's title, or the page's own title back (null). Shared with the upload
+ * queue (cloud.move_to_cloud). */
+export function showTitle(next: string | null): void {
   if (typeof document === 'undefined') return;
   if (next === null) {
     // put the page's own title back, unless something else has set one since
@@ -85,9 +87,11 @@ function setBadge(on: boolean): void {
   } catch { /* no badge here */ }
 }
 
-function notify(body: string): void {
+/** A system notification, only where SelectaDJ's notifications are already allowed (it never
+ * asks). Shared with the upload queue, under its own tag. */
+export function notify(body: string, tag = 'selecta-import'): void {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  const options = { body, tag: 'selecta-import', icon: '/icons/selecta-192.png' };
+  const options = { body, tag, icon: '/icons/selecta-192.png' };
   try {
     const shown = new Notification('SelectaDJ', options);
     shown.onclick = () => { window.focus(); shown.close(); };
