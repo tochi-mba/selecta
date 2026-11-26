@@ -280,8 +280,15 @@ def test_a_correction_wins_over_the_measurement_and_clears(world):
     _save(world, facts, sha)
     facts_store.set_correction(world["store"], world["song_id"], None, "10A")
     assert stored.load_song(world["store"], world["artifacts"], world["song_id"]).camelot == "10A"
+    # the measured list carries both, so a browser Library shows what is in use
+    (row,) = facts_store.measured(world["store"])["songs"]
+    assert (row["camelot"], row["override_camelot"], row["override_bpm"]) == ("9A", "10A", None)
+    assert row["bpm"] == pytest.approx(facts.bpm)
+    other = EngineStore(world["engine"], new_id())
+    assert facts_store.measured(other) == {"songs": []}
     facts_store.set_correction(world["store"], world["song_id"], None, None)
     assert stored.load_song(world["store"], world["artifacts"], world["song_id"]).camelot == "9A"
+    assert facts_store.measured(world["store"])["songs"][0]["override_camelot"] is None
     with pytest.raises(song_facts.FactsRefused):
         facts_store.set_correction(world["store"], world["song_id"], 900.0, None)
 
