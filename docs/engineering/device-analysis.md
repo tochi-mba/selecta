@@ -149,7 +149,7 @@ The vitest files beside the ports assert, per song:
 | Frame features | the same librosa calls | tuning equal, levels 1e-3 dB, chroma 1e-4 |
 | Bar features | `extract` | energy 1e-4 relative, chroma cosine 0.99999, MFCC 0.01 |
 | Sections, key, row | Python's | equal |
-| Loudness, peak | pyloudnorm | 1e-6 LU, 1e-9 dB |
+| Loudness, peak | pyloudnorm | 1e-6 LU, 1e-5 dB |
 | End to end | the soxr (Desktop) reference | the planner tolerances above |
 
 These tests were written but not run in this change (CI runs them: `web/src/dsp/analysis/`).
