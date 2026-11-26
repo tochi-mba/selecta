@@ -686,6 +686,8 @@ def world(tmp_path, monkeypatch):
                 "proposal": new_id(),
                 "key": new_id(),
                 "message": new_id(),
+                "draft": 1,
+                "position": 1,
             },
             "derived": derived,
             "alice_keys": {original_key(alice_ws, asset_id), derived, f"s/{session_id}/object"},

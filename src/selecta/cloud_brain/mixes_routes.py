@@ -418,8 +418,8 @@ def install(
         claims: Claims = Depends(current_claims),  # noqa: B008
         draft: int | None = Query(default=None, ge=1),  # noqa: B008
     ) -> dict:
-        _placement(body)
         with writing(request, claims) as mixes:
+            _placement(body)
             _check_order(mixes, request, draft)
             if not 1 <= position < len(mix._items(mixes, draft)):
                 raise HTTPException(404, "There's no seam there.")
