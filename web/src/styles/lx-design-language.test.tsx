@@ -100,8 +100,9 @@ describe('LX-0364-02 one song identity in Library and Lucy', () => {
     const library = fs.readFileSync(`${SOURCE}views/LibraryRow.tsx`, 'utf8');
     const lucy = fs.readFileSync(`${SOURCE}views/LucySongs.tsx`, 'utf8');
     // ADR-0478: with library.art_embedded on, a Library row shows a real cover or the generated tile,
-    // and only through CoverArt; otherwise the motif, beside the title as before
-    expect(library).toMatch(/art \? <CoverArt seed=\{song\.id\} songId=\{song\.id\} size="small" \/> : <SongMotif songId=\{song\.id\} \/>/);
+    // and only through CoverArt (the playing row adds its beat bars beside it); otherwise the
+    // motif, beside the title as before
+    expect(library).toMatch(/art\s*\? <><CoverArt seed=\{song\.id\} songId=\{song\.id\} size="small" \/>[^\n]*<\/>\s*: <SongMotif songId=\{song\.id\} \/>/);
     expect(library).toMatch(/\{face\}<b dir="auto"/);
     expect(lucy).toMatch(/<SongMotif songId=\{song\.song_id\} \/>/);
     for (const source of [library, lucy]) expect(source).not.toMatch(/<img\b|cover_url/i);
