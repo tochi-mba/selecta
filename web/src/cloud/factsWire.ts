@@ -1,4 +1,4 @@
-import { DEVICE_ANALYSIS_IMPLEMENTATION } from '../dsp/analysis/deviceAnalysisIds';
+import { factsVersion } from '../dsp/analysis/deviceAnalysisIds';
 import type { SongFacts } from '../dsp/analysis/song';
 
 /** One song's measurements as the account's `PUT /api/song-facts/{song_id}` takes them
@@ -80,8 +80,9 @@ export function factsBody(sha: string, facts: SongFacts): FactsBody | null {
   for (const name of ['energy_bars', 'low_share_bars', 'rms_db_bars'] as const) if (arrays[name].length !== bars) return null;
   return {
     content_sha256: sha,
-    // the account's allowlist names the analysis port; the beat source is in this device's own version
-    implementation: DEVICE_ANALYSIS_IMPLEMENTATION,
+    // the analysis port and the beat source together (`web-dsp-1+web-beatthis-small0-1`), so the
+    // account ranks the neural tracker's measurement above the interim source's
+    implementation: factsVersion(facts.beat_source),
     bpm: row.bpm,
     constant_tempo: row.constant_tempo === 1,
     grid_confidence: row.grid_confidence,

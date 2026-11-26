@@ -10,6 +10,7 @@ import { setTonalActivity } from './tonalActivity';
 import { factsVersion } from '../dsp/analysis/deviceAnalysisIds';
 import type { AnalysisTask } from '../dsp/workers/analysisWorker';
 import { deviceFactsStore, type FactsStore } from './songFacts';
+import { chooseBeatSource, noteBeatModelFailure, recordBeatBenchmark, type BeatSourceChoice } from '../dsp/analysis/beatThis/gate';
 
 /** Browser tonal profiles and harmonic-match answers (cloud.browser_harmonic).
  *
@@ -55,6 +56,9 @@ const MIX_SLICE = 1 << 19;
 const FACTS_RATE = 44100;
 /** A whole song's facts take longer than its profile, most of all on a phone. */
 const FACTS_TIMEOUT_MS = 300_000;
+/** With the neural tracker, a second more per second of audio: twice the slowest device the
+ * benchmark lets use it (beatThis/gate.ts). */
+const NEURAL_MS_PER_AUDIO_SECOND = 1_000;
 
 export type ProfileRecord =
   | { sha: string; implementation: string; profile: TonalProfile }
@@ -288,11 +292,13 @@ export type ProfilerOptions = {
   /** Where song facts are kept with cloud.device_analysis on; the device-wide derived store
    * when not given. Off, facts are never measured and this is never read. */
   facts?: FactsStore;
+  /** Which beat source measures this pass (beatThis/gate.ts `chooseBeatSource` when not given). */
+  chooseBeats?: () => Promise<BeatSourceChoice>;
 };
 
 /** What one song still needs: its profile, and (cloud.device_analysis) its facts, with the
- * store they go to. */
-type Needs = { profile: boolean; facts: FactsStore | null };
+ * store they go to and the beat source to measure them with. */
+type Needs = { profile: boolean; facts: FactsStore | null; beats: BeatSourceChoice | null };
 
 /** Measure, one song at a time in spare time, every song on this device without a current
  * profile (and, with cloud.device_analysis, without current facts). Returns the stop function.
@@ -326,11 +332,11 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
         return;
       }
       await withHashLock('analysis', sha, async () => {
-        if (await facts.has(sha)) {
+        if (await facts.has(sha, factsVersion(needs.beats?.implementation))) {
           if (!profiled) await measureBytes(sha, bytes);
           return;
         }
-        await measureFacts(sha, bytes, facts, !profiled);
+        await measureFacts(sha, bytes, facts, !profiled, needs.beats);
       });
     });
   };
@@ -338,8 +344,8 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
   /** One decode at the Desktop's rate for the facts and, when it is still needed, the profile.
    * Nothing is kept until the whole song is measured, so a tab closed mid-song leaves nothing
    * behind and the song is measured again next time. */
-  const measureFacts = async (sha: string, bytes: ArrayBuffer, facts: FactsStore, withProfile: boolean) => {
-    const version = factsVersion();
+  const measureFacts = async (sha: string, bytes: ArrayBuffer, facts: FactsStore, withProfile: boolean, beats: BeatSourceChoice | null) => {
+    const version = factsVersion(beats?.implementation);
     const tonal = { sha, implementation: TONAL_PROFILE_IMPLEMENTATION };
     const unreadable = async (reason: 'too_large' | 'too_long' | 'undecodable') => {
       if (withProfile) await options.store.put({ ...tonal, unreadable: reason });
@@ -352,11 +358,24 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
     if (stopped) return;
     worker ??= (options.workerFactory ?? spawnAnalysisWorker)();
     const tasks: AnalysisTask[] = withProfile ? ['song', 'profile'] : ['song'];
-    const answer = await analyseInWorker(worker, new Float32Array(0), FACTS_RATE, tasks, { owned: true, timeoutMs: FACTS_TIMEOUT_MS, channels });
+    const seconds = channels[0].length / FACTS_RATE;
+    const neural = beats?.kind === 'neural' ? beats : null;
+    const answer = await analyseInWorker(worker, new Float32Array(0), FACTS_RATE, tasks, {
+      owned: true,
+      timeoutMs: FACTS_TIMEOUT_MS + (neural ? Math.ceil(seconds * NEURAL_MS_PER_AUDIO_SECOND) : 0),
+      channels,
+      ...(neural ? { beatModel: { sha256: neural.sha256 } } : {}),
+    });
+    // the model would not load or run here: the lighter source measured, and stays for a day
+    if (neural && answer.beatFallback) noteBeatModelFailure();
+    // the first song measured with the tracker is this device's benchmark
+    else if (neural && !neural.calibrated && typeof answer.beatMs === 'number') recordBeatBenchmark(answer.beatMs, seconds);
     if (withProfile) {
       await options.store.put(answer.profile && !answer.error ? { ...tonal, profile: answer.profile } : { ...tonal, unreadable: 'undecodable' });
     }
-    await facts.put(answer.facts && !answer.error ? { sha, version, facts: answer.facts } : { sha, version, unreadable: 'undecodable' });
+    // kept under the source that really measured, so a fallback is measured again later
+    const kept = answer.facts && !answer.error ? factsVersion(answer.facts.beat_source) : version;
+    await facts.put(answer.facts && !answer.error ? { sha, version: kept, facts: answer.facts } : { sha, version, unreadable: 'undecodable' });
   };
 
   const measureBytes = async (sha: string, bytes: ArrayBuffer) => {
@@ -387,12 +406,16 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
     const known = await options.store.records();
     // with cloud.device_analysis a song also waits for its facts; off, only for its profile
     const facts = flagOn('cloud.device_analysis') ? (factsStore ??= options.facts ?? deviceFactsStore()) : null;
+    // the neural tracker where this device has it and is fast enough; songs measured with the
+    // lighter source then wait to be measured again, one at a time like every other
+    const beats = facts ? await (options.chooseBeats ?? (() => chooseBeatSource({ fetch: true })))() : null;
+    const version = factsVersion(beats?.implementation);
     const waiting: Array<{ song: StoredSong; needs: Needs }> = [];
     for (const song of await media.all()) {
       if (unreachable.has(song.songId)) continue;
       const profile = !known.has(song.identity.content_sha256);
-      const needsFacts = facts !== null && !(await facts.has(song.identity.content_sha256));
-      if (profile || needsFacts) waiting.push({ song, needs: { profile, facts: needsFacts ? facts : null } });
+      const needsFacts = facts !== null && !(await facts.has(song.identity.content_sha256, version));
+      if (profile || needsFacts) waiting.push({ song, needs: { profile, facts: needsFacts ? facts : null, beats } });
     }
     for (const { song, needs } of waiting) {
       await spareTime(IDLE_GAP_MS, isStopped);
@@ -413,7 +436,7 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
         failures.set(sha, times);
         if (times >= 2) {
           if (needs.profile) await options.store.put({ sha, implementation: TONAL_PROFILE_IMPLEMENTATION, unreadable: 'undecodable' });
-          await needs.facts?.put({ sha, version: factsVersion(), unreadable: 'undecodable' });
+          await needs.facts?.put({ sha, version: factsVersion(needs.beats?.implementation), unreadable: 'undecodable' });
         } else unreachable.add(song.songId);
       }
     }
