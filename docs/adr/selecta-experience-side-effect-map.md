@@ -263,7 +263,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/uploads/{session_id}/complete` | Finishes an upload |
 | `DELETE /api/uploads/{session_id}` | Cancels an upload |
 | `POST /api/storage/derived-playback-url` | Signs a playback URL |
-| `DELETE /api/assets/{asset_id}` | Deletes an uploaded asset |
+| `DELETE /api/assets/{asset_id}` | Deletes an uploaded asset: hidden at once (a song tombstone); after the 30-day window maintenance erases its original and every derived file made from its bytes alone (analysis, playback file, transition clips under `w/{workspace}/{kind}/{hash}/`) and their artifact rows, unless another live upload has the same bytes; exports stay until their plan retention |
 | `POST /api/assets/{asset_id}/playback-proxy` | Asks for a playback proxy to be made |
 
 ### Hosted processing (`src/selecta/routes/hosted_render.py`) - `cloud.hosted_render`
@@ -276,7 +276,7 @@ Each makes worker jobs only for the caller's own workspace; nothing is stored in
 | `POST /api/hosted/songs/{asset_id}/retry` | For one of the caller's own songs: cancels its failed or stuck `analyse.song` job and queues a fresh one (never two live jobs) |
 | `POST /api/hosted/mixes/plan` | None stored: reads analyses and returns the local planner's order and moves |
 | `POST /api/hosted/mixes/render` | Queues `play.proxy` and `seam.render` jobs the mix still needs, then returns its timeline with signed links |
-| `POST /api/hosted/mixes/export` | Does what `mixes/render` does for the same order (queues any `play.proxy` or `seam.render` still missing), then, once every part is ready or failed, queues one `export.render` job naming the exact timeline played (each part's file key and SHA-256, cut and level), keyed by that timeline's hash; an export of the same timeline already stored is handed back without a new job. Writes the export under `w/{workspace}/export/{timeline hash}/` in the derived bucket |
+| `POST /api/hosted/mixes/export` | Does what `mixes/render` does for the same order (queues any `play.proxy` or `seam.render` still missing), then, once every part is ready or failed, queues one `export.render` job naming the exact timeline played (each part's file key and SHA-256, cut and level), keyed by that timeline's hash; an export of the same timeline already stored is handed back without a new job. Writes the export under `w/{workspace}/export/{timeline hash}/` in the derived bucket. A new export takes one of the plan's exports this month (`allowance_counters`, kind `export`), given back when no new job was made (refused, or another device's press made it first); none is made while storage is over the plan's limit |
 
 ### Covers and details from the web (`src/selecta/catalog/routes.py`) - `library.art_lookup` (ADR-0478)
 
