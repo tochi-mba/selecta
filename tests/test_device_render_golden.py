@@ -83,6 +83,7 @@ def test_the_manifest_lists_every_committed_case():
     assert manifest["script_schema"] == 1
 
 
+@pytest.mark.slow  # regenerating every fixture takes about twelve minutes
 def test_the_committed_fixtures_are_what_the_generator_makes_today(regenerated):
     for path in sorted(FIXTURES.glob("*.json")):
         kept = json.loads(path.read_text(encoding="utf-8"))
