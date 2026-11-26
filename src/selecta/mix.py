@@ -618,8 +618,9 @@ def copy_current(conn: Conn, name: str | None = None) -> int:
 
 @_writes
 def duplicate_draft(conn: Conn, draft: int) -> int:
-    row = conn.draft_row(draft)
-    return create_draft(conn, f"{row['name']} copy", _stored(row))
+    # a copy takes the name and the songs only, so its revisions are never read
+    items = conn.draft_items(draft)
+    return create_draft(conn, f"{conn.draft_name(draft)} copy", _stored({"items": items}))
 
 
 @_writes
