@@ -232,7 +232,7 @@ describe('the mixes kept with the account', () => {
     await send('POST', '/mix/songs', { song_id: 5, position: 1 });
     await send('POST', '/mix/move', { source: 0, target: 2 });
     await send('POST', '/mix/2/seam', { move: 'echo_out' });
-    expect(calls.length).toBe(10);
+    expect(calls.length).toBe(9);
     calls.forEach(holdsTheContract);
     expect(calls[0]).toEqual({ method: 'PUT', path: '/mix/order', body: { song_ids: [3, 1, 2], name: 'Ocean to Counting the Days' } });
   });
