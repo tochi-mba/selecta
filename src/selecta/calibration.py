@@ -38,6 +38,9 @@ class Collected:
     unrated: int = 0
     without_facts: int = 0
     """Rated seams from before records kept the pair's facts: counted, never fitted on."""
+    grades: list[dict] = field(default_factory=list)
+    """Listening-study grades (1 to 5) given to a rendered seam, each with its seam key
+    (`engine_store.listening.seam_grades`). Counted beside the clicks; the gates fit on clicks."""
 
     def span(self) -> tuple[str, str] | None:
         stamps = sorted(r["rated_at"] for r in self.records if r.get("rated_at"))
@@ -76,6 +79,25 @@ def _from_store(home: Path) -> list[dict] | None:
         return None
 
 
+def _grades_from_store(home: Path) -> list[dict]:
+    """The study's grades joined to seams, read only with `core.engine_store` on and only from a
+    library past `lib0010listening`; otherwise none."""
+    from selecta.engine_store import library
+    from selecta.engine_store import listening as study
+
+    library_file = home / "selecta.sqlite"
+    try:
+        with library.engine_for(library_file).connect() as connection:
+            stamp = connection.execute(
+                sa.text(f"SELECT version_num FROM {library.VERSION_TABLE}")  # noqa: S608
+            ).scalar()
+        if stamp is None or not library.includes(stamp, "lib0010listening"):
+            return []
+        return study.seam_grades(library.store_for(library_file))
+    except sa.exc.SQLAlchemyError:
+        return []
+
+
 def rated_seams(home: Path) -> Collected:
     """Every rated seam in `home`: the render cache's records and the history that outlives
     them, one per seam key, the cache's copy first. Reads only."""
@@ -89,6 +111,8 @@ def rated_seams(home: Path) -> Collected:
     for state in stored or []:
         found.files += 1
         seen.setdefault(str(state.get("key")), state)
+    if stored is not None:
+        found.grades = _grades_from_store(home)
     for path in paths:
         found.files += 1
         state = _read(path)

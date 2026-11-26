@@ -220,18 +220,15 @@ def add_routes(app, ctx) -> None:
 
     @app.get("/api/listening/{trial}/{option}/audio")
     def listening_audio(trial: str, option: str, request: Request) -> Response:
-        from selecta.listening import initialise
+        from selecta.listening import trial_mapping
 
         if option not in {"a", "b"}:
             raise HTTPException(404)
         with connect() as conn:
-            initialise(conn)
-            row = conn.execute(
-                "SELECT mapping FROM listening_trials WHERE id=?", (trial,)
-            ).fetchone()
-        if row is None:
+            mapping = trial_mapping(conn, trial)
+        if mapping is None:
             raise HTTPException(404)
-        key = json.loads(row["mapping"])[option]
+        key = json.loads(mapping)[option]
         if not isinstance(key, str) or Path(key).name != key:
             raise HTTPException(404)
         root = store.root.resolve()

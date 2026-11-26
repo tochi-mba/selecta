@@ -7,7 +7,8 @@ account's workspace, and PostgreSQL's fail-closed policy (migrations `es0479rate
 `ratings` is the first slice. On Desktop it is the hand-made `ratings` table in `db.SCHEMA`,
 adopted in place by the library migration `lib0002ratings`: the same rows, the same columns with
 the same meaning, plus `workspace_id`. The hand-made table's own foreign keys to `songs` and
-`seam_book` stay in the library file; they are not declared here because Cloud has neither table.
+`seam_book` stay in the library file; they are not declared here (Cloud has no `songs`, and its
+`seam_book`, made by `es0479disc01`, is keyed by workspace).
 
 The song facts are the second slice (`lib0003songs`, `es0479song01`):
 
@@ -470,12 +471,67 @@ playback_skips = sa.Table(
     sa.Column("created_at", sa.Text, nullable=True),
 )
 
-LIBRARY_TABLES = (songs, lyrics, playback_skips)
+# The listening study (`engine_store.listening`): Desktop only, the owner's own blind A/B tool.
+# Made and adopted by `lib0010listening`; `listening.initialise` made them before.
+
+# One blind trial: `mapping` is JSON {"a": condition, "b": condition}, never shown to a listener.
+# `ordinal` is the order trials were registered in.
+listening_trials = sa.Table(
+    "listening_trials",
+    library_metadata,
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("study", sa.Text, nullable=False),
+    sa.Column("pair", sa.Text, nullable=False),
+    sa.Column("mapping", sa.Text, nullable=False),
+    sa.Column("seed", sa.Integer, nullable=False),
+    sa.Column("ordinal", sa.Integer, nullable=True),
+)
+
+# A condition's private label: the method and renderer, and the rendered seam it is, if named.
+listening_methods = sa.Table(
+    "listening_methods",
+    library_metadata,
+    sa.Column("condition", sa.Text, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("method", sa.Text, nullable=False),
+    sa.Column("renderer", sa.Text, nullable=False),
+    sa.Column("seam_key", sa.String(SEAM_KEY), nullable=True),
+)
+
+# A listener's answer to one trial: a, b, tie or cannot_judge. `updated_at` UTC as SQLite writes.
+listening_responses = sa.Table(
+    "listening_responses",
+    library_metadata,
+    sa.Column("trial", sa.Text, primary_key=True),
+    sa.Column("listener", sa.Text, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("choice", sa.Text, nullable=False),
+    sa.Column("setup", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=True),
+)
+
+# A listener's 1 to 5 grade of one option of a trial, with the issues they ticked (JSON list).
+listening_quality = sa.Table(
+    "listening_quality",
+    library_metadata,
+    sa.Column("trial", sa.Text, primary_key=True),
+    sa.Column("listener", sa.Text, primary_key=True),
+    sa.Column("option", sa.Text, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("grade", sa.Integer, nullable=False),
+    sa.Column("tags", sa.Text, nullable=False),
+)
+
+LISTENING_TABLES = (listening_trials, listening_methods, listening_responses, listening_quality)
+
+LIBRARY_TABLES = (songs, lyrics, playback_skips, *LISTENING_TABLES)
 
 __all__ = [
     "DISCOVERY_TABLES",
     "ENGINE_TABLES",
     "LIBRARY_TABLES",
+    "LISTENING_TABLES",
     "MIX_TABLES",
     "REQUEST_TABLES",
     "SEAM_TABLES",
@@ -483,6 +539,10 @@ __all__ = [
     "discovery_comparisons",
     "drafts",
     "library_metadata",
+    "listening_methods",
+    "listening_quality",
+    "listening_responses",
+    "listening_trials",
     "lyrics",
     "mix_imports",
     "playback_skips",

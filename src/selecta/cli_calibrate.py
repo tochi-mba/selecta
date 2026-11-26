@@ -56,6 +56,13 @@ def report_lines(fits, collected) -> list[str]:
         )
     if collected.unreadable:
         lines.append(f"Seam files that could not be read: {collected.unreadable}.")
+    if collected.grades:
+        graded = len({grade["key"] for grade in collected.grades})
+        low = sum(1 for grade in collected.grades if grade["grade"] <= 2)
+        lines.append(
+            f"Listening-study grades on {graded} rendered seams: {len(collected.grades)} "
+            f"(1 to 5; {low} were 1 or 2). The gates are fitted on Good and Bad only."
+        )
     lines.append("Nothing has been changed.")
     for fit in fits:
         lines += ["", f"{fit.label}: today {_value(fit, fit.current)} ({fit.seams} rated seams)"]
@@ -99,6 +106,7 @@ def calibrate(
             "rated_seams": len(collected.records),
             "rated_between": list(collected.span() or ()),
             "without_facts": collected.without_facts,
+            "listening_grades": collected.grades,
             "gates": [evidence(fit) for fit in fits],
         }
         typer.echo(json.dumps(data, indent=1))
