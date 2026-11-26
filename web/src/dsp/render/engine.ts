@@ -268,9 +268,23 @@ export function inContext(rendered: Rendered, before: number, after: number, sou
   return { audio: limit(out), clipAt: clipAt / SAMPLE_RATE };
 }
 
-/** The source samples each part of a script reads, so a caller can decode and send only those
- * windows (the worker never holds more). In source samples, end exclusive. */
+/** The source samples a script reads, one window per source (parts reading the same source share
+ * one window covering all of them), so a caller can decode and send only those windows and the
+ * worker never holds more. In source samples, end exclusive. */
 export function neededWindows(script: TransitionScript): { ref: SourceRef; from: number; to: number }[] {
+  const merged = new Map<string, { ref: SourceRef; from: number; to: number }>();
+  for (const window of partWindows(script)) {
+    const key = JSON.stringify([window.ref.song, window.ref.role, window.ref.stem, window.ref.start, window.ref.duration]);
+    const kept = merged.get(key);
+    if (kept) {
+      kept.from = Math.min(kept.from, window.from);
+      kept.to = Math.max(kept.to, window.to);
+    } else merged.set(key, { ...window });
+  }
+  return [...merged.values()];
+}
+
+function partWindows(script: TransitionScript): { ref: SourceRef; from: number; to: number }[] {
   const count = intRound(script.duration * SAMPLE_RATE);
   return [script.a, script.b, ...script.extras].map((part) => {
     const warp = heardWarp(part);

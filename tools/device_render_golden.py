@@ -634,6 +634,11 @@ def _versions() -> dict:
     }
 
 
+def _write(path: Path, text: str) -> None:
+    """UTF-8 with LF line ends on every system, so the committed files do not churn."""
+    path.write_text(text, "utf-8", newline="\n")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--out", type=Path, default=OUTPUT)
@@ -644,12 +649,12 @@ def main(argv: list[str] | None = None) -> None:
     resolver = SyntheticResolver({song["id"]: song for song in made})
     keep = ("id", "name", "sampleRate", "durationS", "bpm", "beats", "events")
     song_file = {"songs": [{key: song[key] for key in keep} for song in made]}
-    (args.out / "songs.json").write_text(json.dumps(song_file, separators=(",", ":")), "utf-8")
+    _write(args.out / "songs.json", json.dumps(song_file, separators=(",", ":")))
     listed = []
     for case in cases(by_name):
         measured = measure(case, resolver)
         name = f"{case['name']}.json"
-        (args.out / name).write_text(json.dumps(measured, separators=(",", ":")), "utf-8")
+        _write(args.out / name, json.dumps(measured, separators=(",", ":")))
         listed.append(
             {
                 "name": case["name"],
@@ -664,7 +669,7 @@ def main(argv: list[str] | None = None) -> None:
             }
         )
         print(case["name"], "written")
-    (args.out / "repair.json").write_text(json.dumps(repair_cases(), indent=1), "utf-8")
+    _write(args.out / "repair.json", json.dumps(repair_cases(), indent=1))
     manifest = {
         "about": "Fixtures for the browser renderer and audit; docs/engineering/device-render.md",
         "generator": "tools/device_render_golden.py",
@@ -675,7 +680,7 @@ def main(argv: list[str] | None = None) -> None:
         "repair": "repair.json",
         "cases": listed,
     }
-    (args.out / "manifest.json").write_text(json.dumps(manifest, indent=1), "utf-8")
+    _write(args.out / "manifest.json", json.dumps(manifest, indent=1))
 
 
 if __name__ == "__main__":
