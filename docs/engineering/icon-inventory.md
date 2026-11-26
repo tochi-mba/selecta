@@ -69,7 +69,7 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `phone` | A phone, in the list of signed-in devices | standard | `devices/DevicesPanel.tsx` | The device's name beside it |
 | `tablet` | A tablet, in the list of signed-in devices; a song kept on another device (Library, `library.places`) | standard, compact | `devices/DevicesPanel.tsx`, `views/PlaceChip.tsx` | The device's name beside it; on the Library chip, the chip's words |
 | `download` | Download, on the account export button | toolbar | `cloud/AccountData.tsx`, `cloud/hosted/HostedMix.tsx` | The button's words |
-| `cloud` | A song kept in the cloud library, and uploading to it (Library, `library.places`) | compact, toolbar, standard | `views/PlaceChip.tsx`, `cloud/CloudLibrary.tsx` | The chip's words (kept as its name when a phone shows the icons alone), or the menu item's and button's words |
+| `cloud` | A song kept in the cloud library, and uploading to it (Library, `library.places`) | compact, toolbar, standard | `views/PlaceChip.tsx`, `cloud/CloudLibrary.tsx`, `cloud/PlacesNote.tsx` | The chip's words (kept as its name when a phone shows the icons alone), or the menu item's and button's words |
 
 ## Gaps, badges, states and targets (MP-0277-03 to -08)
 

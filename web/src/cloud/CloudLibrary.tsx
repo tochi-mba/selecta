@@ -10,6 +10,9 @@ import { ConnectMusic, summaryWords, type ConnectMusicHandle } from './ConnectMu
 import { formatCount } from './ImportStatus';
 import { useImportShellView } from './importSession';
 import { MusicFolders } from './MusicFolders';
+import { deviceSongs } from './libraryPlaces';
+import { PlacesNote } from './PlacesNote';
+import { LibraryPlacesContext } from '../views/LibraryPlaces';
 import { foldAway } from '../views/feelPieces';
 import './libraryWorkspace.css';
 
@@ -17,7 +20,9 @@ const KEEP_SAID = 'selecta.library.keep-said';
 
 /** ADR-0475 R6, R7: the one quiet line when another device has the music. A device with some
  * music of its own says how much is here and where the rest is. */
-export function remoteLineWords(playable: number, connected: number, holder: { name: string; online: boolean }, keptHere = 0): string {
+export function remoteLineWords(playable: number, connected: number, holder: { name: string; online: boolean }, keptHere = 0, cloud = 0): string {
+  // library.places: songs in the cloud library play here too, so the line counts them apart
+  if (cloud > 0) return `${countOf(cloud, 'song')} ${cloud === 1 ? 'is' : 'are'} in your cloud library${playable > 0 ? ` and ${formatCount(playable)} on this device` : ''}. The rest are on ${holder.name}${holder.online ? '' : ', which isn’t open right now'}.`;
   // R7: songs chosen here before, which this browser needs chosen again to play
   if (playable === 0 && keptHere > 0) return `${countOf(keptHere, 'song')} on this device ${keptHere === 1 ? 'needs' : 'need'} choosing again to play here. The rest are on ${holder.name}.`;
   if (playable > 0) return `${formatCount(playable)} of ${countOf(connected, 'song')} are on this device. The rest are on ${holder.name}${holder.online ? '' : ', which isn’t open right now'}.`;
@@ -70,7 +75,12 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
   };
   // the finished import's result stands in for the banner until it is put away
   const [resultSeen, setResultSeen] = useState<ImportSummary | null>(null);
-  const playable = shared.status.counts.ready ?? 0;
+  // library.places: the "choose your folder" banners count songs kept on devices only, never
+  // the ones in the cloud library, which need no folder
+  const places = useContext(LibraryPlacesContext);
+  const devices = places ? deviceSongs(shared.status) : null;
+  const playable = devices ? devices.here : shared.status.counts.ready ?? 0;
+  const wanted = devices ? devices.wanted : connected;
   const holder = useContext(HolderContext);
   // ADR-0475 R7: a browser that cannot keep folder access (most phones) says so once, never on
   // every page; the songs are asked for again when they are needed
@@ -87,7 +97,7 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
   const doneWords = (summary: ImportSummary) => {
     if (playable === 0 && summary.imported + summary.duplicates > 0) return summaryWords(summary);
     const failed = summary.failed ? ` ${countOf(summary.failed, 'file')} could not be read.` : '';
-    return `${formatCount(playable)} of ${countOf(connected, 'song')} can now play here.${failed}`;
+    return `${formatCount(playable)} of ${countOf(wanted, 'song')} can now play here.${failed}`;
   };
   const connectProps = { ...connect, doneWords, onResultDismissed: setResultSeen };
 
@@ -97,39 +107,53 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
         <header className="page-header">
           <div className="page-header-text">
             <h1 className="display small">Library</h1>
-            <p className="page-lead">Your songs, and which of them can play on this device.</p>
+            <p className="page-lead">{places ? 'Your songs, and where each one is kept.' : 'Your songs, and which of them can play on this device.'}</p>
           </div>
         </header>
-        <ConnectMusic {...connectProps} variant="hero" />
+        {/* library.places: an account that can upload chooses where its first songs are kept */}
+        {places?.canUpload ? (
+          <div className="lw-add-choices">
+            <ConnectMusic {...connectProps} variant="hero" />
+            <section className="empty-state boxed lw-hero lw-upload-choice" aria-labelledby="library-upload-choice">
+              <span className="empty-state-icon" aria-hidden="true"><Icon name="cloud" /></span>
+              <h2 id="library-upload-choice">Upload to your cloud library</h2>
+              <p>Songs you upload are kept in your cloud library and play on all your devices.</p>
+              <button type="button" className="primary" onClick={places.upload}><Icon name="cloud" size="toolbar" />Upload songs</button>
+            </section>
+          </div>
+        ) : <ConnectMusic {...connectProps} variant="hero" />}
       </main>
     );
   }
 
   const folders = handle.current?.folders ?? true;
   // none, or so few that the library reads as "not here": this browser has not been given the music
-  const fresh = playable === 0 || playable * 5 < connected;
+  const fresh = playable === 0 || playable * 5 < wanted;
   const showingResult = (session.phase === 'finished' || session.phase === 'paused') && !!session.summary && session.summary !== resultSeen;
-  const needsFolder = playable < connected && !importing && !showingResult && (fresh || !dismissed);
+  const needsFolder = playable < wanted && !importing && !showingResult && (fresh || !dismissed);
   const choose = folders ? 'Choose your music folder' : 'Choose your songs';
+  // library.places: "Add music" says where each way keeps the songs, and offers uploading
   const action = importing
     ? <Status kind="working">Adding music</Status>
     : (
       // on a remote, connecting music here is a choice, not what the page is for: a quiet action
-      <Menu className={(needsFolder && fresh) || holder ? 'lw-connect-menu' : 'lw-connect-menu lw-primary'} label={<><Icon name="plus" size="toolbar" />Connect music</>}>
-        <button type="button" role="menuitem" onClick={() => handle.current?.chooseFolder()}><Icon name="folder" size="toolbar" />Choose a folder</button>
-        <button type="button" role="menuitem" onClick={() => handle.current?.chooseSongs()}><Icon name="music" size="toolbar" />Choose songs</button>
+      <Menu className={(needsFolder && fresh) || holder ? 'lw-connect-menu' : 'lw-connect-menu lw-primary'} label={<><Icon name="plus" size="toolbar" />{places ? 'Add music' : 'Connect music'}</>}>
+        <button type="button" role="menuitem" onClick={() => handle.current?.chooseFolder()}><Icon name="folder" size="toolbar" />{places ? 'Choose a folder (stays on this device)' : 'Choose a folder'}</button>
+        <button type="button" role="menuitem" onClick={() => handle.current?.chooseSongs()}><Icon name="music" size="toolbar" />{places ? 'Choose songs (stays on this device)' : 'Choose songs'}</button>
+        {places?.canUpload && <button type="button" role="menuitem" onClick={places.upload}><Icon name="cloud" size="toolbar" />Upload to your cloud library</button>}
       </Menu>
     );
   return (
     <Library {...shared} browser={{ action }} lead={(
       <div className="lw-lead">
-        {whereWords(cloudStorage) && <p className="lw-remote-line" data-testid="library-where-line"><Icon name="music" size="toolbar" /><span>{whereWords(cloudStorage)}</span></p>}
+        {places ? <PlacesNote accountId={places.accountId} />
+          : whereWords(cloudStorage) && <p className="lw-remote-line" data-testid="library-where-line"><Icon name="music" size="toolbar" /><span>{whereWords(cloudStorage)}</span></p>}
         {needsFolder && fresh && holder && (
           // ADR-0475 R6: another device has the music, so this one is its remote; connecting
           // music here is a choice, not the way forward
           <p className="lw-remote-line" data-testid="library-remote-line" data-remote-only={playable === 0 && keptHere === 0 ? '' : undefined}>
             <Icon name="system" size="toolbar" />
-            <span>{remoteLineWords(playable, connected, holder, keptHere)}</span>
+            <span>{remoteLineWords(playable, wanted, holder, keptHere, shared.status.places?.cloud ?? 0)}</span>
             {playable === 0 && keptHere > 0 && <button type="button" className="quiet" onClick={() => handle.current?.chooseSongs()}>Choose them again</button>}
           </p>
         )}
@@ -137,7 +161,7 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
           <section className="lw-welcome" aria-labelledby="library-give-music">
             <span className="lw-welcome-mark" aria-hidden="true"><Icon name="folder" /></span>
             <div>
-              <h2 id="library-give-music">{playable === 0 ? 'This browser hasn’t been given your music yet' : `Only ${formatCount(playable)} of ${countOf(connected, 'song')} can play in this browser`}</h2>
+              <h2 id="library-give-music">{playable === 0 ? 'This browser hasn’t been given your music yet' : `Only ${formatCount(playable)} of ${countOf(wanted, 'song')} can play in this browser`}</h2>
               <p>Each browser needs the folder once. Your library, mixes and settings are already here.</p>
             </div>
             <button type="button" className="primary" onClick={() => handle.current?.chooseFolder()}><Icon name="folder" size="toolbar" />{choose}</button>
@@ -146,7 +170,7 @@ export function CloudLibrary({ shared, connected, connect, cloudStorage = false 
         {needsFolder && !fresh && (
           <div className="banner" data-tone="info" role="status" ref={settleBanner}>
             <Icon name="folder" size="toolbar" />
-            <p><b>{`${formatCount(playable)} of ${countOf(connected, 'song')} can play here.`}</b> {settleWords(playable, keptHere) ?? ''} Choose your music folder to open the rest.</p>
+            <p><b>{`${formatCount(playable)} of ${countOf(wanted, 'song')} can play here.`}</b> {settleWords(playable, keptHere) ?? ''} Choose your music folder to open the rest.</p>
             <button type="button" onClick={() => handle.current?.chooseFolder()}>{choose}</button>
             <button type="button" className="quiet" onClick={dismiss}>Dismiss</button>
           </div>

@@ -397,3 +397,25 @@ details.mf-folders > .mf-body { padding: 0 var(--space-4) var(--space-4); }
 .lw-added { color: var(--status-ready); font-size: var(--text-sm); white-space: nowrap; }
 .lw-added.lw-in-mix { color: var(--text-soft); }
 .lw-added:empty { display: none; }
+
+/* ---- library.places: where a song is kept (views/PlaceChip.tsx), and a line only when it
+   cannot play here; a phone shows the icons alone, the words stay the button's name ---- */
+.lw-state.lw-places { justify-items: start; }
+.place-chip { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); min-width: 0; max-width: 100%; min-height: 32px; padding: 0 var(--space-2); border: var(--separator) solid var(--border); border-radius: var(--radius-pill); background: none; color: var(--text); font-size: var(--text-sm); text-align: start; }
+.place-chip-icons { display: inline-flex; flex: none; gap: var(--space-hair); }
+.place-chip-words { min-width: 0; overflow-wrap: anywhere; }
+.place-chip[data-place='none'] { color: var(--status-failed); }
+.place-line { min-width: 0; color: var(--text-soft); font-size: var(--text-xs); line-height: 1.4; overflow-wrap: anywhere; }
+.lw-places-note > span { min-width: 0; flex: 1 1 12rem; }
+/* an empty account that can upload: keep songs here, or upload them; side by side when there is room */
+.lw-add-choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+@media (min-width: 769px) {
+  .lw-add-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+}
+@media (max-width: 640px) {
+  .place-chip { min-height: 44px; min-width: 44px; justify-content: center; }
+  .place-chip-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (forced-colors: active) {
+  .place-chip { border-color: ButtonText; }
+}
