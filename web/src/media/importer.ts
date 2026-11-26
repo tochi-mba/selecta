@@ -435,7 +435,8 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
         stopped = error;
         break;
       }
-      present.push(song.song_id);
+      // cloud.move_to_cloud: a song played from the cloud library only is not this device's to offer
+      if (!store.isCloudOnly?.(song.song_id)) present.push(song.song_id);
       if (song.duplicate_of !== undefined) {
         summary.duplicates += 1;
         emit({ kind: 'file', name: item.name, stage: 'done', songId: song.song_id, duplicateOf: song.duplicate_of });

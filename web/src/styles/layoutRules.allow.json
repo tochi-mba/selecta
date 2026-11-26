@@ -1,0 +1,5 @@
+[
+  "fixed width of 200px or more: business/console/console.css .sched-board { min-width: 1100px }",
+  "fixed width of 200px or more: styles/polish.css .studio-lane { min-width: 520px }",
+  "fixed width of 200px or more: styles/polish.css @media (max-width: 760px) .studio-lane { min-width: 520px }"
+]

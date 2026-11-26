@@ -738,6 +738,12 @@ def test_a_seam_says_what_was_tried_before_what_it_landed_on(tmp_path, monkeypat
     b = song_from_track(tmp_path, "b", track)
     a.id, b.id = 1, 2
     monkeypatch.setattr("selecta.seams.load_song", lambda _c, _s, song: {1: a, 2: b}[song])
+
+    def no_aligner(*_args):
+        raise AssertionError("a vocal ride finds no words, so it never loads the word aligner")
+
+    # loading it fetched a speech model over the network the first time, for nothing
+    monkeypatch.setattr("selecta.seams.Aligner", no_aligner)
     request = SeamRequest(a=1, b=2, move="vocal_ride", soft=True)
     state = store.render_now(None, request)
     assert state["status"] == "ready"

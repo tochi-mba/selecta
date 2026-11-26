@@ -116,7 +116,8 @@
    "site": "cloud",
    "path": "/listen (local-first)",
    "owner": [
-    "web/src/cloud/CloudShell.tsx"
+    "web/src/cloud/CloudShell.tsx",
+    "web/src/cloud/CloudShellPages.tsx"
    ],
    "states": [
     "initial"
@@ -130,6 +131,7 @@
    "path": "/library (local-first)",
    "owner": [
     "web/src/cloud/CloudShell.tsx",
+    "web/src/cloud/CloudShellPages.tsx",
     "web/src/cloud/ConnectMusic.tsx"
    ],
    "states": [
@@ -144,6 +146,7 @@
    "path": "/mixes (local-first)",
    "owner": [
     "web/src/cloud/CloudShell.tsx",
+    "web/src/cloud/CloudShellPages.tsx",
     "web/src/views/Mixes.tsx"
    ],
    "states": [
@@ -157,7 +160,8 @@
    "site": "cloud",
    "path": "/mixes/mine (local-first)",
    "owner": [
-    "web/src/cloud/CloudShell.tsx"
+    "web/src/cloud/CloudShell.tsx",
+    "web/src/cloud/CloudShellPages.tsx"
    ],
    "states": [
     "initial"
@@ -497,6 +501,12 @@
    "title": "Activity",
    "kind": "drawer",
    "owner": "web/src/cloud/DeviceActivity.tsx"
+  },
+  {
+   "id": "site.overlay.cloud.upload_to_cloud",
+   "title": "Upload to your cloud library",
+   "kind": "sheet",
+   "owner": "web/src/cloud/UploadToCloudSheet.tsx"
   },
   {
    "id": "site.overlay.business.add-venue",

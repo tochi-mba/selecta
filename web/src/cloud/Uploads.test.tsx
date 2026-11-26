@@ -102,4 +102,27 @@ describe('the Add music panel', () => {
     expect(screen.getByLabelText(/Choose music files/)).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Start upload' })).toBeDisabled();
   });
+
+  it('cloud.page_layout: with something beside it, the files sit left and storage, what happens and the unfinished uploads right', async () => {
+    const { api } = fakeApi({ sessions: [session()] });
+    const { container } = render(<UploadsPanel api={api} workspaceId="ws" setError={() => {}} setNotice={() => {}} blocked={null} side={<section aria-label="Storage">2 GB of 10 GB</section>} />);
+    const panel = container.querySelector('.cloud-upload-panel')!;
+    expect(panel).toHaveAttribute('data-columns');
+    const main = panel.querySelector('.cloud-upload-main')!;
+    const side = panel.querySelector('.cloud-upload-side')!;
+    expect(main).toContainElement(screen.getByLabelText(/Choose music files/));
+    expect(main).toContainElement(screen.getByRole('button', { name: 'Start upload' }));
+    expect(side).toContainElement(screen.getByRole('region', { name: 'Storage' }));
+    expect(side).toContainElement(screen.getByRole('region', { name: 'What happens to uploads' }));
+    expect(side).toContainElement(await screen.findByRole('region', { name: 'Unfinished uploads' }));
+  });
+
+  it('without it the panel is one column, as before', () => {
+    const { api } = fakeApi();
+    const { container } = render(<UploadsPanel api={api} workspaceId="ws" setError={() => {}} setNotice={() => {}} blocked={null} />);
+    expect(container.querySelector('.cloud-upload-panel')).not.toHaveAttribute('data-columns');
+    expect(container.querySelector('.cloud-upload-main')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'What happens to uploads' })).toBeNull();
+    expect(container.querySelector('.cloud-upload-intro')).toHaveTextContent('SelectaDJ checks the actual audio format');
+  });
 });

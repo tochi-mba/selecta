@@ -490,7 +490,7 @@ button[data-working]::after {
 @media (max-width: 760px) { .overlay-workspace { padding: 0; } .overlay-workspace .overlay-panel { border-radius: 0; } }
 
 /* the timeline, with whatever's selected beside it */
-.edit-layout.has-inspector { display: grid; grid-template-columns: minmax(420px, 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
+.edit-layout.has-inspector { display: grid; grid-template-columns: minmax(min(420px, 100%), 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
 .inspector-column { position: relative; min-width: 0; align-self: stretch; }
 .inspector-resize {
   position: absolute;
@@ -557,7 +557,7 @@ button.song-open:hover { text-decoration: underline; }
 .job-list, .job-failures, .folder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .job-list li { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; }
 .job-list .status { white-space: normal; }
-@media (max-width: 560px) { .job-list li { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .job-list li { grid-template-columns: minmax(0, 1fr); } }
 .folder-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
 .folder-list b { overflow-wrap: anywhere; }
 .folder-list .status { white-space: normal; }
@@ -678,6 +678,27 @@ main.page h1[tabindex='-1']:focus { outline: none; }
 .shell[data-mode='cloud'] .content > main.page:has(~ div.page) { flex: none; padding-bottom: var(--space-5); }
 .shell[data-mode='cloud'] .listen-empty { min-height: 0; }
 
+/* cloud.page_layout: a Cloud page fills the frame instead of being capped narrower, so a wide
+   window has no empty half; its text keeps a readable measure. Account and billing keep the width
+   their side list needs and onboarding the reading width, each centred in the frame. The frame's
+   left edge and the top bar stay put. (`:has(> main.page)` outranks every page's own width.) */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page) { --page-max: var(--page-frame); }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'])) { --page-max: var(--content-browse); }
+/* the settings pages (Account, Plan & billing, Devices) are exactly as wide as their section list
+   and cards (cloud/account.css), so they sit centred rather than heavy on the left */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page .acct-layout) { --page-max: calc(13rem + var(--space-6) + 46rem + 2 * var(--page-gutter)); }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page[data-page-width='reading']) { --page-max: var(--content-reading); }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) > :is(.page, .cloud-footer),
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page .acct-layout) > :is(.page, .cloud-footer) { margin-inline: auto; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > .shell-banners { max-width: var(--page-frame); }
+/* on a centred page the notices line up with the page's own edges, not the wider frame's */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) > .shell-banners,
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page .acct-layout) > .shell-banners { max-width: var(--page-max); margin-inline: auto; }
+:where(:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > main.page) p { max-width: 70ch; }
+/* a banner's words keep that measure, and its buttons go to the banner's far end instead of
+   floating in its middle */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .banner > p:not(.ui-icon):not(:last-child) { margin-inline-end: auto; }
+
 /* Cloud notices (connection, account, import progress): one stack on the page column, in the
    page's flow under the bar. Each takes a row of its own; none floats over the page. */
 .shell-banners { display: grid; gap: var(--space-2); padding: var(--space-3) var(--page-gutter) 0; min-width: 0; }
@@ -729,6 +750,8 @@ dl.keys dd { overflow-wrap: anywhere; }
 @media (max-width: 520px) {
   .tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); column-gap: var(--space-1); }
   .tabs a { display: flex; align-items: center; justify-content: center; text-align: center; padding-inline: var(--space-2); overflow-wrap: anywhere; }
+  /* four tabs (Cloud's Workspace) make two even rows of two, not three and one left alone */
+  .tabs:has(> a:nth-of-type(4):last-of-type) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* The Cloud frame's own look (side bar groups, account menu, top bar, phone bar, More sheet, mini

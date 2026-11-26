@@ -58,6 +58,54 @@ def test_hosted_processing_never_reaches_another_accounts_songs(world):  # noqa:
     assert not set(world["objects"].touched) & world["alice_keys"]
 
 
+def test_the_export_by_catalogue_song_never_reaches_another_accounts_songs(world):  # noqa: F811
+    """cloud.one_mixer: Bob names Alice's catalogue song for an export. Her upload is no cloud
+    copy of his, so it is refused exactly as a made-up song id is, and nothing of hers is queued,
+    read or changed; with the flag off the route reads songs by upload alone, as before."""
+    import hashlib
+
+    from selecta import flags
+    from selecta.local_media.schema import local_songs
+    from selecta.work.schema import jobs
+
+    client, engine = world["client"], world["engine"]
+    with transaction(engine, world["alice_ws"]) as conn:
+        now = db_now(conn)
+        alice_song = int(conn.execute(local_songs.insert().values(
+            workspace_id=world["alice_ws"], title="Private Song", artist="Alice's Band",
+            content_sha256=hashlib.sha256(b"alice's song").hexdigest(), created_at=now,
+            updated_at=now).returning(local_songs.c.id)).scalar_one())
+
+    def export(token, *ids):
+        return client.post("/api/hosted/mixes/export", headers=_auth(token),
+                           json={"songs": [{"song_id": song_id} for song_id in ids]})
+
+    def jobs_of(workspace_id):
+        with engine.connect() as conn:
+            return conn.execute(sa.select(jobs.c.id).where(
+                jobs.c.workspace_id == workspace_id)).all()
+
+    mine = export(ALICE, alice_song, alice_song)
+    # the positive control: her own song is read as her upload
+    assert mine.status_code == 202, mine.text
+    assert "missing" not in mine.json()
+    before = _rows_of(engine, world["alice_ws"])
+    world["objects"].touched.clear()
+
+    made_up = alice_song + 10_000
+    theirs, missing = export(BOB, alice_song, alice_song), export(BOB, made_up, made_up)
+    assert (theirs.status_code, missing.status_code) == (202, 202)
+    assert theirs.json() == {**missing.json(), "missing": [alice_song]}
+    assert theirs.json()["state"] == "refused" and "Alice" not in theirs.text
+    assert jobs_of(world["bob_ws"]) == []
+    assert _rows_of(engine, world["alice_ws"]) == before
+    assert not set(world["objects"].touched) & world["alice_keys"]
+
+    flags.use(None)  # the build's defaults: cloud.one_mixer is off
+    off = export(ALICE, alice_song, alice_song)
+    assert (off.status_code, off.json()["detail"]["code"]) == (400, "invalid_songs")
+
+
 def test_stored_exports_list_only_the_callers_own(world):  # noqa: F811
     """Alice's finished export is listed, with a link, for Alice alone: Bob's list is empty
     and nothing of hers is signed or changed (T-20261125-d37b)."""

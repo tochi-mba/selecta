@@ -87,3 +87,31 @@ test('a grandfathered account mixes a device song with a hosted one, and the que
   // seconds after the first press of a visit (T-20261125-b2cd)
   await expect(queue.locator('li', { hasText: 'Song 1' })).toContainText('From your cloud library', { timeout: 40_000 });
 });
+
+test('cloud.one_mixer: an account with songs in both places makes the current mix with the shared mixer', async ({ page, request }) => {
+  const user = listener('lf-one-mixer');
+  const made = await seeded(request, user, { songs: 1, seconds: 12, local_songs: 2, local_titles: ['Device song', 'Song 1'] });
+  const [device] = made.local_songs;
+  // the cloud studio is on, so with the flag off this account would get the separate card
+  await asLocalFirst(page, user, { hosted: true, features: { 'cloud.hosted_render': true, 'cloud.one_mixer': true } });
+  await connectOnThisDevice(page, made.workspace_id, [{ songId: device, title: 'Device song', audio: true }]);
+
+  await page.goto('/mixes');
+  await expect(page.getByRole('heading', { name: 'Make a Mix', level: 1 })).toBeVisible();
+  // the shared mixer, never the separate card
+  await expect(page.getByRole('region', { name: 'Make a new mix' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your mix' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page).toHaveURL(/\/listen$/);
+  const queue = page.getByTestId('queue-sources');
+  await expect(queue.locator('li', { hasText: 'Device song' })).toContainText('From this device', { timeout: 20_000 });
+  await expect(queue.locator('li', { hasText: 'Song 1' })).toContainText('From your cloud library', { timeout: 40_000 });
+
+  // it is the current mix: My Mixes lists it, and the mini player follows across pages
+  await page.goto('/mixes/mine');
+  const saved = page.getByRole('region', { name: /^Saved mixes/ }).getByRole('listitem').filter({ hasText: 'Current mix' });
+  await expect(saved).toHaveCount(1);
+  await expect(saved).toContainText('2 songs');
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library', exact: true }).click();
+  await expect(page.locator('aside.mini')).toContainText(/Device song|Song 1/);
+});

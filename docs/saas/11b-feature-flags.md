@@ -40,6 +40,7 @@ Each flag can have an ordered list of rules, evaluated against a context; the fi
 - **Segments**: by plan (`plan in [free]`), staff, account age, country, client version, device kind.
 - **Percentage rollout**: on for N% of a segment, chosen by a stable hash of `flag_id + salt + workspace_id`, so the same account gets the same answer on every device, and raising the percentage only adds accounts. Changing the salt reshuffles and warns.
 - **Schedule**: from/until (UTC), e.g. switch a feature on at launch time.
+- **Follows**: on wherever another flag is on for the account and off wherever it is off, so staff can send a feature wherever a grant goes without a release (a flag's `requires` does the same for good, and is decided per account too). It reads that flag's whole decision; a flag can't follow itself, and a circle of them answers nothing.
 
 **Flag scope** (new registry field): `global`, `workspace`, `user` or `guest`, so percentage rollouts hash the right id and workspace features don't change when a different member signs in.
 

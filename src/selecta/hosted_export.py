@@ -18,10 +18,15 @@ month (`Plan.exports_per_month`, the same counter the Plan & billing meter shows
 made while storage is over the plan's limit (`over_quota_read_only`), because a kept export
 counts against storage. Asking again for an export already made or already queued takes
 nothing, and a job that isn't made gives its export back.
+
+With `cloud.one_mixer` a mix may also be named by catalogue songs (`request_song_export`): each
+song plays from its cloud copy (`local_media.store.cloud_copies`, this workspace's own live
+uploads only), then the export is the same one, with the same join, allowance and storage rules.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -42,6 +47,13 @@ READ_ONLY = ("Your storage is over your plan's limit, so a new export can't be k
              "songs or exports, or move to a plan with more storage, to export again.")
 USED_UP = ("You've made this month's {limit} exports on your plan. More open on the 1st, or "
            "move to a plan with more.")
+NOT_IN_CLOUD = ("A song in this mix isn't in your cloud library, so the file can't be made "
+                "there. You can still save it on this device.")
+SONGS_FLAG = "cloud.one_mixer"
+MAX_SONGS = 60
+"""A mix's most songs, as `routes.hosted_render.MAX_MIX_SONGS`."""
+_MOVE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+_MOST_ID = 2**63 - 1
 
 
 def allow_export(engine: Engine, workspace_id: str, created_by: str | None, *,
@@ -107,14 +119,21 @@ def export_spec(workspace_id: str, timeline: list[dict[str, Any]],
 
 def request_export(engine: Engine, work: Work, workspace_id: str, order: Sequence[dict[str, Any]],
                    *, client, buckets, created_by: str | None = None,
-                   read_object: Callable[[str, Path], Path] | None = None) -> dict[str, Any]:
-    """One `export.render` job for this mix as it plays now (module notes)."""
+                   read_object: Callable[[str, Path], Path] | None = None,
+                   preparing: bool = False) -> dict[str, Any]:
+    """One `export.render` job for this mix as it plays now (module notes). With `preparing`, a
+    mix whose parts are still being made answers `preparing` with its counts, not a refusal."""
     mix = hosted_render.mix_state(engine, work, workspace_id, order, client=client,
                                   buckets=buckets, created_by=created_by,
                                   read_object=read_object, files=True)
     if sum(1 for part in mix["parts"] if part["kind"] == "song") < 2:
         return {"state": "refused", "why": "An export needs at least two songs."}
     timeline = export_timeline(mix["parts"]) if mix["complete"] else None
+    if timeline is None and preparing:
+        extra = {"allowance_used": mix["allowance_used"]} if mix.get("allowance_used") else {}
+        return {"state": "preparing", "counts": mix["counts"],
+                "estimate_s": mix.get("estimate_s"), "worker_seen": mix.get("worker_seen"),
+                **extra}
     if timeline is None:
         return {"state": "refused", "why": NOT_READY}
     from selecta.hosted_limits import export_too_long
@@ -164,6 +183,61 @@ def request_export(engine: Engine, work: Work, workspace_id: str, order: Sequenc
         return {"state": "refused", "why": refused}
     return {"state": "queued", "job_id": job_id or old["id"], "parts_done": 0,
             "parts_total": total, "progress": [0, total]}
+
+
+def songs_named(raw: Any) -> list[dict[str, Any]] | None:
+    """A request's `songs` named by catalogue song (`[{"song_id", "move"?}]`, `cloud.one_mixer`),
+    or None for the older form by upload (`asset_id`), which the route reads as before. Raises
+    ValueError (`invalid_songs` or `invalid_move`) for catalogue songs that aren't well formed."""
+    from selecta import flags
+
+    if not flags.on(SONGS_FLAG) or not isinstance(raw, list) or not raw:
+        return None
+    if not all(isinstance(item, dict) and "song_id" in item and "asset_id" not in item
+               for item in raw):
+        return None
+    if len(raw) > MAX_SONGS:
+        raise ValueError("invalid_songs")
+    songs = []
+    for item in raw:
+        song_id = item.get("song_id")
+        if isinstance(song_id, bool) or not isinstance(song_id, int) or not 0 < song_id <= _MOST_ID:
+            raise ValueError("invalid_songs")
+        move = item.get("move")
+        if move is not None and (not isinstance(move, str) or not _MOVE.fullmatch(move)):
+            raise ValueError("invalid_move")
+        songs.append({"song_id": song_id, "move": move})
+    return songs
+
+
+def order_for_songs(engine: Engine, workspace_id: str,
+                    songs: Sequence[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[int]]:
+    """The mix order by upload: each song's cloud copy (`cloud_copies`), and the songs with
+    none. Another workspace's song has none here, exactly as a made-up id has none."""
+    from selecta.local_media.store import cloud_copies
+
+    with transaction(engine, workspace_id) as conn:
+        copies = cloud_copies(conn, workspace_id, [song["song_id"] for song in songs])
+    order = [{"asset_id": str(copies[song["song_id"]]["asset_id"]), "move": song["move"]}
+             for song in songs if song["song_id"] in copies]
+    missing = list(dict.fromkeys(song["song_id"] for song in songs
+                                 if song["song_id"] not in copies))
+    return order, missing
+
+
+def request_song_export(engine: Engine, work: Work, workspace_id: str,
+                        songs: Sequence[dict[str, Any]], *, client, buckets,
+                        created_by: str | None = None,
+                        read_object: Callable[[str, Path], Path] | None = None) -> dict[str, Any]:
+    """`request_export` for a mix named by catalogue songs (module notes). A song with no cloud
+    copy refuses it before anything is asked for, naming those songs (`missing`); while parts
+    are still being made it answers `preparing`, so the page shows how far it has got and asks
+    again, each ask moving the work along as `/api/hosted/mixes/render` does."""
+    order, missing = order_for_songs(engine, workspace_id, songs)
+    if missing:
+        return {"state": "refused", "why": NOT_IN_CLOUD, "missing": missing}
+    return request_export(engine, work, workspace_id, order, client=client, buckets=buckets,
+                          created_by=created_by, read_object=read_object, preparing=True)
 
 
 def export_status(engine: Engine, workspace_id: str, job_id: str, *, client,
@@ -234,5 +308,5 @@ def stored_exports(engine: Engine, workspace_id: str, *, client, buckets) -> dic
     return {"exports": out}
 
 
-__all__ = ["export_spec", "export_status", "export_timeline", "request_export",
-           "stored_exports"]
+__all__ = ["export_spec", "export_status", "export_timeline", "order_for_songs",
+           "request_export", "request_song_export", "songs_named", "stored_exports"]

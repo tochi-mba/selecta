@@ -64,7 +64,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
     if (saved === null) return;
     const target = saved;
     // only the names are needed here; Drafts below reads the whole list for itself
-    void Promise.all([getDraftNames(), get<MixData>(`/mix?draft=${target.id}`)])
+    void Promise.all([getDraftNames(get), get<MixData>(`/mix?draft=${target.id}`)])
       .then(([list, detail]) => {
         if (!active) return;
         const draft = list.drafts.find((item) => item.id === target.id);

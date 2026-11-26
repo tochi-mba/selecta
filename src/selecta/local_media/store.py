@@ -483,9 +483,67 @@ def set_aside_of(conn: Connection, workspace_id: str, song_ids: Iterable[int]) -
         return set()
 
 
+# Ids per query: one catalogue page, and safely under SQLite's bound-variable limit.
+CLOUD_COPIES_BATCH = 1000
+
+
+def cloud_copies(
+    conn: Connection, workspace_id: str, song_ids: Iterable[int]
+) -> dict[int, dict[str, Any]]:
+    """Each song's copy in the cloud library: a live upload of this workspace whose file hash is
+    the song's own or one of its other known hashes (`local_song_hashes`). One indexed query per
+    thousand ids, never one per song. A song kept twice ("Keep another copy") is one entry: the
+    oldest upload's id and format, every copy's bytes summed and `copies` counted. Venue uploads
+    are a business's own and never count, nor does another workspace's upload of the same bytes."""
+    from selecta.storage.schema import assets
+
+    wanted = sorted({int(song_id) for song_id in song_ids})
+    found: dict[int, dict[str, Any]] = {}
+    for start in range(0, len(wanted), CLOUD_COPIES_BATCH):
+        batch = wanted[start : start + CLOUD_COPIES_BATCH]
+        # every hash of every song in the batch: its own and the others recorded for it
+        hashes = sa.union(
+            sa.select(local_songs.c.id.label("song_id"), local_songs.c.content_sha256.label("sha"))
+            .where(local_songs.c.workspace_id == workspace_id, local_songs.c.id.in_(batch)),
+            sa.select(local_song_hashes.c.song_id, local_song_hashes.c.content_sha256.label("sha"))
+            .where(
+                local_song_hashes.c.workspace_id == workspace_id,
+                local_song_hashes.c.song_id.in_(batch),
+            ),
+        ).subquery()
+        # the IN keeps the assets read on its (workspace, sha256) index: a plain join lets SQLite
+        # walk every upload of the workspace against the id list instead
+        rows = conn.execute(
+            sa.select(hashes.c.song_id, assets.c.id, assets.c.size, assets.c.format)
+            .join(assets, assets.c.sha256 == hashes.c.sha)
+            .where(
+                assets.c.workspace_id == workspace_id,
+                assets.c.sha256.in_(sa.select(hashes.c.sha)),
+                assets.c.deleted_at.is_(None),
+                assets.c.venue_id.is_(None),
+            )
+            .order_by(hashes.c.song_id, assets.c.created_at, assets.c.id)
+        )
+        # an upload has one hash and the union lists each (song, hash) once, so each upload
+        # comes once per song
+        for row in rows:
+            song_id = int(row.song_id)
+            entry = found.get(song_id)
+            if entry is None:
+                found[song_id] = {
+                    "asset_id": row.id, "bytes": int(row.size), "format": row.format, "copies": 1,
+                }
+            else:
+                entry["bytes"] += int(row.size)
+                entry["copies"] += 1
+    return found
+
+
 __all__ = [
     "AVAILABILITY_TTL_SECONDS",
+    "CLOUD_COPIES_BATCH",
     "availability_counts",
+    "cloud_copies",
     "device_holdings",
     "holding_counts",
     "exists",

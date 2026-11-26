@@ -61,7 +61,7 @@ export function VolumeControl({ player, now }: { player: PlayerLike; now: NowSta
 /** The song that's playing, on every page but the one that's all about it. It only presents the
  * player. The player itself lives above every page, so nothing here can start or stop the music by
  * appearing or going away. */
-function MiniPlayer({ player, now, song, hasNext, onRequests, waiting, cloud, closing, boxRef }: { player: PlayerLike; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number; cloud: boolean; closing: boolean; boxRef: RefObject<HTMLElement | null> }) {
+function MiniPlayer({ player, now, song, hasNext, onRequests, waiting, cloud, closing, boxRef, note }: { player: PlayerLike; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number; cloud: boolean; closing: boolean; boxRef: RefObject<HTMLElement | null>; note?: ReactNode }) {
   const progress = now.duration > 0 && Number.isFinite(now.songTime) ? Math.min(Math.max(now.songTime / now.duration, 0), 1) : 0;
   const on = useFlags();
   // ADR-0477: the cover, the glowing head and the beat targets exist only while their part of the
@@ -105,6 +105,7 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting, cloud, cl
             too, so the reason the music stopped is visible on every page, not only on Listen */}
         {now.notice && now.phase !== 'playing' && <span className="mini-notice" role="status">{now.notice}</span>}
       </PageLink>
+      {note && <div className="mini-note">{note}</div>}
       <button className="mini-next" disabled={now.phase === 'loading' || !hasNext} onClick={() => void player.next()} aria-label="Next song" title="Next song"><Icon name="next" /></button>
       {on('requests') && (
         <button className="mini-requests" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'}>
@@ -471,6 +472,7 @@ export function Shell({
   account,
   status,
   next,
+  playerNote,
 }: {
   route: ShellRoute;
   player: PlayerLike;
@@ -497,6 +499,8 @@ export function Shell({
   account?: ShellAccount;
   /** Cloud only: one compact live status for the top bar (an open room), never a page banner. */
   status?: ReactNode;
+  /** Cloud only (cloud.page_layout): a line about the music shown in the mini player itself. */
+  playerNote?: ReactNode;
 }) {
   const place = useLocationText().split('?')[0];
   const content = useRef<HTMLDivElement>(null);
@@ -575,6 +579,14 @@ export function Shell({
     root.dataset.cloud = 'on';
     return () => { delete root.dataset.cloud; };
   }, [mode]);
+  // cloud.page_layout: Cloud pages take the frame's width (styles/shell.css reads the mark)
+  const frameLayout = mode === 'cloud' && on('cloud.page_layout');
+  useEffect(() => {
+    if (!frameLayout) return;
+    const root = document.documentElement;
+    root.dataset.pageLayout = 'frame';
+    return () => { delete root.dataset.pageLayout; };
+  }, [frameLayout]);
 
   const editing = route.page === 'edit';
   const here = destinationOf(route);
@@ -750,7 +762,7 @@ export function Shell({
         {mode === 'cloud' && banner ? <div className="shell-banners">{banner}</div> : banner}
         {children}
       </div>
-      {dock.present && dockSong && <MiniPlayer player={player} now={now} song={dockSong} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} cloud={mode === 'cloud'} closing={dock.closing} boxRef={dock.ref} />}
+      {dock.present && dockSong && <MiniPlayer player={player} now={now} song={dockSong} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} cloud={mode === 'cloud'} closing={dock.closing} boxRef={dock.ref} note={playerNote} />}
       {moreOpen && cloudMore && (
         <Drawer title="More" onClose={() => setMoreOpen(false)}>
           <nav className="more-nav more-sheet" aria-label="More">

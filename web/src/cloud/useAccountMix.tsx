@@ -2,8 +2,9 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { MixData, Request } from '../api';
 import { MOVE_NOW_EVENT, MOVE_OFFER_EVENT, moveWords, type MoveOffer } from '../devices/controller';
 import { showToast } from '../ui/toasts';
+import { accountMixesOn, recipeAsCurrent } from './accountMixes';
 import { onReconnect } from './connection';
-import { conflictWords, CURRENT_MIX_CONFLICT, CURRENT_MIX_EVENT, type AccountCurrent } from './currentMix';
+import { conflictWords, CURRENT_MIX_CONFLICT, CURRENT_MIX_EVENT, isAccountTurn, type AccountCurrent } from './currentMix';
 import type { RecipeStore } from './recipeStore';
 
 // ADR-0475 R8 in the local-first shell: the account's current mix, followed on every open device.
@@ -19,10 +20,16 @@ import type { RecipeStore } from './recipeStore';
 // - I85: a Library song the speaker lacks but another open device holds asks "Move the music
 //   there?": Move and play puts it first in the current mix and asks that device to play it;
 //   Add it later puts it at the end of the current mix, for when the music is there.
+// - cloud.account_mixes: the account keeps the current mix itself, and its `mix.current` events
+//   say what it now is (cloud_brain/mix_current.py). A device already showing that order does
+//   nothing; another reads it again; the speaker is offered it, as above. The last change on any
+//   device stands, and Undo there brings the one before back here the same way.
 
 type Device = { device_id: string; name: string };
+/** A new mix another device made: a recipe by id, or the account's own (`order`, its song ids). */
+type Arrived = { mixId: string; by: string | null; order?: string };
 
-export function useAccountMix({ recipes, request, refreshMix, setMixData, audibleHere, playHere, askToPlay, devices }: {
+export function useAccountMix({ recipes, request, refreshMix, setMixData, audibleHere, playHere, askToPlay, devices, heldOrder }: {
   recipes: RecipeStore;
   request: Request;
   refreshMix: () => void;
@@ -35,8 +42,10 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
   askToPlay: (device: Device, mixId: string | null, move?: boolean) => void;
   /** The person's devices, to find the one an offer names. */
   devices?: () => readonly Device[];
+  /** The song ids this device shows as the current mix, in order ("3,1,2"). */
+  heldOrder?: () => string;
 }): { banner: ReactNode; offerLater: (device: Device) => void; clearOffers: () => void } {
-  const [arrived, setArrived] = useState<{ mixId: string; by: string | null } | null>(null);
+  const [arrived, setArrived] = useState<Arrived | null>(null);
   const [later, setLater] = useState<{ device: Device; mixId: string | null } | null>(null);
   const [move, setMove] = useState<MoveOffer | null>(null);
   useEffect(() => {
@@ -79,6 +88,39 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
   audible.current = audibleHere;
   const refresh = useRef(refreshMix);
   refresh.current = refreshMix;
+  const held = useRef(heldOrder);
+  held.current = heldOrder;
+
+  // cloud.account_mixes: the account's own current mix changed on some device
+  useEffect(() => {
+    let newest = 0;
+    const follow = (event: Event) => {
+      const value = (event as CustomEvent<unknown>).detail;
+      if (!isAccountTurn(value) || !accountMixesOn()) return;
+      // the event stream replays its history to a device that has just connected: an older
+      // change is not the account's now
+      if (value.updated_at < newest) return;
+      newest = value.updated_at;
+      if (value.order === held.current?.()) {
+        // this device made it, or already shows it
+        setArrived((was) => (was?.order !== undefined ? null : was));
+        return;
+      }
+      if (audible.current) {
+        // the speaker keeps playing what it plays; a cleared mix is simply not offered
+        setArrived(value.songs ? { mixId: 'account', by: value.updated_by_device_name, order: value.order } : (was) => (was?.order !== undefined ? null : was));
+        return;
+      }
+      refresh.current();
+    };
+    window.addEventListener(CURRENT_MIX_EVENT, follow);
+    // back online: what the account has now, unless this device is making the sound
+    const off = onReconnect(() => { if (accountMixesOn() && !audible.current) refresh.current(); });
+    return () => {
+      window.removeEventListener(CURRENT_MIX_EVENT, follow);
+      off();
+    };
+  }, []);
 
   useEffect(() => {
     const account = recipes.account;
@@ -102,7 +144,8 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
       refresh.current();
     };
     const look = () => { void account.sync().then(take).catch(() => undefined); };
-    const heard = (event: Event) => { const value = (event as CustomEvent<AccountCurrent>).detail; if (value) take(value); };
+    // the account's own mix is followed above, never read as a recipe
+    const heard = (event: Event) => { const value = (event as CustomEvent<AccountCurrent>).detail; if (value && !isAccountTurn(value)) take(value); };
     const lost = (event: Event) => {
       const value = (event as CustomEvent<AccountCurrent>).detail;
       showToast(conflictWords(value?.updated_by_device_name ?? null));
@@ -124,8 +167,8 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
     const offer = arrived;
     setArrived(null);
     if (!offer) return;
-    recipes.setCurrent(offer.mixId);
-    const mix = await request<MixData>('/mix').catch(() => null);
+    // the account's own mix is already current there; a recipe is made current first
+    const mix = await (offer.order !== undefined ? request<MixData>('/mix') : recipeAsCurrent(recipes, request, offer.mixId)).catch(() => null);
     if (!mix?.mix.length) { showToast('That mix couldn’t be opened here. Try again from My Mixes.', { tone: 'problem' }); return; }
     setMixData(mix);
     playHere();
@@ -134,7 +177,7 @@ export function useAccountMix({ recipes, request, refreshMix, setMixData, audibl
   const banner = (
     <>
       {/* gone once that mix is the one here (played from this banner, or asked from another device) */}
-      {arrived && arrived.mixId !== recipes.current() && (
+      {arrived && (arrived.order !== undefined ? arrived.order !== held.current?.() : arrived.mixId !== recipes.current()) && (
         <p className="asked-to-play" role="status" data-testid="new-mix-arrived">
           <span className="asked-to-play-words">{arrived.by ?? 'Another device'} made a new mix.</span>
           <button className="primary" onClick={() => void playArrived()}>Play it now</button>

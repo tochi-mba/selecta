@@ -129,7 +129,7 @@
   position: absolute;
   right: 8%;
   top: 12%;
-  width: 220px;
+  width: min(220px, 100%);
   height: 220px;
   border: var(--separator) solid color-mix(in srgb, var(--motif) 45%, transparent);
   border-radius: 50%;
@@ -161,7 +161,15 @@
 .cloud-card p:not(.cloud-eyebrow),
 .cloud-plan-card p:not(.cloud-eyebrow) { color: var(--text-soft); font-size: var(--text-sm); }
 .cloud-card-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+.cloud-card-heading > * { min-width: 0; }
 .cloud-card-heading h2 small { font: var(--type-meta); color: var(--text-soft); }
+/* two actions side by side in a card keep a gap between them */
+.cloud-card > button + button { margin-inline-start: var(--space-2); }
+/* the older Library's counts: each name over its value, side by side */
+.cloud-library-overview { display: flex; flex-wrap: wrap; align-items: start; gap: var(--space-3) var(--space-6); margin: var(--space-4) 0; }
+.cloud-library-overview > div { display: grid; gap: var(--space-1); min-width: 0; }
+.cloud-library-overview .cloud-eyebrow { margin: 0; }
+.cloud-library-overview button { justify-self: start; }
 .cloud-locked {
   display: flex;
   align-items: center;
@@ -366,10 +374,22 @@
 .cloud-device-check > label { display: grid; gap: var(--space-1); margin-top: var(--space-3); font: var(--type-label); }
 .cloud-device-check textarea { width: 100%; box-sizing: border-box; }
 
-/* uploads */
-.cloud-upload-panel { display: grid; gap: var(--space-4); }
+/* uploads: one column that never grows past the page, however long a file's name (T-20261125-3d9f) */
+.cloud-upload-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 .cloud-upload-intro { max-width: 40rem; }
 .cloud-upload-intro p:not(.cloud-eyebrow) { color: var(--text-soft); }
+/* cloud.page_layout: the files on the left, storage and what happens to uploads on the right, side
+   by side once the window is wide enough; one column, files first, below that */
+.cloud-upload-panel[data-columns] .cloud-upload-intro { max-width: none; }
+.cloud-upload-main,
+.cloud-upload-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-content: start; min-width: 0; }
+.cloud-upload-about { padding: var(--space-cozy) var(--space-4); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); background: var(--surface-control); }
+.cloud-upload-about h3 { margin: 0 0 var(--space-1); font-size: var(--text-md); }
+.cloud-upload-about p { margin: 0; color: var(--text-soft); }
+.cloud-upload-side .cloud-meter-card { margin: 0; }
+@media (min-width: 1180px) {
+  .cloud-upload-panel[data-columns] { grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem); align-items: start; }
+}
 .cloud-drop {
   position: relative;
   min-height: 190px;
@@ -389,8 +409,10 @@
 .cloud-drop.disabled { cursor: not-allowed; opacity: 0.6; }
 .cloud-drop-icon { font-size: var(--text-2xl); color: var(--motif); }
 .cloud-drop small { color: var(--text-soft); }
-.cloud-upload-actions { display: flex; align-items: center; gap: var(--space-cozy); color: var(--text-soft); }
-.cloud-upload-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2); }
+.cloud-upload-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-cozy); min-width: 0; color: var(--text-soft); }
+/* "Uploading {file name}: part 2 of 9" breaks inside a long name rather than widen the page */
+.cloud-upload-actions > span { min-width: 0; overflow-wrap: anywhere; }
+.cloud-upload-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 .cloud-upload-list li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -411,8 +433,11 @@
 }
 .cloud-unfinished h3 { margin: 0 0 var(--space-1); font-size: var(--text-md); }
 .cloud-unfinished p { margin: 0 0 var(--space-2); color: var(--text-soft); }
-.cloud-unfinished ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
-.cloud-unfinished li { display: flex; justify-content: space-between; gap: var(--space-3); overflow-wrap: anywhere; }
+.cloud-unfinished ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+.cloud-unfinished li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); overflow-wrap: anywhere; }
+/* a long file name is cut short beside its part count and Remove, never pushing them off the page */
+.cloud-unfinished li > .truncate { flex: 1 1 auto; }
+.cloud-unfinished li > :not(.truncate) { flex: none; }
 .cloud-unfinished small { color: var(--text-soft); }
 
 /* the hosted library */
@@ -639,7 +664,7 @@
   .cloud-library-player { align-items: flex-start; flex-direction: column; }
   .cloud-plan-grid,
   .cloud-upload-list li,
-  .cloud-reconcile-list li { grid-template-columns: 1fr; }
+  .cloud-reconcile-list li { grid-template-columns: minmax(0, 1fr); }
   .cloud-upload-list b { grid-row: 2; }
   .cloud-upload-list small { grid-row: 3; }
   .cloud-library-heading > div:last-child,

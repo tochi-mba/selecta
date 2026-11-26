@@ -287,7 +287,7 @@
 .shell[data-mode='cloud'] .theme-menu > button[aria-expanded='true'] { background: var(--surface-control); border-color: transparent; color: var(--text); }
 .shell[data-mode='cloud'] :is(.context-button, .theme-menu > button):active:not(:disabled) { background: var(--border); }
 .shell[data-mode='cloud'] .palette-button {
-  min-width: 232px;
+  min-width: min(232px, 40vw);
   justify-content: flex-start;
   margin-inline-end: var(--space-2);
   padding: 0 var(--space-dense) 0 var(--space-snug);
@@ -432,6 +432,24 @@
 .shell[data-mode='cloud'] .shell-banners > :is(.warn, [role='alert']) { border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border)); background: color-mix(in srgb, var(--status-warning) 8%, var(--surface-raised)); box-shadow: inset var(--marker) 0 0 var(--status-warning); }
 .shell[data-mode='cloud'] .shell-banners > * > button { margin-inline-start: auto; min-height: var(--nav-row); padding: 0 var(--space-3); font-size: var(--text-sm); }
 .shell[data-mode='cloud'] .shell-banners > .cloud-import-chip { margin: 0; }
+/* cloud.page_layout: the notice stack (cloud/NoticeStack.tsx). The open notice first, progress
+   chips on one row after it, then "2 more notes"; the folded notes show only while that is open. */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners:has(> [data-notice-mark]) { display: flex; flex-wrap: wrap; align-items: center; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners:has(> [data-notice-mark]):not(:has(> :not([hidden], .notice-live))) { display: none; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners:has(> [data-notice-mark]) > * { flex: 1 1 100%; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners > [data-notice-expanded] { order: 1; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners > [data-notice-chip] { order: 2; flex: 0 1 auto; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners > .notice-more { order: 3; flex: none; min-height: var(--nav-row); padding: 0 var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-pill); background: none; color: var(--text-soft); font-size: var(--text-sm); }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners > [data-notice-folded] { order: 4; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners:not(:has(> .notice-more[aria-expanded='true'])) > [data-notice-folded] { display: none; }
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .shell-banners > [data-notice-mark='end'] ~ * { order: 5; }
+/* the other-tab line rides in the mini player instead (cloud.page_layout) */
+.shell[data-mode='cloud'] .mini-note { flex: none; min-width: 0; }
+.shell[data-mode='cloud'] .mini-note > .asked-to-play { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
+.shell[data-mode='cloud'] .mini-note button { min-height: var(--control-height); white-space: nowrap; }
+@media (max-width: 760px) {
+  .shell[data-mode='cloud'] .mini-note .asked-to-play-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 /* a room is open: a live line that leads back to it */
 .shell[data-mode='cloud'] .shell-banners > .room-open-line { border-color: color-mix(in srgb, var(--status-ready) 40%, var(--border)); background: color-mix(in srgb, var(--status-ready) 7%, var(--surface-raised)); color: var(--text-soft); }
 .shell[data-mode='cloud'] .room-open-line::before { content: ''; flex: none; width: var(--space-2); height: var(--space-2); border-radius: 50%; background: var(--status-ready); box-shadow: 0 0 0 var(--space-1) color-mix(in srgb, var(--status-ready) 22%, transparent); margin-inline-end: var(--space-1); }

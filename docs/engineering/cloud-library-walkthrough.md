@@ -453,3 +453,93 @@ With the flag off every job, hash and answer is the older one (`tests/test_hoste
 **The local versus Cloud map** (`GET /api/cloud-mixes/capabilities`) is computed from the account's flags; no row says "not yet": the Studio lanes are Desktop only and Cloud needs sign-in, both said as decisions.
 
 **Not run here.** PostgreSQL (row security on the facts and seam writes is the engine store's, already tested in CI), a real worker rendering a core seam, a real upload, the dev cloud stack.
+
+## 13. Uploads join the song they are for (2026-11-26, two-places plan phase 6a)
+
+Branch `feat/cloud-two-places`, flag `storage.upload_identity` (default off, needs
+`cloud.uploads`). A member whose account has the cloud library uploads songs that are already in
+their device library; each upload now lands on the same catalogue song, so its facts,
+corrections, seams, mixes, drafts, requests and ratings carry over. The rules are in
+`audio-identity.md`, "Uploads". In short:
+
+- A file on `POST /api/uploads/plan` may name its `song_id` (and `audio_id`). The plan refuses it
+  per file with `song_mismatch` unless the file is that song; acceptance checks again with the
+  probed hash and the audio id the server reads, and a mismatch is rejected with its storage
+  released (`upload_sessions.song_id`, migration `st0480up01`).
+- Unnamed uploads find their song by any of its file hashes, or by an audio id exactly one live
+  song has; an unsure match becomes a version of that song. A reused row keeps its own hash,
+  title and artist.
+- The duplicate check says "already in your cloud library" for a song uploaded under any of its
+  hashes.
+- `POST /api/uploads/preview` is a dry run, rate limited like the plan and behind the same grant:
+  per file `ok`, `in_cloud_library` or `refused` (`song_mismatch`, `format`, `too_large`,
+  `too_long`, `quota`), the note `long_for_server_mixes` for a song over 30 minutes, and totals
+  (`bytes_needed`, `bytes_left`, `fit` in the given order, `measure_days` under the daily analysis
+  cap, or null when no cap applies). It creates and reserves nothing.
+- An uploaded song a device measured is measured again by the worker, whose facts replace the
+  device's; the member's corrections still win.
+
+Tested through the routes on SQLite (`tests/test_cloud_upload_identity.py`) and the no-grant
+refusal in `tests/test_bf_no_audio_egress.py`. Not run here: PostgreSQL, a real upload, the dev
+cloud stack.
+
+## 14. Transitions between cloud library songs, one pair at a time (2026-11-26, two-places plan Phase 5)
+
+Branch `feat/cloud-two-places`, flag `cloud.studio_seams` (default off; it requires
+`cloud.hosted_render`, and so the cloud library grant). This is the server half; the shared
+player's half is the browser's (`web/src/cloud/studioPlan.ts`, `cloudSeams.ts`, each song's level
+in the resolver).
+
+**`hosted_pairs.pair_state(engine, work, workspace, a, b, move, lane)`.** `a` and `b` are
+catalogue song ids. Each is found by its cloud copy (`local_media.store.cloud_copies`: the oldest
+live upload of any of the song's hashes); a deleted song, another workspace's song and a song
+with no upload all read alike. The pair then gets exactly what a server mix asks for it: the
+songs' analyses, their lossless playback files, the seam job built by `_seam_spec` and keyed by
+`seam_hash` (a planner-core seam with `cloud.hosted_brain`), its first job paid from the day's
+transition allowance, and the rendered seam kept in the engine store. `mix_state` runs the same
+steps (`prepared`, `read_songs`, `look`, `make`, `keep_in_store`) over each pair of its order, and
+`tests/test_hosted_pairs.py` holds its jobs, hashes and timeline to a run recorded from the code
+before the split. A pair asked for here and the same pair in a server mix share one job and one
+charge.
+
+**`POST /api/hosted/seams`** with `{a, b, move?, lane?, retry?}`, needing `mixes.edit`, rate
+limited in its own bucket (`hosted_seams`, 90 a minute, as the render route). `lane` is
+`interactive` (the next hand-off) or `standard` (the default). It answers 200 with:
+
+- `state`: `ready`, `queued`, `running`, `waiting_for_analysis`, `failed` (with `why`) or
+  `refused` (with `why` and `code`: `allowance_used`, which also carries `allowance_used`
+  `{kind, limit, used, resets_at, why}`, or `not_admitted`);
+- `planned_move`, `move`, `passed`, `fell_back`, `checks` and `job_id` when there is one;
+- `files: {a, b}`, each `{url, sha256, sample_rate, seconds}` (signed for 15 minutes) or null
+  while its playback file is made;
+- only when ready, `clip: {url, sha256, a_source_start, b_source_end, seconds, sample_rate,
+  switch_at, b_warp}` and `levels: {a_gain_db, b_gain_db}`.
+
+Refusals: 404 `no_cloud_copy` with `sides` (`a`, `b` or both); 400 `invalid_songs`,
+`invalid_move` or `invalid_lane`; 403 `flag_off` with the flag off or no grant; 503
+`storage_temporarily_unavailable`. Over quota it works as the render route does: seams are
+derived files that don't count against storage, so nothing is refused for it.
+
+**Levels.** A worker renders each song at `SongInfo.gain_db`, neither rounded nor held to an
+export's range (`hosted_render.gain_db`, which the hosted card's timeline uses, is both). New
+seams record it (`settings.levels`); for older seams the route works it out the same way from the
+same loudness. The browser plays each song's own file at exactly that level, so
+`renderedProblem` finds no step at either join.
+
+**Switch point and B's warp.** New seam records also carry `switch_at` (the overlap's end, in
+clip seconds) and `b_warp` (B's warp from clip seconds to its own, up to 2,000 points). Older
+seams answer null for both, and the player assumes a linear warp of B across the clip.
+
+**Sample rates.** The clip is made at 44.1 kHz. A playback file keeps its original's rate
+(`play.proxy`), which `files.*.sample_rate` says, so the browser decodes both at the clip's
+rate before it lines up samples.
+
+**Wording.** A seam in an account mix whose record has a worker attestation says "Prepared in your
+cloud library." instead of "Worked out in your browser as the mix plays."
+(`cloud_brain.mixes_routes._states`). The hosted session keeps its own seams under `w` keys,
+never a mix's key, so the player's report of a cloud seam under the mix's key is to-do
+T-20261126-afbb.
+
+Tested on SQLite with synthetic numbers (`tests/test_hosted_pairs.py`,
+`tests/test_hosted_seams_route.py`). Not run here: a real worker, PostgreSQL, the dev cloud
+stack, the browser.

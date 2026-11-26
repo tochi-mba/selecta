@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickerOrder, telling, whereToPlay, whyNot, type Candidate, type Situation } from './whereToPlay';
+import { pickerOrder, playsHere, telling, whereToPlay, whyNot, type Candidate, type Situation } from './whereToPlay';
 
 // ADR-0475: which device plays when one must be chosen, row by row.
 
@@ -65,5 +65,60 @@ describe('the picker', () => {
     expect(telling(one, [one, two], 'a', 1000)).toBe('This device');
     expect(telling(two, [one, two], 'a', 1000)).toBe('Last seen 10 minutes ago');
     expect(telling(device('c', { name: 'Unique' }), [one, two], 'a', 1000)).toBeNull();
+  });
+});
+
+// cloud.catalogue_play: songs in the cloud library count as held by every signed-in browser
+describe('with songs in the cloud library', () => {
+  const laptop = device('laptop');
+  // a phone with no music of its own, the device in the person's hand
+  const phone = device('phone', { songs: 0, last_seen_at: 200 });
+  const cloud = (ids: number[]) => ({ ids: new Set(ids), songs: ids.length });
+  const laptopOnly = new Map<string, ReadonlySet<number>>([['laptop', new Set([1, 2, 3, 4])]]);
+  const here = (over: Partial<Situation>) => at({ devices: [laptop, phone], thisDeviceId: 'phone', ids: laptopOnly, ...over });
+
+  it('all in the cloud library: the phone can play it too, so the person chooses, this device first', () => {
+    const situation = here({ cloud: cloud([1, 2, 3, 4]) });
+    const choice = whereToPlay(situation);
+    expect(choice).toMatchObject({ kind: 'ask', suggested: 'phone' });
+    const options = pickerOrder(situation);
+    expect(options.map((option) => [option.device.device_id, option.held, option.usable, option.cloud])).toEqual([['phone', 4, true, true], ['laptop', 4, true, false]]);
+    expect(whyNot(phone, situation)).toBeNull();
+    expect(playsHere(situation)).toBe(true);
+  });
+
+  it('mixed: each device counts its own songs and the cloud library’s; the default plays and the one with all is named', () => {
+    const situation = here({ cloud: cloud([1, 2]), defaultId: 'phone' });
+    expect(whereToPlay(situation)).toMatchObject({ kind: 'default', device: { device_id: 'phone' }, held: 2, whole: { device_id: 'laptop' } });
+    expect(pickerOrder(here({ cloud: cloud([1, 2]) })).map((option) => [option.device.device_id, option.held])).toEqual([['laptop', 4], ['phone', 2]]);
+  });
+
+  it('a phone with no device songs and the laptop away plays here: never "nobody can play"', () => {
+    const situation = here({ devices: [device('laptop', { online: false }), phone], cloud: cloud([1, 2, 3, 4]) });
+    expect(whereToPlay(situation)).toMatchObject({ kind: 'only', device: { device_id: 'phone' } });
+    // with the laptop the default, still the phone, with the default named as away
+    expect(whereToPlay({ ...situation, defaultId: 'laptop' })).toMatchObject({ kind: 'only', device: { device_id: 'phone' }, defaultAway: { device_id: 'laptop' } });
+  });
+
+  it('a phone used as a remote keeps today’s rule for songs only the laptop holds', () => {
+    // songs 3 and 4 are on the laptop alone; the cloud library holds others
+    const situation = here({ mixIds: [3, 4], cloud: cloud([1, 2]) });
+    expect(whereToPlay(situation)).toMatchObject({ kind: 'only', device: { device_id: 'laptop' } });
+    expect(playsHere(situation)).toBe(false);
+    expect(whyNot(phone, situation)).toBe('phone has no music connected.');
+    expect(pickerOrder(situation).map((option) => option.device.device_id)).toEqual(['laptop']);
+  });
+
+  it('without the cloud library every answer is as before', () => {
+    const before = here({});
+    expect(whereToPlay(before)).toMatchObject({ kind: 'only', device: { device_id: 'laptop' } });
+    expect(playsHere(before)).toBe(false);
+    expect(pickerOrder(before)[0]).not.toHaveProperty('cloud');
+    expect(whereToPlay(here({ cloud: null }))).toEqual(whereToPlay(before));
+  });
+
+  it('nobody open: the devices away are named, music of their own or not', () => {
+    const situation = here({ devices: [device('laptop', { online: false }), device('phone', { songs: 0, online: false })], cloud: cloud([1]) });
+    expect(whereToPlay(situation)).toMatchObject({ kind: 'none', away: [{ device_id: 'laptop' }, { device_id: 'phone' }] });
   });
 });

@@ -4,6 +4,8 @@ import { exportFile } from '../engine/export';
 import { ENGINE_SAMPLE_RATE } from '../engine/context';
 import { createLevels, type Levels } from '../engine/level';
 import { flagListed, flagOn } from '../flags';
+import type { MediaResolver } from '../media';
+import { cloudFileFamily } from './cloudFileExport';
 import { deviceRenderOn, SEAM_BUDGET_MS, type DeviceStudio, type StudioSong } from './deviceStudio';
 import { makeDeviceStudio, songsHere } from './studioWiring';
 
@@ -23,14 +25,25 @@ import { makeDeviceStudio, songsHere } from './studioWiring';
  *
  * Cancel works at any point and leaves no file. Nothing is uploaded: the only requests are the
  * planning and report requests the device studio makes for any transition (no audio, no path). A
- * job lives while this tab is open. */
+ * job lives while this tab is open.
+ *
+ * With `cloud.one_mixer` a song in the cloud library is saved too: its bytes are read through
+ * the player's own resolver to this device, never sent anywhere. A transition next to one has no
+ * clip made for it and is joined as playback blends it live. A song only on another device, or
+ * nowhere, is left out by name and the rest is saved. */
 
 /** With `cloud.local_export` named on by the server. */
 export const localExportOn = (): boolean => flagListed('cloud.local_export');
+/** With `cloud.one_mixer` named on: songs in the cloud library are saved too. */
+export const bothPlacesOn = (): boolean => flagListed('cloud.one_mixer');
 
 export const NOT_HERE = (title: string) => `${title} isn’t on this device, so this mix can’t be saved as a file here.`;
+export const ON_DEVICE = (title: string, device: string) => `${title} is only on ${device}, so it was left out of this file.`;
+export const NOWHERE = (title: string) => `${title} can’t be read on this device and isn’t in your cloud library, so it was left out of this file.`;
+export const TOO_FEW = 'A file needs at least two songs that this device can read.';
 
-type Song = { song: StudioSong; data(): Promise<ArrayBuffer> };
+/** `song`: the file on this device, for its transitions; null for a cloud library copy. */
+type Song = { song: StudioSong | null; data(): Promise<ArrayBuffer> };
 type Running = { job: ExportJob; control: AbortController; frozen: MixData; url: string | null };
 
 const jobs = new Map<string, Running>();
@@ -59,6 +72,11 @@ export type ExportDeps = {
   cloud: Request;
   /** A song by id, on this device; the player's own resolver by default. */
   songOf?: (songId: number) => Promise<Song | null>;
+  /** `cloud.one_mixer`: the player's resolver (this device first, then the cloud library), for a
+   * song `songOf` has no file of; registered by the shell (`exportReaders`) by default. */
+  resolve?: () => Promise<MediaResolver | null>;
+  /** `cloud.one_mixer`: another of the member's devices that holds a song, by name. */
+  heldBy?: (songId: number) => string | null;
   /** The transition maker for the export; the device studio by default. */
   studio?: () => DeviceStudio | null;
   /** The finished file as a link; an object URL by default. */
@@ -66,6 +84,9 @@ export type ExportDeps = {
   write?: typeof exportFile;
   decode?: (bytes: ArrayBuffer) => Promise<AudioBuffer>;
   level?: (buffer: AudioBuffer) => Promise<number>;
+  /** `cloud.one_mixer`: of these song ids, those with their OWN cloud copy (`ownCloudCopies`),
+   * for "Make the file in your cloud library" (cloudFileExport.ts). */
+  inCloud?: (songIds: readonly number[]) => Promise<ReadonlySet<number>>;
 };
 
 /** One transition per boundary, made ahead or now; null where none can be had (crossfade). */
@@ -83,15 +104,23 @@ async function prepare(running: Running, songs: Song[], deps: ExportDeps): Promi
   const signal = running.control.signal;
   const stopped = new Promise<null>((done) => signal.addEventListener('abort', () => { studio.dispose(); done(null); }, { once: true }));
   try {
-    let from = await read(await songs[0].data());
+    // decoded only for a pair of files on this device: a cloud copy's transition is blended live
+    let from: AudioBuffer | null = null;
+    let fromAt = -1;
     for (let index = 0; index < total; index += 1) {
       if (running.control.signal.aborted) break;
-      const to = await read(await songs[index + 1].data());
-      const levels = { a: await level(from).catch(() => 1), b: await level(to).catch(() => 1) };
-      const made = await Promise.race([studio.clipFor({ a: songs[index].song, b: songs[index + 1].song, from, to, levels }, SEAM_BUDGET_MS).catch(() => null), stopped]);
-      clips[index] = made?.status === 'clip' ? made.rendered : null;
+      const a = songs[index].song;
+      const b = songs[index + 1].song;
+      if (a && b) {
+        if (fromAt !== index || !from) from = await read(await songs[index].data());
+        const to = await read(await songs[index + 1].data());
+        const levels = { a: await level(from).catch(() => 1), b: await level(to).catch(() => 1) };
+        const made = await Promise.race([studio.clipFor({ a, b, from, to, levels }, SEAM_BUDGET_MS).catch(() => null), stopped]);
+        clips[index] = made?.status === 'clip' ? made.rendered : null;
+        from = to;
+        fromAt = index + 1;
+      }
       changed(running, { seams_ready: index + 1 });
-      from = to;
     }
   } finally {
     studio.dispose();
@@ -99,23 +128,51 @@ async function prepare(running: Running, songs: Song[], deps: ExportDeps): Promi
   return clips;
 }
 
+/** A song read through the player's resolver: its file here, or its cloud library copy, read to
+ * this device (cloud.one_mixer). */
+async function readable(songId: number, deps: ExportDeps): Promise<Song | null> {
+  const found = await (await deps.resolve?.().catch(() => null))?.(songId).catch(() => null);
+  if (!found) return null;
+  return { song: (found.source ?? 'device') === 'device' && found.held ? found.held : null, data: found.data };
+}
+
+/** The songs this device can read, with the mix items they are, and why each other one was left
+ * out. With `cloud.one_mixer` off, any song not on this device stops the whole file, as before. */
+async function gather(frozen: MixData, deps: ExportDeps): Promise<{ songs: Song[]; items: MixData['mix']; left: string[] }> {
+  const songOf = deps.songOf ?? (async (songId: number) => (await songsHere(deps.workspaceId)?.(songId)) ?? null);
+  const both = bothPlacesOn();
+  const songs: Song[] = [];
+  const items: MixData['mix'] = [];
+  const left: string[] = [];
+  for (const item of frozen.mix) {
+    const title = item.title || 'A song';
+    const found = (await songOf(item.song_id).catch(() => null)) ?? (both ? await readable(item.song_id, deps) : null);
+    if (found) {
+      songs.push(found);
+      items.push(item);
+      continue;
+    }
+    if (!both) throw new Error(NOT_HERE(title));
+    const device = deps.heldBy?.(item.song_id) ?? null;
+    left.push(device ? ON_DEVICE(title, device) : NOWHERE(title));
+  }
+  if (songs.length < 2) throw new Error([...left, TOO_FEW].join(' '));
+  return { songs, items, left };
+}
+
 async function run(running: Running, deps: ExportDeps): Promise<void> {
   const { frozen, control } = running;
-  const songOf = deps.songOf ?? (async (songId: number) => (await songsHere(deps.workspaceId)?.(songId)) ?? null);
   try {
-    const songs: Song[] = [];
-    for (const item of frozen.mix) {
-      const found = await songOf(item.song_id).catch(() => null);
-      if (!found) throw new Error(NOT_HERE(item.title || 'A song'));
-      songs.push(found);
-    }
+    const { songs, items, left } = await gather(frozen, deps);
+    // what was left out is said on the job, and the rest is saved
+    if (left.length) changed(running, { error: left.join(' '), seams_total: songs.length - 1 });
     const clips = await prepare(running, songs, deps);
     if (control.signal.aborted) return changed(running, { state: 'cancelled', can_cancel: false });
     changed(running, { state: 'encoding' });
     const level = deps.level ?? levelOf;
     const result = await (deps.write ?? exportFile)({
       format: 'flac',
-      tracks: songs.map((one, index) => ({ id: frozen.mix[index].song_id, data: one.data })),
+      tracks: songs.map((one, index) => ({ id: items[index].song_id, data: one.data })),
       decode: deps.decode ?? decode,
       sampleRate: ENGINE_SAMPLE_RATE,
       level: (_index, buffer) => level(buffer),
@@ -162,8 +219,13 @@ export type ExportFamily = {
 /** `/exports/jobs` as the shared panel asks it. `mix` reads the mix being saved (the adapter's
  * own `GET /mix`, with the draft when there is one). */
 export function exportFamily(deps: ExportDeps & { mix: (draft: number | null) => Promise<MixData> }): ExportFamily {
+  // cloud.one_mixer: "Make the file in your cloud library", its own module and requests
+  const inCloud = deps.inCloud;
+  const elsewhere = inCloud ? cloudFileFamily({ cloud: deps.cloud, mix: deps.mix, inCloud }) : null;
   return {
     answer: (method, route, query, init) => {
+      const there = elsewhere?.answer(method, route, query, init);
+      if (there) return there;
       if (route !== '/exports/jobs' && !route.startsWith('/exports/jobs/')) return undefined;
       if (!localExportOn()) return Promise.reject(refuse('Saving a mix as a file is switched off for this account.', 'flag_off', 403));
       if (method === 'GET' && route === '/exports/jobs') return Promise.resolve({ jobs: [...jobs.values()].map((one) => one.job).reverse() });

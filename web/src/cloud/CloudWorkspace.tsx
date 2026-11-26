@@ -24,6 +24,7 @@ import { setMeasuringPaused } from './measuringControl';
 import { NumberRoll } from '../feel/numberRoll';
 import { feelOn } from '../feel/root';
 import { motionMs } from '../ui/exitMotion';
+import { deviceSongs } from './libraryPlaces';
 import './libraryWorkspace.css';
 
 /** Workspace in browser-first Cloud (`cloud.workspace`).
@@ -63,7 +64,7 @@ function connectAs(connect: ReactNode, variant: 'card' | 'status', ref: Ref<Conn
   return isValidElement(connect) ? cloneElement(connect as ReactElement<{ variant?: string; ref?: Ref<ConnectMusicHandle>; doneWords?: (summary: ImportSummary) => string }>, { variant, ref, doneWords }) : connect;
 }
 
-export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, stems, stemsShown, measuringKeys, savedMixes, fileCheck, playback }: {
+export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, stems, stemsShown, measuringKeys, savedMixes, fileCheck, playback, uploadAll }: {
   tab: WorkshopTab;
   status: AppStatus;
   workspaceId: string;
@@ -80,6 +81,9 @@ export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, s
   /** The sweep that checks which connected files this browser can still open. */
   fileCheck: FileCheck;
   playback: PlaybackFacts;
+  /** cloud.move_to_cloud: "Upload everything on this device" (uploadEntry.tsx), drawn by the
+   * shell, or nothing; Sources shows it under the songs open here. */
+  uploadAll?: ReactNode;
 }) {
   const on = useFlags();
   const [degraded, setDegraded] = useState(false);
@@ -104,7 +108,7 @@ export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, s
       </header>
       <LinkTabs label="Workspace" items={TABS} current={here} />
       {tab === 'overview' && <Overview status={status} workspaceId={workspaceId} connect={connect} degraded={degraded} savedMixes={savedMixes} fileCheck={fileCheck} stemsShown={stemsShown} measuringKeys={measuringKeys} />}
-      {tab === 'sources' && <Sources status={status} workspaceId={workspaceId} connect={connect} />}
+      {tab === 'sources' && <Sources status={status} workspaceId={workspaceId} connect={connect} uploadAll={uploadAll} />}
       {tab === 'storage' && (
         <div className="lw-stack">
           <StorageCard degraded={degraded} />
@@ -192,23 +196,29 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
     return () => { live = false; stop(); };
   }, []);
   const songs = counts.music ?? 0;
-  const playable = counts.ready ?? 0;
-  const missing = counts.missing ?? 0;
+  // library.places: the folder need counts songs kept on devices only, and "missing" is a song
+  // with no copy anywhere, the same songs its Show them opens
+  const devices = deviceSongs(status);
+  const deviceTotal = devices ? devices.wanted : songs;
+  const playable = devices ? devices.here : counts.ready ?? 0;
+  const missing = status.places ? status.places.none : counts.missing ?? 0;
   const running = importing.phase === 'running';
 
   const needs: Need[] = [];
   if (songs === 0 && !running) {
     needs.push({ key: 'empty', icon: 'music', title: 'Add your music', words: 'Choose the folder your songs are in. Your files stay on this device.', action: <button type="button" className="primary" onClick={() => handle.current?.chooseFolder()}>Choose a folder</button> });
-  } else if (playable < songs - missing && !running && !interrupted) {
+  } else if (playable < deviceTotal - missing && !running && !interrupted) {
     needs.push({
       key: 'choose', icon: 'folder',
-      title: playable === 0 ? 'This browser hasn’t been given your music yet' : playable * 5 < songs ? `Only ${formatCount(playable)} of ${formatCount(songs)} songs can play in this browser` : `${formatCount(songs - missing - playable)} songs are not open in this browser`,
-      words: playable * 5 < songs ? 'Each browser needs the folder once. Your library, mixes and settings are already here.' : 'Choose your music folder to play them here.',
-      action: <button type="button" className={playable * 5 < songs ? 'primary' : undefined} onClick={() => handle.current?.chooseFolder()}>Choose your music folder</button>,
+      title: playable === 0 ? 'This browser hasn’t been given your music yet' : playable * 5 < deviceTotal ? `Only ${formatCount(playable)} of ${formatCount(deviceTotal)} songs can play in this browser` : `${formatCount(deviceTotal - missing - playable)} songs are not open in this browser`,
+      words: playable * 5 < deviceTotal ? 'Each browser needs the folder once. Your library, mixes and settings are already here.' : 'Choose your music folder to play them here.',
+      action: <button type="button" className={playable * 5 < deviceTotal ? 'primary' : undefined} onClick={() => handle.current?.chooseFolder()}>Choose your music folder</button>,
     });
   }
   if (missing > 0) {
-    needs.push({ key: 'missing', icon: 'warning', title: `${formatCount(missing)} ${missing === 1 ? 'song is' : 'songs are'} missing from every device`, words: 'Connect the folder they are in to bring them back.', action: <PageLink to="/library?show=attention" className="button">Show them</PageLink> });
+    needs.push(status.places
+      ? { key: 'missing', icon: 'warning', title: `${formatCount(missing)} ${missing === 1 ? 'song is' : 'songs are'} not on any of your devices or in your cloud library`, words: 'Connect the folder they are in to bring them back.', action: <PageLink to="/library?show=none" className="button">Show them</PageLink> }
+      : { key: 'missing', icon: 'warning', title: `${formatCount(missing)} ${missing === 1 ? 'song is' : 'songs are'} missing from every device`, words: 'Connect the folder they are in to bring them back.', action: <PageLink to="/library?show=attention" className="button">Show them</PageLink> });
   }
   if (degraded) {
     needs.push({ key: 'degraded', icon: 'warning', title: 'This browser is not keeping your song list', words: 'You will need to choose your songs again next visit. A private window often causes this.', action: <PageLink to="/workshop/diagnostics" className="button">See why</PageLink> });
@@ -295,7 +305,7 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
 
 /** Where music comes from in this browser: the way to add more, the folder this browser remembers,
  * and how much of the library is open here. */
-function Sources({ status, workspaceId, connect }: { status: AppStatus; workspaceId: string; connect: ReactNode }) {
+function Sources({ status, workspaceId, connect, uploadAll }: { status: AppStatus; workspaceId: string; connect: ReactNode; uploadAll?: ReactNode }) {
   const handle = useRef<ConnectMusicHandle>(null);
   const [folder, setFolder] = useState<StoredFolderHandle | null | undefined>(undefined);
   const [access, setAccess] = useState<string | null>(null);
@@ -334,6 +344,7 @@ function Sources({ status, workspaceId, connect }: { status: AppStatus; workspac
         {connectAs(connect, 'status', handle, status)}
         <MusicFolders workspaceId={workspaceId} variant="full" onAddFolder={() => handle.current?.chooseFolder()} onChooseSongs={() => handle.current?.chooseSongs()} />
         {openHere && <section className="ui-card" aria-label="Songs open here"><ul className="lw-sources">{openHere}</ul></section>}
+        {uploadAll}
       </div>
     );
   }
@@ -368,6 +379,7 @@ function Sources({ status, workspaceId, connect }: { status: AppStatus; workspac
         )}
         {folder === null && songs > 0 && <p className="hint">No folder is remembered in this browser. Choose a folder above and it is remembered, so adding music can carry on after an interruption.</p>}
       </section>
+      {uploadAll}
     </div>
   );
 }

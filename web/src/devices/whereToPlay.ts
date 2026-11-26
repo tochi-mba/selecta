@@ -11,12 +11,20 @@ import type { DeviceHolding } from './controller';
 // 3. Else the only online device that holds some of it.
 // 4. Else, with two or more, the person chooses (the picker), never silently.
 // 5. Else nobody: no Play, and the devices that had music with when each was last seen.
+//
+// cloud.catalogue_play: songs in the cloud library count as held by every signed-in browser of
+// the account, so a phone with no music of its own can play them. Songs only on a device keep
+// today's rule.
 
 /** A device as the rule reads it. `needsFolder`: open, but its music folder must be allowed
  * again, so it holds nothing now (never suggested, never usable). */
 export type Candidate = DeviceHolding & { needsFolder?: boolean };
 
-export type PickerOption = { device: Candidate; held: number | null; usable: boolean; why: string | null };
+/** `cloud`: it holds none of these itself and plays them from the cloud library. */
+export type PickerOption = { device: Candidate; held: number | null; usable: boolean; why: string | null; cloud?: boolean };
+
+/** The songs in the account's cloud library (every file id of each, and how many songs). */
+export type CloudHeld = { ids: ReadonlySet<number>; songs: number };
 
 export type Choice =
   | { kind: 'speaker'; deviceId: string }
@@ -35,11 +43,23 @@ export type Situation = {
   mixIds: readonly number[];
   /** Each reporting device's song ids. */
   ids: ReadonlyMap<string, ReadonlySet<number>>;
+  /** cloud.catalogue_play: the cloud library's songs, which every signed-in browser of the account
+   * plays; absent or null, none count, as before. */
+  cloud?: CloudHeld | null;
 };
+
+/** How many of what is about to play are in the cloud library; all of its songs when nothing is
+ * named; 0 without the cloud library. */
+export function cloudHeld(situation: Pick<Situation, 'mixIds' | 'cloud'>): number {
+  const cloud = situation.cloud;
+  if (!cloud) return 0;
+  return situation.mixIds.length ? situation.mixIds.filter((id) => cloud.ids.has(id)).length : cloud.songs;
+}
 
 /** How many songs of what is about to play a device holds; its whole count when nothing is named
  * or it has not said which; null when it has said nothing at all. */
-export function heldOf(device: Candidate, situation: Pick<Situation, 'mixIds' | 'ids'>): number | null {
+export function heldOf(device: Candidate, situation: Pick<Situation, 'mixIds' | 'ids' | 'cloud'>): number | null {
+  if (situation.cloud) return heldWithCloud(device, situation, situation.cloud);
   if (device.needsFolder) return 0;
   const songs = situation.ids.get(device.device_id);
   if (!situation.mixIds.length) return device.songs;
@@ -47,7 +67,20 @@ export function heldOf(device: Candidate, situation: Pick<Situation, 'mixIds' | 
   return situation.mixIds.filter((id) => songs.has(id)).length;
 }
 
+/** `heldOf` with the cloud library: its songs count as on every device, besides each one's own. */
+function heldWithCloud(device: Candidate, situation: Pick<Situation, 'mixIds' | 'ids'>, cloud: CloudHeld): number | null {
+  const own = device.needsFolder ? 0 : device.songs;
+  if (!situation.mixIds.length) return Math.max(own, cloud.songs);
+  const songs = device.needsFolder ? new Set<number>() : situation.ids.get(device.device_id);
+  const inCloud = situation.mixIds.filter((id) => cloud.ids.has(id)).length;
+  // it has said nothing: only the cloud songs are known to play there
+  if (!songs && device.reported_at === null) return inCloud || null;
+  return situation.mixIds.filter((id) => cloud.ids.has(id) || songs?.has(id)).length;
+}
+
 const usable = (device: Candidate, situation: Situation) => {
+  // cloud.catalogue_play: any open device plays the cloud library's songs, music of its own or not
+  if (cloudHeld(situation) > 0) return device.online;
   const held = heldOf(device, situation);
   return device.online && !device.needsFolder && device.songs > 0 && (held === null || held > 0);
 };
@@ -55,22 +88,42 @@ const usable = (device: Candidate, situation: Situation) => {
 /** Why a listed device cannot be chosen now, in the person's words; null when it can. */
 export function whyNot(device: Candidate, situation: Situation): string | null {
   if (!device.online) return `${device.name} isn’t open right now.`;
-  if (device.needsFolder) return `${device.name} needs its music folder allowed again.`;
-  if (!device.songs) return `${device.name} has no music connected.`;
+  const inCloud = cloudHeld(situation) > 0;
+  if (device.needsFolder && !inCloud) return `${device.name} needs its music folder allowed again.`;
+  if (!device.songs && !inCloud) return `${device.name} has no music connected.`;
   if (heldOf(device, situation) === 0) return `${device.name} has none of these songs.`;
   return null;
 }
+
+/** Whether a device plays these only from the cloud library: none of them is its own. */
+const onlyFromCloud = (device: Candidate, situation: Situation) => {
+  if (cloudHeld(situation) === 0) return false;
+  if (device.needsFolder || !device.songs) return true;
+  const songs = situation.ids.get(device.device_id);
+  return !!songs && situation.mixIds.length > 0 && !situation.mixIds.some((id) => songs.has(id));
+};
 
 /** The picker's order: most of what is about to play, then this device, then most recently
  * active. Unusable devices follow, disabled with their reason. */
 export function pickerOrder(situation: Situation): PickerOption[] {
   const rank = (device: Candidate) => heldOf(device, situation) ?? 0;
-  const listed = situation.devices.filter((device) => device.songs > 0 || device.needsFolder);
+  const inCloud = cloudHeld(situation) > 0;
+  const listed = situation.devices.filter((device) => device.songs > 0 || device.needsFolder || inCloud);
   const sorted = [...listed].sort((one, other) => rank(other) - rank(one)
     || Number(other.device_id === situation.thisDeviceId) - Number(one.device_id === situation.thisDeviceId)
     || other.last_seen_at - one.last_seen_at);
-  const options = sorted.map((device) => ({ device, held: heldOf(device, situation), usable: usable(device, situation), why: whyNot(device, situation) }));
+  const options = sorted.map((device) => ({
+    device, held: heldOf(device, situation), usable: usable(device, situation), why: whyNot(device, situation),
+    ...(inCloud ? { cloud: onlyFromCloud(device, situation) } : {}),
+  }));
   return [...options.filter((option) => option.usable), ...options.filter((option) => !option.usable)];
+}
+
+/** Whether this device could play some of what is about to play, for "Play here instead". */
+export function playsHere(situation: Situation): boolean {
+  // cloud.catalogue_play: this browser plays the cloud library's songs, whatever it holds itself
+  if (cloudHeld(situation) > 0) return true;
+  return situation.devices.some((one) => one.device_id === situation.thisDeviceId && one.online && one.songs > 0);
 }
 
 export function whereToPlay(situation: Situation): Choice {
@@ -92,7 +145,8 @@ export function whereToPlay(situation: Situation): Choice {
     const options = pickerOrder(situation);
     return { kind: 'ask', options, suggested: options[0].device.device_id, defaultAway };
   }
-  return { kind: 'none', away: situation.devices.filter((device) => device.songs > 0 && !device.online) };
+  const inCloud = cloudHeld(situation) > 0;
+  return { kind: 'none', away: situation.devices.filter((device) => (device.songs > 0 || inCloud) && !device.online) };
 }
 
 /** Said once when the music starts somewhere other than the default. */

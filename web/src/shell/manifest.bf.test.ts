@@ -107,6 +107,12 @@ describe('the Cloud More area (BF-0463-01)', () => {
     expect(moreDestinationsFor(context('cloud', ['cloud.uploads'], BOTH)).map((item) => item.id)).toContain('uploads');
   });
 
+  it('library.places calls uploading Upload music, as the Library’s Add music holds every way in', () => {
+    const label = (features: string[]) => moreDestinationsFor(context('cloud', features, BOTH)).find((item) => item.id === 'uploads')?.label;
+    expect(label(['cloud.uploads'])).toBe('Add music');
+    expect(label(['cloud.uploads', 'library.places'])).toBe('Upload music');
+  });
+
   it('drops devices and Rooms when their flags are off', () => {
     const ids = moreDestinationsFor(context('cloud', [], LOCAL_FIRST)).map((item) => item.id);
     expect(ids).not.toContain('devices');

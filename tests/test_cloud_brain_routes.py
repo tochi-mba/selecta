@@ -110,7 +110,7 @@ def cloud(tmp_path, monkeypatch):
                 )
                 assert saved.status_code == 200, saved.text
             yield {"client": client, "ids": ids[: len(SEEDS)], "unmeasured": ids[-1],
-                   "engine": engine}
+                   "engine": engine, "app": app}
     finally:
         engine.dispose()
 

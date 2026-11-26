@@ -59,6 +59,8 @@ AREAS = (
     "app",
     "tools",
     "cloud",
+    # cloud.json is near the file-length cap, so newer Cloud flags start their own file
+    "cloud_shell",
     "autopilot",
     "venueops",
     "business",

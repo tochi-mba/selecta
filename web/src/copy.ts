@@ -164,8 +164,27 @@ export const copy: { desktop: Record<CopyKey, string>; cloud: Record<MusicHome, 
   cloud: { cloud_library: cloudWords('cloud_library'), device: cloudWords('device'), both: cloudWords('both') },
 };
 
+/** `cloud.move_to_cloud` (ADR-0489): the 'both' sentences for an account that can upload songs
+ * from this device to its cloud library. Every other account keeps the words above, word for
+ * word. The file on the device is never moved or changed, so that promise stays. */
+export const UPLOADING_FROM_DEVICE: Readonly<Partial<Record<HomeKey, string>>> = {
+  startAudioStays: 'Songs you upload to your cloud library are copied there and stay private to your workspace; the file on this device stays as it is.',
+  startFolderHelp: 'Choose music files or a folder to upload, or a folder that stays on this device. Songs you upload to your cloud library are copied there. Your original files on this device are never moved or changed.',
+  sourcesHelp: `Add music by uploading files, or by choosing a folder on this device. Songs you upload to your cloud library are copied there and stay private to your workspace; the file on this device stays as it is. ${LYRICS_LOOKUP}`,
+};
+
+/** MUSIC_HOME_START.both.privacy for the same accounts. */
+export const UPLOADING_FROM_DEVICE_PRIVACY = 'Music you connect from this device stays on this device. Songs you upload to your cloud library are copied there, and the file on this device stays as it is. Your cloud library stays available in SelectaDJ.';
+
 let place: Place = 'desktop';
 let home: MusicHome = 'cloud_library';
+let uploadsFromDevice = false;
+
+/** Called once the Cloud account says whether it can upload from this device (the account's
+ * `cloud.move_to_cloud`, which needs the cloud library grant). */
+export function setUploadsFromDevice(on: boolean) {
+  uploadsFromDevice = on;
+}
 
 /** Called once the server has said which place this is. */
 export function setCopyPlace(next: Place) {
@@ -197,7 +216,8 @@ export function words(): Record<CopyKey, string> {
   if (place === 'desktop') return copy.desktop;
   if (home === 'cloud_library') return copy.cloud[home];
   // what this device prepares ahead follows its two switches, so the sentence does too
-  return { ...copy.cloud[home], libraryReadyMeaning: readyMeaning(home, deviceWork()) };
+  const uploading = home === 'both' && uploadsFromDevice ? UPLOADING_FROM_DEVICE : {};
+  return { ...copy.cloud[home], ...uploading, libraryReadyMeaning: readyMeaning(home, deviceWork()) };
 }
 
 /** The Cloud start card: how to begin, and what happens to the music, for where it lives. */
@@ -219,6 +239,12 @@ export const MUSIC_HOME_START: Readonly<Record<MusicHome | 'none', { heading: st
     privacy: 'SelectaDJ has not been given access to music for this account.',
   },
 };
+
+/** The start card's words; `uploading` is the account's `cloud.move_to_cloud`. */
+export function musicHomeStart(source: MusicHome | 'none', uploading: boolean): { heading: string; privacy: string } {
+  const found = MUSIC_HOME_START[source];
+  return source === 'both' && uploading ? { ...found, privacy: UPLOADING_FROM_DEVICE_PRIVACY } : found;
+}
 
 /* ------------------------------------------------------------------------------------------------
  * Playback status, one vocabulary (ADR-0463 BF-0463-03; states from ADR-0457, ADR-0460, ADR-0461).

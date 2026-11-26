@@ -291,6 +291,25 @@ describe('what the local-first shell mounts', () => {
     expect(await screen.findByLabelText('Cutover notice')).toHaveTextContent('notice for user-1');
   });
 
+  it('with cloud.page_layout off the notices draw as before: no stack, and the root has no layout mark', async () => {
+    account = { ...withExperience(true, true, true), features: { 'cloud.local_first': true, 'cloud.hosted_media': true, 'cloud.page_layout': false } };
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    render(<CloudApp />);
+    await screen.findByLabelText('Cutover notice');
+    expect(document.querySelector('[data-notice-mark], [data-notice-expanded]')).toBeNull();
+    expect(document.documentElement.dataset.pageLayout).toBeUndefined();
+  });
+
+  it('with cloud.page_layout on the notices are one stack with one open, and pages take the frame', async () => {
+    account = { ...withExperience(true, true, true), features: { 'cloud.local_first': true, 'cloud.hosted_media': true, 'cloud.page_layout': true } };
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    render(<CloudApp />);
+    await screen.findByLabelText('Cutover notice');
+    expect(document.querySelectorAll('[data-notice-mark]')).toHaveLength(5);
+    await waitFor(() => expect(document.querySelectorAll('[data-notice-expanded]')).toHaveLength(1));
+    expect(document.documentElement.dataset.pageLayout).toBe('frame');
+  });
+
   it('never shows a local-first member the upload surface', async () => {
     account = withExperience(true, false, true);
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
@@ -303,13 +322,14 @@ describe('what the local-first shell mounts', () => {
 });
 
 describe('the Library Connect music menu', () => {
-  it('has a name, opens from the keyboard on its first item, and Escape gives focus back', async () => {
-    account = withExperience(true, false, true);
+  // library.places names the menu Add music and says where each way keeps the songs
+  async function menuOf(name: string, base: Account, places: boolean) {
+    account = { ...base, features: { ...base.features, 'library.places': places } };
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     window.history.replaceState({}, '', '/library');
     render(<CloudApp />);
     const trigger = await waitFor(() => {
-      const found = screen.getAllByRole('button', { name: 'Connect music' }).find((button) => button.getAttribute('aria-expanded') !== null);
+      const found = screen.getAllByRole('button', { name }).find((button) => button.getAttribute('aria-expanded') !== null);
       expect(found).toBeDefined();
       return found!;
     });
@@ -318,11 +338,20 @@ describe('the Library Connect music menu', () => {
     fireEvent.click(trigger);
     const menu = await screen.findByRole('menu');
     const items = within(menu).getAllByRole('menuitem');
-    expect(items.map((item) => item.textContent)).toEqual(['Choose a folder', 'Choose songs']);
     await waitFor(() => expect(items[0]).toHaveFocus());
     fireEvent.keyDown(items[0], { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
     expect(trigger).toHaveFocus();
+    return items.map((item) => item.textContent);
+  }
+
+  it('has a name, opens from the keyboard on its first item, and Escape gives focus back', async () => {
+    expect(await menuOf('Connect music', withExperience(true, false, true), false)).toEqual(['Choose a folder', 'Choose songs']);
+  });
+
+  it('with library.places it is Add music, and an account with a cloud library can upload from it', async () => {
+    expect(await menuOf('Add music', withExperience(true, true, true), true))
+      .toEqual(['Choose a folder (stays on this device)', 'Choose songs (stays on this device)', 'Upload to your cloud library']);
   });
 });
 

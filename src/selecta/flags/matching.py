@@ -35,6 +35,7 @@ class RuleKind(enum.StrEnum):
     SEGMENT = "segment"
     PERCENTAGE = "percentage"
     SCHEDULE = "schedule"
+    FOLLOWS = "follows"
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,7 @@ _ALLOWED = {
     RuleKind.SEGMENT: SEGMENT_KEYS | {"on", "note"},
     RuleKind.PERCENTAGE: SEGMENT_KEYS | {"percent", "salt", "note"},
     RuleKind.SCHEDULE: SEGMENT_KEYS | {"from", "until", "on", "note"},
+    RuleKind.FOLLOWS: frozenset({"flag", "on", "note"}),
 }
 
 
@@ -115,6 +117,10 @@ class Rule:
       segment, on for that share of accounts, off for the rest.
     - `schedule`: `from` and/or `until` as UTC epoch seconds, `on` (default true), plus optional
       segment keys. Within the segment, `on` inside the window and the opposite outside it.
+    - `follows`: `flag`, another flag's id, and `on` (default true). `on` where that flag is on
+      for this account and the opposite where it is off, so staff can send a feature wherever
+      a grant goes without a release (a flag's `requires` does it for good). It needs that
+      flag's own decision, so `flags/targeting.py` answers it; its matcher here answers nothing.
     """
 
     kind: str
@@ -308,6 +314,13 @@ def _compile(kind: str, params: Mapping[str, Any]) -> tuple[list[str], Matcher |
 
     if rule_kind is RuleKind.KILL_SWITCH:
         return found, lambda flag, ctx, now: False
+
+    if rule_kind is RuleKind.FOLLOWS:
+        followed = params.get("flag")
+        if not isinstance(followed, str) or followed not in flags.registry():
+            found.append("flag should name another flag")
+        _bool_param(params, "on", True, found)
+        return found, lambda flag, ctx, now: None
 
     if rule_kind in (RuleKind.USERS, RuleKind.WORKSPACES):
         ids = frozenset(_strings(params.get("ids"), "ids", found))

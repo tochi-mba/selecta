@@ -92,6 +92,29 @@
       "kind": "release",
       "owner": "storage"
     },
+    "storage.upload_identity": {
+      "label": "Uploads join the song they are for",
+      "about": "Uploading a song that is already in your library adds the file to that same song, matched by its file, an older copy of it or its audio, so its measurements, corrections, mixes and ratings stay with it; an unsure match becomes another version of the song. Also adds a check that says what a batch of uploads would do before anything is sent. Off: an upload finds its song by the exact file only, as before.",
+      "routes": ["POST /api/uploads/preview"],
+      "requires": ["cloud.uploads"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "storage",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Song identity and a dry run underneath uploads; it adds no page or control of its own."
+    },
+    "cloud.move_to_cloud": {
+      "label": "Upload songs from this device",
+      "about": "A member with a cloud library can upload songs from this device to it, one song at a time, carrying on after a reload or a closed tab, and then play them from the cloud library only: the song leaves this device's list, the file on this device stays exactly as it is, folder checks never add it back, and each song can play from this device again. The build ships it on; an account without the cloud library still sees nothing, because it needs the cloud library grant, uploads and uploads joining their song. Off, nothing about it is shown.",
+      "routes": ["GET /api/uploads/rights", "POST /api/uploads/rights"],
+      "requires": ["cloud.hosted_media", "cloud.uploads", "storage.upload_identity"],
+      "surfaces": ["cloud.library"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "storage"
+    },
     "cloud.stored_media": {
       "label": "Stored media",
       "about": "List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the cloud library grant, so nobody's library goes dark (ADR-0456).",
@@ -139,6 +162,18 @@
       "owner": "playback",
       "cloud_surface_kind": "headless",
       "cloud_surface_reason": "Changes which transitions the server renders for a cloud library mix, not any screen: the cloud library card looks and works the same either way"
+    },
+    "cloud.studio_seams": {
+      "label": "Cloud library transitions made ahead",
+      "about": "For an account with a cloud library, a transition between two songs that are both in the cloud library is made ahead by the cloud studio and played by the same player as every other mix as a finished clip, each song playing from its lossless file at the level the clip was made at (selecta.hosted_pairs). Off: those transitions are worked out in the browser as the mix plays, as before. Off until it has been listened to.",
+      "routes": ["POST /api/hosted/seams"],
+      "requires": ["cloud.hosted_render"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "A route the shared player asks for each transition between two cloud library songs; it adds no page or control of its own"
     },
     "cloud.local_first": {
       "label": "Music on the member's devices",
@@ -218,6 +253,35 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.page_layout": {
+      "label": "Cloud pages fill the frame",
+      "about": "Every Cloud page uses the full width of the frame, with text kept to a readable line length; account, billing and onboarding pages stay narrow and centred; Add music shows its storage beside the uploads on wide screens. Notices above the page show one at a time, with the rest folded into one line. Off, pages are drawn as before.",
+      "surfaces": ["cloud.home", "cloud.listen", "cloud.library", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.one_mixer": {
+      "label": "One Make a Mix for songs in both places",
+      "about": "For an account with songs on its devices and in its cloud library, Make a Mix is the same mixer everyone has: the mix it makes becomes the current mix, so Listen, the editor, My Mixes and the mini player follow it, and Listen says when transitions are being got ready without holding up the music. Saving a mix as a file takes songs from both places, reading cloud songs to this device only; songs only on another device are left out by name. When every song is in the cloud library, the file can also be made there. Off: such an account keeps its separate cloud library card, and a file is saved only from songs on this device.",
+      "requires": ["cloud.local_first", "cloud.stored_media"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.catalogue_play": {
+      "label": "Phones and other devices play cloud songs",
+      "about": "A song in your cloud library plays on any device you are signed in on: it is found by the song itself, never by this device's own files or by its name, and its link is signed again when it runs out. Choosing where the music plays counts those songs as on every signed-in device, so a phone with no music of its own can play them here. Off, songs in the cloud library are matched as before.",
+      "requires": ["cloud.stored_media"],
+      "surfaces": ["cloud.listen", "cloud.library"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.progressive_import": {
       "label": "Import continues in the background",
       "about": "A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02).",
@@ -285,17 +349,17 @@
     },
     "cloud.account_mixes": {
       "label": "Your mixes in one place",
-      "about": "The account's mixes come from one place on every device: the current mix and every draft are kept with the account in the same form the Desktop app keeps them (ADR-0479, docs/engineering/engine-store-mixes.md), and the browser reads and changes them through the Desktop's own mix routes, which also need cloud.brain. The account's song requests are kept with it the same way and answer the Desktop's request routes, since a request joins the account's mix. The first time an account uses them, its saved browser mixes are copied in as drafts once; nothing about them is changed or removed. Mixes hold catalogue song ids and transition choices, never audio or file paths. Off until it has been tried on a real account: the browser keeps its saved browser mixes as before, and these routes answer flag_off.",
+      "about": "The account's mixes come from one place on every device: the current mix and every draft are kept with the account in the same form the Desktop app keeps them (ADR-0479, docs/engineering/engine-store-mixes.md), and the browser reads and changes them through the Desktop's own mix routes, which also need cloud.brain. The account's song requests are kept with it the same way and answer the Desktop's request routes, since a request joins the account's mix. The first time an account uses them, its saved browser mixes and uploaded-music mixes are copied in as drafts once; nothing about them is changed or removed. My Mixes then lists the drafts, a draft opens in the editor, and a change of the current mix reaches every open device. Mixes hold catalogue song ids and transition choices, never audio or file paths. On for every account with the cloud library (it needs cloud.hosted_media, decided per account) and off for every other: there the browser keeps its saved browser mixes as before, and these routes answer flag_off.",
       "routes": [
         "PUT /api/mix/order"
       ],
-      "requires": ["cloud.brain"],
+      "requires": ["cloud.brain", "cloud.hosted_media"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback",
       "cloud_surface_kind": "headless",
-      "cloud_surface_reason": "Changes where the browser keeps a mix, not any screen: Make a Mix, the editor and My Mixes look and work the same either way"
+      "cloud_surface_reason": "Changes where a mix is kept, not a page of its own: Make a Mix, the editor and My Mixes are the shared shell's, with the Desktop's drafts list"
     },
     "cloud.local_media": {
       "label": "Local media catalogue",
@@ -784,6 +848,16 @@
       "surfaces": ["cloud.listen"],
       "words": ["Tonight in numbers"],
       "modes": ["cloud"],
+      "kind": "release",
+      "owner": "rooms"
+    },
+    "rooms.cloud_songs": {
+      "label": "Rooms offer songs in your cloud library",
+      "about": "For an account with a cloud library, a room also offers the songs in it, because the device playing the room can play them from there; any signed-in device can then play the room. Songs kept only on another device stay out, as before. Off, a room offers only the songs on the device playing it.",
+      "requires": ["rooms", "cloud.stored_media"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
       "kind": "release",
       "owner": "rooms"
     },

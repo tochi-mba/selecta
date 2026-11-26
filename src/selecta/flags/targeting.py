@@ -142,6 +142,8 @@ class _Evaluator:
         self.local = ctx.mode == "local"
         self.decided: dict[str, Decision] = {}
         self.teasers: dict[str, str | None] = {}
+        # flags whose follows rule is being answered, so a circle of them stops
+        self.following: set[str] = set()
 
     def flag(self, flag_id: str) -> flags.Flag:
         if flag_id not in self.registry:
@@ -164,7 +166,10 @@ class _Evaluator:
         for position, rule in enumerate(self.snapshot.for_flag(flag.id), start=1):
             if not rule.enabled or rule.matcher is None:
                 continue
-            verdict = rule.matcher(flag, self.ctx, self.now)
+            if rule.kind == RuleKind.FOLLOWS:
+                verdict = self.follow(flag, rule)
+            else:
+                verdict = rule.matcher(flag, self.ctx, self.now)
             if verdict is None:
                 continue
             reason = RULE_ON if verdict else RULE_OFF
@@ -172,6 +177,21 @@ class _Evaluator:
         if not flag.rules_default:
             return Decision(False, Layer.RULES, NOT_GRANTED), "no rule granted it"
         return Decision(True, Layer.RULES, DEFAULT), "no rule matched"
+
+    def follow(self, flag: flags.Flag, rule: Rule) -> bool | None:
+        """A follows rule: `on` where the named flag is on for this context (its whole decision,
+        cascade and preference included), the opposite where it is off. A flag that leads back
+        here, or isn't there, is no answer."""
+        other = rule.params.get("flag")
+        if other == flag.id or other in self.following or other not in self.registry:
+            return None
+        self.following.add(flag.id)
+        try:
+            there = self.decide(str(other)).on
+        finally:
+            self.following.discard(flag.id)
+        on = rule.params.get("on", True)
+        return on if there else not on
 
     def layers(self, flag: flags.Flag) -> Decision:
         """Layers 1 to 4, before the cascade and the person's preference."""

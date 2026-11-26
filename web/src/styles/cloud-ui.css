@@ -87,7 +87,7 @@
 :where(:root[data-cloud='on']) .field > label { font-size: var(--text-sm); font-weight: var(--weight-label); }
 :where(:root[data-cloud='on']) .field-help { margin: 0; color: var(--text-soft); font: var(--type-caption); }
 :where(:root[data-cloud='on']) .field > .warn { margin: 0; color: var(--danger); font-size: var(--text-sm); }
-:where(:root[data-cloud='on']) .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); align-items: start; }
+:where(:root[data-cloud='on']) .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-4); align-items: start; }
 
 /* ---- page header: title, one line, the page's actions ---- */
 :where(:root[data-cloud='on']) .page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); margin: 0 0 var(--space-5); min-width: 0; }
@@ -158,6 +158,10 @@
 :where(:root[data-cloud='on']) .banner > .ui-icon { color: var(--tone); }
 :where(:root[data-cloud='on']) .banner > :is(p, span, div):not(.ui-icon) { flex: 1 1 200px; min-width: 0; margin: 0; }
 :where(:root[data-cloud='on']) .banner > :is(button, a.button) { flex: none; min-height: 32px; padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
+/* a finger's target on a touch screen */
+@media (pointer: coarse), (max-width: 760px) {
+  :where(:root[data-cloud='on']) .banner > :is(button, a.button) { min-height: var(--control-height); }
+}
 :where(:root[data-cloud='on']) .badge { --tone: var(--text-soft); display: inline-flex; align-items: center; gap: var(--icon-gap-dense); padding: 0 var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--tone) 16%, transparent); color: var(--tone); font: var(--weight-label) var(--text-xs) / 1.83 var(--body); white-space: nowrap; }
 :where(:root[data-cloud='on']) .badge:not([data-tone]) { background: var(--surface-control); color: var(--text); }
 :where(:root[data-cloud='on']) .badge[data-tone='accent'] { background: var(--primary-fill); color: var(--primary-ink); }
@@ -209,7 +213,7 @@
 }
 
 /* ---- menus and popovers ---- */
-:where(:root[data-cloud='on']) .menu-list { min-width: 200px; padding: var(--space-1); border-radius: var(--radius); }
+:where(:root[data-cloud='on']) .menu-list { min-width: min(200px, calc(100vw - 2 * var(--gutter))); padding: var(--space-1); border-radius: var(--radius); }
 :where(:root[data-cloud='on']) .menu-list button { min-height: 36px; padding: var(--space-dense) var(--space-3); border: 0; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 500; }
 :where(:root[data-cloud='on']) .popover-panel { border-radius: var(--radius); padding: var(--space-4); }
 

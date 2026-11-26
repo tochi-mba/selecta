@@ -30,25 +30,31 @@ def _generator():
     return module
 
 
-def _same(fresh, kept, where: str) -> None:
+def _same(fresh, kept, where: str, scale: float = 0.0) -> None:
     """Equal, numbers within 1e-5 relative. Most values are float32 sums over many FFT bins, and
     the libraries' SIMD paths differ between CPUs: a CI runner put the onset envelope 1.05e-6
-    apart (a few float32 steps). An analysis change moves values far more, and the browser
-    port is only held to 1e-3 on the envelope, so this still catches every real change."""
+    apart (a few float32 steps). A number in a list also gets 1e-6 of the list's largest: an
+    MFCC is a DCT over 64 mel bands in dB, so a coefficient near 0 carries the float32 noise of
+    its neighbours (a runner put a 0.0758 coefficient beside a 188 one 1.03e-6 apart). An
+    analysis change moves values far more, and the browser port is only held to 1e-3 on the
+    envelope and 1e-2 on MFCCs, so this still catches every real change."""
     if isinstance(kept, dict):
         assert isinstance(fresh, dict) and set(fresh) == set(kept), where
         for key in kept:
             _same(fresh[key], kept[key], f"{where}.{key}")
     elif isinstance(kept, list):
         assert isinstance(fresh, list) and len(fresh) == len(kept), where
+        numbers = [abs(v) for v in kept if isinstance(v, int | float) and not isinstance(v, bool)]
+        largest = max(numbers, default=0.0)
         for index, (a, b) in enumerate(zip(fresh, kept, strict=True)):
-            _same(a, b, f"{where}[{index}]")
+            _same(a, b, f"{where}[{index}]", largest)
     elif isinstance(kept, bool) or kept is None or isinstance(kept, str):
         assert fresh == kept, where
     elif isinstance(kept, int) and isinstance(fresh, int):
         assert fresh == kept, where
     else:
-        assert math.isclose(float(fresh), float(kept), rel_tol=1e-5, abs_tol=1e-6), where
+        near = max(1e-6, 1e-6 * scale)
+        assert math.isclose(float(fresh), float(kept), rel_tol=1e-5, abs_tol=near), where
 
 
 @pytest.fixture(scope="module")

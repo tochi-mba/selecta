@@ -148,15 +148,16 @@ jobs:
         run: uv run --no-project python src/selecta/audit/checklist_evidence.py
 
   python:
-    # Every pytest case is assigned to exactly one isolated Windows runner.
-    name: Python / tests (shard ${{ matrix.shard }}/2)
+    # Every pytest case is assigned to exactly one isolated Windows runner. Three shards: with
+    # coverage, two shards of the suite outgrew 60 minutes each (cut off at about 90%).
+    name: Python / tests (shard ${{ matrix.shard }}/3)
     needs: [lint]
     runs-on: windows-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -181,7 +182,7 @@ jobs:
       - run: uv sync --locked
       - name: Run full assigned pytest shard with coverage
         env:
-          SELECTA_TEST_SHARD: ${{ matrix.shard }}/2
+          SELECTA_TEST_SHARD: ${{ matrix.shard }}/3
         run: uv run pytest --cov=selecta --cov-report=term-missing --cov-fail-under=0
       - name: Rename per-runner coverage
         run: Rename-Item .coverage ".coverage.${{ matrix.shard }}"
@@ -198,15 +199,16 @@ jobs:
     # The same Desktop tests with core.engine_store forced on (tests/engine_store_on.py), so the
     # storage rewrite is checked against the whole suite, not only its own tests. The flag is off
     # by default, so this job reports and does not gate `verify`: it becomes required when the
-    # flag's default changes. See docs/engineering/engine-store.md.
-    name: Python / tests, engine store on (shard ${{ matrix.shard }}/2)
+    # flag's default changes. See docs/engineering/engine-store.md. Three shards, as `python`:
+    # each of two took 53 or 54 of its 60 minutes.
+    name: Python / tests, engine store on (shard ${{ matrix.shard }}/3)
     needs: [lint]
     runs-on: windows-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -231,7 +233,7 @@ jobs:
       - run: uv sync --locked
       - name: Run the assigned pytest shard with the engine store on
         env:
-          SELECTA_TEST_SHARD: ${{ matrix.shard }}/2
+          SELECTA_TEST_SHARD: ${{ matrix.shard }}/3
           SELECTA_TEST_ENGINE_STORE: "1"
         run: uv run pytest -q
 

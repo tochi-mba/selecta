@@ -3,6 +3,7 @@ import app from '../../src/selecta/flags/app.json' with { type: 'json' };
 import autopilot from '../../src/selecta/flags/autopilot.json' with { type: 'json' };
 import business from '../../src/selecta/flags/business.json' with { type: 'json' };
 import cloud from '../../src/selecta/flags/cloud.json' with { type: 'json' };
+import cloudShell from '../../src/selecta/flags/cloud_shell.json' with { type: 'json' };
 import core from '../../src/selecta/flags/core.json' with { type: 'json' };
 import discover from '../../src/selecta/flags/discover.json' with { type: 'json' };
 import editor from '../../src/selecta/flags/editor.json' with { type: 'json' };
@@ -27,14 +28,14 @@ import workspace from '../../src/selecta/flags/workspace.json' with { type: 'jso
  * command or word about it, and the page around it closes up. That is the whole contract, and the
  * browser sweep in `web/e2e/flags.e2e.ts` holds every page to it. */
 
-const AREAS = [core, listen, mixes, lucy, mymixes, editor, moves, requests, discover, library, learning, workspace, app, tools, cloud, autopilot, venueops, business];
+const AREAS = [core, listen, mixes, lucy, mymixes, editor, moves, requests, discover, library, learning, workspace, app, tools, cloud, cloudShell, autopilot, venueops, business];
 
 export type FlagId =
   | keyof typeof core.flags | keyof typeof listen.flags | keyof typeof mixes.flags | keyof typeof lucy.flags
   | keyof typeof mymixes.flags | keyof typeof editor.flags | keyof typeof moves.flags | keyof typeof requests.flags
   | keyof typeof discover.flags | keyof typeof library.flags | keyof typeof learning.flags | keyof typeof workspace.flags
-  | keyof typeof app.flags | keyof typeof tools.flags | keyof typeof cloud.flags | keyof typeof autopilot.flags
-  | keyof typeof venueops.flags | keyof typeof business.flags;
+  | keyof typeof app.flags | keyof typeof tools.flags | keyof typeof cloud.flags | keyof typeof cloudShell.flags
+  | keyof typeof autopilot.flags | keyof typeof venueops.flags | keyof typeof business.flags;
 
 export type FlagSpec = {
   area: string;

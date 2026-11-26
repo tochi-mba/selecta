@@ -123,6 +123,17 @@
       "owner": "library",
       "cloud_surface_kind": "headless",
       "cloud_surface_reason": "Song identity underneath the library; it adds no page or control of its own."
+    },
+    "library.places": {
+      "label": "Where each song is kept",
+      "about": "For an account with a cloud library, the Library says where each song is kept: on this device, in your cloud library, or both, with a filter for each, its size in your cloud library and a way to remove it from there. Adding music offers keeping songs on this device or uploading them. Off: the Library is as before. An account without a cloud library sees nothing new.",
+      "routes": ["POST /api/assets/remove"],
+      "requires": ["cloud.stored_media"],
+      "surfaces": ["cloud.library", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "library"
     }
   }
 }

@@ -330,6 +330,26 @@ def _versions() -> dict[str, int]:
     return {"analysis": ANALYSIS_VERSION, "render": RENDER_VERSION}
 
 
+MAX_WARP_POINTS = 2_000
+
+
+def _played(script) -> dict:
+    """What a player joining the clip to the songs' own files needs beyond the cues
+    (`hosted_pairs`): the level each song was rendered at (exact), the clip second the ear moves
+    to B (the overlap's end), and B's warp from clip seconds to its own (left out when long)."""
+    import math
+
+    found: dict[str, Any] = {"switch_at": round(float(script.overlap[1]), 4)}
+    gains = (float(script.a.song.gain_db), float(script.b.song.gain_db))
+    if all(math.isfinite(gain) for gain in gains):
+        found["levels"] = {"a_gain_db": gains[0], "b_gain_db": gains[1]}
+    output, source = script.b.warp.output, script.b.warp.source
+    if 2 <= len(output) <= MAX_WARP_POINTS:
+        found["b_warp"] = {"output": [round(float(t), 4) for t in output],
+                           "source": [round(float(t), 4) for t in source]}
+    return found
+
+
 def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
     from selecta.workers import engine_core, engine_seams
 
@@ -371,6 +391,7 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
         settings={
             "style": style or "auto", "cues": cues, "engine": engine_name, "move": take.move,
             "passed": bool(take.report.passed), "fell_back": take.fell_back,
+            **_played(take.rendered.script),
         },
     )
     artifact = ctx.publish("seam", input_hash, output, "seam.flac", provenance=provenance)

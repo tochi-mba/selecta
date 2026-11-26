@@ -196,7 +196,8 @@ async function checkOne(id: string, signal: AbortSignal, turn: Turn): Promise<vo
   const facts = await factsOf(files, { signal, onProgress: (done, total) => publish({ checking: { folderId: id, stage: 'reading', done, total } }) });
   const store = await own.openStore();
   const before = await store.all();
-  const plan = await planCheck(id, facts, before, signal);
+  // cloud.move_to_cloud: unchanged files of songs played from the cloud library only are skipped
+  const plan = await planCheck(id, facts, before, signal, store.cloudOnlyRecords?.() ?? []);
   if (gone()) return;
   for (const { songId, source } of plan.adopt) {
     const song = await store.get(songId);

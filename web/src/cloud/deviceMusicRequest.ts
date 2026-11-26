@@ -1,4 +1,5 @@
-import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
+import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status, type CloudCopy } from '../api';
+import { cloudBySong, placeCounts, placeMatches, placeSorter, songPlaces } from './libraryPlaces';
 import { accountMeasured, noteCorrection, sendingOn, type Measured } from './accountFacts';
 import { accountMixes, accountMixesOn, fallsBack } from './accountMixes';
 import { accountOrderPlanner } from './accountOrder';
@@ -13,6 +14,7 @@ import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeSto
 import { requestsFamily } from './deviceMusicRequests';
 import { askToMake, forgetRatings, inspectorOn, seamOptions, withInspection } from './seamInspection';
 import { exportFamily, exportStudio } from './localExport';
+import { ownCloudCopies } from './cloudFileExport';
 import { readCached, writeCached } from './offlineCache';
 import { canHeal, classify } from './resilientRequest';
 import { libraryFamily } from './deviceMusicLibrary';
@@ -50,6 +52,10 @@ export type CatalogueSong = {
   versions?: number[];
   /** The member set it aside (Is it music? answered no): kept out of mixes (T-20261126-3f92). */
   set_aside?: boolean;
+  /** When the catalogue first listed it (epoch seconds), for "Newest first". */
+  created_at?: number;
+  /** library.places: its copy in the cloud library, every kept copy counted; absent with none. */
+  cloud?: CloudCopy | null;
 };
 
 /** The refusal for a route only the SelectaDJ app on a computer answers. */
@@ -93,6 +99,14 @@ export async function readCatalogue(cloud: Request): Promise<CatalogueSong[]> {
 export type AvailabilitySources = {
   here?: () => Promise<ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>>;
   hosted?: (songs: readonly CatalogueSong[]) => Promise<ReadonlySet<number>>;
+  /** cloud.catalogue_play: the upload in the cloud library that is a song, from its rows (best
+   * version first) and the whole list; null when it has none. */
+  cloudCopy?: (rows: readonly CatalogueSong[], all: readonly CatalogueSong[]) => Promise<string | null>;
+  /** cloud.one_mixer: the player's resolver, so a saved file reads cloud songs as playback does. */
+  resolver?: () => Promise<import('../media').MediaResolver | null>;
+  /** library.places: the Library filters, sorts and counts by where songs are kept, and each
+   * row says its places (libraryPlaces.ts). Off or left out: as before. */
+  places?: boolean;
   /** Where browser mixes are kept (BF-0462-05); without it the current mix is empty. */
   recipes?: RecipeStore;
   /** Harmonic matches from key profiles measured on this device (cloud.browser_harmonic);
@@ -134,18 +148,46 @@ export type Availability = {
   /** Tempo, key and energy measured on the member's devices and saved to the account, with
    * their own corrections (cloud.brain and cloud.device_analysis); absent otherwise. */
   facts?: ReadonlyMap<number, Measured>;
+  /** library.places: each song's cloud copy (its versions' summed); present only with the flag,
+   * which is how the Library page and status know to answer by place. */
+  cloud?: ReadonlyMap<number, CloudCopy>;
 };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
-/** One song's availability: this device first, then a hosted copy, then the member's other devices. */
+/** Every place a song is kept, each on its own: a song can be on this device and in the cloud
+ * library at once, and on other devices too. */
+export type Places = {
+  /** this device: plays now, needs permission again, needs choosing again, or not here */
+  device: 'here' | 'reauth' | 'reconnect' | null;
+  /** a copy in the cloud library */
+  cloud: boolean;
+  /** `devices`: how many devices the server counts holding it (this one may be among them);
+   * `online` and `before`: the member's other open and closed devices that hold it, by name, once
+   * the holdings are known (empty until then) */
+  other: { devices: number; online: readonly string[]; before: readonly string[] };
+};
+const HELD_NOWHERE_ELSE = { online: [], before: [] } as const;
+
+/** Where one song is kept: this device, the cloud library and the member's other devices. */
+export function placesOf(song: CatalogueSong, known: Availability): Places {
+  const held = known.elsewhere?.(song.id) ?? HELD_NOWHERE_ELSE;
+  return {
+    device: known.here.get(song.id) ?? null,
+    cloud: known.hosted.has(song.id),
+    other: { devices: song.available_on ?? 0, online: held.online, before: held.before },
+  };
+}
+
+/** One song's availability, the one place it plays from: this device first, then a hosted copy,
+ * then the member's other devices. A reduction of `placesOf`. */
 export function availabilityOf(song: CatalogueSong, known: Availability): SongAvailability {
-  const device = known.here.get(song.id);
+  const { device, cloud, other } = placesOf(song, known);
   if (device === 'here') return 'here';
-  if (known.hosted.has(song.id)) return 'hosted';
+  if (cloud) return 'hosted';
   if (device === 'reauth') return 'reauth';
   // picked on this device in an earlier visit: it is here, the browser just needs it chosen again
   if (device === 'reconnect') return 'reconnect';
-  return (song.available_on ?? 0) > 0 ? 'elsewhere' : 'nowhere';
+  return other.devices > 0 ? 'elsewhere' : 'nowhere';
 }
 
 /** ADR-0488: what rooms made of a song, said after how it plays; nothing when no room loved it. */
@@ -167,6 +209,8 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     : undefined;
   return {
     ...(versions ? { versions } : {}),
+    // library.places: where it is kept, each place on its own
+    ...(known.cloud ? { places: songPlaces(placesOf(song, known), known.cloud.get(song.id) ?? null) } : {}),
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, ...measuredOf(known.facts?.get(song.id)),
     music_override: song.set_aside ? 0 : null, grid_confidence: null, lyric_status: null,
@@ -215,6 +259,9 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
     .filter((song) => {
       if (state === 'all' || state === 'not_yet') return true;
       if (state === 'set_aside') return song.set_aside === true;
+      // library.places: on this device, in the cloud library, on another device, or nowhere
+      const placed = known.cloud ? placeMatches(state, song, placesOf(song, known), !!known.elsewhere) : null;
+      if (placed !== null) return placed;
       const where = availabilityOf(song, known);
       if (song.set_aside && state !== 'attention' && state !== 'missing') return false;
       if (state === 'ready') return where === 'here' || where === 'hosted';
@@ -223,10 +270,10 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
       if (state === 'attention') return where === 'reauth' || where === 'reconnect' || where === 'nowhere';
       return state === 'missing' && where === 'nowhere';
     })
-    .sort((one, other) => {
+    .sort((known.cloud ? placeSorter(sort, (id) => known.cloud?.get(id) ?? null) : null) ?? ((one, other) => {
       const key = sort === 'artist' ? 'artist' : 'title';
       return one[key].localeCompare(other[key]) || one.id - other.id;
-    });
+    }));
   const page = matching.slice(start, start + limit);
   const next = start + limit < matching.length ? String(start + limit) : null;
   return { songs: page.map((song) => asLibrarySong(song, known)), total: matching.length, next };
@@ -239,6 +286,8 @@ export function statusFrom(songs: CatalogueSong[], known: Availability = NO_AVAI
   const setAside = songs.filter((song) => song.set_aside).length;
   return {
     counts: { total: songs.length, music: songs.length - setAside, analysed: 0, ready, lyrics: 0, set_aside: setAside, missing: songs.length - available },
+    // library.places: how many songs are kept where ("missing" is `none` there)
+    ...(known.cloud ? { places: placeCounts(songs.map((song) => ({ song, places: placesOf(song, known) })), !!known.elsewhere) } : {}),
     steering,
     // the browser's moves by name, so the shared views can say which one a seam asks for
     moves: browserMovesOn() ? browserMoveNames() : {},
@@ -280,8 +329,17 @@ export function withMeasured(mix: MixData, measured: ReadonlyMap<number, Measure
   return changed ? { ...mix, mix: items } : mix;
 }
 
+/** The adapted request, with what its grouped catalogue knows about the cloud library
+ * (cloud.catalogue_play): a song's upload by catalogue id, and every file of a song with one. */
+export type DeviceMusicRequest = Request & {
+  cloudAssetOf: (songId: number) => Promise<string | null>;
+  cloudSongs: () => Promise<CloudSongs>;
+};
+/** The songs in the cloud library: every file id of each, and how many songs. */
+export type CloudSongs = { ids: ReadonlySet<number>; songs: number };
+
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
-export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
+export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources = {}): DeviceMusicRequest {
   let catalogue: Promise<Grouping> | null = null;
   let lastGrouping: Grouping | null = null;
   let readAt = 0;
@@ -376,6 +434,8 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
       loved: await lovedNow(),
       facts: await factsNow(),
       files: { here, rows: new Map(grouping.files.map((file) => [file.id, file])) },
+      // library.places: a grouped song's cloud copy is its versions' copies
+      ...(sources.places ? { cloud: cloudBySong(grouping.files, grouping.primaryOf) } : {}),
     };
   };
   const playable = async (): Promise<PlayableSong[]> => {
@@ -420,7 +480,7 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
   // the account's planner orders a new mix when it can (accountOrder.ts); otherwise today's order
   const planOrder = sources.workspaceId ? accountOrderPlanner(cloud, sources.workspaceId) : undefined;
   // cloud.account_mixes: the account's own mix and draft routes answer first (accountMixes.ts)
-  const account = accountMixes(cloud);
+  const account = accountMixes(cloud, sources.workspaceId);
   // the account's idea cards on Make a Mix, built by its planner (accountIdeas.ts)
   const ideas = sources.workspaceId ? accountIdeas(cloud, sources.workspaceId) : undefined;
   const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder, account, ideas) : null;
@@ -452,6 +512,12 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     cloud,
     studio: exportStudio(sources.workspaceId, cloud),
     mix: (draft) => adapted<MixData>(draft === null ? '/mix' : `/mix?draft=${draft}`),
+    // cloud.one_mixer: cloud songs read as the player reads them, the device holding a song
+    // left out by name, and which songs have their OWN cloud copy (never a row's union of
+    // versions: the server's export reads exactly that song)
+    resolve: sources.resolver,
+    heldBy: (songId) => { const where = holdersNow()?.(songId); return where?.online[0] ?? where?.before[0] ?? null; },
+    inCloud: sources.hosted ? async (songIds) => ownCloudCopies((await grouped()).files, songIds, sources.cloudCopy) : undefined,
   }) : null;
   // T-20261126-827e: the Seam Inspector's reads, from the transitions this device made
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {
@@ -488,7 +554,8 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     // ADR-0475 I84: another device is playing, so a song added from the Library joins its
     // programme (next, or at the end), the same signed press a request uses
     const link = sources.controller?.() ?? null;
-    if (link && method === 'POST' && route === '/mix/songs') {
+    // (a song added to a draft is the draft's, never the speaker's)
+    if (link && method === 'POST' && route === '/mix/songs' && !new URLSearchParams(query).has('draft')) {
       const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number; song_ids?: number[]; position?: number };
       const songId = Number(body.song_id ?? body.song_ids?.[0]);
       // I88: several chosen songs go in at once, in order, those the speaker has (the bar said so)
@@ -525,7 +592,7 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
         if (!fallsBack(problem)) throw problem;
       }
     } else if (addsHere && sources.recipes) {
-      const added = await addPlayable(init);
+      const added = await addPlayable(init, query);
       if (added !== undefined) return added as T;
     }
     const mixAnswer = mixes?.answer(method, route, new URLSearchParams(query), init);
@@ -560,13 +627,14 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
   };
   /** POST /mix/songs through the account (cloud.account_mixes): the song must be one this
    * device can play, as the browser's own mixes ask. Undefined when the account doesn't answer. */
-  const addPlayable = async (init?: RequestInit): Promise<unknown> => {
+  const addPlayable = async (init?: RequestInit, query = ''): Promise<unknown> => {
     if (!accountMixesOn()) return undefined;
     const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number };
     const song = (await playable()).find((one) => one.id === Number(body.song_id));
     if (!song || !song.playable) throw new ApiError('Choose a song that plays on this device.', 400, 'not_playable', 'device-music:mix');
     try {
-      return await account.answer('POST', '/mix/songs', '', init);
+      // `?draft=` adds to that draft, not to the current mix
+      return await account.answer('POST', '/mix/songs', query, init);
     } catch (problem) {
       if (!fallsBack(problem)) throw problem;
       return undefined;
@@ -636,7 +704,22 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     return everyVersion((body.entries ?? []).map((entry) => ({ id: entry.id, expected: entry.expected === true })))
       .then((entries) => write(body.action === 'never', entries));
   };
-  return adapted as Request;
+  // cloud.catalogue_play: a song's upload found from its versions' rows, never this device's files
+  const cloudAssetOf = async (songId: number): Promise<string | null> => {
+    if (!sources.cloudCopy) return null;
+    const grouping = await grouped();
+    const ids = grouping.versionsOf(songId);
+    const rows = ids.flatMap((id) => grouping.files.filter((file) => file.id === id));
+    return rows.length ? sources.cloudCopy(rows, grouping.files) : null;
+  };
+  // every file of each song with a cloud copy, so a mix naming any version is matched; and how
+  // many songs that is
+  const cloudSongs = async (): Promise<CloudSongs> => {
+    const grouping = await grouped();
+    const hosted = setBySong(grouping, (await sources.hosted?.(grouping.files).catch(() => null)) ?? new Set());
+    return { ids: new Set(grouping.files.filter((file) => hosted.has(grouping.primaryOf(file.id))).map((file) => file.id)), songs: hosted.size };
+  };
+  return Object.assign(adapted as Request, { cloudAssetOf, cloudSongs });
 }
 
 /** The media importer asks with full `/api/...` paths (web/src/media); the Cloud client adds

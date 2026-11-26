@@ -10,9 +10,11 @@ from collections.abc import Callable
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import and_, or_, select
 from sqlalchemy.engine import Connection, Engine
 
+from selecta.authz.roles import WorkspaceAction
 from selecta.business import crates
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
@@ -20,9 +22,13 @@ from selecta.storage.deletion import DeletionKind, tombstone
 from selecta.storage.ids import require_id
 from selecta.storage.schema import assets, upload_sessions
 from selecta.usage import quota
+from selecta.work import outbox
 
 _CURSOR_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 _MAX_PAGE_SIZE = 100
+# songs one removal may name, as the Library's selection holds at most 200
+MAX_REMOVE = 200
+REMOVED_TOPIC = "asset.removed"
 
 
 class _QuotaRelease:
@@ -68,6 +74,23 @@ def _asset_json(row: Any) -> dict[str, Any]:
         "channels": row.channels,
         "created_at": row.created_at,
     }
+
+
+class RemoveRequest(BaseModel):
+    """Catalogue song ids, not upload ids: a song's copies are found on the server (its own hash
+    and its older ones), so a second copy or one under an older hash is never left behind."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    song_ids: list[int] = Field(min_length=1, max_length=MAX_REMOVE)
+
+    @model_validator(mode="after")
+    def once_each(self) -> RemoveRequest:
+        if len(set(self.song_ids)) != len(self.song_ids):
+            raise ValueError("each song may appear once")
+        if any(song_id <= 0 for song_id in self.song_ids):
+            raise ValueError("song ids are positive")
+        return self
 
 
 def install_routes(
@@ -209,5 +232,61 @@ def install_routes(
             "physical_delete_after": result.deletion.physical_after,
         }
 
+    @app.post("/api/assets/remove")
+    def remove_from_cloud(
+        body: RemoveRequest,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """Remove songs from the cloud library (`library.places`): every upload that is a cloud
+        copy of each song goes, by the same delete as `DELETE /api/assets/{id}`, with the bytes
+        given back in one go. Files on the member's devices are never touched. Says for each song
+        how many copies went and whether it is now kept nowhere at all."""
+        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        if not principal.can(WorkspaceAction.LIBRARY_WRITE):
+            raise HTTPException(status_code=403, detail={"code": "not_allowed"})
+        workspace_id = principal.workspace.id
+        with transaction(engine, workspace_id) as conn:
+            return remove_songs(conn, workspace_id, body.song_ids)
 
-__all__ = ["install_routes"]
+
+def remove_songs(conn: Connection, workspace_id: str, song_ids: list[int]) -> dict[str, Any]:
+    """Tombstone every cloud copy of these songs and give their bytes back with one quota
+    recount. A song that is not this workspace's answers `found: false`, as a missing one."""
+    from selecta.local_media import places
+
+    live = places.live_songs(conn, workspace_id, song_ids)
+    copies = places.copy_ids(conn, workspace_id, live)
+    released = 0
+    first: str | None = None
+    removed: dict[int, int] = {}
+    now = int(db_now(conn))
+    for song_id, asset_ids in copies.items():
+        for asset_id in asset_ids:
+            result = tombstone(conn, workspace_id, DeletionKind.SONG, asset_id)
+            if not result.created:
+                continue
+            released += result.bytes_to_release
+            first = first or result.deletion.id
+            removed[song_id] = removed.get(song_id, 0) + 1
+            # a deleted song leaves every crate of an organisation at once (BZ-0442-06)
+            crates.tombstone_song(conn, workspace_id, asset_id, now=now)
+    if released:
+        quota.release_deleted(conn, workspace_id, released, ref=f"deletions:{len(removed)}:{first}")
+    if removed:
+        # every open page of the account reads its storage and its library again
+        outbox.emit(conn, REMOVED_TOPIC, workspace_id, {"songs": len(removed)}, db_now(conn))
+    nowhere = places.left_nowhere(conn, workspace_id, live)
+    return {
+        "songs": [
+            {"id": song_id, "found": False} if song_id not in live else {
+                "id": song_id, "found": True, "removed": removed.get(song_id, 0),
+                "left_nowhere": song_id in nowhere,
+            }
+            for song_id in song_ids
+        ],
+        "bytes_released": released,
+    }
+
+
+__all__ = ["MAX_REMOVE", "REMOVED_TOPIC", "install_routes", "remove_songs"]

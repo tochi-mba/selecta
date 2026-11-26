@@ -9,6 +9,12 @@ import { ApiError, type Request } from '../api';
 
 /** The account's current mix as the server answers it. */
 export type AccountCurrent = { mix_id: string | null; revision: number; updated_at: number | null; updated_by_device_name: string | null };
+/** cloud.account_mixes: the account's own current mix changed (cloud_brain/mix_current.py). Not
+ * a recipe: `order` is its song ids in order, and the mix itself is read from `GET /mix`. */
+export type AccountTurn = { account: true; order: string; songs: number; name: string; updated_at: number; updated_by_device_name: string | null };
+
+/** Whether a `mix.current` event is about the account's own mix rather than a recipe. */
+export const isAccountTurn = (value: unknown): value is AccountTurn => !!value && typeof value === 'object' && (value as { account?: unknown }).account === true;
 /** Fired on window by the Cloud event stream (CloudApp) for each `mix.current` event. */
 export const CURRENT_MIX_EVENT = 'selecta:mix-current';
 /** Fired on window when this device's choice lost to another device's: `detail` is the account's value. */
@@ -20,7 +26,7 @@ export function conflictWords(byDevice: string | null): string {
 }
 
 /** This browser's playback device id, when it has registered (usePlaybackDevice keeps it). */
-function deviceId(workspaceId: string): string | null {
+export function deviceId(workspaceId: string): string | null {
   try { return localStorage.getItem(`selecta.device.${workspaceId}`); } catch { return null; }
 }
 

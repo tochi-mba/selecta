@@ -291,9 +291,6 @@ BUSINESS_SCOPED = {
 # forced on in `test_bf_local_media.py` (Bob cannot read, delete or report availability on
 # Alice's songs), the same arrangement the Business routes have.
 FLAG_DARK = {
-    # The whole order of an account's mix (cloud.account_mixes, off by default); Bob can't reach
-    # Alice's mixes (`test_cloud_brain_mixes.py`).
-    ("PUT", "/api/mix/order"),
     ("POST", "/api/local-media/songs"),
     ("GET", "/api/local-media/songs"),
     ("GET", "/api/local-media/songs/{song_id}"),
@@ -390,6 +387,15 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     },
     ("POST", "/api/billing/lucy-packs/confirm"): None,
     ("POST", "/api/uploads/plan"): {"files": [{"name": "song.flac", "size": 10}]},
+    # the dry run (storage.upload_identity, forced on in `world`) reads only the caller's own
+    # songs and storage; `test_cloud_upload_identity.py` checks another account's song id
+    ("POST", "/api/uploads/preview"): {
+        "files": [{"name": "song.flac", "size": 10, "sha256": "a" * 64, "song_id": 1}]
+    },
+    # the upload rights statement (cloud.move_to_cloud): read and kept for the caller's own
+    # workspace only; `test_cloud_upload_rights.py` checks one workspace's record is not another's
+    ("GET", "/api/uploads/rights"): None,
+    ("POST", "/api/uploads/rights"): {"version": "2026-11-26", "wording_sha256": "a" * 64},
     ("GET", "/api/uploads"): None,
     ("GET", "/api/uploads/{session_id}"): None,
     ("POST", "/api/uploads/{session_id}/parts"): {"part_numbers": [1]},
@@ -398,6 +404,9 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/assets"): None,
     ("GET", "/api/assets/{asset_id}"): None,
     ("DELETE", "/api/assets/{asset_id}"): None,
+    # removing songs from the cloud library (library.places, forced on in `world`): catalogue
+    # ids of the caller's own workspace only; `test_local_media_places.py` names another's song
+    ("POST", "/api/assets/remove"): {"song_ids": [1]},
     ("GET", "/api/assets/{asset_id}/playback-url"): None,
     ("POST", "/api/assets/{asset_id}/playback-proxy"): None,
     ("GET", "/api/assets/{asset_id}/playback-proxy"): None,
@@ -417,6 +426,9 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("PUT", "/api/catalog/settings"): {"lookups": True},
     ("POST", "/api/hosted/mixes/plan"): {"count": 4},
     ("POST", "/api/hosted/mixes/render"): {"songs": [{"asset_id": "tenant-a"}]},
+    # one hand-off by catalogue ids (cloud.studio_seams, forced on in `world`);
+    # `test_hosted_seams_route.py` names another account's songs
+    ("POST", "/api/hosted/seams"): {"a": 1, "b": 2},
     ("POST", "/api/hosted/mixes/export"): {"songs": [{"asset_id": "tenant-a"}]},
     ("GET", "/api/hosted/exports/{job_id}"): None,
     # cloud.stored_media (open without the hosted grant): only the caller's own exports;
@@ -608,9 +620,12 @@ def world(tmp_path, monkeypatch):
     # their workspace checks rather than the flag guard (the conftest resets flags after).
     from selecta import flags
 
-    # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`; on here for the same
-    # reason.
-    flags.use("+business.orgs +business.zones +library.art_embedded +library.art_lookup")
+    # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`, the upload dry run
+    # behind `storage.upload_identity`, removing from the cloud library behind
+    # `library.places`, one cloud hand-off behind `cloud.studio_seams` and the export by
+    # catalogue song behind `cloud.one_mixer`; on here for the same reason.
+    flags.use("+business.orgs +business.zones +library.art_embedded +library.art_lookup"
+              " +storage.upload_identity +library.places +cloud.studio_seams +cloud.one_mixer")
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)

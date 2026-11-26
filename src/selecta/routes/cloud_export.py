@@ -1,7 +1,8 @@
 """Authenticated account data archive for Selecta Cloud.
 
 The ZIP holds every original (checked against its stored size and SHA-256), `settings.json` (the
-account, workspace, plan, feature opt-outs, Lucy choices and signed-in devices), `assets.json`,
+account, workspace, plan, feature opt-outs, Lucy choices, signed-in devices and the
+upload rights statements the workspace confirmed), `assets.json`,
 `mixes.json`, `song-facts.json` with each song's stored arrays (`cloud_brain.export`) and a
 manifest. Cloud doesn't store mix revisions yet, so `mixes.json` says so and
 carries what Cloud does keep about mixes: the workspace's playback session.
@@ -36,6 +37,7 @@ from selecta.lucy.cloud_schema import lucy_cloud_conversations, lucy_cloud_turns
 from selecta.persistence import transaction
 from selecta.playback.default_speaker_schema import playback_default_speakers
 from selecta.playback.schema import devices, playback_sessions
+from selecta.storage import personal_rights
 from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets, R2ArtifactStore
 from selecta.storage.keys import Bucket, original_key
 from selecta.storage.objects import ObjectClient, R2Error
@@ -232,6 +234,8 @@ def install_routes(
             kept = _kept_library(conn, workspace.id)
             # ADR-0479: song facts, corrections, ratings and the other hashes a song is known by
             engine_rows = song_facts_export.kept(conn, workspace.id)
+            # ADR-0489: the upload rights statement this workspace confirmed, each wording
+            rights = personal_rights.export_rows(conn, workspace.id)
 
         temp_dir = Path(tempfile.mkdtemp(prefix="selecta-account-export-"))
         archive_path = temp_dir / "selectadj-account-export.zip"
@@ -345,6 +349,7 @@ def install_routes(
                     "feature_preferences": preferences,
                     "lucy": lucy_choices,
                     "devices": device_rows,
+                    "upload_rights": rights,
                 }
                 mixes = {
                     # saved mixes (every revision of each) and the mix last chosen as current

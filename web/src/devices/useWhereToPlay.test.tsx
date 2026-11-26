@@ -65,6 +65,36 @@ describe('A5 and E34', () => {
   });
 });
 
+// cloud.catalogue_play: a phone with no music of its own, the laptop its usual speaker
+describe('Play here instead, with songs in the cloud library', () => {
+  const ids = new Map<string, ReadonlySet<number>>([['laptop', new Set([1, 2, 3, 4])]]);
+  const press = (over: Partial<Situation>) => {
+    const playHereInstead = vi.fn();
+    const askToPlay = vi.fn();
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: situation({ defaultId: 'laptop', mixIds: [1, 2, 3, 4], ids, ...over }), cloud: vi.fn() as never, playHere: vi.fn(), askToPlay, refreshHoldings: vi.fn(), playHereInstead }));
+    act(() => { expect(hook.result.current.decide()).toBe(true); });
+    return { notice: hook.result.current.notice, askToPlay, playHereInstead };
+  };
+
+  it('the phone is offered Play here instead when the mix is in the cloud library', () => {
+    const { notice, askToPlay, playHereInstead } = press({ cloud: { ids: new Set([1, 2, 3, 4]), songs: 4 } });
+    expect(askToPlay).toHaveBeenCalledWith(expect.objectContaining({ device_id: 'laptop' }));
+    expect(notice?.text).toBe('Starting on laptop.');
+    const instead = notice?.actions.find((action) => action.label === 'Play here instead');
+    expect(instead).toBeDefined();
+    act(() => instead!.run());
+    expect(playHereInstead).toHaveBeenCalled();
+  });
+
+  it('a phone used as a remote for songs only the laptop holds keeps today’s behaviour', () => {
+    const { notice, askToPlay } = press({ cloud: { ids: new Set([9]), songs: 1 } });
+    expect(askToPlay).toHaveBeenCalledWith(expect.objectContaining({ device_id: 'laptop' }));
+    expect(notice?.actions.map((action) => action.label)).toEqual([]);
+    // and without the cloud library at all, the same
+    expect(press({}).notice?.actions.map((action) => action.label)).toEqual([]);
+  });
+});
+
 describe('D30', () => {
   it('closing the room while the picker is open closes the picker', async () => {
     const { noteRoom } = await import('../rooms/useRoomSession');
@@ -100,6 +130,14 @@ describe('T-20261125-45b5: never "none open" from a device that can play', () =>
 
   it('plays here when this device has music the server has not counted yet', () => {
     const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: away, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn(), playableHere: true }));
+    act(() => { expect(hook.result.current.decide()).toBe(false); });
+    expect(hook.result.current.notice).toBeNull();
+  });
+
+  it('cloud.catalogue_play: says nothing of the kind when this device can play the mix from the cloud library', () => {
+    // this device is not in the list yet, and the laptop is away; the mix is in the cloud library
+    const unlisted = situation({ devices: [device('laptop', { online: false })], mixIds: [1, 2], cloud: { ids: new Set([1, 2]), songs: 2 } });
+    const hook = renderHook(() => useWhereToPlay({ enabled: true, situation: unlisted, cloud: vi.fn() as never, playHere: vi.fn(), askToPlay: vi.fn(), refreshHoldings: vi.fn() }));
     act(() => { expect(hook.result.current.decide()).toBe(false); });
     expect(hook.result.current.notice).toBeNull();
   });

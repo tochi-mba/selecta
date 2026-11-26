@@ -2,7 +2,8 @@
 
 ADR-0479, Phase 7 steps 2 and 3. The current mix, the drafts and the mix's own named values move
 onto the engine store, on the Desktop (SQLite, behind `core.engine_store`, off by default) and in
-Cloud (PostgreSQL, behind `cloud.brain` and `cloud.account_mixes`, off). Code:
+Cloud (PostgreSQL, behind `cloud.brain` and `cloud.account_mixes`, on for accounts with the cloud
+library). Code:
 `engine_store/mixes.py` (the store side), `mix_backend.py` (the old path and the choice between
 them), `mix.py` (every rule, unchanged), `cloud_brain/mixes_routes.py`,
 `engine_store/mix_import.py`, `web/src/cloud/accountMixes.ts`. Migrations: `lib0007mixes` and
@@ -91,6 +92,24 @@ Bodies forbid unknown fields; a mix holds at most 200 songs and an account 500 d
 is checked inside the write; edits share the `mix_edits` rate limit; the account export carries
 the four tables; account deletion removes them with every workspace row.
 
+## The current mix on every device
+
+A route that changes which mix is current sends `mix.current` on the workspace's event stream,
+inside its own write (`cloud_brain/mix_current.py`): `PUT /api/mix/order` without `?draft=`,
+`POST /api/drafts/{draft}/play`, `POST /api/mix/undo` of the current mix when it undid something,
+and `POST /api/mix/clear`. A draft's edits, making, naming, copying, deleting and bringing back a
+draft, and edits to the current mix's songs send nothing. The event is the recipe event's topic
+marked `account: true`, with `order` (the song ids, as `GET /api/mix` reads them back), `songs`,
+`name`, `updated_at` and `updated_by_device_name` (the device named by `?device_id=`, when it is
+one of the workspace's signed-in devices); `mix_id` is null and `revision` 0, so an older browser
+reads it as no recipe chosen.
+
+The browser (`useAccountMix.tsx`) passes over an event older than one it has heard (the stream
+replays its history to a device that has just connected). A device already showing that order
+does nothing; another reads `GET /mix` again; a device making the sound keeps playing and shows
+"{device} made a new mix" with Play it now. Two devices: the last change stands, and Undo on
+either brings the one before back to both.
+
 ## Recipes fold in
 
 The first use of these routes in a workspace runs `mix_import.import_recipes`: each recipe's
@@ -102,16 +121,37 @@ recipe is changed or removed; the recipe API and the browser's own storage stay 
 The browser (`accountMixes.ts`) answers the shell's mix and draft calls from these routes only
 when `flagListed('cloud.brain')` and `flagListed('cloud.account_mixes')`, so an older server
 never switches it on. A new mix from Make a Mix is `PUT /mix/order` (or a new draft and its
-order). A song added must still play on this device. Offline, a server fault or `flag_off` falls
-back to the recipe path; any other refusal is the account's answer.
+order). A song added must still play on this device; one added in a draft's editor goes to that
+draft. Offline, a server fault or `flag_off` falls back to the recipe path; any other refusal is
+the account's answer.
+
+With it on, My Mixes is the Desktop's: the current mix and the drafts list (`views/Drafts.tsx`),
+whose open, play, rename, copy, delete and bring back are the routes above, and playing a draft
+offers Undo (`cloud/AccountDrafts.tsx`). `/mixes/drafts/{id}/edit` opens a draft in the editor
+through `?draft=`. With it off, My Mixes lists the saved browser mixes and a draft's editor says
+it is the app's, as before. A saved browser mix made current (`recipeAsCurrent`) becomes the
+account's current mix before `GET /mix` is read, so the mix chosen is the one shown and played.
 
 ## What `/cloud-mixes` still does
 
 Uploaded-music mixes stay `mix_revision` artifacts read by the hosted session; nothing changed.
-`import_cloud_mixes` maps each file to the catalogue song with the same hash and is tested, not
-called (to-do T-20261126-1105). Of `cloud_mixes.CAPABILITIES`, this makes "revisions" (Undo and
-drafts) the Desktop's model in Cloud too, and "seam_tools" a step closer (the editor's own routes
-answer), without changing either row here.
+On the first use of the account mix routes, `import_cloud_mixes` brings each one in as a draft,
+once, mapping each file to the catalogue song with the same hash and leaving out a file with none;
+an account with recipes and Cloud mixes ends with every one of them as a draft and its current
+recipe as the current mix (`tests/test_cloud_brain_mix_current.py`). Moving the hosted session
+itself onto the account's mixes is to-do T-20261126-1105. Of `cloud_mixes.CAPABILITIES`, this
+makes "revisions" (Undo and drafts) the Desktop's model in Cloud too, and "seam_tools" a step
+closer (the editor's own routes answer), without changing either row here.
+
+## Who has it
+
+`cloud.account_mixes` is on for every account with the cloud library and off for every other
+(owner decision, 2026-11-26). The build ships it on, and it `requires` `cloud.hosted_media` and
+`cloud.brain`; a requirement is decided per account (`flags/targeting.py`, the cascade runs on
+each account's own decisions, as `cloud.move_to_cloud` needs the grant), so an account without
+the grant has it off with `needs:cloud.hosted_media`, and the grant taken away takes account
+mixes with it. It can still be switched off: a kill switch or a per-account switch on the flag,
+or `-cloud.account_mixes` in `SELECTA_FLAGS`. `tests/test_flag_follows_rule.py` proves each.
 
 ## Still on the old path
 

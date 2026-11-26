@@ -1,0 +1,99 @@
+/* "Upload to your cloud library" (UploadToCloudSheet.tsx, cloud.move_to_cloud). One column at
+   every width, so it stacks on a 390px phone; titles wrap rather than widen the sheet. */
+
+.upload-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.upload-sheet-body > * {
+  min-width: 0;
+}
+
+.upload-sheet-lead {
+  margin: 0;
+  font-weight: 600;
+}
+
+.upload-sheet-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upload-sheet-facts li,
+.upload-sheet-songs li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.upload-sheet-songs {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: 1.25rem;
+}
+
+.upload-sheet-rights {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.upload-sheet-rights h3 {
+  margin: 0;
+}
+
+.upload-sheet-rights blockquote {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.upload-sheet-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.upload-sheet-choice legend {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.upload-sheet-choice label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.upload-sheet-choice label > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.upload-sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 480px) {
+  .upload-sheet-actions > * {
+    flex: 1 1 100%;
+  }
+}

@@ -151,7 +151,9 @@
 }
 :where(:root[data-feel]) .ic-card:has(input:focus-visible) { outline: var(--space-hair) solid var(--focus); outline-offset: var(--space-hair); }
 :where(:root[data-feel]) .ic-card-name { display: flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-label); }
-:where(:root[data-feel]) .ic-card-name > input { margin: 0; }
+/* the radio keeps its own size: the page's input rule (full width, 42px tall) squeezed the name
+   beside it until "Light" broke into "Ligh t" */
+:where(:root[data-feel]) .ic-card-name > input { flex: none; width: auto; min-height: 0; margin: 0; }
 :where(:root[data-feel]) .ic-card-about { color: var(--text-soft); font: var(--type-meta); }
 /* A theme card's page, in that theme's own colours. Both palettes are drawn from Light's tokens,
    because they are the only ones that keep their values whichever theme is showing: Dark is Light's

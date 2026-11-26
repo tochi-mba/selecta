@@ -1,86 +1,56 @@
-import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { lazyPage as lazy } from '../ui/staleBuild';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
-import { accountFlagOn, setFlags, useFlags } from '../flags';
-import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
+import { accountFlagOn, flagListed, setFlags, useFlags } from '../flags';
+import { findLapsed, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
 import { useArtIndex } from './artIndex';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
-import { describeRoute, destinationOf, DESTINATIONS, destinationsFor, moreDestinationsFor, moreRouteOf, type MoreDestinationId, type ShellRoute } from '../shell/manifest';
+import { describeRoute, destinationsFor, moreDestinationsFor, moreRouteOf, type MoreDestinationId, type ShellRoute } from '../shell/manifest';
 import { Shell } from '../shell/Shell';
 import { useMediaKeys } from '../shell/useMediaKeys';
-import { ControllerNotices } from '../devices/ControllerNotices';
 import { setJobsSource } from '../state/jobs';
-import { Drawer, Section, Skeleton } from '../ui/controls';
-import { countOf } from '../ui/format';
+import { Drawer, Section } from '../ui/controls';
 import { showToast } from '../ui/toasts';
-import { Links } from '../views/Links';
-import { Mix } from '../views/Mix';
 import { PlayedTransitions, StemSurfacesContext } from '../views/liveTransitions';
-import { StemsCard } from './stems/StemsCard';
 import { useSplitterNotices } from './stems/useStems';
 import { useStemsEngine } from './stems/useStemsEngine';
 import { playedByPair } from './playedSeams';
 import { peaksFrom } from '../dsp/waveform';
-import { Mixes } from '../views/Mixes';
-import { MyMixes } from '../views/MyMixes';
-import { Now } from '../views/Now';
 import { RequestsContext, RequestsPanel, useRequests, type RequestRow } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
-import { planName, type Account, type Api } from './api';
+import { holdsHostedStorage, planName, type Account, type Api } from './api';
+import { useLibraryPlaces } from './libraryPlacesChrome';
+import { LibraryPlacesContext } from '../views/LibraryPlaces';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
-import { forgetCloudLibraryAssets, cloudLibraryAssets, cloudLibraryResolver, LIBRARY_CHANGED_EVENT, matchAsset } from './cloudLibraryMedia';
+import { forgetCloudLibraryAssets, LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { isHostedAccount } from './deviceMusicGate';
-import { CloudLibrary } from './CloudLibrary';
-import { CloudWorkspace } from './CloudWorkspace';
-import { CurrentMix } from '../views/CurrentMix';
-import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { lucyTransport as currentLucyTransport, setLucyTransport } from '../lucy/client';
-import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './DeviceMusicEmpty';
 import { useLocalFirstPlayer } from './deviceMusicPlayer';
 import { BROWSER_MIX_NEEDS } from './deviceMusicMixes';
-import { EMPTY_MIX, deviceMusicRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './deviceMusicRequest';
-import { RemoteListen } from '../devices/RemoteListen';
+import { EMPTY_MIX, mediaRequest, readCatalogue } from './deviceMusicRequest';
 import { useRemote } from '../devices/useRemote';
-import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, type WhereHeld, programmeTurn, type ControllerLink, type MusicHolder } from '../devices/controller';
+import { bestHolder, HolderContext, mixHeld, musicHolder, whereHeldFrom, programmeTurn, type MusicHolder } from '../devices/controller';
 import { useHoldings } from '../devices/useHoldings';
 import { DEVICE_REGISTERED } from '../devices/playbackWire';
-import { ControllerListen } from '../devices/ControllerListen';
 import { tabLog } from '../devices/audioTab';
 import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
 import { ROOM_REQUEST_EVENT } from './deviceMusicRequests';
-import { useRoomRounds, addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
+import { useRoomRounds, addable, askWords, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
-import { SavedBrowserMixes } from './SavedBrowserMixes';
-import { SoundCheck } from './SoundCheck';
-import { QueueSources } from './QueueSources';
-import { ListenQueue } from './ListenQueue';
-import { NOTHING_PLAYABLE_NOTICE } from '../engine/scheduler';
-import { runningTime } from '../lib';
-import { CutoverNotice } from './migration/CutoverNotice';
-import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, onboardingPutOff, recordImportOutcome } from './onboarding/state';
-import { ImportChip } from './ImportChip';
 import { bindImportWorkspace, endImportSession, useImportShellView } from './importSession';
 import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
-import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
-import { profilesBySong, provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
+import { provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
 import { startFactsUploader } from './factsUploader';
 import { waveformBook } from './sharedWaveforms';
-import { withVersions } from './songVersions';
 import { onReconnect } from './connection';
-import { ConnectionBanner } from './ConnectionBanner';
 import { plainMessage } from './resilientRequest';
 import { useAccountMix } from './useAccountMix';
-import { MixProblem, StatusProblem, ThisDevice } from './deviceMusicParts';
 import { setTabBusy } from './accountTabs';
 import { useWhereToPlay } from '../devices/useWhereToPlay';
-import { OtherTabLine } from '../devices/OtherTabLine';
-import { ChangedFromLine } from '../devices/ChangedFromLine';
-import { PlayNoticeLine } from '../devices/PlayNoticeLine';
-import { HostedMakeAMix, footerWords } from './hosted/HostedMakeAMix';
+import { footerWords } from './hosted/HostedMakeAMix';
 import { browserFlags } from './browserFlags';
 import { sendingOn } from './accountFacts';
 import { accountMixesOn } from './accountMixes';
@@ -88,6 +58,12 @@ import { inspectorOn } from './seamInspection';
 import { DeviceActivityDrawer } from './DeviceActivity';
 import { localExportOn } from './localExport';
 import { placingOn } from './accountPlacements';
+import { RoomOpenLine } from './RoomOpenLine';
+import { useCloudShellMedia, useCloudSongs } from './cloudShellMedia';
+import { CloudShellPages } from './CloudShellPages';
+import { CloudShellNotices, otherTabNote } from './CloudShellNotices';
+import type { NoticeGroups } from './NoticeStack';
+import { useCloudUploadQueue } from './uploadQueueWiring';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -110,11 +86,8 @@ async function newestMix(recipes: { list: () => Promise<{ mix_id: string; name: 
 const PUBLISH_RETRY_MS = 10_000;
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 const LUCY_POLL_MS = 500;
-// Lucy loads only when someone opens her, as in local mode, so she costs the shell nothing.
-const Lucy = lazy(() => import('../views/Lucy'));
-const ListeningRoom = lazy(() => import('../listening-room/ListeningRoom')); // tools.listening_room
 
-export function CloudShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
+export function CloudShell({ api, account, more, notices, accountNotices, feedback, onSignOut, offlineReadOnly = false }: {
   api: Api;
   account: Account;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */
@@ -122,6 +95,8 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
   /** The account's notices (suspended, account problem, over quota, paused live updates), drawn
    * by CloudApp from the same sources as the hosted frame, shown first in the banner. */
   notices?: ReactNode;
+  /** cloud.page_layout: the same account notices, by how pressing they are (NoticeStack.tsx) */
+  accountNotices?: NoticeGroups;
   feedback?: ReactNode;
   /** Sign out of this device, from the side bar's account menu. */
   onSignOut?: () => void;
@@ -139,11 +114,15 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     return store.current.opened;
   }, [workspaceId]);
   useArtIndex(openStore);
-  const resolving = useRef<Promise<MediaResolver> | null>(null);
   // Device first, hosted fallback (ADR-0465): only a grandfathered account with stored media
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
   const coexisting = isHostedAccount(account) && on('cloud.stored_media');
+  // library.places: the Library says where songs are kept, for an account with a cloud library
+  // (the grant, or songs still stored after it was taken away); nothing new for anyone else
+  const placesOn = on('library.places') && on('cloud.stored_media') && holdsHostedStorage(account);
+  // cloud.catalogue_play: cloud songs found by catalogue id, and counted on every device
+  const cataloguePlay = coexisting && flagListed('cloud.catalogue_play');
   // BF-0462-04: the Library says where each song can play from, against this device's own
   // connected files and, for a grandfathered account, its hosted copies
   // Probing every handle means opening every file, which at thousands of songs cannot happen
@@ -235,93 +214,18 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
   const sharedDerived = on('cloud.content_cache');
   const tonal = useMemo(() => tonalStore(workspaceId, sharedDerived ? { held: async () => provenHashes(await (await openStore()).all()) } : undefined), [workspaceId, sharedDerived, openStore]);
   const roomsHere = on('rooms') && !account.feature_locks.rooms;
-  // ADR-0475: the device that is playing when it is not this one, for the request adapter. Set
-  // further down each render, once the session is known; read by the adapter at each press.
-  const controllerLink = useRef<ControllerLink | null>(null);
-  const whereHeld = useRef<WhereHeld | null>(null);
-  // ADR-0475 R8: songs the device R1 would choose holds now, which a mix made here may use
-  const mixableIds = useRef<ReadonlySet<number> | null>(null);
-  const sources = useMemo<AvailabilitySources>(() => ({
-    controller: () => controllerLink.current,
-    holders: () => whereHeld.current,
-    mixable: () => mixableIds.current,
-    here: async () => {
-      const opened = await openStore();
-      const found = new Map<number, 'here' | 'reauth' | 'reconnect'>();
-      for (const song of await opened.all()) {
-        const why = lapsed.current.get(song.songId);
-        // a file the sweep found gone is not on this device; a lapsed permission asks again;
-        // a song picked without a durable handle plays only while this visit holds its file
-        if (why === 'missing' || why === 'changed' || song.availabilityIssue === 'changed') continue;
-        if (song.ref.kind !== 'handle' && !opened.sessionFile(song.songId)) {
-          found.set(song.songId, 'reconnect');
-          continue;
-        }
-        found.set(song.songId, why === 'permission' ? 'reauth' : 'here');
-      }
-      return found;
-    },
-    hosted: coexisting ? async (songs) => {
-      const listing = cloudLibraryAssets(api, workspaceId); // read again after an upload (cloudLibraryMedia.ts)
-      const assets = await listing;
-      return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
-    } : undefined,
-    // Make a Mix and My Mixes: recipes on the server, this browser's current mix and shaping here
-    recipes,
-    // Harmonic matches: answered from the profiles this browser measured, answers kept here
-    tonal: browserHarmonic ? {
-      profiles: async () => profilesBySong(tonal, await openStore()),
-      reviews: () => tonal.reviews(),
-      review: (pair, verdict) => tonal.review(pair, verdict),
-    } : undefined,
-    // Request a song: this browser's requests per workspace, and the room's from the server
-    workspaceId,
-    // an account without Rooms (off, or locked to a plan) never asks for a room's requests
-    rooms: roomsHere,
-    // cloud.offline_shell: the last catalogue is kept here and served, with this device's own
-    // songs, while SelectaDJ cannot be reached; the banner says the library is from this device
-    offline: offlineShell ? {
-      deviceSongs: async () => (await (await openStore()).all()).map((song) => ({
-        id: song.songId, content_sha256: song.identity.content_sha256, title: song.identity.title, artist: song.identity.artist,
-        album: song.identity.album ?? null, duration_s: song.identity.duration_s ?? null, available_on: 1,
-      })),
-      onServed: (from) => setServedFrom(from.cached ? { at: from.at } : null),
-    } : undefined,
-  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
-  const request = useMemo(() => deviceMusicRequest(cloud, sources), [cloud, sources]);
-  // imports register through the adapted request, so each landed batch reads a fresh catalogue
-  const media = useMemo(() => mediaRequest(request), [request]);
+  // where each song can play from, the adapted request and the resolver (cloudShellMedia.ts)
+  const { sources, request, media, resolver, programme, controllerLink, whereHeld, mixableIds } = useCloudShellMedia({
+    api, cloud, workspaceId, on, coexisting, places: placesOn, catalogue: cataloguePlay, openStore, lapsed, refreshStatus: refreshStatusRef, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed: setServedFrom, book,
+  });
   mediaRef.current = media;
-  const programme = useRef<MixData['mix']>([]);
-  const resolverFor = useRef<string | null>(null);
-  const resolver = useCallback(async () => {
-    if (resolverFor.current !== workspaceId) { resolverFor.current = workspaceId; resolving.current = null; }
-    return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
-    // any version of the song this device holds plays it (ADR-0469 amendment 2)
-    device: withVersions(makeResolver(opened, undefined, (songId, present, why) => {
-      if (present) lapsed.current.delete(songId);
-      else lapsed.current.set(songId, why ?? 'missing');
-      refreshStatusRef.current?.();
-      const reportingDevice = registeredDeviceId(workspaceId);
-      if (on('cloud.local_media') && reportingDevice) {
-        const snapshot = present ? { present: [songId], absent: [] } : { present: [], absent: [songId] };
-        void reportDeviceAvailability(media, reportingDevice, snapshot).then(() => {
-          refreshStatusRef.current?.();
-        }).catch(() => undefined);
-      }
-    }, { sharedCache: on('cloud.content_cache') }), workspaceId),
-    hosted: coexisting ? cloudLibraryResolver(api, workspaceId, {
-      songs: () => programme.current,
-      shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
-    }) : null,
-    book,
-  })));
-  }, [openStore, coexisting, api, workspaceId, book, media, on]);
 
   const [status, setStatus] = useState<Status | null>(null);
   const [statusProblem, setStatusProblem] = useState('');
   const [data, setData] = useState<MixData>(EMPTY_MIX);
   programme.current = data.mix;
+  // cloud.catalogue_play: the songs in the cloud library, read again with each status
+  const cloudSongs = useCloudSongs(request, cataloguePlay, status);
   const refreshStatus = useCallback(() => {
     request<Status>('/status')
       .then((next) => { setStatus(next); setStatusProblem(''); })
@@ -405,8 +309,6 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     };
   }, [lucyTransport]);
 
-  // cloud.offline_playback: said once when playing offline ended because another device took over
-  const [takeoverSeen, setTakeoverSeen] = useState('');
   // Listen's waveforms for the visit: from the audio the engine decoded to play each song, else its file
   const [waveforms] = useState(waveformBook);
   const { player, refusal, device: playback, seams: scheduled, prefetch, output } = useLocalFirstPlayer({
@@ -587,7 +489,9 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     const mix = programmeMove ? { ...data, mix: remoteMix } : await request<MixData>('/mix').catch(() => null);
     if (!mix?.mix.length) return 'no_mix';
     const here = await sources.here?.().catch(() => null);
-    if (!mix.mix.some((item) => here?.get(item.song_id) === 'here')) {
+    // cloud.catalogue_play: a mix with songs in the cloud library plays here without a folder
+    const inCloud = cataloguePlay ? (cloudSongs ?? await request.cloudSongs().catch(() => null))?.ids : undefined;
+    if (!mix.mix.some((item) => here?.get(item.song_id) === 'here' || inCloud?.has(item.song_id))) {
       showToast(`${ask.asker_name} asked to play here. Choose your music folder again to play.`, { actions: [{ label: 'Choose music', run: () => navigate('/library') }] });
       return 'needs_music';
     }
@@ -608,7 +512,7 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     const from = seen ? movedFrom(seen.session, mix.mix, lastSeen ?? playback.serverNow()) : null;
     void shellPlayer.playFrom(from?.song_index ?? 0, from ? from.offset_ms / 1000 : 0);
     return 'starting';
-  }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources]);
+  }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources, cataloguePlay, cloudSongs]);
   // what "Play on {device}" would play when this device has no current mix of its own: the
   // account's newest saved mix, read while Listen shows that card
   const [newest, setNewest] = useState<{ mix_id: string; name: string; songs: number; ids?: number[] } | null>(null);
@@ -682,6 +586,7 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
     askToPlay: (device, mixId, move) => void playOn.ask(device, mixId, move),
     devices: () => holdings.devices ?? [],
+    heldOrder: () => programme.current.map((item) => item.song_id).join(','),
   });
   // ADR-0475: with nobody playing elsewhere, the one rule decides where Play makes the sound
   const where = useWhereToPlay({
@@ -690,6 +595,8 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     situation: holdings.devices && !((status?.counts.ready ?? 0) > 0 && !holdings.devices.find((one) => one.device_id === playback.device?.id)?.reported_at) ? {
       devices: holdings.devices, defaultId: holdings.defaultId, thisDeviceId: playback.device?.id ?? null, mixIds: songOrder, ids: holdings.ids,
       speaker: playback.view?.speaker === 'here' && playback.view.speaker_device_id ? { deviceId: playback.view.speaker_device_id, online: true } : null,
+      // cloud.catalogue_play: the cloud library's songs play on every signed-in browser
+      ...(cloudSongs ? { cloud: cloudSongs } : {}),
     } : null,
     cloud, refreshHoldings: holdings.refresh,
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
@@ -815,107 +722,16 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
     importMusic: importRunnerFor({ request: media, openStore, workspaceId }),
   }), [media, openStore, workspaceId]);
   useImportCarryOn({ request: media, openStore, workspaceId, watch: { onAvailabilityChanged: () => sweepLapsed(true), playing: () => playingNow.current() } });
-  const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
-
-  const page = (): ReactNode => {
-    // ADR-0476: Lucy reads the account's API herself, so she opens at once, never behind the
-    // catalogue's first load (2,919 songs took about 30 s on staging)
-    if (route.page === 'lucy' && lucyHere) return <Suspense fallback={<Skeleton lines={4} label="Opening Lucy" />}><Lucy conversation={route.conversation} setMixData={setMixData} player={shellPlayer} request={request} usageRequest={cloud} settingsPanel={<LucyCloudSettings request={cloud} />} /></Suspense>;
-    if (route.page === 'more') {
-      const item = moreItems.find((place) => place.id === route.id);
-      if (!item) return <NotOnThisAccount />;
-      if (item.id === 'workspace') return <ThisDevice openStore={openStore}>{connect}<StemsCard enabled={stems.enabled} store={stems.store} /></ThisDevice>;
-      if (item.id === 'listening_room') return <Suspense fallback={<Skeleton lines={4} label="Opening the Listening Room" />}><ListeningRoom workspaceId={workspaceId} mix={data.mix} mixName={data.name} mixId={recipes.current() ?? null} loading={data === EMPTY_MIX && !mixProblem} resolve={deviceTrack} shellPlaying={now.phase === 'playing' && (playback.view?.speaker === 'here' || !on('devices.remote_control'))} pauseShell={() => shellPlayer.togglePause()} /></Suspense>;
-      return <main className="page" id="main" data-place={item.id}><h1 className="display small">{item.label}</h1><div className="stack">{more(item.id)}</div></main>;
-    }
-    if (!shared) {
-      return <main className="page" id="main" aria-busy={!statusProblem}><h1 className="display small">{describeRoute(route).title}</h1>{statusProblem ? (offlineShell ? <StatusProblem words={statusProblem} onRetry={() => { setStatusProblem(''); refreshStatus(); refreshMix(); }} /> : <p role="alert">{statusProblem}</p>) : <Skeleton variant="rows" lines={4} label="Opening your library" />}</main>;
-    }
-    if (newMember) {
-      return (
-        <main className="page" id="main">
-          <h1 className="display small">Welcome to SelectaDJ</h1>
-          <OnboardingSpine request={media} workspaceId={workspaceId} deps={spineDeps} onDone={() => { setSpine(false); setSpineAsked(false); refreshStatus(); }} />
-        </main>
-      );
-    }
-    // Make a Mix > Harmonic matches, from key profiles measured on this device
-    if (route.page === 'discover' && route.tab === 'harmonic' && browserHarmonic && on('discover.harmonic')) return <BrowserHarmonicMatches resolveTrack={deviceTrack} />;
-    // Workspace, with the tabs a browser can fill (cloud.workspace)
-    if (route.page === 'workshop' && workspacePage) {
-      return (
-        <CloudWorkspace
-          tab={route.tab}
-          status={shared.status}
-          workspaceId={workspaceId}
-          openStore={openStore}
-          connect={connect}
-          stems={<StemsCard enabled={stems.enabled} store={stems.store} />}
-          stemsShown={stems.enabled && !!stems.store}
-          measuringKeys={browserHarmonic && on('discover.harmonic')}
-          savedMixes={savedMixes}
-          fileCheck={fileCheck}
-          playback={{ refusal, speaker: playback.view?.speaker ?? null, phase: now.phase }}
-        />
-      );
-    }
-    switch (route.page) {
-      case 'library':
-        // I84: on a remote, the Library's Play next follows the speaker's music, not this device's
-        return <CloudLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} cloudStorage={coexisting} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
-      case 'mixes':
-        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
-        // R8: a device with little music mixes the songs R1's device holds; hosted: HostedMakeAMix.tsx
-        { const mixer = mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
-          <MixesEmpty
-            current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
-            connected={connected}
-            onSetUp={onboardingFinished(workspaceId) ? undefined : () => { setSpineAsked(true); setSpine(true); }}
-            checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
-          />
-        );
-        return <>{coexisting && on('cloud.hosted_render') ? <HostedMakeAMix api={api} workspaceId={workspaceId} browserMixer={mixer} othersPlaying={now.phase === 'playing'} stopOthers={() => { if (now.phase === 'playing') void shellPlayer.togglePause(); }} /> : mixer}{localExport}</>; }
-      case 'listen':
-        // something is playing on another device and this one does not hold that mix: the remote
-        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} speakerSongs={holdings.speakerSongs} notice={where.notice} onDismissNotice={where.clearNotice} />;
-        // nothing is playing (no speaker at all) and this device holds no music, but the person
-        // has another device: play on one that has music (ADR-0475 R1, R2), or say which is
-        // missing; never a Play button that cannot work here
-        if (on('devices.remote_control') && !followsHere && status && holdings.devices && holdings.devices.some((device) => device.device_id !== playback.device?.id)) {
-          return (
-            <ControllerListen
-              mixName={data.mix.length ? data.name : newest?.name ?? ''} mixSongs={data.mix.length || (newest?.songs ?? 0)} devices={holdings.devices} thisDeviceId={playback.device?.id ?? null}
-              mixIds={data.mix.length ? songOrder : newest?.ids ?? []} ids={holdings.ids}
-              now={playback.serverNow()} asking={playOn.state}
-              onPlayOn={(device) => void playOn.ask(device, recipes.current() ?? newest?.mix_id ?? null)} notice={where.notice} onDismissNotice={where.clearNotice} hosted={coexisting && on('cloud.hosted_render')}
-            />
-          );
-        }
-        return (
-          <>
-            {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
-            {data.mix.length ? <Now {...shared} listenQueue={<ListenQueue mix={data.mix} now={now} player={shellPlayer} />} noticeAction={<>{output?.state === 'output_unverified' && <SoundCheck />}{on('cloud.local_media') && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} nothingPlays={now.notice === NOTHING_PLAYABLE_NOTICE} />}</>} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
-          </>
-        );
-      case 'edit':
-        // Saved browser mixes are opened as the current mix from My Mixes, so only the current
-        // mix has an editor here.
-        if (route.draft !== null) return <OnlyOnYourComputer title="Editing a saved draft" nearest={{ label: 'My Mixes', path: '/mixes/mine' }} />;
-        if (mixProblem && !data.mix.length) return <MixProblem onRetry={refreshMix} />;
-        return <Mix {...shared} key="current" />;
-      case 'missing':
-        return <PageNotFound />;
-      case 'discover':
-        // Word connections are answered in the browser (deviceMusicLinks.ts) while
-        // discover.word_links is on for the account; with it off this page is as it was
-        if (route.tab === 'words' && on('discover.word_links')) return <Links {...shared} tab="words" />;
-        // falls through
-      default: {
-        const nearest = DESTINATIONS.find((place) => place.id === destinationOf(route) && place.id !== 'workspace') ?? DESTINATIONS.find((place) => place.id === 'library')!;
-        return <OnlyOnYourComputer title={describeRoute(route).title} nearest={{ label: nearest.label, path: nearest.path }} />;
-      }
-    }
-  };
+  // cloud.move_to_cloud: the upload queue carries on after a reload; the current mix goes first
+  useCloudUploadQueue({ on: on('cloud.move_to_cloud'), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
+  const connect =<ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
+  // library.places: what the Library knows about where songs are kept (views/LibraryPlaces.tsx)
+  const libraryPlaces = useLibraryPlaces({
+    on: placesOn, cloud, workspaceId, accountId: account.user.id, canUpload: isHostedAccount(account) && on('cloud.uploads'),
+    offline: servedFrom !== null || offlineReadOnly, otherDevices: !!holdings.devices?.some((one) => one.device_id !== playback.device?.id),
+    // cloud.move_to_cloud: a song's details offer "Upload to your cloud library"
+    fromDevice: on('cloud.move_to_cloud') ? { request: media, openStore } : null,
+  });
 
   return (
     <RequestContext.Provider value={request}>
@@ -941,21 +757,21 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
         mode="cloud"
         more={moreItems}
         account={onSignOut ? { email: account.user.email, plan: planName(account), onSignOut } : undefined}
-        status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? (
-          <a className="room-open-line" role="status" data-testid="room-open-line" href={roomsPlace.path} title={`${roomLine(room)}. Open Rooms.`} onClick={(event) => { event.preventDefault(); navigate(roomsPlace.path); }}>
-            <b>{roomLine(room)}</b>
-            <span>{countOf(room.guestsHere, 'guest')} here</span>
-            {roomWaiting > 0 && <span className="room-open-waiting">{countOf(roomWaiting, 'request')} to approve</span>}
-            {roomAdd.ready > 0 && <span className="room-open-waiting">{countOf(roomAdd.ready, 'request')} to add</span>}
-            {roomAdd.onTheWay > 0 && <span className="room-open-waiting">{countOf(roomAdd.onTheWay, 'request')} on the way</span>}
-            {roomAdd.onDevice > 0 && <span className="room-open-waiting" data-testid="room-on-device" title={`${countOf(roomAdd.onDevice, 'request')} waiting on another device`}>{roomAdd.onDevice} waiting on a device</span>}
-          </a>
-        ) : undefined}
-        banner={<>{playback.view?.speaker === 'here' && <ChangedFromLine change={playback.changedFrom} nameOf={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null} />}{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} storedBytes={account.entitlement.storage_used_bytes} />}{feedback}</>}
+        status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? <RoomOpenLine room={room} path={roomsPlace.path} waiting={roomWaiting} add={roomAdd} /> : undefined}
+        banner={<CloudShellNotices account={account} workspaceId={workspaceId} on={on} playback={playback} deviceName={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null}
+          asked={askedBanner} accountMix={accountMix.banner} where={where} playNoticeShown={!(route.page === 'listen' && (remote || !followsHere))} onPlayHere={() => void shellPlayer.togglePause()}
+          onListen={route.page === 'listen'} offlineShell={offlineShell} servedFrom={servedFrom} offlineReadOnly={offlineReadOnly} notices={notices} accountNotices={accountNotices} feedback={feedback} />}
+        // cloud.page_layout: another tab playing is said in the mini player, off Listen
+        playerNote={on('cloud.page_layout') && route.page !== 'listen' ? otherTabNote(playback, () => void shellPlayer.togglePause()) : undefined}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
-        <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section></HolderContext.Provider>
-        <footer className="cloud-footer">{footerWords(coexisting)}</footer>
+        <HolderContext.Provider value={holderValue}><LibraryPlacesContext.Provider value={libraryPlaces}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}><CloudShellPages at={{
+          api, cloud, request, media, workspaceId, on, route, moreItems, more, shared, status, statusProblem, setStatusProblem, refreshStatus, refreshMix,
+          data, mixProblem, setMixData, shellPlayer, now, playback, refusal, output, notify, openStore, connect, sweepLapsed, stems, recipes, deviceTrack, book,
+          lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive,
+          remote, playWays, holdings, where, followsHere, newest, songOrder, playOn,
+        }} /></Section></LibraryPlacesContext.Provider></HolderContext.Provider>
+        <footer className="cloud-footer">{footerWords(coexisting, flagListed('cloud.move_to_cloud'))}</footer>
       </Shell>
       {requesting && on('requests') && (
         <Drawer title="Requests" onClose={() => setRequesting(false)}>

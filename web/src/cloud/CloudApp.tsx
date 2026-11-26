@@ -9,13 +9,12 @@ import { START_ANSWER_EVENT, START_ASK_EVENT } from '../devices/playOn';
 import { CURRENT_MIX_EVENT } from './currentMix';
 import { DEFAULT_SPEAKER_EVENT, HOLDINGS_EVENT } from '../devices/useHoldings';
 import { CloudListen } from '../rooms/CloudListen';
-import { RoomPanel } from '../rooms/RoomPanel';
 import { ROOM_EVENT } from '../rooms/useRoomSession';
 import { ROOM_ROUND_EVENT } from '../rooms/useRoomRounds';
 import { LUCY_TURNS_EVENT, LucyCloudSettings } from '../views/LucyCloudSettings';
 import { LUCY_USAGE_EVENT } from './lucyUsage';
 import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
-import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
+import { DESTINATIONS } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
 import { SettingsLayout, settingsPlaces } from './AccountLayout';
 import { AccountPage, AccountStrip } from './AccountPage';
@@ -23,7 +22,7 @@ import { CatalogLookups } from './CatalogLookups';
 import { OverviewHeroArt, RailNav } from './CloudRailFeel';
 export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
-import { musicHomeOf, setMusicHome } from '../copy';
+import { musicHomeOf, setMusicHome, setUploadsFromDevice } from '../copy';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, statusWords, Page, pageShown, planName } from './api';
 import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
@@ -52,6 +51,8 @@ import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './deviceMusicGate';
 import { DeviceMusicLabs } from './labs/DeviceMusicLabs';
 import { ReconciliationPanel } from './migration/ReconciliationPanel';
+import { accountNotices, morePanelFor, RENEWING_WORDS } from './cloudAppPlaces';
+import { NoticeStack } from './NoticeStack';
 import { navigate, useLocationText } from '../router';
 import { Action, LiveRegion, Section } from '../ui/controls';
 import { Toaster } from '../ui/toasts';
@@ -132,7 +133,6 @@ export const SIGN_IN_TIMING = { waits: [1500, 3000, 6000], patienceMs: 30_000, o
 /** An account read that failed while the connection itself is fine (a 500, a 429) and left the
  * kept account on screen is asked again by itself: first after `firstMs`, doubling to `maxMs`. */
 export const ACCOUNT_RETRY = { firstMs: 5_000, maxMs: 60_000 };
-const RENEWING_WORDS = 'Renewing your sign-in. Everything on this page is kept.';
 
 const PATHS: Record<Page, string> ={ home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
 const sharedLabel = (id: 'listen' | 'library') => DESTINATIONS.find((destination) => destination.id === id)!.label;
@@ -160,6 +160,8 @@ export function CloudApp() {
   // The shared pages' words follow where this account's music lives, before they draw (copy.ts).
   const home = musicHomeOf(deviceMusicDecided(account), account?.experience?.hosted !== false);
   setMusicHome(home === 'none' ? 'cloud_library' : home);
+  // cloud.move_to_cloud (it needs the cloud library grant): uploads from this device are copies
+  setUploadsFromDevice(account?.features?.['cloud.move_to_cloud'] === true);
   // ADR-0475 R12: another tab of this browser signed out, or in as someone; and what a sign-out
   // pressed here would stop, said first
   const [elsewhere, setElsewhere] = useState<{ kind: 'out' } | { kind: 'in'; email: string } | null>(null);
@@ -750,32 +752,13 @@ export function CloudApp() {
     danger={[(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={signOutEverywhere} onDelete={deleteAccount} />]}
   /> : null;
   const billing = account && <SettingsLayout current="billing" places={places}><Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} error={checkoutError} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} /></SettingsLayout>;
-  const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => { void refreshAccount(); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
-  // The account places behind More, one drawing for both shared shells.
-  const morePanel = (id: MoreDestinationId): ReactNode => {
-    if (!account) return null;
-    switch (id) {
-      case 'account': return settingsPanel;
-      case 'billing': return billing;
-      case 'devices': return <SettingsLayout current="devices" places={places}><DevicesPanel api={api} workspaceId={account.workspace.id} titled={false} /></SettingsLayout>;
-      case 'rooms': return <RoomPanel api={api} workspaceId={account.workspace.id} locked={account.feature_locks.rooms} votesOn={flagOn('rooms.votes')} displayOn={flagOn('rooms.display')} playHereOn={flagOn('devices')} freshOnly={account.features['rooms.nickname_confirm'] === true} />;
-      case 'uploads': return uploads;
-      case 'workspace':
-      case 'listening_room': return null;
-    }
-  };
-  // The hosted frame's account notices, in a shared shell's banner slot (one source for every frame).
-  // The local-first shell draws its own connection banner, which also says when its library is
-  // served from this device.
-  const shellNotices = account && <>
-    {flagOn(OFFLINE_SHELL) && !localFirst && <ConnectionBanner />}
-    {account.user.suspended && (exact ? <SuspendedPanel go={goShell} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
-    {problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
-    <OverQuotaBanner account={account} go={goShell} />
-    {place !== PATHS.billing && <BillingStandingNotice account={account} place="shell" busy={busy('portal')} onPortal={() => void openPortal()} />}
-    {renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>}
-    {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
-  </>;
+  const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => { void refreshAccount(); window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)); }} perFile={flagOn(LIBRARY_STATES_FLAG)} side={flagOn('cloud.page_layout') ? <StorageMeter account={account} /> : undefined} />;
+  // The account places behind More, and the account's notices for a shared shell's banner (cloudAppPlaces.tsx)
+  const morePanel = morePanelFor({ account, api, settingsPanel, billing, uploads, places });
+  const { all: shellNotices, groups: noticeGroups } = accountNotices({
+    account, connectionBanner: flagOn(OFFLINE_SHELL) && !localFirst, exact, go: goShell, problem, onRetry: () => void retryAccount(),
+    onBillingPage: place === PATHS.billing, portalBusy: busy('portal'), onPortal: () => void openPortal(), renewing, polling: stream === 'polling' && !connectionDown,
+  });
   const shellFeedback = <Feedback error={problem && error === problem.message ? '' : error} notice={notice} />;
 
   // ADR-0462/0463: an account with the local-first experience, and `cloud.local_first` on, gets the
@@ -783,7 +766,7 @@ export function CloudApp() {
   if (account && localFirst) {
     return (
       <Suspense fallback={<GateLoading label="Opening SelectaDJ…" />}>
-        <CloudShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
+        <CloudShell api={api} account={account} more={morePanel} notices={shellNotices} accountNotices={noticeGroups} feedback={shellFeedback} onSignOut={signOutHere} />
         {signOutAsk && <ConfirmDialog title="Sign out?" body={signOutAsk} confirmLabel="Sign out" cancelLabel="Cancel" onConfirm={() => void leave()} onClose={() => setSignOutAsk(null)} />}
       </Suspense>
     );
@@ -806,7 +789,7 @@ export function CloudApp() {
           account={account}
           signedIn={{ email: user.email, plan: planName(account), onSignOut: signOutHere, onStaffConsole: showsAdmin(account) ? openAdmin : undefined }}
           page={hostedPage}
-          notices={<>{shellNotices}{shellFeedback}</>}
+          notices={flagOn('cloud.page_layout') ? <NoticeStack {...noticeGroups} info={<>{noticeGroups.info}{shellFeedback}</>} /> : <>{shellNotices}{shellFeedback}</>}
           dock={singleAudioOwner(account) ? (view) => <CloudTransportDock api={api} account={account} page={dockPage(view)} reload={libraryVersion} /> : undefined}
           footer={<footer className="cloud-footer">SelectaDJ Cloud · Your originals remain private to your workspace.<CloudCredit /></footer>}
         />

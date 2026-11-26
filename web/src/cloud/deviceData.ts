@@ -39,8 +39,14 @@ export async function forgetWorkspaceOnDevice(workspaceId: string): Promise<void
   await forgetCached(workspaceId);
   // harmonic reviews (the member's own verdicts) and older per-workspace tonal profiles
   await deleteDatabase(`${TONAL_DB_PREFIX}-${workspaceId}`);
+  // the upload queue's journal (cloud.move_to_cloud, cloudUploadJournal.ts) and its answers
+  await deleteDatabase(`${UPLOADS_DB_PREFIX}-${encodeURIComponent(workspaceId)}`);
+  try { localStorage.removeItem(`selecta.uploads.other-devices.${workspaceId}`); } catch { /* no storage */ }
   forgetFingerprintRun(workspaceId);
 }
+
+/** The upload queue's journal, one database per workspace (cloud/cloudUploadJournal.ts). */
+const UPLOADS_DB_PREFIX = 'selecta-cloud-uploads';
 
 /** The business venue offline cache's database (business/offline/zoneCache.ts). */
 const ZONE_CACHE_DB = 'selectadj-zone-cache';
@@ -56,7 +62,7 @@ async function mediaDatabases(): Promise<string[]> {
     const listing = (indexedDB as unknown as DatabasesApi).databases;
     if (!listing) return [];
     const all = await listing.call(indexedDB);
-    return all.map((db) => db.name ?? '').filter((name) => name === MEDIA_DB_PREFIX || name.startsWith(`${MEDIA_DB_PREFIX}-`) || name.startsWith(`${TONAL_DB_PREFIX}-`));
+    return all.map((db) => db.name ?? '').filter((name) => name === MEDIA_DB_PREFIX || name.startsWith(`${MEDIA_DB_PREFIX}-`) || name.startsWith(`${TONAL_DB_PREFIX}-`) || name.startsWith(`${UPLOADS_DB_PREFIX}-`));
   } catch {
     return [];
   }

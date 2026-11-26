@@ -18,7 +18,7 @@ from sqlalchemy.engine import Engine
 
 from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
-from selecta.local_media import store, versions
+from selecta.local_media import places, store, versions
 from selecta.persistence import db_now, transaction
 from selecta.playback import default_speaker
 from selecta.playback.schema import devices as playback_devices
@@ -209,10 +209,23 @@ def install_routes(
             counts = store.availability_counts(conn, workspace_id, [s["id"] for s in songs])
             # the member's "Is it music?" (T-20261126-3f92), said only for a song set aside
             aside = store.set_aside_of(conn, workspace_id, [s["id"] for s in songs])
+            # library.places (needs cloud.stored_media): each song's copy in the cloud library,
+            # one query for the page; the hosted grant gates uploads, not reading (ADR-0456)
+            cloud = (
+                places.cloud_field(
+                    conn, workspace_id, [s["id"] for s in songs],
+                    measuring=places.decided(request, conn, principal, places.STUDIO),
+                )
+                if places.decided(request, conn, principal, places.FLAG)
+                else None
+            )
         for song in songs:
             song["available_on"] = counts.get(song["id"], 0)
             if song["id"] in aside:
                 song["set_aside"] = True
+            # null says "no copy", so a page never has to list the uploads to find out
+            if cloud is not None:
+                song["cloud"] = cloud.get(song["id"])
         answer: dict[str, Any] = {"songs": songs}
         if next_after is not None:
             answer["next"] = next_after

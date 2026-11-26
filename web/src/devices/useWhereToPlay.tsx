@@ -7,7 +7,7 @@ import { showToast } from '../ui/toasts';
 import { navigate } from '../router';
 import type { DeviceHolding } from './controller';
 import { SpeakerPicker } from './SpeakerPicker';
-import { becauseWords, NOBODY_OPEN, whereToPlay, type Choice, type Situation } from './whereToPlay';
+import { becauseWords, NOBODY_OPEN, playsHere, whereToPlay, type Choice, type Situation } from './whereToPlay';
 
 // ADR-0475: what a press of Play does when nothing is playing elsewhere, by the one rule
 // (whereToPlay.ts). Every way of starting music in the local-first shell goes through the
@@ -103,8 +103,9 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
     started.current = device.device_id;
     askToPlay(device);
     navigate('/listen');
-    // the person is holding this device while the sound starts elsewhere: one way back
-    const thisHolds = latest.current.situation?.devices.some((one) => one.device_id === here && one.online && one.songs > 0);
+    // the person is holding this device while the sound starts elsewhere: one way back (also when
+    // this device has no music of its own and the mix has songs in the cloud library)
+    const thisHolds = latest.current.situation ? playsHere(latest.current.situation) : false;
     setNotice({ deviceId: device.device_id, text: note ?? `Starting on ${device.name}.`, actions: [...(thisHolds ? [{ label: 'Play here instead', run: () => { setNotice(null); (playHereInstead ?? playHere)(); } }] : []), ...extra] });
   }, [askToPlay, playHere]);
 
@@ -129,8 +130,11 @@ export function useWhereToPlay({ enabled, situation, cloud, playHere, askToPlay,
       return true;
     }
     if (now.kind === 'ask') { setAsking(now); return true; }
-    // the server's report can lag this device's own music: never say none is open from here
-    if (nobodyOpenWrong(latest.current.playableHere, false)) return false;
+    // the server's report can lag this device's own music: never say none is open from here, nor
+    // when this device can play the mix's songs in the cloud library
+    const seen = latest.current.situation;
+    const cloudHere = seen?.cloud ? playsHere(seen) : false;
+    if (nobodyOpenWrong(latest.current.playableHere || cloudHere, false)) return false;
     setNotice({ deviceId: null, text: NOBODY_OPEN, actions: [{ label: 'Connect music here', run: () => navigate('/library') }] });
     return true;
   }, [forgetGhost, startOn]);

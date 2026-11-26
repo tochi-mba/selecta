@@ -1,4 +1,4 @@
-import { DraftList, get } from '../api';
+import { DraftList, get as localGet } from '../api';
 import { flagOn } from '../flags';
 
 /** Each draft's id and name, and the current mix's name: all a picker or shortcut needs. */
@@ -11,8 +11,9 @@ const fromFull = (list: DraftList): DraftNames => ({
 
 /** mymixes.lean_list: names alone come from /drafts/names, which reads no songs, transitions or
  * revisions, so a picker doesn't pay for the whole My Mixes list. With the flag off, or from a
- * server that doesn't have it yet, the full list is asked for and cut down to the same shape. */
-export async function getDraftNames(): Promise<DraftNames> {
+ * server that doesn't have it yet, the full list is asked for and cut down to the same shape.
+ * `get` is the page's own read (useApi), so a Cloud page asks the account; local mode's by default. */
+export async function getDraftNames(get: <T>(path: string) => Promise<T> = localGet): Promise<DraftNames> {
   if (flagOn('mymixes.lean_list')) {
     try {
       const lean = await get<DraftNames>('/drafts/names');

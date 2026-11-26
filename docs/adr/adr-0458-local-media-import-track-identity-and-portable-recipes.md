@@ -1,6 +1,8 @@
 # ADR-0458 - Local media import, track identity and portable recipes
 
 > Words: this record keeps the names of its time; [glossary.md](../glossary.md) says what each is called now (ADR-0479).
+>
+> Uploads from this device: [ADR-0489](adr-0489-uploading-songs-from-this-device-to-the-cloud-library.md). An upload of a device song is the same catalogue song, and a song played from the cloud library only is kept off this device's list by a record that folder checks honour.
 
 - **Decision:** Accepted (owner, 2026-11-17).
 - **Implementation:** 7/7 implemented in code. Required regression and integration tests remain for the final test phase; real-device quota evidence is pending.

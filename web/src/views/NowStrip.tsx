@@ -115,8 +115,13 @@ export function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: S
     const section = sections.find((part) => part.start <= at && at < part.end);
     const name = section ? SECTION_WORDS[section.label] ?? section.label : '';
     element.textContent = name ? `${transportClock(at)} · ${name}` : transportClock(at);
-    element.style.left = `${percent(at)}%`;
     element.hidden = false;
+    // centred on the mouse, but kept whole inside the strip at either end, so near the last second
+    // it never pokes past the page's edge
+    const width = event.currentTarget.clientWidth;
+    const half = element.offsetWidth / 2;
+    const x = (percent(at) / 100) * width;
+    element.style.left = width > half * 2 ? `${Math.min(Math.max(x, half), width - half)}px` : `${percent(at)}%`;
   };
   const hideLens = () => { if (lens.current) lens.current.hidden = true; };
   const moveSeek = (event: PointerEvent<HTMLDivElement>) => {

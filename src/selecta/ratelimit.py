@@ -69,11 +69,17 @@ STRICT: tuple[tuple[re.Pattern[str], str | None, Rule], ...] = (
      Rule("account_change", 10, 5)),
     (re.compile(r"^/api/account$"), "DELETE", Rule("account_change", 10, 5)),
     (re.compile(r"^/api/uploads/plan$"), "POST", Rule("upload_plan", 60, 20)),
+    # the dry run reads as much as a plan (storage.upload_identity), so it is held the same
+    (re.compile(r"^/api/uploads/preview$"), "POST", Rule("upload_preview", 60, 20)),
+    # removing songs from the cloud library (library.places): up to 200 a press, so a few a minute
+    (re.compile(r"^/api/assets/remove$"), "POST", Rule("asset_remove", 20, 10)),
     # Hosted processing (cloud.hosted_render): planning reads up to 60 analyses from storage
     # and runs the planner, so a few a minute; the mix and export routes are polled every 3 s
     # by the hosted card (HostedMix.tsx POLL_MS), so room for several tabs and no more.
     (re.compile(r"^/api/hosted/mixes/plan$"), "POST", Rule("hosted_plan", 10, 5)),
     (re.compile(r"^/api/hosted/mixes/(render|export)$"), "POST", Rule("hosted_mix", 90, 30)),
+    # one hand-off (cloud.studio_seams): the player asks for the next two as a mix plays
+    (re.compile(r"^/api/hosted/seams$"), "POST", Rule("hosted_seams", 90, 30)),
     (re.compile(r"^/api/hosted/songs/(prepare|[^/]+/retry)$"), "POST",
      Rule("hosted_prepare", 30, 10)),
     (re.compile(r"/search(/|$)"), None, Rule("search", 120, 30)),

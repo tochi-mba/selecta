@@ -12,6 +12,7 @@ tests/test_engine_store_mixes_postgres.py.
 from __future__ import annotations
 
 import pytest
+from cloud_helpers import grant_hosted_media
 from test_cloud_brain_routes import ALICE, BOB, _auth, cloud  # noqa: F401  (the fixture)
 
 from selecta import flags
@@ -19,8 +20,9 @@ from selecta.engine_store import EngineStore, mix_import
 
 
 @pytest.fixture(autouse=True)
-def account_mixes_on():
-    flags.use("+cloud.account_mixes")
+def account_mixes_on(cloud):
+    # on for every account with the cloud library: it needs cloud.hosted_media
+    grant_hosted_media(cloud["engine"], cloud["app"])
     yield
     flags.use(None)
 
@@ -117,7 +119,7 @@ def test_a_song_not_in_the_library_is_refused_and_bob_sees_nothing(cloud):
 
 def test_recipes_come_in_as_drafts_once_and_are_never_changed(cloud):
     client, (a, b, c, *_rest) = cloud["client"], cloud["ids"]
-    flags.use("")  # the browser's saved mixes, made before the account kept mixes
+    flags.use("-cloud.account_mixes")  # saved browser mixes, made before the account kept mixes
     first = client.post(
         "/api/local-media/recipes",
         headers=_auth(ALICE),
@@ -206,7 +208,7 @@ def test_the_account_mix_routes_bring_cloud_mixes_in_on_first_use_once(cloud, mo
 
 
 def test_with_the_flag_off_the_routes_answer_flag_off(cloud):
-    flags.use("")
+    flags.use("-cloud.account_mixes")
     answer = cloud["client"].get("/api/mix", headers=_auth(ALICE))
     assert answer.status_code == 403 and answer.json()["detail"]["flag"] == "cloud.account_mixes"
     order = cloud["client"].put("/api/mix/order", headers=_auth(ALICE), json={"song_ids": []})

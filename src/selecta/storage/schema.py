@@ -55,6 +55,9 @@ upload_sessions = sa.Table(
     sa.Column("uploaded_by", Id, nullable=True),
     # The venue the upload was made for, from a venue page (ADR-0448 per-venue storage).
     sa.Column("venue_id", Id, nullable=True),
+    # The catalogue song the upload is for, checked at plan and at acceptance
+    # (`storage.upload_identity`; migration st0480up01).
+    sa.Column("song_id", sa.Integer, nullable=True),
     sa.Column("error", sa.Text),
     sa.Column("created_at", Epoch, nullable=False),
     sa.Column("updated_at", Epoch, nullable=False),

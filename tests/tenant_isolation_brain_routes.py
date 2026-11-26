@@ -46,6 +46,8 @@ BRAIN_SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/mix/{position}/lock"): None,
     ("POST", "/api/mix/undo"): None,
     ("POST", "/api/mix/clear"): None,
+    # on for accounts with the cloud library, which the matrix's accounts have
+    ("PUT", "/api/mix/order"): {"song_ids": []},
     # the account's song requests (cloud_brain.requests_routes, the same flags)
     ("GET", "/api/requests"): None,
     ("POST", "/api/requests"): {"song_id": 1},

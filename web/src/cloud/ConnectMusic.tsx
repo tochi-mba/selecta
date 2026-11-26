@@ -1,6 +1,6 @@
 import { ChangeEvent, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { Request } from '../api';
-import { flagOn, useFlag } from '../flags';
+import { flagListed, flagOn, useFlag } from '../flags';
 import { dirPicker, directoryInput, findLapsed, forgetFolder, listWatchedFolders, recallFolder, refreshDeviceAvailability, rememberFolder, runImport } from '../media';
 import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome, StoredFolderHandle } from '../media';
 import { importSummaryWords, useImportAnnouncer } from './importAnnouncer';
@@ -113,6 +113,8 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   useImportAnnouncer();
   const progressive = useFlag('cloud.progressive_import');
   const resilient = useFlag('cloud.resilient_import');
+  // the account can upload songs from this device to its cloud library (it needs the grant)
+  const uploading = useFlag('cloud.move_to_cloud') && flagListed('cloud.move_to_cloud');
   const [problem, setProblem] = useState('');
   const [lapsed, setLapsed] = useState<LapsedItem[]>([]);
   const [regranted, setRegranted] = useState<Record<number, string>>({});
@@ -376,7 +378,8 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
       <section className="empty-state boxed music-empty lw-hero connect-music" aria-labelledby="connect-music-title">
         <span className="empty-state-icon" aria-hidden="true"><Icon name="music" /></span>
         <h2 id="connect-music-title">Add your music</h2>
-        <p>Choose the folder your songs are in and SelectaDJ turns them into mixes. Your files stay on this device; nothing is uploaded.</p>
+        {/* cloud.move_to_cloud: this account can upload, so say what connecting does instead */}
+        <p>{uploading ? 'Choose the folder your songs are in and SelectaDJ turns them into mixes. Your files stay on this device. Connecting uploads nothing.' : 'Choose the folder your songs are in and SelectaDJ turns them into mixes. Your files stay on this device; nothing is uploaded.'}</p>
         {buttons}
         {inputs}
         {!folders && <p className="hint">This browser cannot pick a whole folder, so choose the songs themselves.</p>}

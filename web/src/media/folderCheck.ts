@@ -1,7 +1,7 @@
 import { breathe } from './breathe';
 import { isAudioName } from './importer';
 import type { StoredFolderHandle } from './folders';
-import type { DirectoryHandleLike, FileHandleLike, MediaStore, SongSource, StoredSong } from './store';
+import type { CloudOnlyRecord, DirectoryHandleLike, FileHandleLike, MediaStore, SongSource, StoredSong } from './store';
 
 // Checking a watched folder (`cloud.music_folders`): what is new, changed or missing since the
 // last look, worked out from each file's place, size and modified time, so a file already known
@@ -77,11 +77,17 @@ export type CheckPlan = {
   /** Known places with no file now. Nothing is deleted: their songs show as not found here the
    * way every lapsed file does. */
   missing: { songId: number; path: string }[];
+  /** `cloud.move_to_cloud`: unchanged files of songs played from the cloud library only, left
+   * alone. A changed one goes to `fresh`: if it is still that song it stays out of the index. */
+  excluded: number;
 };
 
-/** What one check of `folderId` has to do, given the files there now and the songs this browser
- * knows. Pure apart from asking the browser whether two handles are the same file. */
-export async function planCheck(folderId: string, facts: readonly FileFacts[], songs: readonly StoredSong[], signal?: AbortSignal): Promise<CheckPlan> {
+/** What one check of `folderId` has to do, given the files there now, the songs this browser
+ * knows and the songs it plays from the cloud library only. Pure apart from asking the browser
+ * whether two handles are the same file. */
+export async function planCheck(folderId: string, facts: readonly FileFacts[], songs: readonly StoredSong[], signal?: AbortSignal, cloudOnly: readonly CloudOnlyRecord[] = []): Promise<CheckPlan> {
+  const kept = new Map<string, SongSource>();
+  for (const record of cloudOnly) for (const source of record.sources) if (source.folderId === folderId) kept.set(source.path, source);
   const byPath = new Map<string, { song: StoredSong; source: SongSource }>();
   // songs with no place in this folder yet, by file name, for adopting what was imported before
   const byName = new Map<string, StoredSong[]>();
@@ -94,12 +100,14 @@ export async function planCheck(folderId: string, facts: readonly FileFacts[], s
       byName.set(song.ref.handle.name, list);
     }
   }
-  const plan: CheckPlan = { fresh: [], known: 0, adopt: [], changed: [], missing: [] };
+  const plan: CheckPlan = { fresh: [], known: 0, adopt: [], changed: [], missing: [], excluded: 0 };
   const seen = new Set<string>();
   let looked = 0;
   for (const fact of facts) {
     stopped(signal);
     seen.add(fact.path);
+    const out = kept.get(fact.path);
+    if (out && !byPath.has(fact.path) && out.size === fact.size && out.modified === fact.modified) { plan.excluded += 1; continue; }
     const was = byPath.get(fact.path);
     if (was) {
       if (was.source.size === fact.size && was.source.modified === fact.modified) plan.known += 1;

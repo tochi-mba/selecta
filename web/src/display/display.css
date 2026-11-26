@@ -58,7 +58,7 @@ p { margin: 0.4em 0; }
 .d-steps { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6em 1.6em; margin: 0 0 1.2em; padding: 0; font-size: 0.95em; }
 .d-steps li { display: inline-flex; align-items: center; gap: 0.5em; }
 .d-step { display: inline-grid; place-items: center; width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--surface-raised); border: 1px solid var(--line); font-size: 0.8em; font-weight: var(--weight-heading); font-variant-numeric: tabular-nums; }
-.d-code { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.12em; font-family: var(--display); font-weight: var(--weight-display); font-size: min(4.6em, 12.5vw); line-height: 1; margin: 0 0 0.25em; font-variant-numeric: tabular-nums; }
+.d-code { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.12em; font-family: var(--display); font-weight: var(--weight-display); font-size: min(4.6em, 9vw); line-height: 1; margin: 0 0 0.25em; font-variant-numeric: tabular-nums; }
 /* the code said letter by letter for a screen reader; the boxes are only seen */
 .d-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .d-code span { display: inline-grid; place-items: center; min-width: 1.15em; padding: 0.22em 0.08em; border-radius: var(--radius); background: var(--surface-raised); border: 1px solid var(--line); animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }

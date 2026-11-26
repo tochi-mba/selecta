@@ -202,7 +202,8 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
         break;
       }
       saved.push({ key: item.key, importId, name: item.name, state: 'saved', entry: item.entry, songId: song.song_id, ...(song.duplicate_of !== undefined ? { duplicateOf: song.duplicate_of } : {}), at });
-      unreported.add(song.song_id);
+      // cloud.move_to_cloud: a song played from the cloud library only is not this device's to offer
+      if (!store.isCloudOnly?.(song.song_id)) unreported.add(song.song_id);
       done(item.name, song);
     }
     try { await journal.put(saved); } catch (error) { full ??= error; }

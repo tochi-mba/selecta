@@ -167,7 +167,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       {flagOn('library.art_lookup') && <SongCatalog song={song} notify={notify} />}
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       {facts.reason && <p className="hint">{facts.reason}</p>}
-      <SongPlaces song={song} onPlayNext={onPlayNext} />
+      <SongPlaces song={song} onPlayNext={onPlayNext} onChanged={onChanged} notify={notify} />
       {analysedHere && nextStep(song.readiness?.status) && <p className="hint song-next-step">{nextStep(song.readiness?.status)}</p>}
       {flagOn('library.capability_readiness') && (
         <dl className="song-facts song-capabilities" aria-label="What it’s ready for">

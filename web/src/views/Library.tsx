@@ -15,6 +15,7 @@ import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { SearchField } from '../ui/primitives';
 import { BrowserLibraryEmpty, BrowserLibraryHead, BrowserLibraryMeta, BrowserLibraryToolbar, type LibraryBrowserChrome } from './LibraryBrowser';
 import { LibraryRow, LibraryRowActions } from './LibraryRow';
+import { LibraryPlacesContext, placeChips, placeFilter, placeLabel, placeSort, placeSorts, pressPlace, RemoveFromCloud } from './LibraryPlaces';
 import { hasEarlyLibrary, libraryUrl, takeEarlyLibrary } from './libraryPrefetch';
 import { batchLines, batchWords } from './libraryBatchWords';
 import { ViewProps } from './shared';
@@ -76,8 +77,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // S4-0105-10: only filters the server supports count, so an old or hand-typed `?show=genre` (or
   // tempo, key) never reads as a filter that exists; it shows everything instead.
   const shown = useQueryParam('show') ?? 'all';
-  const filter = FILTERS.some((option) => option.name === shown) ? shown : 'all';
-  const sort = useQueryParam('sort') ?? 'title';
+  // library.places: a Cloud shell with a cloud library filters and sorts by place, and Set aside
+  // combines with a place (`aside=1`); everywhere else the filters are as before
+  const placesChrome = useContext(LibraryPlacesContext);
+  const places = browser ? placesChrome : null;
+  const asideAsked = useQueryParam('aside') === '1';
+  const placed = places ? placeFilter(shown, asideAsked) : null;
+  const filter = placed ? placed.state : FILTERS.some((option) => option.name === shown) ? shown : 'all';
+  const sortAsked = useQueryParam('sort') ?? 'title';
+  const sort = placed ? placeSort(sortAsked, placed) : sortAsked;
+  const asideView = filter === 'set_aside' || filter.startsWith('set_aside:');
   const pagesAsked = useQueryParam('pages');
   const pagesWanted = useRef(pagesFrom(pagesAsked));
   const pagesJustAppended = useRef<number | null>(null);
@@ -630,7 +639,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     <main className={`page library density${browser ? ' library-browser' : ''}`} id="main">
       {browser && (
         <BrowserLibraryHead songs={counts.music} playable={counts.ready} setAside={counts.set_aside} action={browser.action}
-          onSetAside={() => setAddressQuery({ show: 'set_aside', pages: null }, { push: true })} />
+          places={places ? status.places : undefined}
+          onSetAside={() => setAddressQuery({ show: 'set_aside', aside: null, pages: null }, { push: true })} />
       )}
       {!browser && <header className="library-head">
         <div className="library-head-line">
@@ -653,9 +663,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {lead}
       {browser && (
         <BrowserLibraryToolbar typed={typed} onTyped={setTyped}
-          filters={visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => ({ name: option.name, label: option.name === 'all' ? 'All' : option.name === 'ready' ? 'On this device' : option.label }))}
-          filter={filter} onFilter={(name) => setAddressQuery({ show: name === 'all' ? null : name, pages: null }, { push: true })}
-          sorts={SORTS.filter((option) => analysisAvailable || option.name !== 'tempo')} sort={sort}
+          filters={placed ? placeChips(placed, places?.otherDevices ?? false) : visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => ({ name: option.name, label: option.name === 'all' ? 'All' : option.name === 'ready' ? 'On this device' : option.label }))}
+          pressed={placed ? (name) => placeChips(placed, places?.otherDevices ?? false).some((chip) => chip.name === name && chip.pressed) : undefined}
+          filter={filter} onFilter={(name) => setAddressQuery(placed ? { ...pressPlace(placed, name), pages: null } : { show: name === 'all' ? null : name, pages: null }, { push: true })}
+          sorts={placed ? placeSorts(SORTS.filter((option) => option.name !== 'tempo'), placed) : SORTS.filter((option) => analysisAvailable || option.name !== 'tempo')} sort={sort}
           onSort={(name) => setAddressQuery({ sort: name === 'title' ? null : name, pages: null }, { push: true })}
           cards={cardLayout} onCards={(cards) => changeLayout(cards ? 'cards' : 'list')} cardsOffered={on('library.card_view')} />
       )}
@@ -707,7 +718,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         <BrowserLibraryMeta
           countWords={committedRows === null ? '' : <RollingCount value={total} format={(all) => countWords(committedRows.length, all, true)} />}
           updating={searching} selected={visibleSelected.length} selectRef={selectionEntryRef}
-          canSelect={batch && !!committedRows?.length && filter !== 'set_aside'}
+          canSelect={(batch || !!places) && !!committedRows?.length && !asideView}
           onSelectAll={() => {
             if (!committedRows || searching || failed) return;
             setBatchSelection({ identity: selectionIdentity, ids: committedRows.slice(0, 200).map((song) => song.id) });
@@ -727,8 +738,17 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <button type="button" disabled={searching || failed} onClick={() => askBatch('deprioritize')}>Remove priority</button>
             </>
           )}
+          {/* library.places: the selection's copies leave the cloud library; files on devices stay */}
+          {places && <RemoveFromCloud songs={visibleSelected} chrome={places} disabled={searching || failed} onDone={async (_answer, words) => {
+            setBatchSelection({ identity: selectionIdentity, ids: [] });
+            notify(words);
+            await load();
+          }} />}
+          {/* cloud.move_to_cloud: the selection's songs on this device upload to the cloud library */}
+          {places?.uploadSongs?.(visibleSelected, 'selected')}
         </BrowserLibraryMeta>
       )}
+      {placed?.place === 'here' && !placed.aside && !!committedRows?.length && places?.uploadSongs?.(committedRows, 'shown')}
       {!browser && <p className="hint library-count" role="status">{committedRows === null ? '' : <RollingCount value={total} format={(all) => `${countWords(committedRows.length, all, false)}.`} />}</p>}
       {!browser && batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">
@@ -769,7 +789,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
       {browser && committedRows?.length === 0 && !failed && (
-        <BrowserLibraryEmpty query={query} filterLabel={filter === 'all' ? null : filter === 'ready' ? 'On this device' : FILTERS.find((option) => option.name === filter)?.label ?? filter}
+        <BrowserLibraryEmpty query={query} filterLabel={placed ? placeLabel(placed) : filter === 'all' ? null : filter === 'ready' ? 'On this device' : FILTERS.find((option) => option.name === filter)?.label ?? filter}
           onClearSearch={() => { setTyped(''); setAddressQuery({ q: null, pages: null }); }}
           onShowAll={() => setAddressQuery({ show: null, pages: null }, { push: true })} />
       )}
@@ -798,14 +818,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         <div className="library-column-head" aria-hidden="true">
           <span>{browser ? 'Song' : 'Song and artist'}</span>
           <span>{analysisAvailable || committedRows.some((one) => one.bpm !== null) ? 'Tempo · Key · Length' : 'Length'}</span>
-          <span>{browser ? 'Plays here' : 'Mix readiness'}</span>
+          <span>{places ? 'Where it is kept' : browser ? 'Plays here' : 'Mix readiness'}</span>
           <span>{browser ? '' : 'Actions'}</span>
         </div>
       )}
       <ul ref={listRef} className={`rows library-rows ${cardLayout ? 'library-cards' : ''}`} aria-busy={searching}>
         {committedRows?.map((song) => (
           <LibraryRow key={song.id} song={song} page={pageBySong.current.get(song.id) ?? 0} actions={rowActions}
-            selectable={batch && filter !== 'set_aside'} selected={selectedIdSet.has(song.id)}
+            selectable={(batch || !!places) && !asideView} selected={selectedIdSet.has(song.id)}
             selectionFull={selectedIdSet.size >= 200} searching={searching} failed={failed} building={building}
             duplicate={duplicateIds.has(song.id)} sharedTitle={sharedTitles.has(song.title ?? 'Untitled')}
             inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}

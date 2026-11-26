@@ -75,7 +75,9 @@
   block-size: var(--marker);
   margin-inline-start: var(--space-2);
   border-radius: var(--radius-pill);
-  background: linear-gradient(currentColor, currentColor) no-repeat 0 0 / calc(var(--fill, 0) * 100%) 100%, var(--surface-control);
+  /* the track is a faint line of the badge's own ink: on the badge's fill a surface colour vanished,
+     and one place in ten read as a stray dot */
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 0 / calc(var(--fill, 0) * 100%) 100%, color-mix(in srgb, currentColor 22%, transparent);
 }
 @media (forced-colors: active) {
   :where(:root[data-feel]) .devices-meter { display: none; }

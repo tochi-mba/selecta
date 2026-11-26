@@ -14,6 +14,8 @@ Each route keeps its Desktop flag as owner and also needs `cloud.brain` and `clo
 for the account (refused as `flag_off` otherwise), except `PUT /api/mix/order`, which Desktop has
 no route for and `cloud.account_mixes` owns. The first use in a workspace brings its recipes and
 its uploaded-music Cloud mixes (`/cloud-mixes`) in as drafts (`engine_store.mix_import`), once.
+A change of which mix is current (a new order, playing a draft, Undo, clearing) is sent to every
+open device as `mix.current` (`cloud_brain.mix_current`).
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from selecta import flags, mix
 from selecta.authz.roles import WorkspaceAction
+from selecta.cloud_brain import mix_current
 from selecta.engine_store import EngineStore
 from selecta.engine_store.mixes import StoreMixes
 from selecta.identity.tokens import Claims
@@ -37,6 +40,7 @@ MOST_SONGS = 200  # mix_contract.MAX_SONGS: the most a Cloud mix has ever held
 MOST_DRAFTS = 500
 MOST_OVERLAP_BARS = 64  # routes/edit.py
 WORKED_OUT_LIVE = "Worked out in your browser as the mix plays."
+PREPARED_IN_CLOUD = "Prepared in your cloud library."
 SongId = Field(gt=0, lt=2**31)
 
 
@@ -82,15 +86,37 @@ class MixChanged(Exception):
     """The page's view of the mix (`x-mix-order`) is no longer the mix."""
 
 
-def cloud_state(key: str) -> dict:
-    """A seam in a Cloud account's mix: nothing is rendered ahead, so none, with the words."""
-    return {"status": "none", "key": key, "why": WORKED_OUT_LIVE}
+def cloud_state(key: str, prepared: bool = False) -> dict:
+    """A seam in a Cloud account's mix: nothing on these tables is rendered ahead, so none, with
+    the words: prepared in the cloud library when the cloud studio made it, else live."""
+    return {"status": "none", "key": key, "why": PREPARED_IN_CLOUD if prepared else WORKED_OUT_LIVE}
+
+
+def _states(mixes: StoreMixes):
+    """`cloud_state` for each seam key, `prepared` when its record has a worker attestation (the
+    cloud studio rendered it). One read of those keys, on the first seam asked about."""
+    from selecta.engine_store import seams as stored
+    from selecta.engine_store.schema import seam_attestations as made
+
+    attested: set[str] | None = None
+
+    def state(key: str) -> dict:
+        nonlocal attested
+        if attested is None:
+            # a hosted session's own seams ("w" keys, hosted_seams.worker_seam_key) are never a
+            # mix's, so they are left out of the read
+            attested = set(mixes.connection.execute(sa.select(made.c.key).where(
+                mixes.store.mine(made), made.c.studio == stored.WORKER,
+                made.c.key.notlike("w%"))).scalars())
+        return cloud_state(key, key in attested)
+
+    return state
 
 
 def payload(mixes: StoreMixes, draft: int | None = None) -> dict:
     """`GET /api/mix` as Desktop answers it, without what only Desktop has (an estimate, a place
     in the render line, request marks)."""
-    items = mix.read_mix(mixes, None, draft, status=cloud_state)
+    items = mix.read_mix(mixes, None, draft, status=_states(mixes))
     answer = {
         "mix": items,
         "name": mix.mix_name(mixes, draft),
@@ -106,8 +132,9 @@ def drafts_payload(mixes: StoreMixes) -> dict:
     rows = mix.all_drafts(mixes)
     loaded = mix.rows_for_drafts(mixes, {row["id"]: row["items"] for row in rows})
     summaries = []
+    state = _states(mixes)
     for row in rows:
-        items = mix.read_mix(mixes, None, row["id"], loaded[row["id"]], cloud_state)
+        items = mix.read_mix(mixes, None, row["id"], loaded[row["id"]], state)
         states = [item["seam"]["state"] for item in items[1:]]
         stored = mix._stored(row)
         summaries.append(
@@ -170,6 +197,11 @@ def _check_order(mixes: StoreMixes, request: Request, draft: int | None) -> None
 def _room_for(mixes: StoreMixes, draft: int | None, more: int) -> None:
     if len(mix._items(mixes, draft)) + more > MOST_SONGS:
         raise HTTPException(409, f"A mix holds at most {MOST_SONGS} songs.")
+
+
+def _told(mixes: StoreMixes, request: Request, answer: dict) -> dict:
+    """Every open device hears that the current mix is now `answer`'s."""
+    return mix_current.told(mixes, answer, request.query_params.get(mix_current.DEVICE_PARAM))
 
 
 def _a_new_draft(mixes: StoreMixes) -> None:
@@ -361,7 +393,7 @@ def install(
             if not mix._rows(mixes, draft):
                 raise HTTPException(400, "Add a song to this draft first.")
             mix.play_draft(mixes, draft)
-            return payload(mixes)
+            return _told(mixes, request, payload(mixes))
 
     @app.post("/api/mix/songs")
     def add_song(
@@ -450,7 +482,9 @@ def install(
     ) -> dict:
         with writing(request, claims) as mixes:
             undone = mix.undo(mixes, draft)
-            return {**payload(mixes, draft), "undone": undone}
+            answer = {**payload(mixes, draft), "undone": undone}
+            # Undo of the current mix brings back the one before, on every device
+            return _told(mixes, request, answer) if draft is None and undone else answer
 
     @app.post("/api/mix/clear")
     def clear_mix(
@@ -462,7 +496,7 @@ def install(
             mix.remember(mixes, "clearing the mix")
             mix.write_order(mixes, [])
             mix.set_mix_name(mixes, "Your mix")
-            return payload(mixes)
+            return _told(mixes, request, payload(mixes))
 
     @app.put("/api/mix/order")
     def set_order(
@@ -485,7 +519,8 @@ def install(
                     mix.set_mix_name(mixes, mix._clean_name(body.name))
                 else:
                     mix.rename_draft(mixes, draft, body.name)
-            return payload(mixes, draft)
+            answer = payload(mixes, draft)
+            return answer if draft is not None else _told(mixes, request, answer)
 
 
 class _Open:

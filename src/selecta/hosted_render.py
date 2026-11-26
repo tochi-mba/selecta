@@ -684,80 +684,34 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
     With `files`, each part also carries `_file` (`key`, `sha256`): what an export joins.
     """
     from selecta import hosted_estimate
-    from selecta.work import fleet, proxies
+    from selecta import hosted_pairs as pairs
+    from selecta.work import fleet
 
     ids = [str(item["asset_id"]) for item in order]
     moves = [item.get("move") if isinstance(item.get("move"), str) else None for item in order]
-    prepare_songs(engine, work, workspace_id, ids, retry=retry, created_by=created_by)
+    # each hand-off is asked for as `hosted_pairs.pair_state` asks for one
+    brain, playback = pairs.prepared(engine, work, workspace_id, ids, retry=retry,
+                                     created_by=created_by)
     with transaction(engine, workspace_id) as conn:
-        # only this workspace's own live songs: anyone else's id reads as a missing song
-        mine = _songs(conn, workspace_id, ids)
-    own = [song["id"] for song in mine]
-    # cloud.hosted_brain: each seam is the planner core's, built from the engine store's facts
-    brain = (hosted_brain.side_facts(engine, workspace_id, [s["sha256"] for s in mine])
-             if hosted_brain.on() and mine else None)
-    playback = {p.asset_id: p for p in proxies.prepare(
-        work.store, workspace_id, own, need="mix", created_by=created_by)} if own else {}
-    with transaction(engine, workspace_id) as conn:
-        by_id = {song["id"]: song for song in _songs(conn, workspace_id, ids)}
-        songs = [by_id[i] for i in ids if i in by_id]
-        analysed: list[tuple[str, str, str | None]] = []
-        rendered: list[dict[str, Any]] = []
-        for song in songs:
-            digest = analysis_hash(song["sha256"])
-            row = _artifact(conn, workspace_id, "analysis", digest)
-            song["analysis_key"] = _first_key(row["keys"]) if row is not None else None
-            job = _latest_job(conn, workspace_id, ANALYSE, digest)
-            song["loudness"] = _loudness((job["result"] if job is not None else None) or {},
-                                         song["analysis_key"], read_object)
-            prepared = playback.get(song["id"])
-            if prepared is not None and prepared.status == "ready":
-                made = _artifact(conn, workspace_id, "playback", prepared.input_hash)
-                song["file_sha256"] = made["checksum"] if made is not None else None
-            elif prepared is not None and prepared.status == "direct":
-                song["file_sha256"] = song["sha256"]
-            if song["analysis_key"]:
-                analysed.append((song["sha256"], song["analysis_key"],
-                                 ((job["result"] if job is not None else None) or {})
-                                 .get("audio_id")))
-        seams, wanted = [], []
+        songs, analysed = pairs.read_songs(conn, workspace_id, ids, playback, read_object)
+        seams, wanted, rendered = [], [], []
         for index in range(len(songs) - 1):
-            a, b, move = songs[index], songs[index + 1], moves[index + 1]
-            core, pair = _core_part(brain, a, b)
-            digest = seam_hash(a["sha256"], b["sha256"], move, core)
-            row = _artifact(conn, workspace_id, "seam", digest)
-            if row is not None:
-                rendered.append({"a_sha256": a["sha256"], "b_sha256": b["sha256"],
-                                 "digest": digest, "row": row})
-            job = _latest_job(conn, workspace_id, SEAM, f"hosted-seam:{digest}")
-            state = _state(row, job)
-            # a failed transition is tried again only on Try again (it plays as a plain change
-            # meanwhile); a job that can never publish, or was cancelled, is replaced at once
-            why = hosted_status.needs_new(row is not None, job, _output("seam", digest),
-                                          retry=retry)
-            if row is None and not (a["analysis_key"] and b["analysis_key"]):
-                state = {"state": "waiting_for_analysis"}
-            elif why is not None:
-                wanted.append((index, a, b, move, job, pair))
-                state = {"state": "queued"}
-            result = (job["result"] if job is not None else None) or {}
-            seams.append({"index": index, "planned_move": move, **state, "row": row,
-                          "move": result.get("move"), "passed": result.get("audit_passed"),
-                          "fell_back": result.get("fell_back"), "checks": result.get("checks")})
+            seam, want, made = pairs.look(conn, workspace_id, index, songs[index],
+                                          songs[index + 1], moves[index + 1], brain, retry)
+            seams.append(seam)
+            wanted += [want] if want is not None else []
+            rendered += [made] if made is not None else []
         slots = fleet.pool_slots(conn, "cpu-heavy", db_now(conn) - WORKER_SEEN_S)
         durations = hosted_estimate.Durations(conn, workspace_id, FIRST_GUESS_S)
-    _keep_in_store(engine, workspace_id, analysed, rendered, read_object, client, buckets)
+    pairs.keep_in_store(engine, workspace_id, analysed, rendered, read_object, client, buckets)
     capped = False
-    for index, a, b, move, old, pair in wanted:
-        lane = Lane.INTERACTIVE if index < 2 else Lane.STANDARD
-        # a first job for a hand-off takes this account's measured seconds for the move from
-        # today's transition allowance (hosted_caps); a renewal or Try again takes nothing
-        refused, by_allowance = _make_paid(
-            engine, work, _seam_spec(workspace_id, a, b, move, lane, created_by, pair), old,
-            hosted_caps.TRANSITIONS, durations.expected(SEAM, move))
+    for want in wanted:
+        lane = Lane.INTERACTIVE if want[0] < 2 else Lane.STANDARD  # the next two first
+        refused, by_allowance = pairs.make(engine, work, workspace_id, want, lane, created_by,
+                                           durations)
         capped = capped or by_allowance
         if refused:
-            seams[index].update(state="refused", why=refused)
+            seams[want[0]].update(state="refused", why=refused)
     timeline = _timeline(workspace_id, songs, seams, playback, client, buckets, files=files)
     with transaction(engine, workspace_id) as conn:
         # after the jobs above are made, so they count; hand-offs still waiting for analysis
@@ -775,33 +729,13 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
     return {**timeline, **left, "worker_seen": slots > 0, **extra}
 
 
-def _keep_in_store(engine, workspace_id, analysed, rendered, read_object, client, buckets):
-    """The engine store's copy of what the workers made (`cloud.brain`): each analysed song's
-    facts the first time (`hosted_facts.keep`, also the backfill for older uploads) and each
-    rendered seam (`hosted_brain.keep_seams`). Never changes what the mix answers."""
-    from selecta import flags, hosted_facts
-
-    if not flags.on(hosted_facts.FLAG):
-        return
-    if client is not None and read_object is not None:
-        from selecta.storage.artifacts import R2ArtifactStore
-
-        hosted_facts.keep(engine, workspace_id, analysed, read_object,
-                          R2ArtifactStore(client, buckets))
-    hosted_brain.keep_seams(engine, workspace_id, rendered)
-
-
 def _timeline(workspace_id, songs, seams, playback, client, buckets, *, files=False):
+    from selecta.hosted_pairs import file_key as file_of
+
     parts: list[dict[str, Any]] = []
     start = 0.0
     for index, song in enumerate(songs):
-        prepared = playback.get(song["id"])
-        if prepared is not None and prepared.status == "direct":
-            file_key = original_key(workspace_id, song["id"])
-        elif prepared is not None and prepared.status == "ready":
-            file_key = _first_key(prepared.keys)
-        else:
-            file_key = None
+        file_key = file_of(workspace_id, song["id"], playback.get(song["id"]))
         seam = seams[index] if index < len(seams) else None
         cues = _cues(seam["row"]) if seam is not None and seam["state"] == "ready" else None
         end = float(song["duration_s"] or 0.0)

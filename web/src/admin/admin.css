@@ -149,7 +149,7 @@
 .admin-record { display: grid; gap: var(--space-4); }
 .admin-record-head { display: flex; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; align-items: start; }
 .admin-record-head h2 { margin: 0; font: var(--type-page); overflow-wrap: anywhere; }
-.admin-record-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); gap: var(--space-5); }
+.admin-record-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(min(220px, 100%), 300px); gap: var(--space-5); }
 .admin-record-main { display: grid; gap: var(--space-4); min-width: 0; align-content: start; }
 .admin-record-facts { display: grid; gap: var(--space-4); align-content: start; }
 .admin-danger-zone { border-top: var(--separator) solid var(--edge-error); padding-top: var(--space-3); }

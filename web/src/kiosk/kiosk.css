@@ -72,7 +72,7 @@ body { margin: 0; background: var(--surface-base); color: var(--ink); font: clam
 .k-plain { font: inherit; padding: 0.4em 0.9em; border-radius: var(--radius); border: 1px solid var(--soft); background: transparent; color: var(--ink); }
 .k-panel input { font: inherit; width: 100%; padding: 0.4em; margin: 0.4em 0; }
 @media (max-width: 640px) {
-  .k-pairing { grid-template-columns: 1fr; text-align: center; }
+  .k-pairing { grid-template-columns: minmax(0, 1fr); text-align: center; }
   .k-qr { margin: 0 auto; }
   .k-code { font-size: 3.2em; }
 }

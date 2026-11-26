@@ -14,7 +14,7 @@
 .lw-connect-menu > button { display: inline-flex; align-items: center; gap: var(--icon-gap); }
 .lw-connect-menu.lw-primary > button { background: var(--primary-fill); border-color: var(--primary-edge); color: var(--primary-ink); font-weight: var(--weight-strong); }
 .lw-connect-menu.lw-primary > button:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-fill) 88%, var(--primary-ink)); }
-.lw-connect-menu .menu-list { inset-inline: auto 0; min-width: 220px; }
+.lw-connect-menu .menu-list { inset-inline: auto 0; min-width: min(220px, calc(100vw - 2 * var(--gutter))); }
 .lw-connect-menu .menu-list button { display: flex; align-items: center; gap: var(--icon-gap); }
 .page-header-actions > .status { min-height: 40px; }
 
@@ -151,6 +151,14 @@
 .library-browser .library-cards .lw-why { display: block; }
 /* I86: the one hint for a song whose devices are all closed is always shown */
 .lw-why[data-hint] { display: block; }
+/* a touch screen shows no tooltip, so what the chip's title says is written under it */
+@media (hover: none) {
+  .lw-why { display: block; }
+}
+/* a finger's target on any touch screen, not only a narrow one */
+@media (pointer: coarse) {
+  .lw-chips button { min-width: var(--control-height); min-height: var(--control-height); }
+}
 .library-browser .library-cards .lw-length { grid-column: 1; grid-row: 3; }
 .library-browser .library-rows.library-cards .lw-row .lw-actions { grid-column: 2; grid-row: 3; }
 
@@ -233,7 +241,29 @@
 .lw-chip-progress p span { color: var(--text-soft); font-variant-numeric: tabular-nums; }
 .cloud-import-chip .lw-chip-hide { min-width: 32px; min-height: 32px; padding: 0; }
 /* a page that shows the import's own card needs no second notice above it */
-.content:has(> main .lw-import) > .shell-banners > .cloud-import-chip[data-tone='info'] { display: none; }
+.content:has(> main .lw-import) > .shell-banners > .cloud-import-chip[data-tone='info']:not(.cloud-upload-chip) { display: none; }
+/* a phone keeps the progress chip on one line: the words shorten, the buttons stay beside them */
+@media (max-width: 420px) {
+  .cloud-import-chip.banner[data-tone='info'] { flex-wrap: nowrap; }
+  .cloud-import-chip.banner[data-tone='info'] .lw-chip-progress { flex: 1 1 0; }
+  .cloud-import-chip.banner[data-tone='info'] .lw-chip-progress p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cloud-import-chip.banner[data-tone='info'] > button { flex: none; white-space: nowrap; }
+}
+
+/* ---- the upload chip (cloud.move_to_cloud): the import chip's look, one line at 320px while it
+   runs; the words shorten and the buttons stay beside them ---- */
+.cloud-upload-chip-words { margin: 0; min-width: 0; flex: 1 1 12rem; }
+.cloud-upload-chip-words span { color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.cloud-upload-chip > button { flex: none; white-space: nowrap; }
+.cloud-upload-chip-list { margin: 0; padding: var(--space-2) var(--space-3); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); background: var(--surface-raised); font-size: var(--text-sm); max-height: min(50vh, 24rem); overflow: auto; }
+.cloud-upload-chip-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-dense); }
+.cloud-upload-chip-list li { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.cloud-upload-chip-list small { color: var(--text-soft); overflow-wrap: anywhere; }
+@media (max-width: 420px) {
+  .cloud-upload-chip.banner[data-phase='running'] { flex-wrap: nowrap; }
+  .cloud-upload-chip.banner[data-phase='running'] .cloud-upload-chip-words { flex: 1 1 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cloud-upload-chip.banner[data-phase='running'] > button { padding-inline: var(--space-2); }
+}
 
 @media (max-width: 1100px) {
   .library-browser { --lw-columns: minmax(0, 1fr) 56px minmax(130px, 200px) 150px; }
@@ -309,6 +339,11 @@
   .library-browser .lw-chips { flex: 1 1 0; min-width: 0; margin-inline-end: 0; }
   .library-browser .lw-chips button { flex: none; white-space: nowrap; }
   .library-browser .lw-toolbar-end { flex: none; gap: var(--space-1); }
+  /* cloud.page_layout: the filters take a row of their own, edge to edge, so more than one and a
+     half of them show; search shares the top row with sort and view, and takes what they leave */
+  :root[data-page-layout='frame'] .library-browser .lw-toolbar .search-field { flex: 1 1 8rem; min-width: 0; }
+  :root[data-page-layout='frame'] .library-browser .lw-chips { order: 2; flex: 1 1 100%; margin-inline-end: calc(-1 * var(--page-gutter)); }
+  :root[data-page-layout='frame'] .library-browser .lw-toolbar-end { order: 1; }
   .library-browser .lw-sort select { max-width: 6.5rem; }
   .library-browser .lw-state { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); }
   .library-browser .lw-sort > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -367,3 +402,25 @@ details.mf-folders > .mf-body { padding: 0 var(--space-4) var(--space-4); }
 .lw-added { color: var(--status-ready); font-size: var(--text-sm); white-space: nowrap; }
 .lw-added.lw-in-mix { color: var(--text-soft); }
 .lw-added:empty { display: none; }
+
+/* ---- library.places: where a song is kept (views/PlaceChip.tsx), and a line only when it
+   cannot play here; a phone shows the icons alone, the words stay the button's name ---- */
+.lw-state.lw-places { justify-items: start; }
+.place-chip { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); min-width: 0; max-width: 100%; min-height: 32px; padding: 0 var(--space-2); border: var(--separator) solid var(--border); border-radius: var(--radius-pill); background: none; color: var(--text); font-size: var(--text-sm); text-align: start; }
+.place-chip-icons { display: inline-flex; flex: none; gap: var(--space-hair); }
+.place-chip-words { min-width: 0; overflow-wrap: anywhere; }
+.place-chip[data-place='none'] { color: var(--status-failed); }
+.place-line { min-width: 0; color: var(--text-soft); font-size: var(--text-xs); line-height: 1.4; overflow-wrap: anywhere; }
+.lw-places-note > span { min-width: 0; flex: 1 1 12rem; }
+/* an empty account that can upload: keep songs here, or upload them; side by side when there is room */
+.lw-add-choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+@media (min-width: 769px) {
+  .lw-add-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+}
+@media (max-width: 640px) {
+  .place-chip { min-height: 44px; min-width: 44px; justify-content: center; }
+  .place-chip-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (forced-colors: active) {
+  .place-chip { border-color: ButtonText; }
+}

@@ -36,7 +36,8 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Good and Bad on a transition | Works | `cloud.brain` | |
 | Choosing a transition's move | Works | `cloud.browser_moves` | |
 | Seam Inspector | Works for each transition this device made: the move, its reasons, where each song is left and joined, the checks, what else was tried, Good and Bad, and its preview played from the clip on the device; "Render it" asks this device to make one. Stem Studio is absent (no stems in a browser) | `cloud.device_render`, `cloud.brain` | |
-| My Mixes, drafts, Undo | Works: the account's own mix routes | `cloud.brain`, `cloud.account_mixes` | |
+| My Mixes, drafts, Undo | Works with the account keeping the mix: My Mixes lists the current mix and the account's drafts (open, play, rename, copy, delete, bring back), a draft opens in the editor, and Undo works on both. On for every account with the cloud library; for an account without it, My Mixes lists the saved browser mixes and a draft's editor is the app's | `cloud.brain`, `cloud.account_mixes` (needs `cloud.hosted_media`) | |
+| The current mix on two devices | Works with the account keeping the mix: a new order, playing a draft, Undo and clearing reach every open device (`mix.current`); the last change stands and Undo brings the one before back; the device making the sound keeps playing and offers the new mix | `cloud.brain`, `cloud.account_mixes` (needs `cloud.hosted_media`) | |
 | Locks | Works when the account keeps the mix; a mix kept in this browser has no lock | `cloud.brain`, `cloud.account_mixes` | |
 | Energy horizon in the editor | Works: the mix's rows carry each song's energy, tempo and key as the account measured them; a song not measured shows none | `cloud.brain`, `cloud.device_analysis` | |
 | Request a song | Works, kept with the account; the member adds it | `requests`, `cloud.account_mixes` | |

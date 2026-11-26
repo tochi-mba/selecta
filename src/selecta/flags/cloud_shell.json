@@ -1,0 +1,14 @@
+{
+  "area": "Cloud services",
+  "flags": {
+    "cloud.one_shell": {
+      "label": "One Cloud shell for every account",
+      "about": "Every Cloud account opens the same pages, wherever its songs are kept. An account whose songs are only in its cloud library gets them without anything about this device: no connecting music, no folder checks and no This device place. Adding music means uploading, songs play from the cloud library on any device, and Make a Mix is the mixer everyone has, playing through the same player that other devices, Rooms and Lucy can reach. Music on the member's devices then only adds what belongs to a device. Off: an account without music on its devices keeps its own cloud library pages.",
+      "surfaces": ["cloud.home", "cloud.listen", "cloud.library", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    }
+  }
+}
