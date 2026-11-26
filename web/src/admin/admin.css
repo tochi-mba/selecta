@@ -66,8 +66,11 @@
 }
 .admin-mode.changing { background: var(--surface-selected); }
 .admin-prod-notice { margin: var(--space-2) var(--gutter); color: var(--danger); }
-.admin-main { padding: var(--space-4) var(--gutter) var(--page-end); display: grid; gap: var(--space-5); min-width: 0; align-content: start; }
-.admin-page { display: grid; gap: var(--space-5); min-width: 0; }
+.admin-main { padding: var(--space-4) var(--gutter) var(--page-end); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); min-width: 0; align-content: start; }
+/* one column that never grows past the page: on AI a wide table's wrapper once widened the whole
+   page by 88px on a phone on its side (the table scrolls inside its own box instead) */
+.admin-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); min-width: 0; }
+.admin-page > * { min-width: 0; }
 .admin-section { display: grid; gap: var(--space-2); min-width: 0; padding-top: var(--space-3); border-top: var(--separator) solid var(--edge-decorative); }
 .admin-section-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
 .admin-section h2 { margin: 0; font: var(--type-section); display: inline-flex; gap: var(--space-2); align-items: baseline; }
