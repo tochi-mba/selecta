@@ -23,6 +23,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Neural key, lyric timing | Decision: the standard key finder reads key; lyrics are not shown in a browser | | T-20261126-2cbe (lyrics) |
 | Make a Mix: order from the planner | Works | `cloud.brain`, `cloud.device_analysis` | |
 | Energy shape | Works: sent to the planner with the order | `cloud.brain`, `cloud.device_analysis` | |
+| Idea cards on Make a Mix | Works: the account's cards beside the browser's own, and a card builds its mix with the planner choosing and ordering the songs; planned over at most 60 measured songs that play here | `cloud.brain`, `cloud.device_analysis` | T-20261126-6e24 (more than 60) |
 | Mix language, ending | Works | | |
 | Transition feel | Works: the order is planned in the feel, and each transition of a mix made in it is made on the device in that feel's moves (`language` on `/planning/candidates`); a mix already made keeps its transitions | `cloud.brain`, `cloud.device_analysis` (transitions: `cloud.device_render`) | |
 | Stem moves, stem splitting | Decision: absent; the stem model is not published, so songs play whole | `cloud.browser_stems` when it is | T-20261125-03a3 |
