@@ -159,10 +159,10 @@ connection. `analysis.song.load_song` reads through the caller's own connection 
 connection has writes pending (`conn.in_transaction`), exactly as before, so a caller that writes
 then reads in one transaction still sees its writes.
 
-These writers still use the raw library connection (to-do item "Song facts writers on Desktop
-still use the raw library connection"): `db.save_analysis`, `db.save_lyrics`, `db.upsert_song`,
-the correction route and the scan. Safe: same file, and each commits before a store read can see
-it. In Cloud a device saves a song's facts through `engine_store.facts_store.save`, with their
+The writers moved with the library slice ([engine-store-library.md](engine-store-library.md)):
+with the flag on, the scan, `db.save_analysis` (with the hashes in the same write),
+`db.save_lyrics`, the correction route and the library's settings write through the store. In
+Cloud a device saves a song's facts through `engine_store.facts_store.save`, with their
 provenance (`analysis.implementation`, `analysis.source`), and `load_songs` reads many songs in
 one transaction (docs/engineering/cloud-planning.md).
 
@@ -172,26 +172,32 @@ Moved (each with its own page): ratings and song facts (above); seams, Phase 7 s
 ([engine-store-seams.md](engine-store-seams.md)); mixes, steps 2 and 3
 ([engine-store-mixes.md](engine-store-mixes.md)); requests, step 3
 ([engine-store-requests.md](engine-store-requests.md)); discovery with its links (`seam_book`) and
-the listening study, step 4 ([engine-store-discovery.md](engine-store-discovery.md)). Each keeps
-its old path, statement for statement, for the flag off; these calls are that path, not work
-left: `requests.py` (its `_sqlite_` bodies, 28), `mix_backend.SqliteMixes` (25), `listening.py`
-(16), `discovery/sweep.py` (5), `routes/discover.py` (3 of 4), `discovery/search.py` (1 of 2),
-`library/relink.py`'s discoveries count (1), `eval/ratings.py` (2).
+the listening study, step 4 ([engine-store-discovery.md](engine-store-discovery.md)); the library:
+scan, song writes, relink, Library routes, cache care and the scattered library reads, step 5
+([engine-store-library.md](engine-store-library.md)).
 
-Still on the library's raw connection on 2026-11-26, the remaining work of Phase 7. Counts are
-`.execute`/`.executemany` lines in modules that import `sqlite3`, plus Desktop routes handed the
-library connection; Cloud modules' SQLAlchemy calls are not counted.
+Each keeps its old path, statement for statement, for the flag off and for a caller holding
+writes of its own; these calls are that path, not work left: `requests.py` (its `_sqlite_`
+bodies, 28), `mix_backend.SqliteMixes` (25), `listening.py` (16), `discovery/sweep.py` (5),
+`routes/discover.py` (3), `discovery/search.py` (1), `eval/ratings.py` (2), `library/scan.py`
+(13), `routes/library.py` (7: priority and correction), `db.py`'s song helpers (6),
+`analysis/pipeline.py` (2), `analysis/song.py` (3, a caller with writes pending).
+
+The library slice also runs SQLite-only statements over Desktop-only tables on a store
+connection (`library_rows.Rows`, through `store.read()` or `store.write()`): the Library page and
+its search (`routes/library.py`, 11 lines; `library/search_cache.py`, 3), the relink
+(`library/relink.py`, 8), and single reads in `eta.py`, `planner/`, `routes/helpers.py`,
+`session.py`, `lyrics/lrclib.py`, `eval/feedback.py`, `cache_care.py` and the command line. They
+are on the store with the flag on; Cloud never runs them.
+
+Still on raw `sqlite3` with the flag on, on 2026-11-26. Counts are `.execute`/`.executemany`/
+`.executescript` lines; Cloud modules' SQLAlchemy calls are not counted.
 
 | Area | Modules (calls) |
 |---|---|
-| Hand-made schema and start-up steps (including `_legacy_kinds_renamed`, kept on purpose) | `db.py` (26), `local_upgrade.py` (4) |
-| Library scan, search and files | `library/scan.py` (16), `library/relink.py` (7), `library/search_cache.py` (4), `routes/library.py` (23), `cache_care.py` (12) |
-| Reading songs and lyrics for discovery | `discovery/search.lyric_links` (1), `routes/discover.py`'s `/api/links` names (1) |
-| Reading rated seams across data folders | `eval/feedback.py` (1, read-only) |
+| Hand-made schema and `connect` (with its start-up steps, `_legacy_kinds_renamed` kept on purpose) | `db.py` (17) |
+| The upgrade backup and stamp | `local_upgrade.py` (4) |
+| Whole-file tools (copy and check whole files; must not open the store for writing) | `homes.py` (14), `recovery.py` (9), `backup.py` (8) |
 | Lucy's tables on the Desktop | `lucy/conversations.py` (31), `lucy/memory.py` (17), `lucy/commit.py` (15), `lucy/proposals.py` (12), `lucy/permissions.py` (7), `lucy/events.py` (6), `lucy/schema.py`, `lucy/readiness.py` (2 each), `lucy/context.py`, `lucy/catalog.py` (1 each), `routes/lucy.py` (12), `lucy/agent.py` (10) |
-| Mix and request routes' own reads | `routes/helpers.py` (5), `routes/mixes.py` (2), `routes/edit.py` (3), `routes/system.py` (4), `session.py` (1) |
-| Analysis, planning and workers reading songs | `analysis/pipeline.py` (3), `analysis/song.py` (3), `eta.py` (3), `planner/wordreel.py` (2), `planner/ready.py`, `planner/reel.py`, `planner/gridcheck.py`, `stems.py`, `lyrics/lrclib.py`, `workers/local_seams.py`, `workers/local_analysis.py`, `api.py` (1 each) |
-| Whole-file tools (work on files, not a workspace) | `homes.py` (14), `recovery.py` (9), `backup.py` (8) |
-| Development only | `devstack/identity_store.py` (31) |
-
-`preferences` beyond the mix's own keys is read on the old path too.
+| Development only | `devstack/identity_store.py` (32) |
+| Left with a reason (to-do T-20261126-1e71) | `cache_care.tidy_database` (10: page counts, incremental vacuum, `VACUUM`, which no transaction may hold), `api.py`'s `/api/ready` probe (1, read-only), `workers/local_seams.py`, `workers/local_analysis.py` (1 each, read-only, `work.sqlite`, not the library), `engine_store/library.py` (3: the stamp and file name the store is found by) |
