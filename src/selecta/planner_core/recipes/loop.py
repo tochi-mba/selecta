@@ -147,8 +147,19 @@ def loop_window(song: SongInfo, exit_bar: int, bars: int) -> Windows | None:
     return None
 
 
+def a_untouched(a: SongInfo, b: SongInfo) -> bool:
+    """Whether B alone can absorb the tempo gap, as `beat_lock` does, so every pass of A's loop
+    is an exact copy of its own audio. Between 3 and 4.5 percent both songs are stretched, and on
+    the synthetic design pair at 3.2 percent the audit read the beats at 26 ms (a plain blend on
+    the same pair: 12 ms), so loops wait there until the owner has heard the close ones."""
+    folded_bpm = b.bpm / fold_ratio(a, b)
+    return abs(a.bpm / folded_bpm - 1.0) <= A_NATIVE_MAX_GAP
+
+
 def loop_room_fits(a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue, bars: int):
     """Where loop room plays for this cue pair, or None where it doesn't belong."""
+    if not a_untouched(a, b):
+        return None
     windows = loop_window(a, exit_cue.bar, bars)
     if windows is None:
         return None
@@ -334,7 +345,7 @@ def loop_room(
     """The bass-swap blend (blend.py) over a loop of A's last clean bars. B comes in on the
     loop's first pass, which is A's own audio carrying on; every later pass is a repeat, with a
     highpass rising slowly over them; the bass is traded on a bar line, one low end at a time."""
-    windows = loop_window(a, exit_cue.bar, bars)
+    windows = loop_window(a, exit_cue.bar, bars) if a_untouched(a, b) else None
     if windows is None or a.beats_per_bar != b.beats_per_bar:
         return None
     timing = loop_lock(a, b, windows, b.beat_index_of_bar(entry_cue.bar), fold_ratio(a, b))

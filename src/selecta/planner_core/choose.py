@@ -102,10 +102,9 @@ def _energy_step(a: SongInfo, b: SongInfo, exit_cue: Cue, entry_cue: Cue) -> flo
 
 
 # Moves that make their own room, waiting on the owner's ears: each sits below a natural
-# 8-bar blend at the same tempo gap (0.95 within 3 percent, 0.7 beyond) and above an echo or a
-# cut (0.45). Provisional until their reels are rated.
+# 8-bar blend (0.95 within 3 percent tempo, where every loop is) and above an echo or a cut
+# (0.45). Provisional until their reels are rated.
 LOOP_ROOM_FIT = 0.85
-LOOP_ROOM_FIT_WIDE = 0.6
 TEMPO_BRIDGE_FIT = 0.6
 RAP_BLEND_COST = 0.3
 
@@ -115,8 +114,7 @@ def _style_fit(recipe: Recipe, a: SongInfo, b: SongInfo, bars: int, gap: float) 
     beatmatched blends rated well, and none of the four tempo-free moves did."""
     rap = a.family == "hiphop" and b.family == "hiphop"
     if recipe.name == "loop_room":
-        fit = LOOP_ROOM_FIT if gap <= 0.03 else LOOP_ROOM_FIT_WIDE
-        return fit - (RAP_BLEND_COST if rap else 0.0)
+        return LOOP_ROOM_FIT - (RAP_BLEND_COST if rap else 0.0)
     if recipe.name == "tempo_bridge":
         return TEMPO_BRIDGE_FIT - (RAP_BLEND_COST if rap else 0.0)
     if recipe.name == "bass_swap_blend":

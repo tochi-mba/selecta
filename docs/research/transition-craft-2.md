@@ -151,7 +151,72 @@ coherence judge (2.6) and key-shifted versions (2.5).
 
 Each is a recipe or planner rule, behind its own flag, kept only if the owner rates its reel up.
 
-## 5. Gaps
+## 5. Built: loop room and tempo bridge (2026-11-26)
+
+Two of the moves above now exist in the planner core (`planner_core/recipes/loop.py`,
+`recipes/bridge.py`), behind `move.loop_room` and `move.tempo_bridge`, both off until the owner
+has heard them. Both are ordinary transition scripts: a loop is one part per pass of the same
+bars, joined by a 10 ms linear crossfade that ends on the bar line, so the renderer, the browser
+port and the JSON form needed no change.
+
+### Loop room (2.4)
+
+- **When:** the auto pool only, and only for a pair with no natural blend of 8 bars or more. A's
+  exit must have fewer clean bars before it than the overlap needs, but at least 4. Clean means
+  no singing (lyric lines, 0.1 s either side), at least 60% of the song's usual bar energy (the
+  drums are in), every beat within 3% of the period, and no reaching back past the start of the
+  section. The usual beat-lock gates apply (grid confidence 0.8, keys), and tempo within 3%,
+  where B alone absorbs the gap and every pass is an exact copy of A's audio. At 3.2% both songs
+  are stretched and the audit read the synthetic pair's beats at 26 ms (a plain blend on the same
+  pair, 12 ms; the snare beats sat within 3 ms on both sides, the scatter was on beats carrying
+  only a filtered synthetic kick), so loops wait there until the close ones have been heard.
+- **Bar by bar:** A plays as itself up to its last clean 4 or 8 bars. B enters on the first bar of
+  that phrase, which is still A's own audio, so nobody hears where the loop begins. The phrase
+  then repeats until the overlap (8 or 16 bars) is filled, at most 4 passes, with a highpass on
+  the repeats rising from 20 Hz to 400 Hz by the end. The hand-over is the bass-swap blend's:
+  equal-power fades over 65% of the overlap, the low end traded on a bar line.
+- **Ranking (provisional):** fit 0.85 (a natural blend has 0.95 at the same tempo gap, an echo
+  or cut 0.45). On the synthetic design pair it ranked first, 0.857 against 0.794
+  for the best cut or echo; with a 16-bar natural window the same pair got no loop at all.
+- **Audit on synthetic pairs** (`tools/device_render_golden.py` synthesis, A singing up to a
+  4-bar clean outro, B singing from its second bar): 16-bar overlap at one tempo, 4 passes of 4
+  bars, passed every check (beats 2.9 ms over 51 beats, vocal overlap 0 s, harmony -0.035,
+  entry level +0.79 dB); 8-bar overlap, 2 passes, passed (beats 2.2 ms). The joins measured no
+  step larger than a tenth of the audio's ordinary sample-to-sample movement.
+
+### Tempo bridge (section 4, item 5)
+
+- **When:** tempo gap over 4.5% and A's tempo moved no more than 8% (`MAX_STRETCH`, the audit's
+  stretch limit), a steady grid, keys within the usual gates, and a clean, steady 8-bar phrase
+  ending at A's exit. 10% apart gets nothing.
+- **Bar by bar:** one bar of A as it is. Then 16 bars of A's clean bars (its own as far as they
+  go in whole phrases, then its last phrase again, never more than 4 passes), each bar a constant
+  tempo, each a step of one sixteenth of the gap nearer B's. Over the first bar A's low band falls
+  about 10 dB; over two bars the mids drop 2 dB and a highpass rises to 150 Hz. On the beat
+  before B arrives, A's low band goes. B enters on that phrase line at its own speed, never
+  stretched, fading in over 65% of 8 bars while A, now at B's tempo and pinned to B's bar lines,
+  fades out with its highpass rising to 1.2 kHz. Pitch never moves: Rubber Band time-stretch.
+- **Ranking (provisional):** fit 0.6, against 0.45 for an echo or cut. On the synthetic pair 6%
+  apart it ranked first (0.802 against 0.794).
+- **Audit on synthetic pairs:** four pairs, each passing every check: 124 into 131.5 BPM from
+  two exits (one with 16 clean bars, one with 8 looped three times; beats 2.9 to 10 ms over 27
+  beats, stretch 6.05%, quiet time 0 s, entry level +1.07 dB), 131.5 into 124 (stretch 5.7%) and
+  124 into 116.9 (5.73%), both with beats at 2.9 ms. A 10% pair gets no bridge. A harder strip (low band out,
+  highpass 300 Hz) left 15 s under the quiet-time floor; a lighter one let A's kick under B's and
+  the beat check read 19 to 30 ms. The audit's stretch check reads only A's first part, which
+  carries the timing of the whole walk, so it reports the full stretch.
+- **Not built:** the stem form (A's drums alone), and looping B's intro for loop room. Both are
+  in docs/todo.
+
+### What to listen for
+
+Whether a loop's joins click or stutter; whether four passes sound like a held groove or a stuck
+record; whether the bridge's 16 stripped bars feel like a breakdown or a hole; whether the walk in
+tempo is heard at all; and, in both, whether B arrives on something. `selecta move-trial
+loop_room --register` (and `tempo_bridge`) renders pairs from the library against what the
+planner would otherwise pick, for the blind listening study.
+
+## 6. Gaps
 
 - No listening test of per-band or per-bin handovers against a plain bass swap.
 - No source on dembow or swing mismatch.
