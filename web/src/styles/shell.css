@@ -695,6 +695,9 @@ main.page h1[tabindex='-1']:focus { outline: none; }
 :root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page:is([data-place='account'], [data-place='billing'], [data-page-width='reading'])) > .shell-banners,
 :root[data-page-layout='frame'] .shell[data-mode='cloud'] .content:has(> main.page .acct-layout) > .shell-banners { max-width: var(--page-max); margin-inline: auto; }
 :where(:root[data-page-layout='frame'] .shell[data-mode='cloud'] .content > main.page) p { max-width: 70ch; }
+/* a banner's words keep that measure, and its buttons go to the banner's far end instead of
+   floating in its middle */
+:root[data-page-layout='frame'] .shell[data-mode='cloud'] .banner > p:not(.ui-icon):not(:last-child) { margin-inline-end: auto; }
 
 /* Cloud notices (connection, account, import progress): one stack on the page column, in the
    page's flow under the bar. Each takes a row of its own; none floats over the page. */

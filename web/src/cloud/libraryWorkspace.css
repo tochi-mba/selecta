@@ -339,6 +339,11 @@
   .library-browser .lw-chips { flex: 1 1 0; min-width: 0; margin-inline-end: 0; }
   .library-browser .lw-chips button { flex: none; white-space: nowrap; }
   .library-browser .lw-toolbar-end { flex: none; gap: var(--space-1); }
+  /* cloud.page_layout: the filters take a row of their own, edge to edge, so more than one and a
+     half of them show; search shares the top row with sort and view, and takes what they leave */
+  :root[data-page-layout='frame'] .library-browser .lw-toolbar .search-field { flex: 1 1 8rem; min-width: 0; }
+  :root[data-page-layout='frame'] .library-browser .lw-chips { order: 2; flex: 1 1 100%; margin-inline-end: calc(-1 * var(--page-gutter)); }
+  :root[data-page-layout='frame'] .library-browser .lw-toolbar-end { order: 1; }
   .library-browser .lw-sort select { max-width: 6.5rem; }
   .library-browser .lw-state { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); }
   .library-browser .lw-sort > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
