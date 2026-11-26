@@ -36,6 +36,7 @@ import librosa
 import numpy as np
 import pyloudnorm
 import scipy
+import scipy.signal
 import soxr
 
 from selecta.analysis.beats import build_grid, onset_envelope, regularize
@@ -326,6 +327,10 @@ def songs() -> list[dict]:
     four = [0, 1, 2, 3]
     offbeats = [0.5, 1.5, 2.5, 3.5]
     return [
+        # Beats at .25 + k/2 s fall midway between Beat This's 20 ms frames, so the reported
+        # beats alternate 10 ms early and late; the median interval is then 0.52 s and
+        # `_constant_grid`'s 3 percent search around it never reaches 0.50 s. Python reads this
+        # steady song as moving (constant_tempo 0, 119.87 BPM). Kept: the port must agree.
         groove_song(
             "house-120-a-minor",
             44_100,
@@ -481,6 +486,7 @@ def analyse(stereo: np.ndarray, rate: int, song: dict, resampler) -> dict:
         "envelope": f32(envelope),
         "lufs": float(lufs),
         "peakDb": float(peak_db),
+        "playbackMeterLufs": playback_meter_lufs(stereo, rate),
         "peaks": [int(v) for v in waveform_peaks(mono)],
         "regularizedBeats": int(regularize(raw_beats).size),
         "grid": None,
@@ -558,6 +564,47 @@ def _cosine_min(a, b) -> float:
     return float(np.min(dots / np.maximum(norms, 1e-12)))
 
 
+def _biquad(b0, b1, b2, a0, a1, a2):
+    return np.array([b0, b1, b2]) / a0, np.array([1.0, a1 / a0, a2 / a0])
+
+
+def playback_meter_lufs(stereo: np.ndarray, rate: int) -> float:
+    """web/src/dsp/loudness.ts::integratedLoudness (the browser's playback meter) in numpy, to
+    record how far it reads from pyloudnorm: libebur128's K-weighting constants, whole blocks
+    only, and a strict absolute gate. The port does not use it (songLoudness.ts follows
+    pyloudnorm); this is only the measured difference."""
+    gain, centre, q = 3.999843853973347, 1681.974450955533, 0.7071752369554196
+    amp = 10 ** (gain / 40)
+    omega = 2 * math.pi * centre / rate
+    cos, alpha = math.cos(omega), math.sin(omega) / (2 * q)
+    root = 2 * math.sqrt(amp) * alpha
+    shelf = _biquad(
+        amp * (amp + 1 + (amp - 1) * cos + root),
+        -2 * amp * (amp - 1 + (amp + 1) * cos),
+        amp * (amp + 1 + (amp - 1) * cos - root),
+        amp + 1 - (amp - 1) * cos + root,
+        2 * (amp - 1 - (amp + 1) * cos),
+        amp + 1 - (amp - 1) * cos - root,
+    )
+    omega = 2 * math.pi * 38.13547087602444 / rate
+    cos, alpha = math.cos(omega), math.sin(omega) / (2 * 0.5003270373238773)
+    high = _biquad((1 + cos) / 2, -(1 + cos), (1 + cos) / 2, 1 + alpha, -2 * cos, 1 - alpha)
+    weighted = [
+        scipy.signal.lfilter(*high, scipy.signal.lfilter(*shelf, stereo[:, c].astype(np.float64)))
+        for c in range(stereo.shape[1])
+    ]
+    block, step = round(0.4 * rate), round(0.1 * rate)
+    energies = []
+    for start in range(0, stereo.shape[0] - block + 1, step):
+        energies.append(sum(float(np.sum(w[start : start + block] ** 2)) / block for w in weighted))
+    energies = np.asarray(energies)
+    level = -0.691 + 10 * np.log10(np.maximum(energies, 1e-30))
+    above = energies[level > -70]
+    gate = -0.691 + 10 * math.log10(above.mean()) - 10
+    kept = above[(-0.691 + 10 * np.log10(np.maximum(above, 1e-30))) > gate]
+    return float(-0.691 + 10 * math.log10(kept.mean()))
+
+
 def resampler_effect(port: dict, desktop: dict) -> dict:
     """How far the two references are apart: what choosing the browser's resampler costs."""
     effect = {
@@ -621,12 +668,13 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=OUTPUT)
     folder = parser.parse_args().out
     folder.mkdir(parents=True, exist_ok=True)
-    entries = []
+    entries, playback = [], []
     for song in songs():
         result = measure(song)
+        playback.append(abs(result["port"]["playbackMeterLufs"] - result["port"]["lufs"]))
         file = f"{song['name']}.json"
         (folder / file).write_text(
-            json.dumps(result, separators=(",", ":")) + "\n", encoding="utf-8"
+            json.dumps(result, separators=(",", ":")) + "\n", encoding="utf-8", newline="\n"
         )
         entries.append(
             {
@@ -649,8 +697,12 @@ def main() -> None:
             "pyloudnorm": getattr(pyloudnorm, "__version__", "0.2.0"),
         },
         "songs": entries,
+        # how far the browser's playback meter (../loudness.ts) reads from pyloudnorm, in LU
+        "playbackMeterLufsDifference": max(playback),
     }
-    (folder / "manifest.json").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
+    (folder / "manifest.json").write_text(
+        json.dumps(manifest, indent=1) + "\n", encoding="utf-8", newline="\n"
+    )
     print(f"Wrote {len(entries)} songs to {folder}")
 
 
