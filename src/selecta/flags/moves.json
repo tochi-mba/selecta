@@ -33,6 +33,16 @@
       "label": "Tempo ramp",
       "about": "Both songs drift to a shared speed for a short overlap."
     },
+    "move.loop_room": {
+      "label": "Loop and blend",
+      "about": "When a song leaves no clean bars to blend over, its last clean phrase loops so the next song can still come in slowly. Off until it has been listened to.",
+      "default": false
+    },
+    "move.tempo_bridge": {
+      "label": "Tempo bridge",
+      "about": "Songs too far apart in tempo to blend: the first is stripped to its beat and walked to the next one's speed over sixteen bars, then the next comes in untouched. Off until it has been listened to.",
+      "default": false
+    },
     "move.echo_out": {
       "label": "Echo out",
       "about": "The last beat rings on as the next song lands under it."
