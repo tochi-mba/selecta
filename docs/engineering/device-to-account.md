@@ -15,7 +15,7 @@ named, nothing is sent and the browser orders and blends exactly as before.
 
 ## What is sent, and when
 
-`factsUploader.ts`, started by the local-first shell, runs in the background for the signed-in
+`factsUploader.ts`, started by the Cloud shell, runs in the background for the signed-in
 workspace. Once per pass (every five minutes) it reads `GET /api/song-facts` page by
 page (kept ten minutes, and updated as it saves), then walks this device's song index:
 

@@ -15,7 +15,7 @@ How the code is laid out, and how a request and a job travel through it. The ful
 | Work | In-process runner threads | Remote workers through the gateway |
 | Flags | `SELECTA_FLAGS` and the JSON defaults | The same, plus targeting rules, plans and Labs opt-ins |
 
-Local mode keeps every guarantee it had before the cloud work ([ADR-0391](../adr/adr-0391-selecta-cloud-goal-and-local-guarantees.md)).
+Desktop keeps every guarantee it had before the cloud work ([ADR-0391](../adr/adr-0391-selecta-cloud-goal-and-local-guarantees.md)).
 
 ## The packages
 
@@ -65,7 +65,7 @@ Packages talk across boundaries through small **ports** (Python `Protocol`s in e
 5. It uploads outputs under its own attempt prefix and calls **complete**. Only the current lease holder can publish; results are applied in the same transaction that marks the job done.
 6. The **reaper** returns jobs whose leases expired, so a crashed worker never loses work.
 
-In local mode the same tables live in SQLite and the workers are threads in the app.
+On Desktop the same tables live in SQLite and the workers are threads in the app.
 
 ## Where things are written down
 

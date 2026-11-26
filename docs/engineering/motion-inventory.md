@@ -132,7 +132,7 @@ Script animations are not stopped by a stylesheet, so every engine in `web/src/f
 | Rooms and devices (`styles/feel-rooms.css`) | a room opens; this device is found; the sound really moves to another speaker | the room's QR code comes in as a diagonal wave, opacity only so it scans as drawn (`feel-qr-wave`); this device's edge lights once (`feel-beacon`); one pulse crosses from the old speaker's chip to the new one's, then a tick draws and a phone that can buzzes inside the press (`feel-speaker-pulse`, `devices/SpeakerMoved.tsx`) | spring and effects tokens; the pulse `--motion-spring-glide` | shown at rest; without motion the move line is not drawn and the remote's speaker line says where the music is |
 | Rooms page QR, full screen (`rooms/RoomShare.tsx`, `feelHooks.growFrom`) | Show full screen pressed on the card's QR code | the large code grows out of the small one, transform only, on `--spring-gentle` | `--motion-spring-glide` | appears at once |
 | Rooms page guest count (`rooms/RoomPanel.tsx`) | a guest really joins or leaves | the header count and the Guests card's count roll (`NumberRoll`); a guest who joined in the last 15 seconds pops in (`feel-pop`) | `--motion-spring-snappy` | the number changes in place |
-| Local first scan (`styles/feel-local.css`) | the first scan finds a phrase | the word lights like the current lyric word (`feel-word-light`) | effects tokens | shown lit |
+| Desktop's first scan (`styles/feel-local.css`) | the first scan finds a phrase | the word lights like the current lyric word (`feel-word-light`) | effects tokens | shown lit |
 | Account, Plan, Workspace, Library, editor, Studio (`styles/feel-account.css`, `styles/feel-library.css`) | arrivals; hover; the plan you are on | reuse `feel-arrive`, `feel-draw` and `feel-pop`; the plan you are on carries a lit edge, not a moving thing | spring and effects tokens | shown at rest |
 | Music folders drop zone (`cloud/libraryWorkspace.css`) | files dragged over the page | the drop zone fades in (`mf-drop-in`), only under `prefers-reduced-motion: no-preference` | `--motion-reveal` | shown at once |
 | Staff deck PIN (`business/staff/staff.css`) | a refused PIN | the dots show the danger colour once (`feel-pin-refused`); no shake | effects tokens | the colour, at once |
@@ -141,7 +141,7 @@ Script animations are not stopped by a stylesheet, so every engine in `web/src/f
 
 ## Cloud, Rooms, devices and the other surfaces
 
-The hosted Cloud pages, the local-first Cloud shell, Rooms hosting and the devices list move through
+The cloud library pages, the Cloud shell, Rooms hosting and the devices list move through
 the shared parts above and the feel sheets. `cloud/cloud.css`, `rooms/rooms.css` and
 `devices/devices.css` are scanned by `motion-tokens.test.ts` with the app's sheets, so a duration
 added there has to be a token and a keyframe a row here; `rooms.css` defines `ask-in`.
