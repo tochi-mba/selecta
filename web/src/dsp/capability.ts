@@ -3,9 +3,10 @@
  * Three tiers. Tier 1 is the baseline every qualified player has. Tier 2 features exist only on
  * measured devices. Tier 3 features need per-device benchmark evidence plus a model licence
  * review. The registry refuses a Tier 3 `ready` record unless it arrives with evidence that
- * passes `stemSeparationEvidenceState`; only stem separation has such a check, and with no
- * passed licence record in this build it always fails. `unsupported_here` is a first-class
- * state with a reason, never an error.
+ * passes its check: `stemSeparationEvidenceState` for stem separation, `neuralBeatsState`
+ * (analysis/beatThis/gate.ts) for neural beats. Both need a passed licence record, and this
+ * build has none, so both stay unsupported_here. `unsupported_here` is a first-class state with
+ * a reason, never an error.
  *
  * Every analysis or rendering result produced elsewhere in `web/src/dsp/` carries the
  * implementation id (name + version) of the code that made it, so a cached result imported from
@@ -25,6 +26,8 @@ import { STRETCH_IMPLEMENTATION, STRETCH_PLAYBACK_INTEGRATION } from './stretchL
 import { workerBudgetEvidenceState, type WorkerBudgetEvidence } from './budget';
 import { STEM_MODEL, STEM_MODEL_ARTEFACT } from './stems/model';
 import { stemCalibrationState, type CrashGuardState, type StemCalibration } from './stems/gate';
+import { BEAT_MODEL_IMPLEMENTATION, BEATS_LICENCE_RECORD } from './analysis/beatThis/model';
+import { neuralBeatsState } from './analysis/beatThis/gate';
 
 /** How a seam meets a track from either music path: the whole file decoded before planning. */
 export const WHOLE_FILE_DECODE_IMPLEMENTATION = 'whole-file-decode-v1';
@@ -55,7 +58,7 @@ export class CapabilityError extends Error {}
 export const STEMS_LICENCE_RECORD: string | null = null;
 
 /** Record ids that have passed review; a Tier 3 licence claim must name one of these. */
-export const PASSED_TIER3_RECORDS: readonly string[] = STEMS_LICENCE_RECORD ? [STEMS_LICENCE_RECORD] : [];
+export const PASSED_TIER3_RECORDS: readonly string[] = [STEMS_LICENCE_RECORD, BEATS_LICENCE_RECORD].filter((record): record is string => record !== null);
 
 export const STEMS_LICENCE_REASON = "the stem model's licence is still under review";
 
@@ -92,7 +95,7 @@ export function stemSeparationEvidenceState(
   return { supported: true };
 }
 
-function validate(capability: Capability, evidence?: StemEvidence | null): Capability {
+function validate(capability: Capability, evidence?: StemEvidence | Tier3EvidenceState | null): Capability {
   if (!capability.feature) {
     throw new CapabilityError('A capability needs a feature name.');
   }
@@ -103,13 +106,22 @@ function validate(capability: Capability, evidence?: StemEvidence | null): Capab
     throw new CapabilityError(`'${capability.feature}' is unsupported_here but gives no reason.`);
   }
   if (capability.tier === 3 && capability.status === 'ready') {
+    if (capability.feature === 'neural_beats') {
+      // the neural tracker (analysis/beatThis/gate.ts): a passed record, the verified model, a fast enough device
+      const beats = evidence && 'supported' in evidence ? evidence : null;
+      if (!BEATS_LICENCE_RECORD || !PASSED_TIER3_RECORDS.includes(BEATS_LICENCE_RECORD) || beats?.supported !== true) {
+        const why = beats && !beats.supported ? beats.reason : 'its evidence is missing';
+        throw new CapabilityError(`'neural_beats' is Tier 3 and cannot be ready here: ${why}.`);
+      }
+      return capability;
+    }
     if (capability.feature !== 'stem_separation') {
       throw new CapabilityError(
         `'${capability.feature}' is Tier 3: per-device benchmark and licence evidence do not ` +
           'exist in this release, so it cannot be ready anywhere.'
       );
     }
-    const state = stemSeparationEvidenceState(evidence);
+    const state = stemSeparationEvidenceState(evidence && 'licenceRecord' in evidence ? evidence : null);
     if (!state.supported) {
       throw new CapabilityError(`'stem_separation' is Tier 3 and cannot be ready here: ${state.reason}.`);
     }
@@ -130,7 +142,7 @@ export class CapabilityRegistry {
   private readonly records = new Map<string, Capability>();
 
   /** `evidence` is read only for a Tier 3 `ready` record. */
-  register(capability: Capability, evidence?: StemEvidence | null): Capability {
+  register(capability: Capability, evidence?: StemEvidence | Tier3EvidenceState | null): Capability {
     const checked = validate({ ...capability }, evidence);
     this.records.set(checked.feature, checked);
     return checked;
@@ -177,12 +189,15 @@ export interface DspEvidence {
   now?: number;
   /** Tier 3 stem separation: licence record, model hash, device benchmark and crash guard. */
   stems?: StemEvidence | null;
+  /** Tier 3 neural beats: read from this browser (analysis/beatThis/gate.ts) when not given. */
+  neuralBeats?: Tier3EvidenceState | null;
 }
 
 /** Tier 3 features. Only stem separation has an evidence path, and it needs a passed licence
  * record that does not exist in this build. */
 export const TIER3_FEATURES = ['neural_beats', 'neural_key', 'stem_separation', 'lyric_alignment'] as const;
 
+const BEATS_NOT_HERE = 'the neural beat tracker is not on this device, so SelectaDJ uses its lighter beat finder here';
 const TIER3_REASON = 'needs per-device benchmark evidence and a model licence review, which do not exist yet';
 const NOT_A_PLAYER = (reason: string) => `this device cannot play here: ${reason}`;
 
@@ -244,8 +259,11 @@ export function registerBrowserDspCapabilities(
   }
 
   for (const feature of TIER3_FEATURES) {
-    if (feature !== 'stem_separation') registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_REASON);
+    if (feature !== 'stem_separation' && feature !== 'neural_beats') registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_REASON);
   }
+  const beats = evidence.neuralBeats === undefined ? neuralBeatsState(undefined, evidence.now ?? Date.now()) : evidence.neuralBeats ?? { supported: false as const, reason: BEATS_NOT_HERE };
+  if (beats.supported) registry.register({ feature: 'neural_beats', tier: 3, implementation: BEAT_MODEL_IMPLEMENTATION, status: 'ready' }, beats);
+  else registry.markUnsupported('neural_beats', 3, BEAT_MODEL_IMPLEMENTATION, beats.reason);
   const stems = stemSeparationEvidenceState(evidence.stems, { now: evidence.now });
   // The licence comes first: until it passes, that is the reason on every device.
   const stemsReason = !stems.supported ? stems.reason : !player ? playerReason : '';
