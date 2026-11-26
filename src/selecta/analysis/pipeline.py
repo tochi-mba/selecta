@@ -74,12 +74,15 @@ class Earlier:
 
 
 def earlier_results(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Earlier | None:
+    from selecta.engine_store import library_rows
+
     path = features_path(settings, song_id)
-    row = conn.execute(
-        "SELECT key, camelot, key_confidence, key_agrees_chroma FROM analysis "
-        "WHERE song_id = ? AND key IS NOT NULL",
-        (song_id,),
-    ).fetchone()
+    with library_rows.reading(conn) as source:
+        row = source.execute(
+            "SELECT key, camelot, key_confidence, key_agrees_chroma FROM analysis "
+            "WHERE song_id = ? AND key IS NOT NULL",
+            (song_id,),
+        ).fetchone()
     if row is None or not path.exists():
         return None
     with np.load(path) as data:
@@ -193,13 +196,14 @@ def analyse_song(
     finally:
         partial.unlink(missing_ok=True)
     if hashes is not None:
-        _store_features(conn, settings, song["id"], hashes, target)
+        _publish_features(settings, song["id"], hashes, target)
     result.timings["save"] = round(time.perf_counter() - save_started, 3)
     result.timings["total"] = round(time.perf_counter() - started, 3)
 
-    db.save_analysis(
+    _save(
         conn,
         song["id"],
+        hashes,
         {
             "version": ANALYSIS_VERSION,
             "bpm": round(grid.bpm, 2),
@@ -233,17 +237,44 @@ def _content_hash(song: sqlite3.Row) -> tuple[str, str | None] | None:
     return hash_both(Path(song["path"]), song["size"], song["mtime"], audio)
 
 
-def _store_features(
+def _save(
     conn: sqlite3.Connection,
+    song_id: int,
+    hashes: tuple[str, str | None] | None,
+    values: dict,
+) -> None:
+    """The analysis row and the hashes its features are keyed by, together. Through the store
+    (core.engine_store) that is one write; on the old path the hashes are written on `conn` and
+    `save_analysis` commits them with the row."""
+    if hashes is None:
+        db.save_analysis(conn, song_id, values)
+        return
+    from selecta.engine_store import library_rows, library_writes
+
+    store = library_rows.store_path(conn)
+    if store is not None:
+        library_writes.save_analysis(store, song_id, values, hashes)
+        return
+    content_hash, audio_id = hashes
+    if audio_id is None:
+        conn.execute("UPDATE songs SET content_hash=? WHERE id=?", (content_hash, song_id))
+    else:
+        conn.execute(
+            "UPDATE songs SET content_hash=?, audio_id=? WHERE id=?",
+            (content_hash, audio_id, song_id),
+        )
+    db.save_analysis(conn, song_id, values)
+
+
+def _publish_features(
     settings: Settings,
     song_id: int,
     hashes: tuple[str, str | None],
     path: Path,
 ) -> None:
     """Also publish the features file under its content key (the file above stays, for the flag
-    off and as the fallback), and note the hashes it was made from. A song with an audio id is
-    stored under that key instead, which a tag edit leaves alone. `save_analysis` commits the
-    hashes with the analysis that names the version, so the key and the row always agree."""
+    off and as the fallback), before the row that names it is written (`_save`). A song with an
+    audio id is stored under that key instead, which a tag edit leaves alone."""
     from selecta.engine_store import library
     from selecta.engine_store.songs import audio_features_key, features_key
     from selecta.persistence import LOCAL_WORKSPACE
@@ -258,13 +289,6 @@ def _store_features(
     except OSError as error:
         # the file above is complete and is what a read falls back to, so the song is still fine
         print(f"Features for song {song_id} were not stored by content: {error}")
-    if audio_id is None:
-        conn.execute("UPDATE songs SET content_hash=? WHERE id=?", (content_hash, song_id))
-    else:
-        conn.execute(
-            "UPDATE songs SET content_hash=?, audio_id=? WHERE id=?",
-            (content_hash, audio_id, song_id),
-        )
 
 
 def load_features(
