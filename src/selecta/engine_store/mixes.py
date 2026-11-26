@@ -116,7 +116,9 @@ class StoreMixes(Mixes):
         self.connection = connection
         self.store = store
 
-    def _run(self, statement):
+    def _run(self, statement, rows=None):
+        if rows:
+            return self.connection.execute(statement, rows)
         return self.connection.execute(statement)
 
     def commit(self) -> None:
@@ -245,7 +247,7 @@ class StoreMixes(Mixes):
         return items
 
     def items_of(self, draft: int) -> str | None:
-        return self._run(sa.select(drafts.c.items).where(self._draft(draft))).scalar()
+        return self._run(sa.select(drafts.c["items"]).where(self._draft(draft))).scalar()
 
     def write_draft_items(self, draft: int, items: str) -> None:
         self._run(
@@ -287,7 +289,7 @@ class StoreMixes(Mixes):
         columns = (
             drafts.c.id,
             drafts.c.name,
-            drafts.c.items,
+            drafts.c["items"],
             drafts.c.ready_only,
             drafts.c.line,
             drafts.c.created_at,
@@ -303,8 +305,8 @@ class StoreMixes(Mixes):
         return [(row.id, row.name) for row in rows]
 
     def empty_draft(self) -> int | None:
-        for row in self._run(self._listed(drafts.c.id, drafts.c.items)):
-            if array_length(row.items) == 0:
+        for row in self._run(self._listed(drafts.c.id, drafts.c["items"])):
+            if array_length(row._mapping["items"]) == 0:
                 return int(row.id)
         return None
 
@@ -349,7 +351,9 @@ class StoreMixes(Mixes):
 
     def any_draft_with(self, items: str) -> bool:
         found = self._run(
-            sa.select(drafts.c.id).where(self.store.mine(drafts), drafts.c.items == items).limit(1)
+            sa.select(drafts.c.id)
+            .where(self.store.mine(drafts), drafts.c["items"] == items)
+            .limit(1)
         ).first()
         return found is not None
 

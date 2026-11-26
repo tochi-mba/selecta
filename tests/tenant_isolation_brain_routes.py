@@ -1,5 +1,5 @@
-"""Song facts, planning, seam and mix routes (`cloud.brain`, ADR-0479) for the tenant isolation matrix
-(tests/test_cloud_tenant_isolation.py), kept apart so that file stays under the length limit.
+"""Song facts, planning, seam and mix routes (`cloud.brain`, ADR-0479) for the tenant isolation
+matrix (tests/test_cloud_tenant_isolation.py), kept apart so that file stays under the length limit.
 
 Each one reads or writes only the caller's own workspace through the engine store, so naming
 another workspace is refused before anything happens. The bodies are valid enough to get past
