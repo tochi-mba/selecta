@@ -403,6 +403,9 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/assets"): None,
     ("GET", "/api/assets/{asset_id}"): None,
     ("DELETE", "/api/assets/{asset_id}"): None,
+    # removing songs from the cloud library (library.places, forced on in `world`): catalogue
+    # ids of the caller's own workspace only; `test_local_media_places.py` names another's song
+    ("POST", "/api/assets/remove"): {"song_ids": [1]},
     ("GET", "/api/assets/{asset_id}/playback-url"): None,
     ("POST", "/api/assets/{asset_id}/playback-proxy"): None,
     ("GET", "/api/assets/{asset_id}/playback-proxy"): None,
@@ -613,10 +616,11 @@ def world(tmp_path, monkeypatch):
     # their workspace checks rather than the flag guard (the conftest resets flags after).
     from selecta import flags
 
-    # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`, and the upload
-    # dry run behind `storage.upload_identity`; on here for the same reason.
+    # The catalogue routes (ADR-0478) ship dark behind `library.art_lookup`, the upload dry run
+    # behind `storage.upload_identity` and removing from the cloud library behind
+    # `library.places`; on here for the same reason.
     flags.use("+business.orgs +business.zones +library.art_embedded +library.art_lookup"
-              " +storage.upload_identity")
+              " +storage.upload_identity +library.places")
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)

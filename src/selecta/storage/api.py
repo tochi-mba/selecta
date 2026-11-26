@@ -20,7 +20,7 @@ from selecta.business import terms, upload_rights
 from selecta.business.content.store import record_upload_tag
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
-from selecta.storage import upload_identity, upload_preview
+from selecta.storage import personal_rights, upload_identity, upload_preview
 from selecta.storage.artifacts import Buckets
 from selecta.storage.audio_check import Rejected
 from selecta.storage.failures import storage_failure
@@ -328,6 +328,9 @@ def install_routes(
     upload_preview.install(app, engine=engine, current_claims=current_claims,
                            workspace=workspace, refuse_if_restricted=refuse_if_restricted,
                            limits=_LimitsAdapter())
+    # before GET /api/uploads/{session_id}, so `rights` is never read as an upload's id
+    personal_rights.install(app, engine=engine, current_claims=current_claims,
+                            principal_for=principal_for)
 
     @app.get("/api/uploads")
     def list_uploads(

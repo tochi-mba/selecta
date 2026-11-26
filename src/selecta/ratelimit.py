@@ -71,6 +71,8 @@ STRICT: tuple[tuple[re.Pattern[str], str | None, Rule], ...] = (
     (re.compile(r"^/api/uploads/plan$"), "POST", Rule("upload_plan", 60, 20)),
     # the dry run reads as much as a plan (storage.upload_identity), so it is held the same
     (re.compile(r"^/api/uploads/preview$"), "POST", Rule("upload_preview", 60, 20)),
+    # removing songs from the cloud library (library.places): up to 200 a press, so a few a minute
+    (re.compile(r"^/api/assets/remove$"), "POST", Rule("asset_remove", 20, 10)),
     # Hosted processing (cloud.hosted_render): planning reads up to 60 analyses from storage
     # and runs the planner, so a few a minute; the mix and export routes are polled every 3 s
     # by the hosted card (HostedMix.tsx POLL_MS), so room for several tabs and no more.
