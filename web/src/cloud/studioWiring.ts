@@ -30,16 +30,25 @@ export type StudioWiring = {
 const access = new Map<string, Request>();
 export const planningAccess = (workspaceId: string): Request | null => access.get(workspaceId) ?? null;
 
+/** The two planning requests the studio makes: song ids, the settle rule and an index, no more. */
+export function planningCalls(request: Request) {
+  const post = <T,>(path: string, body: unknown) => askWithin<T>(request, path, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  }, PLANNING_WITHIN_MS);
+  return {
+    candidates: (a: number, b: number) => post<CandidatesAnswer>('/planning/candidates', { a, b, leave_after: LEAVE_AFTER_SECONDS, scripts: STUDIO_SCRIPTS }),
+    script: async (a: number, b: number, index: number, fingerprint: string) => (await post<{ script?: unknown }>('/planning/candidates/script', { a, b, leave_after: LEAVE_AFTER_SECONDS, option: index, fingerprint }))?.script ?? null,
+  };
+}
+
 export function makeDeviceStudio(wiring: StudioWiring): DeviceStudio {
   access.set(wiring.workspaceId, wiring.request);
   const renderer = new SeamRenderer();
   const factsOf = wiring.facts ?? ((sha: string) => songFacts(sha));
-  const post = <T,>(path: string, body: unknown) => askWithin<T>(wiring.request, path, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
-  }, PLANNING_WITHIN_MS);
+  const calls = planningCalls(wiring.request);
   return new DeviceStudio({
-    candidates: (a, b) => post<CandidatesAnswer>('/planning/candidates', { a, b, leave_after: LEAVE_AFTER_SECONDS, scripts: STUDIO_SCRIPTS }),
-    script: async (a, b, index, fingerprint) => (await post<{ script?: unknown }>('/planning/candidates/script', { a, b, leave_after: LEAVE_AFTER_SECONDS, option: index, fingerprint }))?.script ?? null,
+    candidates: calls.candidates,
+    script: calls.script,
     measured: async (a: StudioSong, b: StudioSong) => {
       const [one, two] = await Promise.all([factsOf(a.sha), factsOf(b.sha)]);
       if (!one?.row || !two?.row) return false;
