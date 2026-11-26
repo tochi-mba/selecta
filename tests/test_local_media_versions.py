@@ -200,6 +200,7 @@ READS_BY_ID_OR_HASH = {
     "src/selecta/storage/catalogue_link.py": "by content hash",
     "src/selecta/storage/schema.py": "mentions the table in a comment",
     "src/selecta/storage/shared_derivations.py": "by content hash",
+    "src/selecta/storage/upload_identity.py": "an upload's song, by id, content hash or audio id",
     "src/selecta/usage/meters.py": "counts through listed_songs",
     "src/selecta/admin/read_models.py": "staff count; see the admin to-do on counting songs",
     "src/selecta/devstack/lucy_practice.py": "local practice data",
