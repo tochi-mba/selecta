@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { setFlags } from '../flags';
 import { forgetAccountMeasured, type Request } from './accountFacts';
 import { ACCOUNT_BASE, accountDiscoveries, SWEEP_GAP_MS, SWEEP_SONGS } from './accountDiscoveries';
+import { pairSteps } from './BrowserHarmonicMatches';
 import { discoveriesFamily, type BrowserAudition, type BrowserDiscovery, type DiscoverySong } from './localFirstDiscoveries';
 
 // T-20261126-9a31: Harmonic matches calls the account's sweep in spare time, one call at a time,
@@ -87,5 +88,7 @@ describe('the account pairs on Harmonic matches', () => {
     const said = await family(request).answer('POST', `/discoveries/${ACCOUNT_BASE + 5}/review`, new URLSearchParams(), { method: 'POST', body: JSON.stringify({ verdict: 'approved' }) });
     expect(said).toEqual({ id: ACCOUNT_BASE + 5, status: 'approved' });
     expect(calls.find((call) => call.path === '/discoveries/5/review')?.body).toEqual({ verdict: 'approved' });
+    // the page says the stretches it plays, not the ends of the songs
+    expect(pairSteps(rows[0])).toEqual(['16 seconds of Song 1', '16 seconds of Song 2']);
   });
 });
