@@ -60,6 +60,9 @@ Open `/listening-room` (`tools.listening_room`). It runs blind trials at matched
 | Each transition is planned when its song starts, songs are levelled to one loudness, a missed deadline retries | `cloud.seam_lead` | on | Play the same mix with the flag off and on |
 | Song order and each transition's exit, entry, move and length come from the planner | `cloud.brain` with `cloud.device_analysis` | brain on, analysis off | Each seam's record says whether the account or the device chose it |
 | Transitions rendered ahead of time, checked, then played as a finished clip | `cloud.device_render` | off | The Listening Room pairs each transition twice: made ahead against the device's own choice, and made ahead against the planner's choice played live |
+| The downloaded file plays the same finished clips as playback, joined the same way, each song at its own level | `cloud.local_export` with `cloud.device_render` | export on, render off | Download a mix as FLAC and play it beside the same mix in the app: the joins should sound the same, with no click |
+| The feel of a mix's transitions (punchy or seamless) picks which moves the planner may use | `cloud.brain` with `cloud.device_analysis` | brain on, analysis off | Make the same mix twice, once with each feel. A mix already made keeps the feel it was made with |
+| A requested song joins the mix where the planner places it, once this device has made the transitions around it | `cloud.account_mixes` with `cloud.device_render` | off | Ask for a song while a mix plays and listen to the two transitions around it |
 
 ## Cloud, uploaded music
 
