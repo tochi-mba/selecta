@@ -274,7 +274,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 <!-- owner-runbook:generated:begin -->
 
-**Open person-only tasks: 763.**
+**Open person-only tasks: 768.**
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
@@ -284,8 +284,8 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 | 4. Listening session | 87 | [tracker/listening.md](tracker/listening.md) |
 | 5. User-study sessions | 216 | [tracker/user-study.md](tracker/user-study.md) |
 | 6. Staging, drills and rollback | 16 | [tracker/staging.md](tracker/staging.md) |
-| 7. Legal and business list | 14 | [tracker/legal-business.md](tracker/legal-business.md) |
-| 8. Sign-off pass | 135 | [tracker/sign-off.md](tracker/sign-off.md) |
+| 7. Legal and business list | 15 | [tracker/legal-business.md](tracker/legal-business.md) |
+| 8. Sign-off pass | 139 | [tracker/sign-off.md](tracker/sign-off.md) |
 
 ### Task IDs closed by sitting 1: Visual review and baseline approval
 
@@ -386,6 +386,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-autopilot-implementation-checklist.md` (1): AV-0433-04
 - `selecta-business-implementation-checklist.md` (4): BZ-0441-09, BZ-0449-11, BZ-0451-11, BZ-0454-14
 - `selecta-cloud-implementation-checklist.md` (9): SC-0403-05, SC-0405-02, SC-0405-04, SC-0406-01, SC-0406-04, SC-0412-01, SC-0413-01, SC-0413-04, SC-0416-07
+- `selecta-lucy-usage-implementation-checklist.md` (1): LM-0486-02
 
 ### Task IDs closed by sitting 8: Sign-off pass
 
@@ -402,6 +403,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-flow-implementation-checklist.md` (8): SF-0198-07, SF-0200-08, SF-0229-03, SF-0230-06, SF-0234-08, SF-0240-08, SF-0241-08, SF-0247-08
 - `selecta-gap-polish-implementation-checklist.md` (1): GP-0253-08
 - `selecta-library-lucy-experience-implementation-checklist.md` (3): LX-0363-06, LX-0364-03, LX-0365-08
+- `selecta-lucy-usage-implementation-checklist.md` (4): LM-0486-01, LM-0487-02, LM-0487-03, LM-0487-05
 - `selecta-measured-micro-polish-implementation-checklist.md` (3): MP-0298-08, MP-0299-07, MP-0299-08
 - `selecta-microinteraction-implementation-checklist.md` (3): MI-0135-08, MI-0162-08, MI-0164-08
 - `selecta-unified-finish-implementation-checklist.md` (10): UF-0366-07, UF-0366-08, UF-0367-04, UF-0367-08, UF-0379-04, UF-0380-07, UF-0385-01, UF-0387-06, UF-0389-06, UF-0389-08
