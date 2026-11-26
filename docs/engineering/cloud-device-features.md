@@ -29,7 +29,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Transitions made ahead, audited and repaired | Works in a worker on the device | `cloud.device_render` | |
 | Good and Bad on a transition | Works | `cloud.brain` | |
 | Choosing a transition's move | Works | `cloud.browser_moves` | |
-| Seam Inspector | Decision: absent; rate and choose moves from the mix instead | | T-20261126-827e |
+| Seam Inspector | Works for each transition this device made: the move, its reasons, where each song is left and joined, the checks, what else was tried, Good and Bad, and its preview played from the clip on the device; "Render it" asks this device to make one. Stem Studio is absent (no stems in a browser) | `cloud.device_render`, `cloud.brain` | |
 | My Mixes, drafts, Undo | Works: the account's own mix routes | `cloud.brain`, `cloud.account_mixes` | |
 | Locks | Works when the account keeps the mix; a mix kept in this browser has no lock | `cloud.brain`, `cloud.account_mixes` | |
 | Energy horizon in the editor | Decision: absent | | T-20261126-bfec |
