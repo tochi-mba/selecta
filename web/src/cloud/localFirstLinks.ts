@@ -35,7 +35,7 @@ export type CloudLinks = {
 export const NO_PREVIEW_HERE = 'Transition previews aren’t made in your browser. Add both songs to your mix and SelectaDJ works the transition out as it plays.';
 
 function refuse(message: string, code: string, status = 400): ApiError {
-  return new ApiError(message, status, code, 'local-first:links');
+  return new ApiError(message, status, code, 'device-music:links');
 }
 
 /** A Cloud link in the shape the shared Links view reads. Its one move is the browser's own

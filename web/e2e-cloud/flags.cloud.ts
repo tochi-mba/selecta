@@ -460,7 +460,7 @@ const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> 
   'cloud.progressive_import': { surfaces: ['cloud.home', 'cloud.library', 'cloud.listen'], ships: true, marks: [{ text: /Checking your music: \d+ of/ }, { text: /Keep checking / }, { text: /Continue while it finishes/ }] },
   // Its on-state (join, leave, the closed refusal) is local-first-labs.labs.ts, on a server whose
   // build turns it on (playwright.labs.config.ts).
-  'cloud.local_first_labs': { surfaces: ['cloud.settings'], ships: false, marks: [{ role: { role: 'region', name: 'Labs: browser-first Cloud' } }, { role: { role: 'button', name: 'Join Labs' } }] },
+  'cloud.local_first_labs': { surfaces: ['cloud.settings'], ships: false, marks: [{ role: { role: 'region', name: 'Labs: music on your devices' } }, { role: { role: 'button', name: 'Join Labs' } }] },
 };
 const BF_IDS = Object.keys(BF) as FlagId[];
 const BF_SEED = { songs: 1, local_songs: 2 };

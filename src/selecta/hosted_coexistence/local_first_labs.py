@@ -1,4 +1,4 @@
-"""The Labs opening for browser-first Cloud (ADR-0467 step 3, BF-0467-05).
+"""The Labs opening for music on the member's devices (ADR-0467 step 3, BF-0467-05).
 
 `cloud.local_first` is a release flag, so the generic Labs page (which lists `beta` flags and
 stores a preference) cannot open it. ADR-0467 allows a companion instead: `cloud.local_first_labs`
@@ -129,11 +129,11 @@ def decide(snapshot: RuleSnapshot, layers: Layers, flag_id: str = LOCAL_FIRST):
 
 
 REFUSALS = {
-    targeting.BUILD_OFF: "Browser-first Cloud isn't switched on in this build.",
-    targeting.MODE_OFF: "Browser-first Cloud isn't available on this site.",
-    targeting.PLAN_LOCKED: "Your plan doesn't include browser-first Cloud.",
-    targeting.RULE_OFF: "Browser-first Cloud is paused right now.",
-    targeting.USER_OFF: "You've switched browser-first Cloud off.",
+    targeting.BUILD_OFF: "Music on your devices isn't switched on in this build.",
+    targeting.MODE_OFF: "Music on your devices isn't available on this site.",
+    targeting.PLAN_LOCKED: "Your plan doesn't include music on your devices.",
+    targeting.RULE_OFF: "Music on your devices is paused right now.",
+    targeting.USER_OFF: "You've switched music on your devices off.",
 }
 
 
@@ -159,7 +159,7 @@ def join(conn: Connection, snapshot: RuleSnapshot, layers: Layers, *, author: st
     proposed = with_member(current, user_id)
     after = decide(snapshot.replacing({LOCAL_FIRST: proposed}), layers)
     if not after.on:
-        message = REFUSALS.get(after.reason, "Browser-first Cloud can't be switched on for you.")
+        message = REFUSALS.get(after.reason, "Music on your devices can't be switched on for you.")
         raise LabsRefused(after.reason, message)
     version = snapshot.version
     if proposed != current:

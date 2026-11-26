@@ -50,7 +50,7 @@ describe('GP-0259 Explore expectations', () => {
     show();
     expect(await screen.findByText('needs 6 more')).toBeInTheDocument();
     const waiting = screen.getByRole('heading', { name: 'Needs more mix-ready songs' }).closest('section')!;
-    expect(within(waiting).getByText(/try another available idea, or analyse more local songs/)).toBeInTheDocument();
+    expect(within(waiting).getByText(/try another available idea, or analyse more songs/)).toBeInTheDocument();
     expect(within(waiting).getByText(/No new mix will be made from an unavailable idea/)).toBeInTheDocument();
     // the unavailable idea has no Play button anywhere
     expect(screen.queryByRole('heading', { name: 'Rap run' })).toBeNull();

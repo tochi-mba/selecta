@@ -50,14 +50,14 @@ export type CloudModeCopy = {
 /** Member-facing words for the decided Cloud experience (BF-0455-06).
  *
  * Keep this keyed by the account snapshot rather than scattering flag checks and jargon through
- * pages. Hosted mode is intentionally described as available, never legacy or deprecated.
+ * pages. The cloud library is described as available, never legacy or deprecated.
  */
 export function cloudModeCopy(account: Pick<Account, 'experience'> | null): CloudModeCopy {
   const local = account?.experience?.local_first === true;
   const hosted = account?.experience?.hosted === true;
   if (local && hosted) return {
-    heading: 'Use music on this device or from your Cloud library',
-    privacy: 'Music you connect locally stays on this device. Your hosted library remains available in SelectaDJ Cloud.',
+    heading: 'Use music on this device or in your cloud library',
+    privacy: 'Music you connect from this device stays on this device. Your cloud library stays available in SelectaDJ.',
     source: 'both',
   };
   if (local) return {
@@ -66,8 +66,8 @@ export function cloudModeCopy(account: Pick<Account, 'experience'> | null): Clou
     source: 'device',
   };
   if (hosted) return {
-    heading: 'Use your SelectaDJ Cloud library',
-    privacy: 'Your hosted music remains available in SelectaDJ Cloud.',
+    heading: 'Use your cloud library',
+    privacy: 'Your cloud library stays available in SelectaDJ.',
     source: 'hosted',
   };
   return {

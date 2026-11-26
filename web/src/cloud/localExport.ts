@@ -40,7 +40,7 @@ const levelOf = (buffer: AudioBuffer): Promise<number> => (flagOn('cloud.seam_le
 // the same decode the playing context makes: its rate, the browser's own decoder
 const decode = (bytes: ArrayBuffer): Promise<AudioBuffer> => new OfflineAudioContext(2, 1, ENGINE_SAMPLE_RATE).decodeAudioData(bytes);
 
-const refuse = (message: string, code: string, status = 409) => new ApiError(message, status, code, 'local-first:export');
+const refuse = (message: string, code: string, status = 409) => new ApiError(message, status, code, 'device-music:export');
 
 function changed(running: Running, next: Partial<ExportJob>): void {
   running.job = { ...running.job, ...next };

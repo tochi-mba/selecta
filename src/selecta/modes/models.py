@@ -29,7 +29,7 @@ class ModelNotAllowed(RuntimeError):
         self.status = status
         why = "isn't in the licence register" if status is None else f"is marked {status}"
         super().__init__(
-            f"Cloud mode can't load the model {model_id!r}: it {why}. "
+            f"SelectaDJ Cloud can't load the model {model_id!r}: it {why}. "
             "See docs/saas/licence-register.md."
         )
 

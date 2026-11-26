@@ -77,9 +77,9 @@ export function CutoverNotice({ accountId, storedBytes = 1 }: { accountId: strin
         </div>
         <IconButton icon="close" label="Dismiss this note" onClick={dismiss} />
       </div>
-      <p>Your hosted library, your mixes and your plan work exactly as they did. Nothing was moved and nothing was removed.</p>
+      <p>Your cloud library, your mixes and your plan work exactly as they did. Nothing was moved and nothing was removed.</p>
       <p>New accounts now start with music that stays on their own device: SelectaDJ plays and mixes it right there in the browser, and SelectaDJ Cloud keeps only the details of the library and the mixes.</p>
-      <p>If you ever want to work that way too, you can download your originals, add them on your device, and SelectaDJ will match them to your mixes by their contents. It’s entirely up to you, and your hosted library stays where it is either way.</p>
+      <p>If you ever want to work that way too, you can download your originals, add them on your device, and SelectaDJ will match them to your mixes by their contents. It’s entirely up to you, and your cloud library stays where it is either way.</p>
       <div className="cloud-actions">
         <button type="button" className="primary" onClick={dismiss}>Got it</button>
       </div>

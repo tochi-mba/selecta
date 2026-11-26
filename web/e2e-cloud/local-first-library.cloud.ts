@@ -14,7 +14,7 @@ const row = (page: Page, title: string) => page.locator('li.song-row', { hasText
 /** A browser row's one status chip (02889fe5): whether it plays here, or the step that makes it.
  * Where it plays from rides in the chip's title. */
 const chip = (page: Page, title: string) => row(page, title).locator('.lw-state .status');
-const HOSTED = 'Plays from your hosted copy in SelectaDJ Cloud.';
+const HOSTED = 'Plays from your cloud library in SelectaDJ.';
 
 test('a grandfathered account sees hosted copies, songs on its other devices and songs on none', async ({ page, request }) => {
   const user = listener('lf-library-hosted');

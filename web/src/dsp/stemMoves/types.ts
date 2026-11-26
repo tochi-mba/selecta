@@ -210,7 +210,7 @@ export function gate(pair: StemPair, rule: MoveRule): { refused: string } | { ke
   return { keyChecked, gap };
 }
 
-export const KEY_NOT_CHECKED = 'Key wasn\'t known for one of these songs, so the tempos had to sit closer than local mode asks.';
+export const KEY_NOT_CHECKED = 'Key wasn\'t known for one of these songs, so the tempos had to sit closer than they would with both keys known.';
 
 /** Where the overlap of `bars` bars can sit: the latest start on A's grid that respects the
  * settle rule and A's window, and the earliest bar line of B whose stretch fits B's window.

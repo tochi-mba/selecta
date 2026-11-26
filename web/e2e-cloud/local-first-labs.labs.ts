@@ -22,7 +22,7 @@ async function member(page: Page, request: APIRequestContext, name: string) {
   return { user, auth: { Authorization: `Bearer e2e:${user}`, Origin: String(test.info().project.use.baseURL) } };
 }
 
-test('joining Labs puts the account in browser-first Cloud, and leaving returns it', async ({ page, request }) => {
+test('joining Labs plays the account's music from its devices, and leaving returns it', async ({ page, request }) => {
   const { auth } = await member(page, request, 'labs-join');
   const before = await (await request.get('/api/account', { headers: auth })).json();
   expect(before.features['cloud.local_first'], 'the catch-all leaves a new member out').toBe(false);
@@ -31,7 +31,7 @@ test('joining Labs puts the account in browser-first Cloud, and leaving returns 
   // The hosted pages, with the Labs card in settings.
   await page.goto('/account');
   await expect(page.getByRole('navigation', { name: 'Cloud workspace' })).toBeVisible();
-  const card = page.getByRole('region', { name: 'Labs: browser-first Cloud' });
+  const card = page.getByRole('region', { name: 'Labs: music on your devices' });
   await expect(card).toBeVisible();
   await card.getByRole('button', { name: 'Join Labs' }).click();
 
@@ -46,7 +46,7 @@ test('joining Labs puts the account in browser-first Cloud, and leaving returns 
 
   // Leave, from the same card in the local-first shell's account place.
   await page.goto('/account');
-  const inShell = page.getByRole('region', { name: 'Labs: browser-first Cloud' });
+  const inShell = page.getByRole('region', { name: 'Labs: music on your devices' });
   await expect(inShell.getByRole('button', { name: 'Leave Labs' })).toBeVisible();
   await inShell.getByRole('button', { name: 'Leave Labs' }).click();
   // leaving asks first, in the shared confirmation
@@ -68,7 +68,7 @@ test('with Labs closed, joining is refused with the honest reason and the card i
   expect(refused.status()).toBe(403);
   const detail = (await refused.json()).detail;
   expect(detail).toMatchObject({ code: 'flag_off', flag: 'cloud.local_first_labs' });
-  expect(detail.message).toContain('Labs: browser-first Cloud');
+  expect(detail.message).toContain('Labs: music on your devices');
   expect(detail.message).toContain("isn't available on this account right now");
   // Where they stand is still readable, and true: not in, Labs closed, the experience off.
   const status = await (await request.get('/api/account/labs/local-first', { headers: auth })).json();
@@ -78,7 +78,7 @@ test('with Labs closed, joining is refused with the honest reason and the card i
   await page.goto('/account');
   await expect(page.getByRole('heading', { level: 1, name: 'Account settings' })).toBeVisible();
   await page.waitForTimeout(800);
-  await expect(page.getByRole('region', { name: 'Labs: browser-first Cloud' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Labs: music on your devices' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Join Labs' })).toHaveCount(0);
   await request.post('/test/flags/off', { data: { user, flags: [] } });
 });

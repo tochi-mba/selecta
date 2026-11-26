@@ -425,8 +425,8 @@ def explain(
         )
     )
     if ev.local:
-        steps.append(Step(Layer.PLAN, None, "local", "local mode has no plans"))
-        steps.append(Step(Layer.RULES, None, "local", "local mode has no rules"))
+        steps.append(Step(Layer.PLAN, None, "local", "Desktop has no plans"))
+        steps.append(Step(Layer.RULES, None, "local", "Desktop has no rules"))
     else:
         gated = flag_id in ev.plan_gated
         plan_on = not gated or flag_id in ev.entitled

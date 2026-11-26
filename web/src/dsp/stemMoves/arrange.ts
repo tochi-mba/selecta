@@ -141,6 +141,6 @@ export function stemArrange(pair: StemPair): StemRecipe {
     bWarp,
     handoverToNative: { at: end + HANDOVER_SECONDS, startAt: end - HANDOVER_SECONDS, bSourceAt: warpAt(bWarp, end - HANDOVER_SECONDS), crossfadeSeconds: 2 * HANDOVER_SECONDS },
     keyChecked: checked.keyChecked,
-    why: `Over ${bars} bars the first song drops its bass, then its drums, then its voice while its melody carries on; the next song's melody is teased, then its bass and drums land. This is a reduced strip and land: local mode's starting shape, without the fine tuning local mode does after measuring every stem.${moved}${checked.keyChecked ? '' : ` ${KEY_NOT_CHECKED}`}`,
+    why: `Over ${bars} bars the first song drops its bass, then its drums, then its voice while its melody carries on; the next song's melody is teased, then its bass and drums land. This is a reduced strip and land: the Desktop app's starting shape, without the fine tuning the Desktop app does after measuring every stem.${moved}${checked.keyChecked ? '' : ` ${KEY_NOT_CHECKED}`}`,
   };
 }

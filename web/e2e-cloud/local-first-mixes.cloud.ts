@@ -76,7 +76,7 @@ test('a grandfathered account mixes a device song with a hosted one, and the que
   await expect(chip('Device song')).toHaveText('Ready');
   await expect(chip('Device song')).toHaveAttribute('title', 'The file is connected here and can play.');
   await expect(chip('Song 1')).toHaveText('Ready');
-  await expect(chip('Song 1')).toHaveAttribute('title', 'Plays from your hosted copy in SelectaDJ Cloud.');
+  await expect(chip('Song 1')).toHaveAttribute('title', 'Plays from your cloud library in SelectaDJ.');
 
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Make a Mix', exact: true }).click();
   await page.getByRole('button', { name: 'Play', exact: true }).click();
@@ -85,5 +85,5 @@ test('a grandfathered account mixes a device song with a hosted one, and the que
   await expect(queue.locator('li', { hasText: 'Device song' })).toContainText('From this device', { timeout: 20_000 });
   // the hosted song is looked up as the engine reaches for it, which locally can take some
   // seconds after the first press of a visit (T-20261125-b2cd)
-  await expect(queue.locator('li', { hasText: 'Song 1' })).toContainText('From your SelectaDJ Cloud library', { timeout: 40_000 });
+  await expect(queue.locator('li', { hasText: 'Song 1' })).toContainText('From your cloud library', { timeout: 40_000 });
 });

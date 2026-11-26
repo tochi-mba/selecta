@@ -84,7 +84,7 @@ export function hostedResolver(api: Api, workspaceId: string, options: {
   const assets = () => hostedAssets(api, workspaceId);
   const fetchBytes = options.fetchBytes ?? (async (url: string) => {
     const response = await fetch(url);
-    if (!response.ok) throw new Error('SelectaDJ could not fetch the hosted copy of this song.');
+    if (!response.ok) throw new Error('SelectaDJ could not fetch this song from your cloud library.');
     return response.arrayBuffer();
   });
   return async (songId) => {

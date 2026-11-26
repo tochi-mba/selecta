@@ -52,9 +52,9 @@ describe('ReconciliationPanel', () => {
   it('lists matched and unmatched across every page, with reasons', async () => {
     const { request } = server();
     render(<ReconciliationPanel request={request} />);
-    expect(await screen.findByText('1 matched · 3 only in your hosted library · 2 only on your devices')).toBeInTheDocument();
+    expect(await screen.findByText('1 matched · 3 only in your cloud library · 2 only on your devices')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Matched' })).getByText('Track One.mp3')).toBeInTheDocument();
-    const hosted = screen.getByRole('region', { name: 'Only in your hosted library' });
+    const hosted = screen.getByRole('region', { name: 'Only in your cloud library' });
     expect(hosted).toHaveTextContent('Night Drive.flac');
     expect(hosted).toHaveTextContent('no fingerprint');
     expect(screen.getByRole('region', { name: 'Only on your devices' })).toHaveTextContent('Only Local');

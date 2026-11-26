@@ -38,7 +38,7 @@ test('an Owner walks through the console pages', async ({ page, request }) => {
   await expect(page.getByRole('heading', { name: `${customer}@example.test` })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Suspend…' })).toBeDisabled();
   await page.getByRole('navigation', { name: 'Customer sections' }).getByRole('link', { name: 'Configuration' }).click();
-  await expect(page.getByRole('region', { name: 'Storage mode' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Where their music lives' })).toBeVisible();
   await accessible(page, 'admin customer');
 
   // Staff and security: the Owner, the role matrix and the audit log.

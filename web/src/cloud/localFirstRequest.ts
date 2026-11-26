@@ -68,7 +68,7 @@ let catalogueChanges = 0;
 if (typeof window !== 'undefined') window.addEventListener(CATALOGUE_CHANGED_EVENT, () => { catalogueChanges += 1; });
 
 export function onlyInTheApp(path: string): ApiError {
-  return new ApiError(ONLY_IN_THE_APP, 404, 'flag_off', `local-first:${path.split('?')[0]}`);
+  return new ApiError(ONLY_IN_THE_APP, 404, 'flag_off', `device-music:${path.split('?')[0]}`);
 }
 
 /** Every catalogue song, page by page, however many pages there are (it used to stop silently at
@@ -564,7 +564,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     if (!accountMixesOn()) return undefined;
     const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number };
     const song = (await playable()).find((one) => one.id === Number(body.song_id));
-    if (!song || !song.playable) throw new ApiError('Choose a song that plays on this device.', 400, 'not_playable', 'local-first:mix');
+    if (!song || !song.playable) throw new ApiError('Choose a song that plays on this device.', 400, 'not_playable', 'device-music:mix');
     try {
       return await account.answer('POST', '/mix/songs', '', init);
     } catch (problem) {

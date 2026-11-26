@@ -98,7 +98,7 @@ function hereWords(note: string): string {
 }
 
 function refuse(message: string, code: string, status = 400): ApiError {
-  return new ApiError(message, status, code, 'local-first:requests');
+  return new ApiError(message, status, code, 'device-music:requests');
 }
 
 function bodyOf<T>(init?: RequestInit): T {

@@ -11,7 +11,7 @@ import { Icon } from '../ui/Icon';
 
 export const SOURCE_WORDS = {
   device: 'From this device',
-  hosted: 'From your SelectaDJ Cloud library',
+  hosted: 'From your cloud library',
   pending: 'Checked when it comes up',
 } as const;
 
@@ -48,7 +48,7 @@ export function QueueSources({ mix, book, problemsOnly = false, nothingPlays = f
   );
   if (problemsOnly) return notHere || null;
   const count = (source: string) => rows.filter((row) => (row.entry?.source ?? 'pending') === source).length;
-  const summary = [count('device') && `${count('device')} from this device`, count('hosted') && `${count('hosted')} from Cloud`]
+  const summary = [count('device') && `${count('device')} from this device`, count('hosted') && `${count('hosted')} from your cloud library`]
     .filter(Boolean).join(', ');
   return (
     <>

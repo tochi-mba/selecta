@@ -53,7 +53,7 @@ export function WorkersPage() {
   }, [api]);
   useEffect(() => { void load(); }, [load]);
   useVisiblePoll(load, 30_000);
-  if (!data) return error ? <Problem error={error} onRetry={() => void load()} /> : <Skeleton rows={8} label="Loading hosted processing" />;
+  if (!data) return error ? <Problem error={error} onRetry={() => void load()} /> : <Skeleton rows={8} label="Loading the cloud studio" />;
   const pools = failed(data.pools) ? null : data.pools;
   const auto = failed(data.pieces.autoscaler) ? null : data.pieces.autoscaler;
   const paused = (pools ?? []).filter((p) => p.paused);
@@ -135,7 +135,7 @@ function Headline({ pools }: { pools: Pool[] | Fail }) {
     level = 'partial';
     text = `${worst('paused').map((p) => poolName(p.pool)).join(' and ')} paused by staff; the other pools are fine.`;
   } else if (worst('working').length) {
-    text = 'Hosted processing is working.';
+    text = 'The cloud studio is working.';
   } else {
     text = 'Every pool is idle: nothing is waiting.';
   }
@@ -290,8 +290,8 @@ function Pieces({ pieces, narrow }: { pieces: Status['pieces']; narrow: boolean 
           {piece.extra}
         </li>)}
         {narrow && !failed(pieces.flags)
-          ? <Disclosure name="Hosted flags" badge={<Badge tone={pieces.flags.every((f) => f.on) ? 'ok' : 'warn'}>{pieces.flags.filter((f) => f.on).length} of {pieces.flags.length} on</Badge>}><Flags flags={pieces.flags} /></Disclosure>
-          : <li data-lift="row"><strong>Hosted flags</strong>{failed(pieces.flags) ? <Problem error={pieces.flags.error} /> : <Flags flags={pieces.flags} />}</li>}
+          ? <Disclosure name="Cloud studio flags" badge={<Badge tone={pieces.flags.every((f) => f.on) ? 'ok' : 'warn'}>{pieces.flags.filter((f) => f.on).length} of {pieces.flags.length} on</Badge>}><Flags flags={pieces.flags} /></Disclosure>
+          : <li data-lift="row"><strong>Cloud studio flags</strong>{failed(pieces.flags) ? <Problem error={pieces.flags.error} /> : <Flags flags={pieces.flags} />}</li>}
       </ul>
     </Section>
   );
@@ -302,22 +302,22 @@ function Flags({ flags }: { flags: Flag[] }) {
     <ul className="admin-health">{flags.map((f) => (
       <li key={f.id}><code>{f.id}</code><FlagSwitch on={f.on} /><Badge tone={f.on ? 'ok' : 'warn'}>{f.on ? 'On' : 'Off'}</Badge><span>{f.about}{f.note && `. ${f.note}`}.</span></li>
     ))}</ul>
-    <p><span className="admin-soft">What to do: </span>a flag that is off here is off in the build; change it in Flags, or grant hosted storage to an account from its customer page.</p>
+    <p><span className="admin-soft">What to do: </span>a flag that is off here is off in the build; change it in Flags, or grant a cloud library to an account from its customer page.</p>
   </>;
 }
 
 function CustomersSection({ customers }: { customers: Customers | Fail }) {
   return (
-    <Section title="What customers see meanwhile" tour="workers-customers" help="Accounts with hosted storage and how long their songs have waited for processing. Their song card says “waiting for a worker” while nothing takes their jobs.">
+    <Section title="What customers see meanwhile" tour="workers-customers" help="Accounts with a cloud library and how long their songs have waited for processing. Their song card says “waiting for a worker” while nothing takes their jobs.">
       {failed(customers) ? <Problem error={customers.error} /> : <>
         <div className="admin-kpis">
-          <Kpi label="Accounts with hosted storage" help="Accounts granted hosted storage and processing (cloud.hosted_media) from their customer page." value={customers.hosted_accounts} />
-          <Kpi label="Accounts waiting" help="Accounts with hosted work queued or running now." value={customers.accounts_waiting} tone={customers.accounts_waiting ? 'warn' : undefined} />
+          <Kpi label="Accounts with a cloud library" help="Accounts granted cloud library storage and processing (cloud.hosted_media) from their customer page." value={customers.hosted_accounts} />
+          <Kpi label="Accounts waiting" help="Accounts with cloud studio work queued or running now." value={customers.accounts_waiting} tone={customers.accounts_waiting ? 'warn' : undefined} />
           <Kpi label="Songs waiting for analysis" help="Song analyses not finished yet. A song can’t join a server mix until it is analysed." value={customers.songs_waiting} />
           <div className="admin-kpi"><span className="admin-kpi-label">Longest wait<WhatsThis label="Longest wait">The longest any account’s oldest unfinished job has waited.</WhatsThis></span><strong className={customers.longest_s && customers.longest_s > 3600 ? 'admin-tone-bad' : undefined}>{customers.longest_s ? waited(customers.longest_s) : 'none'}</strong></div>
         </div>
         {customers.hosted_accounts === 0 && customers.top.length === 0
-          ? <Empty title="No account has hosted storage yet.">Grant it from a customer’s page: Configuration, Storage mode. Their uploads then queue analysis here.</Empty>
+          ? <Empty title="No account has a cloud library yet.">Grant it from a customer’s page: Configuration, Storage and processing. Their uploads then queue analysis here.</Empty>
           : customers.top.length === 0 ? <Empty title="Nobody is waiting.">When an account’s songs wait for a worker, the longest waits are listed here.</Empty>
           : <AdminTable caption="Accounts waiting longest" rows={customers.top} rowKey={(r) => r.workspace_id} sortKey="wsort"
             onOpen={customers.can_open ? (r) => r.user_id && go(adminPath('customers', [r.user_id])) : undefined}
@@ -380,11 +380,11 @@ function CostSection({ cost, onChange, narrow }: { cost: Cost | Fail; onChange: 
 
 function Explainer() {
   return (
-    <Section title="How hosted processing works" tour="workers-explainer">
+    <Section title="How the cloud studio works" tour="workers-explainer">
       <details className="admin-explainer">
         <summary>Read it once: from upload to export, and which pool does what</summary>
         <ol className="admin-steps">
-          <li><strong>Upload.</strong> A customer with hosted storage uploads songs straight to object storage (R2). The API checks each file and queues its analysis.</li>
+          <li><strong>Upload.</strong> A customer with a cloud library uploads songs straight to object storage (R2). The API checks each file and queues its analysis.</li>
           <li><strong>Analysis</strong> (<code>analyse.song</code>, CPU heavy): tempo, beat grid, key, sections, loudness. A song joins a server mix only once analysed.</li>
           <li><strong>Transitions</strong> (<code>seam.render</code>, CPU heavy): each hand-off of a server mix is planned and rendered the local app’s way.</li>
           <li><strong>Playback files</strong> (<code>play.proxy</code>, CPU light): a lossless file per song, cut at the transitions, played gaplessly in the browser.</li>

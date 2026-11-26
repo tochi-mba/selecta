@@ -185,7 +185,7 @@ export function BudgetForm({ current, warn, version, onChange }: { current: numb
     void careful(ctx, async () => {
       await write(ctx.api, { path: '/admin/hosted/budget', method: 'PUT', body: { monthly_usd: monthly, warn_percent: percent, reason, version, read_at: Date.now() / 1000 } });
       setOpen(false); setReason(''); onChange();
-    }, monthly ? `The hosted processing budget is $${monthly.toLocaleString()} a month, with a warning at ${percent}%.` : 'The hosted processing budget is cleared.');
+    }, monthly ? `The cloud studio budget is $${monthly.toLocaleString()} a month, with a warning at ${percent}%.` : 'The cloud studio budget is cleared.');
   };
   return (
     <form className="admin-inline-form" onSubmit={save} aria-label="Set the monthly budget">
