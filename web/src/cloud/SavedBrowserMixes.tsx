@@ -6,6 +6,7 @@ import { countOf, relativeTime } from '../ui/format';
 import { Icon } from '../ui/Icon';
 import { MenuItem } from '../ui/primitives';
 import type { ViewProps } from '../views/shared';
+import { recipeAsCurrent } from './accountMixes';
 import { EMPTY_MIX } from './deviceMusicRequest';
 import { copyName, MIX_NAME_LIMIT, type RecipeStore, type RecipeSummary } from './recipeStore';
 import { flagOn } from '../flags';
@@ -93,13 +94,13 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
     return () => window.removeEventListener(MIX_OUTBOX_EVENT, heard);
   }, [outbox, load, workspaceId]);
 
-  /** Make a saved mix the current one; the old pointer comes back if that fails. */
+  /** Make a saved mix the current one, shown and played as itself (recipeAsCurrent); the old
+   * pointer comes back if that fails. */
   const makeCurrent = async (recipe: RecipeSummary) => {
     const { recipes: store, request: ask, setMixData: show, refreshStatus: refresh } = latest.current;
     const previous = store.current();
-    store.setCurrent(recipe.mix_id);
     try {
-      show(await ask<MixData>('/mix'));
+      show(await recipeAsCurrent(store, ask, recipe.mix_id));
       refresh();
     } catch (error) {
       store.setCurrent(previous);
@@ -165,8 +166,7 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
       notify(`Deleted ${recipe.name}. This reaches your account when the connection is back.`, async () => {
         await recipes.restore?.(recipe.mix_id);
         if (wasCurrent && !recipes.current()) {
-          recipes.setCurrent(recipe.mix_id);
-          setMixData(await request<MixData>('/mix'));
+          setMixData(await recipeAsCurrent(recipes, request, recipe.mix_id));
           refreshStatus();
         }
         await load();

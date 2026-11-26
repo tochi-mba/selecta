@@ -1,7 +1,9 @@
 import type { MixData, Request } from '../api';
 import { flagListed } from '../flags';
 import { deviceId } from './currentMix';
+import type { RecipeStore } from './recipeStore';
 import { canHeal, classify } from './resilientRequest';
+import { currentGrouping } from './songVersions';
 
 /** The account's own mixes (ADR-0479, docs/engineering/engine-store-mixes.md): with
  * `cloud.account_mixes`, the shared shell's mix and draft calls are answered by the account's
@@ -87,4 +89,19 @@ export function accountMixes(cloud: Request, workspaceId?: string): AccountMixes
       return { id: made.id, name: made.name, count: songIds.length };
     },
   };
+}
+
+/** A saved browser mix (a recipe) made the current mix, read back as the shell shows it, so the
+ * chosen mix is the one shown and played. `request` is the shell's adapted request. With account
+ * mixes, `GET /mix` is the account's own current mix, so the recipe's songs become that first
+ * (each once, those still in the library); without, the recipe pointer is what it reads. */
+export async function recipeAsCurrent(recipes: RecipeStore, request: Request, mixId: string): Promise<MixData> {
+  recipes.setCurrent(mixId);
+  if (accountMixesOn()) {
+    const recipe = await recipes.read(mixId);
+    const songOf = currentGrouping().primaryOf;
+    const songIds = [...new Set(recipe.songs.filter((song) => song.in_library !== false).map((song) => songOf(song.song_id)))];
+    await request('/mix/order', { method: 'PUT', body: JSON.stringify({ song_ids: songIds, name: recipe.name }) });
+  }
+  return request<MixData>('/mix');
 }

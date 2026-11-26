@@ -580,6 +580,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },
     askToPlay: (device, mixId, move) => void playOn.ask(device, mixId, move),
     devices: () => holdings.devices ?? [],
+    heldOrder: () => programme.current.map((item) => item.song_id).join(','),
   });
   // ADR-0475: with nobody playing elsewhere, the one rule decides where Play makes the sound
   const where = useWhereToPlay({
