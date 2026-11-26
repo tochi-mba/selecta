@@ -43,6 +43,7 @@ function rig(placement: Record<string, unknown>) {
     if (path.startsWith('/requests/consider')) return { requests: [{ id: 41, song_id: 9, ...placement }], settled: [] };
     if (path.startsWith('/requests/insert')) return mix;
     if (/^\/requests\/41\/bridge$/.test(path)) return { requests: [{ id: 41, song_id: 9, available: 1 }] };
+    if (path === '/requests/41/bridges') return { options: [{ songs: [{ id: 3 }, { id: 9 }], song_ids: [3, 9], transitions: [{ from: 'Song 1', to: 'Song 3', a: 1, b: 3, status: 'none' }] }], looked_at: 4, direct: false, capped: false };
     throw new Error(`unexpected ${path}`);
   }) as Request;
   const send = (async () => mix) as Request;
@@ -117,9 +118,15 @@ describe('a bridge the account found for a request (T-20261126-ae4f)', () => {
     expect(row.needs_approval).toBeFalsy();
   });
 
-  it('searching every song for one stays the app\'s, and the flag comes with the account placing requests', async () => {
-    const { family } = rig({});
-    await expect(family.answer('POST', '/requests/1/bridges', new URLSearchParams(), { method: 'POST' })).rejects.toMatchObject({ message: NO_BRIDGES });
+  it('searching every song for one asks the account over the songs that play here', async () => {
+    const { consider, family, calls } = rig({ stage: 'searching' });
+    const [row] = await consider();
+    const found = await family.answer('POST', `/requests/${row.id}/bridges`, new URLSearchParams(), { method: 'POST', body: JSON.stringify({ order: [1, 2, 3], position: 0 }) }) as { options: { transitions: unknown[] }[]; looked_at: number };
+    expect(calls.at(-1)).toEqual({ path: '/requests/41/bridges', body: { order: [1, 2, 3], position: 0, songs: [1, 2, 3, 9] } });
+    // its transitions are made on this device once one is chosen, so none is offered to hear first
+    expect(found.options[0].transitions).toEqual([]);
+    expect(found.looked_at).toBe(4);
+    await expect(family.answer('POST', '/requests/77/bridges', new URLSearchParams(), { method: 'POST' })).rejects.toMatchObject({ message: NO_BRIDGES });
     expect(browserFlags(false)['requests.bridges']).toBe(false);
     expect(browserFlags(false, false, { placing: true })['requests.bridges']).toBeUndefined();
   });

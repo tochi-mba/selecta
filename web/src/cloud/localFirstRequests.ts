@@ -37,7 +37,9 @@ export const ROOM_REQUEST_EVENT = 'selecta:room-request';
 
 export const JOINS_BY_HAND = 'Add next plays a song right after the current one.';
 export const NOT_ON_THIS_DEVICE = 'This song’s file isn’t on this device. Connect it in Library to play it.';
-export const NO_BRIDGES = 'Searching every song for a bridge works in the SelectaDJ app on a computer. Here a bridge is offered with the place SelectaDJ finds for a request, or you can add it next.';
+export const NO_BRIDGES = 'A bridge can be found for the songs you asked for yourself. This one can be added next.';
+/** The most song ids a bridge search names (the server's own bound, bridge_routes.BridgeBody). */
+const MOST_NAMED = 20_000;
 export const NOTHING_TO_HEAR = 'A request’s transitions are worked out in your browser as the mix plays, so there is nothing to hear ahead.';
 export const NO_MIX_YET = 'There is no mix playing to add it to. Start a mix on Make a Mix first.';
 /** A request whose place needs a song or two before it, for the member to agree to. */
@@ -395,6 +397,21 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     return list();
   };
 
+  /** Find a bridge (T-20261126-0ae3): the account searches its measured songs, only those that
+   * play on this device, so a bridge chosen is one this device can make. Its transitions are made
+   * here once one is chosen, so none can be heard first (no `transitions` on an option). */
+  const findBridges = async (id: number, init?: RequestInit) => {
+    const { saved } = await rows();
+    const kept = Object.entries(saved.account).find(([, number]) => number === id)?.[0];
+    if (!kept) throw refuse(NO_BRIDGES, 'flag_off');
+    const { order, position } = bodyOf<Where>(init);
+    const here = (await songs()).filter((song) => song.playable && !song.never).map((song) => song.id);
+    const found = await cloud<{ options: { songs: { id: number }[]; transitions?: unknown[] }[] }>(`/requests/${Number(kept)}/bridges`, {
+      method: 'POST', body: JSON.stringify({ order: order ?? null, position: Number.isInteger(position) ? position : null, songs: here.slice(0, MOST_NAMED) }),
+    });
+    return { ...found, options: found.options.map((option) => ({ ...option, transitions: [] })) };
+  };
+
   /** A placement the account made ready on this device, put in as the account planned it. */
   const insertPlanned = async (offer: string, body: Partial<Playback>): Promise<MixData> => {
     const changed = await placing.insert(body, offer);
@@ -454,6 +471,8 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
       }
       const bridge = /^\/requests\/(\d+)\/bridge$/.exec(route);
       if (method === 'POST' && bridge && placingOn()) return chooseBridge(Number(bridge[1]), init);
+      const search = /^\/requests\/(\d+)\/bridges$/.exec(route);
+      if (method === 'POST' && search && placingOn()) return findBridges(Number(search[1]), init);
       if (/^\/requests\/\d+\/(bridges|bridge)$/.test(route)) return Promise.reject(refuse(NO_BRIDGES, 'flag_off'));
       if (/^\/requests\/\d+\/hear$/.test(route)) return Promise.reject(refuse(NOTHING_TO_HEAR, 'flag_off'));
       return Promise.reject(refuse('In your browser, a request can be asked for, added next or dismissed.', 'flag_off', 404));

@@ -11,6 +11,7 @@ import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
 import { localFirstRequest } from './localFirstRequest';
+import { requestsFamily } from './localFirstRequests';
 import { reportSeam } from './seamReports';
 import { planningCalls } from './studioWiring';
 import type { MadeSeam } from '../dsp/render/seamMaker';
@@ -58,6 +59,8 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['POST', /^\/requests\/insert\?device_id=[A-Za-z0-9_-]{1,64}$/],
   // yes or no to a bridge the account found for one of its requests: song ids only
   ['POST', /^\/requests\/\d+\/bridge$/],
+  // Find a bridge: the mix's order and position, and the ids of the songs that play here
+  ['POST', /^\/requests\/\d+\/bridges$/],
   // the Seam Inspector: the Good or Bad of the transitions this device made, by key
   ['GET', /^\/seams\?keys=[0-9a-f]{20}(,[0-9a-f]{20})*(&device_id=[A-Za-z0-9_-]{1,64})?$/],
 ];
@@ -351,6 +354,29 @@ describe('a correction from Song details', () => {
     await accountMixes(request).answer('POST', '/mix/2/lock', '', { method: 'POST' });
     expect(calls).toEqual([{ method: 'POST', path: '/mix/2/lock', body: undefined }]);
     calls.forEach(holdsTheContract);
+  });
+});
+
+describe('Find a bridge', () => {
+  it('carries the mix order, the position and the song ids that play here, nothing about files', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true, 'cloud.device_render': true, 'cloud.device_analysis': true, 'requests.bridges': true });
+    localStorage.setItem('selecta.device.ws-1', 'dev-1');
+    const calls: Captured[] = [];
+    const cloud = (async (path: string, init?: RequestInit) => {
+      calls.push({ method: init?.method ?? 'GET', path, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      if (path === '/requests' && !init?.method) return { requests: [{ id: 41, song_id: 9, available: 1 }] };
+      if (path === '/requests/41/bridges') return { options: [], looked_at: 3, direct: false };
+      return { requests: [] };
+    }) as Parameters<typeof requestsFamily>[0]['cloud'];
+    const songs = async () => [1, 2, 9].map((id) => ({ id, title: `Song ${id}`, artist: 'Rex', duration: 200, playable: true }));
+    const family = requestsFamily({ cloud, workspaceId: 'ws-1', songs, send: cloud });
+    const listed = await family.answer('GET', '/requests', new URLSearchParams(), {}) as { requests: { id: number }[] };
+    await family.answer('POST', `/requests/${listed.requests[0].id}/bridges`, new URLSearchParams(), { method: 'POST', body: JSON.stringify({ order: [1, 2], position: 0 }) });
+    const search = calls.filter((call) => call.path === '/requests/41/bridges');
+    expect(search).toHaveLength(1);
+    search.forEach(holdsTheContract);
+    expect(search[0].body).toEqual({ order: [1, 2], position: 0, songs: [1, 2, 9] });
+    localStorage.clear();
   });
 });
 
