@@ -194,6 +194,47 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+  python-store-on:
+    # The same Desktop tests with core.engine_store forced on (tests/engine_store_on.py), so the
+    # storage rewrite is checked against the whole suite, not only its own tests. The flag is off
+    # by default, so this job reports and does not gate `verify`: it becomes required when the
+    # flag's default changes. See docs/engineering/engine-store.md.
+    name: Python / tests, engine store on (shard ${{ matrix.shard }}/2)
+    needs: [lint]
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Suite-inventory tests compare against a historical baseline commit.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          version: "0.12.15" # matches infra/docker/service.Dockerfile
+          enable-cache: true
+      - name: Install FFmpeg
+        # A download from a third-party mirror, so retried; tests themselves never are here.
+        run: |
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            choco install ffmpeg --yes --no-progress
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Output "::warning::FFmpeg install failed (attempt $attempt of 3)"
+            Start-Sleep -Seconds 20
+          }
+          exit 1
+      - run: uv sync --locked
+      - name: Run the assigned pytest shard with the engine store on
+        env:
+          SELECTA_TEST_SHARD: ${{ matrix.shard }}/2
+          SELECTA_TEST_ENGINE_STORE: "1"
+        run: uv run pytest -q
+
   cloud:
     # Cloud code on Linux against a real PostgreSQL: row locks, SKIP LOCKED, LISTEN/NOTIFY,
     # advisory locks and row-level security only exist there. The Windows shards run the same
@@ -675,6 +716,7 @@ jobs:
       - lint
       - checklist-evidence
       - python
+      - python-store-on
       - cloud
       - cloud-rest
       - python-advisories
@@ -703,10 +745,12 @@ jobs:
           CLOUD_REST_RESULT: ${{ needs.cloud-rest.result }}
           # advisory: said here, not required (python-advisories)
           ADVISORIES_RESULT: ${{ needs.python-advisories.result }}
+          # said here, not required while core.engine_store is off by default (python-store-on)
+          STORE_ON_RESULT: ${{ needs.python-store-on.result }}
           CLOUD_BROWSER_RESULT: ${{ needs.cloud-browser.result }}
         run: |
           echo "Changes: $CHANGES_RESULT (code=$CODE_CHANGED); Service image: $SERVICE_IMAGE_RESULT"
-          echo "Workflows: $WORKFLOWS_RESULT; Lint: $LINT_RESULT; Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT; Cloud rest: $CLOUD_REST_RESULT; Cloud E2E: $CLOUD_BROWSER_RESULT; Python advisories (not required): $ADVISORIES_RESULT"
+          echo "Workflows: $WORKFLOWS_RESULT; Lint: $LINT_RESULT; Evidence: $EVIDENCE_RESULT; Python: $PYTHON_RESULT; Web: $WEB_RESULT; Edge E2E: $BROWSER_RESULT; Flags: $FLAGS_RESULT; Cloud: $CLOUD_RESULT; Cloud rest: $CLOUD_REST_RESULT; Cloud E2E: $CLOUD_BROWSER_RESULT; Python advisories (not required): $ADVISORIES_RESULT; Engine store on (not required): $STORE_ON_RESULT"
           test "$CHANGES_RESULT" = success
           case "$CODE_CHANGED" in
             true | false) ;;
