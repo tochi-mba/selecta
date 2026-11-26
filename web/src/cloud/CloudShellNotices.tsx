@@ -13,6 +13,7 @@ import type { useLocalFirstPlayer } from './deviceMusicPlayer';
 import { ImportChip } from './ImportChip';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { NoticeStack, type NoticeGroups } from './NoticeStack';
+import { UploadChip } from './UploadChip';
 
 type Playback = ReturnType<typeof useLocalFirstPlayer>['device'];
 
@@ -59,9 +60,11 @@ export function CloudShellNotices({ account, workspaceId, on, playback, deviceNa
   const takeover = on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>;
   const controller = on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />;
   const importing = on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />;
+  // cloud.move_to_cloud: the upload queue's chip sits beside the import chip
+  const uploading = on('cloud.move_to_cloud') && <UploadChip workspaceId={workspaceId} />;
   const layout = on('cloud.page_layout');
   const cutover = isHostedAccount(account) && <CutoverNotice accountId={account.user.id} storedBytes={account.entitlement.storage_used_bytes} line={layout} />;
-  if (!layout) return <>{changedFrom}{asked}{accountMix}{where.picker}{playNotice}{otherTabNote(playback, onPlayHere)}{connection}{notices}{takeover}{controller}{importing}{cutover}{feedback}</>;
+  if (!layout) return <>{changedFrom}{asked}{accountMix}{where.picker}{playNotice}{otherTabNote(playback, onPlayHere)}{connection}{notices}{takeover}{controller}{importing}{uploading}{cutover}{feedback}</>;
   // the picker answers a press of Play, so it is never folded away
   return (
     <>
@@ -69,7 +72,7 @@ export function CloudShellNotices({ account, workspaceId, on, playback, deviceNa
       <NoticeStack
         blocking={accountNotices?.blocking}
         playback={<>{asked}{changedFrom}{accountMix}{playNotice}{onListen && otherTabNote(playback, onPlayHere)}{connection}{accountNotices?.playback}{takeover}{controller}</>}
-        progress={<>{importing}{accountNotices?.progress}</>}
+        progress={<>{importing}{uploading}{accountNotices?.progress}</>}
         info={<>{cutover}{accountNotices?.info}{feedback}</>}
       />
     </>

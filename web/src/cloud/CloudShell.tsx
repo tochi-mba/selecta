@@ -61,6 +61,7 @@ import { useCloudShellMedia, useCloudSongs } from './cloudShellMedia';
 import { CloudShellPages } from './CloudShellPages';
 import { CloudShellNotices, otherTabNote } from './CloudShellNotices';
 import type { NoticeGroups } from './NoticeStack';
+import { useCloudUploadQueue } from './uploadQueueWiring';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -716,7 +717,9 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     importMusic: importRunnerFor({ request: media, openStore, workspaceId }),
   }), [media, openStore, workspaceId]);
   useImportCarryOn({ request: media, openStore, workspaceId, watch: { onAvailabilityChanged: () => sweepLapsed(true), playing: () => playingNow.current() } });
-  const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
+  // cloud.move_to_cloud: the upload queue carries on after a reload; the current mix goes first
+  useCloudUploadQueue({ on: on('cloud.move_to_cloud'), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
+  const connect =<ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   return (
     <RequestContext.Provider value={request}>
