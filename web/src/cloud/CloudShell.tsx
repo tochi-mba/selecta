@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
-import { accountFlagOn, setFlags, useFlags } from '../flags';
+import { accountFlagOn, flagListed, setFlags, useFlags } from '../flags';
 import { findLapsed, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
 import { useArtIndex } from './artIndex';
 import type { NowState } from '../player';
@@ -57,7 +57,7 @@ import { DeviceActivityDrawer } from './DeviceActivity';
 import { localExportOn } from './localExport';
 import { placingOn } from './accountPlacements';
 import { RoomOpenLine } from './RoomOpenLine';
-import { useCloudShellMedia } from './cloudShellMedia';
+import { useCloudShellMedia, useCloudSongs } from './cloudShellMedia';
 import { CloudShellPages } from './CloudShellPages';
 import { CloudShellNotices, otherTabNote } from './CloudShellNotices';
 import type { NoticeGroups } from './NoticeStack';
@@ -115,6 +115,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
   const coexisting = isHostedAccount(account) && on('cloud.stored_media');
+  // cloud.catalogue_play: cloud songs found by catalogue id, and counted on every device
+  const cataloguePlay = coexisting && flagListed('cloud.catalogue_play');
   // BF-0462-04: the Library says where each song can play from, against this device's own
   // connected files and, for a grandfathered account, its hosted copies
   // Probing every handle means opening every file, which at thousands of songs cannot happen
@@ -208,7 +210,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   const roomsHere = on('rooms') && !account.feature_locks.rooms;
   // where each song can play from, the adapted request and the resolver (cloudShellMedia.ts)
   const { sources, request, media, resolver, programme, controllerLink, whereHeld, mixableIds } = useCloudShellMedia({
-    api, cloud, workspaceId, on, coexisting, openStore, lapsed, refreshStatus: refreshStatusRef, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed: setServedFrom, book,
+    api, cloud, workspaceId, on, coexisting, catalogue: cataloguePlay, openStore, lapsed, refreshStatus: refreshStatusRef, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed: setServedFrom, book,
   });
   mediaRef.current = media;
 
@@ -216,6 +218,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   const [statusProblem, setStatusProblem] = useState('');
   const [data, setData] = useState<MixData>(EMPTY_MIX);
   programme.current = data.mix;
+  // cloud.catalogue_play: the songs in the cloud library, read again with each status
+  const cloudSongs = useCloudSongs(request, cataloguePlay, status);
   const refreshStatus = useCallback(() => {
     request<Status>('/status')
       .then((next) => { setStatus(next); setStatusProblem(''); })
@@ -479,7 +483,9 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     const mix = programmeMove ? { ...data, mix: remoteMix } : await request<MixData>('/mix').catch(() => null);
     if (!mix?.mix.length) return 'no_mix';
     const here = await sources.here?.().catch(() => null);
-    if (!mix.mix.some((item) => here?.get(item.song_id) === 'here')) {
+    // cloud.catalogue_play: a mix with songs in the cloud library plays here without a folder
+    const inCloud = cataloguePlay ? (cloudSongs ?? await request.cloudSongs().catch(() => null))?.ids : undefined;
+    if (!mix.mix.some((item) => here?.get(item.song_id) === 'here' || inCloud?.has(item.song_id))) {
       showToast(`${ask.asker_name} asked to play here. Choose your music folder again to play.`, { actions: [{ label: 'Choose music', run: () => navigate('/library') }] });
       return 'needs_music';
     }
@@ -500,7 +506,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     const from = seen ? movedFrom(seen.session, mix.mix, lastSeen ?? playback.serverNow()) : null;
     void shellPlayer.playFrom(from?.song_index ?? 0, from ? from.offset_ms / 1000 : 0);
     return 'starting';
-  }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources]);
+  }, [data, recipes, remoteMix, request, setMixData, shellPlayer, sources, cataloguePlay, cloudSongs]);
   // what "Play on {device}" would play when this device has no current mix of its own: the
   // account's newest saved mix, read while Listen shows that card
   const [newest, setNewest] = useState<{ mix_id: string; name: string; songs: number; ids?: number[] } | null>(null);
@@ -582,6 +588,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
     situation: holdings.devices && !((status?.counts.ready ?? 0) > 0 && !holdings.devices.find((one) => one.device_id === playback.device?.id)?.reported_at) ? {
       devices: holdings.devices, defaultId: holdings.defaultId, thisDeviceId: playback.device?.id ?? null, mixIds: songOrder, ids: holdings.ids,
       speaker: playback.view?.speaker === 'here' && playback.view.speaker_device_id ? { deviceId: playback.view.speaker_device_id, online: true } : null,
+      // cloud.catalogue_play: the cloud library's songs play on every signed-in browser
+      ...(cloudSongs ? { cloud: cloudSongs } : {}),
     } : null,
     cloud, refreshHoldings: holdings.refresh,
     playHere: () => { hereOnPurpose.current = true; void shellPlayer.playFrom(0); },

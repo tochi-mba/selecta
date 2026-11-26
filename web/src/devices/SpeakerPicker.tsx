@@ -14,6 +14,8 @@ import './devices.css';
 // Confirm even if the start then fails: it is the stated wish.
 
 const FORGOTTEN_AFTER_S = 30 * 86_400;
+/** A device with none of these songs itself, playing them from the cloud library. */
+const CLOUD_ROW = 'From your cloud library';
 const seenWords = (seconds: number) => {
   const minutes = Math.max(1, Math.round(seconds / 60));
   if (minutes < 90) return `Last seen ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
@@ -54,7 +56,9 @@ export function SpeakerPicker({ options, suggested, defaultAway, total, thisDevi
     const apart = telling(option.device, shown.map((one) => one.device), thisDeviceId, now);
     // the reason without the name: the row already says which device it is
     const why = option.why?.startsWith(option.device.name) ? option.why.slice(option.device.name.length).trim().replace(/^./, (first) => first.toUpperCase()) : option.why;
-    return [apart, why ?? what].filter(Boolean).join(' · ');
+    // cloud.catalogue_play: said in the row, not a tooltip, so a touch screen shows it too
+    const from = !why && option.cloud ? CLOUD_ROW : null;
+    return [apart, why ?? what, from].filter(Boolean).join(' · ');
   };
   return (
     <Dialog title="Where should the music play?" onClose={onCancel} className="speaker-picker" footer={(
