@@ -21,7 +21,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict
 from pathlib import Path
 
-from selecta import db, flags, jobs
+from selecta import db, flags, jobs, seam_mirror
 from selecta.analysis.song import SongInfo, load_song
 from selecta.arrange import can_arrange
 from selecta.audit.checks import AuditReport
@@ -257,6 +257,7 @@ class SeamStore:
             json.dump(state, stream)
         try:
             temporary.replace(target)
+            seam_mirror.kept(self.settings, state, self.folder(state["key"]))  # core.engine_store
             # Internal writes must be reflected immediately, independent of the
             # longer cache TTL used to avoid expensive Windows disk walks.
             self._memory_revision += 1
@@ -325,6 +326,7 @@ class SeamStore:
                     with self._lock:
                         self._states.pop(key, None)
         self._remembered = None
+        seam_mirror.forget_song(self.settings, song_id)
         return forgotten
 
     def status_reader(self) -> Callable[[str], dict]:
@@ -558,7 +560,8 @@ class SeamStore:
             states: dict[str, dict] = {}
             records: dict[Path, tuple[tuple[int, int], dict]] = {}
             histories = (self.settings.home / "seam-history").glob("*.json")
-            for meta in [*self.root.glob("*/seam.json"), *histories]:
+            mirrored = seam_mirror.states(self.settings)  # the table, with core.engine_store on
+            for meta in [*self.root.glob("*/seam.json"), *histories] if mirrored is None else []:
                 try:
                     facts = meta.stat()
                     stamp = (facts.st_mtime_ns, facts.st_size)
@@ -576,8 +579,8 @@ class SeamStore:
                     elapsed = time.monotonic() - scan_started
                     print(f"[MEMORY] Indexed {len(records)} files in {elapsed:.0f}s...", flush=True)
                     last_report = time.monotonic()
-            memory = SeamMemory.from_states(states.values())
-            self._records = records
+            memory = SeamMemory.from_states(states.values() if mirrored is None else mirrored)
+            self._records = records if mirrored is None else self._records
             # Writes that arrived during the scan force another refresh, rather
             # than treating a potentially stale snapshot as recently valid.
             history_after = self._current_history_stamp()

@@ -1,8 +1,9 @@
 """The Desktop side of gate calibration: rated seams read from a SelectaDJ home, and the small
 file that applies a fit (docs/engineering/calibration.md).
 
-`rated_seams` only reads. It never opens the database (a read-only SQLite open can still leave
-files behind on a live library) and never looks in other folders, so it sees exactly one home.
+`rated_seams` only reads, and never looks in other folders, so it sees exactly one home. With
+`core.engine_store` off it never opens the database (a read-only SQLite open can still leave
+files behind on a live library); on, it reads the library's seam tables, as the app does.
 The fitting itself is `planner_core.calibrate`, which takes plain records and reads nothing.
 `calibration.json` is written only by `selecta calibrate --apply --yes` and removed by `--reset`;
 the planner core never reads it. `desktop_gates` loads it for the Desktop's seam planning, and
@@ -17,6 +18,8 @@ import os
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import sqlalchemy as sa
 
 from selecta import flags
 from selecta.planner_core.calibrate import GateFit, evidence, overrides_from
@@ -54,15 +57,38 @@ def _read(path: Path) -> dict | None:
     return state if isinstance(state, dict) else None
 
 
+def _from_store(home: Path) -> list[dict] | None:
+    """With `core.engine_store` on, every seam's record from the library's seam tables (the
+    import copied the files in; docs/engineering/engine-store-seams.md); else None, and the files
+    are read as before. A library without the tables also reads the files."""
+    library_file = home / "selecta.sqlite"
+    if not flags.on("core.engine_store") or not library_file.is_file():
+        return None
+    from selecta.engine_store import library
+    from selecta.engine_store import seams as stored
+
+    try:
+        with library.engine_for(library_file).connect() as connection:
+            if library.VERSION_TABLE not in sa.inspect(connection).get_table_names():
+                return None
+        return stored.records(library.store_for(library_file))
+    except sa.exc.SQLAlchemyError:
+        return None
+
+
 def rated_seams(home: Path) -> Collected:
     """Every rated seam in `home`: the render cache's records and the history that outlives
     them, one per seam key, the cache's copy first. Reads only."""
     found = Collected()
     seen: dict[str, dict] = {}
-    paths = [
+    stored = _from_store(home)
+    paths = [] if stored is not None else [
         *sorted((home / "renders" / "seams").glob("*/seam.json")),
         *sorted((home / "seam-history").glob("*.json")),
     ]
+    for state in stored or []:
+        found.files += 1
+        seen.setdefault(str(state.get("key")), state)
     for path in paths:
         found.files += 1
         state = _read(path)
