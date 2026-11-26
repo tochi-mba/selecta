@@ -2,6 +2,7 @@ import { ApiError, MixData, SongRow, Status, Suggestion, VibeCard } from '../api
 import { browserMovesAllowed, browserMovesOn } from './browserMoves';
 import { asMixData, copyName, RecipeStore, WORKED_OUT_LIVE } from './recipeStore';
 import type { OrderPlanner } from './accountOrder';
+import { accountMixesOn, fallsBack, type AccountMixes } from './accountMixes';
 import { currentGrouping } from './songVersions';
 
 /** The mix route family of the local-first adapter (ADR-0462 "one adapter per route family",
@@ -92,7 +93,8 @@ export type SongPlace = (songId: number, playableHere: boolean) => { rank: numbe
 /** `lovedInRooms` (ADR-0488): song id to how many rooms loved it, from the account's crowd marks. */
 /** `planOrder` (docs/engineering/device-to-account.md): the account's planner orders the chosen
  * songs when it can; null from it, or none given, keeps today's order. */
-export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace, lovedInRooms?: () => Promise<Map<number, number>>, planOrder?: OrderPlanner): MixFamily {
+/** `account` (cloud.account_mixes): a new mix is kept with the account rather than as a recipe. */
+export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace, lovedInRooms?: () => Promise<Map<number, number>>, planOrder?: OrderPlanner, account?: AccountMixes): MixFamily {
   const current = async (): Promise<MixData | null> => {
     const id = store.current();
     if (!id) return null;
@@ -122,6 +124,13 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     const never = new Set(all.filter((song) => song.never).map((song) => song.id));
     const choices = { start, end: target ? Number(target) : null, steering: store.steering(), never };
     const ids = (planOrder ? await planOrder(chosen, choices).catch(() => null) : null) ?? chosen;
+    if (account && accountMixesOn()) {
+      try {
+        return await account.install(mixNameFor(all, ids), ids, asDraft);
+      } catch (problem) {
+        if (!fallsBack(problem)) throw problem;
+      }
+    }
     const recipe = await store.create(mixNameFor(all, ids), ids, all);
     // Save draft keeps it in My Mixes without touching what's playing, as local mode's does
     if (asDraft) return { id: 0, mix_id: recipe.mix_id, name: recipe.name, count: ids.length };
