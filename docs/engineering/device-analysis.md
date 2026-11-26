@@ -152,13 +152,11 @@ The vitest files beside the ports assert, per song:
 | Loudness, peak | pyloudnorm | 1e-6 LU, 1e-9 dB |
 | End to end | the soxr (Desktop) reference | the planner tolerances above |
 
-These tests were written but not run in this change (the owner's rule: CI runs them). Their
-results are in CI for `web/src/dsp/analysis/*.test.ts`. The tolerances above are the
-expectation from the checks that were run: the STFT, mel and chroma filterbanks, the
-`piptrack` peaks, the tuning and the float32 percentiles were each reproduced in Python from
-the port's formulas and matched librosa exactly (filterbanks and peaks bit-equal); the risks
-are a tuning estimate that flips by 0.01 when a peak sits on a histogram edge, and an argmax
-in the grid that flips between near-equal onsets. Either would show as a stage failure.
+These tests were written but not run in this change (CI runs them: `web/src/dsp/analysis/`).
+The expectation comes from checks that were run: the STFT, mel and chroma filterbanks, the
+`piptrack` peaks, the tuning and the float32 percentiles, reproduced in Python from the port's
+formulas, matched librosa (filterbanks and peaks bit-equal). The risks are a tuning that flips
+by 0.01 when a peak sits on a histogram edge, and a grid argmax between near-equal onsets.
 
 ## Beats
 
