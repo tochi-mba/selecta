@@ -24,6 +24,7 @@ import sqlalchemy as sa
 from cloud_helpers import cloud_settings, grant_hosted_media
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+from tenant_isolation_brain_routes import BRAIN_SCOPED
 from tenant_isolation_staff_routes import STAFF_ONLY
 
 from selecta.api_cloud import create_cloud_app
@@ -514,6 +515,8 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("DELETE", "/api/rooms/{room_id}/requests/{request_id}/dedication"): None,
     ("GET", "/api/crowd-marks"): None,
     ("GET", "/api/room-recaps"): None,
+    # song facts and planning over the caller's own catalogue (cloud.brain)
+    **BRAIN_SCOPED,
 }
 # The scoped routes that name one resource. In his own workspace, Bob asking for Alice's
 # resource must get the same answer as asking for one that doesn't exist.
