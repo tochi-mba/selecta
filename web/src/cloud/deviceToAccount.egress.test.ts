@@ -6,6 +6,7 @@ import { forgetAccountMeasured } from './accountFacts';
 import { accountMixes } from './accountMixes';
 import { accountRequests } from './accountRequests';
 import { accountPlacements } from './accountPlacements';
+import { accountIdeas } from './accountIdeas';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
@@ -27,6 +28,8 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['GET', /^\/song-facts\?after=\d+&limit=\d+$/],
   ['PUT', /^\/song-facts\/\d+$/],
   ['POST', /^\/planning\/order$/],
+  // the account's idea cards over the songs measured here: song ids and the feel only
+  ['POST', /^\/planning\/ideas$/],
   ['POST', /^\/planning\/candidates$/],
   // cloud.device_render: one more option's script, by index; the clips themselves never leave
   ['POST', /^\/planning\/candidates\/script$/],
@@ -300,6 +303,21 @@ describe('where a request joins, planned by the account', () => {
     calls.forEach(holdsTheContract);
     expect(calls[0].body).toEqual({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60 });
     expect(calls[1].body).toEqual({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60, offer: 'a'.repeat(64) });
+  });
+});
+
+describe('the account\'s idea cards', () => {
+  it('carry song ids and the feel, never a path or audio', async () => {
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => {
+      const answer = await capture(path, init);
+      return path === '/planning/ideas' ? { ideas: [] } : answer;
+    }) as typeof capture;
+    const songs = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ id, title: `T${id}`, playable: true }));
+    await accountIdeas(request, 'w1').cards(songs, 'seamless');
+    expect(calls.map((call) => `${call.method} ${call.path.split('?')[0]}`)).toEqual(['GET /song-facts', 'POST /planning/ideas']);
+    calls.forEach(holdsTheContract);
+    expect(calls[1].body).toEqual({ songs: [1, 2, 3, 4, 5, 6, 7], language: 'seamless' });
   });
 });
 

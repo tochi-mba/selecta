@@ -2,6 +2,7 @@ import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability,
 import { accountMeasured, noteCorrection, sendingOn, type Measured } from './accountFacts';
 import { accountMixes, accountMixesOn, fallsBack } from './accountMixes';
 import { accountOrderPlanner } from './accountOrder';
+import { accountIdeas } from './accountIdeas';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { linksFamily } from './localFirstLinks';
 import { mixFamily, type PlayableSong, type SongPlace } from './localFirstMixes';
@@ -408,7 +409,9 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   const planOrder = sources.workspaceId ? accountOrderPlanner(cloud, sources.workspaceId) : undefined;
   // cloud.account_mixes: the account's own mix and draft routes answer first (accountMixes.ts)
   const account = accountMixes(cloud);
-  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder, account) : null;
+  // the account's idea cards on Make a Mix, built by its planner (accountIdeas.ts)
+  const ideas = sources.workspaceId ? accountIdeas(cloud, sources.workspaceId) : undefined;
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder, account, ideas) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
     songs: async () => {
