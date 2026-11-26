@@ -4,7 +4,8 @@ Each route that changes which mix is current sends `mix.current`, marked `accoun
 order every device reads back, and no other route does; two devices: the last change stands and
 Undo brings the one before back; Bob hears none of Alice's; and an account with both recipes and
 `/cloud-mixes` mixes ends, on first use, with every one of them as a draft and its current recipe
-as the current mix. Synthetic catalogue rows only.
+as the current mix. Account mixes are on for an account with the cloud library and off for one
+without, with no setting anywhere. Synthetic catalogue rows only.
 """
 
 # ruff: noqa: F811  (each test takes the `cloud` fixture imported below)
@@ -12,16 +13,19 @@ from __future__ import annotations
 
 import pytest
 import sqlalchemy as sa
+from cloud_helpers import grant_hosted_media
 from test_cloud_brain_routes import ALICE, BOB, _auth, cloud  # noqa: F401  (the fixture)
 
 from selecta import flags
+from selecta.flags.matching import Rule, RuleKind
 from selecta.persistence import new_id
 from selecta.work.schema import outbox_events
 
 
 @pytest.fixture(autouse=True)
-def account_mixes_on():
-    flags.use("+cloud.account_mixes")
+def account_mixes_on(cloud):
+    # on for every account with the cloud library: it needs cloud.hosted_media
+    grant_hosted_media(cloud["engine"], cloud["app"])
     yield
     flags.use(None)
 
@@ -172,7 +176,8 @@ def test_recipes_and_cloud_mixes_all_become_drafts_on_first_use_and_the_current_
                 "SELECT id, content_sha256 FROM local_songs WHERE id IN (?, ?, ?)", (b, c, d)
             ).all()
         )
-    flags.use("")  # the browser's saved mixes and the uploaded-music mixes, made before
+    # the browser's saved mixes and the uploaded-music mixes, made before
+    flags.use("-cloud.account_mixes")
     friday = client.post(
         "/api/local-media/recipes", headers=_auth(ALICE),
         json={"name": "Friday", "song_ids": [a, b]},
@@ -198,7 +203,7 @@ def test_recipes_and_cloud_mixes_all_become_drafts_on_first_use_and_the_current_
         cloud_mixes, "_all_revisions",
         lambda _conn, ws: [(contract, 1.0) for contract in uploaded] if ws == alice else [],
     )
-    flags.use("+cloud.account_mixes")
+    flags.use("")  # the build as it ships
     drafts = client.get("/api/drafts", headers=_auth(ALICE)).json()["drafts"]
     assert sorted((row["name"], tuple(row["song_ids"])) for row in drafts) == [
         ("Friday", (a, b)), ("Sunday", (c, d)), ("Uploaded one", (b, c)), ("Uploaded two", (d,)),
@@ -208,3 +213,23 @@ def test_recipes_and_cloud_mixes_all_become_drafts_on_first_use_and_the_current_
     # a later use brings nothing in again, and the import says nothing as the account's mix
     assert len(client.get("/api/drafts", headers=_auth(ALICE)).json()["drafts"]) == 4
     assert [event for event in _events(cloud, alice) if event.get("account")] == []
+
+
+def test_on_for_an_account_with_the_cloud_library_and_off_for_one_without(cloud):
+    """No console or deployment step: the shipped build gives account mixes to the granted
+    account, and the one whose grant is taken away is refused as flag_off and hears nothing."""
+    client, (a, b, *_rest) = cloud["client"], cloud["ids"]
+    with cloud["engine"].connect() as connection:
+        alice = _owner_workspace(connection, ALICE)
+    flags.use("")
+    assert client.get("/api/mix", headers=_auth(BOB)).status_code == 200
+    without = Rule(RuleKind.WORKSPACES, {"ids": [alice], "on": False})
+    grant_hosted_media(cloud["engine"], cloud["app"], without)
+    for answer in (
+        client.get("/api/mix", headers=_auth(ALICE)),
+        client.put("/api/mix/order", headers=_auth(ALICE), json={"song_ids": [a, b]}),
+    ):
+        assert answer.status_code == 403, answer.text
+        assert answer.json()["detail"]["flag"] == "cloud.account_mixes"
+    assert _events(cloud, alice) == []
+    assert client.get("/api/mix", headers=_auth(BOB)).status_code == 200

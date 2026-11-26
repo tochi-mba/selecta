@@ -12,6 +12,7 @@ PostgreSQL's policy is in tests/test_engine_store_requests_postgres.py.
 from __future__ import annotations
 
 import pytest
+from cloud_helpers import grant_hosted_media
 from test_cloud_brain_routes import ALICE, BOB, _auth, cloud  # noqa: F401  (the fixture)
 from test_cloud_brain_seams import _device, _put, _report
 
@@ -19,8 +20,9 @@ from selecta import flags
 
 
 @pytest.fixture(autouse=True)
-def account_mixes_on():
-    flags.use("+cloud.account_mixes")
+def account_mixes_on(cloud):
+    # on for every account with the cloud library: it needs cloud.hosted_media
+    grant_hosted_media(cloud["engine"], cloud["app"])
     yield
     flags.use(None)
 
@@ -129,7 +131,7 @@ def test_a_look_settles_a_request_already_in_the_mix(cloud):
 
 
 def test_the_routes_answer_flag_off_without_account_mixes(cloud):
-    flags.use("")
+    flags.use("-cloud.account_mixes")
     client, (a, *_rest) = cloud["client"], cloud["ids"]
     for answer in (
         client.get("/api/requests", headers=_auth(ALICE)),

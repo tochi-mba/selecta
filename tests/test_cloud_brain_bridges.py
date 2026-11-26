@@ -11,6 +11,7 @@ catalogue rows and facts only.
 from __future__ import annotations
 
 import pytest
+from cloud_helpers import grant_hosted_media
 from test_cloud_brain_routes import ALICE, BOB, _auth, _infos, cloud  # noqa: F401  (the fixture)
 
 from selecta import flags
@@ -20,8 +21,9 @@ from selecta.request_planner import PairBook, bridge_options
 
 
 @pytest.fixture(autouse=True)
-def account_mixes_on():
-    flags.use("+cloud.account_mixes")
+def account_mixes_on(cloud):
+    # on for every account with the cloud library: it needs cloud.hosted_media
+    grant_hosted_media(cloud["engine"], cloud["app"])
     yield
     flags.use(None)
 

@@ -2,7 +2,8 @@
 
 ADR-0479, Phase 7 steps 2 and 3. The current mix, the drafts and the mix's own named values move
 onto the engine store, on the Desktop (SQLite, behind `core.engine_store`, off by default) and in
-Cloud (PostgreSQL, behind `cloud.brain` and `cloud.account_mixes`, off). Code:
+Cloud (PostgreSQL, behind `cloud.brain` and `cloud.account_mixes`, on for accounts with the cloud
+library). Code:
 `engine_store/mixes.py` (the store side), `mix_backend.py` (the old path and the choice between
 them), `mix.py` (every rule, unchanged), `cloud_brain/mixes_routes.py`,
 `engine_store/mix_import.py`, `web/src/cloud/accountMixes.ts`. Migrations: `lib0007mixes` and
@@ -142,16 +143,15 @@ itself onto the account's mixes is to-do T-20261126-1105. Of `cloud_mixes.CAPABI
 makes "revisions" (Undo and drafts) the Desktop's model in Cloud too, and "seam_tools" a step
 closer (the editor's own routes answer), without changing either row here.
 
-## Turning it on
+## Who has it
 
-`cloud.account_mixes` is meant for every account with the cloud library (`cloud.hosted_media`),
-and for no other. Its build default stays off. The rule is `mix_current.WITH_THE_CLOUD_LIBRARY`,
-a `follows` rule (`flags/matching.py`): on wherever `cloud.hosted_media` is on for the account,
-off wherever it is off. A rule decides only once the build carries the flag, so the order is:
-save that rule as the flag's rules (the console's `set_rules`, or a per-account switch above it
-for a trial), then add `+cloud.account_mixes` to the deployment's `SELECTA_FLAGS`. Before that
-the owner checks it on a copy of their own library (the plan's sign-off); the step is to-do
-T-20261126-0270.
+`cloud.account_mixes` is on for every account with the cloud library and off for every other
+(owner decision, 2026-11-26). The build ships it on, and it `requires` `cloud.hosted_media` and
+`cloud.brain`; a requirement is decided per account (`flags/targeting.py`, the cascade runs on
+each account's own decisions, as `cloud.move_to_cloud` needs the grant), so an account without
+the grant has it off with `needs:cloud.hosted_media`, and the grant taken away takes account
+mixes with it. It can still be switched off: a kill switch or a per-account switch on the flag,
+or `-cloud.account_mixes` in `SELECTA_FLAGS`. `tests/test_flag_follows_rule.py` proves each.
 
 ## Still on the old path
 

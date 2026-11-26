@@ -349,17 +349,17 @@
     },
     "cloud.account_mixes": {
       "label": "Your mixes in one place",
-      "about": "The account's mixes come from one place on every device: the current mix and every draft are kept with the account in the same form the Desktop app keeps them (ADR-0479, docs/engineering/engine-store-mixes.md), and the browser reads and changes them through the Desktop's own mix routes, which also need cloud.brain. The account's song requests are kept with it the same way and answer the Desktop's request routes, since a request joins the account's mix. The first time an account uses them, its saved browser mixes are copied in as drafts once; nothing about them is changed or removed. Mixes hold catalogue song ids and transition choices, never audio or file paths. Off until it has been tried on a real account: the browser keeps its saved browser mixes as before, and these routes answer flag_off.",
+      "about": "The account's mixes come from one place on every device: the current mix and every draft are kept with the account in the same form the Desktop app keeps them (ADR-0479, docs/engineering/engine-store-mixes.md), and the browser reads and changes them through the Desktop's own mix routes, which also need cloud.brain. The account's song requests are kept with it the same way and answer the Desktop's request routes, since a request joins the account's mix. The first time an account uses them, its saved browser mixes and uploaded-music mixes are copied in as drafts once; nothing about them is changed or removed. My Mixes then lists the drafts, a draft opens in the editor, and a change of the current mix reaches every open device. Mixes hold catalogue song ids and transition choices, never audio or file paths. On for every account with the cloud library (it needs cloud.hosted_media, decided per account) and off for every other: there the browser keeps its saved browser mixes as before, and these routes answer flag_off.",
       "routes": [
         "PUT /api/mix/order"
       ],
-      "requires": ["cloud.brain"],
+      "requires": ["cloud.brain", "cloud.hosted_media"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback",
       "cloud_surface_kind": "headless",
-      "cloud_surface_reason": "Changes where the browser keeps a mix, not any screen: Make a Mix, the editor and My Mixes look and work the same either way"
+      "cloud_surface_reason": "Changes where a mix is kept, not a page of its own: Make a Mix, the editor and My Mixes are the shared shell's, with the Desktop's drafts list"
     },
     "cloud.local_media": {
       "label": "Local media catalogue",

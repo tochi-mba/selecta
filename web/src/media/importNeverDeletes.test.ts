@@ -114,7 +114,8 @@ describe('the import path never deletes or moves a member file', () => {
 // way deletes, moves or writes the file, or takes the song out of the library.
 describe('uploading and cloud only never touch a member file', () => {
   it('has no destructive call in the queue, its helpers or cloud only', () => {
-    for (const name of ['cloudUploadQueue.ts', 'cloudOnly.ts', 'cloudUploadPacing.ts', 'cloudUploadWords.ts', 'uploadQueueWiring.ts', 'uploadParts.ts']) {
+    // with the consent sheet and its entry points (plan 6c), which read the device's songs only
+    for (const name of ['cloudUploadQueue.ts', 'cloudOnly.ts', 'cloudUploadPacing.ts', 'cloudUploadWords.ts', 'uploadQueueWiring.ts', 'uploadParts.ts', 'uploadConsent.ts', 'uploadEntry.tsx', 'UploadToCloudSheet.tsx']) {
       expect(code(cloudSource(name)).match(DESTRUCTIVE) ?? [], name).toEqual([]);
       // never the folder watch's "stop watching and remove its songs", never the library's remove
       expect(code(cloudSource(name)), name).not.toMatch(/stopWatching|local-media\/songs|removeSongs/);

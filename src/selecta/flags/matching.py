@@ -118,9 +118,9 @@ class Rule:
     - `schedule`: `from` and/or `until` as UTC epoch seconds, `on` (default true), plus optional
       segment keys. Within the segment, `on` inside the window and the opposite outside it.
     - `follows`: `flag`, another flag's id, and `on` (default true). `on` where that flag is on
-      for this account and the opposite where it is off, so a feature can go wherever a grant
-      goes (`cloud.account_mixes` with `cloud.hosted_media`). It needs that flag's own decision,
-      so `flags/targeting.py` answers it; its matcher here answers nothing.
+      for this account and the opposite where it is off, so staff can send a feature wherever
+      a grant goes without a release (a flag's `requires` does it for good). It needs that
+      flag's own decision, so `flags/targeting.py` answers it; its matcher here answers nothing.
     """
 
     kind: str
