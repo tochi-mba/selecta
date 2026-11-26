@@ -86,8 +86,17 @@ live engine already does. The schedule says `chosenBy: {by: 'account'}` and its 
 words. Otherwise the device chooses as before and the record says `chosenBy: {by: 'device', note}`
 with why: not measured, not this device's file, too late, nothing plays as planned, the call failed.
 
-The repair loop (`next-step`, `take-step`) is never asked: the live engine renders and audits
-nothing ahead of time, so there is no audit for the rule to read.
+The repair loop (`next-step`, `take-step`) is never asked of the account: the live engine renders
+and audits nothing ahead of time, so there is no audit for the rule to read.
+
+**Made ahead, with `cloud.device_render`.** The live mapping above is then the fallback. The device
+studio (`deviceStudio.ts`) asks `candidates` with `scripts: 8` instead of `scripts: 0` (one answer
+serves both), renders and audits the planner's options in a worker, follows the browser's own port
+of the repair rule, and plays the finished clip between the two songs; its record says
+`chosenBy: {by: 'account-rendered'}`. It also asks `POST /api/planning/candidates/script` for an
+option's script the first answer did not carry. When no clip is ready in time, or one is in doubt,
+the live plan above plays, its note saying why (`not rendered: ...`); without one, the device
+chooses as before. docs/engineering/device-studio-playback.md has the whole life of a seam.
 
 ### Move table (`plannerMoves.ts`)
 
@@ -118,6 +127,7 @@ A move the device can't do (no EQ, no echo returns, no stretch for the tempo gap
 | Transition | exit within 8 s of where A plays | the device chooses | |
 | Transition | prepared too late anyway | the scheduler's short fade (unchanged) | |
 | Transition | the stretched entry can't be made | scripted again without it, still the account's | stretch's own |
+| Transition (made ahead) | no clip in time, refused, or in doubt | the live plan above, then the device | device-studio-playback.md |
 
 ## What the member sees
 
@@ -127,8 +137,6 @@ energy." when the account chose it. Make a Mix's busy state may last up to 12 s 
 
 ## Next
 
-- The browser renders the planner's scripts offline in a worker and follows the repair rule with
-  `next-step`, replacing the live mapping above (`candidates` with `scripts`).
 - Beat This in the browser replaces the interim beat source; the account then needs an
   implementation id that names the beat source (to-do "The account cannot tell measurements from
   the interim beat source").

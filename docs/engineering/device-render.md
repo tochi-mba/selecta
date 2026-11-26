@@ -3,7 +3,8 @@
 ADR-0479, phase 5. The browser renders a `TransitionScript` (docs/engineering/transition-script-json.md)
 offline into a short clip, measures it with the Desktop's audit and follows the Desktop's repair
 rule, instead of improvising the transition live with Web Audio. This page is the recipe both
-sides follow and the record of how closely they agree. Playback does not use it yet.
+sides follow and the record of how closely they agree. Playback uses it through the device studio
+(docs/engineering/device-studio-playback.md).
 
 - Python: `render/engine.py` (`render`, `in_context`), `render/dsp.py`, `render/script.py`,
   `audit/checks.py` (`audit`, `audit_facts`), `planner_core/repair.py`.
@@ -174,14 +175,8 @@ It is never to be presented as the Desktop engine's render.
   for clips of 12 to 37 s (3.6 to 15 times faster than real time; the filter sweep's bank is the
   slow stage), audit 0.5 to 2.3 s. Not measured in a browser or on a tablet.
 
-## What the next task needs
+## Still to do
 
-1. The scheduler playing a rendered clip between native A and native B (the `in_context` joins:
-   30 ms linear crossfades at `a_source_start` and `b_source_end`), from the same decode it was
-   rendered from.
-2. Rendering ahead in play order with `SeamRenderer`, flag `cloud.device_render`, sending only
-   `neededWindows`; vocal spans from the device's own voice stems when it has them.
-3. The loop: the account's answer, or `repair.ts` here (`nextStep`, `takeStep`), with the tighten
-   take that shifts B by `audit.beatOffset` as the seam pipeline does.
-4. A better stretcher than WSOLA (to-do T-20261126-afe7), a faster sweep (T-20261126-1ed4), and
-   timings on a tablet and a phone (T-20261126-d1a3).
+A better stretcher than WSOLA (to-do T-20261126-afe7), a faster sweep (T-20261126-1ed4), and
+timings on a tablet and a phone (T-20261126-d1a3). Playback, render-ahead and the repair loop are
+in docs/engineering/device-studio-playback.md.
