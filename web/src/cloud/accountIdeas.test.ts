@@ -72,4 +72,11 @@ describe('the account\'s idea cards', () => {
     await family.answer('POST', '/vibes/late/build', new URLSearchParams(), { method: 'POST' });
     expect(created).toEqual([{ name: 'Late night', ids: [7, 5, 3, 1] }]);
   });
+
+  it('are asked over every measured song that plays here, past 60, up to the server bound', () => {
+    const many = Array.from({ length: 300 }, (_, at) => ({ id: at + 1, title: `Song ${String(at + 1).padStart(3, '0')}`, playable: true }));
+    const measured = new Map(many.map((song) => [song.id, {}]));
+    expect(ideaSongs(many, measured)).toHaveLength(300);
+    expect(ideaSongs([...many, { id: 999, title: 'Elsewhere', playable: false }], measured)).toHaveLength(300);
+  });
 });

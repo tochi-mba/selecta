@@ -1,16 +1,16 @@
 import type { VibeCard } from '../api';
 import { accountMeasured, answerWithin, askWithin, planningOn, type Request } from './accountFacts';
-import { ORDER_MOST, ORDER_NEEDS, ORDER_WITHIN_MS, orderBody, type OrderChoices } from './accountOrder';
+import { ORDER_NEEDS, ORDER_WITHIN_MS, orderBody, type OrderChoices } from './accountOrder';
 import { rememberFeel } from './mixFeel';
 
 /** The account's idea cards on Make a Mix (T-20261126-408d; docs/engineering/cloud-planning.md).
  *
  * The Desktop's idea cards ("Late night", "Warm up" and the rest) come from its planner over the
- * whole library. Here, with planning on, `POST /api/planning/ideas` is asked over the songs this
- * device can play that the account has measured, at most `ORDER_MOST` of them (the planner's own
- * limit, the same songs every time: by title), and its cards join the browser's own. Building one
- * asks `POST /api/planning/order` with that idea over the same songs, so the planner picks and
- * orders them as the Desktop's build does. Off, slow or refused: only the browser's own card, and
+ * whole library. Here, with planning on, `POST /api/planning/ideas` is asked over every song this
+ * device can play that the account has measured (up to `IDEAS_MOST`, the server's own bound: the
+ * cards read numbers only, T-20261126-6e24), and its cards join the browser's own. Building one
+ * asks `POST /api/planning/order` with that idea over the same songs, so the planner picks the
+ * songs that suit it best and orders them as the Desktop's build does. Off, slow or refused: only the browser's own card, and
  * its build, as before. Sent: song ids and the member's choices, never a file, path or audio. */
 
 export type PlayableLike = { id: number; title: string; playable: boolean; never?: boolean };
@@ -22,13 +22,16 @@ export type IdeasPlanner = {
   order: (key: string, songs: readonly PlayableLike[], choices: OrderChoices, count: number) => Promise<{ ids: number[]; name: string } | null>;
 };
 
+/** The most song ids the cards and a build name (`cloud_brain.idea_songs.MOST_NAMED`). */
+export const IDEAS_MOST = 5_000;
+
 /** The songs an idea is planned over: playable here, not set to Never play, measured in the
- * account, by title, at most the planner's limit. */
+ * account, by title, at most `IDEAS_MOST`. */
 export function ideaSongs(songs: readonly PlayableLike[], measured: ReadonlyMap<number, unknown>): number[] {
   return songs
     .filter((song) => song.playable && !song.never && measured.has(song.id))
     .sort((one, other) => one.title.localeCompare(other.title) || one.id - other.id)
-    .slice(0, ORDER_MOST)
+    .slice(0, IDEAS_MOST)
     .map((song) => song.id);
 }
 
