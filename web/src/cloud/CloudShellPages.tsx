@@ -47,6 +47,8 @@ import { ExportElsewhere } from '../views/exportElsewhere';
 import { cloudFileOn } from './cloudFileExport';
 import { CloudFileOffer } from './CloudFileOffer';
 import { TransitionsGettingReady } from './TransitionsGettingReady';
+import { accountMixesOn } from './accountMixes';
+import { AccountDraftEditor, accountDraftActions } from './AccountDrafts';
 
 // Lucy loads only when someone opens her, as in local mode, so she costs the shell nothing.
 const Lucy = lazy(() => import('../views/Lucy'));
@@ -122,6 +124,8 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   // cloud.one_mixer: the shared mixer for every account, and its file made in the cloud library
   const oneMixer = flagListed('cloud.one_mixer');
   const cloudFile = oneMixer && coexisting && cloudFileOn();
+  // cloud.account_mixes: My Mixes lists the account's drafts and the editor opens one (AccountDrafts.tsx)
+  const drafts = accountMixesOn() ? accountDraftActions({ request, setMixData, refreshStatus, player: shellPlayer, notify }) : null;
   // ADR-0476: Lucy reads the account's API herself, so she opens at once, never behind the
   // catalogue's first load (2,919 songs took about 30 s on staging)
   if (route.page === 'lucy' && lucyHere) return <Suspense fallback={<Skeleton lines={4} label="Opening Lucy" />}><Lucy conversation={route.conversation} setMixData={setMixData} player={shellPlayer} request={request} usageRequest={cloud} settingsPanel={<LucyCloudSettings request={cloud} />} /></Suspense>;
@@ -168,6 +172,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
       // I84: on a remote, the Library's Play next follows the speaker's music, not this device's
       return <CloudLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} cloudStorage={coexisting} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
     case 'mixes':
+      if (route.tab === 'mine' && drafts) return <><MyMixes {...shared} {...drafts} />{localExport}</>;
       if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
       // R8: a device with little music mixes the songs R1's device holds; hosted: HostedMakeAMix.tsx
       { const mixer = mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
@@ -203,12 +208,13 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
         </>
       );
     case 'edit':
-      // Saved browser mixes are opened as the current mix from My Mixes, so only the current
-      // mix has an editor here.
+      // The account's drafts have an editor of their own; saved browser mixes are opened as the
+      // current mix from My Mixes, so with account mixes off only the current mix has one here.
+      if (route.draft !== null && drafts) return <AccountDraftEditor draftId={route.draft} shared={shared} request={request} actions={drafts} />;
       if (route.draft !== null) return <OnlyOnYourComputer title="Editing a saved draft" nearest={{ label: 'My Mixes', path: '/mixes/mine' }} />;
       if (mixProblem && !data.mix.length) return <MixProblem onRetry={refreshMix} />;
       // cloud.one_mixer: the Export panel may also make the file in the cloud library
-      return <ExportElsewhere.Provider value={cloudFile ? CloudFileOffer : null}><Mix {...shared} key="current" /></ExportElsewhere.Provider>;
+      return <ExportElsewhere.Provider value={cloudFile ? CloudFileOffer : null}><Mix {...shared} {...(drafts ?? {})} key="current" /></ExportElsewhere.Provider>;
     case 'missing':
       return <PageNotFound />;
     case 'discover':
