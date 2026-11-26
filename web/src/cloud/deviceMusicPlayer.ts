@@ -29,6 +29,8 @@ import { saveSongLength } from './songLength';
 import { accountSeamPlanner, type AccountSeamAnswer, type AccountSeamAsk } from './accountSeams';
 import { deviceRenderOn, type StudioSong } from './deviceStudio';
 import { makeDeviceStudio } from './studioWiring';
+import { CloudSeams, cloudPairsOf, cloudSeamsOn, withCloudSeams, type CloudPair } from './cloudSeams';
+import { browserConnection } from './studioPlan';
 
 /** The shell player for local-first Cloud (ADR-0462 BF-0462-06): the browser engine's speaker
  * (ADR-0457 BrowserSpeaker) driven through the ADR-0415 playback session (usePlaybackDevice),
@@ -415,7 +417,8 @@ export type SeamWiring = {
 
 /** Opens the engine from a press and makes this device's speaker. Injectable for tests. */
 export type EngineStarter = (
-  resolve: (index: number) => Promise<{ id: number; data: () => Promise<ArrayBuffer> } | null>,
+  /** `level`: the gain a song must play at (cloud.studio_seams); measured when absent. */
+  resolve: (index: number) => Promise<{ id: number | string; data: () => Promise<ArrayBuffer>; level?: number } | null>,
   queueLength?: () => number,
   seams?: SeamWiring,
   /** Told each time the engine has decoded a song to play (engine/speakerAdapter.ts decoded). */
@@ -523,8 +526,9 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   /** The media agent's resolver (media/makeResolver), opened lazily; null before it exists. */
   resolver: () => Promise<MediaResolver | null>;
   starter?: EngineStarter;
-  /** The catalogue's request, to save a length decoded here for a song that has none (songLength.ts). */
-  request?: <T>(path: string, init?: RequestInit) => Promise<T>;
+  /** The catalogue's request, to save a length decoded here for a song that has none (songLength.ts);
+   * with `cloudOwnCopy`, each song's own cloud copy (cloud.studio_seams). */
+  request?: (<T>(path: string, init?: RequestInit) => Promise<T>) & { cloudOwnCopy?: (songId: number) => Promise<string | null> };
   /** Told, by song, each time the engine has decoded one to play (Listen's waveforms read it). */
   decoded?: (songId: number, audio: AudioBuffer) => void;
 }) {
@@ -587,6 +591,20 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     },
   }), [workspaceId, resolver]);
   useEffect(() => () => studio.dispose(), [studio]);
+  // cloud.studio_seams: transitions between cloud library songs made in the cloud, two ahead
+  const cloud = useMemo(() => new CloudSeams({
+    request: (path, init) => apiNow.current(path, init, workspaceId),
+    // decoded by the playing context, at its rate, as the songs are
+    decode: async (bytes) => (await speakerNow.current?.decodedSource({ id: 'cloud-clip', data: async () => bytes })) ?? null,
+    heard: () => {
+      const at = speakerNow.current?.position();
+      return at ? { index: at.song_index, seconds: at.offset_ms / 1000 } : null;
+    },
+    on: () => cloudSeamsOn() && seamLeadOn(),
+  }), [workspaceId]);
+  useEffect(() => () => cloud.dispose(), [cloud]);
+  // the song each lossless file plays, for Listen's waveforms
+  const cloudFiles = useRef(new Map<string, number>());
   // The stem prefetcher (cloud.browser_stems): splits the windows the next transitions need while
   // this song plays. Only with the flag on, the stem model's licence cleared and a model published.
   const prefetcher = useMemo(() => {
@@ -626,7 +644,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     onPlanned: (record) => setSeams((kept) => [...kept, { ...record, pair: [songs.current[record.fromIndex]?.song_id ?? null, songs.current[record.toIndex]?.song_id ?? null] as const }].slice(-SEAMS_KEPT)),
     allowed: () => (browserMovesOn() ? browserMovesAllowed() : undefined),
     stems: stemReading,
-    planned: accountSeamPlanner({
+    // the cloud studio first for its own seams, then the account's planner (cloudSeams.ts)
+    planned: withCloudSeams(cloud, accountSeamPlanner({
       request: (path, init) => apiNow.current(path, init, workspaceId),
       workspaceId,
       fileOf: (index) => held.current.get(index)?.songId ?? null,
@@ -636,8 +655,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
         return at ? { index: at.song_index, seconds: at.offset_ms / 1000 } : null;
       },
       studio,
-    }),
-  }), [stemReading, workspaceId, studio]);
+    })),
+  }), [stemReading, workspaceId, studio, cloud]);
 
   useEffect(() => speaker?.onState(setEngine), [speaker]);
   // the clock moves while playing: redraw the position twice a second, never faster
@@ -648,13 +667,17 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
 
   const resolve = useCallback(async (index: number) => {
     const songId = songs.current[index]?.song_id;
-    const found = songId === undefined ? null : await (await resolver())?.(songId);
+    const usual = async () => (songId === undefined ? null : (await (await resolver())?.(songId)) ?? null);
+    // cloud.studio_seams: a song next to a cloud seam plays its lossless file at its clip's level
+    const lossless = songId === undefined ? null : await cloud.songAt(index, songId, usual).catch(() => null);
+    if (lossless && songId !== undefined) cloudFiles.current.set(lossless.id, songId);
+    const found = lossless ?? await usual();
     if (found) sources.current.set(index, found.source ?? 'device');
     else sources.current.delete(index);
-    if (found?.held && (found.source ?? 'device') === 'device') held.current.set(index, found.held);
+    if (found && 'held' in found && found.held && (found.source ?? 'device') === 'device') held.current.set(index, found.held);
     else held.current.delete(index);
-    return found ? { id: found.id, data: found.data } : null;
-  }, [resolver]);
+    return found ? { id: found.id, data: found.data, ...(found.level !== undefined ? { level: found.level } : {}) } : null;
+  }, [resolver, cloud]);
 
   // A speaker made from a press asks for the lease once it exists.
   useEffect(() => {
@@ -682,7 +705,11 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
         ...wiring,
         workerCalibration: measured?.record ?? null,
         deviceId: measured?.deviceId ?? null,
-      }, (id, buffer) => { if (typeof id === 'number') onDecoded.current?.(id, buffer); });
+      }, (id, buffer) => {
+        cloud.noteDecoded(id, buffer);
+        const songId = typeof id === 'number' ? id : cloudFiles.current.get(id);
+        if (songId !== undefined) onDecoded.current?.(songId, buffer);
+      });
       if (made.refusal) {
         made.speaker?.dispose();
         setRefusal(made.refusal);
@@ -777,6 +804,18 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     });
     return () => { live = false; };
   }, [studio, speaker, position, mix, resolve]);
+  // cloud.studio_seams: which seams the cloud studio makes (studioPlan.ts), worked out per mix
+  const [cloudPairs, setCloudPairs] = useState<readonly (CloudPair | null)[]>([]);
+  const ownCopy = request?.cloudOwnCopy;
+  useEffect(() => {
+    if (!ownCopy || !cloudSeamsOn() || !seamLeadOn()) { setCloudPairs([]); return undefined; }
+    let live = true;
+    void cloudPairsOf(mix, ownCopy, { device: deviceRenderOn(), here: (index) => held.current.has(index), connection: browserConnection() })
+      .then((pairs) => { if (live) setCloudPairs(pairs); }, () => undefined);
+    return () => { live = false; };
+  }, [mix, ownCopy]);
+  // ...and the next two of them asked for, from the playing song
+  useEffect(() => { if (speaker) cloud.follow(cloudPairs, position); }, [cloud, speaker, cloudPairs, position]);
   const prefetch: Observable<PrefetchState> | null = prefetcher?.state ?? null;
   // T-20261125-8ab8: the song the engine decoded has a length the catalogue lacks; keep it there
   const playingSong = here ? mix[here.song_index] : undefined;

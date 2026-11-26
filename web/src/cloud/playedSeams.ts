@@ -2,6 +2,7 @@ import type { SeamSchedule } from '../dsp/seams';
 import type { PlayedSeam } from '../views/liveTransitions';
 import { playedKey } from '../views/liveTransitions';
 import { moveWords } from './browserMoves';
+import { ALLOWANCE_USED_LINE } from './cloudSeams';
 import type { PlayedRecord } from './deviceMusicPlayer';
 
 const sentence = (text: string) => {
@@ -13,8 +14,11 @@ const sentence = (text: string) => {
  * listener heard (dsp/seamProvider.ts records schedules, not sound). */
 export function playedWords(schedule: SeamSchedule): PlayedSeam {
   const reasons = (schedule.degraded ?? []).map((degrade) => degrade.reason);
+  // cloud.studio_seams: the one quiet line when the day's prepared transitions are used up
+  const usedUp = schedule.chosenBy?.note === ALLOWANCE_USED_LINE ? ALLOWANCE_USED_LINE : null;
   if (schedule.kind === 'fade') {
-    return { label: 'Faded', detail: reasons.length ? sentence(reasons[reasons.length - 1]) : null, fellBack: true };
+    const detail = [reasons.length ? sentence(reasons[reasons.length - 1]) : null, usedUp].filter(Boolean).join(' ');
+    return { label: 'Faded', detail: detail || null, fellBack: true };
   }
   const style = schedule.style ?? 'blend';
   const name = moveWords(style)?.label ?? style.replaceAll('_', ' ');
@@ -28,7 +32,7 @@ export function playedWords(schedule: SeamSchedule): PlayedSeam {
   const stretched = schedule.stretch && !schedule.why
     ? `The next song was stretched ${(Math.abs(schedule.stretch.ratio - 1) * 100).toFixed(1)} percent to match, without changing its pitch.`
     : null;
-  return { label, detail: [schedule.why ?? null, stretched, shortened, ...other].filter(Boolean).join(' ') || null, fellBack: false };
+  return { label, detail: [schedule.why ?? null, stretched, shortened, ...other, usedUp].filter(Boolean).join(' ') || null, fellBack: false };
 }
 
 /** The latest scheduled seam for each pair of songs, keyed as the editor looks them up. */
