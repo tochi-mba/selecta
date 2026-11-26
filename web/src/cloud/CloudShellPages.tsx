@@ -42,6 +42,11 @@ import { onboardingFinished } from './onboarding/state';
 import type { useImportShellView } from './importSession';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
 import { HostedMakeAMix } from './hosted/HostedMakeAMix';
+import { flagListed } from '../flags';
+import { ExportElsewhere } from '../views/exportElsewhere';
+import { cloudFileOn } from './cloudFileExport';
+import { CloudFileOffer } from './CloudFileOffer';
+import { TransitionsGettingReady } from './TransitionsGettingReady';
 
 // Lucy loads only when someone opens her, as in local mode, so she costs the shell nothing.
 const Lucy = lazy(() => import('../views/Lucy'));
@@ -114,6 +119,9 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   const { data, mixProblem, setMixData, shellPlayer, now, playback, refusal, output, notify, openStore, connect, sweepLapsed, stems, recipes, deviceTrack, book } = at;
   const { lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive } = at;
   const { remote, playWays, holdings, where, followsHere, newest, songOrder, playOn } = at;
+  // cloud.one_mixer: the shared mixer for every account, and its file made in the cloud library
+  const oneMixer = flagListed('cloud.one_mixer');
+  const cloudFile = oneMixer && coexisting && cloudFileOn();
   // ADR-0476: Lucy reads the account's API herself, so she opens at once, never behind the
   // catalogue's first load (2,919 songs took about 30 s on staging)
   if (route.page === 'lucy' && lucyHere) return <Suspense fallback={<Skeleton lines={4} label="Opening Lucy" />}><Lucy conversation={route.conversation} setMixData={setMixData} player={shellPlayer} request={request} usageRequest={cloud} settingsPanel={<LucyCloudSettings request={cloud} />} /></Suspense>;
@@ -170,7 +178,8 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
           checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
         />
       );
-      return <>{coexisting && on('cloud.hosted_render') ? <HostedMakeAMix api={api} workspaceId={workspaceId} browserMixer={mixer} othersPlaying={now.phase === 'playing'} stopOthers={() => { if (now.phase === 'playing') void shellPlayer.togglePause(); }} /> : mixer}{localExport}</>; }
+      // cloud.one_mixer: the shared mixer for every account; the old card only with it off
+      return <>{coexisting && on('cloud.hosted_render') && !oneMixer ? <HostedMakeAMix api={api} workspaceId={workspaceId} browserMixer={mixer} othersPlaying={now.phase === 'playing'} stopOthers={() => { if (now.phase === 'playing') void shellPlayer.togglePause(); }} /> : mixer}{localExport}</>; }
     case 'listen':
       // something is playing on another device and this one does not hold that mix: the remote
       if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} ways={playWays} refusal={playback.error} speakerSongs={holdings.speakerSongs} notice={where.notice} onDismissNotice={where.clearNotice} />;
@@ -190,7 +199,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
       return (
         <>
           {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
-          {data.mix.length ? <Now {...shared} listenQueue={<ListenQueue mix={data.mix} now={now} player={shellPlayer} />} noticeAction={<>{output?.state === 'output_unverified' && <SoundCheck />}{on('cloud.local_media') && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} nothingPlays={now.notice === NOTHING_PLAYABLE_NOTICE} />}</>} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
+          {data.mix.length ? <Now {...shared} listenQueue={<>{oneMixer && <TransitionsGettingReady workspaceId={workspaceId} />}<ListenQueue mix={data.mix} now={now} player={shellPlayer} /></>} noticeAction={<>{output?.state === 'output_unverified' && <SoundCheck />}{on('cloud.local_media') && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} nothingPlays={now.notice === NOTHING_PLAYABLE_NOTICE} />}</>} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
         </>
       );
     case 'edit':
@@ -198,7 +207,8 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
       // mix has an editor here.
       if (route.draft !== null) return <OnlyOnYourComputer title="Editing a saved draft" nearest={{ label: 'My Mixes', path: '/mixes/mine' }} />;
       if (mixProblem && !data.mix.length) return <MixProblem onRetry={refreshMix} />;
-      return <Mix {...shared} key="current" />;
+      // cloud.one_mixer: the Export panel may also make the file in the cloud library
+      return <ExportElsewhere.Provider value={cloudFile ? CloudFileOffer : null}><Mix {...shared} key="current" /></ExportElsewhere.Provider>;
     case 'missing':
       return <PageNotFound />;
     case 'discover':
