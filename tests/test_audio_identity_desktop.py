@@ -9,10 +9,10 @@ with either flag off everything is as before. Synthetic files from the shared fi
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
-import shutil
 import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
@@ -27,6 +27,12 @@ from selecta.engine_store import library, song_hashes
 from selecta.engine_store import songs as stored
 
 FIXTURES = Path(__file__).parent / "fixtures" / "audio_identity"
+
+
+def _fixture_bytes(name: str) -> bytes:
+    """A fixture's bytes, which travel in the manifest: the repo ignores audio file names."""
+    files = json.loads((FIXTURES / "manifest.json").read_text(encoding="utf-8"))["files"]
+    return base64.b64decode(next(entry["bytes"] for entry in files if entry["file"] == name))
 MANIFEST = {
     entry["file"]: entry
     for entry in json.loads((FIXTURES / "manifest.json").read_text(encoding="utf-8"))["files"]
@@ -52,7 +58,7 @@ def _song(settings: Settings, fixture: str, song_id: int = 1) -> Path:
     music = settings.home / "music"
     music.mkdir(exist_ok=True)
     file = music / f"{song_id}.mp3"
-    shutil.copyfile(FIXTURES / fixture, file)
+    file.write_bytes(_fixture_bytes(fixture))
     facts = file.stat()
     conn = db.connect(settings.db_path)
     conn.execute(
@@ -195,7 +201,7 @@ def test_a_read_error_skips_the_song_without_stopping_the_pass(home, monkeypatch
 
 def _retag(settings: Settings, file: Path, fixture: str) -> None:
     """What a scan does when another player re-tagged the file: new bytes, tags, size and time."""
-    shutil.copyfile(FIXTURES / fixture, file)
+    file.write_bytes(_fixture_bytes(fixture))
     facts = file.stat()
     conn = db.connect(settings.db_path)
     try:

@@ -8,15 +8,15 @@ import { audioId, audioIdOfBytes, fileIdentity } from './audioIdentity';
 // Same disk access as stretch.test.ts: the app's tsconfig has no Node types. Vitest runs in web/.
 const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
 const fs = node.getBuiltinModule('node:fs') as {
-  readFileSync(path: string): Uint8Array;
   readFileSync(path: string, encoding: 'utf8'): string;
 };
 const FOLDER = `${node.cwd()}/../tests/fixtures/audio_identity`;
 
-type Entry = { file: string; group: string | null; audio_id: string | null; size: number };
+type Entry = { file: string; group: string | null; audio_id: string | null; size: number; bytes: string };
 const manifest = JSON.parse(fs.readFileSync(`${FOLDER}/manifest.json`, 'utf8')) as { version: string; files: Entry[] };
 
-const bytesOf = (entry: Entry) => new Uint8Array(fs.readFileSync(`${FOLDER}/${entry.file}`));
+// The bytes travel in the manifest as base64: the repo ignores audio file names on purpose.
+const bytesOf = (entry: Entry) => Uint8Array.from(atob(entry.bytes), (char) => char.charCodeAt(0));
 const blobOf = (entry: Entry) => new Blob([bytesOf(entry) as BlobPart]);
 
 describe('audio id fixtures', () => {

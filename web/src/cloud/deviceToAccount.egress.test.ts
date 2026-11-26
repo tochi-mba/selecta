@@ -28,6 +28,7 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
 /** A path in any of its shapes: a drive, a backslash, two or more slash-separated names, or an
  * audio file's name. Base64 array data (which may hold slashes) is checked apart. */
 const PATH_LIKE = /[A-Za-z]:\\|\\|\b[\w .-]+\/[\w .-]+\/|\.(mp3|flac|wav|m4a|aac|ogg|opus|aiff?)\b/i;
+const ROUTE_LEAK = /[A-Za-z]:\\|\\|\.(mp3|flac|wav|m4a|aac|ogg|opus|aiff?)/i;
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 /** More numbers than a beat grid could ever have: a second of audio at 8 kHz. */
 const AUDIO_SIZED = 8_000;
@@ -76,7 +77,9 @@ function numbersIn(value: unknown): number {
 
 function holdsTheContract(call: Captured) {
   expect(ALLOWED.some(([method, path]) => method === call.method && path.test(call.path)), `${call.method} ${call.path}`).toBe(true);
-  expect(call.path).not.toMatch(PATH_LIKE);
+  // a route has slashes of its own and is pinned by ALLOWED; what it must never carry is a
+  // drive, a backslash or an audio file name
+  expect(call.path).not.toMatch(ROUTE_LEAK);
   if (call.body === undefined) return;
   expect(() => assertNoPath(call.body)).not.toThrow();
   const words = texts(call.body);

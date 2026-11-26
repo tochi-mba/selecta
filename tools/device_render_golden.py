@@ -669,7 +669,7 @@ def main(argv: list[str] | None = None) -> None:
             }
         )
         print(case["name"], "written")
-    _write(args.out / "repair.json", json.dumps(repair_cases(), indent=1))
+    _write(args.out / "repair.json", json.dumps(repair_cases(), separators=(",", ":")))
     manifest = {
         "about": "Fixtures for the browser renderer and audit; docs/engineering/device-render.md",
         "generator": "tools/device_render_golden.py",
