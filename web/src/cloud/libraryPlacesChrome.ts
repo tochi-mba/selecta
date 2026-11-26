@@ -5,7 +5,7 @@ import type { LibraryPlacesChrome, RemovedFromCloud } from '../views/LibraryPlac
 import { forgetCloudLibraryAssets, LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { CATALOGUE_CHANGED_EVENT } from './deviceMusicRequest';
 import { groupingFor } from './songVersions';
-import { songUploadActions } from './uploadEntry';
+import { libraryUploadSongs, songUploadActions } from './uploadEntry';
 import type { MediaStore } from '../media/store';
 
 /** library.places in CloudShell: the Library's places chrome, and removing songs from the cloud
@@ -62,6 +62,9 @@ export function useLibraryPlaces({ on, cloud, workspaceId, accountId, canUpload,
     accountId, otherDevices, canUpload, offline,
     removeFromCloud: (songIds: readonly number[]) => removeFromCloud(cloud, workspaceId, songIds),
     upload: () => navigate('/upload'),
-    ...(media && openStore ? { uploadActions: songUploadActions({ request: media, openStore }) } : {}),
+    ...(media && openStore ? {
+      uploadActions: songUploadActions({ request: media, openStore }),
+      uploadSongs: libraryUploadSongs({ request: media, openStore }),
+    } : {}),
   } : null), [on, cloud, workspaceId, accountId, canUpload, offline, otherDevices, media, openStore]);
 }

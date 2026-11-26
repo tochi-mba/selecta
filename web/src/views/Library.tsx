@@ -744,8 +744,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             notify(words);
             await load();
           }} />}
+          {/* cloud.move_to_cloud: the selection's songs on this device upload to the cloud library */}
+          {places?.uploadSongs?.(visibleSelected, 'selected')}
         </BrowserLibraryMeta>
       )}
+      {placed?.place === 'here' && !placed.aside && !!committedRows?.length && places?.uploadSongs?.(committedRows, 'shown')}
       {!browser && <p className="hint library-count" role="status">{committedRows === null ? '' : <RollingCount value={total} format={(all) => `${countWords(committedRows.length, all, false)}.`} />}</p>}
       {!browser && batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">

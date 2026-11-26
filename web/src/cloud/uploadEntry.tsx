@@ -76,16 +76,32 @@ type UploadParts = { request: Request; openStore: () => Promise<MediaStore>; onS
 
 /** One upload action as a button, hosting its own sheet: for the Library's selection bar ("Upload
  * to your cloud library") and its On this device list ("Upload all N shown"). */
-export function UploadSongsButton({ action, className, ...parts }: UploadParts & { action: UploadAction; className?: string }) {
+export function UploadSongsButton({ action, className, row = false, ...parts }: UploadParts & { action: UploadAction; className?: string; row?: boolean }) {
   const upload = useUploadToCloud(parts);
   if (!upload.available) return null;
-  return (
+  const body = (
     <>
       <button type="button" className={className} onClick={() => void upload.open(action.songIds)}><Icon name="plus" size="toolbar" />{action.label}</button>
       {upload.problem && <span className="hint" role="status">{upload.problem}</span>}
       {upload.sheet}
     </>
   );
+  return row ? <div className="row wrap">{body}</div> : body;
+}
+
+/** The Library's selection bar and its On this device list (`LibraryPlacesChrome.uploadSongs`):
+ * the songs among these whose file is on this device and that have no cloud copy. */
+export function libraryUploadSongs(parts: UploadParts): (songs: readonly Pick<LibrarySong, 'id' | 'places'>[], kind: 'selected' | 'shown') => ReactNode {
+  return function LibraryUpload(songs, kind) {
+    const known = new Map(songs.map((song) => [song.id, song]));
+    const ids = songs.map((song) => song.id);
+    const [action] = uploadActionsFor({
+      ...(kind === 'selected' ? { selected: ids } : { shown: ids, showHere: true }),
+      onDevice: (id) => !!known.get(id)?.places?.device,
+      inCloud: (id) => !!known.get(id)?.places?.cloud,
+    });
+    return action ? <UploadSongsButton action={action} row={kind === 'shown'} {...parts} /> : null;
+  };
 }
 
 /** A song's details: "Upload to your cloud library" for a song whose file is on this device and
@@ -94,7 +110,7 @@ export function UploadSongsButton({ action, className, ...parts }: UploadParts &
 export function songUploadActions(parts: UploadParts): (song: Pick<LibrarySong, 'id' | 'places'>) => ReactNode {
   return function SongUpload(song) {
     const [action] = uploadActionsFor({ song: song.id, onDevice: () => !!song.places?.device, inCloud: () => !!song.places?.cloud });
-    return action ? <div className="row wrap"><UploadSongsButton action={action} {...parts} /></div> : null;
+    return action ? <UploadSongsButton action={action} row {...parts} /> : null;
   };
 }
 

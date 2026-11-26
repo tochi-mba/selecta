@@ -22,6 +22,9 @@ export type LibraryPlacesChrome = {
   /** Phase 6 (cloud.move_to_cloud): the upload actions in a song's details. Nothing is given
    * yet, so nothing is drawn. */
   uploadActions?: (song: LibrarySong) => ReactNode;
+  /** cloud.move_to_cloud: "Upload to your cloud library" for a selection, or "Upload all N
+   * shown" for the On this device list; nothing when no song there can upload. */
+  uploadSongs?: (songs: readonly LibrarySong[], kind: 'selected' | 'shown') => ReactNode;
 };
 
 /** The server's answer to a removal: per song, how many copies went and whether it is now
