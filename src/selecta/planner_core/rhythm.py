@@ -23,10 +23,11 @@ from selecta.planner_core.fit import fold_ratio
 STEPS = 16
 """Steps per band in a stored bar pattern (`features.PATTERN_STEPS`)."""
 
-CLASH_BELOW = 0.5
-"""Patterns less alike than this fight. On the synthetic design pairs a four-on-the-floor house
-groove against itself scored about 1.0, against a broken beat or a swung groove well under this.
-Provisional until the owner has listened."""
+CLASH_BELOW = 0.45
+"""Patterns less alike than this fight. Measured on synthetic grooves at 124 BPM, 16-bar overlap:
+four on the floor against itself 1.00 (and at 126 BPM 0.996), against straight sixteenth hats
+0.50, against a broken beat 0.13, a swung groove 0.15, a swung two-step -0.20; a broken beat
+against a swung groove -0.23. Provisional until the owner has listened."""
 SWING_FREE = 0.03
 """A swing gap this small is the same feel."""
 SWING_WEIGHT = 3.0
@@ -44,7 +45,7 @@ class RhythmFit:
     similarity: float
     """About 1 for the same pattern, near 0 or below for patterns that fight."""
     pattern: float
-    """The mean correlation of the two bands' step patterns."""
+    """The lower of the two bands' step-pattern correlations."""
     swing_gap: float | None
     """How far apart the two swings sit, or None where it isn't compared (half or double time)."""
 
@@ -94,7 +95,9 @@ def rhythm_fit(
             heard.append(value)
     if not heard:
         return None
-    pattern = float(np.mean(heard))
+    # either band fighting is a fight: two snares on two and four don't make two kick patterns
+    # sit together (the synthetic broken beat matched four on the floor at 0.8 on the mean)
+    pattern = float(min(heard))
     swing_gap = None
     if fold == 1.0 and a.swing_bars is not None and b.swing_bars is not None:
         # swing is a share of one beat, so it only compares at one pulse

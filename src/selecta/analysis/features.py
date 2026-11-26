@@ -125,6 +125,7 @@ SWING_LOW, SWING_HIGH = 0.40, 0.70
 """Where an off-beat may sit within its beat: a straight eighth at 0.5, a triplet swing at
 0.67. The next sixteenth (0.75) is left out, so straight sixteenths never read as swing."""
 SWING_PHASES = 48
+ONSET_LEAD_SECONDS = 0.03
 QUIET_OFFBEAT = 0.1
 """An off-beat peak below this share of the beat's strongest hit isn't heard as one."""
 
@@ -151,6 +152,9 @@ def rhythm_bars(
         _band_onsets(power, frequencies >= PATTERN_HIGH_HZ),
     )
     frame_seconds = HOP / FEATURE_SR
+    # a centred 2048-point frame starts rising about 30 ms before the hit it hears (measured on
+    # the synthetic grooves: straight eighths read 0.44 of a beat and triplets 0.60 without this)
+    lead = ONSET_LEAD_SECONDS / frame_seconds
     frames = power.shape[1]
     edges = np.concatenate((bar_times, [duration]))
     patterns = np.zeros((bar_times.size, 2 * PATTERN_STEPS), dtype=np.float32)
@@ -168,8 +172,8 @@ def rhythm_bars(
             for k in range(PATTERN_STEPS):
                 # one step's window, centred on the step, so a hit a little early still counts
                 centre = start + k * step
-                lo = max(int(np.floor((centre - step / 2) / frame_seconds)), 0)
-                hi = min(int(np.ceil((centre + step / 2) / frame_seconds)), frames)
+                lo = max(int(np.floor((centre - step / 2) / frame_seconds - lead)), 0)
+                hi = min(int(np.ceil((centre + step / 2) / frame_seconds - lead)), frames)
                 if hi > lo:
                     row[k] = onsets[lo:hi].max()
             peak = float(row.max())
@@ -177,10 +181,14 @@ def rhythm_bars(
                 patterns[bar, band * PATTERN_STEPS : (band + 1) * PATTERN_STEPS] = row / peak
         beat = (end - start) / beats
         times = start + beat * (np.arange(beats)[:, None] + phases[None, :])
-        profile = np.interp(times / frame_seconds, np.arange(frames), bands[1]).mean(axis=0)
+        profile = np.interp(times / frame_seconds - lead, np.arange(frames), bands[1]).mean(axis=0)
+        # only a real peak counts: the rising edge of the next sixteenth at the window's end
+        # would otherwise read as a late off-beat
+        peaks = window & (profile >= np.roll(profile, 1)) & (profile >= np.roll(profile, -1))
         top = float(profile.max())
-        if top > 1e-6 and float(profile[window].max()) >= QUIET_OFFBEAT * top:
-            swing[bar] = float(phases[window][int(np.argmax(profile[window]))])
+        if top > 1e-6 and peaks.any() and float(profile[peaks].max()) >= QUIET_OFFBEAT * top:
+            found = np.flatnonzero(peaks)
+            swing[bar] = float(phases[found[int(np.argmax(profile[found]))]])
     return patterns, swing
 
 
