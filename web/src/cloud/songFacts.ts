@@ -36,7 +36,7 @@ export function deviceFactsStore(open: () => Promise<DerivedStore> = derivedStor
   };
 }
 
-/** One song's facts measured here, or null when it has none at the current version (not yet
+/** One song's facts measured here, or null when it has none at the current version (never
  * measured, unreadable, or measured by an older implementation). `sha` must come from the
  * caller's own song index. */
 export async function songFacts(sha: string, open: () => Promise<DerivedStore> = derivedStore): Promise<SongFacts | null> {
