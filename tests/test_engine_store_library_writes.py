@@ -394,3 +394,20 @@ def test_backup_and_restore_carry_the_scanned_rows(home, tmp_path):
     with zipfile.ZipFile(io.BytesIO(archive)) as zipped:
         zipped.extract("selecta.sqlite", restored)
     assert _rows(restored / "selecta.sqlite") == kept
+
+
+def test_a_restore_closes_the_stores_connections_before_it_replaces_the_file(home, tmp_path):
+    import hashlib
+
+    root = tmp_path / "music"
+    _prepared(home, root)
+    conn = db.connect(home.db_path)
+    kept = _rows(home.db_path)
+    archive = backup.export_backup(conn, home)
+    db.set_preference(conn, "library_folders", ["/changed"])  # held: the store's pool is open
+    assert db.preference(conn, "library_folders") == ["/changed"]
+    conn.close()
+    backup.stage_restore(home, archive, hashlib.sha256(archive).hexdigest())
+    # without `library.forget` in the restore, Windows refuses to replace the open file
+    assert backup.activate_pending_restore(home) is True
+    assert _rows(home.db_path) == kept
