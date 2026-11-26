@@ -15,7 +15,8 @@ import threading
 from collections.abc import Iterable
 from typing import Any
 
-from selecta.lucy import EVENT_SCHEMA_VERSION
+from selecta.engine_store.lucy import events as stored
+from selecta.lucy import EVENT_SCHEMA_VERSION, backing
 from selecta.lucy.ids import now_iso
 
 EVENT_TYPES = frozenset(
@@ -94,6 +95,12 @@ def append(
 ) -> int:
     if type not in EVENT_TYPES:
         raise ValueError(f"Unknown Lucy event type {type!r}")
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            return stored.append(
+                tx, conversation, type, payload, turn=turn, run=run, plan=plan, step=step
+            )
     cursor = conn.execute(
         "INSERT INTO lucy_events(conversation_id,v,type,turn_id,run_id,plan_id,step_id,payload,"
         "created_at) VALUES(?,?,?,?,?,?,?,?,?)",
@@ -148,21 +155,33 @@ def since(
         "SELECT pruned_through FROM lucy_conversations WHERE id=?", (conversation,)
     ).fetchone()
     if row is None:
-        return {"events": [], "gap": False, "missing": True, "cursor": after}
-    gap = after < row["pruned_through"]
+        return _since(after, None, [])
     rows = conn.execute(
         "SELECT * FROM lucy_events WHERE conversation_id=? AND id>? ORDER BY id LIMIT ?",
         (conversation, after, limit),
     ).fetchall()
+    return _since(after, row["pruned_through"], rows)
+
+
+def _since(after: int, pruned: int | None, rows: list) -> dict[str, Any]:
+    if pruned is None:
+        return {"events": [], "gap": False, "missing": True, "cursor": after}
     events = [_shape(item) for item in rows]
     cursor = events[-1]["id"] if events else after
-    return {"events": events, "gap": gap, "missing": False, "cursor": cursor}
+    return {"events": events, "gap": after < pruned, "missing": False, "cursor": cursor}
 
 
 def latest_id(conn: sqlite3.Connection, conversation: str) -> int:
     known = LATEST.get(conversation)
     if known:
         return known
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            found = stored.newest(tx, conversation)
+        if found:
+            LATEST.bump(conversation, found)
+        return found
     row = conn.execute(
         "SELECT MAX(id) FROM lucy_events WHERE conversation_id=?", (conversation,)
     ).fetchone()
@@ -187,6 +206,10 @@ def prune(conn: sqlite3.Connection, conversation: str, keep: int = RETAIN_EVENTS
     floor = newest - keep
     if floor <= 0:
         return 0
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            return stored.prune(tx, conversation, floor)
     removed = conn.execute(
         "DELETE FROM lucy_events WHERE conversation_id=? AND id<=? AND type IN "
         "('message.delta','step.progress')",

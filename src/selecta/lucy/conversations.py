@@ -12,7 +12,8 @@ import json
 import sqlite3
 from typing import Any
 
-from selecta.lucy import events
+from selecta.engine_store.lucy import conversations as stored
+from selecta.lucy import backing, events
 from selecta.lucy.ids import new_id, now_iso
 
 TITLE_LIMIT = 80
@@ -32,6 +33,11 @@ def _clean_title(text: str) -> str:
 
 def create(conn: sqlite3.Connection, title: str = "", scope: dict | None = None) -> dict:
     conversation = new_id("conversation")
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            stored.create(tx, conversation, _clean_title(title), scope)
+        return get(conn, conversation)
     stamp = now_iso()
     conn.execute(
         "INSERT INTO lucy_conversations(id,title,scope,created_at,updated_at) VALUES(?,?,?,?,?)",
@@ -48,13 +54,38 @@ def _row(conn: sqlite3.Connection, conversation: str) -> sqlite3.Row:
     return row
 
 
+def _found(row: Any, conversation: str) -> Any:
+    if row is None:
+        raise NotFound(conversation)
+    return row
+
+
 def get(conn: sqlite3.Connection, conversation: str) -> dict:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            row = _found(stored.row(tx, conversation), conversation)
+            text = stored.last_user_text(tx, conversation)
+        return _shaped(row, text)
     row = _row(conn, conversation)
     last = conn.execute(
         "SELECT content FROM lucy_messages WHERE conversation_id=? AND role='user' "
         "ORDER BY seq DESC LIMIT 1",
         (conversation,),
     ).fetchone()
+    return _shaped(row, last["content"] if last else None)
+
+
+def field(conn: sqlite3.Connection, conversation: str, name: str) -> Any:
+    """One value of a conversation's (`scope` read as JSON), or None when it isn't there."""
+    try:
+        found = get(conn, conversation)
+    except NotFound:
+        return None
+    return found[name]
+
+
+def _shaped(row: Any, last: str | None) -> dict:
     return {
         "id": row["id"],
         "title": row["title"],
@@ -65,7 +96,7 @@ def get(conn: sqlite3.Connection, conversation: str) -> dict:
         "archived": bool(row["archived"]),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
-        "last_user_text": (last["content"][:140] if last else None),
+        "last_user_text": (last[:140] if last is not None else None),
     }
 
 
@@ -73,6 +104,11 @@ def listing(
     conn: sqlite3.Connection, query: str = "", archived: bool = False, limit: int = 50
 ) -> list[dict]:
     """Searchable history by title and message text, newest first (LU-302-04)."""
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            found = stored.listing(tx, query, archived, max(1, min(limit, 200)))
+        return [get(conn, conversation) for conversation in found]
     params: list[Any] = [1 if archived else 0]
     sql = "SELECT c.id FROM lucy_conversations c WHERE c.archived=?"
     if query.strip():
@@ -88,6 +124,14 @@ def listing(
 
 
 def rename(conn: sqlite3.Connection, conversation: str, title: str) -> dict:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            _found(stored.row(tx, conversation), conversation)
+            stored.update(tx, conversation, title=_clean_title(title), updated_at=now_iso())
+            stored.log.append(tx, conversation, "conversation.updated",
+                              {"title": _clean_title(title)})
+        return get(conn, conversation)
     _row(conn, conversation)
     conn.execute(
         "UPDATE lucy_conversations SET title=?, updated_at=? WHERE id=?",
@@ -99,6 +143,12 @@ def rename(conn: sqlite3.Connection, conversation: str, title: str) -> dict:
 
 
 def set_archived(conn: sqlite3.Connection, conversation: str, archived: bool) -> dict:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            _found(stored.row(tx, conversation), conversation)
+            stored.update(tx, conversation, archived=1 if archived else 0, updated_at=now_iso())
+        return get(conn, conversation)
     _row(conn, conversation)
     conn.execute(
         "UPDATE lucy_conversations SET archived=?, updated_at=? WHERE id=?",
@@ -114,6 +164,12 @@ def delete(conn: sqlite3.Connection, conversation: str) -> dict:
     Commit records are kept: they're the receipt that a draft came from an approval, and they
     answer a retried approval truthfully even after the chat is gone.
     """
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            row = _found(stored.row(tx, conversation), conversation)
+            stored.delete(tx, conversation)
+        return {"deleted": row["id"], "drafts_kept": True}
     row = _row(conn, conversation)
     conn.execute("DELETE FROM lucy_events WHERE conversation_id=?", (conversation,))
     conn.execute("DELETE FROM lucy_permissions WHERE conversation_id=?", (conversation,))
@@ -153,6 +209,13 @@ def add_message(
 ) -> dict:
     if role not in ROLES or status not in MESSAGE_STATES:
         raise ValueError("Unknown message role or state.")
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            _found(stored.row(tx, conversation), conversation)
+            message = stored.add_message(tx, conversation, role, content, status=status,
+                                         turn=turn, run=run, revision=revision, meta=meta)
+            return _message(stored.message(tx, message))
     message = new_id("message")
     seq = _next_seq(conn, conversation)
     conn.execute(
@@ -178,6 +241,10 @@ def add_message(
 
 
 def message_by_id(conn: sqlite3.Connection, message: str) -> dict:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            return _message(_found(stored.message(tx, message), message))
     row = conn.execute("SELECT * FROM lucy_messages WHERE id=?", (message,)).fetchone()
     if row is None:
         raise NotFound(message)
@@ -209,6 +276,14 @@ def finish_message(
 ) -> None:
     if status not in MESSAGE_STATES:
         raise ValueError(status)
+    store = backing.store_of(conn)
+    if store is not None:
+        values = {"content": content, "status": status, "revision_id": revision}
+        if meta is not None:
+            values["meta"] = json.dumps(meta)
+        with backing.writing(store) as tx:
+            stored.finish_message(tx, message, **values)
+        return
     if meta is None:
         conn.execute(
             "UPDATE lucy_messages SET content=?, status=?, revision_id=coalesce(?,revision_id) "
@@ -225,6 +300,10 @@ def finish_message(
 
 
 def messages(conn: sqlite3.Connection, conversation: str) -> list[dict]:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            return [_message(row) for row in stored.messages(tx, conversation)]
     rows = conn.execute(
         "SELECT * FROM lucy_messages WHERE conversation_id=? ORDER BY seq", (conversation,)
     )
@@ -252,6 +331,16 @@ def accept_turn(
         raise ValueError(f"Keep a message under {TEXT_LIMIT} characters.")
     if not client_id or len(client_id) > 80:
         raise ValueError("A send needs a client id so it can't be done twice.")
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            known = stored.turn_by_client(tx, conversation, client_id)
+            if known is not None:
+                return _turn(known), False
+            _found(stored.row(tx, conversation), conversation)
+            turn, _ = stored.accept_turn(tx, conversation, client_id, clean, _clean_title(clean),
+                                         expected_revision, selection)
+            return _turn(stored.turn(tx, turn)), True
     known = conn.execute(
         "SELECT * FROM lucy_turns WHERE conversation_id=? AND client_id=?",
         (conversation, client_id),
@@ -339,6 +428,10 @@ def _turn(row: sqlite3.Row) -> dict:
 
 
 def turn_by_id(conn: sqlite3.Connection, turn: str) -> dict:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            return _turn(_found(stored.turn(tx, turn), turn))
     row = conn.execute("SELECT * FROM lucy_turns WHERE id=?", (turn,)).fetchone()
     if row is None:
         raise NotFound(turn)
@@ -346,6 +439,11 @@ def turn_by_id(conn: sqlite3.Connection, turn: str) -> dict:
 
 
 def set_turn_status(conn: sqlite3.Connection, turn: str, status: str) -> None:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            stored.set_turn_status(tx, turn, status)
+        return
     conn.execute(
         "UPDATE lucy_turns SET status=? WHERE id=? AND status NOT IN ('superseded')",
         (status, turn),
@@ -354,6 +452,11 @@ def set_turn_status(conn: sqlite3.Connection, turn: str, status: str) -> None:
 
 
 def is_superseded(conn: sqlite3.Connection, turn: str) -> bool:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            row = stored.turn(tx, turn)
+        return row is None or row["status"] in {"superseded", "cancelled"}
     row = conn.execute("SELECT status FROM lucy_turns WHERE id=?", (turn,)).fetchone()
     return row is None or row["status"] in {"superseded", "cancelled"}
 
@@ -361,6 +464,11 @@ def is_superseded(conn: sqlite3.Connection, turn: str) -> bool:
 def branch(conn: sqlite3.Connection, conversation: str, at_message: str) -> dict:
     """A new conversation holding copies of the messages up to one point. The original, its
     messages and its proposal snapshots are untouched (LU-302-06)."""
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            created = _branched(tx, conversation, at_message)
+        return get(conn, created)
     source = _row(conn, conversation)
     cut = conn.execute(
         "SELECT seq FROM lucy_messages WHERE id=? AND conversation_id=?",
@@ -389,3 +497,28 @@ def branch(conn: sqlite3.Connection, conversation: str, at_message: str) -> dict
         )
     conn.commit()
     return get(conn, created["id"])
+
+
+def _branched(tx: Any, conversation: str, at_message: str) -> str:
+    """`branch` as one store write, in the old path's order."""
+    source = _found(stored.row(tx, conversation), conversation)
+    cut = stored.message(tx, at_message)
+    if cut is None or cut["conversation_id"] != conversation:
+        raise NotFound(at_message)
+    created = new_id("conversation")
+    stored.create(tx, created, _clean_title(f"{source['title']} (branch)"),
+                  json.loads(source["scope"]))
+    stored.update(tx, created, parent_id=conversation, branched_from=at_message)
+    for row in stored.messages(tx, conversation, through=cut["seq"]):
+        stored.add_message(
+            tx,
+            created,
+            row["role"],
+            row["content"],
+            status=row["status"] if row["status"] != "streaming" else "interrupted",
+            turn=None,
+            run=None,
+            revision=row["revision_id"],
+            meta={**json.loads(row["meta"]), "copied_from": row["id"]},
+        )
+    return created
