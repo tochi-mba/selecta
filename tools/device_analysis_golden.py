@@ -663,10 +663,10 @@ def measure(song: dict) -> dict:
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, default=OUTPUT)
-    folder = parser.parse_args().out
+    folder = parser.parse_args(argv).out
     folder.mkdir(parents=True, exist_ok=True)
     entries, playback = [], []
     for song in songs():
