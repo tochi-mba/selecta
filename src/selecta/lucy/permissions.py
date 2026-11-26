@@ -11,7 +11,9 @@ import json
 import sqlite3
 from typing import Any
 
-from selecta.lucy import events
+from selecta.engine_store.lucy import events as log
+from selecta.engine_store.lucy import memory as stored
+from selecta.lucy import backing, events
 from selecta.lucy.ids import new_id, now_iso
 
 KNOWN = {"analysis.request"}
@@ -34,6 +36,18 @@ def request(ctx: Any, tier: str, operation: str, arguments: dict, text: str) -> 
     if operation not in KNOWN:
         raise PermissionError(f"{operation} can't be requested.")
     found = new_id("permission")
+    store = backing.store_of(ctx.conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            stored.add_permission(
+                tx, id=found, conversation_id=ctx.conversation, run_id=ctx.run, tier=tier,
+                operation=operation, arguments=json.dumps({**arguments, "text": text}),
+                status="pending", created_at=now_iso(),
+            )
+            shaped = _shape(stored.permission(tx, found))
+        ctx.permissions.append(found)
+        ctx.emit("permission.requested", shaped)
+        return shaped
     ctx.conn.execute(
         "INSERT INTO lucy_permissions(id,conversation_id,run_id,tier,operation,arguments,status,"
         "created_at) VALUES(?,?,?,?,?,?,?,?)",
@@ -49,6 +63,10 @@ def request(ctx: Any, tier: str, operation: str, arguments: dict, text: str) -> 
 
 
 def pending(conn: sqlite3.Connection, conversation: str) -> list[dict]:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            return [_shape(row) for row in stored.pending(tx, conversation)]
     rows = conn.execute(
         "SELECT * FROM lucy_permissions WHERE conversation_id=? AND status='pending' "
         "ORDER BY created_at", (conversation,)).fetchall()
@@ -59,6 +77,9 @@ def decide(conn: sqlite3.Connection, permission: str, decision: str) -> dict:
     """The person's own answer. Only a pending request can be decided, once."""
     if decision not in {"allow", "deny"}:
         raise ValueError("Answer allow or deny.")
+    store = backing.store_of(conn)
+    if store is not None:
+        return _decided(store, permission, decision)
     row = conn.execute("SELECT * FROM lucy_permissions WHERE id=?", (permission,)).fetchone()
     if row is None:
         raise KeyError(permission)
@@ -80,3 +101,21 @@ def decide(conn: sqlite3.Connection, permission: str, decision: str) -> dict:
                   {"id": permission, "status": status}, run=row["run_id"])
     return _shape(conn.execute("SELECT * FROM lucy_permissions WHERE id=?",
                                (permission,)).fetchone())
+
+
+def _decided(store, permission: str, decision: str) -> dict:
+    """`decide` as one store write: the answer, the songs moved up, and its event."""
+    with backing.writing(store) as tx:
+        row = stored.permission(tx, permission)
+        if row is None:
+            raise KeyError(permission)
+        if row["status"] != "pending":
+            return _shape(row)
+        status = "allowed" if decision == "allow" else "denied"
+        front: list[int] = []
+        if status == "allowed" and row["operation"] == "analysis.request":
+            front = [int(song) for song in json.loads(row["arguments"]).get("song_ids", [])]
+        stored.decide(tx, permission, status, now_iso(), front)
+        log.append(tx, row["conversation_id"], "permission.decided",
+                   {"id": permission, "status": status}, run=row["run_id"])
+        return _shape(stored.permission(tx, permission))
