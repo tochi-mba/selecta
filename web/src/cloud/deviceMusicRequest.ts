@@ -137,15 +137,40 @@ export type Availability = {
 };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
-/** One song's availability: this device first, then a hosted copy, then the member's other devices. */
+/** Every place a song is kept, each on its own: a song can be on this device and in the cloud
+ * library at once, and on other devices too. */
+export type Places = {
+  /** this device: plays now, needs permission again, needs choosing again, or not here */
+  device: 'here' | 'reauth' | 'reconnect' | null;
+  /** a copy in the cloud library */
+  cloud: boolean;
+  /** `devices`: how many devices the server counts holding it (this one may be among them);
+   * `online` and `before`: the member's other open and closed devices that hold it, by name, once
+   * the holdings are known (empty until then) */
+  other: { devices: number; online: readonly string[]; before: readonly string[] };
+};
+const HELD_NOWHERE_ELSE = { online: [], before: [] } as const;
+
+/** Where one song is kept: this device, the cloud library and the member's other devices. */
+export function placesOf(song: CatalogueSong, known: Availability): Places {
+  const held = known.elsewhere?.(song.id) ?? HELD_NOWHERE_ELSE;
+  return {
+    device: known.here.get(song.id) ?? null,
+    cloud: known.hosted.has(song.id),
+    other: { devices: song.available_on ?? 0, online: held.online, before: held.before },
+  };
+}
+
+/** One song's availability, the one place it plays from: this device first, then a hosted copy,
+ * then the member's other devices. A reduction of `placesOf`. */
 export function availabilityOf(song: CatalogueSong, known: Availability): SongAvailability {
-  const device = known.here.get(song.id);
+  const { device, cloud, other } = placesOf(song, known);
   if (device === 'here') return 'here';
-  if (known.hosted.has(song.id)) return 'hosted';
+  if (cloud) return 'hosted';
   if (device === 'reauth') return 'reauth';
   // picked on this device in an earlier visit: it is here, the browser just needs it chosen again
   if (device === 'reconnect') return 'reconnect';
-  return (song.available_on ?? 0) > 0 ? 'elsewhere' : 'nowhere';
+  return other.devices > 0 ? 'elsewhere' : 'nowhere';
 }
 
 /** ADR-0488: what rooms made of a song, said after how it plays; nothing when no room loved it. */
