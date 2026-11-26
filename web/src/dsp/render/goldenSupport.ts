@@ -150,6 +150,23 @@ export function perceptualMeasures(audio: Channels): Perceptual {
   };
 }
 
+/** For each reference onset, how far (ms) the nearest onset in the port's audio is: the nearest
+ * peak of its transient envelope at least a tenth of its loudest. This compares timing without
+ * asking both sides to pick the same onsets (a picker's threshold moves with the loudest one);
+ * identical audio gives 0 for every onset. Infinity when there is no such peak. */
+export function onsetOffsetsMs(audio: Channels, onsets: number[]): number[] {
+  const env = transientEnvelope(monoOf(audio));
+  let top = 0;
+  for (const value of env) top = Math.max(top, value);
+  const peaks: number[] = [];
+  for (let k = 1; k < env.length - 1; k += 1) if (env[k] >= 0.1 * top && env[k] >= env[k - 1] && env[k] > env[k + 1]) peaks.push(k);
+  return onsets.map((time) => {
+    let nearest = Infinity;
+    for (const k of peaks) if (Math.abs(k * ENV_HOP_TIME - time) < Math.abs(nearest)) nearest = k * ENV_HOP_TIME - time;
+    return Math.round(nearest * 1e6) / 1e3;
+  });
+}
+
 /** For each reference onset, the nearest port onset: the share within `withinMs`, and the worst
  * distance among those matched. */
 export function onsetAgreement(reference: number[], port: number[], withinMs = 10): { share: number; worstMs: number } {

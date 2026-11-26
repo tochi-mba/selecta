@@ -1,0 +1,138 @@
+{
+ "about": "Fixtures for the browser renderer and audit; docs/engineering/device-render.md",
+ "generator": "tools/device_render_golden.py",
+ "sample_rate": 44100,
+ "script_schema": 1,
+ "libraries": {
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "soxr": "1.1.0",
+  "librosa": "1.0.0",
+  "pedalboard": "0.9.26"
+ },
+ "songs": "songs.json",
+ "repair": "repair.json",
+ "cases": [
+  {
+   "name": "blend-8",
+   "file": "blend-8.json",
+   "family": "a",
+   "style": "bass_swap_blend",
+   "seconds": 21.290322580645164,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.001647353172302246
+  },
+  {
+   "name": "blend-8-nudged-hot",
+   "file": "blend-8-nudged-hot.json",
+   "family": "a",
+   "style": "bass_swap_blend",
+   "seconds": 21.290322580645164,
+   "nudge_ms": 8.79,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.007219135761260986
+  },
+  {
+   "name": "filter-sweep-8",
+   "file": "filter-sweep-8.json",
+   "family": "a",
+   "style": "filter_sweep",
+   "seconds": 21.290322580645164,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.0
+  },
+  {
+   "name": "cut-on-one",
+   "file": "cut-on-one.json",
+   "family": "a",
+   "style": "cut_on_one",
+   "seconds": 11.870967741935484,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 2.2709369659423828e-05
+  },
+  {
+   "name": "echo-out",
+   "file": "echo-out.json",
+   "family": "a",
+   "style": "echo_out",
+   "seconds": 11.870967741935484,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.0
+  },
+  {
+   "name": "delay-throw",
+   "file": "delay-throw.json",
+   "family": "a",
+   "style": "delay_throw",
+   "seconds": 11.870967741935484,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.0
+  },
+  {
+   "name": "reverb-wash",
+   "file": "reverb-wash.json",
+   "family": "a",
+   "style": "reverb_wash",
+   "seconds": 11.870967741935484,
+   "nudge_ms": 0.0,
+   "port_passed": true,
+   "desktop_passed": true,
+   "desktop_clip_max_abs_vs_port": 0.0
+  },
+  {
+   "name": "stem-seam",
+   "file": "stem-seam.json",
+   "family": "a",
+   "style": "seam_studio",
+   "seconds": 17.483870967741936,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.010466039180755615
+  },
+  {
+   "name": "blend-126",
+   "file": "blend-126.json",
+   "family": "b",
+   "style": "bass_swap_blend",
+   "seconds": 25.099540532082198,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.0005890727043151855
+  },
+  {
+   "name": "sweep-128",
+   "file": "sweep-128.json",
+   "family": "b",
+   "style": "filter_sweep",
+   "seconds": 30.480393185379317,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.0
+  },
+  {
+   "name": "ramp-132",
+   "file": "ramp-132.json",
+   "family": "b",
+   "style": "tempo_ramp",
+   "seconds": 37.52092583090636,
+   "nudge_ms": 0.0,
+   "port_passed": false,
+   "desktop_passed": false,
+   "desktop_clip_max_abs_vs_port": 0.0014337897300720215
+  }
+ ]
+}
