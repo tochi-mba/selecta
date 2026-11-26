@@ -66,18 +66,22 @@ def library(tmp_path_factory):
     tracks = [make_track(bpm=120, bars=72, seed=1), make_track(bpm=120, bars=76, seed=2)]
     run = engine_handlers.handlers(analysers=lambda: Analysers(KnownBeats(tracks), None))
     sides = []
-    for number, track in enumerate(tracks):
-        wav = tmp_path / f"song{number}.wav"
-        sf.write(wav, track.audio, SR, subtype="PCM_16")
-        key = original_key(WS, f"asset-{number}")
-        size, sha = store.publish(key, wav)
-        job = _job("analyse.song", {"source_sha256": sha, "source_key": key})
-        ctx = _ctx(store, tmp_path, job, f"attempt-a{number}")
-        result = run["analyse.song"](job, ctx)
-        sides.append({"source_sha256": sha, "source_key": key,
-                      "analysis_key": result["keys"][0], "title": f"Synth {number}",
-                      "result": result, "outputs": ctx.artifacts.outputs})
-    return store, tmp_path, sides, run
+    with pytest.MonkeyPatch.context() as patch:
+        # a seam's audit separates stems under SELECTA_HOME: this module's own folder, for
+        # every test that uses it, never the real ~/.selecta
+        patch.setenv("SELECTA_HOME", str(tmp_path / "selecta-home"))
+        for number, track in enumerate(tracks):
+            wav = tmp_path / f"song{number}.wav"
+            sf.write(wav, track.audio, SR, subtype="PCM_16")
+            key = original_key(WS, f"asset-{number}")
+            size, sha = store.publish(key, wav)
+            job = _job("analyse.song", {"source_sha256": sha, "source_key": key})
+            ctx = _ctx(store, tmp_path, job, f"attempt-a{number}")
+            result = run["analyse.song"](job, ctx)
+            sides.append({"source_sha256": sha, "source_key": key,
+                          "analysis_key": result["keys"][0], "title": f"Synth {number}",
+                          "result": result, "outputs": ctx.artifacts.outputs})
+        yield store, tmp_path, sides, run
 
 
 def _side(side):
