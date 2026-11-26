@@ -147,6 +147,12 @@ def owner_checklist(conn: Connection, actor: Actor) -> list[dict[str, Any]]:
         reporting = seen is not None and db_now(conn) - float(seen) < 600
         items.append(("workers", "Hosted processing: workers reporting", "/admin/workers",
                       reporting or None))
+        from selecta.notify import operator_alerts
+
+        # checked by the server: the maintenance service reports whether it can mail alerts
+        items.append(("alert_mail", "Operator alerts reach you by email: set "
+                      f"{operator_alerts.ADDRESS_ENV} on the maintenance service",
+                      "/admin/workers", operator_alerts.configured(conn) or None))
     return [{"id": i, "label": label, "link": link,
              "done": bool(auto) or i in marked, "checked_by": "server" if auto else "you"}
             for i, label, link, auto in items]

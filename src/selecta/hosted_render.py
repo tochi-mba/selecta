@@ -38,7 +38,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
-from selecta import hosted_status
+from selecta import hosted_caps, hosted_limits, hosted_status
 from selecta.config import ANALYSIS_VERSION
 from selecta.persistence import db_now, transaction
 from selecta.scheduling.policy import Lane
@@ -198,6 +198,8 @@ def _analysis_spec(workspace_id: str, song: dict, created_by: str | None, lane=L
     return JobSpec(
         workspace_id=workspace_id, type=ANALYSE, idempotency_key=analysis_hash(song["sha256"]),
         lane=lane, created_by=created_by,
+        # the runtime limit follows the song's length (hosted_limits)
+        max_run_s=hosted_limits.analysis_run_s(song.get("duration_s")),
         input_ref={"source_key": key, "source_sha256": song["sha256"], "objects": [key],
                    "output": _output("analysis", analysis_hash(song["sha256"]))},
     )
@@ -214,7 +216,8 @@ def prepare_songs(engine: Engine, work: Work, workspace_id: str, ids: Sequence[s
     one analysis and so one job. Safe to call from any number of tabs at once: a replacement
     locks the old job, and the store never holds two live jobs for the same work.
     """
-    made = {"queued": 0, "ready": 0, "running": 0, "failed": 0, "refused": 0, "replaced": 0}
+    made = {"queued": 0, "ready": 0, "running": 0, "failed": 0, "refused": 0, "replaced": 0,
+            "allowance": 0, "too_long": 0}
     with transaction(engine, workspace_id) as conn:
         wanted, seen = [], set()
         for song in _songs(conn, workspace_id, ids):
@@ -223,6 +226,9 @@ def prepare_songs(engine: Engine, work: Work, workspace_id: str, ids: Sequence[s
                 continue
             seen.add(digest)
             found = _artifact(conn, workspace_id, "analysis", digest)
+            if found is None and hosted_limits.too_long(song["duration_s"]):
+                made["too_long"] += 1  # never a job that would run into its limit and fail
+                continue
             job = _latest_job(conn, workspace_id, ANALYSE, digest)
             failures = _unsuccessful(conn, workspace_id, ANALYSE, digest) if job else 0
             why = hosted_status.needs_new(found is not None, job, _output("analysis", digest),
@@ -234,14 +240,60 @@ def prepare_songs(engine: Engine, work: Work, workspace_id: str, ids: Sequence[s
             made["ready" if state == "ready" else "failed" if state == "failed"
                  else "running"] += 1
     for song, job in wanted:
-        job_id, refused = _make(work, _analysis_spec(workspace_id, song, created_by), job)
-        if refused:
-            made["refused"] += 1
-        elif job_id is None:
-            made["running"] += 1  # its worker is letting go; the next call replaces it
-        else:
-            made["replaced" if job is not None else "queued"] += 1
+        made[_queue_analysis(engine, work, workspace_id, song, job, created_by)] += 1
     return made
+
+
+def _queue_analysis(engine: Engine, work: Work, workspace_id: str, song: dict, job,
+                    created_by: str | None) -> str:
+    """One song's analysis job, paid from the daily allowance only for its first analysis
+    (`hosted_caps`). Returns which count of `prepare_songs` it adds to."""
+    spec = _analysis_spec(workspace_id, song, created_by)
+    taken = None
+    if job is None:
+        with transaction(engine, workspace_id) as conn:
+            paid = hosted_caps.analysis_paid(conn, workspace_id, song["sha256"])
+        if not paid:
+            taken, _why = hosted_caps.take(engine, workspace_id, hosted_caps.ANALYSIS, 1)
+            if taken is None:
+                return "allowance"  # waits, with the reason on its row; nothing is dropped
+    try:
+        if job is None:
+            job_id, refused, created = work.submit_new(spec)
+        else:
+            (job_id, refused), created = work.renew(spec, job["id"]), True
+    except Exception:
+        hosted_caps.give_back(engine, workspace_id, taken)
+        raise
+    if taken is not None:
+        if created and job_id and not refused:
+            hosted_caps.mark_analysis_paid(engine, workspace_id, song["id"])
+        else:  # another tab or a retry made it first, or it wasn't admitted: never pay twice
+            hosted_caps.give_back(engine, workspace_id, taken)
+    if refused:
+        return "refused"
+    if job_id is None:
+        return "running"  # its worker is letting go; the next call replaces it
+    return "replaced" if job is not None else "queued"
+
+
+def _make_paid(engine: Engine, work: Work, spec: JobSpec, job, kind: str,
+               amount: float) -> tuple[str | None, bool]:
+    """`_make`, taking `amount` of a daily allowance for a first job (none for a renewal).
+    Returns (why it wasn't made, whether the allowance was the reason)."""
+    if job is not None:
+        return _make(work, spec, job)[1], False
+    taken, why = hosted_caps.take(engine, spec.workspace_id, kind, amount)
+    if taken is None:
+        return why, True
+    try:
+        job_id, refused, created = work.submit_new(spec)
+    except Exception:
+        hosted_caps.give_back(engine, spec.workspace_id, taken)
+        raise
+    if refused or job_id is None or not created:
+        hosted_caps.give_back(engine, spec.workspace_id, taken)
+    return refused, False
 
 
 def on_upload_accepted(engine: Engine, work: Work, workspace_id: str, asset_id: str,
@@ -306,6 +358,8 @@ def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
         songs = _songs(conn, workspace_id)
         worker = _worker_seen(conn, "cpu-heavy")
         each = _measured(conn, workspace_id, ANALYSE)
+        # today's analysis allowance used up: songs with no job yet say so (hosted_caps)
+        paused = hosted_caps.used_up(conn, workspace_id, hosted_caps.ANALYSIS)
         out, by_digest = [], {}
         for song in songs:
             digest = analysis_hash(song["sha256"])
@@ -315,11 +369,16 @@ def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
             result = (job["result"] if job is not None else None) or {}
             if state["state"] == "ready":
                 state.update({"bpm": result.get("bpm"), "camelot": result.get("camelot")})
+            status = hosted_status.customer_status(
+                found is not None, job, worker_seen=worker,
+                not_started=paused["why"] if paused else None)
+            long_why = None if found is not None else hosted_limits.too_long(song["duration_s"])
+            if long_why:
+                status = {"state": "failed", "reason": long_why, "job_id": None,
+                          "can_retry": False}
+                state = {"state": "failed", "why": long_why}
             entry = {"asset_id": song["id"], "name": song["display_name"] or "Untitled",
-                     "duration_s": song["duration_s"],
-                     "status": hosted_status.customer_status(found is not None, job,
-                                                             worker_seen=worker),
-                     "analysis": state}
+                     "duration_s": song["duration_s"], "status": status, "analysis": state}
             by_digest.setdefault(digest, []).append(entry)
             out.append(entry)
     for twins in by_digest.values():
@@ -343,10 +402,14 @@ def songs_status(engine: Engine, workspace_id: str) -> dict[str, Any]:
     moving = worker and totals["running"] + in_line > 0
     unfinished = totals["running"] + totals["waiting"]
     waiting_for = None if moving or not unfinished else ("retry" if worker else "worker")
-    return {"songs": out, "totals": totals, "moving": moving, "waiting_for": waiting_for,
-            "counts": counts, "seconds_each": round(each, 1),
-            "estimate_s": round(unfinished * each) if moving else None,
-            "worker_seen": worker, "total": len(out)}
+    found = {"songs": out, "totals": totals, "moving": moving, "waiting_for": waiting_for,
+             "counts": counts, "seconds_each": round(each, 1),
+             "estimate_s": round(unfinished * each) if moving else None,
+             "worker_seen": worker, "total": len(out)}
+    if paused and any(s["status"]["reason"] == paused["why"] for s in out):
+        # {"kind", "limit", "used", "resets_at", "why"}: songs wait for tomorrow's allowance
+        found["allowance_used"] = paused
+    return found
 
 
 def song_status(engine: Engine, workspace_id: str, asset_id: str) -> dict[str, Any] | None:
@@ -621,9 +684,16 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
                           "move": result.get("move"), "passed": result.get("audit_passed"),
                           "fell_back": result.get("fell_back"), "checks": result.get("checks")})
         slots = fleet.pool_slots(conn, "cpu-heavy", db_now(conn) - WORKER_SEEN_S)
+        durations = hosted_estimate.Durations(conn, workspace_id, FIRST_GUESS_S)
+    capped = False
     for index, a, b, move, old in wanted:
         lane = Lane.INTERACTIVE if index < 2 else Lane.STANDARD
-        _job, refused = _make(work, _seam_spec(workspace_id, a, b, move, lane, created_by), old)
+        # a first job for a hand-off takes this account's measured seconds for the move from
+        # today's transition allowance (hosted_caps); a renewal or Try again takes nothing
+        refused, by_allowance = _make_paid(
+            engine, work, _seam_spec(workspace_id, a, b, move, lane, created_by), old,
+            hosted_caps.TRANSITIONS, durations.expected(SEAM, move))
+        capped = capped or by_allowance
         if refused:
             seams[index].update(state="refused", why=refused)
     timeline = _timeline(workspace_id, songs, seams, playback, client, buckets, files=files)
@@ -635,9 +705,12 @@ def mix_state(engine: Engine, work: Work, workspace_id: str, order: Sequence[dic
         left = hosted_estimate.mix_estimate(
             conn, workspace_id, hosted_estimate.Durations(conn, workspace_id, FIRST_GUESS_S),
             slots=slots, now=db_now(conn), later_seams=later)
+        paused = hosted_caps.used_up(conn, workspace_id, hosted_caps.TRANSITIONS,
+                                     refused=True) if capped else None
     if timeline["complete"]:
         left = {**left, "estimate_s": 0, "estimate_why": None}
-    return {**timeline, **left, "worker_seen": slots > 0}
+    extra = {"allowance_used": paused} if paused else {}
+    return {**timeline, **left, "worker_seen": slots > 0, **extra}
 
 
 def _timeline(workspace_id, songs, seams, playback, client, buckets, *, files=False):

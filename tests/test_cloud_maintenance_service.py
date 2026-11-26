@@ -69,8 +69,10 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
         "queue_metrics",
         "queue_watch",
         "lost_jobs",
+        "operator_alerts",
     }
     assert set(plan.disabled) == {
+        "derived_gc",
         "stripe_events",
         "business.billing.vat_recheck",
         "stripe_reconcile",
@@ -124,6 +126,8 @@ def test_secrets_switch_the_external_tasks_on(sqlite_engine, monkeypatch):
         "account_deletions",
         "rooms",
         "derived_eviction",
+        "derived_gc",
+        "operator_alerts",
         "export_expiry",
         "autoscale",
         "dmca_renewal",

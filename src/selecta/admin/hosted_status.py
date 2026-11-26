@@ -218,11 +218,28 @@ def check_gateway(url: str, expected: str | None, get: Callable[..., Any] | None
     return {"state": "ok", "detail": f"Ready, schema {schema}."}
 
 
+def refused_builds(conn: Connection, now: float) -> list[dict[str, Any]]:
+    """Workers the gateway refused in the last hour for running another engine build
+    (`work.engine_build`): `[{"pool", "worker_build", "gateway_build", "at"}]`. Words for the
+    page: "A worker on another engine build was turned away; it exits and its pool starts it
+    again on the deployed image. If this repeats, deploy the workers (modal deploy) from the
+    same commit as the gateway.\""""
+    import json
+
+    from selecta.work.engine_build import REFUSED_METRIC
+
+    rows = conn.execute(sa.select(admin_metrics.c.labels, admin_metrics.c.as_of).where(
+        admin_metrics.c.name == REFUSED_METRIC, admin_metrics.c.as_of >= now - 3_600)).all()
+    return [{**json.loads(row.labels or "{}"), "at": float(row.as_of)}
+            for row in sorted(rows, key=lambda r: -float(r.as_of))][:10]
+
+
 def gateway(conn: Connection, now: float) -> dict[str, Any]:
     url = os.environ.get(GATEWAY_ENV, "").strip()
     last_seen = conn.execute(sa.select(sa.func.max(workers.c.last_seen_at))).scalar()
     out: dict[str, Any] = {"configured": bool(url), "setting": GATEWAY_ENV,
-                           "workers_last_seen": float(last_seen) if last_seen else None}
+                           "workers_last_seen": float(last_seen) if last_seen else None,
+                           "refused_builds": refused_builds(conn, now)}
     if not url:
         out.update(state="not_configured", detail=f"{GATEWAY_ENV} isn't set on the API service.")
         return out
@@ -422,6 +439,25 @@ def _section(conn: Connection, name: str, read: Callable[[], Any]) -> Any:
     return found
 
 
+def collector(conn: Connection) -> dict[str, Any]:
+    """The derived-files collector's last run (`storage.derived_gc.last_run`): {"ran", "at",
+    "dry_run", "deleted", "deleted_bytes", "playback_expired", "playback_bytes", "failed",
+    "kept_unknown"}. Dry while `cloud.derived_gc` is off: the counts are what it would do."""
+    from selecta.storage import derived_gc
+
+    found = derived_gc.last_run(conn)
+    return {"ran": found is not None, **(found or {})}
+
+
+def alert_mail(conn: Connection) -> dict[str, Any]:
+    """Whether operator alerts reach a person by email (`notify.operator_alerts`):
+    {"configured": true | false | null (the maintenance service hasn't reported), "setting"}."""
+    from selecta.notify import operator_alerts
+
+    return {"configured": operator_alerts.configured(conn),
+            "setting": operator_alerts.ADDRESS_ENV}
+
+
 def status(conn: Connection, actor: Actor) -> dict[str, Any]:
     """The Workers page in one read (module notes). Needs `jobs.read`."""
     authorize(conn, actor, "jobs.read")
@@ -449,6 +485,9 @@ def status(conn: Connection, actor: Actor) -> dict[str, Any]:
             "autoscaler": _section(conn, "the autoscaler", lambda: autoscaler(conn, now)),
             "storage": _section(conn, "object storage", lambda: storage(conn)),
             "flags": _section(conn, "the hosted flags", lambda: hosted_flags(conn, hosted)),
+            "collector": _section(conn, "the derived-files collector",
+                                  lambda: collector(conn)),
+            "alert_mail": _section(conn, "operator alert mail", lambda: alert_mail(conn)),
         },
         "customers": people,
         "cost": _section(conn, "processing cost", lambda: cost(conn, now)),

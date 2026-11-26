@@ -20,6 +20,8 @@ depends on a cron somebody forgot:
 | `usage_reconcile` | 24 h | Ledger vs rollups and storage; drift becomes an alert, never a fix |
 | `derived_eviction` | 10 min | Workspaces over their derived-data budget (`storage.eviction`) |
 | `export_expiry` | 1 h | Exports past their plan's retention (`storage.export_expiry`) |
+| `derived_gc` | 1 h | Unused derived files and idle playback files (`maintain_hosted`) |
+| `operator_alerts` | 1 min | Operator alert mail (`notify.operator_alerts`, `maintain_hosted`) |
 | `autoscale` | 30 s | Size each worker pool and tell the launcher (`work.autoscale_leader`) |
 | `dmca_renewal` | 24 h | Owner alert as the DMCA agent's renewal nears (`admin.dmca`) |
 | `emails` | 60 s | Long-job and over-quota emails, each once (`notify.emails`) |
@@ -481,6 +483,9 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _business_horizons(engine, plan)
     _business_billing(engine, env, plan)
     _business_licensing(engine, plan)
+    from selecta import maintain_hosted
+
+    maintain_hosted.add_tasks(engine, env, plan)  # derived_gc, operator_alerts
     from selecta.observability import leader_metrics
 
     made, off = leader_metrics.tasks(engine, env)

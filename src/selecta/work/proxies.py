@@ -32,6 +32,7 @@ from typing import Any
 import sqlalchemy as sa
 
 from selecta import persistence
+from selecta.hosted_limits import proxy_run_s
 from selecta.scheduling.policy import DEFAULT_URGENCY, Lane, inherited
 from selecta.storage.keys import original_key
 from selecta.storage.schema import assets
@@ -154,6 +155,8 @@ def prepare(
         spec = JobSpec(
             workspace_id=workspace_id, type="play.proxy", idempotency_key=input_hash,
             lane=lane, urgency=urgency, needed_by=needed_by, created_by=created_by,
+            # a long song's encode gets a limit that follows its length (hosted_limits)
+            max_run_s=proxy_run_s(getattr(asset, "duration_s", None)),
             input_ref={
                 "objects": [original_key(workspace_id, asset_id)],
                 "source_sha256": asset.sha256, "sample_rate": asset.sample_rate,

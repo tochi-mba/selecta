@@ -20,6 +20,7 @@ from selecta.observability import tracing
 from selecta.scheduling.policy import WorkerCaps
 from selecta.work import provenance as provenance_rule
 from selecta.work.claims import Claim
+from selecta.work.engine_build import engine_build
 from selecta.work.errors import CompletionRejected, JobCancelled, StaleLease
 from selecta.work.lifecycle import Heartbeat
 from selecta.work.model import ErrorClass, Job, JobState
@@ -37,6 +38,18 @@ class RemoteGatewayError(RuntimeError):
         self.status = status
         self.code = code
         super().__init__(f"Worker gateway returned HTTP {status} ({code}).")
+
+
+class WorkerOutdated(SystemExit):
+    """This worker runs another engine build than the gateway (`work.engine_build`). It is a
+    `SystemExit`, so the runner's poll loop (which survives any `Exception`) lets it through and
+    the process ends; the pool then starts a fresh container on the deployed image."""
+
+    def __init__(self, worker_build: str, gateway_build: str | None):
+        super().__init__(
+            f"This worker's engine build {worker_build} differs from the gateway's "
+            f"{gateway_build or 'unknown'}: exiting so the pool restarts it on the deployed "
+            "image.")
 
 
 class RemoteWorkerClient:
@@ -121,6 +134,7 @@ class RemoteWorkerClient:
             "speed_factor": caps.speed_factor,
             "job_types": sorted(caps.job_types) if caps.job_types is not None else None,
             "region": caps.region,
+            "engine_build": engine_build(),
         }
         try:
             with httpx.Client(
@@ -137,6 +151,9 @@ class RemoteWorkerClient:
         except httpx.HTTPError as error:
             raise TransientError("Worker enrollment could not reach the gateway.") from error
         payload = cls._response(response)
+        theirs = payload.get("engine_build")
+        if isinstance(theirs, str) and theirs != engine_build():
+            raise WorkerOutdated(engine_build(), theirs)
         ttl = int(payload.get("expires_in", 0))
         token = payload.get("token")
         worker_id = payload.get("worker_id")
@@ -175,6 +192,9 @@ class RemoteWorkerClient:
                 if isinstance(detail, dict)
                 else "gateway_request_failed"
             )
+            if code == "engine_build_mismatch":
+                raise WorkerOutdated(str(detail.get("worker_build") or engine_build()),
+                                     detail.get("gateway_build"))
             if code == "stale_lease":
                 raise StaleLease("The worker attempt no longer holds its lease.")
             if code == "job_cancelled":

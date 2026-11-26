@@ -117,6 +117,11 @@ def request_export(engine: Engine, work: Work, workspace_id: str, order: Sequenc
     timeline = export_timeline(mix["parts"]) if mix["complete"] else None
     if timeline is None:
         return {"state": "refused", "why": NOT_READY}
+    from selecta.hosted_limits import export_too_long
+
+    too_long = export_too_long(sum(float(part["seconds"]) for part in timeline))
+    if too_long:  # said before any job, never a job that runs into its limit (hosted_limits)
+        return {"state": "refused", "why": too_long}
     spec = export_spec(workspace_id, timeline, created_by)
     with transaction(engine, workspace_id) as conn:
         old = _latest_job(conn, workspace_id, EXPORT, spec.idempotency_key)
@@ -191,4 +196,43 @@ def export_status(engine: Engine, workspace_id: str, job_id: str, *, client,
     return out
 
 
-__all__ = ["export_spec", "export_status", "export_timeline", "request_export"]
+def stored_exports(engine: Engine, workspace_id: str, *, client, buckets) -> dict[str, Any]:
+    """Every finished hosted export this workspace still keeps, newest first, each with a
+    15-minute download link: `{"exports": [{"id", "created_at", "size_bytes", "seconds",
+    "expires_at", "url"}]}`.
+
+    It belongs to `cloud.stored_media`, not the hosted grant (T-20261125-d37b): the grant gates
+    new processing, never a customer's access to files they already have, so with hosted
+    storage switched off for the account its exports stay downloadable until their plan's
+    retention ends them (`storage.export_expiry`). Originals download through
+    `GET /api/assets/{id}/playback-url?download=true`, also under `cloud.stored_media`."""
+    from selecta.storage.export_expiry import DAY_S, retention_days, shortened_at
+    from selecta.work.schema import artifacts
+
+    with transaction(engine, workspace_id) as conn:
+        rows = conn.execute(sa.select(
+            artifacts.c.id, artifacts.c["keys"], artifacts.c.size_bytes, artifacts.c.created_at,
+            artifacts.c.job_id).where(
+            artifacts.c.workspace_id == workspace_id, artifacts.c.kind == "export")
+            .order_by(artifacts.c.created_at.desc(), artifacts.c.id).limit(200)).all()
+        kept = retention_days(conn, workspace_id)
+        since = shortened_at(conn, workspace_id, kept[1]) if kept else None
+        results = {row.id: row.result for row in conn.execute(sa.select(jobs.c.id, jobs.c.result)
+                   .where(jobs.c.workspace_id == workspace_id,
+                          jobs.c.id.in_([r.job_id for r in rows if r.job_id])))}
+    out = []
+    for row in rows:
+        key = _first_key(row._mapping["keys"])
+        expires = None
+        if kept is not None:
+            expires = max(float(row.created_at), float(since or 0.0)) + kept[1] * DAY_S
+        result = results.get(row.job_id) or {}
+        out.append({"id": row.id, "created_at": float(row.created_at),
+                    "size_bytes": row.size_bytes, "seconds": result.get("seconds"),
+                    "expires_at": expires,
+                    "url": _sign(client, buckets, key, workspace_id) if key else None})
+    return {"exports": out}
+
+
+__all__ = ["export_spec", "export_status", "export_timeline", "request_export",
+           "stored_exports"]
