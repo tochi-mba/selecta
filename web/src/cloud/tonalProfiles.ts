@@ -52,7 +52,7 @@ const PROFILER_LOCK = 'selecta-tonal-profiler';
 /** Samples mixed down per slice before the page is handed back (a few milliseconds each). */
 const MIX_SLICE = 1 << 19;
 /** With cloud.device_analysis, songs are decoded at the rate the Desktop decodes them to
- * (`selecta.config.SAMPLE_RATE`), in stereo, and measured whole (cloud/songFacts.ts). */
+ * (the Desktop sample rate), in stereo, and measured whole (cloud/songFacts.ts). */
 const FACTS_RATE = 44100;
 /** A whole song's facts take longer than its profile, most of all on a phone. */
 const FACTS_TIMEOUT_MS = 300_000;

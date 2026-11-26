@@ -6,7 +6,7 @@
  * (src/selecta/engine_store/facts.py); bump it when any measurement changes what it returns. */
 export const DEVICE_ANALYSIS_IMPLEMENTATION = 'web-dsp-1';
 
-/** The Desktop recipe the port follows (`selecta.config.ANALYSIS_VERSION`). */
+/** The Desktop recipe the port follows (the Desktop analysis version). */
 export const PYTHON_ANALYSIS_VERSION = 3;
 
 /** The interim beat source (beatSource.ts): whole-song autocorrelation tempo and a comb phase. */
