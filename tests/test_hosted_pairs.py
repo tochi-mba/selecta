@@ -330,6 +330,28 @@ def test_an_older_seam_gets_the_level_the_worker_rendered_at_and_a_linear_warp(p
     assert hosted_pairs.worker_gain_db((float("-inf"), float("-inf"))) is None
 
 
+def test_a_queued_pair_already_says_the_levels_its_clip_will_be_made_at(pair):
+    first = ask(pair)  # each analysis job, whose result holds the song's loudness
+    assert first["state"] == "waiting_for_analysis" and first["levels"] is None
+    analysed(pair.engine, "a", "b")
+    queued = ask(pair)
+    # the browser starts a song at this level before its clip is made, so it is the worker's own
+    # (`SongInfo.gain_db`), as a ready clip's older record works it out
+    assert queued["state"] == "queued" and queued["clip"] is None
+    assert queued["levels"] == {"a_gain_db": min(-14.0 + 9.5, -1.0 + 0.3),
+                                "b_gain_db": min(-14.0 + 12.0, -1.0 + 2.5)}
+    seam_made(pair.engine, hosted_render.seam_hash(sha("a"), sha("b"), "blend"), "blend")
+    assert ask(pair)["levels"] == queued["levels"]
+
+
+def test_a_refused_pair_says_no_levels(pair):
+    ask(pair)
+    analysed(pair.engine, "a", "b")
+    with limited(10.0):
+        answer = ask(pair)
+    assert answer["state"] == "refused" and answer["levels"] is None and answer["clip"] is None
+
+
 def test_a_song_with_no_cloud_copy_is_named_and_nothing_is_queued(pair):
     only_here = add_song(pair.engine, "c", upload=False, number=3)
     with pytest.raises(hosted_pairs.NoCloudCopy) as refused:

@@ -124,12 +124,14 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   const { api, cloud, request, media, workspaceId, on, route, moreItems, more, shared, status, statusProblem, setStatusProblem, refreshStatus, refreshMix } = at;
   const { data, mixProblem, setMixData, shellPlayer, now, playback, refusal, output, notify, openStore, connect, sweepLapsed, stems, recipes, deviceTrack, book } = at;
   const { lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive } = at;
-  const { remote, playWays, holdings, where, followsHere, newest, songOrder, playOn, devicesHere } = at;
+  const { remote, playWays, holdings, where, followsHere, newest, songOrder, playOn } = at;
+  // music on this device unless the shell says there is none (cloud.one_shell, cloud only)
+  const devicesHere = at.devicesHere !== false;
   // cloud.one_mixer: the shared mixer for every account, and its file made in the cloud library
   // (and always in the cloud-only profile, musicHomes.ts)
   const oneMixer = oneMixerOn();
   // cloud.one_shell, cloud only: songs come from Upload music, never a folder on this device
-  const uploadPlace = moreItems.find((place) => place.id === 'uploads')?.path ?? null;
+  const uploadPlace = devicesHere ? null : moreItems.find((place) => place.id === 'uploads')?.path ?? null;
   const cloudOnly = devicesHere ? undefined : { upload: uploadPlace };
   const cloudFile = oneMixer && coexisting && cloudFileOn();
   // cloud.account_mixes: My Mixes lists the account's drafts and the editor opens one (AccountDrafts.tsx)

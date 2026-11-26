@@ -5,6 +5,7 @@ import { ENGINE_SAMPLE_RATE } from '../engine/context';
 import { createLevels, type Levels } from '../engine/level';
 import { flagListed, flagOn } from '../flags';
 import type { MediaResolver } from '../media';
+import { cloudExportParts } from './cloudExport';
 import { cloudFileFamily } from './cloudFileExport';
 import { oneMixerOn } from './musicHomes';
 import { deviceRenderOn, SEAM_BUDGET_MS, type DeviceStudio, type StudioSong } from './deviceStudio';
@@ -31,7 +32,11 @@ import { makeDeviceStudio, songsHere } from './studioWiring';
  * With `cloud.one_mixer` a song in the cloud library is saved too: its bytes are read through
  * the player's own resolver to this device, never sent anywhere. A transition next to one has no
  * clip made for it and is joined as playback blends it live. A song only on another device, or
- * nowhere, is left out by name and the rest is saved. */
+ * nowhere, is left out by name and the rest is saved.
+ *
+ * With `cloud.studio_seams` a transition between two songs with their own cloud copy is the cloud
+ * studio's clip, joined with the same arithmetic, each song next to it read from its lossless file
+ * at the clip's level (cloudExport.ts). */
 
 /** With `cloud.local_export` named on by the server. */
 export const localExportOn = (): boolean => flagListed('cloud.local_export');
@@ -167,17 +172,23 @@ async function run(running: Running, deps: ExportDeps): Promise<void> {
     const { songs, items, left } = await gather(frozen, deps);
     // what was left out is said on the job, and the rest is saved
     if (left.length) changed(running, { error: left.join(' '), seams_total: songs.length - 1 });
-    const clips = await prepare(running, songs, deps);
+    // cloud.studio_seams: the transitions made in the cloud, and their songs' lossless files
+    const cloud = deps.inCloud
+      ? await cloudExportParts(items, { request: deps.cloud, inCloud: deps.inCloud, decode: deps.decode ?? decode, usual: (index) => songs[index].data() }, control.signal)
+      : null;
+    // a song read from its lossless file is joined by the cloud's clips, never the device studio's
+    const clips = await prepare(running, cloud ? songs.map((one, index) => (cloud.songs.has(index) ? { ...one, song: null } : one)) : songs, deps);
     if (control.signal.aborted) return changed(running, { state: 'cancelled', can_cancel: false });
     changed(running, { state: 'encoding' });
     const level = deps.level ?? levelOf;
     const result = await (deps.write ?? exportFile)({
       format: 'flac',
-      tracks: songs.map((one, index) => ({ id: items[index].song_id, data: one.data })),
+      tracks: songs.map((one, index) => ({ id: items[index].song_id, data: cloud?.songs.get(index)?.data ?? one.data })),
       decode: deps.decode ?? decode,
       sampleRate: ENGINE_SAMPLE_RATE,
-      level: (_index, buffer) => level(buffer),
-      joins: async (index) => clips[index] ?? null,
+      // a cloud song at its clip's level, as playback plays it
+      level: async (index, buffer) => cloud?.songs.get(index)?.level ?? level(buffer),
+      joins: async (index) => cloud?.clips.get(index) ?? clips[index] ?? null,
       signal: control.signal,
     });
     if (!result.ok) {
