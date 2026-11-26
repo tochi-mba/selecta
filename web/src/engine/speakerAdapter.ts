@@ -72,6 +72,7 @@ export class BrowserSpeaker implements Speaker {
   private readonly store: EngineStore;
   private readonly graph: EngineGraph;
   private readonly loader: Loader;
+  private readonly decodeBytes: (bytes: ArrayBuffer) => Promise<AudioBuffer>;
   private readonly scheduler: Scheduler;
   private readonly resolve: ResolveTrack;
   private readonly disposeOwner?: () => void;
@@ -106,7 +107,8 @@ export class BrowserSpeaker implements Speaker {
     this.decoded = options.decoded;
     this.graph = options.graph ?? buildGraph(options.audio.context);
     const context = options.audio.context;
-    this.loader = createLoader((bytes) => context.decodeAudioData(bytes), { keep: options.keep });
+    this.decodeBytes = (bytes) => context.decodeAudioData(bytes);
+    this.loader = createLoader(this.decodeBytes, { keep: options.keep });
     this.scheduler = createScheduler({
       graph: this.graph,
       store: this.store,
@@ -214,6 +216,18 @@ export class BrowserSpeaker implements Speaker {
       if (!source || this.disposed) return null;
       const result = await this.loader.load(source.id, source.data);
       return result.ok ? result.buffer : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** A song not in the mix yet (a request's), decoded by the context that plays, so a transition
+   * made ahead from it has the samples it will play with. Outside the loader's cache, so it never
+   * pushes out a song about to play. Null when it cannot be read here. */
+  async decodedSource(source: TrackSource): Promise<AudioBuffer | null> {
+    if (this.disposed) return null;
+    try {
+      return await this.decodeBytes(await source.data());
     } catch {
       return null;
     }

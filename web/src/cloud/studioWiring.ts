@@ -25,12 +25,49 @@ export type StudioWiring = {
   decodedAt(index: number): Promise<AudioBuffer | null>;
   level(buffer: AudioBuffer): Promise<number>;
   facts?(sha: string): Promise<SongFacts | null>;
+  /** A song by catalogue id when its file is on this device: the file's hash and its decode, the
+   * speaker's own. For a request's transitions, whose song is not in the mix yet. */
+  songHere?(songId: number): Promise<{ song: StudioSong; decoded(): Promise<AudioBuffer | null> } | null>;
 };
 
 // the account's request for each workspace whose player made a studio, so the Listening Room can
 // hear the planner's choices without being handed the account by the shell
 const access = new Map<string, Request>();
 export const planningAccess = (workspaceId: string): Request | null => access.get(workspaceId) ?? null;
+
+// the studio of each workspace's player, so the requests adapter can ask it for a request's
+// transitions (T-20261126-a246) and the Activity drawer can show its work (T-20261126-36c7)
+type Kept = { studio: DeviceStudio; songHere: StudioWiring['songHere'] };
+const studios = new Map<string, Kept>();
+export const studioOf = (workspaceId: string): DeviceStudio | null => studios.get(workspaceId)?.studio ?? null;
+/** Subscribed to by the Activity drawer, told when a player makes or ends its studio. */
+const studioListeners = new Set<() => void>();
+export function onStudios(listener: () => void): () => void {
+  studioListeners.add(listener);
+  return () => { studioListeners.delete(listener); };
+}
+const studiosChanged = () => { for (const listener of [...studioListeners]) listener(); };
+
+/** Ask this workspace's studio to make the transitions a waiting request's placement needs,
+ * pairs of catalogue song ids. Songs whose file is not on this device are skipped: another device
+ * makes its own. Returns how many pairs it could ask for. */
+export async function prepareRequestSeams(workspaceId: string, pairs: readonly { a: number; b: number }[]): Promise<number> {
+  const kept = studios.get(workspaceId);
+  if (!kept?.songHere) return 0;
+  const ids = [...new Set(pairs.flatMap((pair) => [pair.a, pair.b]))];
+  const found = new Map<number, StudioSong>();
+  await Promise.all(ids.map(async (id) => {
+    const here = await kept.songHere!(id).catch(() => null);
+    if (here) found.set(id, here.song);
+  }));
+  const asked = pairs.flatMap((pair) => {
+    const a = found.get(pair.a);
+    const b = found.get(pair.b);
+    return a && b ? [{ a, b }] : [];
+  });
+  if (studios.get(workspaceId) === kept) kept.studio.prepareFor(asked);
+  return asked.length;
+}
 
 /** The two planning requests the studio makes: song ids, the settle rule and an index, no more. */
 export function planningCalls(request: Request) {
@@ -45,10 +82,20 @@ export function planningCalls(request: Request) {
 
 export function makeDeviceStudio(wiring: StudioWiring): DeviceStudio {
   access.set(wiring.workspaceId, wiring.request);
+  // the decode for each song a request needs, by its file's hash
+  const decodes = new Map<string, () => Promise<AudioBuffer | null>>();
+  const songHere = wiring.songHere && (async (songId: number) => {
+    const here = await wiring.songHere!(songId);
+    if (here) {
+      decodes.set(here.song.sha, here.decoded);
+      while (decodes.size > 16) decodes.delete(decodes.keys().next().value as string);
+    }
+    return here;
+  });
   const renderer = new SeamRenderer();
   const factsOf = wiring.facts ?? ((sha: string) => songFacts(sha));
   const calls = planningCalls(wiring.request);
-  return new DeviceStudio({
+  const studio = new DeviceStudio({
     candidates: calls.candidates,
     script: calls.script,
     measured: async (a: StudioSong, b: StudioSong) => {
@@ -58,13 +105,26 @@ export function makeDeviceStudio(wiring: StudioWiring): DeviceStudio {
       return account.has(a.songId) && account.has(b.songId);
     },
     audio: (index) => wiring.decodedAt(index),
+    songAudio: wiring.songHere ? async (song) => (await decodes.get(song.sha)?.()) ?? null : undefined,
     level: (buffer) => wiring.level(buffer),
     // every window is cut for its call alone, so it is moved to the worker, never copied
     render: (script, sources, options) => renderer.render(script, sources, { signal: options.signal, timeoutMs: options.timeoutMs, owned: true }),
     store: createClipStore(),
     log: import.meta.env.DEV ? (line) => console.info(line) : undefined,
-    stop: () => renderer.end(),
+    stop: () => {
+      renderer.end();
+      if (studios.get(wiring.workspaceId)?.studio === studio) {
+        studios.delete(wiring.workspaceId);
+        studiosChanged();
+      }
+    },
     // after the clip is in hand, off the path the music takes
     report: (pair, made, answer) => { setTimeout(() => void reportSeam(wiring.request, wiring.workspaceId, made, pair, answer), 0); },
   });
+  // only the player's studio is kept: the Listening Room's own (no songHere) works for itself
+  if (wiring.songHere) {
+    studios.set(wiring.workspaceId, { studio, songHere });
+    studiosChanged();
+  }
+  return studio;
 }

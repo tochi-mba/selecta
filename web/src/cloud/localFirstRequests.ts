@@ -3,6 +3,7 @@ import type { RequestRow } from '../views/Requests';
 import type { PlayableSong } from './localFirstMixes';
 import { askerOf, openRoomId } from '../rooms/useRoomSession';
 import { accountRequests, accountRequestsOn, type AccountRequest } from './accountRequests';
+import { ACCOUNT_OFFER, accountPlacements, type Placement, type Playback } from './accountPlacements';
 import { addedOnReturn, comingUp, notHereWords, notOnSpeaker, playsOn, programmeWithNext, speakerHolds, type ControllerLink, type WhereHeld } from '../devices/controller';
 
 /** The requests route family of the local-first adapter (ADR-0462 "one adapter per route family"):
@@ -16,6 +17,11 @@ import { addedOnReturn, comingUp, notHereWords, notOnSpeaker, playsOn, programme
  * that is playing, with the browser's own blend. Bridges and hearing a request's transitions
  * ahead are refused with that reason. The panel shows these rows as one short Waiting list
  * (views/BrowserRequests.tsx): who asked, Add next, Dismiss.
+ *
+ * With the account keeping the mix and this device making transitions (accountPlacements.ts,
+ * T-20261126-a246), the account looks for a request's place from the songs it has measured, this
+ * device makes the transitions that place needs, and the request joins there by itself once they
+ * are made; Add next still plays it right away.
  *
  * Where it is kept: with `cloud.brain` and `cloud.account_mixes`, the member's own requests are
  * kept with the account (accountRequests.ts), so they wait on every device; otherwise, or when
@@ -33,6 +39,8 @@ export const NOT_ON_THIS_DEVICE = 'This song’s file isn’t on this device. Co
 export const NO_BRIDGES = 'SelectaDJ can’t look for bridge songs in your browser: nothing here is measured for key or tempo. Add the request to the mix directly instead.';
 export const NOTHING_TO_HEAR = 'A request’s transitions are worked out in your browser as the mix plays, so there is nothing to hear ahead.';
 export const NO_MIX_YET = 'There is no mix playing to add it to. Start a mix on Make a Mix first.';
+/** A request the account found a place for, while this device makes its transitions. */
+export const making = (after?: string) => `SelectaDJ is making its transitions on this device, so it can join${after ? ` after ${after}` : ''}. Add next plays it right away instead.`;
 
 /** A room request waiting for this workspace's browser mix, as `/api/room-requests` answers it. */
 export type RoomRequest = {
@@ -143,6 +151,9 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
   const roomChanged = () => { rooms = null; };
   // the member's own requests kept with the account; any failure leaves this browser's own list
   const account = accountRequests(cloud);
+  // T-20261126-a246: where the account would put each of them, from its last look
+  const placing = accountPlacements(cloud, workspaceId);
+  let planned = new Map<number, Placement>();
   const accountRows = async (): Promise<AccountRequest[]> => {
     if (!accountRequestsOn()) return [];
     try { return await account.list(); } catch { return []; }
@@ -206,9 +217,17 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     const nowMs = Date.now();
     for (const [roomId, until] of sentToSpeaker) if (until < nowMs || !room.some((asked) => asked.id === roomId)) sentToSpeaker.delete(roomId);
     const shown = link ? room.filter((asked) => !sentToSpeaker.has(asked.id)) : room;
+    // the account's own: joined by itself once the account's place for it is ready here
+    const placed = (asked: AccountRequest): RequestRow => {
+      const shown = row(mine[String(asked.id)], asked.song_id);
+      const plan = link ? undefined : planned.get(asked.id);
+      if (!plan || plan.song_id !== asked.song_id || !shown.available || plan.needs_approval) return shown;
+      if (plan.ready && plan.offer) return { ...shown, ready: true, offer: `${ACCOUNT_OFFER}${plan.offer}`, ...(plan.after ? { after: plan.after } : {}) };
+      return plan.stage === 'preparing' ? { ...shown, where_note: making(plan.after) } : shown;
+    };
     return {
       rows: [
-        ...own.map((asked) => row(mine[String(asked.id)], asked.song_id)),
+        ...own.map(placed),
         ...saved.local.map((asked) => row(asked.id, asked.song_id)),
         ...shown.map((asked) => row(kept[asked.id], asked.song_id, asked)),
       ],
@@ -338,6 +357,9 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
    * (`offer` stays empty), because nothing can say where it fits. */
   const consider = async (init?: RequestInit) => {
     const { order = [], position } = bodyOf<Where>(init);
+    // the account's look first: it settles its own requests already in the mix and plans the rest
+    const looked = controller?.() ? null : await placing.look(bodyOf<Partial<Playback>>(init));
+    planned = new Map((looked?.requests ?? []).map((plan) => [plan.id, plan]));
     const from = Number.isInteger(position) ? Math.max(0, Number(position)) : 0;
     const inMix = new Set(order.slice(from));
     const { rows: now } = await rows();
@@ -350,7 +372,14 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
       if (remote && row.room_request_id) continue;
       if (await finish(row.id, 'played').catch(() => false)) settled.push(row.title ?? 'A requested song');
     }
-    return { ...(await list()), settled };
+    return { ...(await list()), settled: [...(looked?.settled ?? []), ...settled] };
+  };
+
+  /** A placement the account made ready on this device, put in as the account planned it. */
+  const insertPlanned = async (offer: string, body: Partial<Playback>): Promise<MixData> => {
+    const changed = await placing.insert(body, offer);
+    planned = new Map([...planned].filter(([, plan]) => plan.offer !== offer));
+    return changed;
   };
 
   const undo = (init?: RequestInit): Promise<MixData> | undefined => {
@@ -389,6 +418,7 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
       if (method === 'POST' && route === '/requests/consider') return consider(init);
       if (method === 'POST' && route === '/requests/insert') {
         const body = bodyOf<Where & { offer?: string }>(init);
+        if (String(body.offer ?? '').startsWith(ACCOUNT_OFFER)) return insertPlanned(String(body.offer).slice(ACCOUNT_OFFER.length), body as Partial<Playback>);
         const id = Number(String(body.offer ?? '').replace(/^request-/, ''));
         if (!Number.isInteger(id)) return Promise.reject(refuse('That request isn’t waiting any more.', 'no_request', 404));
         return join(id, body);

@@ -5,6 +5,7 @@ import { assertNoPath } from '../media/identity';
 import { forgetAccountMeasured } from './accountFacts';
 import { accountMixes } from './accountMixes';
 import { accountRequests } from './accountRequests';
+import { accountPlacements } from './accountPlacements';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
@@ -48,6 +49,10 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['GET', /^\/requests$/],
   ['POST', /^\/requests$/],
   ['DELETE', /^\/requests\/\d+$/],
+  // cloud.device_render with cloud.account_mixes: the account's look for where a request joins
+  // and putting a ready one in: song ids, the playing position, an offer's name, the device id
+  ['POST', /^\/requests\/consider\?device_id=[A-Za-z0-9_-]{1,64}$/],
+  ['POST', /^\/requests\/insert\?device_id=[A-Za-z0-9_-]{1,64}$/],
 ];
 
 /** The one request that is not to the account: the beat tracker's model file, fetched from
@@ -271,6 +276,26 @@ describe('the requests kept with the account', () => {
     expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['POST /requests', 'GET /requests', 'DELETE /requests/12']);
     calls.forEach(holdsTheContract);
     expect(calls[0].body).toEqual({ song_id: 5 });
+  });
+});
+
+describe('where a request joins, planned by the account', () => {
+  it('carries the song ids of the mix, the playing position, an offer and the device id, never a path or audio', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true, 'cloud.device_render': true });
+    localStorage.setItem('selecta.device.w1', 'dev-1');
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => {
+      const answer = await capture(path, init);
+      return path.startsWith('/requests/consider') ? { requests: [], settled: [] } : answer;
+    }) as typeof capture;
+    const placing = accountPlacements(request, 'w1');
+    await placing.look({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60 });
+    await placing.insert({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60 }, 'a'.repeat(64));
+    localStorage.removeItem('selecta.device.w1');
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['POST /requests/consider?device_id=dev-1', 'POST /requests/insert?device_id=dev-1']);
+    calls.forEach(holdsTheContract);
+    expect(calls[0].body).toEqual({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60 });
+    expect(calls[1].body).toEqual({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60, offer: 'a'.repeat(64) });
   });
 });
 
