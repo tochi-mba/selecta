@@ -5,7 +5,9 @@ import { setFlags } from '../flags';
 import type { MediaResolver, ResolvedTrack } from '../media';
 import type { DeviceStudio } from './deviceStudio';
 import { exportFamily, forgetExports, NOT_HERE, ON_DEVICE, TOO_FEW, type ExportDeps } from './localExport';
-import { NOT_IN_CLOUD } from './cloudFileExport';
+import { NOT_IN_CLOUD, ownCloudCopies } from './cloudFileExport';
+import type { CatalogueSong } from './deviceMusicRequest';
+import { groupVersions } from './songVersions';
 
 // Phase 4 (cloud.one_mixer): a mix with songs on this device and in the cloud library saves as a
 // file here, reading the cloud songs to this device through the player's resolver; a song only
@@ -126,6 +128,52 @@ describe('Make the file in your cloud library', () => {
     expect(cloud).not.toHaveBeenCalled();
     setFlags({ ...ON, 'cloud.one_mixer': false });
     await expect(rig({ inCloud: [1, 2, 3] }).ask('GET', '/exports/cloud')).rejects.toMatchObject({ code: 'flag_off' });
+  });
+
+  describe('a song with two versions, only the other one in the cloud library', () => {
+    // song 1 is the song a mix plays; 5 is another file of it (a version), and only 5 was
+    // uploaded. Its Library row shows both places, but the server's export reads song 1's own
+    // copy (`cloud_copies`), and it has none.
+    const copy = (asset_id: string) => ({ asset_id, bytes: 100, format: 'flac', copies: 1 });
+    const rows: CatalogueSong[] = [
+      { id: 1, title: 'Song 1', artist: 'Rex', content_sha256: sha(1) },
+      { id: 2, title: 'Song 2', artist: 'Rex', content_sha256: sha(2), cloud: copy('a2') },
+      { id: 5, title: 'Song 1', artist: 'Rex', content_sha256: sha(5), duplicate_of: 1, cloud: copy('a5') },
+    ];
+    const grouping = groupVersions(rows);
+    const two: MixData = { ...MIX, mix: [item(1, 0), item(2, 1)] };
+    const family = (files: CatalogueSong[], cloudCopy?: (rows: readonly CatalogueSong[], all: readonly CatalogueSong[]) => Promise<string | null>) => {
+      const cloud = vi.fn(async () => ({ state: 'queued', job_id: 'job-1' }));
+      const made = exportFamily({ workspaceId: 'ws-1', cloud: cloud as unknown as Request, mix: async () => two, inCloud: (ids) => ownCloudCopies(files, ids, cloudCopy) });
+      const ask = <T,>(method: string, route: string) => made.answer(method, route, new URLSearchParams(), { method }) as Promise<T>;
+      return { ask, cloud };
+    };
+
+    it('is not offered, and the server’s refusal is never reached', async () => {
+      expect(grouping.primaryOf(5)).toBe(1);
+      const { ask, cloud } = family(grouping.files);
+      expect(await ask('GET', '/exports/cloud')).toEqual({ offered: false });
+      await expect(ask('POST', '/exports/cloud')).rejects.toMatchObject({ code: 'not_in_cloud', message: NOT_IN_CLOUD('Song 1') });
+      expect(cloud).not.toHaveBeenCalled();
+      // the song's own copy is what counts: with it, the file is offered
+      const own = grouping.files.map((row) => (row.id === 1 ? { ...row, cloud: copy('a1') } : row));
+      expect(await family(own).ask('GET', '/exports/cloud')).toEqual({ offered: true });
+    });
+
+    it('without the server’s answer, asks for the song’s own row alone, never a version’s', async () => {
+      const bare = grouping.files.map((row) => ({ ...row, cloud: undefined }));
+      const asked: number[][] = [];
+      const byHash = async (looked: readonly CatalogueSong[]) => {
+        asked.push(looked.map((row) => row.id));
+        return looked.some((row) => row.id === 2 || row.id === 5) ? 'asset' : null;
+      };
+      const { ask, cloud } = family(bare, byHash);
+      expect(await ask('GET', '/exports/cloud')).toEqual({ offered: false });
+      expect(asked).toEqual([[1], [2]]);
+      // and with no way to tell, nothing is offered
+      expect(await family(bare).ask('GET', '/exports/cloud')).toEqual({ offered: false });
+      expect(cloud).not.toHaveBeenCalled();
+    });
   });
 
   it('answers nothing without the cloud library list, so the panel offers nothing', () => {
