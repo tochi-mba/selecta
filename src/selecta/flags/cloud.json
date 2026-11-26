@@ -239,6 +239,16 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.catalogue_play": {
+      "label": "Phones and other devices play cloud songs",
+      "about": "A song in your cloud library plays on any device you are signed in on: it is found by the song itself, never by this device's own files or by its name, and its link is signed again when it runs out. Choosing where the music plays counts those songs as on every signed-in device, so a phone with no music of its own can play them here. Off, songs in the cloud library are matched as before.",
+      "requires": ["cloud.stored_media"],
+      "surfaces": ["cloud.listen", "cloud.library"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.progressive_import": {
       "label": "Import continues in the background",
       "about": "A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02).",
@@ -805,6 +815,16 @@
       "surfaces": ["cloud.listen"],
       "words": ["Tonight in numbers"],
       "modes": ["cloud"],
+      "kind": "release",
+      "owner": "rooms"
+    },
+    "rooms.cloud_songs": {
+      "label": "Rooms offer songs in your cloud library",
+      "about": "For an account with a cloud library, a room also offers the songs in it, because the device playing the room can play them from there; any signed-in device can then play the room. Songs kept only on another device stay out, as before. Off, a room offers only the songs on the device playing it.",
+      "requires": ["rooms", "cloud.stored_media"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
       "kind": "release",
       "owner": "rooms"
     },
