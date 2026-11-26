@@ -24,7 +24,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Make a Mix: order from the planner | Works | `cloud.brain`, `cloud.device_analysis` | |
 | Energy shape | Works: sent to the planner with the order | `cloud.brain`, `cloud.device_analysis` | |
 | Mix language, ending | Works | | |
-| Transition feel | Decision: absent; transitions use the standard feel | | T-20261126-6f97 |
+| Transition feel | Works: the order is planned in the feel, and each transition of a mix made in it is made on the device in that feel's moves (`language` on `/planning/candidates`); a mix already made keeps its transitions | `cloud.brain`, `cloud.device_analysis` (transitions: `cloud.device_render`) | |
 | Stem moves, stem splitting | Decision: absent; the stem model is not published, so songs play whole | `cloud.browser_stems` when it is | T-20261125-03a3 |
 | Transitions made ahead, audited and repaired | Works in a worker on the device | `cloud.device_render` | |
 | Good and Bad on a transition | Works | `cloud.brain` | |
@@ -32,7 +32,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Seam Inspector | Works for each transition this device made: the move, its reasons, where each song is left and joined, the checks, what else was tried, Good and Bad, and its preview played from the clip on the device; "Render it" asks this device to make one. Stem Studio is absent (no stems in a browser) | `cloud.device_render`, `cloud.brain` | |
 | My Mixes, drafts, Undo | Works: the account's own mix routes | `cloud.brain`, `cloud.account_mixes` | |
 | Locks | Works when the account keeps the mix; a mix kept in this browser has no lock | `cloud.brain`, `cloud.account_mixes` | |
-| Energy horizon in the editor | Decision: absent | | T-20261126-bfec |
+| Energy horizon in the editor | Works: the mix's rows carry each song's energy, tempo and key as the account measured them; a song not measured shows none | `cloud.brain`, `cloud.device_analysis` | |
 | Request a song | Works, kept with the account; the member adds it | `requests`, `cloud.account_mixes` | |
 | A request placed by its planned transitions | Works: the account plans the place, this device makes its transitions after the mix's own, and it joins by itself (`/requests/consider` and `/requests/insert` with the device id); Add next still plays it right away | `cloud.brain`, `cloud.account_mixes`, `cloud.device_render`, `requests` | |
 | Bridge songs for a request | Decision: absent | | T-20261126-ae4f |
