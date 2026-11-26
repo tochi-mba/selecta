@@ -27,7 +27,7 @@ const LEAVE_MS = 4000;
 export const MISSING_WAITS_MS = [0, 2000, 4000, 4000, 8000, 16000, 30000];
 /** After this many re-asks (ten seconds) a row stops saying "Getting ready". */
 export const STUCK_AFTER_ASKS = 4;
-export const NOT_HERE_YET = 'This request hasn’t reached this browser yet, so it can’t be added here. SelectaDJ keeps trying.';
+export const STILL_ARRIVING = 'This request is still on its way to this browser, so it can’t be added here. SelectaDJ keeps trying.';
 
 /** The browser's Requests list and what it can do with a row; null where there is no such list
  * (a workspace whose mix is not built in this browser): SelectaDJ places the songs itself. */
@@ -271,7 +271,7 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
     // no list in this browser: SelectaDJ puts accepted songs in the mix on its own
     if (!mix) return { note: '', buttons: <>{<span className="ask-state">Joins the mix on its own</span>}{pass}</> };
     if (!row && stuck) {
-      return { note: NOT_HERE_YET, buttons: <>{onMissing && <button type="button" aria-label={`Try now: ${title}`} onClick={() => onMissing()}>Try now</button>}{pass}</> };
+      return { note: STILL_ARRIVING, buttons: <>{onMissing && <button type="button" aria-label={`Try now: ${title}`} onClick={() => onMissing()}>Try now</button>}{pass}</> };
     }
     if (!row) return { note: '', buttons: <>{<span className="ask-state">{rows === null ? `Loading${ELLIPSIS}` : `Getting ready${ELLIPSIS}`}</span>}{rows !== null && pass}</> };
     const why = going[id] ? '' : held(row.request, row.stage);

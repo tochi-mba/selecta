@@ -579,7 +579,13 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     workspaceId,
     decodedAt: async (index) => (await speakerNow.current?.decodedAt(index)) ?? null,
     level: (buffer) => (seamLeadOn() ? songLevels().of(buffer) : Promise.resolve(1)),
-  }), [workspaceId]);
+    // a request's song, not in the mix yet: only this device's own file (T-20261126-a246)
+    songHere: async (songId) => {
+      const found = await (await resolver())?.(songId);
+      if (!found?.held || (found.source ?? 'device') !== 'device') return null;
+      return { song: found.held, data: found.data, decoded: async () => (await speakerNow.current?.decodedSource({ id: found.id, data: found.data })) ?? null };
+    },
+  }), [workspaceId, resolver]);
   useEffect(() => () => studio.dispose(), [studio]);
   // The stem prefetcher (cloud.browser_stems): splits the windows the next transitions need while
   // this song plays. Only with the flag on, the stem model's licence cleared and a model published.

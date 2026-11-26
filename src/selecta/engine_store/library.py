@@ -34,7 +34,7 @@ from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy.engine import Engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import QueuePool
 
 from selecta.config import Settings
 from selecta.engine_store import EngineStore
@@ -105,9 +105,13 @@ def behind(conn: sqlite3.Connection) -> bool:
     return stamp != head() and stamp in known()
 
 
-# One engine per library file. NullPool: nothing is held open between uses, so a restore can
-# replace the file and a test's temporary folder can be removed.
+# One engine per library file. It keeps a few idle connections (T-20261125-ecd7): opening one
+# per read cost milliseconds on Windows, which a page of songs or a plan of hundreds paid per
+# song. A nested read takes another connection, never the one in use. Anything that replaces
+# or removes the file calls `forget` first, which closes them (a restore does, `backup`).
+POOL_SIZE = 4
 _engines: dict[str, Engine] = {}
+_stores: dict[str, EngineStore] = {}
 _engines_lock = threading.Lock()
 
 
@@ -120,14 +124,27 @@ def engine_for(path: Path | str) -> Engine:
     with _engines_lock:
         engine = _engines.get(key)
         if engine is None:
-            engine = make_engine(f"sqlite:///{Path(key).as_posix()}", poolclass=NullPool)
+            engine = make_engine(
+                f"sqlite:///{Path(key).as_posix()}",
+                poolclass=QueuePool,
+                pool_size=POOL_SIZE,
+                max_overflow=-1,
+            )
             _engines[key] = engine
         return engine
 
 
 def store_for(path: Path | str) -> EngineStore:
-    """The local workspace's store on this library file."""
-    return EngineStore(engine_for(path), LOCAL_WORKSPACE, library=True)
+    """The local workspace's store on this library file: one per file, made once, since a page
+    or a plan asks for it per song."""
+    key = _key(path)
+    with _engines_lock:
+        store = _stores.get(key)
+    if store is None:
+        store = EngineStore(engine_for(path), LOCAL_WORKSPACE, library=True)
+        with _engines_lock:
+            store = _stores.setdefault(key, store)
+    return store
 
 
 def artifacts_for(settings: Settings) -> LocalArtifactStore:
@@ -187,9 +204,11 @@ def _check_baseline(connection: sa.Connection) -> None:
 
 
 def forget(path: Path | str) -> None:
-    """Drop this file's engine, for a file that is being replaced or removed."""
+    """Drop this file's engine and close its idle connections, for a file that is being
+    replaced or removed."""
     with _engines_lock:
         engine = _engines.pop(_key(path), None)
+        _stores.pop(_key(path), None)
     if engine is not None:
         engine.dispose()
 

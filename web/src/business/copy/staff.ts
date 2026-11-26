@@ -28,7 +28,7 @@ export const STAFF_COPY = {
   resume: 'Resume',
   requests: 'Requests',
   volume: 'Volume',
-  noZones: "This tablet isn't set up for a zone yet. Ask your manager",
+  noZones: "This tablet isn't set up for a zone. Ask your manager",
   noRequests: 'No requests right now',
   loading: 'Getting the music',
   offlineQueued: 'Will send when back online',

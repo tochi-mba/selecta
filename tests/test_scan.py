@@ -305,7 +305,9 @@ def test_a_song_with_skip_history_going_does_not_stop_the_scan(tmp_path):
     root, conn, _report = _library(tmp_path)
     song = conn.execute("SELECT id FROM songs WHERE path LIKE '%0.flac'").fetchone()[0]
     conn.execute(
-        "CREATE TABLE playback_skips (id INTEGER PRIMARY KEY, song_id INTEGER NOT NULL "
+        # with core.engine_store on the library chain has made it already
+        "CREATE TABLE IF NOT EXISTS playback_skips (id INTEGER PRIMARY KEY, "
+        "song_id INTEGER NOT NULL "
         "REFERENCES songs(id), heard_seconds REAL NOT NULL, source_position REAL NOT NULL)"
     )
     conn.execute(

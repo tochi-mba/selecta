@@ -364,6 +364,11 @@ def activate_pending_restore(settings: Settings) -> bool:
     A marker makes a crash between database and history renames recoverable.
     No music files or any audio caches are touched.
     """
+    # the engine store's idle connections to the library are closed, never opened, so the file
+    # can be replaced (engine_store.library keeps a few between reads)
+    from selecta.engine_store import library
+
+    library.forget(settings.db_path)
     _recover_interrupted(settings)
     home = settings.home
     incoming = home / PENDING

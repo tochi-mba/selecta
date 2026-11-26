@@ -104,3 +104,72 @@ describe('playback status vocabulary (BF-0463-03)', () => {
     }
   });
 });
+
+/**
+ * The owner's rule: nothing in SelectaDJ is "not yet". Every string literal and JSX text in
+ * web/src (.ts and .tsx, tests aside) is checked for a promise about the product: "not yet",
+ * "coming soon", "soon" (other than "as soon as" and "too soon"), and a refusal that ends in
+ * "yet" ("isn't available here yet", "can't do that in your browser yet"). A state of a song,
+ * a device or a list ("No mixes yet", "Not measured yet") is a fact and is not matched. Where
+ * the product can't do something, the page says what the member can do instead.
+ */
+const PROMISE_FILES = fs.readdirSync(SOURCE, { recursive: true })
+  .map((file) => file.replace(/\\/g, '/'))
+  .filter((file) => /\.tsx?$/.test(file) && !file.endsWith('.d.ts') && !file.includes('.test.') && !file.includes('/test/'));
+
+const PROMISES: ReadonlyArray<[string, RegExp]> = [
+  ['not yet', /\bnot yet\b/i],
+  ['coming soon', /\bcoming soon\b/i],
+  ['soon', /\bsoon\b(?<!\bas soon)(?<!\btoo soon)/i],
+  ['a refusal that waits on "yet"', /\b(can't|cannot|isn't|aren't|doesn't|don't|not)\b[^.?!]*\b(browser|available|supported|on sale|published|switched on|open|set up|offered|here|do (this|that))\b[^.?!]*\byet\b/i],
+];
+
+/** Sentences where the word is not a promise about the product, each with its reason. */
+const NOT_A_PROMISE: ReadonlyArray<[string, string, string]> = [
+  ['kiosk/copy.ts', 'Closed. Music starts soon', 'the venue\'s own opening hours: music starts at the next opening time'],
+  ['business/forms/LicenceAttestationForm.tsx', 'Ends soon', 'a licence\'s end date is close: a fact about the venue\'s licence'],
+  ['views/LucyUsageMeter.tsx', 'Expires soon', 'a top-up\'s expiry date is close: a fact about the member\'s allowance'],
+  ['views/EditorRows.tsx', 'warn seam-too-soon', 'a CSS class name, never shown'],
+];
+
+function promises(file: string, source: string): string[] {
+  const out: string[] = [];
+  for (const piece of literals(source)) {
+    const plain = piece.replace(/[’‘]/g, "'");
+    const said = PROMISES.find(([, rule]) => rule.test(plain));
+    if (!said) continue;
+    if (NOT_A_PROMISE.some(([where, sentence]) => where === file && plain === sentence)) continue;
+    out.push(`${file}: "${piece.slice(0, 100)}" says ${said[0]}`);
+  }
+  return out;
+}
+
+describe('no "not yet" in SelectaDJ', () => {
+  it('scans the pages and the copy tables, so the scan is not vacuous', () => {
+    expect(PROMISE_FILES.length).toBeGreaterThan(FILES.length);
+    expect(PROMISE_FILES).toContain('cloud/localFirstRequest.ts');
+    expect(PROMISE_FILES).toContain('cloud/browserFlags.ts');
+  });
+
+  it('catches a planted promise and lets a fact through', () => {
+    expect(promises('x.ts', "const a = 'SelectaDJ can’t do that in your browser yet.';")).toHaveLength(1);
+    expect(promises('x.ts', "const b = 'Lyrics: coming soon';")).toHaveLength(1);
+    expect(promises('x.tsx', '<p>Not yet</p>')).toHaveLength(1);
+    expect(promises('x.ts', "const c = 'Stems arrive soon';")).toHaveLength(1);
+    expect(promises('x.ts', "const d = 'No mixes yet. Make one';")).toEqual([]);
+    expect(promises('x.ts', "const e = 'This song has not played yet tonight';")).toEqual([]);
+    expect(promises('x.ts', "const f = 'Plays as soon as it is here';")).toEqual([]);
+    expect(promises('x.ts', '// a comment may say not yet')).toEqual([]);
+  });
+
+  it('every allowed sentence is still there, so the list never goes stale', () => {
+    for (const [file, sentence] of NOT_A_PROMISE) {
+      expect(literals(fs.readFileSync(SOURCE + file, 'utf8')).map((piece) => piece.replace(/[’‘]/g, "'")), `${file}: ${sentence}`).toContain(sentence);
+    }
+  });
+
+  it('no string in web/src promises a feature later', () => {
+    const found = PROMISE_FILES.flatMap((file) => promises(file, fs.readFileSync(SOURCE + file, 'utf8')));
+    expect(found, found.join('\n')).toEqual([]);
+  });
+});

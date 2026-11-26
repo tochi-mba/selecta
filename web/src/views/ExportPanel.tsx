@@ -162,7 +162,7 @@ export function ExportPanel(props: {
       {file && (
         <p className="notice" role="status" data-export-ready={feel ? '' : undefined} data-arrive={feel ? '' : undefined}>
           {celebrating && <MomentLayer kind="equalizer" onDone={celebrated} />}
-          Ready{file.seconds != null ? `, ${length(file.seconds)} long` : ''}: <a href={`/api/exports/${encodeURIComponent(file.name)}`} download className={feel ? 'button primary export-download' : undefined} onClick={() => { if (feel) setPressed(file.name); }}>download {file.name}</a>
+          Ready{file.seconds != null ? `, ${length(file.seconds)} long` : ''}: <a href={file.url ?? `/api/exports/${encodeURIComponent(file.name)}`} download={file.name} className={feel ? 'button primary export-download' : undefined} onClick={() => { if (feel) setPressed(file.name); }}>download {file.name}</a>
           {/* the press handed the file to the browser's own download; the tick says it was taken */}
           {feel && pressed === file.name && <DrawnTick size="compact" className="export-download-tick" />}
           {/* the written file's own waveform, measured when it was verified */}

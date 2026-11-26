@@ -58,12 +58,21 @@ class FactsRequest(BaseModel):
 
 
 class CorrectionRequest(BaseModel):
-    """The member's tempo and key for a song; null leaves that one as measured."""
+    """The member's tempo and key for a song; null leaves that one as measured. `is_music`
+    (T-20261126-3f92): false sets the song aside, true says it is music, null clears the mark.
+    A body naming only `is_music` leaves tempo and key as they are."""
 
     model_config = ConfigDict(extra="forbid")
 
     bpm: float | None = None
     camelot: str | None = Field(default=None, max_length=3)
+    is_music: bool | None = Field(default=None, strict=True)  # never "yes" or 1
+
+    def tempo_key(self) -> tuple[Any, Any]:
+        named = self.model_fields_set
+        if "is_music" in named and not named & {"bpm", "camelot"}:
+            return facts_store.KEEP, facts_store.KEEP
+        return self.bpm, self.camelot
 
 
 def _path_like(value: Any, where: str = "") -> str | None:
@@ -220,7 +229,9 @@ def install(
         """The member's own tempo or key for a song, which wins over what was measured."""
         store = store_for(request, claims, WorkspaceAction.LIBRARY_WRITE)
         try:
-            return facts_store.set_correction(store, song_id, body.bpm, body.camelot)
+            bpm, camelot = body.tempo_key()
+            music = body.is_music if "is_music" in body.model_fields_set else facts_store.KEEP
+            return facts_store.set_correction(store, song_id, bpm, camelot, is_music=music)
         except LookupError:
             raise HTTPException(status_code=404, detail={"code": "song_not_found"}) from None
         except song_facts.FactsRefused as error:
@@ -232,7 +243,7 @@ def install(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
-        """Put a song's tempo and key back to what was measured."""
+        """Put a song's tempo and key back to what was measured. A set-aside mark stays."""
         store = store_for(request, claims, WorkspaceAction.LIBRARY_WRITE)
         try:
             return facts_store.set_correction(store, song_id, None, None)

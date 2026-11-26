@@ -132,3 +132,51 @@ describe('rendering ahead in play order', () => {
     expect(renders).toHaveLength(0);
   });
 });
+
+describe('a waiting request\'s transitions (T-20261126-a246)', () => {
+  it('makes them after the play order\'s own, from the songs decoded by id, and tells what it is doing', async () => {
+    const { studio, renders, deps, decoded } = rig([1, 2, 3]);
+    decoded.set(9, song(9).audio as unknown as AudioBuffer);
+    deps.songAudio = vi.fn(async (one: StudioSong) => decoded.get(one.songId) ?? null);
+    const seen: unknown[] = [];
+    studio.state.subscribe(() => seen.push(studio.state.get()));
+    studio.prepareFor([{ a: at(1), b: at(9) }, { a: at(9), b: at(2) }]);
+    studio.follow([at(1), at(2), at(3)], 0);
+    await vi.waitFor(() => expect(renders).toHaveLength(1));
+    // the mix's own next transition comes first
+    expect(renders[0]).toMatchObject({ a: 1, b: 2 });
+    expect(studio.state.get()).toMatchObject({ making: { a: 1, b: 2, forRequest: false }, waiting: 3 });
+    renders[0].release();
+    await vi.waitFor(() => expect(renders).toHaveLength(2));
+    renders[1].release();
+    await vi.waitFor(() => expect(renders).toHaveLength(3));
+    expect(renders[2]).toMatchObject({ a: 1, b: 9 });
+    expect(studio.state.get()).toMatchObject({ making: { a: 1, b: 9, forRequest: true } });
+    renders[2].release();
+    await vi.waitFor(() => expect(renders).toHaveLength(4));
+    expect(renders[3]).toMatchObject({ a: 9, b: 2 });
+    renders[3].release();
+    await vi.waitFor(() => expect(studio.state.get()).toMatchObject({ making: null, waiting: 0, made: 4 }));
+    expect(studio.holds(at(9), at(2))).toBe(true);
+    expect(deps.songAudio).toHaveBeenCalled();
+    expect(seen.length).toBeGreaterThan(3);
+  });
+
+  it('drops a request\'s transitions once no placement needs them', async () => {
+    const { studio, renders, deps, decoded } = rig([1, 2]);
+    decoded.set(9, song(9).audio as unknown as AudioBuffer);
+    deps.songAudio = vi.fn(async (one: StudioSong) => decoded.get(one.songId) ?? null);
+    studio.prepareFor([{ a: at(1), b: at(9) }]);
+    await vi.waitFor(() => expect(renders).toHaveLength(1));
+    studio.prepareFor([]);
+    expect(renders[0].signal?.aborted).toBe(true);
+    expect(studio.state.get()).toMatchObject({ waiting: 0 });
+  });
+
+  it('asks for nothing without a way to read a song by id, or with the flag off', async () => {
+    const { studio, renders } = rig([1, 2]);
+    studio.prepareFor([{ a: at(1), b: at(9) }]);
+    await new Promise((done) => setTimeout(done, 20));
+    expect(renders).toHaveLength(0);
+  });
+});

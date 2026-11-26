@@ -2,6 +2,8 @@ import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability,
 import { accountMeasured, noteCorrection, sendingOn, type Measured } from './accountFacts';
 import { accountMixes, accountMixesOn, fallsBack } from './accountMixes';
 import { accountOrderPlanner } from './accountOrder';
+import { accountIdeas } from './accountIdeas';
+import { accountDiscoveries } from './accountDiscoveries';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { linksFamily } from './localFirstLinks';
 import { mixFamily, type PlayableSong, type SongPlace } from './localFirstMixes';
@@ -9,8 +11,13 @@ import { MOVE_OFFER_EVENT, notOnSpeaker, playsOn, speakerHolds, type MoveOffer }
 import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscoveries';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 import { requestsFamily } from './localFirstRequests';
+import { askToMake, forgetRatings, inspectorOn, seamOptions, withInspection } from './seamInspection';
+import { exportFamily, exportStudio } from './localExport';
 import { readCached, writeCached } from './offlineCache';
 import { canHeal, classify } from './resilientRequest';
+import { libraryFamily } from './localFirstLibrary';
+import { isFirst } from './measuringControl';
+import { flagListed } from '../flags';
 import { groupVersions, hereBySong, linkBySong, rememberGrouping, setBySong, whereBySong, type Grouping } from './songVersions';
 
 /** The local-first shell's request adapter (ADR-0462 "one adapter per route family").
@@ -41,6 +48,8 @@ export type CatalogueSong = {
   duplicate_of?: number | null;
   /** On a grouped song only: every version's id, the primary first. */
   versions?: number[];
+  /** The member set it aside (Is it music? answered no): kept out of mixes (T-20261126-3f92). */
+  set_aside?: boolean;
 };
 
 /** The refusal for a route only the SelectaDJ app on a computer answers. */
@@ -160,14 +169,17 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     ...(versions ? { versions } : {}),
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, ...measuredOf(known.facts?.get(song.id)),
-    music_override: null, grid_confidence: null, lyric_status: null,
-    never: song.never === true, priority: false, availability,
+    music_override: song.set_aside ? 0 : null, grid_confidence: null, lyric_status: null,
+    // priority: this device measures it before the others (measuringControl.ts)
+    never: song.never === true, priority: isFirst(song.id), availability,
     // the availability line says where it is; readiness only says how far analysis has got
     // in a browser mix a song that plays here is ready: its transitions are worked out from the
     // audio as the mix plays, so nothing has to be measured first (BF-0462-05)
     // ADR-0475 I83: a song another open device holds plays there, so it can be played, added
     // and started from here, on that device
-    readiness: playable
+    readiness: song.set_aside
+      ? { status: 'set_aside', reason: 'You set this aside.' }
+      : playable
       ? { status: 'mix_ready', reason: `${WORKED_OUT_LIVE}${lovedWords(known.loved?.get(song.id) ?? 0)}` }
       : openElsewhere
         ? { status: 'mix_ready', reason: `Plays on ${openElsewhere}.` }
@@ -202,7 +214,9 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
     // works its transitions out as it plays); needing attention is a song this device cannot play
     .filter((song) => {
       if (state === 'all' || state === 'not_yet') return true;
+      if (state === 'set_aside') return song.set_aside === true;
       const where = availabilityOf(song, known);
+      if (song.set_aside && state !== 'attention' && state !== 'missing') return false;
       if (state === 'ready') return where === 'here' || where === 'hosted';
       // R6: plays now, here or on another of the person's devices that is open
       if (state === 'playable_now') return where === 'here' || where === 'hosted' || (known.elsewhere?.(song.id).online.length ?? 0) > 0;
@@ -221,9 +235,10 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
 /** The status the shared shell and views read, from what the catalogue knows. */
 export function statusFrom(songs: CatalogueSong[], known: Availability = NO_AVAILABILITY, steering: Status['steering'] = DEFAULT_STEERING): Status {
   const available = songs.filter((song) => (song.available_on ?? 0) > 0).length;
-  const ready = songs.filter((song) => ['here', 'hosted'].includes(availabilityOf(song, known))).length;
+  const ready = songs.filter((song) => !song.set_aside && ['here', 'hosted'].includes(availabilityOf(song, known))).length;
+  const setAside = songs.filter((song) => song.set_aside).length;
   return {
-    counts: { total: songs.length, music: songs.length, analysed: 0, ready, lyrics: 0, set_aside: 0, missing: songs.length - available },
+    counts: { total: songs.length, music: songs.length - setAside, analysed: 0, ready, lyrics: 0, set_aside: setAside, missing: songs.length - available },
     steering,
     // the browser's moves by name, so the shared views can say which one a seam asks for
     moves: browserMovesOn() ? browserMoveNames() : {},
@@ -245,6 +260,25 @@ export function mergeSongs(kept: readonly CatalogueSong[], device: readonly Cata
 
 /** The current mix before a recipe store has answered, or without one. */
 export const EMPTY_MIX: MixData = { mix: [], name: 'Current mix', can_undo: false };
+
+/** The mix with each song's tempo, key and energy as the account measured them (the member's own
+ * tempo and key first), where the row has none: the energy horizon draws these (T-20261126-bfec).
+ * A song the account has not measured keeps nothing, never a guess. */
+export function withMeasured(mix: MixData, measured: ReadonlyMap<number, Measured> | undefined): MixData {
+  if (!measured?.size || !mix.mix.length) return mix;
+  let changed = false;
+  const items = mix.mix.map((item) => {
+    const found = measured.get(item.song_id);
+    if (!found) return item;
+    const bpm = item.bpm ?? found.override_bpm ?? found.bpm ?? null;
+    const key = item.key ?? found.override_camelot ?? found.camelot ?? null;
+    const energy = item.energy ?? found.energy ?? null;
+    if (bpm === item.bpm && key === item.key && energy === (item.energy ?? null)) return item;
+    changed = true;
+    return { ...item, bpm, key, energy };
+  });
+  return changed ? { ...mix, mix: items } : mix;
+}
 
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
 export function localFirstRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
@@ -351,7 +385,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     return list.map((song) => {
       const where = availabilityOf(song, known);
       const elsewhere = mixable.has(song.id);
-      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' || elsewhere, never: song.never === true };
+      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' || elsewhere, never: song.never === true || song.set_aside === true };
     });
   };
   // R5: a result is placed by the device playing (it plays there, it is on another device, or on none)
@@ -387,9 +421,13 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   const planOrder = sources.workspaceId ? accountOrderPlanner(cloud, sources.workspaceId) : undefined;
   // cloud.account_mixes: the account's own mix and draft routes answer first (accountMixes.ts)
   const account = accountMixes(cloud);
-  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder, account) : null;
+  // the account's idea cards on Make a Mix, built by its planner (accountIdeas.ts)
+  const ideas = sources.workspaceId ? accountIdeas(cloud, sources.workspaceId) : undefined;
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder, account, ideas) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
+    // T-20261126-9a31: the account's own sweep over what this device measured, in spare time
+    account: sources.workspaceId ? accountDiscoveries(cloud, sources.workspaceId) : undefined,
     songs: async () => {
       const list = await songs();
       const known = await availability(list);
@@ -403,7 +441,40 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);
+  // T-20261126-ed4c: the Desktop's song search, and measuring first or paused on this device
+  const library = libraryFamily({
+    rows: async () => { const list = await songs(); const known = await availability(list); return list.map((song) => asLibrarySong(song, known)); },
+    measuring: () => flagListed('cloud.browser_harmonic'),
+  });
+  // T-20261126-96d3: a mix saved as a file on this device, with the transitions playback plays
+  const exports = sources.workspaceId ? exportFamily({
+    workspaceId: sources.workspaceId,
+    cloud,
+    studio: exportStudio(sources.workspaceId, cloud),
+    mix: (draft) => adapted<MixData>(draft === null ? '/mix' : `/mix?draft=${draft}`),
+  }) : null;
+  // T-20261126-827e: the Seam Inspector's reads, from the transitions this device made
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {
+    const method = (init?.method ?? 'GET').toUpperCase();
+    const [route, query = ''] = path.split('?');
+    const workspaceId = sources.workspaceId;
+    const exportAnswer = exports?.answer(method, route, new URLSearchParams(query), init);
+    if (exportAnswer) return (await exportAnswer) as T;
+    // T-20261126-bfec: the mix's rows carry each song's tempo, key and energy from the account
+    if (workspaceId && method === 'GET' && route === '/mix') {
+      const mix = withMeasured(await answered<MixData>(path, init), await factsNow());
+      return (inspectorOn() ? withInspection(mix, workspaceId, cloud) : mix) as Promise<T>;
+    }
+    if (!workspaceId || !inspectorOn()) return answered<T>(path, init);
+    const seamAt = /^\/mix\/(\d+)\/(options|render)$/.exec(route);
+    if (seamAt && method === 'GET' && seamAt[2] === 'options') return seamOptions() as T;
+    if (seamAt && method === 'POST' && seamAt[2] === 'render') {
+      const mix = await answered<MixData>(query ? `/mix?${query}` : '/mix');
+      return askToMake(workspaceId, mix, Number(seamAt[1])) as Promise<T>;
+    }
+    return answered<T>(path, init);
+  };
+  const answered = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const method = (init?.method ?? 'GET').toUpperCase();
     const [route, query = ''] = path.split('?');
     if (method === 'GET' && route === '/library') {
@@ -440,6 +511,8 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
         return { position, song_id: id, artist: found?.artist ?? '', title: found?.title ?? 'A song', duration: found?.duration_s ?? 0, bpm: null, key: null, locked: false, seam: null };
       }) } as T;
     }
+    const libraryAnswer = library.answer(method, route, new URLSearchParams(query), init);
+    if (libraryAnswer) return (await libraryAnswer) as T;
     const requestAnswer = requests?.answer(method, route, new URLSearchParams(query), init);
     if (requestAnswer) return (await requestAnswer) as T;
     // a song added here must play on this device, as the browser's own mixes ask
@@ -475,7 +548,10 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     if (route.startsWith('/catalog/')) return cloud<T>(path, init);
     // ADR-0479: a Good or Bad on a transition the account knows, and every one given, are the
     // account's (cloud.brain; the server says when it is off)
-    if ((method === 'POST' && /^\/seams\/[0-9A-Za-z_-]+\/rate$/.test(route)) || (method === 'GET' && route === '/memory/ratings')) return cloud<T>(path, init);
+    if ((method === 'POST' && /^\/seams\/[0-9A-Za-z_-]+\/rate$/.test(route)) || (method === 'GET' && route === '/memory/ratings')) {
+      if (method === 'POST') forgetRatings();
+      return cloud<T>(path, init);
+    }
     const corrected = correct(method, route, init);
     if (corrected) return (await corrected) as T;
     const neverAnswer = setNever(method, route, init);
@@ -497,15 +573,23 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     }
   };
   /** Song details' tempo and key correction (`/songs/{id}/correct`), kept with the account's
-   * measurements (`PUT` or `DELETE /song-facts/{id}/correction`). Only tempo and key: whether a
-   * file is music is decided by the app reading a folder, and the browser hides that control. */
+   * measurements (`PUT` or `DELETE /song-facts/{id}/correction`), and Is it music?: the
+   * member's set-aside mark, `is_music` alone on the same route (null clears it). */
   const correct = (method: string, route: string, init?: RequestInit): Promise<unknown> | undefined => {
     const asked = method === 'POST' ? route.match(/^\/songs\/(\d+)\/correct$/) : null;
     if (!asked || !sources.workspaceId || !sendingOn()) return undefined;
     const songId = Number(asked[1]);
     const workspaceId = sources.workspaceId;
-    const body = JSON.parse(String(init?.body ?? '{}')) as { bpm?: number; camelot?: string; is_music?: boolean };
-    if (body.is_music !== undefined) return Promise.reject(onlyInTheApp(route));
+    const body = JSON.parse(String(init?.body ?? '{}')) as { bpm?: number; camelot?: string; is_music?: boolean; clear?: string[] };
+    if (typeof body.is_music === 'boolean' || body.clear?.includes('is_music')) {
+      // a browser never decides by itself, so true and "decide again" both clear the mark
+      const mark = body.is_music === false ? false : null;
+      return (async () => {
+        await cloud(`/song-facts/${songId}/correction`, { method: 'PUT', body: JSON.stringify({ is_music: mark }) });
+        catalogue = null;
+        return { redone: 0 };
+      })();
+    }
     const bpm = typeof body.bpm === 'number' ? body.bpm : null;
     const camelot = typeof body.camelot === 'string' && body.camelot ? body.camelot : null;
     return (async () => {

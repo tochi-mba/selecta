@@ -2,6 +2,7 @@ import { ApiError, MixData, SongRow, Status, Suggestion, VibeCard } from '../api
 import { browserMovesAllowed, browserMovesOn } from './browserMoves';
 import { asMixData, copyName, RecipeStore, WORKED_OUT_LIVE } from './recipeStore';
 import type { OrderPlanner } from './accountOrder';
+import type { IdeasPlanner } from './accountIdeas';
 import { accountMixesOn, fallsBack, type AccountMixes } from './accountMixes';
 import { currentGrouping } from './songVersions';
 
@@ -94,7 +95,9 @@ export type SongPlace = (songId: number, playableHere: boolean) => { rank: numbe
 /** `planOrder` (docs/engineering/device-to-account.md): the account's planner orders the chosen
  * songs when it can; null from it, or none given, keeps today's order. */
 /** `account` (cloud.account_mixes): a new mix is kept with the account rather than as a recipe. */
-export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace, lovedInRooms?: () => Promise<Map<number, number>>, planOrder?: OrderPlanner, account?: AccountMixes): MixFamily {
+/** `ideas` (T-20261126-408d): the account's idea cards join the browser's own, and build as the
+ * Desktop's do; none given, or none to be had, leaves the browser's card alone. */
+export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace, lovedInRooms?: () => Promise<Map<number, number>>, planOrder?: OrderPlanner, account?: AccountMixes, ideas?: IdeasPlanner): MixFamily {
   const current = async (): Promise<MixData | null> => {
     const id = store.current();
     if (!id) return null;
@@ -107,7 +110,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     }
   };
 
-  const build = async (query: URLSearchParams): Promise<unknown> => {
+  const build = async (query: URLSearchParams, idea = 'pick'): Promise<unknown> => {
     const asDraft = query.get('as_draft') === 'true';
     const all = await songs();
     const count = Math.max(BROWSER_MIX_NEEDS, Number(query.get('count') ?? 0) || 20);
@@ -123,15 +126,18 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     // the person chose as the start or ending keeps its place; the planner would leave it out)
     const never = new Set(all.filter((song) => song.never).map((song) => song.id));
     const choices = { start, end: target ? Number(target) : null, steering: store.steering(), never };
-    const ids = (planOrder ? await planOrder(chosen, choices).catch(() => null) : null) ?? chosen;
+    // an idea card of the account's: the planner picks and orders its songs, as the Desktop builds one
+    const planned = idea !== 'pick' && ideas ? await ideas.order(idea, all, choices, count).catch(() => null) : null;
+    const ids = planned?.ids ?? (planOrder ? await planOrder(chosen, choices).catch(() => null) : null) ?? chosen;
+    const name = planned?.name ?? mixNameFor(all, ids);
     if (account && accountMixesOn()) {
       try {
-        return await account.install(mixNameFor(all, ids), ids, asDraft);
+        return await account.install(name, ids, asDraft);
       } catch (problem) {
         if (!fallsBack(problem)) throw problem;
       }
     }
-    const recipe = await store.create(mixNameFor(all, ids), ids, all);
+    const recipe = await store.create(name, ids, all);
     // Save draft keeps it in My Mixes without touching what's playing, as local mode's does
     if (asDraft) return { id: 0, mix_id: recipe.mix_id, name: recipe.name, count: ids.length };
     store.setCurrent(recipe.mix_id);
@@ -152,7 +158,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     } else if (body.action === 'energy_arc') {
       next = { ...now, energy_arc: Array.isArray(body.value) ? (body.value as number[]) : null };
     } else {
-      throw refuse('That setting works in the SelectaDJ app on a computer. Here you can choose the ending, the mix language and the energy shape.', 'flag_off', 404);
+      throw refuse('That setting works in the SelectaDJ app on a computer. Here you can choose the ending, the transition feel and the energy shape.', 'flag_off', 404);
     }
     store.setSteering(next);
     return next;
@@ -249,8 +255,9 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
   return {
     steering: store.steering,
     answer: (method, route, query, init) => {
-      if (method === 'GET' && route === '/vibes') return songs().then((all) => [pickCard(all)]);
-      if (method === 'POST' && /^\/vibes\/[^/]+\/build$/.test(route)) return build(query);
+      if (method === 'GET' && route === '/vibes') return songs().then(async (all) => [pickCard(all), ...(ideas ? await ideas.cards(all, store.steering().mix_language).catch(() => []) : [])]);
+      const building = /^\/vibes\/([^/]+)\/build$/.exec(route);
+      if (method === 'POST' && building) return build(query, decodeURIComponent(building[1]));
       if (method === 'GET' && route === '/mix' && !query.has('draft')) {
         return current().then((data) => data ?? { mix: [], name: 'Current mix', can_undo: false });
       }

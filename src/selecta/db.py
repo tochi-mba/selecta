@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from selecta import flags, local_upgrade
+from selecta.engine_store import library_rows
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS songs (
@@ -326,11 +327,18 @@ def _hash_columns(conn: sqlite3.Connection) -> set[str]:
 
 
 def known_files(conn: sqlite3.Connection) -> dict[str, tuple[int, float]]:
-    rows = conn.execute("SELECT path, size, mtime FROM songs")
-    return {row["path"]: (row["size"], row["mtime"]) for row in rows}
+    with library_rows.reading(conn) as source:
+        rows = source.execute("SELECT path, size, mtime FROM songs")
+        return {row["path"]: (row["size"], row["mtime"]) for row in rows}
 
 
 def save_analysis(conn: sqlite3.Connection, song_id: int, values: dict[str, Any]) -> None:
+    store = library_rows.store_path(conn)
+    if store is not None:
+        from selecta.engine_store import library_writes
+
+        library_writes.save_analysis(store, song_id, values)
+        return
     record = dict(values, song_id=song_id)
     for key in ("sections", "timbre", "timings"):
         if key in record and not isinstance(record[key], str | type(None)):
@@ -349,6 +357,12 @@ def save_analysis(conn: sqlite3.Connection, song_id: int, values: dict[str, Any]
 def save_lyrics(
     conn: sqlite3.Connection, song_id: int, status: str, synced: str | None, plain: str | None
 ) -> None:
+    store = library_rows.store_path(conn)
+    if store is not None:
+        from selecta.engine_store import library_writes
+
+        library_writes.save_lyrics(store, song_id, status, synced, plain)
+        return
     conn.execute(
         "INSERT INTO lyrics (song_id, status, synced, plain) VALUES (?, ?, ?, ?) "
         "ON CONFLICT(song_id) DO UPDATE SET status=excluded.status, synced=excluded.synced, "
@@ -375,28 +389,43 @@ def songs_needing_analysis(
     if folder_contains:
         query += " AND s.folder LIKE ?"
         params.append(f"%{folder_contains}%")
-    return conn.execute(query + " ORDER BY s.processing_priority DESC, s.id", params).fetchall()
+    with library_rows.reading(conn) as source:
+        return source.execute(
+            query + " ORDER BY s.processing_priority DESC, s.id", params
+        ).fetchall()
 
 
 def is_analysed(conn: sqlite3.Connection, song_id: int, version: int) -> bool:
-    found = conn.execute(
-        "SELECT 1 FROM analysis WHERE song_id=? AND version>=? AND error IS NULL",
-        (song_id, version),
-    ).fetchone()
+    with library_rows.reading(conn) as source:
+        found = source.execute(
+            "SELECT 1 FROM analysis WHERE song_id=? AND version>=? AND error IS NULL",
+            (song_id, version),
+        ).fetchone()
     return found is not None
 
 
 def song_by_id(conn: sqlite3.Connection, song_id: int) -> sqlite3.Row | None:
-    return conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
-
+    with library_rows.reading(conn) as source:
+        return source.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
 
 
 def preference(conn: sqlite3.Connection, key: str, default: Any = None) -> Any:
+    store = library_rows.store_path(conn)
+    if store is not None:
+        from selecta.engine_store import library_writes
+
+        return library_writes.preference(store, key, default)
     row = conn.execute("SELECT value FROM preferences WHERE key = ?", (key,)).fetchone()
     return json.loads(row["value"]) if row else default
 
 
 def set_preference(conn: sqlite3.Connection, key: str, value: Any) -> None:
+    store = library_rows.store_path(conn)
+    if store is not None:
+        from selecta.engine_store import library_writes
+
+        library_writes.set_preference(store, key, value)
+        return
     conn.execute(
         "INSERT INTO preferences(key, value) VALUES (?, ?) "
         "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",

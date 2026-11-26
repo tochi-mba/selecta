@@ -306,6 +306,17 @@ def records(store: EngineStore) -> list[dict]:
         return [json.loads(text) for text in rows]
 
 
+def current(store: EngineStore) -> list[tuple[str, dict, str]]:
+    """Every seam's current record as (key, record, when its row last changed), in key order."""
+    with store.read() as connection:
+        rows = connection.execute(
+            sa.select(seams.c.key, seams.c.record, seams.c.updated_at)
+            .where(store.mine(seams))
+            .order_by(seams.c.key)
+        )
+        return [(row.key, json.loads(row.record), row.updated_at) for row in rows]
+
+
 def keys(store: EngineStore) -> dict[str, tuple[str, str]]:
     """Every key with its record hash and source, for the import's comparison."""
     with store.read() as connection:
@@ -319,10 +330,15 @@ def keys(store: EngineStore) -> dict[str, tuple[str, str]]:
 
 def ready_records(store: EngineStore, studio_ids: Collection[str]) -> list[tuple[dict, dict]]:
     """Each ready seam with an attestation from one of these studios: (record, attestation)."""
+    return [(record, attestation) for record, attestation, _ in ready_rows(store, studio_ids)]
+
+
+def ready_rows(store: EngineStore, studio_ids: Collection[str]) -> list[tuple[dict, dict, str]]:
+    """`ready_records`, each with when its seam row last changed."""
     if not studio_ids:
         return []
     query = (
-        sa.select(seams.c.record, seam_attestations)
+        sa.select(seams.c.record, seams.c.updated_at.label("row_updated_at"), seam_attestations)
         .select_from(
             seams.join(
                 seam_attestations,
@@ -343,7 +359,7 @@ def ready_records(store: EngineStore, studio_ids: Collection[str]) -> list[tuple
         found = []
         for row in connection.execute(query).mappings():
             attestation = {name: row[name] for name in seam_attestations.c.keys()}
-            found.append((json.loads(row["record"]), attestation))
+            found.append((json.loads(row["record"]), attestation, row["row_updated_at"]))
         return found
 
 

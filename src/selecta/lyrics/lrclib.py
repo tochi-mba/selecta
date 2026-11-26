@@ -212,13 +212,16 @@ def fetch_all(
 ) -> dict[str, int]:
     if not flags.on("lyrics.lookup"):
         return {}  # turned off in this build: nothing is sent to LRCLIB
-    rows = conn.execute(
-        "SELECT s.id, s.artist, s.title, s.album, s.duration FROM songs s "
-        "LEFT JOIN lyrics l ON l.song_id = s.id "
-        "LEFT JOIN analysis a ON a.song_id = s.id "
-        "WHERE s.is_music = 1 AND s.duplicate_of IS NULL AND l.song_id IS NULL "
-        "ORDER BY (a.song_id IS NOT NULL) DESC, s.id"
-    ).fetchall()
+    from selecta.engine_store import library_rows
+
+    with library_rows.reading(conn) as source:
+        rows = source.execute(
+            "SELECT s.id, s.artist, s.title, s.album, s.duration FROM songs s "
+            "LEFT JOIN lyrics l ON l.song_id = s.id "
+            "LEFT JOIN analysis a ON a.song_id = s.id "
+            "WHERE s.is_music = 1 AND s.duplicate_of IS NULL AND l.song_id IS NULL "
+            "ORDER BY (a.song_id IS NOT NULL) DESC, s.id"
+        ).fetchall()
     if limit:
         rows = rows[:limit]
     api = LrcLib()

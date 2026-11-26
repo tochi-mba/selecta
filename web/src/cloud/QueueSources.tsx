@@ -62,7 +62,7 @@ export function QueueSources({ mix, book, problemsOnly = false, nothingPlays = f
           {rows.map(({ item, index, entry }) => (
             <li key={`${index}-${item.song_id}`} data-source={entry?.source ?? 'pending'}>
               <strong>{item.artist ? `${item.artist} - ${item.title}` : item.title}</strong>
-              <span>{entry?.source === 'unavailable' ? 'Not in this browser yet' : sourceWords(entry)}</span>
+              <span>{entry?.source === 'unavailable' ? 'Not in this browser' : sourceWords(entry)}</span>
             </li>
           ))}
         </ol>

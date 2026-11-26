@@ -243,17 +243,16 @@ async def respond(ctx: Any, say: Say, run_plan: RunPlan) -> None:
 def _scope(ctx: Any) -> dict:
     import json
 
-    row = ctx.conn.execute(
-        "SELECT scope FROM lucy_conversations WHERE id=?", (ctx.conversation,)
-    ).fetchone()
-    return json.loads(row["scope"]) if row else {}
+    from selecta.lucy import conversations
+
+    scope = conversations.column(ctx.conn, ctx.conversation, "scope")
+    return json.loads(scope) if scope is not None else {}
 
 
 def _has_proposal(ctx: Any) -> bool:
-    row = ctx.conn.execute(
-        "SELECT proposal_id FROM lucy_conversations WHERE id=?", (ctx.conversation,)
-    ).fetchone()
-    return bool(row and row["proposal_id"])
+    from selecta.lucy import conversations
+
+    return bool(conversations.column(ctx.conn, ctx.conversation, "proposal_id"))
 
 
 async def _answer(ctx: Any, text: str, say: Say, run_plan: RunPlan) -> None:

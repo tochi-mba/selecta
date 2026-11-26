@@ -6,7 +6,8 @@ import { analyseInWorker, spawnAnalysisWorker } from '../dsp/workers/spawn';
 import { seamWorkIdle } from '../dsp/seamWork';
 import { flagOn } from '../flags';
 import { importSnapshot } from './importSession';
-import { setTonalActivity } from './tonalActivity';
+import { setTonalActivity, setTonalLeft } from './tonalActivity';
+import { measuringPaused, nextOf, setWaiting } from './measuringControl';
 import { factsVersion } from '../dsp/analysis/deviceAnalysisIds';
 import type { AnalysisTask } from '../dsp/workers/analysisWorker';
 import { deviceFactsStore, type FactsStore } from './songFacts';
@@ -392,11 +393,12 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
   };
 
   // an import in this tab or another one (a following tab's snapshot says running too), or music
-  const busy = () => importSnapshot().phase === 'running' || options.playing();
+  // or the member paused measuring (measuringControl.ts)
+  const busy = () => measuringPaused() || importSnapshot().phase === 'running' || options.playing();
   // `report`: only while songs are waiting does the Workspace say why measuring has paused
   const quiet = async (report = false) => {
     while (!stopped && busy()) {
-      if (report) setTonalActivity(importSnapshot().phase === 'running' ? 'waiting_import' : 'waiting_music');
+      if (report) setTonalActivity(measuringPaused() ? 'paused' : importSnapshot().phase === 'running' ? 'waiting_import' : 'waiting_music');
       await new Promise((resolve) => window.setTimeout(resolve, BUSY_POLL_MS));
     }
   };
@@ -417,16 +419,28 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
       const needsFacts = facts !== null && !(await facts.has(song.identity.content_sha256, version));
       if (profile || needsFacts) waiting.push({ song, needs: { profile, facts: needsFacts ? facts : null, beats } });
     }
-    for (const { song, needs } of waiting) {
+    // the Activity drawer's count; the first song measured with the neural tracker times it here
+    let toGo = waiting.length;
+    setTonalLeft(toGo, beats?.kind === 'neural' && !beats.calibrated);
+    // a song the member asked for comes next (measuringControl.ts), the rest in turn
+    const left = waiting.map((one) => ({ ...one, id: one.song.songId }));
+    setWaiting(left.map((one) => one.id));
+    while (left.length) {
       await spareTime(IDLE_GAP_MS, isStopped);
       // a transition being prepared comes first: wait for it before reading the next song
       if (flagOn('cloud.seam_lead')) await seamWorkIdle();
       await quiet(true);
       if (stopped) break;
+      const picked = nextOf(left)!;
+      left.splice(left.indexOf(picked), 1);
+      setWaiting(left.map((one) => one.id), picked.id);
+      const { song, needs } = picked;
       setTonalActivity('measuring');
       try {
         await measure(song.songId, song.identity.content_sha256, needs);
         options.onProfiled?.();
+        toGo -= 1;
+        setTonalLeft(toGo, false);
       } catch {
         // a worker that timed out or failed is replaced; this song is tried again next pass
         (worker as Worker | null)?.terminate();
@@ -452,6 +466,7 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
       }
       // everything reachable is measured, or another tab is measuring
       setTonalActivity('idle');
+      setTonalLeft(0, false);
       unreachable.clear();
       await new Promise((resolve) => window.setTimeout(resolve, RESWEEP_MS));
     }
@@ -460,6 +475,7 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
   return () => {
     stopped = true;
     setTonalActivity('idle');
+    setTonalLeft(0, false);
     worker?.terminate();
     worker = null;
   };

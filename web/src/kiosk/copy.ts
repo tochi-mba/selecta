@@ -40,7 +40,7 @@ export const KIOSK_COPY = {
   savedAhead: 'Music saved ahead',
   hours: (hours: number) => (hours === 1 ? '1 hour' : `${Math.round(hours * 10) / 10} hours`),
   lastSync: 'Last sync',
-  never: 'Not yet',
+  never: 'Never',
   version: 'App version',
   reload: 'Reload player',
   showCode: 'Show pairing code',
@@ -48,7 +48,7 @@ export const KIOSK_COPY = {
   done: 'Done',
   networkWords: { online: 'Connected', offline: 'Not connected', unknown: 'Unknown' },
   offlinePlay: 'Plays without internet',
-  offlineWords: { ready: 'Yes', newer: 'No, it needs a newer browser', not_yet: 'Not yet', off: 'Not switched on' },
+  offlineWords: { ready: 'Yes', newer: 'No, it needs a newer browser', not_yet: 'Once music is saved ahead', off: 'Not switched on' },
 } as const;
 
 /** The pairing link a manager's phone opens from the QR. */

@@ -215,12 +215,15 @@ def pinned_keys(conn: sqlite3.Connection) -> set[str]:
     the newest ready-only drafts, and ready-only proposals touched in the last day (LU-318-07)."""
     import json
 
+    from selecta.engine_store import library_rows
+
     keys: set[str] = set()
     try:
-        rows = conn.execute(
+        rows = library_rows.fetch(
+            conn,
             "SELECT items FROM drafts WHERE ready_only=1 ORDER BY updated_at DESC LIMIT ?",
             (PIN_DRAFTS,),
-        ).fetchall()
+        )
     except sqlite3.OperationalError:
         return keys
     for row in rows:
@@ -228,12 +231,21 @@ def pinned_keys(conn: sqlite3.Connection) -> set[str]:
         for before, item in zip(items, items[1:], strict=False):
             settings = json.loads(item[1]) if item[1] else {}
             keys.add(request_from(before[0], item[0], settings).key)
+    from selecta.lucy import backing
+
     try:
         cutoff = time.time() - PROPOSAL_LEASE_SECONDS
-        recent = conn.execute(
-            "SELECT r.snapshot, p.updated_at FROM lucy_proposals p JOIN lucy_revisions r "
-            "ON r.id=p.current_revision"
-        ).fetchall()
+        store = backing.store_of(conn)
+        if store is not None:
+            from selecta.engine_store.lucy import proposals as stored
+
+            with backing.reading(store) as tx:
+                recent = stored.current_snapshots(tx)
+        else:
+            recent = conn.execute(
+                "SELECT r.snapshot, p.updated_at FROM lucy_proposals p JOIN lucy_revisions r "
+                "ON r.id=p.current_revision"
+            ).fetchall()
     except sqlite3.OperationalError:
         return keys
     from datetime import datetime

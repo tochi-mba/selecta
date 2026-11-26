@@ -55,7 +55,7 @@ describe('the Library batch actions', () => {
     ]);
   });
 
-  it('analysis priority is still not offered here, since nothing is analysed in the browser', async () => {
+  it('analysis priority is only in the app where this browser does not measure songs', async () => {
     const { cloud } = cloudWith([song(1, 'One')]);
     const request = localFirstRequest(cloud, {});
     await expect(request('/library/batch', { method: 'POST', body: JSON.stringify({ action: 'prioritize', entries: [] }) }))

@@ -67,8 +67,12 @@ after the workspace check; `consider` and `insert` share the `planning` rate lim
 | `POST /api/requests/consider?device_id=` | settle what is in the mix, plan the rest from song facts |
 | `POST /api/requests/insert?device_id=` | put a ready placement in, against the exact mix |
 
-Searching every song for a bridge (`/bridges`) and hearing a handover ahead (`/hear`) stay
-Desktop's: the first reads every song's arrays on each search, the second renders on the server.
+Searching every song for a bridge (`POST /api/requests/{request_id}/bridges`) is
+`cloud_brain/bridge_routes.py`: the Desktop's `request_planner.bridge_options` over the account's
+measured songs, at most 250 a search (those nearest the request's tempo when there are more, said
+as `capped`), arrays read 100 at a time, 6 searches a minute; a browser names the songs that play
+on it. Hearing a handover ahead (`/hear`) stays Desktop's: it renders on the server, and in Cloud
+the device makes a bridge's transitions once it is chosen.
 
 ## What "ready" means in Cloud
 
@@ -88,9 +92,12 @@ by the device that made it (`playable_here`). So:
 5. `insert` makes the same look again: the offer must still name the same placement against the
    same mix (a hash of the mix, the request and the plan, since Cloud keeps no offers in memory).
 
-Filed as to-do T-20261126-a246: the browser rendering `seams_needed` ahead and joining through
-`insert`. Worker-rendered seams for uploaded music count only when the hosted session's studio id
-is the one asked about.
+The browser does this (web/src/cloud/accountPlacements.ts, T-20261126-a246): with
+`cloud.device_render` too, its request look is the account's, with this device's id; the device
+studio makes each `seams_needed` pair after the mix's own (`DeviceStudio.prepareFor`, the songs
+decoded by id through the playing context) and reports it; a ready placement joins through
+`insert`, and Add next still works. Worker-rendered seams for uploaded music count only when the
+hosted session's studio id is the one asked about.
 
 ## The browser
 
@@ -103,12 +110,8 @@ row's own words promise that place, which `/add`'s Desktop place (one later) wou
 failure keeps the request in this browser as before. Sent: a catalogue song id and a request id,
 never audio, a path or a name (`deviceToAccount.egress.test.ts`).
 
-## Bridges in discovery (`seam_book`): not moved
+## Discovery's links (`seam_book`)
 
-`seam_book` holds discovery's links, not a request's bridge. It is written inside discovery's
-sweep (`discovery/sweep.py`, `discovery/search.py._save`) on the sweep's own connection, in the
-same uncommitted transaction as `discovery_comparisons`, which marks a pair as compared. Moving
-`seam_book` alone would either split that transaction (a pair marked compared without its links,
-or links without the mark, after a crash) or make the store's write wait behind the sweep's own
-lock. It moves with the discovery slice, `discovery_comparisons` included; nothing in Cloud
-writes it (the browser finds its harmonic matches on the device). To-do T-20261126-bf59.
+`seam_book` holds discovery's links, not a request's bridge, and no request code reads it. It
+moved with the discovery slice, together with `discovery_comparisons`, so a compared pair's
+links and its mark are one store write ([engine-store-discovery.md](engine-store-discovery.md)).

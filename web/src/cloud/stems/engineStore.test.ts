@@ -18,7 +18,7 @@ describe('the engine, as the stems surfaces read it', () => {
   it('says why a device can not split, then whether a splitter exists to download', () => {
     expect(splitterFrom(facts({ crash: { clear: false, reason: 'the page stopped', at: 1 } }))).toMatchObject({ code: 'crash_guard' });
     expect(splitterFrom(facts({ deviceCannot: 'no WebGPU here' }))).toMatchObject({ code: 'no_webgpu_wasm_slow', reason: 'no WebGPU here' });
-    expect(splitterFrom(facts({ artefactBytes: null }))).toMatchObject({ code: 'other', reason: 'the stem splitter isn’t published yet' });
+    expect(splitterFrom(facts({ artefactBytes: null }))).toMatchObject({ code: 'other', reason: 'the stem splitter isn’t published, so songs play whole' });
     expect(splitterFrom(facts())).toEqual({ state: 'absent', bytes: 170_000_000, needBytes: 340_000_000 });
   });
 

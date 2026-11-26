@@ -312,7 +312,9 @@ def load_songs(
                 legacy,
                 row["audio_id"],
             )
-        except ArtifactMissing:
+        except (ArtifactMissing, OSError):
+            # no stored arrays, or an old features file that is gone or can't be read: a song
+            # loaded alone is skipped for the same reasons (`planner.reel.load_library`)
             missing.append(song_id)
             continue
         found.append(build_song(row, features, lyrics_of.get(song_id), corrections.get(song_id)))

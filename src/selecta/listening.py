@@ -1,4 +1,8 @@
-"""Persistent paired trials. Condition identities stay outside listener-facing records."""
+"""Persistent paired trials. Condition identities stay outside listener-facing records.
+
+With `core.engine_store` on, on a library past `lib0010listening`, every read and write goes
+through `engine_store.listening` (one operation, one write); off, the statements below, as before.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +15,41 @@ from pathlib import Path
 import numpy as np
 import pyloudnorm as pyln
 import soundfile as sf
+
+from selecta import flags
+
+MIGRATION = "lib0010listening"
+
+
+def store_of(conn):
+    """The engine store the study reads and writes through, or None for the old path: flag on,
+    the file past `lib0010listening`, and `conn` holding no writes a store write would wait on."""
+    if not flags.on("core.engine_store") or conn.in_transaction:
+        return None
+    from selecta.engine_store import library
+
+    try:
+        if not _made_by_the_migration(conn):
+            return None
+        return library.store_of(conn)
+    except (library.LibraryNotReady, sqlite3.Error):
+        return None
+
+
+def _made_by_the_migration(conn: sqlite3.Connection) -> bool:
+    from selecta.engine_store import library
+
+    stamp = library.stamp_of(conn)
+    return stamp is not None and library.includes(stamp, MIGRATION)
+
+
+def _seam_key(condition: dict) -> str | None:
+    key = condition.get("seam_key")
+    if key is None:
+        return None
+    if not isinstance(key, str) or not key.strip() or len(key) > 80:
+        raise ValueError("A seam key must be a short nonempty string")
+    return key
 
 
 def register_comparison(
@@ -34,6 +73,7 @@ def register_comparison(
             not isinstance(condition["method"], str) or not condition["method"].strip()
         ):
             raise ValueError("Method labels must be nonempty strings")
+        _seam_key(condition)
     first, sr = sf.read(conditions[0]["path"], always_2d=True)
     second, other_sr = sf.read(conditions[1]["path"], always_2d=True)
     if sr != other_sr:
@@ -59,11 +99,24 @@ def register_comparison(
         )
         keys.append(key)
     trials = create_trials(conn, study, [{"pair": pair, "conditions": keys}], seed)
+    store = store_of(conn)
+    if store is not None:
+        from selecta.engine_store import listening as stored
+
+        stored.add_methods(
+            store,
+            [
+                (key, metadata["method"].strip(), metadata["renderer"], _seam_key(metadata))
+                for key, metadata in zip(keys, conditions, strict=True)
+                if metadata.get("method")
+            ],
+        )
+        return trials
     with conn:
         for key, metadata in zip(keys, conditions, strict=True):
             if metadata.get("method"):
                 conn.execute(
-                    "INSERT INTO listening_methods VALUES(?,?,?)",
+                    "INSERT INTO listening_methods(condition,method,renderer) VALUES(?,?,?)",
                     (key, metadata["method"].strip(), metadata["renderer"]),
                 )
     return trials
@@ -112,6 +165,10 @@ def prepare_comparison(
 
 
 def initialise(conn: sqlite3.Connection) -> None:
+    """Make the study's tables if they aren't there. With `core.engine_store` on, the library
+    migration `lib0010listening` has made them, so nothing is created at run time."""
+    if flags.on("core.engine_store") and _made_by_the_migration(conn):
+        return
     conn.execute(
         "CREATE TABLE IF NOT EXISTS listening_methods ("
         "condition TEXT PRIMARY KEY, method TEXT NOT NULL, renderer TEXT NOT NULL)"
@@ -151,35 +208,52 @@ def create_trials(conn: sqlite3.Connection, study: str, pairs: list[dict], seed:
             raise ValueError("The two rendered conditions must be distinct")
     initialise(conn)
     rng = random.Random(seed)
-    ids = []
+    rows = []
+    for pair in pairs:
+        conditions = list(pair["conditions"])
+        rng.shuffle(conditions)
+        mapping = json.dumps(dict(zip(("a", "b"), conditions, strict=True)))
+        rows.append((uuid.uuid4().hex, study, pair["pair"], mapping, seed))
+    store = store_of(conn)
+    if store is not None:
+        from selecta.engine_store import listening as stored
+
+        stored.create_trials(store, rows)
+        return [row[0] for row in rows]
     with conn:
-        for pair in pairs:
-            conditions = list(pair["conditions"])
-            rng.shuffle(conditions)
-            trial = uuid.uuid4().hex
+        for row in rows:
             conn.execute(
-                "INSERT INTO listening_trials VALUES(?,?,?,?,?)",
-                (
-                    trial,
-                    study,
-                    pair["pair"],
-                    json.dumps(dict(zip(("a", "b"), conditions, strict=True))),
-                    seed,
-                ),
+                "INSERT INTO listening_trials(id,study,pair,mapping,seed) VALUES(?,?,?,?,?)", row
             )
-            ids.append(trial)
-    return ids
+    return [row[0] for row in rows]
 
 
 def public_trials(conn: sqlite3.Connection, study: str) -> list[dict]:
     """Expose opaque trial IDs and A/B handles, never pair or condition metadata."""
     initialise(conn)
+    store = store_of(conn)
+    if store is not None:
+        from selecta.engine_store import listening as stored
+
+        return [{"id": trial, "options": ["a", "b"]} for trial in stored.trial_ids(store, study)]
     return [
         {"id": row[0], "options": ["a", "b"]}
         for row in conn.execute(
             "SELECT id FROM listening_trials WHERE study=? ORDER BY rowid", (study,)
         )
     ]
+
+
+def trial_mapping(conn: sqlite3.Connection, trial: str) -> str | None:
+    """A trial's private mapping JSON, for serving its audio; None when there is no such trial."""
+    initialise(conn)
+    store = store_of(conn)
+    if store is not None:
+        from selecta.engine_store import listening as stored
+
+        return stored.mapping(store, trial)
+    row = conn.execute("SELECT mapping FROM listening_trials WHERE id=?", (trial,)).fetchone()
+    return None if row is None else row[0]
 
 
 def respond(
@@ -211,6 +285,16 @@ def respond(
     if not listener.strip() or not setup.strip():
         raise ValueError("A listener ID and listening setup are required")
     initialise(conn)
+    store = store_of(conn)
+    if store is not None:
+        from selecta.engine_store import listening as stored
+
+        grades = [
+            (option, score["grade"], json.dumps(score.get("tags", [])))
+            for option, score in quality.items()
+        ]
+        stored.respond(store, trial, listener, choice, setup, grades)
+        return
     if conn.execute("SELECT 1 FROM listening_trials WHERE id=?", (trial,)).fetchone() is None:
         raise ValueError("Unknown listening trial")
     with conn:
@@ -226,7 +310,8 @@ def respond(
         )
         for option, score in quality.items():
             conn.execute(
-                "INSERT INTO listening_quality VALUES(?,?,?,?,?)",
+                "INSERT INTO listening_quality(trial,listener,option,grade,tags) "
+                "VALUES(?,?,?,?,?)",
                 (trial, listener, option, score["grade"], json.dumps(score.get("tags", []))),
             )
 
@@ -234,31 +319,51 @@ def respond(
 def study_summary(conn: sqlite3.Connection, study: str) -> dict:
     """Descriptive counts; repeated listeners are not independent experiments."""
     initialise(conn)
-    trials = conn.execute(
-        "SELECT id,mapping FROM listening_trials WHERE study=?", (study,)
-    ).fetchall()
+    store = store_of(conn)
+    if store is not None:
+        from selecta.engine_store import listening as stored
+
+        found = stored.study_rows(store, study)
+        trials, labels = found["trials"], found["labels"]
+
+        def answers(trial: str) -> list:
+            return found["answers"][trial]
+
+        def graded(trial: str, listener: str) -> list:
+            return found["grades"].get((trial, listener), [])
+    else:
+        trials = conn.execute(
+            "SELECT id,mapping FROM listening_trials WHERE study=?", (study,)
+        ).fetchall()
+        labels = {
+            row[0]: (row[1], row[2])
+            for row in conn.execute("SELECT condition,method,renderer FROM listening_methods")
+        }
+
+        def answers(trial: str) -> list:
+            return conn.execute(
+                "SELECT listener,choice FROM listening_responses WHERE trial=?", (trial,)
+            ).fetchall()
+
+        def graded(trial: str, listener: str) -> list:
+            return conn.execute(
+                "SELECT option,grade FROM listening_quality WHERE trial=? AND listener=?",
+                (trial, listener),
+            ).fetchall()
+
     conditions, listeners = {}, set()
-    labels = {
-        row[0]: (row[1], row[2])
-        for row in conn.execute("SELECT condition,method,renderer FROM listening_methods")
-    }
     methods: dict[str, dict[str, dict]] = {}
     unlabelled = 0
     choices = {"a": 0, "b": 0, "tie": 0, "cannot_judge": 0}
     unanswered = missing = 0
     for trial, mapping_json in trials:
         mapping = json.loads(mapping_json)
-        responses = conn.execute(
-            "SELECT listener,choice FROM listening_responses WHERE trial=?", (trial,)
-        ).fetchall()
+        responses = answers(trial)
         unanswered += not responses
         for listener, choice in responses:
             listeners.add(listener)
             choices[choice] += 1
-            grades = conn.execute(
-                "SELECT option,grade FROM listening_quality WHERE trial=? AND listener=?",
-                (trial, listener),
-            ).fetchall()
+            grades = graded(trial, listener)
             missing += 2 - len(grades)
             for option, grade in grades:
                 result = conditions.setdefault(mapping[option], {"rated": 0, "bad": 0})

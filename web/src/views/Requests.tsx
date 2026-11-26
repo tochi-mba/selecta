@@ -45,7 +45,7 @@ export type BridgeOption = {
   words: string;
   transitions: Transition[];
 };
-export type BridgeSearch = { options: BridgeOption[]; looked_at: number; direct: boolean; unsteady?: boolean };
+export type BridgeSearch = { options: BridgeOption[]; looked_at: number; direct: boolean; unsteady?: boolean; capped?: boolean };
 type Playback = { mix: MixItem[]; player: PlayerLike; onMix: (data: MixData) => void };
 type Notify = (message: string, undo?: boolean | (() => Promise<void>)) => void;
 
@@ -629,7 +629,7 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
       {found && (
         <>
           <p className="hint">
-            Checked {found.looked_at} songs. Nothing changes until you choose one.
+            Checked {found.looked_at} songs{found.capped ? ', those nearest its tempo' : ''}. Nothing changes until you choose one.
             {found.direct ? ' It can already go in without a bridge, so this is only if you’d like one.' : ''}
           </p>
           {!found.options.length && (
@@ -660,9 +660,9 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
                   <p className="hint">{option.words}</p>
                   <div className="row wrap">
                     <button className="primary" aria-describedby={`bridge-use-${request.id}-${index}`} onClick={() => use(option)}>Use this</button>
-                    <button aria-expanded={hearing === index} onClick={() => setHearing(hearing === index ? null : index)}>
+                    {option.transitions.length > 0 && <button aria-expanded={hearing === index} onClick={() => setHearing(hearing === index ? null : index)}>
                       {hearing === index ? 'Hide transitions' : 'Hear the transitions'}
-                    </button>
+                    </button>}
                   </div>
                   <small className="hint request-consequence" id={`bridge-use-${request.id}-${index}`}>
                     Adds {EXTRA_WORDS[extras.length] ?? `${extras.length} extra songs`} with {title}. They join together once every transition is ready, and none of them plays before that.
@@ -801,7 +801,7 @@ export function RequestsPanel() {
   const roomLive = useRoomLive();
   const browser = !!requests?.some((row) => row.browser_note) || !!roomLive;
   const waitingCount = browser ? countWaiting(roomLive, requests) : waitingRequestCount(requests);
-  const browserList = { rows: requests && requests.map((request) => ({ request, stage: stageOf(request, playback) })), live: playingNow(playback), playback, send: state.request ?? provided, refresh: state.refresh, onAdd: addAnyway, onDismiss: (request: RequestRow) => { box.current?.focus(); return cancel(request); } };
+  const browserList = { rows: requests && requests.map((request) => ({ request, stage: stageOf(request, playback) })), live: playingNow(playback), playback, send: state.request ?? provided, refresh: state.refresh, onAdd: addAnyway, onBridge: chooseBridge, onDismiss: (request: RequestRow) => { box.current?.focus(); return cancel(request); } };
   // the list stays open, so a few songs can be asked for from one search
   const pick = (song: SongRow) => { void add(song); box.current?.focus(); };
   const finish = () => { setQuery(''); box.current?.focus(); };

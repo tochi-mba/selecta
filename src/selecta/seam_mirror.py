@@ -10,7 +10,9 @@ flag off every function here returns at once and nothing is opened.
 
 from __future__ import annotations
 
+import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 
 from selecta import flags
@@ -62,23 +64,70 @@ def forget_song(settings: Settings, song_id: int) -> None:
         log.exception("Forgetting a song's seams in the library failed")
 
 
+def _fresh(meta: Path, updated: str) -> bool:
+    """True when the row was kept after its file last changed. Rows say whole seconds, so a
+    file is newer only when it changed a second or more after."""
+    try:
+        kept_at = datetime.strptime(updated, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
+        return meta.stat().st_mtime < kept_at.timestamp() + 1.0
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def _read(meta: Path) -> dict | None:
+    try:
+        state = json.loads(meta.read_text("utf-8"))
+    except (OSError, ValueError):
+        return None
+    return state if isinstance(state, dict) else None
+
+
 def states(settings: Settings) -> list[dict] | None:
-    """Every seam's current record from the table for the memory, or None with the flag off
-    (and when the table can't be read, so the caller reads the files as before)."""
+    """Every seam's current record for the memory, or None with the flag off (and when the
+    table can't be read, so the caller reads the files as before).
+
+    Files win while the flag is proved: a record file the table has no row for, or one changed
+    after its row (another process, a mirror write that failed, a restore), is read from the
+    file, as the file scan would, until the next start's import brings the table in step."""
     if not on():
         return None
     try:
         from selecta.engine_store import seams as stored
 
-        return stored.records(_store(settings))
+        rows = stored.current(_store(settings))
     except Exception:
         log.exception("Reading seam records from the library failed; reading the files")
         return None
+    held = {key: (record, updated) for key, record, updated in rows}
+    found = {key: record for key, (record, _updated) in held.items()}
+    decided: set[str] = set()
+    root, history = settings.renders_dir / "seams", settings.home / "seam-history"
+    # the render folders first, then the history, as the file scan reads them
+    files = [(meta, meta.parent.name) for meta in root.glob("*/seam.json")]
+    files += [(meta, meta.stem) for meta in history.glob("*.json")]
+    for meta, key in files:
+        if key in decided:
+            continue
+        row = held.get(key)
+        if row is not None and _fresh(meta, row[1]):
+            decided.add(key)
+            continue
+        state = _read(meta)
+        if state is None:
+            continue
+        named = str(state.get("key", key))
+        if named in decided:
+            continue
+        decided.update((key, named))
+        found[named] = state
+    return list(found.values())
 
 
-def ready(settings: Settings) -> list[tuple[dict, Path]] | None:
-    """Each ready seam this Desktop rendered itself, with the folder its clip is in, or None with
-    the flag off. A seam another studio rendered isn't playable here, so it isn't listed."""
+def ready(settings: Settings) -> list[tuple[Path, dict | None]] | None:
+    """Each record file in the render folder, with its record from the table when the table
+    holds it ready, attested by this Desktop and kept after the file last changed, else None
+    for the caller to read the file (files win, as in `states`). None with the flag off. A
+    seam another studio rendered has no folder here, so it isn't listed."""
     if not on():
         return None
     from selecta.engine_store import seam_import
@@ -86,11 +135,17 @@ def ready(settings: Settings) -> list[tuple[dict, Path]] | None:
 
     root = settings.renders_dir / "seams"
     try:
-        found = stored.ready_records(_store(settings), {seam_import.DESKTOP_STUDIO})
+        found = stored.ready_rows(_store(settings), {seam_import.DESKTOP_STUDIO})
     except Exception:
         log.exception("Reading ready seams from the library failed; reading the files")
         return None
-    return [(record, root / attestation["key"]) for record, attestation in found]
+    held = {attestation["key"]: (record, updated) for record, attestation, updated in found}
+    listed = []
+    for meta in root.glob("*/seam.json"):
+        row = held.get(meta.parent.name)
+        fresh = row is not None and _fresh(meta, row[1])
+        listed.append((meta, row[0] if fresh else None))
+    return listed
 
 
 __all__ = ["forget_song", "kept", "on", "ready", "states"]

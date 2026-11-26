@@ -86,7 +86,7 @@ export function stemSeparationEvidenceState(
   const passed = options.passedRecords ?? PASSED_TIER3_RECORDS;
   const expectedSha = options.modelSha256 === undefined ? STEM_MODEL_ARTEFACT?.sha256 ?? null : options.modelSha256;
   if (!evidence?.licenceRecord || !passed.includes(evidence.licenceRecord)) return { supported: false, reason: STEMS_LICENCE_REASON };
-  if (!expectedSha) return { supported: false, reason: 'the stem splitter has not been published yet' };
+  if (!expectedSha) return { supported: false, reason: 'the stem splitter is not published, so songs play whole' };
   if (evidence.modelSha256 !== expectedSha) return { supported: false, reason: 'the stem splitter on this device is missing or not the published one' };
   if (!evidence.crashGuard.clear) return { supported: false, reason: evidence.crashGuard.reason };
   const benchmark = stemCalibrationState(evidence.benchmark, evidence.deviceId, expectedSha, options.now ?? Date.now());
@@ -198,7 +198,11 @@ export interface DspEvidence {
 export const TIER3_FEATURES = ['neural_beats', 'neural_key', 'stem_separation', 'lyric_alignment'] as const;
 
 const BEATS_NOT_HERE = 'the neural beat tracker is not on this device, so SelectaDJ uses its lighter beat finder here';
-const TIER3_REASON = 'needs per-device benchmark evidence and a model licence review, which do not exist yet';
+/** Tier 3 features with no model in SelectaDJ, and what this device does instead. */
+const TIER3_INSTEAD: Record<string, string> = {
+  neural_key: 'SelectaDJ reads key with its standard key finder on this device',
+  lyric_alignment: 'lyrics are not shown in a browser, so there is nothing to time against the music',
+};
 const NOT_A_PLAYER = (reason: string) => `this device cannot play here: ${reason}`;
 
 /** Register this device's DSP capabilities from evidence, never from hope.
@@ -259,7 +263,7 @@ export function registerBrowserDspCapabilities(
   }
 
   for (const feature of TIER3_FEATURES) {
-    if (feature !== 'stem_separation' && feature !== 'neural_beats') registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_REASON);
+    if (feature !== 'stem_separation' && feature !== 'neural_beats') registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_INSTEAD[feature]);
   }
   const given = evidence.neuralBeats === undefined ? neuralBeatsState(undefined, evidence.now ?? Date.now()) : evidence.neuralBeats ?? { supported: false as const, reason: BEATS_NOT_HERE };
   // the record comes first, whatever the device showed: without it the tracker is off everywhere

@@ -5,10 +5,14 @@ import { assertNoPath } from '../media/identity';
 import { forgetAccountMeasured } from './accountFacts';
 import { accountMixes } from './accountMixes';
 import { accountRequests } from './accountRequests';
+import { accountPlacements } from './accountPlacements';
+import { accountIdeas } from './accountIdeas';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
 import { localFirstRequest } from './localFirstRequest';
+import { requestsFamily } from './localFirstRequests';
+import { ACCOUNT_BASE, accountDiscoveries } from './accountDiscoveries';
 import { reportSeam } from './seamReports';
 import { planningCalls } from './studioWiring';
 import type { MadeSeam } from '../dsp/render/seamMaker';
@@ -26,6 +30,8 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['GET', /^\/song-facts\?after=\d+&limit=\d+$/],
   ['PUT', /^\/song-facts\/\d+$/],
   ['POST', /^\/planning\/order$/],
+  // the account's idea cards over the songs measured here: song ids and the feel only
+  ['POST', /^\/planning\/ideas$/],
   ['POST', /^\/planning\/candidates$/],
   // cloud.device_render: one more option's script, by index; the clips themselves never leave
   ['POST', /^\/planning\/candidates\/script$/],
@@ -48,6 +54,20 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['GET', /^\/requests$/],
   ['POST', /^\/requests$/],
   ['DELETE', /^\/requests\/\d+$/],
+  // cloud.device_render with cloud.account_mixes: the account's look for where a request joins
+  // and putting a ready one in: song ids, the playing position, an offer's name, the device id
+  ['POST', /^\/requests\/consider\?device_id=[A-Za-z0-9_-]{1,64}$/],
+  ['POST', /^\/requests\/insert\?device_id=[A-Za-z0-9_-]{1,64}$/],
+  // yes or no to a bridge the account found for one of its requests: song ids only
+  ['POST', /^\/requests\/\d+\/bridge$/],
+  // Find a bridge: the mix's order and position, and the ids of the songs that play here
+  ['POST', /^\/requests\/\d+\/bridges$/],
+  // the account's harmonic discovery: a sweep names song ids and a pair limit; a review, a verdict
+  ['POST', /^\/discoveries\/sweep$/],
+  ['GET', /^\/discoveries\?limit=\d+$/],
+  ['POST', /^\/discoveries\/\d+\/review$/],
+  // the Seam Inspector: the Good or Bad of the transitions this device made, by key
+  ['GET', /^\/seams\?keys=[0-9a-f]{20}(,[0-9a-f]{20})*(&device_id=[A-Za-z0-9_-]{1,64})?$/],
 ];
 
 /** The one request that is not to the account: the beat tracker's model file, fetched from
@@ -274,6 +294,41 @@ describe('the requests kept with the account', () => {
   });
 });
 
+describe('where a request joins, planned by the account', () => {
+  it('carries the song ids of the mix, the playing position, an offer and the device id, never a path or audio', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true, 'cloud.device_render': true });
+    localStorage.setItem('selecta.device.w1', 'dev-1');
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => {
+      const answer = await capture(path, init);
+      return path.startsWith('/requests/consider') ? { requests: [], settled: [] } : answer;
+    }) as typeof capture;
+    const placing = accountPlacements(request, 'w1');
+    await placing.look({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60 });
+    await placing.insert({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60 }, 'a'.repeat(64));
+    localStorage.removeItem('selecta.device.w1');
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['POST /requests/consider?device_id=dev-1', 'POST /requests/insert?device_id=dev-1']);
+    calls.forEach(holdsTheContract);
+    expect(calls[0].body).toEqual({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60 });
+    expect(calls[1].body).toEqual({ order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 60, offer: 'a'.repeat(64) });
+  });
+});
+
+describe('the account\'s idea cards', () => {
+  it('carry song ids and the feel, never a path or audio', async () => {
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => {
+      const answer = await capture(path, init);
+      return path === '/planning/ideas' ? { ideas: [] } : answer;
+    }) as typeof capture;
+    const songs = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ id, title: `T${id}`, playable: true }));
+    await accountIdeas(request, 'w1').cards(songs, 'seamless');
+    expect(calls.map((call) => `${call.method} ${call.path.split('?')[0]}`)).toEqual(['GET /song-facts', 'POST /planning/ideas']);
+    calls.forEach(holdsTheContract);
+    expect(calls[1].body).toEqual({ songs: [1, 2, 3, 4, 5, 6, 7], language: 'seamless' });
+  });
+});
+
 describe('a correction from Song details', () => {
   it('carries a tempo and a key, and nothing about the file', async () => {
     const { calls, request: capture } = capturing();
@@ -287,11 +342,62 @@ describe('a correction from Song details', () => {
     expect(calls[1].body).toBeUndefined();
   });
 
+  it('Is it music? carries one yes, no or none, and nothing about the file', async () => {
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => (path.startsWith('/local-media/') ? { songs: [] } : capture(path, init))) as typeof capture;
+    const adapted = localFirstRequest(request, { workspaceId: 'w1' });
+    await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ is_music: false }) });
+    await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ is_music: true }) });
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['PUT /song-facts/4/correction', 'PUT /song-facts/4/correction']);
+    calls.forEach(holdsTheContract);
+    expect(calls.map((call) => call.body)).toEqual([{ is_music: false }, { is_music: null }]);
+  });
+
   it('a lock names a position and carries nothing', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true });
     const { calls, request } = capturing();
     await accountMixes(request).answer('POST', '/mix/2/lock', '', { method: 'POST' });
     expect(calls).toEqual([{ method: 'POST', path: '/mix/2/lock', body: undefined }]);
+    calls.forEach(holdsTheContract);
+  });
+});
+
+describe('Find a bridge', () => {
+  it('carries the mix order, the position and the song ids that play here, nothing about files', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true, 'cloud.device_render': true, 'cloud.device_analysis': true, 'requests.bridges': true });
+    localStorage.setItem('selecta.device.ws-1', 'dev-1');
+    const calls: Captured[] = [];
+    const cloud = (async (path: string, init?: RequestInit) => {
+      calls.push({ method: init?.method ?? 'GET', path, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      if (path === '/requests' && !init?.method) return { requests: [{ id: 41, song_id: 9, available: 1 }] };
+      if (path === '/requests/41/bridges') return { options: [], looked_at: 3, direct: false };
+      return { requests: [] };
+    }) as Parameters<typeof requestsFamily>[0]['cloud'];
+    const songs = async () => [1, 2, 9].map((id) => ({ id, title: `Song ${id}`, artist: 'Rex', duration: 200, playable: true }));
+    const family = requestsFamily({ cloud, workspaceId: 'ws-1', songs, send: cloud });
+    const listed = await family.answer('GET', '/requests', new URLSearchParams(), {}) as { requests: { id: number }[] };
+    await family.answer('POST', `/requests/${listed.requests[0].id}/bridges`, new URLSearchParams(), { method: 'POST', body: JSON.stringify({ order: [1, 2], position: 0 }) });
+    const search = calls.filter((call) => call.path === '/requests/41/bridges');
+    expect(search).toHaveLength(1);
+    search.forEach(holdsTheContract);
+    expect(search[0].body).toEqual({ order: [1, 2], position: 0, songs: [1, 2, 9] });
+    localStorage.clear();
+  });
+});
+
+describe('the account harmonic discovery', () => {
+  it('sends song ids and a pair limit to sweep, and a verdict to review, nothing about files', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true, 'discover.harmonic': true });
+    const { calls, request } = capturing();
+    const found = accountDiscoveries(request, 'ws-1');
+    found.sweepSoon([1, 2, 3].map((id) => ({ id, title: `Song ${id}`, artist: 'Rex', playable: true })));
+    for (let turn = 0; turn < 5; turn += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+    await found.list([]);
+    await found.review(ACCOUNT_BASE + 4, 'rejected');
+    const sweep = calls.find((call) => call.path === '/discoveries/sweep');
+    expect(sweep?.body).toEqual({ song_ids: [1, 2, 3], pair_limit: 200 });
+    expect(calls.find((call) => call.path === '/discoveries/4/review')?.body).toEqual({ verdict: 'rejected' });
+    expect(calls.some((call) => call.path === '/discoveries?limit=40')).toBe(true);
     calls.forEach(holdsTheContract);
   });
 });

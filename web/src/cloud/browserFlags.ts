@@ -4,21 +4,22 @@
  * reflows, rather than present and dead. The command palette and the keyboard shortcuts stay:
  * this shell offers their server-free subset (serverFreeControls.tsx). */
 export const NOT_IN_THE_BROWSER = {
-  // A request joins when the member adds it (localFirstRequests.ts). Bridge songs between a
-  // request and the mix are chosen by the app's request planner (T-20261126-a246 covers the
-  // browser making a request's transitions; bridges are T-20261126-ae4f).
+  // A request joins when the member adds it, or by itself where the account placed it and this
+  // device made its transitions (accountPlacements.ts). On below with that: a bridge the account
+  // found with a request's place is offered to agree to; searching every song for one is the app's.
   'requests.bridges': false,
-  // The energy horizon draws the app's measured energy along a mix (T-20261126-bfec).
+  // The energy horizon: on below when the account keeps measurements; the mix's rows carry each
+  // song's measured energy from the account (localFirstRequest.ts withMeasured).
   'editor.energy_horizon': false,
   // Locks: on below when the account keeps the mix (cloud.account_mixes), whose lock route is the
   // app's own; a mix kept in this browser has no lock.
   'editor.locks': false,
-  // The Seam Inspector reads the app's rendered transition files (T-20261126-827e). Each
-  // transition here can still be rated Good or Bad and its move chosen (cloud.browser_moves).
+  // The Seam Inspector: on below when this device makes transitions ahead and the account keeps
+  // them (cloud.device_render with cloud.brain): it shows the clips this device made
+  // (seamInspection.ts). Without, each transition can still be rated and its move chosen.
   seam_inspector: false,
-  // The Activity drawer lists the app's own jobs (T-20261126-36c7).
-  'app.activity': false,
-  // Export writes audio files from the app's renders; the account's data download is in Account.
+  // Saving a mix as a file: on below with cloud.local_export, written on this device
+  // (localExport.ts) with the transitions playback plays.
   export: false,
   // Lucy: on below with lucy.cloud_conversation (ADR-0476).
   lucy: false,
@@ -27,7 +28,8 @@ export const NOT_IN_THE_BROWSER = {
   // Tempo and key corrections: on below when the account keeps measurements (cloud.brain with
   // cloud.device_analysis). "Is it music?" stays the app's: Song details hides it in a browser (T-20261126-3f92).
   'library.corrections': false,
-  // Transition feel is a setting of the app's transition maker (T-20261126-6f97).
+  // Transition feel: on below when the account plans (cloud.brain with cloud.device_analysis): the
+  // order is planned in the feel, and the device makes each of its transitions in it (mixFeel.ts).
   'mixes.shaping.feel': false,
   // The energy shape: on below when the account plans the order (cloud.brain with
   // cloud.device_analysis), which sends the shape to the planner.
@@ -42,6 +44,14 @@ export type BrowserReach = {
   measured?: boolean;
   /** cloud.brain and cloud.account_mixes: the account keeps the mix, so locks work here. */
   accountMixes?: boolean;
+  /** cloud.device_render and cloud.brain: this device makes transitions and the account keeps
+   * them, so the Seam Inspector works here. */
+  studio?: boolean;
+  /** cloud.local_export: a mix can be saved as a file on this device. */
+  localExport?: boolean;
+  /** The account places requests and this device makes their transitions (accountPlacements.ts),
+   * so a bridge the account found can be agreed to here. */
+  placing?: boolean;
 };
 
 /** What this shell turns off, with Harmonic matches off too unless the browser's own version
@@ -53,7 +63,12 @@ export function browserFlags(browserHarmonic: boolean, lucyHere = false, reach: 
   if (reach.measured) {
     delete off['library.corrections'];
     delete off['mixes.shaping.energy_arc'];
+    delete off['mixes.shaping.feel'];
+    delete off['editor.energy_horizon'];
   }
   if (reach.accountMixes) delete off['editor.locks'];
+  if (reach.studio) delete off.seam_inspector;
+  if (reach.localExport) delete off.export;
+  if (reach.placing) delete off['requests.bridges'];
   return off;
 }

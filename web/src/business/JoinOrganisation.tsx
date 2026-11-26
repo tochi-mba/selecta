@@ -16,7 +16,7 @@ export function joinProblem(problem: unknown): string {
   if (code === 'wrong_email') return 'This invitation was sent to a different email address. Sign in with that address, or ask for a new invitation.';
   if (code === 'expired') return 'This invitation has expired. Ask the person who invited you for a new one.';
   if ((problem as { status?: number })?.status === 404) return 'This invitation is no longer valid. It may have been replaced or withdrawn.';
-  if (code === 'flag_off') return 'Joining an organisation is not available on this account yet.';
+  if (code === 'flag_off') return 'Joining an organisation is not available on this account.';
   return "We couldn't accept this invitation just now. Try again in a moment.";
 }
 

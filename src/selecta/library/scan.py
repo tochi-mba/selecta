@@ -20,6 +20,7 @@ from statistics import median
 import mutagen
 
 from selecta import db, longpaths
+from selecta.engine_store import library_rows, library_writes
 from selecta.planner_core.names import ARTIST_SPLIT
 
 AUDIO_EXTENSIONS = {".mp3", ".flac", ".m4a", ".aac", ".ogg", ".opus", ".wav", ".aiff", ".aif"}
@@ -172,32 +173,39 @@ def identity(artist: str | None, title: str | None) -> str:
     return f"{clean_artist}|{clean_title}"
 
 
-def mark_duplicates(conn: sqlite3.Connection) -> int:
-    """Keep the best copy of each song: lossless first, then bitrate."""
-    rows = conn.execute(
-        "SELECT id, artist, title, duration, lossless, bitrate, path FROM songs WHERE is_music = 1"
-    ).fetchall()
-    groups: dict[str, list[sqlite3.Row]] = defaultdict(list)
+def _duplicate_pairs(rows: list) -> list[tuple[int, int]]:
+    """(duplicate, kept) for each music row that is another copy of a song, in marking order."""
+    groups: dict[str, list] = defaultdict(list)
     for row in rows:
         groups[identity(row["artist"], row["title"])].append(row)
-
-    conn.execute("UPDATE songs SET duplicate_of = NULL")
-    count = 0
+    pairs: list[tuple[int, int]] = []
     for key, members in groups.items():
         if len(members) < 2 or key.endswith("|"):
             continue
         members.sort(key=lambda r: (-r["lossless"], -(r["bitrate"] or 0), r["path"]))
-        keepers: list[sqlite3.Row] = []
+        keepers: list = []
         for row in members:
             match = next((k for k in keepers if abs(k["duration"] - row["duration"]) <= 3.0), None)
             if match is None:
                 keepers.append(row)
             else:
-                conn.execute(
-                    "UPDATE songs SET duplicate_of = ? WHERE id = ?", (match["id"], row["id"])
-                )
-                count += 1
-    return count
+                pairs.append((row["id"], match["id"]))
+    return pairs
+
+
+def mark_duplicates(conn: sqlite3.Connection) -> int:
+    """Keep the best copy of each song: lossless first, then bitrate."""
+    store = library_rows.store_path(conn)
+    if store is not None:
+        return library_writes.mark_duplicates(store, _duplicate_pairs)
+    rows = conn.execute(
+        "SELECT id, artist, title, duration, lossless, bitrate, path FROM songs WHERE is_music = 1"
+    ).fetchall()
+    conn.execute("UPDATE songs SET duplicate_of = NULL")
+    pairs = _duplicate_pairs(rows)
+    for duplicate, kept in pairs:
+        conn.execute("UPDATE songs SET duplicate_of = ? WHERE id = ?", (kept, duplicate))
+    return len(pairs)
 
 
 def _forget_song(conn: sqlite3.Connection, path: str) -> None:
@@ -247,11 +255,12 @@ def folder_changed(conn: sqlite3.Connection, root: Path, now: float | None = Non
     root = root.resolve()
     listing = _audio_listing(root)
     now = time.time() if now is None else now
-    known = {
-        row["path"]: (row["size"], row["mtime"])
-        for row in conn.execute("SELECT path,size,mtime FROM songs")
-        if _inside(str(row["path"]), str(root))
-    }
+    with library_rows.reading(conn) as source:
+        known = {
+            row["path"]: (row["size"], row["mtime"])
+            for row in source.execute("SELECT path,size,mtime FROM songs")
+            if _inside(str(row["path"]), str(root))
+        }
     if not listing and known:
         return False
     unreadable = db.preference(conn, "unreadable_files", {})
@@ -270,7 +279,10 @@ def library_folders(conn: sqlite3.Connection) -> list[Path]:
     saved = db.preference(conn, "library_folders", [])
     if saved:
         return [Path(folder) for folder in saved]
-    paths = [row[0] for row in conn.execute("SELECT path FROM songs WHERE is_music = 1 LIMIT 5000")]
+    with library_rows.reading(conn) as source:
+        paths = [
+            row[0] for row in source.execute("SELECT path FROM songs WHERE is_music = 1 LIMIT 5000")
+        ]
     if not paths:
         return []
     try:
@@ -299,6 +311,10 @@ def interrupted_scan(conn: sqlite3.Connection) -> dict | None:
 
 
 def forget_interrupted_scan(conn: sqlite3.Connection) -> None:
+    store = library_rows.store_path(conn)
+    if store is not None:
+        library_writes.forget_preference(store, SCAN_STATE_KEY)
+        return
     conn.execute("DELETE FROM preferences WHERE key = ?", (SCAN_STATE_KEY,))
     conn.commit()
 
@@ -317,11 +333,32 @@ def _save_batch(
     """Newly read songs saved before the scan ends, so a restart doesn't read them again. Their
     set-aside votes are provisional: the scan's last step classifies the whole folder again."""
     classify(batch, subtitled, root)
+    store = library_rows.store_path(conn)
+    if store is not None:
+        library_writes.upsert_songs(
+            store,
+            [{k: v for k, v in song.items() if k not in SCAN_KEEPS_OUT} for song in batch],
+        )
+        return
     for song in batch:
         db.upsert_song(
             conn,
             {k: v for k, v in song.items() if k not in {"id", "duplicate_of", "music_override"}},
         )
+
+
+SCAN_KEEPS_OUT = {"id", "duplicate_of", "music_override"}
+"""What a scan never writes back: the row's id, its duplicate mark (set again at the end) and a
+person's choice."""
+UNCHANGED_KEEPS_OUT = SCAN_KEEPS_OUT | {
+    "processing_priority",
+    "content_hash",
+    "audio_id",
+    "workspace_id",
+}
+"""Through the store, an unchanged file's row also leaves out what other writers own (a song's
+priority, its hashes): the scan would only write back the values it read, which a priority set or
+an analysis saved during the scan could have changed since."""
 
 
 def _tell(progress: Callable[[int, int], None] | None, done: int, found: int) -> None:
@@ -384,6 +421,7 @@ def _scan(
     progress: Callable[[int, int], None] | None = None,
 ) -> ScanReport:
     report = ScanReport(root=root)
+    store = library_rows.store_path(conn)
     known = db.known_files(conn)
 
     files: list[Path] = []
@@ -428,6 +466,10 @@ def _scan(
         if careful and arriving and known.get(key) != (stat.st_size, stat.st_mtime):
             continue  # still being copied in, so it's read once it has finished
         if known.get(key) == (stat.st_size, stat.st_mtime):
+            if store is not None:
+                # read together after the loop, rather than one store read per file
+                songs.append({"path": key, UNCHANGED: True})
+                continue
             row = conn.execute("SELECT * FROM songs WHERE path = ?", (key,)).fetchone()
             songs.append(dict(row))
             continue
@@ -450,10 +492,18 @@ def _scan(
         report.fresh.append(key)
 
     _tell(progress, report.found, report.found)
+    if store is not None:
+        return _finish_through_store(
+            store, report, root, songs, subtitled, known, seen, files, careful, unreadable
+        )
     classify(songs, subtitled, root)
+    # a re-tagged or replaced file keeps the person's choice too (T-20261126-05d1)
+    chosen = _music_choices(conn, [song["path"] for song in songs if "id" not in song])
 
     for song in songs:
         override = song.get("music_override")
+        if override is None:
+            override = chosen.get(song["path"])
         if override is not None:
             song["is_music"] = int(override)
             song["set_aside_reason"] = None if override else "you set this aside"
@@ -485,7 +535,104 @@ def _scan(
 
 
 def set_aside_summary(conn: sqlite3.Connection) -> list[sqlite3.Row]:
-    return conn.execute(
-        "SELECT folder, COUNT(*) AS files, MIN(set_aside_reason) AS reason "
-        "FROM songs WHERE is_music = 0 GROUP BY folder ORDER BY files DESC"
-    ).fetchall()
+    with library_rows.reading(conn) as source:
+        return source.execute(
+            "SELECT folder, COUNT(*) AS files, MIN(set_aside_reason) AS reason "
+            "FROM songs WHERE is_music = 0 GROUP BY folder ORDER BY files DESC"
+        ).fetchall()
+
+
+UNCHANGED = "\x00unchanged"
+"""Marks an unchanged file's place in the scan's list until its stored row is read."""
+
+
+def _music_choices(conn: sqlite3.Connection, paths: list[str]) -> dict[str, int]:
+    """The person's music choice for files read again (their rows already exist by path)."""
+    found: dict[str, int] = {}
+    for start in range(0, len(paths), 500):
+        part = paths[start : start + 500]
+        marks = ",".join("?" for _ in part)
+        rows = conn.execute(
+            f"SELECT path, music_override FROM songs WHERE path IN ({marks}) "  # noqa: S608
+            "AND music_override IS NOT NULL",
+            part,
+        )
+        found.update({row[0]: int(row[1]) for row in rows})
+    return found
+
+
+def _finish_through_store(
+    store,
+    report: ScanReport,
+    root: Path,
+    songs: list[dict],
+    subtitled: set[str],
+    known: dict,
+    seen: set[str],
+    files: list,
+    careful: bool,
+    unreadable: dict,
+) -> ScanReport:
+    """The scan's writing through the engine store (core.engine_store): the same rows as the old
+    path, in short writes of `library_writes.SCAN_BATCH` songs, never one for the whole scan. A
+    stop or a crash between writes leaves every saved song whole, and the next scan finds them
+    unchanged and carries on."""
+    marked = [song["path"] for song in songs if song.get(UNCHANGED)]
+    stored = library_writes.scanned_rows(store, marked)
+    # a row removed since it was listed (by a relink, say) is simply not written back
+    songs = [
+        stored[song["path"]] if song.get(UNCHANGED) else song
+        for song in songs
+        if not song.get(UNCHANGED) or song["path"] in stored
+    ]
+    unchanged = {path for path in marked if path in stored}
+    classify(songs, subtitled, root)
+    records = [
+        {
+            k: v
+            for k, v in song.items()
+            if k not in (UNCHANGED_KEEPS_OUT if song["path"] in unchanged else SCAN_KEEPS_OUT)
+        }
+        for song in songs
+    ]
+
+    def settle(record: dict, override: int | None) -> None:
+        # a person's choice wins, as read inside the write that saves the row
+        if override is not None:
+            record["is_music"] = int(override)
+            record["set_aside_reason"] = None if override else "you set this aside"
+
+    def same(record: dict) -> bool:
+        """An unchanged file whose row would be written back exactly as it is: skipped, so a
+        rescan of a settled library writes almost nothing. Its stored choice is applied first;
+        one made since the files were listed is already in the row the person changed."""
+        row = stored.get(record["path"])
+        if row is None or record["path"] not in unchanged:
+            return False
+        settled = dict(record)
+        settle(settled, row.get("music_override"))
+        return all(row.get(key) == value for key, value in settled.items())
+
+    writing = []
+    for record in records:
+        if same(record):
+            settle(record, stored[record["path"]].get("music_override"))
+        else:
+            writing.append(record)
+    library_writes.save_scanned(store, writing, unchanged, settle)
+    for record in records:
+        if record["is_music"]:
+            report.music += 1
+        else:
+            report.set_aside[record["set_aside_reason"] or "set aside"] += 1
+    root_text = str(root)
+    missing = [gone for gone in set(known) - seen if _inside(gone, root_text)]
+    within = sum(_inside(path, root_text) for path in known)
+    if missing and (not files or (careful and len(missing) > within * MOST_THAT_CAN_GO)):
+        report.held_back = len(missing)
+        missing = []
+    library_writes.forget_songs(store, missing)
+    report.removed = len(missing)
+    report.duplicates = library_writes.mark_duplicates(store, _duplicate_pairs)
+    library_writes.set_preference(store, "unreadable_files", unreadable)
+    return report

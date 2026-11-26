@@ -204,13 +204,13 @@ export function gate(pair: StemPair, rule: MoveRule): { refused: string } | { ke
   }
   const limit = keyChecked ? rule.maxTempoGap : rule.maxTempoGap * KEY_UNKNOWN_TEMPO_SCALE;
   if (gap > limit) {
-    const unknown = keyChecked ? '' : ', the stricter limit used while the browser can\'t check key';
+    const unknown = keyChecked ? '' : ', the stricter limit used when a song\'s key isn\'t known';
     return { refused: `The songs are ${percent(gap)} apart in tempo; ${rule.label} needs them within ${percent(limit)}${unknown}.` };
   }
   return { keyChecked, gap };
 }
 
-export const KEY_NOT_CHECKED = 'Key wasn\'t checked, since the browser doesn\'t read key yet, so the tempos had to sit closer than local mode asks.';
+export const KEY_NOT_CHECKED = 'Key wasn\'t known for one of these songs, so the tempos had to sit closer than local mode asks.';
 
 /** Where the overlap of `bars` bars can sit: the latest start on A's grid that respects the
  * settle rule and A's window, and the earliest bar line of B whose stretch fits B's window.

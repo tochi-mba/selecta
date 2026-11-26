@@ -111,7 +111,7 @@ export function CancelImportButton({ label = 'Cancel', className }: { label?: st
       {asking && (
         <ConfirmDialog
           title="Stop this import?"
-          body="Songs already added stay in your library. The files not yet added would need checking again next time."
+          body="Songs already added stay in your library. The files still to add would need checking again next time."
           confirmLabel="Stop the import"
           cancelLabel="Keep importing"
           onConfirm={() => { cancelImportSession(); }}

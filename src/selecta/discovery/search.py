@@ -10,6 +10,7 @@ from collections.abc import Callable
 
 import numpy as np
 
+from selecta import flags
 from selecta.analysis.song import SongInfo
 from selecta.discovery.sequence import harmonic_sequence
 from selecta.lyrics.lrclib import clean_artist, parse_lrc
@@ -57,14 +58,38 @@ def _save(conn: sqlite3.Connection, a: int, b: int, kind: str, payload: dict, sc
     )
 
 
+def store_of(conn):
+    """The engine store discovery writes through, or None for the old path on `conn`: with
+    `core.engine_store` on, on a file past `lib0009discovery`, and only when `conn` has no writes
+    pending (a store write would wait behind them). An `EngineStore` is its own answer."""
+    from selecta.engine_store import EngineStore
+
+    if isinstance(conn, EngineStore):
+        return conn
+    if not flags.on("core.engine_store") or conn.in_transaction:
+        return None
+    from selecta.engine_store import library
+
+    try:
+        stamp = library.stamp_of(conn)
+        if stamp is None or not library.includes(stamp, "lib0009discovery"):
+            return None
+        return library.store_of(conn)
+    except (library.LibraryNotReady, sqlite3.Error):
+        return None
+
+
 def lyric_links(conn: sqlite3.Connection, limit: int = 200_000) -> list[LyricLink]:
     """Search every song with timed lyrics. Takes seconds, since only line ends and starts link."""
-    rows = conn.execute(
-        "SELECT s.id,s.artist,s.title,s.duration,l.synced FROM songs s "
-        "JOIN lyrics l ON l.song_id=s.id "
-        "WHERE l.status='synced' AND l.synced IS NOT NULL "
-        "AND s.is_music=1 AND s.duplicate_of IS NULL"
-    ).fetchall()
+    from selecta.engine_store import library_rows
+
+    with library_rows.reading(conn) as source:
+        rows = source.execute(
+            "SELECT s.id,s.artist,s.title,s.duration,l.synced FROM songs s "
+            "JOIN lyrics l ON l.song_id=s.id "
+            "WHERE l.status='synced' AND l.synced IS NOT NULL "
+            "AND s.is_music=1 AND s.duplicate_of IS NULL"
+        ).fetchall()
     return discover(
         {r["id"]: parse_lrc(r["synced"], r["duration"]) for r in rows},
         limit,
@@ -74,9 +99,8 @@ def lyric_links(conn: sqlite3.Connection, limit: int = 200_000) -> list[LyricLin
 
 def lyric_search(conn: sqlite3.Connection) -> int:
     links = lyric_links(conn, limit=5000)
-    for link in links:
-        _save(
-            conn,
+    found = [
+        (
             link.song_a,
             link.song_b,
             link.kind,
@@ -88,8 +112,22 @@ def lyric_search(conn: sqlite3.Connection) -> int:
             },
             link.score,
         )
+        for link in links
+    ]
+    store = store_of(conn)
+    if store is not None:
+        from selecta.engine_store import discovery as stored
+
+        stored.save_links(store, [stored.link(*row) for row in found])
+        return len(links)
+    for row in found:
+        _save(conn, *row)
     conn.commit()
     return len(links)
+
+
+Keep = Callable[[int, int, str, dict, float], None]
+"""Where `audio_links` hands each link it finds: song A, song B, kind, payload, score."""
 
 
 def audio_search(
@@ -103,7 +141,41 @@ def audio_search(
 
     Averaging chroma across a whole track discards the order of notes. It can support a
     broad tonal resemblance, but cannot establish that two songs share a melody.
+
+    On the old path every link is inserted on `conn` and committed once at the end. Through the
+    engine store they are saved `discovery.BATCH` at a time, each batch its own short write.
     """
+    if limit <= 0:
+        return 0
+    store = store_of(conn)
+    if store is None:
+        found = audio_links(songs, limit, lambda *row: _save(conn, *row), before_pair, seed)
+        conn.commit()
+        return found
+    from selecta.engine_store import discovery as stored
+
+    pending: list = []
+
+    def keep(a: int, b: int, kind: str, payload: dict, score: float) -> None:
+        pending.append(stored.link(a, b, kind, payload, score))
+        if len(pending) >= stored.BATCH:
+            stored.save_links(store, pending)
+            pending.clear()
+
+    found = audio_links(songs, limit, keep, before_pair, seed)
+    stored.save_links(store, pending)
+    return found
+
+
+def audio_links(
+    songs: list[SongInfo],
+    limit: int,
+    keep: Keep,
+    before_pair: Callable[[], None] | None = None,
+    seed: int | None = None,
+) -> int:
+    """The search itself: hands each link found to `keep` and returns how many it found. It
+    reads and writes nothing, so the sweep can write a pair's links with its compared mark."""
     if limit <= 0:
         return 0
     found = 0
@@ -154,8 +226,7 @@ def audio_search(
                 sequence[f"{prefix}_end"] = float(
                     song.bar_times[end_bar] if end_bar < len(song.bar_times) else song.duration
                 )
-            _save(
-                conn,
+            keep(
                 a.id,
                 b.id,
                 "harmonic_sequence_candidate",
@@ -166,7 +237,6 @@ def audio_search(
             found += 1
             sequences += 1
             if sequences >= limit:
-                conn.commit()
                 return found
         pb = b.chroma_bars.mean(axis=0)
         pb /= np.linalg.norm(pb) + 1e-9
@@ -174,8 +244,7 @@ def audio_search(
         similarity = max(rotations)
         if similarity > 0.93 and cousins < limit:
             transpose = rotations.index(similarity)
-            _save(
-                conn,
+            keep(
                 a.id,
                 b.id,
                 "tonal_profile_cousin",
@@ -193,5 +262,4 @@ def audio_search(
             found += 1
             if found >= limit and not sequences:
                 break
-    conn.commit()
     return found

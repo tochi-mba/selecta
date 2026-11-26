@@ -85,7 +85,7 @@ const HERE: Record<string, { kind: StatusKind; words: string }> = {
   hosted: { kind: 'ready', words: 'Ready' },
   reauth: { kind: 'needs-action', words: 'Allow again to play here' },
   reconnect: { kind: 'needs-action', words: 'Choose again to play here' },
-  elsewhere: { kind: 'unavailable', words: 'Not in this browser yet' },
+  elsewhere: { kind: 'unavailable', words: 'Not in this browser' },
   nowhere: { kind: 'failed', words: 'Missing' },
 };
 
@@ -231,8 +231,8 @@ export const LibraryRow = memo(function LibraryRow({
           <Menu title={`More actions for ${spoken}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {spoken}</span></>}>
             {facts.canAdd && <Action role="menuitem" disabled={inMix || searching} run={() => actions.add(song, false)} title="Puts it at the end of the current mix. Nothing starts playing.">{inMix ? 'Already in current mix' : 'Add to current mix'}</Action>}
             {facts.canAdd && playing && <Action role="menuitem" disabled={inMix || searching} run={() => actions.add(song, true)} title="Puts it straight after the song playing now. What's playing carries on.">Play next in current mix</Action>}
-            {!facts.setAside && priorityFlag && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => actions.priority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
-              {song.priority ? 'Priority: on' : 'Prioritize'}
+            {!facts.setAside && priorityFlag && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => actions.priority(song)} title={browser ? 'This device measures it before the other songs waiting' : 'Prioritized songs are analysed first and their stem windows are protected from cache cleanup'}>
+              {browser ? (song.priority ? 'Measure first: on' : 'Measure this first') : song.priority ? 'Priority: on' : 'Prioritize'}
             </Action>}
             {!facts.setAside && neverFlag && <Action role="menuitemcheckbox" aria-checked={song.never} run={() => actions.never(song)} title="SelectaDJ won’t pick this when it builds a mix">
               {song.never ? 'Never: on' : 'Never play'}

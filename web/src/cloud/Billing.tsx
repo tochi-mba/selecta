@@ -238,7 +238,7 @@ export function ConsentForm({ consent, onChange, version }: { consent: Consent; 
       <label><input type="checkbox" checked={consent.cancellation} onChange={tick('cancellation')} /> I understand my 14-day cancellation right and when I may lose it.</label>
       {version
         ? <p className="cloud-consent-version">Consent wording version {version}</p>
-        : <p className="cloud-inline-error">Checkout isn’t set up for this site yet.</p>}
+        : <p className="cloud-inline-error">Checkout isn’t set up for this site.</p>}
     </fieldset>
   );
 }

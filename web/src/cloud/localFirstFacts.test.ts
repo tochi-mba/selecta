@@ -84,11 +84,23 @@ describe('corrections from Song details', () => {
     expect(calls.filter((call) => call.path === '/song-facts/1/correction').map((call) => call.method)).toEqual(['DELETE']);
   });
 
-  it('"is it music?" and a correction with the flags off are the app\'s, said plainly', async () => {
+  it('"is it music?" is kept with the account, and the catalogue reads again', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true });
+    const { cloud, calls } = cloudWith([one]);
+    const adapted = localFirstRequest(cloud, { workspaceId: 'w1' });
+    await adapted('/library?state=all');
+    expect(await adapted('/songs/1/correct', { method: 'POST', body: JSON.stringify({ is_music: false }) })).toEqual({ redone: 0 });
+    await adapted('/songs/1/correct', { method: 'POST', body: JSON.stringify({ clear: ['is_music'] }) });
+    const marks = calls.filter((call) => call.path === '/song-facts/1/correction');
+    expect(marks.map((call) => call.body)).toEqual([{ is_music: false }, { is_music: null }]);
+    await adapted('/library?state=all');
+    expect(calls.filter((call) => call.path.startsWith('/local-media/songs?')).length).toBe(2);
+  });
+
+  it('a correction with the flags off is only in the app, said plainly', async () => {
+    setFlags({ 'cloud.brain': true });
     const { cloud } = cloudWith([one]);
     await expect(localFirstRequest(cloud, { workspaceId: 'w1' })('/songs/1/correct', { method: 'POST', body: JSON.stringify({ is_music: false }) })).rejects.toThrow(ONLY_IN_THE_APP);
-    setFlags({ 'cloud.brain': true });
     await expect(localFirstRequest(cloud, { workspaceId: 'w1' })('/songs/1/correct', { method: 'POST', body: JSON.stringify({ bpm: 120 }) })).rejects.toThrow(ONLY_IN_THE_APP);
   });
 });
@@ -99,15 +111,21 @@ describe('what the browser shell switches off', () => {
     const measured = browserFlags(true, false, { measured: true });
     expect(measured['library.corrections']).toBeUndefined();
     expect(measured['mixes.shaping.energy_arc']).toBeUndefined();
+    // the transition feel and the energy horizon come with the account's measurements too
+    expect(measured['mixes.shaping.feel']).toBeUndefined();
+    expect(measured['editor.energy_horizon']).toBeUndefined();
+    expect(browserFlags(true)['mixes.shaping.feel']).toBe(false);
     expect(measured['editor.locks']).toBe(false);
     expect(browserFlags(true, false, { accountMixes: true })['editor.locks']).toBeUndefined();
   });
 
   it('keeps every other decision whatever the account has', () => {
     const all = browserFlags(true, true, { measured: true, accountMixes: true });
-    for (const id of ['requests.bridges', 'editor.energy_horizon', 'seam_inspector', 'app.activity', 'export', 'lyrics.lookup', 'mixes.shaping.feel', 'mixes.shaping.stem_moves']) {
+    for (const id of ['requests.bridges', 'seam_inspector', 'export', 'lyrics.lookup', 'mixes.shaping.stem_moves']) {
       expect(all[id], id).toBe(false);
     }
-    expect(Object.keys(NOT_IN_THE_BROWSER)).toHaveLength(12);
+    expect(Object.keys(NOT_IN_THE_BROWSER)).toHaveLength(11);
+    // the Activity drawer shows this device's own work (DeviceActivity.tsx)
+    expect(all['app.activity']).toBeUndefined();
   });
 });

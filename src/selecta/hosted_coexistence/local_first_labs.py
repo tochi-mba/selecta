@@ -129,9 +129,9 @@ def decide(snapshot: RuleSnapshot, layers: Layers, flag_id: str = LOCAL_FIRST):
 
 
 REFUSALS = {
-    targeting.BUILD_OFF: "Browser-first Cloud isn't switched on in this build yet.",
-    targeting.MODE_OFF: "Browser-first Cloud isn't available here yet.",
-    targeting.PLAN_LOCKED: "Your plan doesn't include browser-first Cloud yet.",
+    targeting.BUILD_OFF: "Browser-first Cloud isn't switched on in this build.",
+    targeting.MODE_OFF: "Browser-first Cloud isn't available on this site.",
+    targeting.PLAN_LOCKED: "Your plan doesn't include browser-first Cloud.",
     targeting.RULE_OFF: "Browser-first Cloud is paused right now.",
     targeting.USER_OFF: "You've switched browser-first Cloud off.",
 }

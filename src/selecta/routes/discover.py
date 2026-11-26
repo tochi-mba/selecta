@@ -22,7 +22,8 @@ from selecta.arrange import (
     what_changed,
 )
 from selecta.discovery.hearing import STEPS, audition_folder, make_audition
-from selecta.discovery.search import spread_out
+from selecta.discovery.search import spread_out, store_of
+from selecta.engine_store import library_rows
 from selecta.eta import combine, still_to_go
 from selecta.routes.files import audio_file
 from selecta.seams import STUDIO_SESSION
@@ -44,13 +45,22 @@ def add_routes(app, ctx) -> None:
     @app.get("/api/discoveries")
     def discoveries(limit: int = 40) -> list[dict]:
         with connect() as conn:
-            rows = conn.execute(
-                "SELECT d.*,a.artist artist_a,a.title title_a,b.artist artist_b,b.title title_b "
-                "FROM seam_book d JOIN songs a ON a.id=d.song_a JOIN songs b ON b.id=d.song_b "
-                "WHERE d.kind='harmonic_sequence_candidate' AND a.is_music=1 AND b.is_music=1 "
-                "AND a.duplicate_of IS NULL AND b.duplicate_of IS NULL "
-                "ORDER BY d.score DESC,d.id"
-            ).fetchall()
+            stored = store_of(conn)
+            if stored is not None:
+                from selecta.engine_store import discovery
+
+                rows = discovery.listed(stored)
+            else:
+                rows = conn.execute(
+                    # the columns named, so an adopted table's workspace_id stays out of it
+                    "SELECT d.id,d.song_a,d.song_b,d.kind,d.payload,d.score,d.status,"
+                    "a.artist artist_a,a.title title_a,b.artist artist_b,"
+                    "b.title title_b FROM seam_book d JOIN songs a ON a.id=d.song_a "
+                    "JOIN songs b ON b.id=d.song_b "
+                    "WHERE d.kind='harmonic_sequence_candidate' AND a.is_music=1 AND b.is_music=1 "
+                    "AND a.duplicate_of IS NULL AND b.duplicate_of IS NULL "
+                    "ORDER BY d.score DESC,d.id"
+                ).fetchall()
         found = [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
         wanted = max(0, min(limit, 200))
         waiting = [row for row in found if row["status"] == "new"]
@@ -59,16 +69,23 @@ def add_routes(app, ctx) -> None:
 
     def discovery_at(discovery_id: int):
         with connect() as conn:
-            row = conn.execute(
-                "SELECT * FROM seam_book WHERE id=? AND kind='harmonic_sequence_candidate'",
-                (discovery_id,),
-            ).fetchone()
+            stored = store_of(conn)
+            if stored is not None:
+                from selecta.engine_store import discovery
+
+                row = discovery.harmonic_link(stored, discovery_id)
+            else:
+                row = conn.execute(
+                    "SELECT song_a,song_b,payload FROM seam_book "
+                    "WHERE id=? AND kind='harmonic_sequence_candidate'",
+                    (discovery_id,),
+                ).fetchone()
             if row is None:
                 raise HTTPException(404, "Discovery not found")
             return (
-                analysed_or_404(conn, row["song_a"]),
-                analysed_or_404(conn, row["song_b"]),
-                json.loads(row["payload"]),
+                analysed_or_404(conn, row[0]),
+                analysed_or_404(conn, row[1]),
+                json.loads(row[2]),
             )
 
     @app.post("/api/discoveries/{discovery_id}/hear")
@@ -179,6 +196,13 @@ def add_routes(app, ctx) -> None:
         if body.verdict not in {"new", "approved", "rejected"}:
             raise HTTPException(400, "Choose approved, rejected, or new")
         with connect() as conn:
+            stored = store_of(conn)
+            if stored is not None:
+                from selecta.engine_store import discovery
+
+                if not discovery.review(stored, discovery_id, body.verdict):
+                    raise HTTPException(404, "Discovery not found")
+                return {"id": discovery_id, "status": body.verdict}
             changed = conn.execute(
                 "UPDATE seam_book SET status=? WHERE id=? AND kind='harmonic_sequence_candidate'",
                 (body.verdict, discovery_id),
@@ -197,18 +221,15 @@ def add_routes(app, ctx) -> None:
 
     @app.get("/api/listening/{trial}/{option}/audio")
     def listening_audio(trial: str, option: str, request: Request) -> Response:
-        from selecta.listening import initialise
+        from selecta.listening import trial_mapping
 
         if option not in {"a", "b"}:
             raise HTTPException(404)
         with connect() as conn:
-            initialise(conn)
-            row = conn.execute(
-                "SELECT mapping FROM listening_trials WHERE id=?", (trial,)
-            ).fetchone()
-        if row is None:
+            mapping = trial_mapping(conn, trial)
+        if mapping is None:
             raise HTTPException(404)
-        key = json.loads(row["mapping"])[option]
+        key = json.loads(mapping)[option]
         if not isinstance(key, str) or Path(key).name != key:
             raise HTTPException(404)
         root = store.root.resolve()
@@ -249,10 +270,11 @@ def add_routes(app, ctx) -> None:
         text = q.casefold()
         with connect() as conn:
             unique, library, space = ranked_links(conn)
-            names = {
-                row["id"]: (row["artist"], row["title"])
-                for row in conn.execute("SELECT id,artist,title FROM songs")
-            }
+            with library_rows.reading(conn) as source:
+                names = {
+                    row["id"]: (row["artist"], row["title"])
+                    for row in source.execute("SELECT id,artist,title FROM songs")
+                }
         shown = []
         prepared = 0
         # r8d: one look at what's been rendered, rather than asking the disk about every move of

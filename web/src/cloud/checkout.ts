@@ -45,7 +45,7 @@ export function checkoutAvailable(account: Account | null): boolean {
   return account?.billing?.checkout_available !== false;
 }
 
-export const UPGRADES_NOT_OPEN = 'Upgrades aren’t open yet on this site.';
+export const UPGRADES_NOT_OPEN = 'Upgrades aren’t open on this site.';
 const CHECKOUT_FAILED = 'SelectaDJ couldn’t start the payment. Nothing was charged. Try again in a moment.';
 
 /** Why pressing Continue did not open Checkout, in plain words: the refusal's own sentence when

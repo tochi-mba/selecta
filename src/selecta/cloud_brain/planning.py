@@ -29,6 +29,7 @@ from selecta.planner_core.choose import (
     enumerate_candidates,
     exits_after,
     fallback_candidate,
+    styles_for_language,
 )
 from selecta.planner_core.memory import SeamMemory
 from selecta.planner_core.recipes import all_recipes
@@ -78,13 +79,23 @@ def moves() -> tuple[str, ...]:
 
 
 def pool(
-    a: SongInfo, b: SongInfo, move: str | None = None, leave_after: float | None = None
+    a: SongInfo,
+    b: SongInfo,
+    move: str | None = None,
+    leave_after: float | None = None,
+    language: str | None = None,
 ) -> list[Candidate]:
     """The ranked candidates, as the Desktop's choose loop enumerates them, at most
-    `MAX_OPTIONS`."""
+    `MAX_OPTIONS`. With a transition feel (`language`) and no move named, only that feel's
+    family, as the Desktop's mix build picks each move (`planner_core.beam._best_move`); a pair
+    with none of the family keeps every move."""
     if move is not None and move not in all_recipes():
         raise PlanningRefused("unknown_move", "That isn't a move SelectaDJ can plan.")
-    return enumerate_candidates(a, b, move, exits=exits_after(a, leave_after))[:MAX_OPTIONS]
+    ranked = enumerate_candidates(a, b, move, exits=exits_after(a, leave_after))
+    allowed = styles_for_language(language) if move is None and language else None
+    if allowed is not None:
+        ranked = [one for one in ranked if one.recipe.name in allowed] or ranked
+    return ranked[:MAX_OPTIONS]
 
 
 def script_of(candidate: Candidate, a: SongInfo, b: SongInfo) -> dict | None:
@@ -129,10 +140,11 @@ def candidates(
     move: str | None = None,
     leave_after: float | None = None,
     scripts: int = SCRIPTED,
+    language: str | None = None,
 ) -> dict[str, Any]:
     """Every ranked option for A into B with its score and reasons, the first `scripts` with
     their scripts, and the fallback cut with its own."""
-    ranked = pool(a, b, move, leave_after)
+    ranked = pool(a, b, move, leave_after, language)
     options = [Option.of(candidate) for candidate in ranked]
     safe = fallback_candidate(a, b)
     scripts = max(0, min(int(scripts), MAX_SCRIPTED))
@@ -156,9 +168,10 @@ def one_script(
     expected: str,
     move: str | None = None,
     leave_after: float | None = None,
+    language: str | None = None,
 ) -> dict[str, Any]:
     """One option's script by its place in the list a `candidates` answer sent."""
-    ranked = pool(a, b, move, leave_after)
+    ranked = pool(a, b, move, leave_after, language)
     if fingerprint([Option.of(candidate) for candidate in ranked]) != expected:
         raise PlanningRefused(
             "plan_changed", "These songs' facts changed since the options were sent; ask again."

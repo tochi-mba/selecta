@@ -207,8 +207,12 @@ def install_routes(
                 versions.ensure_regrouped(conn, workspace_id)
             songs, next_after = store.list_songs(conn, workspace_id, after=after, limit=limit)
             counts = store.availability_counts(conn, workspace_id, [s["id"] for s in songs])
+            # the member's "Is it music?" (T-20261126-3f92), said only for a song set aside
+            aside = store.set_aside_of(conn, workspace_id, [s["id"] for s in songs])
         for song in songs:
             song["available_on"] = counts.get(song["id"], 0)
+            if song["id"] in aside:
+                song["set_aside"] = True
         answer: dict[str, Any] = {"songs": songs}
         if next_after is not None:
             answer["next"] = next_after

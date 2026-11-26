@@ -12,7 +12,6 @@ on them; at most two run at once (LU-331-08, LU-332-05).
 from __future__ import annotations
 
 import asyncio
-import json
 import threading
 import time
 from dataclasses import dataclass
@@ -22,7 +21,17 @@ from weftai._abort import AbortController
 from weftai.adapter.bind import bind_tool, format_invalid_plan
 from weftai.plan.types import PlanSchema
 
-from selecta.lucy import builtin, context, conversations, events, intent, policy, schema, tools
+from selecta.lucy import (
+    builtin,
+    context,
+    conversations,
+    events,
+    intent,
+    policy,
+    runs,
+    schema,
+    tools,
+)
 from selecta.lucy import settings as lucy_settings
 from selecta.lucy.ids import new_id, now_iso
 from selecta.lucy.providers import (
@@ -62,21 +71,8 @@ class Runner:
         config = lucy_settings.get(conn)
         status = lucy_settings.status(conn, app.settings.home)
         run = new_id("run")
-        conn.execute(
-            "INSERT INTO lucy_runs(id,turn_id,conversation_id,attempt,state,provider,limits,"
-            "started_at) VALUES(?,?,?,?,?,?,?,?)",
-            (
-                run,
-                turn["id"],
-                conversation,
-                attempt,
-                "queued",
-                status["provider"]["kind"],
-                json.dumps(config["budgets"]),
-                now_iso(),
-            ),
-        )
-        conn.commit()
+        runs.add(conn, run, turn["id"], conversation, attempt, status["provider"]["kind"],
+                 config["budgets"])
         with self.lock:
             older = self.active.get(conversation)
             if older is not None:
@@ -133,40 +129,7 @@ def recover(conn) -> int:
     """After a restart nothing is running: say so truthfully instead of spinning forever
     (LU-302-03). Partial replies keep the text they had."""
     schema.ensure(conn)
-    stuck = conn.execute(
-        "SELECT id, conversation_id, turn_id FROM lucy_runs WHERE state NOT IN "
-        "('completed','failed','cancelled','interrupted','superseded')"
-    ).fetchall()
-    for row in stuck:
-        conn.execute(
-            "UPDATE lucy_runs SET state='interrupted', ended_at=? WHERE id=?",
-            (now_iso(), row["id"]),
-        )
-        conn.execute(
-            "UPDATE lucy_messages SET status='interrupted' WHERE run_id=? AND status='streaming'",
-            (row["id"],),
-        )
-        conn.execute(
-            "UPDATE lucy_turns SET status='interrupted' WHERE id=? AND status IN "
-            "('queued','running')",
-            (row["turn_id"],),
-        )
-        events.append(
-            conn,
-            row["conversation_id"],
-            "run.state",
-            {
-                "state": "interrupted",
-                "cycles": 0,
-                "steps": 0,
-                "error": "SelectaDJ restarted while Lucy was working.",
-            },
-            turn=row["turn_id"],
-            run=row["id"],
-            commit=False,
-        )
-    conn.commit()
-    return len(stuck)
+    return runs.recover(conn)
 
 
 class RunStopped(Exception):
@@ -209,21 +172,13 @@ class Writer:
         self.buffer = ""
         self.flushed_at = time.monotonic()
         if self.flushed_at - self.persisted_at >= PERSIST_SECONDS:
-            self.ctx.conn.execute(
-                "UPDATE lucy_messages SET content=? WHERE id=?", (self.content, self.message)
-            )
-            self.ctx.conn.commit()
+            runs.save_text(self.ctx.conn, self.message, self.content)
             self.persisted_at = self.flushed_at
 
 
 def _set_state(ctx: tools.LucyCtx, state: str, cycles: int = 0, error: str | None = None) -> None:
     ended = now_iso() if state in TERMINAL else None
-    ctx.conn.execute(
-        "UPDATE lucy_runs SET state=?, cycles=?, steps=?, error=coalesce(?,error), "
-        "ended_at=coalesce(?,ended_at) WHERE id=?",
-        (state, cycles, ctx.steps_run, error, ended, ctx.run),
-    )
-    ctx.conn.commit()
+    runs.set_state(ctx.conn, ctx.run, state, cycles, ctx.steps_run, error, ended)
     payload = {"state": state, "cycles": cycles, "steps": ctx.steps_run}
     if error:
         payload["error"] = error
@@ -277,12 +232,7 @@ async def _run(app: Any, active: Active) -> None:
         attempt=active.attempt,
     )
     if ctx.expected is None and has_proposal:
-        row = conn.execute(
-            "SELECT p.current_revision FROM lucy_proposals p JOIN "
-            "lucy_conversations c ON c.proposal_id=p.id WHERE c.id=?",
-            (active.conversation,),
-        ).fetchone()
-        ctx.expected = row[0] if row else None
+        ctx.expected = runs.current_revision(conn, active.conversation)
     config = lucy_settings.get(conn)
     budgets = config["budgets"]
     deadline = time.monotonic() + budgets["max_seconds"]
@@ -489,11 +439,7 @@ async def _run(app: Any, active: Active) -> None:
                     usage["tokens_out"] += result.tokens_out
                     spent = cost_estimate(provider.model, usage["tokens_in"], usage["tokens_out"])
                     usage["cost_usd"] = spent
-                    conn.execute(
-                        "UPDATE lucy_runs SET tokens_in=?, tokens_out=?, usage=? WHERE id=?",
-                        (usage["tokens_in"], usage["tokens_out"], json.dumps(usage), active.run),
-                    )
-                    conn.commit()
+                    runs.set_usage(conn, active.run, usage)
                     ctx.emit("run.usage", dict(usage))
                     if result.stop == "refusal":
                         await writer.write("\n\n(The AI provider declined to answer that.)")

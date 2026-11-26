@@ -51,6 +51,7 @@ BRAIN_SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/requests"): {"song_id": 1},
     ("DELETE", "/api/requests/{request_id}"): None,
     ("POST", "/api/requests/{request_id}/bridge"): {"allow": False},
+    ("POST", "/api/requests/{request_id}/bridges"): {},
     ("POST", "/api/requests/{request_id}/add"): {},
     ("POST", "/api/requests/consider"): {
         "order": [1], "position": 0, "phase": "playing", "seconds_left": 60.0,
@@ -58,4 +59,8 @@ BRAIN_SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/requests/insert"): {
         "order": [1], "position": 0, "phase": "playing", "seconds_left": 60.0, "offer": "0" * 64,
     },
+    # the account's harmonic discovery (cloud_brain.discovery_routes, discover.harmonic)
+    ("GET", "/api/discoveries"): None,
+    ("POST", "/api/discoveries/sweep"): {"song_ids": [1, 2]},
+    ("POST", "/api/discoveries/{discovery_id}/review"): {"verdict": "approved"},
 }

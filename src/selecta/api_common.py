@@ -266,21 +266,9 @@ MOST_FROM_ONE_ARTIST = 2
 
 
 def _counts(conn: sqlite3.Connection) -> dict[str, int]:
-    row = conn.execute(
-        "SELECT COUNT(*) total, SUM(is_music=0) set_aside, "
-        "SUM(is_music=1 AND duplicate_of IS NULL) music FROM songs"
-    ).fetchone()
-    analysed = conn.execute(
-        "SELECT COUNT(*) FROM analysis WHERE version=? AND error IS NULL", (ANALYSIS_VERSION,)
-    ).fetchone()[0]
-    lyrics = conn.execute("SELECT COUNT(*) FROM lyrics WHERE status='synced'").fetchone()[0]
-    return {
-        "total": row["total"] or 0,
-        "music": row["music"] or 0,
-        "set_aside": row["set_aside"] or 0,
-        "analysed": analysed,
-        "lyrics": lyrics,
-    }
+    from selecta.engine_store import library_reads
+
+    return library_reads.counts(conn, ANALYSIS_VERSION)
 
 
 def _wav(audio: np.ndarray) -> bytes:

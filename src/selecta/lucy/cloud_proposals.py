@@ -247,7 +247,10 @@ def edit(conn: Connection, workspace_id: str, row: Any, expected: str, op: dict)
         song = ids.pop(index)
         ids.insert(max(0, min(len(ids), int(op["to"]))), song)
     else:
-        raise ProposalError("not_here_yet", "Locking songs isn't available in your browser yet.")
+        raise ProposalError(
+            "not_a_proposal_edit",
+            "A proposal can drop or move songs. Lock songs once it is your mix, in the editor.",
+        )
     made = add_revision(
         conn, workspace_id, row.conversation_id, None, mix_id=row.mix_id,
         base_revision=row.base_revision, name=row.name, song_ids=ids,

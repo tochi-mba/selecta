@@ -15,6 +15,8 @@ import sqlite3
 from collections import Counter
 from typing import Any
 
+from selecta.engine_store.lucy import memory as stored
+from selecta.lucy import backing
 from selecta.lucy import settings as lucy_settings
 from selecta.lucy.ids import new_id, now_iso
 
@@ -42,6 +44,14 @@ def record_listening(
         return False
     if not (0 <= heard < 86400 and 0 <= position < 86400) or len(session) > 80:
         raise ValueError("Listening times must be real numbers of seconds.")
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            if stored.song(tx, song_id) is None:
+                raise KeyError(song_id)
+            stored.record_listening(tx, song_id, session, source, event, float(heard),
+                                    float(position))
+        return True
     if conn.execute("SELECT 1 FROM songs WHERE id=?", (song_id,)).fetchone() is None:
         raise KeyError(song_id)
     conn.execute(
@@ -55,11 +65,16 @@ def record_listening(
 
 def play_counts(conn: sqlite3.Connection, days: int) -> dict[int, dict[str, int]]:
     """Starts, meaningful listens (30 s or more, or played through) and quick skips per song."""
-    rows = conn.execute(
-        "SELECT song_id, event, heard FROM listening_events WHERE source='player' AND "
-        "created_at >= datetime('now', ?)",
-        (f"-{int(days)} days",),
-    ).fetchall()
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            rows = stored.player_events(tx, int(days))
+    else:
+        rows = conn.execute(
+            "SELECT song_id, event, heard FROM listening_events WHERE source='player' AND "
+            "created_at >= datetime('now', ?)",
+            (f"-{int(days)} days",),
+        ).fetchall()
     counts: dict[int, Counter] = {}
     for row in rows:
         tally = counts.setdefault(row["song_id"], Counter())
@@ -77,13 +92,18 @@ def play_counts(conn: sqlite3.Connection, days: int) -> dict[int, dict[str, int]
 def most_played(conn: sqlite3.Connection, days: int = 90, limit: int = 10) -> dict:
     """Only from persisted events, with counts and the period they cover (LU-316-04)."""
     counts = play_counts(conn, days)
+    store = backing.store_of(conn)
     ranked = sorted(
         counts.items(),
         key=lambda item: (-item[1].get("completes", 0), -item[1].get("starts", 0), item[0]),
     )
     top = []
     for song_id, tally in ranked[: max(1, min(limit, 50))]:
-        row = conn.execute("SELECT title, artist FROM songs WHERE id=?", (song_id,)).fetchone()
+        if store is not None:
+            with backing.reading(store) as tx:
+                row = stored.song(tx, song_id)
+        else:
+            row = conn.execute("SELECT title, artist FROM songs WHERE id=?", (song_id,)).fetchone()
         if row is None:
             continue
         top.append(
@@ -96,7 +116,11 @@ def most_played(conn: sqlite3.Connection, days: int = 90, limit: int = 10) -> di
                 "skips": tally.get("skips", 0),
             }
         )
-    total = conn.execute("SELECT COUNT(*) FROM listening_events").fetchone()[0]
+    if store is not None:
+        with backing.reading(store) as tx:
+            total = stored.listening_total(tx)
+    else:
+        total = conn.execute("SELECT COUNT(*) FROM listening_events").fetchone()[0]
     return {"top": top, "events": int(total), "period": f"last {days} days" if total else None}
 
 
@@ -119,6 +143,10 @@ def facts(conn: sqlite3.Connection, conversation: str | None = None,
           every_conversation: bool = False) -> list[dict]:
     """What Lucy remembers. A model only ever sees one conversation's notes; the memory panel
     shows the person all of them, so nothing is kept out of sight (LU-310-07)."""
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            return [_fact(row) for row in stored.facts(tx, conversation, every_conversation)]
     if every_conversation:
         rows = conn.execute("SELECT * FROM lucy_memory WHERE forgotten=0 "
                             "ORDER BY kind, updated_at DESC").fetchall()
@@ -149,6 +177,22 @@ def add_fact(
         raise ValueError("A memory needs something to remember.")
     fact = new_id("memory")
     stamp = now_iso()
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            stored.add_fact(
+                tx,
+                id=fact,
+                kind=kind,
+                subject=subject,
+                value=json.dumps(value),
+                source=json.dumps(source or {}),
+                confidence=confidence,
+                conversation_id=conversation if kind == "session" else None,
+                created_at=stamp,
+                updated_at=stamp,
+            )
+            return _fact(stored.fact(tx, fact))
     conn.execute(
         "INSERT INTO lucy_memory(id,kind,subject,value,source,confidence,conversation_id,"
         "created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
@@ -169,6 +213,13 @@ def add_fact(
 
 
 def update_fact(conn: sqlite3.Connection, fact: str, value: Any) -> dict:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            row = stored.fact(tx, fact, live=True)
+            _editable(row, fact)
+            stored.set_value(tx, fact, json.dumps(_trimmed(value)), now_iso())
+            return _fact(stored.fact(tx, fact))
     row = conn.execute("SELECT * FROM lucy_memory WHERE id=? AND forgotten=0", (fact,)).fetchone()
     if row is None:
         raise KeyError(fact)
@@ -184,7 +235,24 @@ def update_fact(conn: sqlite3.Connection, fact: str, value: Any) -> dict:
     return _fact(conn.execute("SELECT * FROM lucy_memory WHERE id=?", (fact,)).fetchone())
 
 
+def _editable(row: Any, fact: str) -> None:
+    if row is None:
+        raise KeyError(fact)
+    if row["kind"] != "explicit":
+        raise ValueError("Only things you told Lucy can be edited; learned ones can be forgotten.")
+
+
+def _trimmed(value: Any) -> Any:
+    return value.strip()[:MAX_FACT_TEXT] if isinstance(value, str) else value
+
+
 def forget_fact(conn: sqlite3.Connection, fact: str) -> None:
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.writing(store) as tx:
+            if not stored.forget(tx, fact):
+                raise KeyError(fact)
+        return
     found = conn.execute("DELETE FROM lucy_memory WHERE id=?", (fact,)).rowcount
     conn.commit()
     if not found:
@@ -192,6 +260,12 @@ def forget_fact(conn: sqlite3.Connection, fact: str) -> None:
 
 
 def clear(conn: sqlite3.Connection, kind: str) -> int:
+    store = backing.store_of(conn)
+    if store is not None:
+        if kind not in {"history", "inferred", "explicit"}:
+            raise ValueError(kind)
+        with backing.writing(store) as tx:
+            return int(stored.clear(tx, kind))
     if kind == "history":
         removed = conn.execute("DELETE FROM listening_events").rowcount
     elif kind in {"inferred", "explicit"}:
@@ -207,7 +281,9 @@ def infer(conn: sqlite3.Connection, seam_memory: Any = None) -> list[dict]:
 
     Rated transitions are directed, and say only what was liked; they never claim a clip is
     ready now (LU-316-05)."""
-    conn.execute("DELETE FROM lucy_memory WHERE kind='inferred'")
+    store = backing.store_of(conn)
+    if store is None:
+        conn.execute("DELETE FROM lucy_memory WHERE kind='inferred'")
     learned: list[tuple[str, Any, dict, float]] = []
     if history_enabled(conn):
         counts = play_counts(conn, 180)
@@ -215,7 +291,7 @@ def infer(conn: sqlite3.Connection, seam_memory: Any = None) -> list[dict]:
         if listened >= 10:
             genres: Counter[str] = Counter()
             for song_id, tally in counts.items():
-                row = conn.execute("SELECT genre FROM songs WHERE id=?", (song_id,)).fetchone()
+                row = _genre_of(conn, store, song_id)
                 if row and row["genre"]:
                     genres[row["genre"]] += tally.get("completes", 0)
             for genre, heard in genres.most_common(3):
@@ -243,10 +319,40 @@ def infer(conn: sqlite3.Connection, seam_memory: Any = None) -> list[dict]:
                         round(abs(liked - disliked) / (rated + 2), 2),
                     )
                 )
+    if store is not None:
+        _replace_inferred(store, learned)
+        return [fact for fact in facts(conn) if fact["kind"] == "inferred"]
     for subject, value, source, confidence in learned:
         add_fact(conn, subject, value, "inferred", source, confidence)
     conn.commit()
     return [fact for fact in facts(conn) if fact["kind"] == "inferred"]
+
+
+def _genre_of(conn: sqlite3.Connection, store: Any, song_id: int) -> Any:
+    if store is None:
+        return conn.execute("SELECT genre FROM songs WHERE id=?", (song_id,)).fetchone()
+    with backing.reading(store) as tx:
+        return stored.song(tx, song_id)
+
+
+def _replace_inferred(store: Any, learned: list[tuple[str, Any, dict, float]]) -> None:
+    """Learned taste replaced whole, in one write: never a moment with half of it."""
+    with backing.writing(store) as tx:
+        stored.clear(tx, "inferred")
+        for subject, value, source, confidence in learned:
+            fact, stamp = new_id("memory"), now_iso()
+            stored.add_fact(
+                tx,
+                id=fact,
+                kind="inferred",
+                subject=" ".join(str(subject).split())[:80],
+                value=json.dumps(_trimmed(value)),
+                source=json.dumps(source or {}),
+                confidence=confidence,
+                conversation_id=None,
+                created_at=stamp,
+                updated_at=stamp,
+            )
 
 
 def provider_receives(conn: sqlite3.Connection) -> list[str]:

@@ -354,3 +354,31 @@ def test_account_deletion_sweeps_the_engine_tables_and_the_features():
     key = features_key(workspace, "ab" * 32, 1001)
     assert any(key.startswith(prefix) for prefix in targets.prefixes[Bucket.DERIVED])
     assert workspace_prefix(workspace) in targets.prefixes[Bucket.DERIVED]
+
+
+@pytest.mark.parametrize("language", ["seamless", "punchy"])
+def test_a_transition_feel_keeps_its_family_as_the_desktop_build_does(cloud, language):
+    from selecta.planner_core.choose import styles_for_language
+
+    first, second = cloud["ids"][:2]
+    asked = {"a": first, "b": second, "language": language}
+    answer = cloud["client"].post("/api/planning/candidates", headers=_auth(ALICE), json=asked)
+    assert answer.status_code == 200, answer.text
+    a, b = _infos(cloud["ids"])[:2]
+    every = enumerate_candidates(a, b, None, exits=None)
+    family = styles_for_language(language) or set()
+    kept = [one for one in every if one.recipe.name in family] or every
+    body = answer.json()
+    assert body["options"] == _norm(
+        [_expected_entry(i, c, a, b, i < 8) for i, c in enumerate(kept[:300])]
+    )
+    script = cloud["client"].post(
+        "/api/planning/candidates/script",
+        headers=_auth(ALICE),
+        json={**asked, "option": 0, "fingerprint": body["fingerprint"]},
+    )
+    assert script.status_code == 200, script.text
+    unknown = cloud["client"].post(
+        "/api/planning/candidates", headers=_auth(ALICE), json={**asked, "language": "loud"}
+    )
+    assert unknown.status_code == 422

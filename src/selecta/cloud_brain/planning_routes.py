@@ -18,8 +18,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.engine import Engine
 
 from selecta.authz.roles import WorkspaceAction
-from selecta.cloud_brain import planning
-from selecta.engine_store import EngineStore
+from selecta.cloud_brain import idea_songs, planning
+from selecta.engine_store import EngineStore, facts_store
 from selecta.identity.tokens import Claims
 from selecta.storage.artifacts import ArtifactStore
 
@@ -40,6 +40,8 @@ class PairRequest(BaseModel):
     b: int = Field(gt=0)
     move: str | None = Field(default=None, max_length=32)
     leave_after: float | None = Field(default=None, ge=0, le=MAX_SONG_SECONDS)
+    # the member's transition feel (`mixes.shaping.feel`): with no move named, that feel's moves
+    language: Language | None = None
 
     @model_validator(mode="after")
     def two_songs(self) -> PairRequest:
@@ -118,7 +120,8 @@ class OrderRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    songs: list[int] = Field(min_length=2, max_length=planning.MAX_ORDER_SONGS)
+    # past MAX_ORDER_SONGS the songs that suit the idea best are planned (idea_songs.py)
+    songs: list[int] = Field(min_length=2, max_length=idea_songs.MOST_NAMED)
     idea: str = Field(default="pick", max_length=64)
     count: int = Field(default=12, ge=1, le=planning.MAX_COUNT)
     start: int | None = None
@@ -144,7 +147,7 @@ class OrderRequest(BaseModel):
 class IdeasRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    songs: list[int] = Field(min_length=1, max_length=planning.MAX_ORDER_SONGS)
+    songs: list[int] = Field(min_length=1, max_length=idea_songs.MOST_NAMED)
     language: Language | None = None
 
 
@@ -179,8 +182,11 @@ def install(
 
         found, missing = load_songs(store, artifacts(), ids)
         if playable and found:
-            never = _never(store, [song.id for song in found])
-            found = [song for song in found if song.id not in never]
+            # Desktop's planner reads only songs that are music (`db.load_library`); a song the
+            # member set aside here is left out the same way (T-20261126-3f92)
+            ids_found = [song.id for song in found]
+            out = _never(store, ids_found) | facts_store.set_aside(store, ids_found)
+            found = [song for song in found if song.id not in out]
         return found, missing
 
     def pair(store: EngineStore, body: PairRequest):
@@ -207,7 +213,9 @@ def install(
         store = store_for(request, claims)
         a, b = pair(store, body)
         try:
-            return planning.candidates(a, b, body.move, body.leave_after, body.scripts)
+            return planning.candidates(
+                a, b, body.move, body.leave_after, body.scripts, body.language
+            )
         except planning.PlanningRefused as error:
             raise _refused(error) from None
 
@@ -222,7 +230,7 @@ def install(
         a, b = pair(store, body)
         try:
             return planning.one_script(
-                a, b, body.option, body.fingerprint, body.move, body.leave_after
+                a, b, body.option, body.fingerprint, body.move, body.leave_after, body.language
             )
         except planning.PlanningRefused as error:
             raise _refused(error) from None
@@ -270,8 +278,19 @@ def install(
         """The order of a mix from these songs and the move into each, as the Desktop builds
         an idea. Songs not measured yet are named, never dropped silently."""
         store = store_for(request, claims)
-        found, missing = songs_of(store, body.songs, playable=True)
-        left_out = sorted(set(body.songs) - set(missing) - {song.id for song in found})
+        named = list(dict.fromkeys(body.songs))
+        many = None
+        if len(named) > planning.MAX_ORDER_SONGS:
+            many = _best_suited(store, named, body.idea, (body.start, body.end))
+        found, missing = songs_of(store, many[0] if many else named, playable=True)
+        if many:
+            # songs the idea passed over are neither missing nor kept out
+            _chosen, measured, left = many
+            missing = [song for song in named if song not in measured]
+        else:
+            left = set(body.songs) - set(missing) - {song.id for song in found}
+        aside = facts_store.set_aside(store, sorted(left))
+        left_out = sorted(left - aside)
         for name in ("start", "end"):
             chosen = getattr(body, name)
             if chosen is not None and chosen not in {song.id for song in found}:
@@ -296,9 +315,11 @@ def install(
                 memory=_memory(store),
             )
         except planning.PlanningRefused as error:
-            error.extra.update(not_measured=missing, never_play=left_out)
+            error.extra.update(not_measured=missing, never_play=left_out, set_aside=sorted(aside))
             raise _refused(error) from None
-        return {**answer, "not_measured": missing, "never_play": left_out}
+        return {
+            **answer, "not_measured": missing, "never_play": left_out, "set_aside": sorted(aside)
+        }
 
     @app.post("/api/planning/ideas")
     def plan_ideas(
@@ -306,10 +327,41 @@ def install(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
-        """The mix ideas these songs support, as Desktop's idea cards."""
+        """The mix ideas these songs support, as Desktop's idea cards: over every song named,
+        from their numbers alone (idea_songs.py), so a big library costs one read."""
         store = store_for(request, claims)
-        found, missing = songs_of(store, list(dict.fromkeys(body.songs)), playable=True)
+        named = list(dict.fromkeys(body.songs))
+        found = idea_songs.summaries(store, named)
+        measured = [song.id for song in found]
+        out = _never(store, measured) | facts_store.set_aside(store, measured)
+        found = [song for song in found if song.id not in out]
+        missing = [song for song in named if song not in set(measured)]
         return {"ideas": planning.ideas(found, body.language), "not_measured": missing}
+
+
+def _best_suited(
+    store: EngineStore, named: list[int], idea: str, keep: tuple[int | None, ...]
+) -> tuple[list[int], set[int], set[int]]:
+    """Of a big library, the `MAX_ORDER_SONGS` songs that suit the idea best, as its card ranks
+    them (`Vibe.belongs`), and the chosen first and last songs: the songs a build plans over.
+    Also every measured song named, and those kept out of mixes."""
+    from selecta.planner_core.vibes import eligible, resolve_vibe, traits_of
+
+    vibe = resolve_vibe(idea)
+    if vibe is None:
+        refusal = planning.PlanningRefused("unknown_idea", "There's no mix idea by that name.")
+        raise _refused(refusal)
+    found = idea_songs.summaries(store, named)
+    ids = [song.id for song in found]
+    out = _never(store, ids) | facts_store.set_aside(store, ids)
+    found = [song for song in found if song.id not in out]
+    traits = traits_of(found, {})
+    ranked = sorted(
+        eligible(vibe, found, traits), key=lambda s: (-vibe.belongs(s, traits[s.id]), s.id)
+    )
+    wanted = [song for song in keep if song is not None and song in set(ids)]
+    best = [song.id for song in ranked if song.id not in wanted]
+    return [*wanted, *best[: planning.MAX_ORDER_SONGS - len(wanted)]], set(ids), out
 
 
 def _memory(store: EngineStore):

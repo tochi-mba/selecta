@@ -4,6 +4,7 @@ import { seamWorkIdle } from '../dsp/seamWork';
 import type { StoredSong } from '../media';
 import { accountMeasured, askWithin, noteMeasured, sendingOn, type Measured, type Request } from './accountFacts';
 import { isOnline } from './connection';
+import { observable, type Observable } from '../dsp/stems/observable';
 import { factsBody } from './factsWire';
 import { readCached, writeCached } from './offlineCache';
 import { backoffMs } from './resilientRequest';
@@ -62,6 +63,12 @@ export type UploaderOptions = {
   wait?: (ms: number) => Promise<void>;
   idle?: () => Promise<void>;
 };
+
+/** What the uploader is doing, for the Activity drawer (T-20261126-36c7): a save in hand, and how
+ * many songs' measurements it saved to the account in this visit. */
+export type UploadActivity = { saving: boolean; saved: number };
+const uploading = observable<UploadActivity>({ saving: false, saved: 0 });
+export const uploadActivity: Observable<UploadActivity> = uploading;
 
 /** What a refusal means for one song. */
 type Outcome = 'saved' | 'done' | 'later' | 'stop';
@@ -149,7 +156,9 @@ export function startFactsUploader(options: UploaderOptions): () => void {
         }
         await idle();
         if (stopped || !isOnline()) return;
-        const outcome = await send(song, sha, facts);
+        uploading.set({ ...uploading.get(), saving: true });
+        const outcome = await send(song, sha, facts).finally(() => uploading.set({ ...uploading.get(), saving: false }));
+        if (outcome === 'saved') uploading.set({ ...uploading.get(), saved: uploading.get().saved + 1 });
         if (outcome === 'stop') return;
         if (outcome === 'later') later.add(song.songId);
         else {

@@ -30,7 +30,7 @@ export function splitterFrom(facts: EngineFacts): SplitterState {
   if (facts.licenceHold) return { state: 'unsupported', code: 'licence', reason: facts.licenceHold };
   if (!facts.crash.clear) return { state: 'unsupported', code: 'crash_guard', reason: facts.crash.reason };
   if (facts.deviceCannot) return { state: 'unsupported', code: 'no_webgpu_wasm_slow', reason: facts.deviceCannot };
-  if (facts.artefactBytes === null) return { state: 'unsupported', code: 'other', reason: 'the stem splitter isn’t published yet' };
+  if (facts.artefactBytes === null) return { state: 'unsupported', code: 'other', reason: 'the stem splitter isn’t published, so songs play whole' };
   const bytes = facts.artefactBytes;
   const paused = facts.prefetch?.paused.find((entry) => entry.reason !== 'manual');
   switch (facts.model.kind) {
@@ -39,7 +39,7 @@ export function splitterFrom(facts: EngineFacts): SplitterState {
     case 'downloading':
       return { state: 'downloading', received: facts.model.received, total: facts.model.total, paused: false };
     case 'failed':
-      if (facts.model.why === 'not_published') return { state: 'unsupported', code: 'other', reason: 'the stem splitter isn’t published yet' };
+      if (facts.model.why === 'not_published') return { state: 'unsupported', code: 'other', reason: 'the stem splitter isn’t published, so songs play whole' };
       if (facts.model.why === 'unavailable') return { state: 'unsupported', code: 'other', reason: 'this browser can’t keep files for SelectaDJ' };
       return { state: 'failed', why: facts.model.why === 'storage_full' ? 'storage_full' : facts.model.why === 'checksum' ? 'checksum' : 'network', detail: facts.model.detail };
     default:

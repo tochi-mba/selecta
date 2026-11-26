@@ -1,5 +1,6 @@
 import type { Status } from '../api';
 import { accountMeasured, answerWithin, askWithin, planningOn, type Request } from './accountFacts';
+import { rememberFeel } from './mixFeel';
 
 /** A browser mix's order from the account's planner (docs/engineering/device-to-account.md).
  *
@@ -75,7 +76,10 @@ export function accountOrderPlanner(request: Request, workspaceId: string, withi
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(orderBody(measured, choices)),
       }, left);
       if (!Array.isArray(answer?.order) || !answer.order.length) return null;
-      return mergeOrder(ids, answer.order, choices);
+      const order = mergeOrder(ids, answer.order, choices);
+      // its transitions are made later on the device, in the feel it was ordered with (mixFeel.ts)
+      rememberFeel(workspaceId, order, choices.steering.mix_language);
+      return order;
     } catch {
       // offline, slow, refused (too few that suit, a song gone): today's order, said to no one
       return null;

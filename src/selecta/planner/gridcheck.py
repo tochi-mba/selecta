@@ -98,11 +98,9 @@ def build_grid_check(
     seed: int = 5,
 ) -> list[GridClip]:
     out_dir.mkdir(parents=True, exist_ok=True)
-    rows = conn.execute(
-        "SELECT song_id FROM analysis WHERE error IS NULL AND bpm IS NOT NULL AND version = "
-        "(SELECT MAX(version) FROM analysis)"
-    ).fetchall()
-    songs = [load_song(conn, settings, row["song_id"]) for row in rows]
+    from selecta.engine_store import library_reads
+
+    songs = [load_song(conn, settings, song) for song in library_reads.newest_with_tempo(conn)]
     cache = SongCache(capacity=2)
     clips: list[GridClip] = []
     for number, song in enumerate(_pick(songs, count, random.Random(seed)), 1):

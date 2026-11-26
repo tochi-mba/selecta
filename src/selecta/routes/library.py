@@ -28,6 +28,7 @@ from selecta.api_common import (
     _counts,
 )
 from selecta.config import ANALYSIS_VERSION
+from selecta.engine_store import library_rows, library_writes
 from selecta.eta import analysis_line_left
 from selecta.library.relevance import match_label
 from selecta.library.scan import ScanStopped
@@ -88,7 +89,8 @@ def add_routes(app, ctx) -> None:
                     checkpoint=checkpoint,
                     progress=moved,
                 )
-                remember_folder(conn, folder)
+                with library_rows.writing(conn) as source:
+                    remember_folder(source, folder)
                 background.scan = {
                     "status": "done",
                     "folder": str(folder),
@@ -190,9 +192,9 @@ def add_routes(app, ctx) -> None:
                 check=False,
             )
             if marking:
-                with connect() as conn:
-                    conn.execute("DELETE FROM preferences WHERE key = ?", (LYRICS_KEY,))
-                    conn.commit()
+                with connect() as conn, library_rows.writing(conn) as source:
+                    source.execute("DELETE FROM preferences WHERE key = ?", (LYRICS_KEY,))
+                    source.commit()
         finally:
             lyrics_running.clear()
 
@@ -275,12 +277,14 @@ def add_routes(app, ctx) -> None:
                 changed = [folder for folder in folders if folder_changed(conn, folder)]
                 if not changed or background.scan.get("status") == "running":
                     return 0
-                before = {row["id"] for row in conn.execute("SELECT id FROM songs")}
+                with library_rows.reading(conn) as source:
+                    before = {row["id"] for row in source.execute("SELECT id FROM songs")}
                 for folder in changed:
                     scan_folder(conn, folder, careful=True)
-                rows = conn.execute(
-                    "SELECT id,title FROM songs WHERE is_music=1 AND duplicate_of IS NULL"
-                ).fetchall()
+                with library_rows.reading(conn) as source:
+                    rows = source.execute(
+                        "SELECT id,title FROM songs WHERE is_music=1 AND duplicate_of IS NULL"
+                    ).fetchall()
         finally:
             background.looking.release()
         new = [row for row in rows if row["id"] not in before]
@@ -348,6 +352,11 @@ def add_routes(app, ctx) -> None:
         if priority not in {0, 100}:
             raise HTTPException(400, "priority must be 0 or 100")
         with connect() as conn:
+            engine = library_rows.store_path(conn)
+            if engine is not None:
+                if not library_writes.set_priority(engine, song_id, priority):
+                    raise HTTPException(404)
+                return {"song_id": song_id, "priority": priority}
             if db.song_by_id(conn, song_id) is None:
                 raise HTTPException(404)
             conn.execute("UPDATE songs SET processing_priority=? WHERE id=?", (priority, song_id))
@@ -356,10 +365,10 @@ def add_routes(app, ctx) -> None:
 
     @app.post("/api/songs/{song_id}/never")
     def never_play(song_id: int) -> dict:
-        with connect() as conn:
-            current = never_played(conn)
+        with connect() as conn, library_rows.writing(conn) as source:
+            current = never_played(source)
             current.symmetric_difference_update({song_id})
-            db.set_preference(conn, "never_play", sorted(current))
+            db.set_preference(source, "never_play", sorted(current))
         return {"song_id": song_id, "never": song_id in current}
 
     @app.post("/api/library/batch")
@@ -380,9 +389,11 @@ def add_routes(app, ctx) -> None:
         if restoring and any(entry.priority is None for entry in body.entries):
             raise HTTPException(400, "Say which priority to put back for every song.")
         is_priority = body.action in {"prioritize", "deprioritize", "restore_priority"}
-        with connect() as conn:
+        # with core.engine_store the whole batch is one store write, begun immediate by the store
+        with connect() as raw, library_rows.writing(raw) as conn:
             try:
-                conn.execute("BEGIN IMMEDIATE")
+                if conn is raw:
+                    conn.execute("BEGIN IMMEDIATE")
                 params = ",".join("?" for _ in ids)
                 selected = conn.execute(
                     f"SELECT id,processing_priority FROM songs WHERE id IN ({params}) "
@@ -442,7 +453,7 @@ def add_routes(app, ctx) -> None:
 
     @app.get("/api/songs")
     def songs(q: str = "", state: str = "all", limit: int = 100, order: str = "name") -> list[dict]:
-        with connect() as conn:
+        with connect() as raw, library_rows.reading(raw) as conn:
             sql = (
                 "SELECT s.id,s.artist,s.title,s.genre,s.duration,s.is_music,"
                 "COALESCE(o.bpm,a.bpm) bpm,COALESCE(o.camelot,a.camelot) camelot,"
@@ -520,7 +531,7 @@ def add_routes(app, ctx) -> None:
             raise HTTPException(400, "Search must be 128 characters or fewer.")
         order = SORTS.get(sort, SORTS["title"])
         limit = min(max(limit, 1), 200)
-        with connect() as conn:
+        with connect() as raw, library_rows.reading(raw) as conn:
             never = never_played(conn)
             working = set(songs_in_line(conn))
             # Search locally across exact recording IDs, titles, artist credits,
@@ -671,6 +682,25 @@ def add_routes(app, ctx) -> None:
         if unknown:
             raise HTTPException(400, f"Can't clear {', '.join(sorted(unknown))}.")
         with connect() as conn:
+            engine = library_rows.store_path(conn)
+            if engine is not None:
+                held = library_writes.correct(
+                    engine,
+                    song_id,
+                    bpm=body.bpm,
+                    camelot=body.camelot,
+                    clear=body.clear,
+                    is_music=body.is_music,
+                )
+                if held is None:
+                    raise HTTPException(404, "That song isn't in your library.")
+                redone = store.forget_song(song_id) if held["changed_sound"] else 0
+                return {
+                    "song_id": song_id,
+                    "bpm": held["bpm"],
+                    "camelot": held["camelot"],
+                    "redone": redone,
+                }
             row = conn.execute("SELECT id FROM songs WHERE id=?", (song_id,)).fetchone()
             if row is None:
                 raise HTTPException(404, "That song isn't in your library.")
@@ -723,7 +753,10 @@ def add_routes(app, ctx) -> None:
 
         with connect() as conn:
             song = analysed_or_404(conn, song_id)
-            lyric = conn.execute("SELECT status FROM lyrics WHERE song_id=?", (song_id,)).fetchone()
+            with library_rows.reading(conn) as source:
+                lyric = source.execute(
+                    "SELECT status FROM lyrics WHERE song_id=?", (song_id,)
+                ).fetchone()
         peaks = load_features(settings, song_id, ("peaks",))["peaks"].astype(float)
         bars = song.bar_times
         return {

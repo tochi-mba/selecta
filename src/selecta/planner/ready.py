@@ -52,11 +52,14 @@ def current_recordings(conn: sqlite3.Connection, songs: list[Any]) -> dict[int, 
     """Only existing, unchanged, eligible sources with current analysis can enter the graph."""
     by_id = {song.id: song for song in songs}
     valid = {}
-    rows = conn.execute(
-        "SELECT s.id,s.path,s.size,s.mtime,a.version FROM songs s "
-        "JOIN analysis a ON a.song_id=s.id "
-        "WHERE s.is_music=1 AND s.duplicate_of IS NULL AND a.error IS NULL"
-    )
+    from selecta.engine_store import library_rows
+
+    with library_rows.reading(conn) as source:
+        rows = source.execute(
+            "SELECT s.id,s.path,s.size,s.mtime,a.version FROM songs s "
+            "JOIN analysis a ON a.song_id=s.id "
+            "WHERE s.is_music=1 AND s.duplicate_of IS NULL AND a.error IS NULL"
+        ).fetchall()
     for row in rows:
         song = by_id.get(row["id"])
         if song is None or row["version"] != ANALYSIS_VERSION:
@@ -93,16 +96,16 @@ def _decodable(clip: Path, duration: float) -> bool:
 
 
 def _records(store: Any):
-    """Each finished seam this Desktop can play, as (its `seam.json` path, its record or None to
-    read the file). With `core.engine_store` on, the seams the table says the Desktop studio
-    rendered (`seam_mirror.ready`); otherwise every record file in the render folder."""
+    """Each record file in the render folder, as (its `seam.json` path, its record or None to
+    read the file). With `core.engine_store` on, the record comes from the table when it holds
+    the file's current version (`seam_mirror.ready`), so the files stay the truth."""
     from selecta import seam_mirror
 
     settings = getattr(store, "settings", None)
     mirrored = seam_mirror.ready(settings) if settings is not None else None
     if mirrored is None:
         return ((meta, None) for meta in store.root.glob("*/seam.json"))
-    return ((folder / "seam.json", record) for record, folder in mirrored)
+    return iter(mirrored)
 
 
 def ready_inventory(store: Any, songs: dict[int, Any]) -> tuple[dict[int, list[ReadyEdge]], dict]:

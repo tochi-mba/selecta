@@ -39,6 +39,7 @@ from selecta.backup import (
     validate_backup,
 )
 from selecta.config import ANALYSIS_VERSION
+from selecta.engine_store import library_reads
 from selecta.eta import analysis_left, analysis_line_left
 from selecta.library.relink import RelinkError, commit_relink, preview_relink
 from selecta.seam_kinds import moves_on
@@ -121,9 +122,7 @@ def add_routes(app, ctx) -> None:
                 counts["ready"] = len(songs)
                 steering = get_steering(conn).__dict__
                 target_song = (
-                    conn.execute(
-                        "SELECT artist,title FROM songs WHERE id=?", (steering["target"],)
-                    ).fetchone()
+                    library_reads.song_fields(conn, steering["target"], "artist", "title")
                     if steering["target"]
                     else None
                 )
@@ -295,10 +294,9 @@ def add_routes(app, ctx) -> None:
         with connect() as conn:
             shown = []
             for folder in library_folders(conn):
-                count = conn.execute(
-                    "SELECT COUNT(*) FROM songs WHERE path LIKE ? ESCAPE '\\'",
-                    (db.escaped(str(folder).rstrip("\\/") + os.sep) + "%",),
-                ).fetchone()[0]
+                count = library_reads.songs_under(
+                    conn, db.escaped(str(folder).rstrip("\\/") + os.sep) + "%"
+                )
                 shown.append({"path": str(folder), "available": folder.is_dir(), "songs": count})
         return {"folders": shown, "scan": background.scan, "watch_every": WATCH_EVERY_SECONDS}
 
@@ -363,10 +361,7 @@ def add_routes(app, ctx) -> None:
                 for status in ("queued", "rendering", "failed", "none", "ready")
             }
             line = mix.line_order(conn)
-            failed = conn.execute(
-                "SELECT s.id, s.title, s.artist FROM analysis a JOIN songs s "
-                "ON s.id=a.song_id WHERE a.error IS NOT NULL ORDER BY a.analysed_at DESC LIMIT 5"
-            ).fetchall()
+            failed = library_reads.failed_songs(conn, 5)
             worker = store._worker
             used, largest = cache_room(settings)  # r8d: one walk of the cache, not two
             full = used >= min(settings.effective_cache_cap_bytes, largest)
@@ -404,9 +399,7 @@ def add_routes(app, ctx) -> None:
         anywhere. It only leaves this PC if a person copies it somewhere themselves."""
         with connect() as conn:
             counts = _counts(conn)
-            errors = conn.execute(
-                "SELECT COUNT(*) FROM analysis WHERE error IS NOT NULL"
-            ).fetchone()[0]
+            errors = library_reads.analysis_errors(conn)
             line = len(mix.line_order(conn))
             mix_songs = len(mix._items(conn))
             from selecta.library.scan import library_folders

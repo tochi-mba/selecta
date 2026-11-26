@@ -67,6 +67,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.controller.notices.seen` | local | `web/src/devices/ControllerNotices.tsx` | The ids of the last 60 remote-control notices this browser dismissed, so a dismissed notice stays dismissed across page loads (Cloud, `devices.remote_control`) | Cloud |
 | `selecta.library.keep-said` | local | `web/src/cloud/CloudLibrary.tsx` | Set once the person pressed Got it on the line saying this browser cannot keep access to their music between visits, so it is said once (Cloud, ADR-0475 R7) | Cloud |
 | `selecta.debug.auth` | session | `web/src/cloud/authTrail.ts` | The last 20 sign-in problems in this tab (when, where, the error's name, message, status and isTransient; never a token), so a false "Sign in again" can be read afterwards (Cloud sign-in) | Cloud |
+| `selecta.measuring.paused` | local | `web/src/cloud/measuringControl.ts` | That the member paused measuring songs on this device (Workspace's Pause measuring, or the app's stop analysis route through the browser adapter), so a reload stays paused; removed by Carry on measuring or Clear everything in this browser (Cloud, `cloud.browser_harmonic`) | Cloud device data |
+| `selecta-mix-feel:<workspace>` | local | `web/src/cloud/mixFeel.ts` | The transition feel each pair of songs in a mix was ordered with (song ids and one word), written when a mix is ordered with a feel, so the device makes those transitions in it; a pair ordered with no feel is forgotten, the oldest pairs go past 2,000, and the rest stays until the browser's site data is cleared (Cloud, `mixes.shaping.feel` with `cloud.brain` and `cloud.device_analysis`) | My Mixes |
 | `selecta-mix-outbox-alias:<workspace>` | local | `web/src/cloud/outbox.ts` | Local mix ids matched to the server's once a queued create or edit lands, so later queued changes and a reloaded tab find the right mix (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-mix-outbox-notices:<workspace>` | local | `web/src/cloud/outbox.ts` | The last few plain notices about queued mix changes the server turned down, shown once and then removed (Cloud, `cloud.mix_outbox`) | My Mixes |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
@@ -134,6 +136,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/mix/{position}/studio/tune` | Arranges or fine-tunes a Studio grid |
 | `POST /api/mix/{position}/studio/use` | Renders the chosen grid and makes it the seam |
 | `POST /api/discoveries/{discovery_id}/review` | Saves a verdict on a harmonic match |
+| `POST /api/discoveries/sweep` | Cloud account: compares named songs' stored facts and saves the harmonic links found (`cloud_brain/discovery_routes.py`) |
 | `POST /api/listening/{trial}/response` | Saves a blind study answer (Learning) |
 
 ### Library (`src/selecta/routes/library.py`) - Library, Workspace
@@ -157,7 +160,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | Route | Side effect |
 |---|---|
 | `POST /api/requests/consider` | Plans pending requests into the mix |
-| `POST /api/requests/{request_id}/bridges` | Searches for bridge songs (no mix change) |
+| `POST /api/requests/{request_id}/bridges` | Searches for bridge songs (no mix change); for a Cloud account over its stored song facts, nothing stored (`cloud_brain/bridge_routes.py`) |
 | `POST /api/requests/{request_id}/bridge` | Records consent to a bridge song |
 | `POST /api/requests/{request_id}/hear` | Renders the route so it can be heard first |
 | `POST /api/requests/{request_id}/add` | Forces a request in without a clean route |
@@ -311,8 +314,8 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `PUT /api/song-facts/{song_id}` | Saves the facts a device measured for one catalogue song (the `analysis` row and its features artifact), unless a measurement that outranks them is stored (ADR-0479) |
 | `PUT /api/mix/order` | Cloud only (`cloud.account_mixes`): replaces the account's current mix, or a draft, with these catalogue songs in this order, keeping each chosen seam whose two songs stay together, after remembering it for Undo (ADR-0479) |
 | `PUT /api/seams/{key}` | Keeps a transition a device rendered (its pair, option, audit verdict, implementation, clip length and hash; never audio) and that device's attestation (Cloud, ADR-0479) |
-| `PUT /api/song-facts/{song_id}/correction` | Sets the member's tempo and key for a catalogue song (`song_overrides`); both null clears it |
-| `DELETE /api/song-facts/{song_id}/correction` | Clears the member's tempo and key correction for a catalogue song |
+| `PUT /api/song-facts/{song_id}/correction` | Sets the member's tempo and key for a catalogue song (`song_overrides`), and with `is_music` its set-aside mark (false sets it aside, kept out of planned mixes; null clears it; a body naming only `is_music` leaves tempo and key); nothing left clears the row |
+| `DELETE /api/song-facts/{song_id}/correction` | Clears the member's tempo and key correction for a catalogue song; a set-aside mark stays |
 | `POST /api/planning/candidates` | None: ranks the transitions between two of the account's songs and builds their scripts; nothing is stored |
 | `POST /api/planning/candidates/script` | None: builds one more ranked option's script; nothing is stored |
 | `POST /api/planning/next-step` | None: the repair rule's next step for the options and attempts sent; reads and stores nothing |

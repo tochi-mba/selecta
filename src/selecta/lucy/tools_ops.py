@@ -10,6 +10,7 @@ from typing import Any
 from weftai import ref, value
 from weftai.schema.spec import any_schema, integer_schema, object_schema, string_schema
 
+from selecta.engine_store import library_rows
 from selecta.lucy import catalog, memory, policy, readiness
 from selecta.lucy.tools import ProposalSongs, Seam, Seams, Track, Tracks, define
 
@@ -57,17 +58,24 @@ def _search(run) -> list[Track]:
     return [track_of(lib, song) for song in songs]
 
 
+def _first(conn: Any, sql: str, params: tuple = ()) -> Any:
+    """One row of a library read: through the store with `core.engine_store` on."""
+    found = library_rows.fetch(conn, sql, params)
+    return found[0] if found else None
+
+
 def _find(run) -> list[Track]:
     text = str(run.input["text"]).strip()
     if len(text) < 2:
         raise ValueError("Give at least two characters to look for.")
     lib = run.ctx.lib()
     like = f"%{text}%"
-    rows = run.ctx.conn.execute(
+    rows = library_rows.fetch(
+        run.ctx.conn,
         "SELECT id,title,artist,genre,duration FROM songs WHERE (title LIKE ? OR artist LIKE ?) "
         "ORDER BY artist,title LIMIT ?",
         (like, like, LIST_LIMIT),
-    ).fetchall()
+    )
     if len(rows) == LIST_LIMIT:
         run.notice(f"Stopped at {LIST_LIMIT} songs; be more specific to see the rest.")
     return [_row_track(row, row["id"] in lib.by_id) for row in rows]
@@ -87,15 +95,16 @@ def _resolve(run) -> list[Track]:
 
 def _excluded(run) -> list[Track]:
     ids = sorted(run.ctx.app.never_played(run.ctx.conn))
-    rows = [run.ctx.conn.execute("SELECT id,title,artist,genre,duration FROM songs WHERE id=?",
-                                 (song_id,)).fetchone() for song_id in ids[:LIST_LIMIT]]
+    rows = [_first(run.ctx.conn, "SELECT id,title,artist,genre,duration FROM songs WHERE id=?",
+                   (song_id,)) for song_id in ids[:LIST_LIMIT]]
     return [_row_track(row, False) for row in rows if row is not None]
 
 
 def _duplicates(run) -> list[Track]:
-    rows = run.ctx.conn.execute(
+    rows = library_rows.fetch(
+        run.ctx.conn,
         "SELECT id,title,artist,genre,duration FROM songs WHERE duplicate_of IS NOT NULL "
-        "ORDER BY artist,title LIMIT ?", (LIST_LIMIT,)).fetchall()
+        "ORDER BY artist,title LIMIT ?", (LIST_LIMIT,))
     return [_row_track(row, False) for row in rows]
 
 
@@ -108,9 +117,10 @@ def _eligibility(run) -> list[dict]:
     never = run.ctx.app.never_played(conn)
     answers = []
     for track in list(run.input["from"].items)[:DETAIL_LIMIT]:
-        row = conn.execute(
+        row = _first(
+            conn,
             "SELECT s.path,s.size,s.is_music,s.duplicate_of,a.version,a.error,a.bpm FROM songs s "
-            "LEFT JOIN analysis a ON a.song_id=s.id WHERE s.id=?", (track.id,)).fetchone()
+            "LEFT JOIN analysis a ON a.song_id=s.id WHERE s.id=?", (track.id,))
         reasons = []
         if row is None:
             reasons.append("not in the library any more")
@@ -174,9 +184,9 @@ def _features(run) -> list[dict]:
             out.append({"id": track.id, "title": track.title, "measured": False,
                         "why": "not mix-ready, so there are no current measurements"})
             continue
-        corrected = conn.execute("SELECT bpm,camelot FROM song_overrides WHERE song_id=?",
-                                 (song.id,)).fetchone()
-        lyric = conn.execute("SELECT status FROM lyrics WHERE song_id=?", (song.id,)).fetchone()
+        corrected = _first(conn, "SELECT bpm,camelot FROM song_overrides WHERE song_id=?",
+                           (song.id,))
+        lyric = _first(conn, "SELECT status FROM lyrics WHERE song_id=?", (song.id,))
         source = f"analysis v{ANALYSIS_VERSION}"
 
         def field(value: Any, by: str = source) -> dict:
@@ -207,7 +217,7 @@ def _health(run) -> dict:
     from selecta.config import ANALYSIS_VERSION
 
     conn = run.ctx.conn
-    one = lambda sql, *args: conn.execute(sql, args).fetchone()[0]  # noqa: E731
+    one = lambda sql, *args: _first(conn, sql, args)[0]  # noqa: E731
     return {
         "songs": one("SELECT COUNT(*) FROM songs"),
         "music": one("SELECT COUNT(*) FROM songs WHERE is_music=1 AND duplicate_of IS NULL"),

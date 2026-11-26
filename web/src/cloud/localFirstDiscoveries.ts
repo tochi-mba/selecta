@@ -1,6 +1,7 @@
 import { ApiError } from '../api';
 import type { TonalProfile } from '../dsp/analysis/tonalProfile';
 import type { Verdict } from './tonalProfiles';
+import type { AccountDiscoveries } from './accountDiscoveries';
 
 /** Harmonic matches in a browser library (cloud.browser_harmonic, ADR-0462 "one adapter per
  * route family"): `/discoveries` answered in the shape Make a Mix's Harmonic matches reads,
@@ -30,7 +31,8 @@ export type BrowserDiscovery = {
   artist_a: string; artist_b: string; status: Verdict;
   payload: {
     a_at: number; b_at: number; a_end: number; b_end: number; bars: number; transpose: number;
-    method: 'whole_song_chroma_browser'; similarity: number; edge_similarity: number;
+    // the account's: the Desktop's chord-sequence sweep over stored facts (accountDiscoveries.ts)
+    method: 'whole_song_chroma_browser' | 'chord_sequence_account'; similarity: number; edge_similarity: number;
     key_a: string; key_b: string; camelot_a: string; camelot_b: string;
   };
   score: number;
@@ -212,6 +214,8 @@ export type DiscoveriesSources = {
   profiles: () => Promise<{ profiles: ReadonlyMap<number, TonalProfile>; songs: number; unreadable: number }>;
   reviews: () => Promise<ReadonlyMap<string, Verdict>>;
   review: (pair: string, verdict: Verdict) => Promise<void>;
+  /** The account's own sweep and its pairs (cloud.brain with discover.harmonic), when wired. */
+  account?: AccountDiscoveries;
 };
 
 export type DiscoveriesFamily = {
@@ -242,8 +246,16 @@ export function discoveriesFamily(sources: DiscoveriesSources): DiscoveriesFamil
     const verdicts = await sources.reviews();
     return (await candidates()).map((row) => ({ ...row, status: verdicts.get(pairKey(row.song_a, row.song_b)) ?? 'new' }));
   };
+  // the account's pairs, when on; a failure shows the browser's own alone
+  const accountRows = async (): Promise<BrowserDiscovery[]> => {
+    if (!sources.account) return [];
+    const songs = await knownSongs();
+    sources.account.sweepSoon(songs);
+    return sources.account.list(songs).catch(() => []);
+  };
   const find = async (id: number): Promise<BrowserDiscovery> => {
-    const row = (await withVerdicts()).find((item) => item.id === id);
+    const rows = sources.account?.owns(id) ? await accountRows() : await withVerdicts();
+    const row = rows.find((item) => item.id === id);
     if (!row) throw refuse('That pair isn’t one SelectaDJ can offer on this device any more.', 'not_found', 404);
     return row;
   };
@@ -251,7 +263,8 @@ export function discoveriesFamily(sources: DiscoveriesSources): DiscoveriesFamil
   return {
     answer: (method, route, query, init) => {
       if (method === 'GET' && route === '/discoveries') {
-        return withVerdicts().then((rows) => {
+        return Promise.all([withVerdicts(), accountRows()]).then(([own, accounts]) => {
+          const rows = [...accounts, ...own];
           const wanted = Math.max(0, Math.min(Number(query.get('limit') ?? LIMIT) || LIMIT, 200));
           return [...spreadOut(rows.filter((row) => row.status === 'new'), wanted), ...rows.filter((row) => row.status !== 'new')];
         });
@@ -277,6 +290,7 @@ export function discoveriesFamily(sources: DiscoveriesSources): DiscoveriesFamil
           let verdict: unknown;
           try { verdict = (JSON.parse(String(init?.body ?? '{}')) as { verdict?: unknown }).verdict; } catch { verdict = undefined; }
           if (verdict !== 'new' && verdict !== 'approved' && verdict !== 'rejected') throw refuse('Choose approved, rejected, or new', 'bad_verdict');
+          if (sources.account?.owns(Number(review[1]))) return sources.account.review(Number(review[1]), verdict);
           const row = await find(Number(review[1]));
           // the answer stays in this browser: it teaches nothing to a server and adds nothing to a mix
           await sources.review(pairKey(row.song_a, row.song_b), verdict);

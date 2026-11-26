@@ -3,6 +3,7 @@ import { RENDER_IMPLEMENTATION } from '../dsp/render/ids';
 import { optionFromJson, MAX_REPAIRS } from '../dsp/render/repair';
 import { seamWorkStarted } from '../dsp/seamWork';
 import { STRETCH_IMPLEMENTATION } from '../dsp/stretchLimits';
+import { observable, type Observable } from '../dsp/stems/observable';
 import { flagListed } from '../flags';
 import { planningOn } from './accountFacts';
 import type { ClipKey, ClipStore } from './clipStore';
@@ -27,6 +28,15 @@ import type { ClipKey, ClipStore } from './clipStore';
 export const SEAMS_AHEAD = 2;
 /** One seam's whole loop (every take, the cut) may take at most this long. */
 export const SEAM_BUDGET_MS = 120_000;
+/** Seams a waiting request needs (T-20261126-a246), prepared after the play order's own. */
+export const REQUEST_SEAMS = 4;
+/** Clips made in this visit kept to be inspected (T-20261126-827e), newest last. */
+export const BOOK_KEPT = 16;
+
+/** A clip this device holds, with the planner's answer it was made from, for the Seam Inspector. */
+export type Booked = { made: MadeSeam; answer: CandidatesAnswer };
+/** Who asked for seams beyond the play order's own: the request look or the Seam Inspector. */
+export type Asker = 'requests' | 'inspector';
 
 /** With the flag named on by the server, and planning from the account on. */
 export const deviceRenderOn = (): boolean => flagListed('cloud.device_render') && planningOn();
@@ -36,7 +46,7 @@ export const STUDIO_IMPLEMENTATION = `${RENDER_IMPLEMENTATION}+${STRETCH_IMPLEME
 
 type CueJson = [number, number, string, number, number];
 export type OptionJson = { move: string; bars: number; exit_cue: CueJson; entry_cue: CueJson };
-type Entry = { index: number; option: OptionJson; script?: unknown; has_script?: boolean };
+type Entry = { index: number; option: OptionJson; script?: unknown; has_script?: boolean; reasons?: string[] };
 /** `POST /api/planning/candidates`, as far as the studio reads it. */
 export type CandidatesAnswer = { max_repairs?: number; fingerprint?: string; options?: Entry[]; fallback?: Entry | null };
 
@@ -55,6 +65,8 @@ export type StudioDeps = {
   measured(a: StudioSong, b: StudioSong): Promise<boolean>;
   /** The decoded song at a mix position, the speaker's own (the same decode it plays). */
   audio(index: number): Promise<Audio | null>;
+  /** A song not in the mix yet (a request), decoded the way the speaker decodes. */
+  songAudio?(song: StudioSong): Promise<Audio | null>;
   /** The level a decoded song plays at. */
   level(audio: Audio): Promise<number>;
   render: MakerRender;
@@ -79,6 +91,12 @@ type Job = {
   done: MadeSeam | NoSeam | null;
 };
 
+/** What the studio is doing, for the Activity drawer (T-20261126-36c7): the seam in hand, how many
+ * more are wanted, and how many this visit has made. */
+export type StudioActivity = { making: { a: number; b: number; forRequest: boolean } | null; waiting: number; made: number };
+
+type Wanted = { key: string; a: StudioSong; b: StudioSong; fromIndex?: number; toIndex?: number; forRequest?: boolean };
+
 const pairKey = (a: StudioSong, b: StudioSong) => `${a.sha}>${b.sha}`;
 const sameLevels = (one: { a: number; b: number }, two: { a: number; b: number }) => Math.fround(one.a) === Math.fround(two.a) && Math.fround(one.b) === Math.fround(two.b);
 const wait = (ms: number) => new Promise<null>((done) => setTimeout(() => done(null), Math.max(0, ms)));
@@ -100,7 +118,15 @@ export function rankedFrom(answer: CandidatesAnswer): { options: RankedOption[];
 }
 
 export class DeviceStudio {
-  private wanted: { key: string; fromIndex: number; toIndex: number; a: StudioSong; b: StudioSong }[] = [];
+  private wanted: Wanted[] = [];
+  private ordered: Wanted[] = [];
+  private readonly asks = new Map<Asker, Wanted[]>();
+  private requested: Wanted[] = [];
+  private readonly book = new Map<string, Booked>();
+  private made = 0;
+  private readonly activity = observable<StudioActivity>({ making: null, waiting: 0, made: 0 });
+  /** What the studio is doing now, read by the Activity drawer. */
+  readonly state: Observable<StudioActivity> = this.activity;
   private jobs = new Map<string, Job>();
   private running: Job | null = null;
   private disposed = false;
@@ -130,7 +156,7 @@ export class DeviceStudio {
    * position playing. Seams that no longer come are dropped; the next ones are prepared. */
   follow(order: readonly (StudioSong | null)[], playing: number): void {
     if (this.disposed) return;
-    const wanted: DeviceStudio['wanted'] = [];
+    const wanted: Wanted[] = [];
     if (deviceRenderOn()) {
       for (let step = 0; step < SEAMS_AHEAD; step += 1) {
         const a = order[playing + step];
@@ -138,14 +164,76 @@ export class DeviceStudio {
         if (a && b && a.sha !== b.sha) wanted.push({ key: pairKey(a, b), fromIndex: playing + step, toIndex: playing + step + 1, a, b });
       }
     }
-    this.wanted = wanted;
-    const keep = new Set(wanted.map((seam) => seam.key));
+    this.ordered = wanted;
+    this.settle();
+  }
+
+  /** The seams the waiting requests' placements need (T-20261126-a246), made after the play
+   * order's own so the music in hand always comes first. Replaces the last list given. */
+  prepareFor(pairs: readonly { a: StudioSong; b: StudioSong }[], asker: Asker = 'requests'): void {
+    if (this.disposed) return;
+    const wanted: Wanted[] = [];
+    if (deviceRenderOn() && this.deps.songAudio) {
+      for (const { a, b } of pairs) {
+        if (a.sha === b.sha || wanted.some((one) => one.key === pairKey(a, b))) continue;
+        wanted.push({ key: pairKey(a, b), a, b, forRequest: true });
+        if (wanted.length >= REQUEST_SEAMS) break;
+      }
+    }
+    this.asks.set(asker, wanted);
+    // the inspector's ask (a member waiting on it) before the request look's
+    const all = [...(this.asks.get('inspector') ?? []), ...(this.asks.get('requests') ?? [])];
+    this.requested = all.filter((seam, at) => all.findIndex((one) => one.key === seam.key) === at);
+    this.settle();
+  }
+
+  /** The clip this device made or kept for two songs in this visit, with the planner's answer. */
+  madeFor(a: number, b: number): Booked | null {
+    return this.book.get(`${a}>${b}`) ?? null;
+  }
+
+  private keep(pair: { a: number; b: number }, made: MadeSeam, answer: CandidatesAnswer): void {
+    const key = `${pair.a}>${pair.b}`;
+    this.book.delete(key);
+    this.book.set(key, { made, answer });
+    while (this.book.size > BOOK_KEPT) this.book.delete(this.book.keys().next().value as string);
+  }
+
+  /** Whether this device holds a finished clip for the pair, made in this visit. */
+  holds(a: StudioSong, b: StudioSong): boolean {
+    return this.jobs.get(pairKey(a, b))?.done?.status === 'clip';
+  }
+
+  private settle(): void {
+    const ordered = new Set(this.ordered.map((seam) => seam.key));
+    this.wanted = [...this.ordered, ...this.requested.filter((seam) => !ordered.has(seam.key))];
+    const keep = new Set(this.wanted.map((seam) => seam.key));
     for (const [key, job] of this.jobs) {
       if (keep.has(key)) continue;
       job.controller.abort();
       this.jobs.delete(key);
     }
+    // the mix's own next transition comes before a request's: a request's render gives way
+    const run = this.running;
+    if (run && !ordered.has(run.key) && this.ordered.some((seam) => !this.jobs.has(seam.key))) run.controller.abort();
     this.pump();
+    this.tell();
+  }
+
+  /** The seam to start now: the first wanted with no work, the mix's own before a request's. */
+  private first(): Wanted | undefined {
+    return this.wanted.find((seam) => !this.jobs.has(seam.key));
+  }
+
+  /** The Activity drawer's view: the seam rendering now and the wanted ones with no work yet. */
+  private tell(): void {
+    const job = this.running;
+    const seam = job ? this.wanted.find((one) => one.key === job.key) : undefined;
+    this.activity.set({
+      making: job ? { a: job.a.songId, b: job.b.songId, forRequest: !!seam?.forRequest } : null,
+      waiting: this.wanted.filter((one) => !this.jobs.has(one.key)).length,
+      made: this.made,
+    });
   }
 
   /** A clip for this seam made from these very songs at these levels, or null: at once when there
@@ -173,28 +261,42 @@ export class DeviceStudio {
     for (const job of this.jobs.values()) job.controller.abort();
     this.jobs.clear();
     this.wanted = [];
+    this.ordered = [];
+    this.requested = [];
+    this.asks.clear();
+    this.book.clear();
+    this.running = null;
+    this.tell();
   }
 
   /** Start the next wanted seam that has no work yet, when nothing is rendering. */
   private pump(): void {
     if (this.disposed || this.running) return;
-    const next = this.wanted.find((seam) => !this.jobs.has(seam.key));
+    const next = this.first();
     if (!next) return;
     void this.prepare(next);
   }
 
-  private async prepare(seam: DeviceStudio['wanted'][number]): Promise<void> {
-    const [from, to] = await Promise.all([this.deps.audio(seam.fromIndex).catch(() => null), this.deps.audio(seam.toIndex).catch(() => null)]);
+  private read(song: StudioSong, index: number | undefined): Promise<Audio | null> {
+    const found = index === undefined ? this.deps.songAudio?.(song) : this.deps.audio(index);
+    return (found ?? Promise.resolve(null)).catch(() => null);
+  }
+
+  private async prepare(seam: Wanted): Promise<void> {
+    const [from, to] = await Promise.all([this.read(seam.a, seam.fromIndex), this.read(seam.b, seam.toIndex)]);
     // the order may have moved on while the songs were read
     if (this.disposed || this.running || this.jobs.has(seam.key) || !this.wanted.some((one) => one.key === seam.key)) return this.pump();
     if (!from || !to) {
       // noted as done, so the seam after it is prepared rather than this one asked for again
       const none: NoSeam = { status: 'none', reason: 'a song could not be read here', attempts: [], tookMs: 0, implementation: STUDIO_IMPLEMENTATION };
       this.jobs.set(seam.key, { key: seam.key, a: seam.a, b: seam.b, levels: null, controller: new AbortController(), result: Promise.resolve(none), done: none });
+      this.tell();
       return this.pump();
     }
     const levels = { a: await this.deps.level(from).catch(() => 1), b: await this.deps.level(to).catch(() => 1) };
     if (this.disposed || this.running || this.jobs.has(seam.key) || !this.wanted.some((one) => one.key === seam.key)) return this.pump();
+    // the mix's own came to be wanted while this request's songs were read: it goes first
+    if (seam.forRequest && this.first()?.key !== seam.key) return this.pump();
     this.start(seam.key, seam.a, seam.b, { from, to, levels });
   }
 
@@ -203,12 +305,15 @@ export class DeviceStudio {
     const job: Job = { key, a, b, levels: songs.levels, controller, result: Promise.resolve(null as never), done: null };
     job.result = this.make(job, songs).then((outcome) => {
       job.done = outcome;
+      if (outcome.status === 'clip') this.made += 1;
       return outcome;
     });
     this.jobs.set(key, job);
     this.running = job;
+    this.tell();
     void job.result.finally(() => {
       if (this.running === job) this.running = null;
+      this.tell();
       // an abandoned or failed seam may be asked again later
       if (job.done?.status !== 'clip' && this.jobs.get(key) === job && controller.signal.aborted) this.jobs.delete(key);
       this.pump();
@@ -232,6 +337,7 @@ export class DeviceStudio {
       if (stored) {
         this.log(`[studio] ${job.a.songId} > ${job.b.songId}: kept from before, ${stored.move}${stored.passed ? '' : ' (did not pass every check)'}`);
         this.deps.report?.({ a: job.a.songId, b: job.b.songId }, stored, answer);
+        this.keep({ a: job.a.songId, b: job.b.songId }, stored, answer);
         return stored;
       }
       const { options, fallback } = rankedFrom(answer);
@@ -257,6 +363,7 @@ export class DeviceStudio {
       if (outcome.status === 'clip') {
         void this.deps.store?.put(clipKey, outcome);
         this.deps.report?.({ a: job.a.songId, b: job.b.songId }, outcome, answer);
+        this.keep({ a: job.a.songId, b: job.b.songId }, outcome, answer);
       }
       return outcome;
     } catch (problem) {

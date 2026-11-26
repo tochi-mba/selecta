@@ -203,13 +203,10 @@ def _priority_window_names(settings: Settings) -> set[str]:
     if not root.is_dir() or not settings.db_path.is_file():
         return set()
     try:
+        from selecta.engine_store import library_reads
+
         with sqlite3.connect(settings.db_path) as conn:
-            paths = {
-                str(Path(path).resolve())
-                for (path,) in conn.execute(
-                    "SELECT path FROM songs WHERE processing_priority=100 AND is_music=1"
-                )
-            }
+            paths = {str(Path(path).resolve()) for path in library_reads.priority_paths(conn)}
     except sqlite3.Error:
         return set()
     protected = set()

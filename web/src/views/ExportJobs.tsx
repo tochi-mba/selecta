@@ -96,7 +96,7 @@ function Row({ job, request, fresh = false }: { job: ExportJob; request: ReturnT
           contents summary holds the same place in every state */}
       {job.state === 'expired' && <p className="hint">The file isn’t in SelectaDJ’s exports folder any more, so it can’t be downloaded.</p>}
       <div className="row wrap export-job-actions">
-        {job.state === 'ready' && <a href={`/api/exports/${encodeURIComponent(job.name)}`} download>download {job.name}</a>}
+        {job.state === 'ready' && <a href={job.url ?? `/api/exports/${encodeURIComponent(job.name)}`} download={job.name}>download {job.name}</a>}
         {job.state === 'ready' && job.seconds != null && <small className="soft">{length(job.seconds)} long</small>}
         {job.can_cancel && <Action working="Cancelling…" aria-label={`Cancel the export of ${job.mix_name}`} run={() => cancelExport(job.id, request)}>Cancel export</Action>}
         {/* a new file is always someone's own choice, from the mix as it is by then */}

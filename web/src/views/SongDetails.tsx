@@ -266,17 +266,18 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
         </div>
       </section>
       )}
-      {flagOn('library.corrections') && analysedHere && (
+      {/* in a browser library the mark is the member's alone, kept by the account (T-20261126-3f92) */}
+      {flagOn('library.corrections') && (
       <section className="stack">
         <h3>Is it music?</h3>
-        <p className="hint">Something set aside never gets analysed or mixed. Your file isn’t touched either way.</p>
+        <p className="hint">{analysedHere ? 'Something set aside never gets analysed or mixed.' : 'Something set aside is left out of the mixes SelectaDJ makes.'} Your file isn’t touched either way.</p>
         <div className="row wrap">
           {facts.setAside ? (
             <Action run={() => send({ is_music: true }, 'This counts as music now.')}>This is music</Action>
           ) : (
             <Action run={() => send({ is_music: false }, 'Set aside.')}>This isn’t music</Action>
           )}
-          {song.music_override != null && <Action run={() => send({ clear: ['is_music'] }, 'SelectaDJ will decide again next time it reads your folder.')}>Let SelectaDJ decide</Action>}
+          {analysedHere && song.music_override != null && <Action run={() => send({ clear: ['is_music'] }, 'SelectaDJ will decide again next time it reads your folder.')}>Let SelectaDJ decide</Action>}
         </div>
       </section>
       )}

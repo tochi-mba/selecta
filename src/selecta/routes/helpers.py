@@ -13,6 +13,7 @@ from selecta import db, jobs, mix
 from selecta import requests as song_requests
 from selecta.api_common import _counts
 from selecta.config import ANALYSIS_VERSION
+from selecta.engine_store import library_reads, library_rows
 from selecta.eta import combine, mix_time_left, time_ahead
 from selecta.seams import STUDIO_SESSION, SeamRequest, request_from
 from selecta.stems import cache_room
@@ -49,14 +50,15 @@ def add_routes(app, ctx) -> None:
         library had none, and finding them parses every song's lyrics (seconds on a laptop)."""
         from selecta.discovery.search import lyric_links
 
-        stamp = tuple(
-            conn.execute(
-                "SELECT COUNT(*), MAX(l.fetched_at), TOTAL(l.song_id), TOTAL(s.mtime), "
-                "MAX(s.id) FROM lyrics l JOIN songs s ON s.id=l.song_id "
-                "WHERE l.status='synced' AND l.synced IS NOT NULL "
-                "AND s.is_music=1 AND s.duplicate_of IS NULL"
-            ).fetchone()
-        )
+        with library_rows.reading(conn) as source:
+            stamp = tuple(
+                source.execute(
+                    "SELECT COUNT(*), MAX(l.fetched_at), TOTAL(l.song_id), TOTAL(s.mtime), "
+                    "MAX(s.id) FROM lyrics l JOIN songs s ON s.id=l.song_id "
+                    "WHERE l.status='synced' AND l.synced IS NOT NULL "
+                    "AND s.is_music=1 AND s.duplicate_of IS NULL"
+                ).fetchone()
+            )
         if links_cache["stamp"] != stamp:
             links_cache["links"] = lyric_links(conn)
             links_cache["stamp"] = stamp
@@ -288,25 +290,29 @@ def add_routes(app, ctx) -> None:
 
         never = never_played(conn)
         counts = _counts(conn)
-        vocal_cues = conn.execute(
-            "SELECT COUNT(*) FROM lyrics WHERE status IN ('synced','instrumental')"
-        ).fetchone()[0]
-        corrected = tuple(tuple(row) for row in conn.execute("SELECT * FROM song_overrides"))
+        with library_rows.reading(conn) as source:
+            vocal_cues = source.execute(
+                "SELECT COUNT(*) FROM lyrics WHERE status IN ('synced','instrumental')"
+            ).fetchone()[0]
+            corrected = tuple(
+                tuple(row) for row in source.execute("SELECT * FROM song_overrides")
+            )
         stamp = (counts["analysed"], vocal_cues, tuple(sorted(never)), corrected)
         with library_lock:
             if library_cache.get("stamp") != stamp:
                 songs = [song for song in load_library(conn, settings) if song.id not in never]
-                years = {
-                    row["id"]: row["year"] for row in conn.execute("SELECT id,year FROM songs")
-                }
+                with library_rows.reading(conn) as source:
+                    years = {
+                        row["id"]: row["year"]
+                        for row in source.execute("SELECT id,year FROM songs")
+                    }
                 library_cache.update(
                     stamp=stamp, songs=songs, traits=traits_of(songs, years), ranked=None
                 )
             return library_cache["songs"], library_cache["traits"]
 
     def music_ids(conn: sqlite3.Connection) -> set[int]:
-        rows = conn.execute("SELECT id FROM songs WHERE is_music=1 AND duplicate_of IS NULL")
-        return {row[0] for row in rows}
+        return library_reads.music_ids(conn)
 
     def seam_request_at(
         conn: sqlite3.Connection, position: int, draft: int | None = None

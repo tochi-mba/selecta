@@ -108,7 +108,11 @@ hold on device facts is its own to-do item.
 **Candidates.** `{a, b, move?, leave_after?, scripts?}`: the Desktop seam request's constraints (a
 move asked for by name, from `planner_core.recipes.all_recipes`; how long A must play). The pool is
 exactly the Desktop choose loop's: `enumerate_candidates(a, b, move, exits=exits_after(a,
-leave_after))`, ranked, at most 300. Answer:
+leave_after))`, ranked, at most 300. With `language` (the member's transition feel: `balanced`,
+`seamless`, `punchy`, `wordplay`) and no move named, only that feel's family is kept
+(`styles_for_language`), and a pair with none of it keeps every move: the Desktop mix build's own
+rule (`planner_core.beam._best_move`). The browser sends the feel a pair's mix was ordered with
+(web/src/cloud/mixFeel.ts), the same for its script requests. Answer:
 
 ```json
 {"schema": 1, "max_repairs": 4, "fingerprint": "64 hex", "scripted": 8,
@@ -122,7 +126,7 @@ when the recipe builds none there (the rule steps over it without counting a ren
 first `scripts` options (default 8, at most 16) carry one: the rule renders at most
 `MAX_REPAIRS` + 1 = 5 takes, so 8 covers a loop that walks in rank order with room for recipes
 that build nothing. The rule can jump down the list (another move after a failure), so a studio
-asks `POST /api/planning/candidates/script` with `{a, b, move, leave_after, option, fingerprint}`;
+asks `POST /api/planning/candidates/script` with `{a, b, move, leave_after, language, option, fingerprint}`;
 a changed list (the songs' facts changed) is 409 `plan_changed`.
 
 **Next step.** `{options: [Option JSON], attempts: [{option, audit: AuditFacts JSON | null}],

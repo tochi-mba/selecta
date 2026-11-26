@@ -82,19 +82,22 @@ def _record(meta: Path) -> dict | None:
 
 def read_rated(home: Path) -> list[Rated]:
     """The rated seams in one data folder, including ones the render cache has since cleared."""
+    from selecta.engine_store import library_rows
+
     conn = sqlite3.connect(f"file:{home / 'selecta.sqlite'}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
-    songs = {
-        row["id"]: row
-        for row in conn.execute(
-            # a person's own tempo and key corrections are the truth about a song, so they
-            # count here too; reading the raw analysis used to report the wrong gap
-            "SELECT s.id, s.artist, s.title, COALESCE(o.bpm, a.bpm) AS bpm, "
-            "COALESCE(o.camelot, a.camelot) AS camelot, a.grid_confidence "
-            "FROM songs s JOIN analysis a ON a.song_id=s.id "
-            "LEFT JOIN song_overrides o ON o.song_id=s.id"
-        )
-    }
+    with library_rows.reading(conn) as source:
+        songs = {
+            row["id"]: row
+            for row in source.execute(
+                # a person's own tempo and key corrections are the truth about a song, so they
+                # count here too; reading the raw analysis used to report the wrong gap
+                "SELECT s.id, s.artist, s.title, COALESCE(o.bpm, a.bpm) AS bpm, "
+                "COALESCE(o.camelot, a.camelot) AS camelot, a.grid_confidence "
+                "FROM songs s JOIN analysis a ON a.song_id=s.id "
+                "LEFT JOIN song_overrides o ON o.song_id=s.id"
+            )
+        }
     conn.close()
     states: dict[str, dict] = {}
     for meta in [

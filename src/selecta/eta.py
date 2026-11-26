@@ -431,12 +431,15 @@ def time_ahead(
 def analysis_rates(conn: sqlite3.Connection) -> list[float]:
     """Seconds of analysis per second of audio, for recently analysed songs. It's per second of
     audio since a seven-minute song takes far longer than a two-minute one."""
-    rows = conn.execute(
-        "SELECT a.timings timings, s.duration duration FROM analysis a "
-        "JOIN songs s ON s.id=a.song_id WHERE a.error IS NULL AND a.timings IS NOT NULL "
-        "ORDER BY a.analysed_at DESC, a.song_id DESC LIMIT ?",
-        (RECENT_ANALYSES,),
-    ).fetchall()
+    from selecta.engine_store import library_rows
+
+    with library_rows.reading(conn) as source:
+        rows = source.execute(
+            "SELECT a.timings timings, s.duration duration FROM analysis a "
+            "JOIN songs s ON s.id=a.song_id WHERE a.error IS NULL AND a.timings IS NOT NULL "
+            "ORDER BY a.analysed_at DESC, a.song_id DESC LIMIT ?",
+            (RECENT_ANALYSES,),
+        ).fetchall()
     rates = []
     for row in rows:
         try:
@@ -489,13 +492,16 @@ def analysis_left(
 ) -> dict:
     """The rest of the library, once what's ahead of it has finished. It only counts songs that
     still need analysing."""
-    row = conn.execute(
-        "SELECT COUNT(*) songs, COALESCE(SUM(s.duration),0) audio FROM songs s "
-        "LEFT JOIN analysis a ON a.song_id=s.id "
-        "WHERE s.is_music=1 AND s.duplicate_of IS NULL "
-        "AND (a.song_id IS NULL OR a.version<?)",
-        (ANALYSIS_VERSION,),
-    ).fetchone()
+    from selecta.engine_store import library_rows
+
+    with library_rows.reading(conn) as source:
+        row = source.execute(
+            "SELECT COUNT(*) songs, COALESCE(SUM(s.duration),0) audio FROM songs s "
+            "LEFT JOIN analysis a ON a.song_id=s.id "
+            "WHERE s.is_music=1 AND s.duplicate_of IS NULL "
+            "AND (a.song_id IS NULL OR a.version<?)",
+            (ANALYSIS_VERSION,),
+        ).fetchone()
     estimate = analysis_time(row["audio"], analysis_rates(conn), running, row["songs"])
     total = combine([estimate, *(ahead or [])]) if row["songs"] else estimate
     return {**total.as_dict(), "songs": row["songs"], "after_mix": waits_for_mix}
@@ -506,14 +512,17 @@ def analysis_line_left(conn: sqlite3.Connection, line: list[int]) -> dict[int, i
     by name don't pause for rendering, so there's no wait for that to add."""
     if not line:
         return {}
+    from selecta.engine_store import library_rows
+
     rates = analysis_rates(conn)
-    durations = {
-        row["id"]: row["duration"]
-        for row in conn.execute(
-            f"SELECT id,duration FROM songs WHERE id IN ({','.join('?' * len(line))})",  # noqa: S608
-            line,
-        )
-    }
+    with library_rows.reading(conn) as source:
+        durations = {
+            row["id"]: row["duration"]
+            for row in source.execute(
+                f"SELECT id,duration FROM songs WHERE id IN ({','.join('?' * len(line))})",  # noqa: S608
+                line,
+            )
+        }
     audio = 0.0
     ready_in = {}
     for count, song in enumerate(line, 1):

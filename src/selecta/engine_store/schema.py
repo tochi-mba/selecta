@@ -7,7 +7,8 @@ account's workspace, and PostgreSQL's fail-closed policy (migrations `es0479rate
 `ratings` is the first slice. On Desktop it is the hand-made `ratings` table in `db.SCHEMA`,
 adopted in place by the library migration `lib0002ratings`: the same rows, the same columns with
 the same meaning, plus `workspace_id`. The hand-made table's own foreign keys to `songs` and
-`seam_book` stay in the library file; they are not declared here because Cloud has neither table.
+`seam_book` stay in the library file; they are not declared here (Cloud has no `songs`, and its
+`seam_book`, made by `es0479disc01`, is keyed by workspace).
 
 The song facts are the second slice (`lib0003songs`, `es0479song01`):
 
@@ -106,6 +107,9 @@ song_overrides = sa.Table(
     sa.Column("bpm", sa.Float, nullable=True),
     sa.Column("camelot", sa.Text, nullable=True),
     sa.Column("updated_at", sa.Text, nullable=True),
+    # Cloud: the member's "Is it music?" (false: set aside, kept out of planned mixes; null: no
+    # mark). Desktop keeps it on `songs` and leaves this null (es0479music01, lib0012ismusic).
+    sa.Column("is_music", sa.Boolean, nullable=True),
     _of_a_song("song_overrides"),
 )
 
@@ -370,27 +374,84 @@ request_marks = sa.Table(
 
 REQUEST_TABLES = (song_requests, request_bridge_approvals, request_routes, request_marks)
 
-ENGINE_TABLES = (ratings, analysis, song_overrides, *SEAM_TABLES, *MIX_TABLES, *REQUEST_TABLES)
+# The discovery slice (`engine_store.discovery`, docs/engineering/engine-store-discovery.md). On
+# Desktop the hand-made `seam_book` and the sweep's `discovery_comparisons`, adopted in place by
+# `lib0009discovery`, keeping their own keys (one workspace per file); Cloud's include it.
+
+# A link found between two songs: a word link, an ordered harmonic sequence or a tonal cousin.
+# `payload` is the link's JSON as found; `status` is new, approved or rejected.
+seam_book = sa.Table(
+    "seam_book",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("song_a", sa.Integer, nullable=False),
+    sa.Column("song_b", sa.Integer, nullable=False),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("payload", sa.Text, nullable=False),
+    sa.Column("score", sa.Float, nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="new"),
+    sa.UniqueConstraint(
+        "workspace_id", "song_a", "song_b", "kind", "payload", name="uq_seam_book_link"
+    ),
+    *_of_two_songs("seam_book"),
+)
+sa.Index("ix_seam_book_kind", seam_book.c.workspace_id, seam_book.c.kind, seam_book.c.score)
+
+# A pair the exhaustive sweep has compared, with both songs' fingerprints when it did, so a pair
+# whose features change is compared again. Written in the same write as the pair's links.
+discovery_comparisons = sa.Table(
+    "discovery_comparisons",
+    metadata,
+    sa.Column("workspace_id", Id, primary_key=True),
+    sa.Column("song_a", sa.Integer, primary_key=True, autoincrement=False),
+    sa.Column("song_b", sa.Integer, primary_key=True, autoincrement=False),
+    sa.Column("fingerprint_a", sa.Text, nullable=False),
+    sa.Column("fingerprint_b", sa.Text, nullable=False),
+    *_of_two_songs("discovery_comparisons"),
+)
+
+DISCOVERY_TABLES = (seam_book, discovery_comparisons)
+
+ENGINE_TABLES = (
+    ratings,
+    analysis,
+    song_overrides,
+    *SEAM_TABLES,
+    *MIX_TABLES,
+    *REQUEST_TABLES,
+    *DISCOVERY_TABLES,
+)
 """Every engine table Cloud has, for the migrations and the fail-closed policy."""
 
 library_metadata = sa.MetaData()
 """Desktop's own engine tables: adopted in place by the library chain, never created anywhere."""
 
-# Only the columns the engine store reads or writes. The hand-made table has more (folder,
-# album, duplicate_of, ...), which these statements simply don't name.
+# The hand-made table of `db.SCHEMA`, every column, as the scanner writes it
+# (`engine_store.library_writes`); `path` is unique there.
 songs = sa.Table(
     "songs",
     library_metadata,
     sa.Column("id", sa.Integer, primary_key=True),
     sa.Column("workspace_id", Id, nullable=False, index=True),
     sa.Column("path", sa.Text, nullable=False),
+    sa.Column("folder", sa.Text, nullable=False),
     sa.Column("size", sa.Integer, nullable=False),
     sa.Column("mtime", sa.Float, nullable=False),
     sa.Column("duration", sa.Float, nullable=False),
     sa.Column("artist", sa.Text, nullable=True),
     sa.Column("title", sa.Text, nullable=True),
+    sa.Column("album", sa.Text, nullable=True),
     sa.Column("genre", sa.Text, nullable=True),
+    sa.Column("year", sa.Text, nullable=True),
+    sa.Column("bitrate", sa.Integer, nullable=True),
+    sa.Column("sample_rate", sa.Integer, nullable=True),
+    sa.Column("lossless", sa.Integer, nullable=False, server_default="0"),
     sa.Column("is_music", sa.Integer, nullable=False),
+    sa.Column("set_aside_reason", sa.Text, nullable=True),
+    # a person's "this is music" (1) or "set it aside" (0); null when they never said
+    sa.Column("music_override", sa.Integer, nullable=True),
+    sa.Column("processing_priority", sa.Integer, nullable=False, server_default="0"),
     # SHA-256 of the file's bytes, as Cloud's catalogue keys a song. Filled in the background
     # (`engine_store.song_hashes`); not a key on Desktop, where two copies may share it.
     sa.Column("content_hash", sa.String(64), nullable=True),
@@ -408,6 +469,8 @@ lyrics = sa.Table(
     sa.Column("workspace_id", Id, nullable=False, index=True),
     sa.Column("status", sa.Text, nullable=False),
     sa.Column("synced", sa.Text, nullable=True),
+    sa.Column("plain", sa.Text, nullable=True),
+    sa.Column("fetched_at", sa.Text, nullable=True),
 )
 
 # What a listener skipped and how far in: Desktop only. It was made by its route on the first skip;
@@ -423,17 +486,278 @@ playback_skips = sa.Table(
     sa.Column("created_at", sa.Text, nullable=True),
 )
 
-LIBRARY_TABLES = (songs, lyrics, playback_skips)
+# The listening study (`engine_store.listening`): Desktop only, the owner's own blind A/B tool.
+# Made and adopted by `lib0010listening`; `listening.initialise` made them before.
+
+# One blind trial: `mapping` is JSON {"a": condition, "b": condition}, never shown to a listener.
+# `ordinal` is the order trials were registered in.
+listening_trials = sa.Table(
+    "listening_trials",
+    library_metadata,
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("study", sa.Text, nullable=False),
+    sa.Column("pair", sa.Text, nullable=False),
+    sa.Column("mapping", sa.Text, nullable=False),
+    sa.Column("seed", sa.Integer, nullable=False),
+    sa.Column("ordinal", sa.Integer, nullable=True),
+)
+
+# A condition's private label: the method and renderer, and the rendered seam it is, if named.
+listening_methods = sa.Table(
+    "listening_methods",
+    library_metadata,
+    sa.Column("condition", sa.Text, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("method", sa.Text, nullable=False),
+    sa.Column("renderer", sa.Text, nullable=False),
+    sa.Column("seam_key", sa.String(SEAM_KEY), nullable=True),
+)
+
+# A listener's answer to one trial: a, b, tie or cannot_judge. `updated_at` UTC as SQLite writes.
+listening_responses = sa.Table(
+    "listening_responses",
+    library_metadata,
+    sa.Column("trial", sa.Text, primary_key=True),
+    sa.Column("listener", sa.Text, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("choice", sa.Text, nullable=False),
+    sa.Column("setup", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=True),
+)
+
+# A listener's 1 to 5 grade of one option of a trial, with the issues they ticked (JSON list).
+listening_quality = sa.Table(
+    "listening_quality",
+    library_metadata,
+    sa.Column("trial", sa.Text, primary_key=True),
+    sa.Column("listener", sa.Text, primary_key=True),
+    sa.Column("option", sa.Text, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("grade", sa.Integer, nullable=False),
+    sa.Column("tags", sa.Text, nullable=False),
+)
+
+LISTENING_TABLES = (listening_trials, listening_methods, listening_responses, listening_quality)
+
+LIBRARY_TABLES = (songs, lyrics, playback_skips, *LISTENING_TABLES)
+
+# Lucy's tables on the Desktop (`engine_store.lucy`, docs/engineering/engine-store-lucy.md):
+# `lucy.schema.SCHEMA` made them at run time; `lib0011lucy` makes them with those statements and
+# adopts them in place. Desktop only: Cloud Lucy has her own tables (`lucy.cloud_schema`). Ids are
+# Lucy's opaque text ids; times are `lucy.ids.now_iso` (UTC ISO, milliseconds); JSON is text.
+
+
+def _lucy(name: str, *columns: sa.Column) -> sa.Table:
+    return sa.Table(
+        name,
+        library_metadata,
+        *columns,
+        sa.Column("workspace_id", Id, nullable=False, index=True),
+    )
+
+
+lucy_conversations = _lucy(
+    "lucy_conversations",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("title", sa.Text, nullable=False),
+    sa.Column("scope", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("proposal_id", sa.Text, nullable=True),
+    sa.Column("parent_id", sa.Text, nullable=True),
+    sa.Column("branched_from", sa.Text, nullable=True),
+    sa.Column("archived", sa.Integer, nullable=False, server_default="0"),
+    # the next message or turn number; the server's order, not the browser's
+    sa.Column("next_seq", sa.Integer, nullable=False, server_default="1"),
+    # events up to this id may have been compacted away
+    sa.Column("pruned_through", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+)
+
+lucy_messages = _lucy(
+    "lucy_messages",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("seq", sa.Integer, nullable=False),
+    sa.Column("role", sa.Text, nullable=False),  # user, assistant or notice
+    sa.Column("turn_id", sa.Text, nullable=True),
+    sa.Column("run_id", sa.Text, nullable=True),
+    sa.Column("content", sa.Text, nullable=False, server_default=""),
+    sa.Column("status", sa.Text, nullable=False, server_default="complete"),
+    sa.Column("revision_id", sa.Text, nullable=True),
+    sa.Column("meta", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_turns = _lucy(
+    "lucy_turns",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("client_id", sa.Text, nullable=False),  # one send, however often it arrives
+    sa.Column("seq", sa.Integer, nullable=False),
+    sa.Column("text", sa.Text, nullable=False),
+    sa.Column("expected_revision", sa.Text, nullable=True),
+    sa.Column("selection", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("status", sa.Text, nullable=False, server_default="queued"),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_runs = _lucy(
+    "lucy_runs",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("turn_id", sa.Text, nullable=False),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("attempt", sa.Integer, nullable=False, server_default="1"),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("provider", sa.Text, nullable=False),
+    sa.Column("cycles", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("steps", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("tokens_in", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("tokens_out", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("usage", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("limits", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("error", sa.Text, nullable=True),
+    sa.Column("started_at", sa.Text, nullable=False),
+    sa.Column("ended_at", sa.Text, nullable=True),
+)
+
+# The ordered log every live view replays; `id` is the global order a client resumes from.
+lucy_events = _lucy(
+    "lucy_events",
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("v", sa.Integer, nullable=False),
+    sa.Column("type", sa.Text, nullable=False),
+    sa.Column("turn_id", sa.Text, nullable=True),
+    sa.Column("run_id", sa.Text, nullable=True),
+    sa.Column("plan_id", sa.Text, nullable=True),
+    sa.Column("step_id", sa.Text, nullable=True),
+    sa.Column("payload", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_proposals = _lucy(
+    "lucy_proposals",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("current_revision", sa.Text, nullable=True),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+)
+
+# An immutable snapshot; `hash` is what an approval binds to.
+lucy_revisions = _lucy(
+    "lucy_revisions",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("proposal_id", sa.Text, nullable=False),
+    sa.Column("number", sa.Integer, nullable=False),
+    sa.Column("parent_id", sa.Text, nullable=True),
+    sa.Column("branch", sa.Text, nullable=False, server_default="main"),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("hash", sa.Text, nullable=False),
+    sa.Column("snapshot", sa.Text, nullable=False),
+    sa.Column("turn_id", sa.Text, nullable=True),
+    sa.Column("summary", sa.Text, nullable=False, server_default=""),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_approvals = _lucy(
+    "lucy_approvals",
+    sa.Column("token", sa.Text, primary_key=True),
+    sa.Column("revision_id", sa.Text, nullable=False),
+    sa.Column("hash", sa.Text, nullable=False),
+    sa.Column("action", sa.Text, nullable=False),
+    sa.Column("expires_at", sa.Integer, nullable=False),  # seconds since 1970
+    sa.Column("used", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_commits = _lucy(
+    "lucy_commits",
+    sa.Column("idempotency_key", sa.Text, primary_key=True),
+    sa.Column("revision_id", sa.Text, nullable=False),
+    sa.Column("hash", sa.Text, nullable=False),
+    sa.Column("action", sa.Text, nullable=False),
+    sa.Column("status", sa.Text, nullable=False),  # pending, committed or failed
+    sa.Column("draft_id", sa.Integer, nullable=True),
+    sa.Column("result", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+)
+
+lucy_memory = _lucy(
+    "lucy_memory",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("kind", sa.Text, nullable=False),  # explicit, inferred or session
+    sa.Column("subject", sa.Text, nullable=False),
+    sa.Column("value", sa.Text, nullable=False),
+    sa.Column("source", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("confidence", sa.Float, nullable=True),
+    sa.Column("conversation_id", sa.Text, nullable=True),
+    sa.Column("forgotten", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+)
+
+lucy_permissions = _lucy(
+    "lucy_permissions",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("run_id", sa.Text, nullable=True),
+    sa.Column("tier", sa.Text, nullable=False),
+    sa.Column("operation", sa.Text, nullable=False),
+    sa.Column("arguments", sa.Text, nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="pending"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("decided_at", sa.Text, nullable=True),
+)
+
+# What the player really played, kept only while the person has history turned on.
+# `created_at` is UTC `YYYY-MM-DD HH:MM:SS`, as SQLite's CURRENT_TIMESTAMP wrote it.
+listening_events = _lucy(
+    "listening_events",
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("song_id", sa.Integer, nullable=False),
+    sa.Column("session", sa.Text, nullable=False),
+    sa.Column("source", sa.Text, nullable=False),
+    sa.Column("event", sa.Text, nullable=False),
+    sa.Column("heard", sa.Float, nullable=False, server_default="0"),
+    sa.Column("position", sa.Float, nullable=False, server_default="0"),
+    sa.Column("created_at", sa.Text, nullable=True),
+)
+
+LUCY_TABLES = (
+    lucy_conversations,
+    lucy_messages,
+    lucy_turns,
+    lucy_runs,
+    lucy_events,
+    lucy_proposals,
+    lucy_revisions,
+    lucy_approvals,
+    lucy_commits,
+    lucy_memory,
+    lucy_permissions,
+    listening_events,
+)
 
 __all__ = [
+    "DISCOVERY_TABLES",
     "ENGINE_TABLES",
     "LIBRARY_TABLES",
+    "LISTENING_TABLES",
+    "LUCY_TABLES",
     "MIX_TABLES",
     "REQUEST_TABLES",
     "SEAM_TABLES",
     "analysis",
+    "discovery_comparisons",
     "drafts",
     "library_metadata",
+    "listening_methods",
+    "listening_quality",
+    "listening_responses",
+    "listening_trials",
     "lyrics",
     "mix_imports",
     "playback_skips",
@@ -444,6 +768,7 @@ __all__ = [
     "request_marks",
     "request_routes",
     "seam_attestations",
+    "seam_book",
     "seam_history",
     "seam_verdicts",
     "seams",
