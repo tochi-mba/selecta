@@ -172,7 +172,12 @@ _lock = threading.Lock()
 
 
 def ensure(conn: sqlite3.Connection) -> sqlite3.Connection:
-    """Create Lucy's tables once per database file. Safe to call from any route at any time."""
+    """Create Lucy's tables once per database file. Safe to call from any route at any time.
+    With `core.engine_store` on, the library migration `lib0011lucy` has made them."""
+    from selecta.lucy import backing
+
+    if backing.made_by_the_migration(conn):
+        return conn
     row = conn.execute("PRAGMA database_list").fetchone()
     key = str(row[2]) if row is not None and row[2] else f"memory:{id(conn)}"
     if key in _ready and conn.execute(

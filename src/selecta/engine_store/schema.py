@@ -539,11 +539,211 @@ LISTENING_TABLES = (listening_trials, listening_methods, listening_responses, li
 
 LIBRARY_TABLES = (songs, lyrics, playback_skips, *LISTENING_TABLES)
 
+# Lucy's tables on the Desktop (`engine_store.lucy`, docs/engineering/engine-store-lucy.md):
+# `lucy.schema.SCHEMA` made them at run time; `lib0011lucy` makes them with those statements and
+# adopts them in place. Desktop only: Cloud Lucy has her own tables (`lucy.cloud_schema`). Ids are
+# Lucy's opaque text ids; times are `lucy.ids.now_iso` (UTC ISO, milliseconds); JSON is text.
+
+
+def _lucy(name: str, *columns: sa.Column) -> sa.Table:
+    return sa.Table(
+        name,
+        library_metadata,
+        *columns,
+        sa.Column("workspace_id", Id, nullable=False, index=True),
+    )
+
+
+lucy_conversations = _lucy(
+    "lucy_conversations",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("title", sa.Text, nullable=False),
+    sa.Column("scope", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("proposal_id", sa.Text, nullable=True),
+    sa.Column("parent_id", sa.Text, nullable=True),
+    sa.Column("branched_from", sa.Text, nullable=True),
+    sa.Column("archived", sa.Integer, nullable=False, server_default="0"),
+    # the next message or turn number; the server's order, not the browser's
+    sa.Column("next_seq", sa.Integer, nullable=False, server_default="1"),
+    # events up to this id may have been compacted away
+    sa.Column("pruned_through", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+)
+
+lucy_messages = _lucy(
+    "lucy_messages",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("seq", sa.Integer, nullable=False),
+    sa.Column("role", sa.Text, nullable=False),  # user, assistant or notice
+    sa.Column("turn_id", sa.Text, nullable=True),
+    sa.Column("run_id", sa.Text, nullable=True),
+    sa.Column("content", sa.Text, nullable=False, server_default=""),
+    sa.Column("status", sa.Text, nullable=False, server_default="complete"),
+    sa.Column("revision_id", sa.Text, nullable=True),
+    sa.Column("meta", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_turns = _lucy(
+    "lucy_turns",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("client_id", sa.Text, nullable=False),  # one send, however often it arrives
+    sa.Column("seq", sa.Integer, nullable=False),
+    sa.Column("text", sa.Text, nullable=False),
+    sa.Column("expected_revision", sa.Text, nullable=True),
+    sa.Column("selection", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("status", sa.Text, nullable=False, server_default="queued"),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_runs = _lucy(
+    "lucy_runs",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("turn_id", sa.Text, nullable=False),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("attempt", sa.Integer, nullable=False, server_default="1"),
+    sa.Column("state", sa.Text, nullable=False),
+    sa.Column("provider", sa.Text, nullable=False),
+    sa.Column("cycles", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("steps", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("tokens_in", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("tokens_out", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("usage", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("limits", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("error", sa.Text, nullable=True),
+    sa.Column("started_at", sa.Text, nullable=False),
+    sa.Column("ended_at", sa.Text, nullable=True),
+)
+
+# The ordered log every live view replays; `id` is the global order a client resumes from.
+lucy_events = _lucy(
+    "lucy_events",
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("v", sa.Integer, nullable=False),
+    sa.Column("type", sa.Text, nullable=False),
+    sa.Column("turn_id", sa.Text, nullable=True),
+    sa.Column("run_id", sa.Text, nullable=True),
+    sa.Column("plan_id", sa.Text, nullable=True),
+    sa.Column("step_id", sa.Text, nullable=True),
+    sa.Column("payload", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_proposals = _lucy(
+    "lucy_proposals",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("current_revision", sa.Text, nullable=True),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+)
+
+# An immutable snapshot; `hash` is what an approval binds to.
+lucy_revisions = _lucy(
+    "lucy_revisions",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("proposal_id", sa.Text, nullable=False),
+    sa.Column("number", sa.Integer, nullable=False),
+    sa.Column("parent_id", sa.Text, nullable=True),
+    sa.Column("branch", sa.Text, nullable=False, server_default="main"),
+    sa.Column("kind", sa.Text, nullable=False),
+    sa.Column("hash", sa.Text, nullable=False),
+    sa.Column("snapshot", sa.Text, nullable=False),
+    sa.Column("turn_id", sa.Text, nullable=True),
+    sa.Column("summary", sa.Text, nullable=False, server_default=""),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_approvals = _lucy(
+    "lucy_approvals",
+    sa.Column("token", sa.Text, primary_key=True),
+    sa.Column("revision_id", sa.Text, nullable=False),
+    sa.Column("hash", sa.Text, nullable=False),
+    sa.Column("action", sa.Text, nullable=False),
+    sa.Column("expires_at", sa.Integer, nullable=False),  # seconds since 1970
+    sa.Column("used", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("created_at", sa.Text, nullable=False),
+)
+
+lucy_commits = _lucy(
+    "lucy_commits",
+    sa.Column("idempotency_key", sa.Text, primary_key=True),
+    sa.Column("revision_id", sa.Text, nullable=False),
+    sa.Column("hash", sa.Text, nullable=False),
+    sa.Column("action", sa.Text, nullable=False),
+    sa.Column("status", sa.Text, nullable=False),  # pending, committed or failed
+    sa.Column("draft_id", sa.Integer, nullable=True),
+    sa.Column("result", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+)
+
+lucy_memory = _lucy(
+    "lucy_memory",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("kind", sa.Text, nullable=False),  # explicit, inferred or session
+    sa.Column("subject", sa.Text, nullable=False),
+    sa.Column("value", sa.Text, nullable=False),
+    sa.Column("source", sa.Text, nullable=False, server_default="{}"),
+    sa.Column("confidence", sa.Float, nullable=True),
+    sa.Column("conversation_id", sa.Text, nullable=True),
+    sa.Column("forgotten", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=False),
+)
+
+lucy_permissions = _lucy(
+    "lucy_permissions",
+    sa.Column("id", sa.Text, primary_key=True),
+    sa.Column("conversation_id", sa.Text, nullable=False),
+    sa.Column("run_id", sa.Text, nullable=True),
+    sa.Column("tier", sa.Text, nullable=False),
+    sa.Column("operation", sa.Text, nullable=False),
+    sa.Column("arguments", sa.Text, nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="pending"),
+    sa.Column("created_at", sa.Text, nullable=False),
+    sa.Column("decided_at", sa.Text, nullable=True),
+)
+
+# What the player really played, kept only while the person has history turned on.
+# `created_at` is UTC `YYYY-MM-DD HH:MM:SS`, as SQLite's CURRENT_TIMESTAMP wrote it.
+listening_events = _lucy(
+    "listening_events",
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("song_id", sa.Integer, nullable=False),
+    sa.Column("session", sa.Text, nullable=False),
+    sa.Column("source", sa.Text, nullable=False),
+    sa.Column("event", sa.Text, nullable=False),
+    sa.Column("heard", sa.Float, nullable=False, server_default="0"),
+    sa.Column("position", sa.Float, nullable=False, server_default="0"),
+    sa.Column("created_at", sa.Text, nullable=True),
+)
+
+LUCY_TABLES = (
+    lucy_conversations,
+    lucy_messages,
+    lucy_turns,
+    lucy_runs,
+    lucy_events,
+    lucy_proposals,
+    lucy_revisions,
+    lucy_approvals,
+    lucy_commits,
+    lucy_memory,
+    lucy_permissions,
+    listening_events,
+)
+
 __all__ = [
     "DISCOVERY_TABLES",
     "ENGINE_TABLES",
     "LIBRARY_TABLES",
     "LISTENING_TABLES",
+    "LUCY_TABLES",
     "MIX_TABLES",
     "REQUEST_TABLES",
     "SEAM_TABLES",
