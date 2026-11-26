@@ -796,7 +796,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     }, requestsOn ? { label: 'Open requests', run: () => setRequesting(true) } : openRoom] });
   }, [api, workspaceId, request, setMixData, roomsPlace, requestsOn]);
   const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
-  useRoomRounds({ api, workspaceId, roomId: room?.id, enabled: roomsOn && account.features?.['rooms.rounds'] !== false, isSpeaker: () => playback.isSpeaker(), playing: roomPlayback, request });
+  useRoomRounds({ api, workspaceId, roomId: room?.id, enabled: roomsOn && accountFlagOn('rooms.rounds', account.features), isSpeaker: () => playback.isSpeaker(), playing: roomPlayback, request });
   const roomWaiting = room ? room.toApprove : 0;
   // R12: what a sign-out in any tab of this browser would stop, answered from here
   setTabBusy({ playing: playback.isSpeaker() && now.phase === 'playing', room: !!room, importing: importLive.phase === 'running' });
