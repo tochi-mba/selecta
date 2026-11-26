@@ -173,7 +173,9 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
       {measuring && <p className="hint" role="status">{measuring}</p>}
     </>
   );
-  const steps = item ? [`The last ${Math.round(item.payload.a_end - item.payload.a_at)} seconds of ${item.title_a}`, `The first ${Math.round(item.payload.b_end - item.payload.b_at)} seconds of ${item.title_b}`] : [];
+  const steps = item ? pairSteps(item) : [];
+  // the account's pairs are found by their chords, on another device's measuring or this one's
+  const fromAccount = item?.payload.method === 'chord_sequence_account';
 
   let body;
   if (!loaded && !error) {
@@ -210,12 +212,18 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
             {alive && <span className="discovery-covers" aria-hidden="true"><CoverArt seed={item.song_a} songId={item.song_a} size="small" /><CoverArt seed={item.song_b} songId={item.song_b} size="small" /></span>}
             <h3>{item.title_a} <span className="soft">into</span> {item.title_b}</h3>
             <p className="hint">{item.artist_a} · {item.artist_b}</p>
+            {fromAccount ? (
+              <p className="hint">
+                {item.payload.camelot_a && item.payload.camelot_b ? `Keys: ${item.payload.camelot_a} and ${item.payload.camelot_b}. ` : ''}Their chords line up for {item.payload.bars} bars{item.payload.transpose !== 0 ? ` with one moved ${Math.abs(item.payload.transpose)} semitone${Math.abs(item.payload.transpose) === 1 ? '' : 's'}` : ''}, and the preview plays both as recorded.
+              </p>
+            ) : (
             <p className="hint">
               {alive
                 ? <>Measured here: <b className="discovery-key">{item.payload.key_a} ({item.payload.camelot_a})</b> and <b className="discovery-key">{item.payload.key_b} ({item.payload.camelot_b})</b>.</>
                 : <>Measured here: {item.payload.key_a} ({item.payload.camelot_a}) and {item.payload.key_b} ({item.payload.camelot_b}).</>}
               {item.payload.transpose !== 0 && ` Their profiles line up most closely with one moved ${Math.abs(item.payload.transpose)} semitone${Math.abs(item.payload.transpose) === 1 ? '' : 's'}, but the keys already sit together, and the preview plays both as recorded.`}
             </p>
+            )}
             <button className="primary" disabled={getting} onClick={() => (step !== null ? stop() : void hear(item))}>
               {getting ? 'Getting it ready…' : step !== null ? <><Icon name="stop" /> Stop</> : <><Icon name="play" /> Hear one into the other</>}
             </button>
@@ -273,4 +281,13 @@ export function BrowserHarmonicMatches({ resolveTrack }: { resolveTrack: MediaRe
       </section>
     </main>
   );
+}
+
+/** What the preview plays, in words: the browser's pairs join the end of one song to the start
+ * of the other; the account's join the stretches where their chords line up. */
+export function pairSteps(item: BrowserDiscovery): [string, string] {
+  const a = Math.round(item.payload.a_end - item.payload.a_at);
+  const b = Math.round(item.payload.b_end - item.payload.b_at);
+  if (item.payload.method === 'chord_sequence_account') return [`${a} seconds of ${item.title_a}`, `${b} seconds of ${item.title_b}`];
+  return [`The last ${a} seconds of ${item.title_a}`, `The first ${b} seconds of ${item.title_b}`];
 }

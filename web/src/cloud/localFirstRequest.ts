@@ -3,6 +3,7 @@ import { accountMeasured, noteCorrection, sendingOn, type Measured } from './acc
 import { accountMixes, accountMixesOn, fallsBack } from './accountMixes';
 import { accountOrderPlanner } from './accountOrder';
 import { accountIdeas } from './accountIdeas';
+import { accountDiscoveries } from './accountDiscoveries';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { linksFamily } from './localFirstLinks';
 import { mixFamily, type PlayableSong, type SongPlace } from './localFirstMixes';
@@ -425,6 +426,8 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder, account, ideas) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
+    // T-20261126-9a31: the account's own sweep over what this device measured, in spare time
+    account: sources.workspaceId ? accountDiscoveries(cloud, sources.workspaceId) : undefined,
     songs: async () => {
       const list = await songs();
       const known = await availability(list);
