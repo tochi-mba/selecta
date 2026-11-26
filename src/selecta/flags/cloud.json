@@ -163,6 +163,18 @@
       "cloud_surface_kind": "headless",
       "cloud_surface_reason": "Changes which transitions the server renders for a cloud library mix, not any screen: the cloud library card looks and works the same either way"
     },
+    "cloud.studio_seams": {
+      "label": "Cloud library transitions made ahead",
+      "about": "For an account with a cloud library, a transition between two songs that are both in the cloud library is made ahead by the cloud studio and played by the same player as every other mix as a finished clip, each song playing from its lossless file at the level the clip was made at (selecta.hosted_pairs). Off: those transitions are worked out in the browser as the mix plays, as before. Off until it has been listened to.",
+      "routes": ["POST /api/hosted/seams"],
+      "requires": ["cloud.hosted_render"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "A route the shared player asks for each transition between two cloud library songs; it adds no page or control of its own"
+    },
     "cloud.local_first": {
       "label": "Music on the member's devices",
       "about": "Selects the navigation and browser-owned playback for music on the member's devices in personal Cloud; the legacy pages remain when off (ADR-0455).",

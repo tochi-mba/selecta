@@ -3,7 +3,9 @@
 Every route belongs to `cloud.hosted_render` (flags/cloud.json), which requires the
 `cloud.hosted_media` grant, so a browser-first account never reaches them, except
 `GET /api/stored/exports`: a customer's finished exports are theirs, so that list belongs to
-`cloud.stored_media` and stays open when the grant is switched off. Reading needs
+`cloud.stored_media` and stays open when the grant is switched off, and `POST /api/hosted/seams`
+(one hand-off by catalogue song ids), owned by `cloud.studio_seams`, which requires
+`cloud.hosted_render`. Reading needs
 `mixes.read`; asking for work needs `mixes.edit`. A mix is named by its songs in order (and
 the planned move into each), so the same songs always mean the same rendered seams.
 """
@@ -19,11 +21,12 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from sqlalchemy.engine import Engine
 
 from selecta import hosted_export as exports
-from selecta import hosted_render
+from selecta import hosted_pairs, hosted_render
 from selecta.admin.state import DbWorkControls
 from selecta.authz.roles import WorkspaceAction
 from selecta.business.weight import business_policy
 from selecta.identity.tokens import Claims
+from selecta.scheduling.policy import Lane
 from selecta.storage.artifacts import Buckets, R2ArtifactStore
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.work.cloud_ports import CloudJobEntitlements
@@ -46,6 +49,21 @@ def _order(body: dict[str, Any]) -> list[dict[str, Any]]:
             raise HTTPException(400, detail={"code": "invalid_move"})
         order.append({"asset_id": item["asset_id"], "move": move})
     return order
+
+
+def _pair(body: dict[str, Any]):
+    """(a, b, move, lane) of a `POST /api/hosted/seams` body: two catalogue song ids."""
+    a, b, move = body.get("a"), body.get("b"), body.get("move")
+    if any(isinstance(v, bool) or not isinstance(v, int) or not 0 < v < 2**31 for v in (a, b)):
+        raise HTTPException(400, detail={"code": "invalid_songs"})
+    if a == b:
+        raise HTTPException(400, detail={"code": "invalid_songs"})
+    if move is not None and (not isinstance(move, str) or not _ID.fullmatch(move)):
+        raise HTTPException(400, detail={"code": "invalid_move"})
+    lane = body.get("lane", "standard")
+    if lane not in hosted_pairs.LANES:
+        raise HTTPException(400, detail={"code": "invalid_lane"})
+    return a, b, move, Lane(lane)
 
 
 def install_routes(
@@ -133,6 +151,28 @@ def install_routes(
                 engine, work, found.workspace.id, _order(body), client=client, buckets=buckets,
                 created_by=found.user.id, retry=body.get("retry") is True,
                 read_object=read_object)
+        except R2Error as error:
+            raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
+        finally:
+            getattr(client, "close", lambda: None)()
+
+    @app.post("/api/hosted/seams")
+    def hosted_seam(request: Request, body: dict = Body(...),  # noqa: B008
+                    claims: Claims = Depends(current_claims)):  # noqa: B008
+        """One hand-off between two catalogue songs, rendered by the cloud studio
+        (`hosted_pairs.pair_state`, owned by `cloud.studio_seams`). A side with no cloud copy,
+        or not a song of this workspace, is 404 `no_cloud_copy` naming it."""
+        found = principal(request, claims, WorkspaceAction.MIXES_EDIT)
+        a, b, move, lane = _pair(body)
+        client = object_client_factory()
+        try:
+            return hosted_pairs.pair_state(
+                engine, work, found.workspace.id, a, b, move, lane, client=client,
+                buckets=buckets, created_by=found.user.id, retry=body.get("retry") is True,
+                read_object=read_object)
+        except hosted_pairs.NoCloudCopy as missing:
+            raise HTTPException(404, detail={"code": "no_cloud_copy",
+                                             "sides": missing.sides}) from None
         except R2Error as error:
             raise HTTPException(503, detail={"code": "storage_temporarily_unavailable"}) from error
         finally:

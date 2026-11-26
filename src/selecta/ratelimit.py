@@ -76,6 +76,8 @@ STRICT: tuple[tuple[re.Pattern[str], str | None, Rule], ...] = (
     # by the hosted card (HostedMix.tsx POLL_MS), so room for several tabs and no more.
     (re.compile(r"^/api/hosted/mixes/plan$"), "POST", Rule("hosted_plan", 10, 5)),
     (re.compile(r"^/api/hosted/mixes/(render|export)$"), "POST", Rule("hosted_mix", 90, 30)),
+    # one hand-off (cloud.studio_seams): the player asks for the next two as a mix plays
+    (re.compile(r"^/api/hosted/seams$"), "POST", Rule("hosted_seams", 90, 30)),
     (re.compile(r"^/api/hosted/songs/(prepare|[^/]+/retry)$"), "POST",
      Rule("hosted_prepare", 30, 10)),
     (re.compile(r"/search(/|$)"), None, Rule("search", 120, 30)),
