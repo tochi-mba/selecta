@@ -47,6 +47,8 @@ export type CatalogueSong = {
   duplicate_of?: number | null;
   /** On a grouped song only: every version's id, the primary first. */
   versions?: number[];
+  /** The member set it aside (Is it music? answered no): kept out of mixes (T-20261126-3f92). */
+  set_aside?: boolean;
 };
 
 /** The refusal for a route only the SelectaDJ app on a computer answers. */
@@ -166,7 +168,7 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     ...(versions ? { versions } : {}),
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, ...measuredOf(known.facts?.get(song.id)),
-    music_override: null, grid_confidence: null, lyric_status: null,
+    music_override: song.set_aside ? 0 : null, grid_confidence: null, lyric_status: null,
     // priority: this device measures it before the others (measuringControl.ts)
     never: song.never === true, priority: isFirst(song.id), availability,
     // the availability line says where it is; readiness only says how far analysis has got
@@ -174,7 +176,9 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     // audio as the mix plays, so nothing has to be measured first (BF-0462-05)
     // ADR-0475 I83: a song another open device holds plays there, so it can be played, added
     // and started from here, on that device
-    readiness: playable
+    readiness: song.set_aside
+      ? { status: 'set_aside', reason: 'You set this aside.' }
+      : playable
       ? { status: 'mix_ready', reason: `${WORKED_OUT_LIVE}${lovedWords(known.loved?.get(song.id) ?? 0)}` }
       : openElsewhere
         ? { status: 'mix_ready', reason: `Plays on ${openElsewhere}.` }
@@ -209,7 +213,9 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
     // works its transitions out as it plays); needing attention is a song this device cannot play
     .filter((song) => {
       if (state === 'all' || state === 'not_yet') return true;
+      if (state === 'set_aside') return song.set_aside === true;
       const where = availabilityOf(song, known);
+      if (song.set_aside && state !== 'attention' && state !== 'missing') return false;
       if (state === 'ready') return where === 'here' || where === 'hosted';
       // R6: plays now, here or on another of the person's devices that is open
       if (state === 'playable_now') return where === 'here' || where === 'hosted' || (known.elsewhere?.(song.id).online.length ?? 0) > 0;
@@ -228,9 +234,10 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
 /** The status the shared shell and views read, from what the catalogue knows. */
 export function statusFrom(songs: CatalogueSong[], known: Availability = NO_AVAILABILITY, steering: Status['steering'] = DEFAULT_STEERING): Status {
   const available = songs.filter((song) => (song.available_on ?? 0) > 0).length;
-  const ready = songs.filter((song) => ['here', 'hosted'].includes(availabilityOf(song, known))).length;
+  const ready = songs.filter((song) => !song.set_aside && ['here', 'hosted'].includes(availabilityOf(song, known))).length;
+  const setAside = songs.filter((song) => song.set_aside).length;
   return {
-    counts: { total: songs.length, music: songs.length, analysed: 0, ready, lyrics: 0, set_aside: 0, missing: songs.length - available },
+    counts: { total: songs.length, music: songs.length - setAside, analysed: 0, ready, lyrics: 0, set_aside: setAside, missing: songs.length - available },
     steering,
     // the browser's moves by name, so the shared views can say which one a seam asks for
     moves: browserMovesOn() ? browserMoveNames() : {},
@@ -377,7 +384,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     return list.map((song) => {
       const where = availabilityOf(song, known);
       const elsewhere = mixable.has(song.id);
-      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' || elsewhere, never: song.never === true };
+      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' || elsewhere, never: song.never === true || song.set_aside === true };
     });
   };
   // R5: a result is placed by the device playing (it plays there, it is on another device, or on none)
@@ -563,15 +570,23 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     }
   };
   /** Song details' tempo and key correction (`/songs/{id}/correct`), kept with the account's
-   * measurements (`PUT` or `DELETE /song-facts/{id}/correction`). Only tempo and key: whether a
-   * file is music is decided by the app reading a folder, and the browser hides that control. */
+   * measurements (`PUT` or `DELETE /song-facts/{id}/correction`), and Is it music?: the
+   * member's set-aside mark, `is_music` alone on the same route (null clears it). */
   const correct = (method: string, route: string, init?: RequestInit): Promise<unknown> | undefined => {
     const asked = method === 'POST' ? route.match(/^\/songs\/(\d+)\/correct$/) : null;
     if (!asked || !sources.workspaceId || !sendingOn()) return undefined;
     const songId = Number(asked[1]);
     const workspaceId = sources.workspaceId;
-    const body = JSON.parse(String(init?.body ?? '{}')) as { bpm?: number; camelot?: string; is_music?: boolean };
-    if (body.is_music !== undefined) return Promise.reject(onlyInTheApp(route));
+    const body = JSON.parse(String(init?.body ?? '{}')) as { bpm?: number; camelot?: string; is_music?: boolean; clear?: string[] };
+    if (typeof body.is_music === 'boolean' || body.clear?.includes('is_music')) {
+      // a browser never decides by itself, so true and "decide again" both clear the mark
+      const mark = body.is_music === false ? false : null;
+      return (async () => {
+        await cloud(`/song-facts/${songId}/correction`, { method: 'PUT', body: JSON.stringify({ is_music: mark }) });
+        catalogue = null;
+        return { redone: 0 };
+      })();
+    }
     const bpm = typeof body.bpm === 'number' ? body.bpm : null;
     const camelot = typeof body.camelot === 'string' && body.camelot ? body.camelot : null;
     return (async () => {

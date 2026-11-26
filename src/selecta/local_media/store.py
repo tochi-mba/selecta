@@ -461,6 +461,28 @@ def availability_counts(
     return {int(row.song_id): int(row.devices) for row in rows}
 
 
+def set_aside_of(conn: Connection, workspace_id: str, song_ids: Iterable[int]) -> set[int]:
+    """The songs among these the member set aside ("Is it music?" answered no, kept with their
+    corrections in the engine store's `song_overrides`). A database without that table or
+    column (an engine store not made yet) has none."""
+    from selecta.engine_store.schema import song_overrides
+
+    wanted = [int(song_id) for song_id in song_ids]
+    if not wanted:
+        return set()
+    try:
+        with conn.begin_nested():
+            rows = conn.execute(
+                sa.select(song_overrides.c.song_id)
+                .where(song_overrides.c.workspace_id == workspace_id)
+                .where(song_overrides.c.song_id.in_(wanted))
+                .where(song_overrides.c.is_music.is_(False))
+            ).scalars()
+            return {int(song_id) for song_id in rows}
+    except sa.exc.DBAPIError:
+        return set()
+
+
 __all__ = [
     "AVAILABILITY_TTL_SECONDS",
     "availability_counts",
@@ -472,6 +494,7 @@ __all__ = [
     "normalised",
     "register_songs",
     "replace_device_availability",
+    "set_aside_of",
     "set_availability",
     "soft_delete",
     "song_for_hash",

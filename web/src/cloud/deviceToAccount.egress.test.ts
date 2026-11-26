@@ -334,6 +334,17 @@ describe('a correction from Song details', () => {
     expect(calls[1].body).toBeUndefined();
   });
 
+  it('Is it music? carries one yes, no or none, and nothing about the file', async () => {
+    const { calls, request: capture } = capturing();
+    const request = (async (path: string, init?: RequestInit) => (path.startsWith('/local-media/') ? { songs: [] } : capture(path, init))) as typeof capture;
+    const adapted = localFirstRequest(request, { workspaceId: 'w1' });
+    await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ is_music: false }) });
+    await adapted('/songs/4/correct', { method: 'POST', body: JSON.stringify({ is_music: true }) });
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['PUT /song-facts/4/correction', 'PUT /song-facts/4/correction']);
+    calls.forEach(holdsTheContract);
+    expect(calls.map((call) => call.body)).toEqual([{ is_music: false }, { is_music: null }]);
+  });
+
   it('a lock names a position and carries nothing', async () => {
     setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true });
     const { calls, request } = capturing();

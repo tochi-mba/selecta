@@ -19,7 +19,7 @@ from sqlalchemy.engine import Engine
 
 from selecta.authz.roles import WorkspaceAction
 from selecta.cloud_brain import planning
-from selecta.engine_store import EngineStore
+from selecta.engine_store import EngineStore, facts_store
 from selecta.identity.tokens import Claims
 from selecta.storage.artifacts import ArtifactStore
 
@@ -181,8 +181,11 @@ def install(
 
         found, missing = load_songs(store, artifacts(), ids)
         if playable and found:
-            never = _never(store, [song.id for song in found])
-            found = [song for song in found if song.id not in never]
+            # Desktop's planner reads only songs that are music (`db.load_library`); a song the
+            # member set aside here is left out the same way (T-20261126-3f92)
+            ids_found = [song.id for song in found]
+            out = _never(store, ids_found) | facts_store.set_aside(store, ids_found)
+            found = [song for song in found if song.id not in out]
         return found, missing
 
     def pair(store: EngineStore, body: PairRequest):
@@ -275,7 +278,9 @@ def install(
         an idea. Songs not measured yet are named, never dropped silently."""
         store = store_for(request, claims)
         found, missing = songs_of(store, body.songs, playable=True)
-        left_out = sorted(set(body.songs) - set(missing) - {song.id for song in found})
+        left = set(body.songs) - set(missing) - {song.id for song in found}
+        aside = facts_store.set_aside(store, sorted(left))
+        left_out = sorted(left - aside)
         for name in ("start", "end"):
             chosen = getattr(body, name)
             if chosen is not None and chosen not in {song.id for song in found}:
@@ -300,9 +305,11 @@ def install(
                 memory=_memory(store),
             )
         except planning.PlanningRefused as error:
-            error.extra.update(not_measured=missing, never_play=left_out)
+            error.extra.update(not_measured=missing, never_play=left_out, set_aside=sorted(aside))
             raise _refused(error) from None
-        return {**answer, "not_measured": missing, "never_play": left_out}
+        return {
+            **answer, "not_measured": missing, "never_play": left_out, "set_aside": sorted(aside)
+        }
 
     @app.post("/api/planning/ideas")
     def plan_ideas(

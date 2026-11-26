@@ -265,25 +265,42 @@ def measured(store: EngineStore, after: int = 0, limit: int = 500) -> dict[str, 
     return answer
 
 
+KEEP: Any = object()
+"""`set_correction`'s "leave this as it is"."""
+
+
 def set_correction(
-    store: EngineStore, song_id: int, bpm: float | None, camelot: str | None
+    store: EngineStore,
+    song_id: int,
+    bpm: float | None | Any = KEEP,
+    camelot: str | None | Any = KEEP,
+    *,
+    is_music: bool | None | Any = KEEP,
 ) -> dict[str, Any]:
-    """The member's tempo and key for a song, which win over what was measured. Both None
-    clears it. `LookupError` when the song isn't this workspace's; `FactsRefused` outside the
-    Desktop correction route's ranges."""
-    if bpm is not None and (not math.isfinite(bpm) or not LOWEST_TEMPO <= bpm <= HIGHEST_TEMPO):
+    """The member's tempo, key and set-aside mark for a song, which win over what was measured.
+    None clears one; `KEEP` leaves it. With none left the row goes. `LookupError` when the song
+    isn't this workspace's; `FactsRefused` outside the Desktop correction route's ranges."""
+    if bpm is not KEEP and bpm is not None and (
+        not math.isfinite(bpm) or not LOWEST_TEMPO <= bpm <= HIGHEST_TEMPO
+    ):
         raise FactsRefused("out_of_range", "bpm", "Tempo has to be between 40 and 240.")
-    if camelot is not None and not CAMELOT.fullmatch(camelot):
+    if camelot is not KEEP and camelot is not None and not CAMELOT.fullmatch(camelot):
         raise FactsRefused("bad_key", "camelot", "Key has to be like 8A or 11B.")
+    mine = sa.and_(store.mine(song_overrides), song_overrides.c.song_id == song_id)
     with store.write() as connection:
         if _song(store, connection, song_id) is None:
             raise LookupError(f"song {song_id} isn't in this library")
-        if bpm is None and camelot is None:
-            connection.execute(
-                sa.delete(song_overrides).where(
-                    store.mine(song_overrides), song_overrides.c.song_id == song_id
-                )
-            )
+        before = connection.execute(
+            sa.select(song_overrides.c.bpm, song_overrides.c.camelot, song_overrides.c.is_music)
+            .where(mine)
+        ).first()
+        kept = (before.bpm, before.camelot, before.is_music) if before else (None, None, None)
+        bpm, camelot, is_music = (
+            kept[at] if given is KEEP else given
+            for at, given in enumerate((bpm, camelot, is_music))
+        )
+        if bpm is None and camelot is None and is_music is None:
+            connection.execute(sa.delete(song_overrides).where(mine))
         else:
             upsert(
                 connection,
@@ -293,11 +310,28 @@ def set_correction(
                     "workspace_id": store.workspace_id,
                     "bpm": bpm,
                     "camelot": camelot,
+                    "is_music": None if is_music is None else bool(is_music),
                     "updated_at": _stamp(db_now(connection)),
                 },
                 keys=["song_id"],
             )
-    return {"song_id": song_id, "bpm": bpm, "camelot": camelot}
+    answer = {"song_id": song_id, "bpm": bpm, "camelot": camelot}
+    if is_music is not None:
+        answer["is_music"] = bool(is_music)
+    return answer
+
+
+def set_aside(store: EngineStore, song_ids: list[int] | None = None) -> set[int]:
+    """The songs the member set aside ("Is it music?" answered no), among `song_ids` or all."""
+    query = sa.select(song_overrides.c.song_id).where(
+        store.mine(song_overrides), song_overrides.c.is_music.is_(False)
+    )
+    if song_ids is not None:
+        if not song_ids:
+            return set()
+        query = query.where(song_overrides.c.song_id.in_(song_ids))
+    with store.read() as connection:
+        return {int(song_id) for song_id in connection.execute(query).scalars()}
 
 
 # --- a SelectaDJ worker's analysis --------------------------------------------------------------
