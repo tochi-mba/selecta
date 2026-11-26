@@ -93,6 +93,9 @@ export async function readCatalogue(cloud: Request): Promise<CatalogueSong[]> {
 export type AvailabilitySources = {
   here?: () => Promise<ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>>;
   hosted?: (songs: readonly CatalogueSong[]) => Promise<ReadonlySet<number>>;
+  /** cloud.catalogue_play: the upload in the cloud library that is a song, from its rows (best
+   * version first) and the whole list; null when it has none. */
+  cloudCopy?: (rows: readonly CatalogueSong[], all: readonly CatalogueSong[]) => Promise<string | null>;
   /** Where browser mixes are kept (BF-0462-05); without it the current mix is empty. */
   recipes?: RecipeStore;
   /** Harmonic matches from key profiles measured on this device (cloud.browser_harmonic);
@@ -305,8 +308,15 @@ export function withMeasured(mix: MixData, measured: ReadonlyMap<number, Measure
   return changed ? { ...mix, mix: items } : mix;
 }
 
+/** The adapted request, with what its grouped catalogue knows about the cloud library
+ * (cloud.catalogue_play): a song's upload by catalogue id, and every file of a song with one. */
+export type DeviceMusicRequest = Request & {
+  cloudAssetOf: (songId: number) => Promise<string | null>;
+  cloudSongs: () => Promise<ReadonlySet<number>>;
+};
+
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
-export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
+export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources = {}): DeviceMusicRequest {
   let catalogue: Promise<Grouping> | null = null;
   let lastGrouping: Grouping | null = null;
   let readAt = 0;
@@ -661,7 +671,21 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     return everyVersion((body.entries ?? []).map((entry) => ({ id: entry.id, expected: entry.expected === true })))
       .then((entries) => write(body.action === 'never', entries));
   };
-  return adapted as Request;
+  // cloud.catalogue_play: a song's upload found from its versions' rows, never this device's files
+  const cloudAssetOf = async (songId: number): Promise<string | null> => {
+    if (!sources.cloudCopy) return null;
+    const grouping = await grouped();
+    const ids = grouping.versionsOf(songId);
+    const rows = ids.flatMap((id) => grouping.files.filter((file) => file.id === id));
+    return rows.length ? sources.cloudCopy(rows, grouping.files) : null;
+  };
+  // every file of each song with a cloud copy, so a mix naming any version is matched
+  const cloudSongs = async (): Promise<ReadonlySet<number>> => {
+    const grouping = await grouped();
+    const hosted = setBySong(grouping, (await sources.hosted?.(grouping.files).catch(() => null)) ?? new Set());
+    return new Set(grouping.files.filter((file) => hosted.has(grouping.primaryOf(file.id))).map((file) => file.id));
+  };
+  return Object.assign(adapted as Request, { cloudAssetOf, cloudSongs });
 }
 
 /** The media importer asks with full `/api/...` paths (web/src/media); the Cloud client adds
