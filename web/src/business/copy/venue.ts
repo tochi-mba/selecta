@@ -31,7 +31,7 @@ export const VENUE_COPY = {
   paymentNoBilling: "There's a payment problem. Your owner has been told",
   offline: "You're offline",
   viewerReadOnly: 'You can look here but not change things',
-  flagOff: 'The venue view is not switched on for this organisation yet',
+  flagOff: 'The venue view is not switched on for this organisation',
   lastKnown: (time: string) => `Last known state from ${time}`,
   commandsSlow: 'Changes may take longer to reach the players',
   planPaused: (zone: string, covered: number) => `${zone} is paused because your plan covers ${covered} zone${covered === 1 ? '' : 's'}. Its music stops at closing time`,

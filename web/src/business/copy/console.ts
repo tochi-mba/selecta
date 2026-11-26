@@ -162,7 +162,7 @@ export const BILLING_COPY = {
   downloading: 'Preparing',
   checkoutTitle: 'Subscribe to SelectaDJ for Business',
   checkoutIntro: 'You enter the card on Stripe, then come back here. Nothing is charged before you choose',
-  checkoutOff: 'SelectaDJ for Business is not on sale yet. Talk to REX Technologies about a pilot',
+  checkoutOff: 'SelectaDJ for Business isn’t sold online. Talk to REX Technologies about a pilot',
   businessConfirm: 'I am buying for a business, not as a consumer',
   termsAccept: (version: string) => `I accept the SelectaDJ business terms, version ${version}`,
   companyName: 'Company name for invoices',

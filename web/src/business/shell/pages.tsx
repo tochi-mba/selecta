@@ -29,7 +29,7 @@ export function PageFallback() {
 
 /** A page the person can't open says why in plain words, with its own h1. */
 export function Refused({ why }: { why: 'role' | 'flag' }) {
-  return <section className="biz-stack"><h1>{why === 'role' ? 'Not part of your role' : 'Not switched on yet'}</h1><Problem>{why === 'role' ? SHELL_COPY.notInRole : SHELL_COPY.pageOff}</Problem></section>;
+  return <section className="biz-stack"><h1>{why === 'role' ? 'Not part of your role' : 'Not switched on'}</h1><Problem>{why === 'role' ? SHELL_COPY.notInRole : SHELL_COPY.pageOff}</Problem></section>;
 }
 
 export function BusinessPage({ route, org, wall }: { route: NonNullable<BusinessRoute>; org: Org; wall?: boolean }) {

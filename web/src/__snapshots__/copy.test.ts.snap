@@ -37,7 +37,7 @@ exports[`the copy layer > has Cloud words for every local sentence 1`] = `
 exports[`the copy layer > keeps the local words exactly as they were 1`] = `
 {
   "diagnosticsStaysHere": "No paths or song names, and nothing is sent anywhere. It only leaves this PC if you copy it somewhere yourself.",
-  "exportNeedsRestart": "This running copy of SelectaDJ can’t do this yet. Restart SelectaDJ, then try again.",
+  "exportNeedsRestart": "This running copy of SelectaDJ needs a restart for this. Restart SelectaDJ, then try again.",
   "exportsNeedRestart": "This running copy of SelectaDJ doesn’t keep track of exports. Restart SelectaDJ to get them.",
   "glossaryAnalysis": "SelectaDJ listening to a song on this PC to find its tempo, key, beats, bars, sections and energy, and, from its lyrics where they’re found, where the singing is. It never changes the audio file.",
   "glossaryArrange": "In the Studio, Let SelectaDJ arrange it and Fine tune mine ask for a proposed set of cells. It works this out on this PC from what it measures in the stems and what you’ve rated. Nothing is sent online. It’s only a proposal: it changes your working copy, and lists each cell it changed.",
@@ -57,7 +57,7 @@ exports[`the copy layer > keeps the local words exactly as they were 1`] = `
   "lucyRunsOutside": "which runs outside this computer.",
   "lucyUsingBuiltin": "Using the built-in planner on this computer. No data leaves it.",
   "mixesRestartToRefresh": "Restart SelectaDJ to refresh this status.",
-  "restorePrepared": "Restore prepared, not yet applied. Restart SelectaDJ to activate it. Your current data is unchanged until then; the previous database is kept as a rollback copy.",
+  "restorePrepared": "Restore prepared. It is applied when SelectaDJ restarts, so restart SelectaDJ to activate it. Your current data is unchanged until then; the previous database is kept as a rollback copy.",
   "setupAnalysis": "Measures each song’s tempo, key, beats and sections, on this PC.",
   "sourcesHelp": "Copy a folder address from File Explorer. Your audio stays on this PC. For lyric lookup, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file. SelectaDJ also communicates with its local server.",
   "startAudioStays": "Your audio stays on this PC.",

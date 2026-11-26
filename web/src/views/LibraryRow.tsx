@@ -85,7 +85,7 @@ const HERE: Record<string, { kind: StatusKind; words: string }> = {
   hosted: { kind: 'ready', words: 'Ready' },
   reauth: { kind: 'needs-action', words: 'Allow again to play here' },
   reconnect: { kind: 'needs-action', words: 'Choose again to play here' },
-  elsewhere: { kind: 'unavailable', words: 'Not in this browser yet' },
+  elsewhere: { kind: 'unavailable', words: 'Not in this browser' },
   nowhere: { kind: 'failed', words: 'Missing' },
 };
 

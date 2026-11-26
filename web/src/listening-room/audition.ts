@@ -176,7 +176,7 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
       found = (async () => {
         const track = await resolve(songId);
         if (!track) throw new Error('A song in this transition is not on this device right now');
-        if (!audio) throw new Error('The sound is not open yet');
+        if (!audio) throw new Error('The sound isn’t open. Press play to start it');
         return audio.context.decodeAudioData(await track.data());
       })();
       decoded.set(songId, found);

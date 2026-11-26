@@ -70,7 +70,7 @@ describe('checkout consent', () => {
 
   it('refuses to offer checkout without a consent version', () => {
     render(<Billing account={cloudAccount()} busy={false} phase="idle" consentVersion="" onCheckout={noop} onPortal={noop} />);
-    expect(screen.getByText('Checkout isn’t set up for this site yet.')).toBeInTheDocument();
+    expect(screen.getByText('Checkout isn’t set up for this site.')).toBeInTheDocument();
   });
 
   it('builds the request with the consent version and each acknowledgement', () => {
@@ -178,7 +178,7 @@ describe('a checkout that could not start', () => {
 
   it('when the site cannot start a payment, shows the plans to read with one quiet line and no form', () => {
     draw({ account: { ...cloudAccount(), billing: { consent_version: 'v1', checkout_available: false } } });
-    expect(screen.getByTestId('upgrades-not-open')).toHaveTextContent('Upgrades aren’t open yet on this site.');
+    expect(screen.getByTestId('upgrades-not-open')).toHaveTextContent('Upgrades aren’t open on this site.');
     expect(screen.getByText('Standard')).toBeInTheDocument();
     expect(screen.getByText('Premium')).toBeInTheDocument();
     expect(screen.queryByText('Before subscribing')).toBeNull();
