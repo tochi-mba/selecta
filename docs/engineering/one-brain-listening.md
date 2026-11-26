@@ -75,6 +75,7 @@ another mix with the same songs. A seam made with the flag on has its own key (`
 | What changed | Flag | Default | How to hear it |
 |---|---|---|---|
 | A hosted mix is ordered by the planner core from the songs' stored facts, and each transition is the core's own ranked choice, rendered, checked and repaired by the Desktop's rule (at most 5 takes and a cut) | `cloud.hosted_brain` | off | The same uploads, one mix with the flag off and one with it on. Each hand-off on the card names its move; the job result says `engine: planner-core` |
+| A transition between two songs that are both in the cloud library is made ahead by the cloud studio (`POST /api/hosted/seams`) and played by the shared player as a finished clip, each song from its lossless file at the level the clip was made at; a pair with a song only on a device, or a day whose transition allowance is used up, plays as a live blend | `cloud.studio_seams` | off | Needs the browser side (web/src/cloud/studioPlan.ts and cloudSeams.ts). In Make a Mix, make one mix of cloud library songs with the flag off (live blends), then turn it on (`SELECTA_FLAGS="+cloud.studio_seams"`), restart, and play the same songs in the same order. Listen at each join for a click, a gap or a level step, then compare each transition with its live blend |
 
 With no lyrics and no stems (Cloud runs no separator), the flag off still renders blends first
 and the audit refuses them (cloud-library-walkthrough.md section 2.3), so it ends on an echo out
