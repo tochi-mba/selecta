@@ -248,6 +248,25 @@ export function mergeSongs(kept: readonly CatalogueSong[], device: readonly Cata
 /** The current mix before a recipe store has answered, or without one. */
 export const EMPTY_MIX: MixData = { mix: [], name: 'Current mix', can_undo: false };
 
+/** The mix with each song's tempo, key and energy as the account measured them (the member's own
+ * tempo and key first), where the row has none: the energy horizon draws these (T-20261126-bfec).
+ * A song the account has not measured keeps nothing, never a guess. */
+export function withMeasured(mix: MixData, measured: ReadonlyMap<number, Measured> | undefined): MixData {
+  if (!measured?.size || !mix.mix.length) return mix;
+  let changed = false;
+  const items = mix.mix.map((item) => {
+    const found = measured.get(item.song_id);
+    if (!found) return item;
+    const bpm = item.bpm ?? found.override_bpm ?? found.bpm ?? null;
+    const key = item.key ?? found.override_camelot ?? found.camelot ?? null;
+    const energy = item.energy ?? found.energy ?? null;
+    if (bpm === item.bpm && key === item.key && energy === (item.energy ?? null)) return item;
+    changed = true;
+    return { ...item, bpm, key, energy };
+  });
+  return changed ? { ...mix, mix: items } : mix;
+}
+
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
 export function localFirstRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
   let catalogue: Promise<Grouping> | null = null;
@@ -419,8 +438,12 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     const workspaceId = sources.workspaceId;
     const exportAnswer = exports?.answer(method, route, new URLSearchParams(query), init);
     if (exportAnswer) return (await exportAnswer) as T;
+    // T-20261126-bfec: the mix's rows carry each song's tempo, key and energy from the account
+    if (workspaceId && method === 'GET' && route === '/mix') {
+      const mix = withMeasured(await answered<MixData>(path, init), await factsNow());
+      return (inspectorOn() ? withInspection(mix, workspaceId, cloud) : mix) as Promise<T>;
+    }
     if (!workspaceId || !inspectorOn()) return answered<T>(path, init);
-    if (method === 'GET' && route === '/mix') return withInspection(await answered<MixData>(path, init), workspaceId, cloud) as Promise<T>;
     const seamAt = /^\/mix\/(\d+)\/(options|render)$/.exec(route);
     if (seamAt && method === 'GET' && seamAt[2] === 'options') return seamOptions() as T;
     if (seamAt && method === 'POST' && seamAt[2] === 'render') {

@@ -3,6 +3,7 @@ import { LEAVE_AFTER_SECONDS } from '../dsp/seams';
 import { SeamRenderer } from '../dsp/workers/renderSpawn';
 import { accountMeasured, askWithin, type Request } from './accountFacts';
 import { createClipStore } from './clipStore';
+import { feelFor } from './mixFeel';
 import { DeviceStudio, type Asker, type CandidatesAnswer, type StudioSong } from './deviceStudio';
 import { reportSeam } from './seamReports';
 import { songFacts } from './songFacts';
@@ -71,14 +72,20 @@ export async function prepareRequestSeams(workspaceId: string, pairs: readonly {
   return asked.length;
 }
 
-/** The two planning requests the studio makes: song ids, the settle rule and an index, no more. */
-export function planningCalls(request: Request) {
+/** The two planning requests the studio makes: song ids, the settle rule, an index and the feel
+ * the pair's mix was made with (mixFeel.ts), no more. */
+export function planningCalls(request: Request, workspaceId?: string) {
   const post = <T,>(path: string, body: unknown) => askWithin<T>(request, path, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
   }, PLANNING_WITHIN_MS);
+  // the same feel for a pair's options and for one more script, so the list stays the same list
+  const feel = (a: number, b: number) => {
+    const language = workspaceId ? feelFor(workspaceId, a, b) : null;
+    return language ? { language } : {};
+  };
   return {
-    candidates: (a: number, b: number) => post<CandidatesAnswer>('/planning/candidates', { a, b, leave_after: LEAVE_AFTER_SECONDS, scripts: STUDIO_SCRIPTS }),
-    script: async (a: number, b: number, index: number, fingerprint: string) => (await post<{ script?: unknown }>('/planning/candidates/script', { a, b, leave_after: LEAVE_AFTER_SECONDS, option: index, fingerprint }))?.script ?? null,
+    candidates: (a: number, b: number) => post<CandidatesAnswer>('/planning/candidates', { a, b, leave_after: LEAVE_AFTER_SECONDS, scripts: STUDIO_SCRIPTS, ...feel(a, b) }),
+    script: async (a: number, b: number, index: number, fingerprint: string) => (await post<{ script?: unknown }>('/planning/candidates/script', { a, b, leave_after: LEAVE_AFTER_SECONDS, option: index, fingerprint, ...feel(a, b) }))?.script ?? null,
   };
 }
 
@@ -96,7 +103,7 @@ export function makeDeviceStudio(wiring: StudioWiring): DeviceStudio {
   });
   const renderer = new SeamRenderer();
   const factsOf = wiring.facts ?? ((sha: string) => songFacts(sha));
-  const calls = planningCalls(wiring.request);
+  const calls = planningCalls(wiring.request, wiring.workspaceId);
   const studio = new DeviceStudio({
     candidates: calls.candidates,
     script: calls.script,

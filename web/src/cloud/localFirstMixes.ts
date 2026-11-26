@@ -152,7 +152,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     } else if (body.action === 'energy_arc') {
       next = { ...now, energy_arc: Array.isArray(body.value) ? (body.value as number[]) : null };
     } else {
-      throw refuse('That setting works in the SelectaDJ app on a computer. Here you can choose the ending, the mix language and the energy shape.', 'flag_off', 404);
+      throw refuse('That setting works in the SelectaDJ app on a computer. Here you can choose the ending, the transition feel and the energy shape.', 'flag_off', 404);
     }
     store.setSteering(next);
     return next;

@@ -99,13 +99,17 @@ describe('what the browser shell switches off', () => {
     const measured = browserFlags(true, false, { measured: true });
     expect(measured['library.corrections']).toBeUndefined();
     expect(measured['mixes.shaping.energy_arc']).toBeUndefined();
+    // the transition feel and the energy horizon come with the account's measurements too
+    expect(measured['mixes.shaping.feel']).toBeUndefined();
+    expect(measured['editor.energy_horizon']).toBeUndefined();
+    expect(browserFlags(true)['mixes.shaping.feel']).toBe(false);
     expect(measured['editor.locks']).toBe(false);
     expect(browserFlags(true, false, { accountMixes: true })['editor.locks']).toBeUndefined();
   });
 
   it('keeps every other decision whatever the account has', () => {
     const all = browserFlags(true, true, { measured: true, accountMixes: true });
-    for (const id of ['requests.bridges', 'editor.energy_horizon', 'seam_inspector', 'export', 'lyrics.lookup', 'mixes.shaping.feel', 'mixes.shaping.stem_moves']) {
+    for (const id of ['requests.bridges', 'seam_inspector', 'export', 'lyrics.lookup', 'mixes.shaping.stem_moves']) {
       expect(all[id], id).toBe(false);
     }
     expect(Object.keys(NOT_IN_THE_BROWSER)).toHaveLength(11);
