@@ -1,4 +1,4 @@
-"""The upload rights statement a workspace confirmed: `upload_rights` (ADR-0480).
+"""The upload rights statement a workspace confirmed: `upload_rights` (ADR-0489).
 
 Revision ID: st0480rights01
 Revises: st0480up01

@@ -2,7 +2,7 @@ import type { MediaStore, StoredSong } from '../media/store';
 import { CloudError } from './api';
 
 // Before uploading songs from this device to the cloud library (`cloud.move_to_cloud`, plan
-// "two places" 6c, ADR-0480): what a batch would do, and the upload rights statement.
+// "two places" 6c, ADR-0489): what a batch would do, and the upload rights statement.
 //
 // Three requests, and only these: `GET` and `POST /api/uploads/rights` (has this workspace
 // confirmed the statement's current wording, and confirming it) and `POST /api/uploads/preview`

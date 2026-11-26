@@ -1,4 +1,4 @@
-"""The upload rights statement, for workspaces that are not a business (ADR-0480, plan "two
+"""The upload rights statement, for workspaces that are not a business (ADR-0489, plan "two
 places" 6c): `GET` and `POST /api/uploads/rights`, behind `cloud.move_to_cloud`.
 
 Before a member's first upload from this device to the cloud library, the member reads one

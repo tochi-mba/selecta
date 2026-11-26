@@ -1,4 +1,4 @@
-"""The upload rights statement a workspace confirmed (`storage.personal_rights`, ADR-0480).
+"""The upload rights statement a workspace confirmed (`storage.personal_rights`, ADR-0489).
 
 One row per workspace for each wording it confirmed: the statement's version, the SHA-256 of
 its exact words, who confirmed it and when. A new wording is a new row, so the history of what

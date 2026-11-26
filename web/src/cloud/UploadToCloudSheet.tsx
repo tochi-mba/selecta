@@ -9,7 +9,7 @@ import {
 } from './uploadConsent';
 import './uploadToCloud.css';
 
-// "Upload to your cloud library" (`cloud.move_to_cloud`, plan "two places" 6c, ADR-0480). Shown
+// "Upload to your cloud library" (`cloud.move_to_cloud`, plan "two places" 6c, ADR-0489). Shown
 // whenever a batch is started: what the batch would do (the dry run), the upload rights statement
 // the first time and whenever its wording changes, and what happens to each song once uploaded.
 // Nothing is sent until the member presses Upload, and never before the statement is confirmed.

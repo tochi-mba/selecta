@@ -164,7 +164,7 @@ export const copy: { desktop: Record<CopyKey, string>; cloud: Record<MusicHome, 
   cloud: { cloud_library: cloudWords('cloud_library'), device: cloudWords('device'), both: cloudWords('both') },
 };
 
-/** `cloud.move_to_cloud` (ADR-0480): the 'both' sentences for an account that can upload songs
+/** `cloud.move_to_cloud` (ADR-0489): the 'both' sentences for an account that can upload songs
  * from this device to its cloud library. Every other account keeps the words above, word for
  * word. The file on the device is never moved or changed, so that promise stays. */
 export const UPLOADING_FROM_DEVICE: Readonly<Partial<Record<HomeKey, string>>> = {

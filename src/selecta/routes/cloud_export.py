@@ -234,7 +234,7 @@ def install_routes(
             kept = _kept_library(conn, workspace.id)
             # ADR-0479: song facts, corrections, ratings and the other hashes a song is known by
             engine_rows = song_facts_export.kept(conn, workspace.id)
-            # ADR-0480: the upload rights statement this workspace confirmed, each wording
+            # ADR-0489: the upload rights statement this workspace confirmed, each wording
             rights = personal_rights.export_rows(conn, workspace.id)
 
         temp_dir = Path(tempfile.mkdtemp(prefix="selecta-account-export-"))
