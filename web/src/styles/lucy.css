@@ -102,8 +102,11 @@
 /* the conversation */
 /* Turns are told apart by place and weight, not loud bubbles: the person's words sit to the
    right on a quiet well; Lucy's answer is plain text at the reading measure, as a page reads. */
-.lucy-log { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); }
-.lucy-msg article { padding: 0; border: 0; border-radius: var(--radius); background: none; }
+/* one column that never grows past the page: an unbroken title in a list item or a long link once
+   widened every turn and pushed the page sideways on a phone */
+.lucy-log { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+.lucy-msg article { min-width: 0; padding: 0; border: 0; border-radius: var(--radius); background: none; overflow-wrap: anywhere; }
+.lucy-msg pre { max-width: 100%; overflow-x: auto; }
 .lucy-msg.is-user article {
   justify-self: end;
   max-width: min(85%, 60ch);
