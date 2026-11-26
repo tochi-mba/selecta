@@ -28,6 +28,8 @@ export type UploadRow = {
   /** The file's own name (the server reads its kind from it), never a path. */
   fileName: string;
   size: number | null;
+  /** Seconds, for the dry run's length check; null where unknown. */
+  duration?: number | null;
   /** Its place in the queue: songs in the current and recent mixes first, then newest. */
   order: number;
   state: UploadRowState;
@@ -37,6 +39,8 @@ export type UploadRow = {
   expiresAt: number | null;
   partsDone: number;
   partCount: number | null;
+  /** The part size the server chose for the session. */
+  partSize: number | null;
   outcome: UploadOutcome | null;
   /** The server's reason for a refusal, in its own words or code. */
   reason: string | null;
