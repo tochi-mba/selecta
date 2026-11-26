@@ -38,6 +38,8 @@ export function deviceWorkLines(work: DeviceWork, titleOf: (songId: number) => s
   } else if (work.measuring === 'waiting_music' || work.measuring === 'waiting_import') {
     const when = work.measuring === 'waiting_music' ? 'when the music stops' : 'when adding music finishes';
     lines.push(`Measuring songs carries on ${when}${work.left > 0 ? `: ${plural(work.left, 'song')} to go` : ''}.`);
+  } else if (work.measuring === 'paused') {
+    lines.push(`Measuring songs is paused${work.left > 0 ? `: ${plural(work.left, 'song')} to go` : ''}.`);
   }
   if (work.upload.saving) lines.push('Saving song measurements to your account.');
   else if (work.upload.saved > 0) lines.push(`Saved measurements of ${plural(work.upload.saved, 'song')} to your account on this visit.`);

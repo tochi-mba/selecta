@@ -4,7 +4,7 @@
 // `idle` covers everything measured, another tab holding the measuring lock, and the profiler not
 // running at all, so the line shows only while this tab has songs to measure.
 
-export type TonalActivity = 'measuring' | 'waiting_import' | 'waiting_music' | 'idle';
+export type TonalActivity = 'measuring' | 'waiting_import' | 'waiting_music' | 'paused' | 'idle';
 
 let now: TonalActivity = 'idle';
 const listeners = new Set<() => void>();
@@ -42,5 +42,6 @@ export function tonalActivityWords(activity: TonalActivity): string | null {
   if (activity === 'measuring') return 'Measuring song keys for Harmonic matches.';
   if (activity === 'waiting_music') return 'Measuring song keys carries on when the music stops.';
   if (activity === 'waiting_import') return 'Measuring song keys carries on when adding music finishes.';
+  if (activity === 'paused') return 'Measuring songs is paused.';
   return null;
 }

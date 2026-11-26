@@ -20,6 +20,7 @@ import { readPersistState, subscribePersist, type PersistState } from './persist
 import { StorageCard } from './StorageCard';
 import { MusicFolders } from './MusicFolders';
 import { onTonalActivity, tonalActivity, tonalActivityWords } from './tonalActivity';
+import { setMeasuringPaused } from './measuringControl';
 import { NumberRoll } from '../feel/numberRoll';
 import { feelOn } from '../feel/root';
 import { motionMs } from '../ui/exitMotion';
@@ -232,7 +233,11 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
       : { key: 'check-waiting', line: <Status kind="queued">Songs are checked in the background while SelectaDJ is open.</Status> });
   // what the profiler is really doing in this tab: nothing is said once every song is measured
   const keysWords = measuringKeys ? tonalActivityWords(keysNow) : null;
-  if (keysWords) activity.push({ key: `keys-${keysNow}`, line: <Status kind={keysNow === 'measuring' ? 'working' : 'paused'}>{keysWords}</Status> });
+  // the Desktop's stop and start of analysis: a pause lasts until the member carries on
+  const pauseControl = measuringKeys && (keysNow === 'measuring' || keysNow === 'paused')
+    ? <button type="button" className="link" onClick={() => setMeasuringPaused(keysNow !== 'paused')}>{keysNow === 'paused' ? 'Carry on measuring' : 'Pause measuring'}</button>
+    : null;
+  if (keysWords) activity.push({ key: `keys-${keysNow}`, line: <><Status kind={keysNow === 'measuring' ? 'working' : 'paused'}>{keysWords}</Status>{pauseControl && <> {pauseControl}</>}</> });
 
   return (
     <div className="lw-stack">
