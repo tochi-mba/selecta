@@ -7,7 +7,8 @@ the idea cards (`planning_routes`). A studio reports the seams it rendered, the 
 them, and the planner learns from both (`seams_routes`). The account's mixes and drafts answer
 the Desktop's own mix routes (`mixes_routes`, also behind `cloud.account_mixes`; see
 docs/engineering/engine-store-mixes.md), and its song requests the Desktop's request routes
-(`requests_routes`, the same flags; docs/engineering/engine-store-requests.md), and its harmonic
+(`requests_routes`, the same flags, with the bridge search in `bridge_routes`;
+docs/engineering/engine-store-requests.md), and its harmonic
 discovery the Desktop's sweep over stored song facts (`discovery_routes`;
 docs/engineering/engine-store-discovery.md). A studio renders and audits; nothing here hears
 audio. Every route needs the `cloud.brain` flag (refused as `flag_off` while it is
@@ -46,6 +47,7 @@ def install_routes(
     the Cloud's own artifact store (the private derived bucket, keyed by workspace). `rules` is
     the flag rules cache, for the seam routes a Desktop flag owns (`seams_routes`)."""
     from selecta.cloud_brain import (
+        bridge_routes,
         discovery_routes,
         facts_routes,
         mixes_routes,
@@ -74,8 +76,9 @@ def install_routes(
             rules=rules,
         )
     # requests plan from song facts (the artifacts) and edit the account's mix (the flags);
-    # discovery compares stored per-bar arrays and keeps its Desktop owner flag
-    for routes in (requests_routes, discovery_routes):
+    # discovery compares stored per-bar arrays and keeps its Desktop owner flag; the bridge
+    # search reads many songs' arrays, so it is bounded and has its own module
+    for routes in (requests_routes, bridge_routes, discovery_routes):
         routes.install(
             app,
             engine=engine,

@@ -13,8 +13,8 @@ is a catalogue song of this workspace, never a path.
 
 Each route keeps its Desktop flag as owner (`requests`, `requests.bridges`) and also needs
 `cloud.brain` and `cloud.account_mixes` (refused as `flag_off` otherwise): requests edit the
-account's mix. Searching every song for a bridge and hearing a handover ahead are Desktop's own
-(they need the library's rendered seams), so Cloud has no routes for them.
+account's mix. Searching every song for a bridge is `bridge_routes` (bounded); hearing a handover
+ahead renders on the Desktop's server, so Cloud has no route for it: the device makes it.
 """
 
 from __future__ import annotations
