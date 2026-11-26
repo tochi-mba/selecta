@@ -141,7 +141,7 @@ describe('capability registry', () => {
     expect(stemSeparationEvidenceState(stemEvidence('bf-tier3-htdemucs-pass'), options)).toEqual({ supported: true });
     expect(stemSeparationEvidenceState(stemEvidence('some-other-record'), options)).toEqual({ supported: false, reason: STEMS_LICENCE_REASON });
     expect(stemSeparationEvidenceState(stemEvidence('bf-tier3-htdemucs-pass'), { ...options, modelSha256: null }))
-      .toMatchObject({ supported: false, reason: expect.stringMatching(/not been published/) });
+      .toMatchObject({ supported: false, reason: expect.stringMatching(/not published/) });
     expect(stemSeparationEvidenceState({ ...stemEvidence('bf-tier3-htdemucs-pass'), modelSha256: 'ff'.repeat(32) }, options))
       .toMatchObject({ supported: false, reason: expect.stringMatching(/not the published one/) });
     expect(stemSeparationEvidenceState({ ...stemEvidence('bf-tier3-htdemucs-pass'), crashGuard: { clear: false, reason: 'the last attempt to split stems on this device stopped the page', at: null } }, options))

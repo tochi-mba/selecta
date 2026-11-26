@@ -5,7 +5,7 @@
 import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestRow, Stage } from '../views/Requests';
-import { NOT_HERE_YET, RoomRequests, type RoomRequestsMix } from './RoomRequests';
+import { STILL_ARRIVING, RoomRequests, type RoomRequestsMix } from './RoomRequests';
 import { addable, noteRoom, type RoomAsk } from './useRoomSession';
 
 const ask = (id: string, songId: number, title: string): RoomAsk => ({ request_id: id, song: { song_id: songId, title, artist: 'Asake' } as RoomAsk['song'], nickname: 'Calm Hedgehog', votes: 1 });
@@ -34,7 +34,7 @@ describe('an accepted request the browser list does not hold yet', () => {
     act(() => room([ask('r1', 5, 'Forgiveness')]));
     const { onMissing } = draw([]);
     expect(screen.getByText(/Getting ready/)).toBeInTheDocument();
-    expect(screen.queryByText(NOT_HERE_YET)).toBeNull();
+    expect(screen.queryByText(STILL_ARRIVING)).toBeNull();
     await wait(0);
     expect(onMissing).toHaveBeenCalledTimes(1);
   });
@@ -61,7 +61,7 @@ describe('an accepted request the browser list does not hold yet', () => {
     expect(screen.getByText(/Getting ready/)).toBeInTheDocument();
     await wait(4000);
     expect(screen.queryByText(/Getting ready/)).toBeNull();
-    expect(screen.getByText(NOT_HERE_YET)).toBeInTheDocument();
+    expect(screen.getByText(STILL_ARRIVING)).toBeInTheDocument();
     const asked = onMissing.mock.calls.length;
     await act(async () => { screen.getByRole('button', { name: 'Try now: Forgiveness' }).click(); });
     expect(onMissing).toHaveBeenCalledTimes(asked + 1);
@@ -76,9 +76,9 @@ describe('an accepted request the browser list does not hold yet', () => {
     await wait(2000);
     await wait(4000);
     await wait(4000);
-    expect(screen.getByText(NOT_HERE_YET)).toBeInTheDocument();
+    expect(screen.getByText(STILL_ARRIVING)).toBeInTheDocument();
     redraw([row('r1', 5, 'Forgiveness')]);
-    expect(screen.queryByText(NOT_HERE_YET)).toBeNull();
+    expect(screen.queryByText(STILL_ARRIVING)).toBeNull();
     expect(screen.getByRole('button', { name: 'Add to mix: Forgiveness' })).toBeInTheDocument();
     const asked = onMissing.mock.calls.length;
     await wait(60_000);

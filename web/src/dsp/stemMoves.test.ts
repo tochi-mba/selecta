@@ -176,7 +176,7 @@ describe('intertwined stems', () => {
     expect(p.why).toContain('Key wasn');
     const twoPercent = pair({ b: track(120 / 1.02) });
     const refused = stemIntertwine(twoPercent);
-    expect(isRefusal(refused) && refused.refused).toContain('can\'t check key');
+    expect(isRefusal(refused) && refused.refused).toContain('key isn\'t known');
     const keyed = plan(stemIntertwine({ ...twoPercent, keyDistance: 1 }));
     expect(keyed.keyChecked).toBe(true);
     expect(keyed.bSourcePerSecond).toBeCloseTo(1.02, 6);
