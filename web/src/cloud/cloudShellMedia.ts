@@ -1,12 +1,12 @@
-import { useCallback, useMemo, useRef, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import type { MixData, Request } from '../api';
 import type { FlagId } from '../flags';
 import { makeCoexistingResolver, makeResolver, reportDeviceAvailability, type LapsedWhy, type MediaResolver, type MediaStore, type SourceBook } from '../media';
 import type { ControllerLink, WhereHeld } from '../devices/controller';
 import type { Api } from './api';
 import { registeredDeviceId } from './ConnectMusic';
-import { cloudLibraryAssets, cloudLibraryResolver, matchAsset } from './cloudLibraryMedia';
-import { deviceMusicRequest, mediaRequest, type AvailabilitySources } from './deviceMusicRequest';
+import { catalogueCopy, catalogueHeld, cloudLibraryAssets, cloudLibraryResolver, matchAsset, serverSaysCopies } from './cloudLibraryMedia';
+import { deviceMusicRequest, mediaRequest, type AvailabilitySources, type DeviceMusicRequest } from './deviceMusicRequest';
 import type { RecipeStore } from './recipeStore';
 import { profilesBySong, type TonalStore } from './tonalProfiles';
 import { withVersions } from './songVersions';
@@ -14,13 +14,15 @@ import { withVersions } from './songVersions';
 /** Where CloudShell's songs can play from, and the resolver that plays them (ADR-0465, ADR-0469):
  * the availability sources the request adapter reads, the adapted request itself, and the device
  * first, hosted fallback resolver. Kept out of CloudShell.tsx so the shell stays under the cap. */
-export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, openStore, lapsed, refreshStatus, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed, book }: {
+export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, catalogue = false, openStore, lapsed, refreshStatus, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed, book }: {
   api: Api;
   cloud: Request;
   workspaceId: string;
   on: (id: FlagId) => boolean;
   /** a grandfathered account with stored media readable gets the hosted path */
   coexisting: boolean;
+  /** cloud.catalogue_play: a cloud song is found from the catalogue by its id, never by name */
+  catalogue?: boolean;
   openStore: () => Promise<MediaStore>;
   /** the sweep's lapsed map: files gone, changed or waiting for permission */
   lapsed: MutableRefObject<Map<number, LapsedWhy>>;
@@ -60,11 +62,13 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, op
       }
       return found;
     },
-    hosted: coexisting ? async (songs) => {
+    hosted: coexisting && catalogue ? (songs) => catalogueHeld(api, workspaceId, songs) : coexisting ? async (songs) => {
       const listing = cloudLibraryAssets(api, workspaceId); // read again after an upload (cloudLibraryMedia.ts)
       const assets = await listing;
       return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
     } : undefined,
+    // cloud.catalogue_play: the upload that is a song, by the same rule as `hosted` above
+    cloudCopy: coexisting && catalogue ? async (rows, all) => catalogueCopy(rows, serverSaysCopies(all) ? null : await cloudLibraryAssets(api, workspaceId)) : undefined,
     // Make a Mix and My Mixes: recipes on the server, this browser's current mix and shaping here
     recipes,
     // Harmonic matches: answered from the profiles this browser measured, answers kept here
@@ -86,15 +90,19 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, op
       })),
       onServed: (from) => onServed(from.cached ? { at: from.at } : null),
     } : undefined,
-  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
+  }), [api, cloud, workspaceId, coexisting, catalogue, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
   const request = useMemo(() => deviceMusicRequest(cloud, sources), [cloud, sources]);
+  // the resolver asks the newest adapter for a song's upload (cloud.catalogue_play)
+  const latestRequest = useRef<DeviceMusicRequest>(request);
+  latestRequest.current = request;
   // imports register through the adapted request, so each landed batch reads a fresh catalogue
   const media = useMemo(() => mediaRequest(request), [request]);
   const programme = useRef<MixData['mix']>([]);
   const resolving = useRef<Promise<MediaResolver> | null>(null);
   const resolverFor = useRef<string | null>(null);
   const resolver = useCallback(async () => {
-    if (resolverFor.current !== workspaceId) { resolverFor.current = workspaceId; resolving.current = null; }
+    const made = `${workspaceId}:${catalogue}`;
+    if (resolverFor.current !== made) { resolverFor.current = made; resolving.current = null; }
     return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
     // any version of the song this device holds plays it (ADR-0469 amendment 2)
     device: withVersions(makeResolver(opened, undefined, (songId, present, why) => {
@@ -109,12 +117,32 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, op
         }).catch(() => undefined);
       }
     }, { sharedCache: on('cloud.content_cache') }), workspaceId),
-    hosted: coexisting ? cloudLibraryResolver(api, workspaceId, {
+    // cloud.catalogue_play: by catalogue id, from any device; off, by hash or name in the programme
+    hosted: coexisting ? cloudLibraryResolver(api, workspaceId, catalogue ? {
+      songs: () => programme.current,
+      assetOf: (songId) => latestRequest.current.cloudAssetOf(songId),
+    } : {
       songs: () => programme.current,
       shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
     }) : null,
     book,
   })));
-  }, [openStore, coexisting, api, workspaceId, book, media, on]);
+  }, [openStore, coexisting, catalogue, api, workspaceId, book, media, on]);
   return { sources, request, media, resolver, programme, controllerLink, whereHeld, mixableIds };
+}
+
+/** cloud.catalogue_play: every file of each song in the cloud library, read again with each
+ * status, so choosing where the music plays counts them; null when off or not read yet. */
+export function useCloudSongs(request: DeviceMusicRequest, enabled: boolean, status: unknown): ReadonlySet<number> | null {
+  const [songs, setSongs] = useState<ReadonlySet<number> | null>(null);
+  useEffect(() => {
+    if (!enabled) { setSongs(null); return undefined; }
+    let live = true;
+    void request.cloudSongs?.().then((found) => {
+      // the same songs again keep the same set, so nothing downstream draws again for nothing
+      if (live) setSongs((was) => (was && was.size === found.size && [...found].every((id) => was.has(id)) ? was : found));
+    }, () => undefined);
+    return () => { live = false; };
+  }, [request, enabled, status]);
+  return songs;
 }
