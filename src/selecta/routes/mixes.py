@@ -9,7 +9,7 @@ from collections import deque
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from selecta import db, mix
+from selecta import db, flags, mix
 from selecta.api_common import (
     SWAPS_REMEMBERED,
     VIBE_KEYS,
@@ -56,6 +56,15 @@ def add_routes(app, ctx) -> None:
             song = db.song_by_id(conn, body.song_id)
             if song is None:
                 raise HTTPException(404)
+            if flags.on("core.engine_store"):
+                # the library migration made the table; the store only writes the row
+                from selecta.engine_store import library
+                from selecta.engine_store.mixes import record_skip
+
+                record_skip(
+                    library.store_of(conn), body.song_id, body.heard_seconds, body.source_position
+                )
+                return {"saved": True}
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS playback_skips (id INTEGER PRIMARY KEY, "
                 "song_id INTEGER NOT NULL REFERENCES songs(id), heard_seconds REAL NOT NULL, "
@@ -223,18 +232,20 @@ def add_routes(app, ctx) -> None:
         except ValueError as problem:
             raise HTTPException(400, str(problem)) from problem
         if as_draft:
-            draft = mix.create_draft(conn, vibe.name)
-            mix.merge_with_locks(conn, [item.song.id for item in planned], seams, draft)
+            with mix.editing(conn) as mixes:
+                draft = mix.create_draft(mixes, vibe.name)
+                mix.merge_with_locks(mixes, [item.song.id for item in planned], seams, draft)
             return {"id": draft, "name": mix.mix_name(conn, draft), "count": len(planned)}
         # Planning can take seconds. Reject when another tab changes this
         # mix after the middleware's initial check but before installation.
-        if expected_order is not None and expected_order != ",".join(
-            str(item[0]) for item in mix._items(conn)
-        ):
-            raise ChangedWhileBuilding()
-        mix.remember(conn, f"changing to {vibe.name}")
-        mix.merge_with_locks(conn, [item.song.id for item in planned], seams)
-        mix.set_mix_name(conn, vibe.name)
+        with mix.editing(conn) as mixes:
+            if expected_order is not None and expected_order != ",".join(
+                str(item[0]) for item in mix._items(mixes)
+            ):
+                raise ChangedWhileBuilding()
+            mix.remember(mixes, f"changing to {vibe.name}")
+            mix.merge_with_locks(mixes, [item.song.id for item in planned], seams)
+            mix.set_mix_name(mixes, vibe.name)
         return {**mix_payload(conn), "count": len(planned)}
 
     @app.post("/api/vibes/{key}/build")
@@ -270,9 +281,10 @@ def add_routes(app, ctx) -> None:
     @app.post("/api/mix/clear")
     def clear_mix() -> dict:
         with connect() as conn:
-            mix.remember(conn, "clearing the mix")
-            mix.write_order(conn, [])
-            mix.set_mix_name(conn, "Your mix")
+            with mix.editing(conn) as mixes:
+                mix.remember(mixes, "clearing the mix")
+                mix.write_order(mixes, [])
+                mix.set_mix_name(mixes, "Your mix")
             return mix_payload(conn)
 
     ctx.build_mix = build_mix

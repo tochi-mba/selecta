@@ -4,7 +4,9 @@ A signed-in device saves the facts it measured for the account's songs (`facts_r
 planner core runs over those facts to answer what Desktop's planner answers: the ranked ways from
 one song into the next with their scripts, the repair rule's next step, the order of a mix and
 the idea cards (`planning_routes`). A studio reports the seams it rendered, the member rates
-them, and the planner learns from both (`seams_routes`). A studio renders and audits; nothing
+them, and the planner learns from both (`seams_routes`). The account's mixes and drafts answer
+the Desktop's own mix routes (`mixes_routes`, also behind `cloud.account_mixes`; see
+docs/engineering/engine-store-mixes.md). A studio renders and audits; nothing
 here hears audio. Every route needs the `cloud.brain` flag (refused as `flag_off` while it is
 off; the seam verdict and ratings routes also keep their Desktop owners) and works in the
 caller's own workspace through the engine store, whatever `core.engine_store` says: that flag
@@ -40,7 +42,7 @@ def install_routes(
     """Mount the song facts, planning and seam routes, with features read and written through
     the Cloud's own artifact store (the private derived bucket, keyed by workspace). `rules` is
     the flag rules cache, for the seam routes a Desktop flag owns (`seams_routes`)."""
-    from selecta.cloud_brain import facts_routes, planning_routes, seams_routes
+    from selecta.cloud_brain import facts_routes, mixes_routes, planning_routes, seams_routes
 
     def artifacts() -> R2ArtifactStore:
         return R2ArtifactStore(object_client_factory(), buckets)
@@ -53,13 +55,14 @@ def install_routes(
             principal_for=principal_for,
             artifacts=artifacts,
         )
-    seams_routes.install(
-        app,
-        engine=engine,
-        current_claims=current_claims,
-        principal_for=principal_for,
-        rules=rules,
-    )
+    for routes in (seams_routes, mixes_routes):
+        routes.install(
+            app,
+            engine=engine,
+            current_claims=current_claims,
+            principal_for=principal_for,
+            rules=rules,
+        )
 
 
 __all__ = ["FLAG", "install_routes"]

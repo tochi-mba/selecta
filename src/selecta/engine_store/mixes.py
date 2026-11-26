@@ -371,6 +371,23 @@ class StoreMixes(Mixes):
             self._run(sa.update(drafts).where(self._draft(draft)).values(line=place))
 
 
+def record_skip(store: EngineStore, song_id: int, heard: float, position: float) -> None:
+    """A listener skipped this song after `heard` seconds, at `position` in it (Desktop only:
+    the table is the library's, made by `lib0007mixes`)."""
+    from selecta.engine_store.schema import playback_skips
+
+    with store.write() as connection:
+        connection.execute(
+            sa.insert(playback_skips).values(
+                workspace_id=store.workspace_id,
+                song_id=song_id,
+                heard_seconds=heard,
+                source_position=position,
+                created_at=now(),
+            )
+        )
+
+
 __all__ = [
     "MIX_KEYS",
     "Mixes",
@@ -378,4 +395,5 @@ __all__ = [
     "StoreMixes",
     "array_length",
     "now",
+    "record_skip",
 ]

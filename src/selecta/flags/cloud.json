@@ -249,7 +249,7 @@
     },
     "cloud.brain": {
       "label": "Planning from song facts",
-      "about": "SelectaDJ's planner runs in Cloud from the facts a member's device measured for their songs (ADR-0479, docs/engineering/cloud-planning.md): a device saves a song's measurements (tempo, beats and bars, sections, key, loudness, per-bar energy and tone numbers; never audio or paths) and the member's tempo and key corrections, and Cloud answers with the ranked transitions between two songs and their scripts, the repair rule's next step, a mix's order and the idea cards. A device reports each seam it rendered (the pair, the option, the audit's verdict, who rendered it, the clip's length and hash; never the clip), any device can see which seams exist for a pair, and the member's Good and Bad on them (POST /api/seams/{key}/rate, GET /api/memory/ratings, which also need this flag) teach the planner. Off: these routes answer flag_off and nothing is saved or planned.",
+      "about": "SelectaDJ's planner runs in Cloud from the facts a member's device measured for their songs (ADR-0479, docs/engineering/cloud-planning.md): a device saves a song's measurements (tempo, beats and bars, sections, key, loudness, per-bar energy and tone numbers; never audio or paths) and the member's tempo and key corrections, and Cloud answers with the ranked transitions between two songs and their scripts, the repair rule's next step, a mix's order and the idea cards. A device reports each seam it rendered (the pair, the option, the audit's verdict, who rendered it, the clip's length and hash; never the clip), any device can see which seams exist for a pair, and the member's Good and Bad on them (POST /api/seams/{key}/rate, GET /api/memory/ratings, which also need this flag) teach the planner. With cloud.account_mixes, the Desktop's mix and draft routes answer for the account too. Off: these routes answer flag_off and nothing is saved or planned.",
       "routes": [
         "PUT /api/song-facts/{song_id}",
         "GET /api/song-facts",
@@ -271,6 +271,20 @@
       "owner": "playback",
       "cloud_surface_kind": "headless",
       "cloud_surface_reason": "Routes a device and a studio call; with cloud.device_analysis on, the browser sends its measurements and plays the planner's order and transitions, which changes no screen"
+    },
+    "cloud.account_mixes": {
+      "label": "Your mixes in one place",
+      "about": "The account's mixes come from one place on every device: the current mix and every draft are kept with the account in the same form the Desktop app keeps them (ADR-0479, docs/engineering/engine-store-mixes.md), and the browser reads and changes them through the Desktop's own mix routes, which also need cloud.brain. The first time an account uses them, its saved browser mixes are copied in as drafts once; nothing about them is changed or removed. Mixes hold catalogue song ids and transition choices, never audio or file paths. Off until it has been tried on a real account: the browser keeps its saved browser mixes as before, and these routes answer flag_off.",
+      "routes": [
+        "PUT /api/mix/order"
+      ],
+      "requires": ["cloud.brain"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Changes where the browser keeps a mix, not any screen: Make a Mix, the editor and My Mixes look and work the same either way"
     },
     "cloud.local_media": {
       "label": "Local media catalogue",

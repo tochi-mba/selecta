@@ -97,30 +97,34 @@ def add_routes(app, ctx) -> None:
     def add_song(body: AddRequest, draft: int | None = None) -> dict:
         with connect() as conn:
             song = analysed_or_404(conn, body.song_id)
-            mix.remember(conn, f"adding {song.title}", draft)
-            mix.add_song(conn, body.song_id, body.position, draft)
+            # one write for both, so Undo always has the mix from just before this change
+            with mix.editing(conn) as mixes:
+                mix.remember(mixes, f"adding {song.title}", draft)
+                mix.add_song(mixes, body.song_id, body.position, draft)
             return mix_payload(conn, draft)
 
     @app.delete("/api/mix/songs/{position}")
     def remove_song(position: int, draft: int | None = None) -> dict:
         with connect() as conn:
-            mix.remember(conn, "removing that song", draft)
-            mix.remove_at(conn, position, draft)
+            with mix.editing(conn) as mixes:
+                mix.remember(mixes, "removing that song", draft)
+                mix.remove_at(mixes, position, draft)
             return mix_payload(conn, draft)
 
     @app.post("/api/mix/move")
     def move_song(body: MoveRequest, draft: int | None = None) -> dict:
         with connect() as conn:
-            if flags.on("editor.locks"):
-                held = mix.locked_in_the_way(conn, body.source, body.target, draft)
-                if held is not None:
-                    raise HTTPException(
-                        409,
-                        f"Song {held + 1} is locked, so it stays where it is and nothing moved. "
-                        "Unlock it first to move songs past it.",
-                    )
-            mix.remember(conn, "moving that song", draft)
-            mix.move_song(conn, body.source, body.target, draft)
+            with mix.editing(conn) as mixes:
+                if flags.on("editor.locks"):
+                    held = mix.locked_in_the_way(mixes, body.source, body.target, draft)
+                    if held is not None:
+                        raise HTTPException(
+                            409,
+                            f"Song {held + 1} is locked, so it stays where it is and nothing "
+                            "moved. Unlock it first to move songs past it.",
+                        )
+                mix.remember(mixes, "moving that song", draft)
+                mix.move_song(mixes, body.source, body.target, draft)
             return mix_payload(conn, draft)
 
     @app.get("/api/mix/suggest")
@@ -260,8 +264,9 @@ def add_routes(app, ctx) -> None:
             if pick is None:
                 raise HTTPException(404, "Nothing else fits here yet. Analysing more songs helps.")
             swapped_out.append(items[position]["song_id"])
-            mix.remember(conn, "swapping that song", draft)
-            mix.replace_at(conn, position, pick.id, draft)
+            with mix.editing(conn) as mixes:
+                mix.remember(mixes, "swapping that song", draft)
+                mix.replace_at(mixes, position, pick.id, draft)
             return mix_payload(conn, draft)
 
     @app.get("/api/mix/{position}/options")
@@ -315,8 +320,9 @@ def add_routes(app, ctx) -> None:
             return refusal(MOVE_FLAGS[body.move])
         with connect() as conn:
             check_placement(conn, seam_request_at(conn, position, draft), body)
-            mix.remember(conn, "changing that seam", draft)
-            mix.set_seam(conn, position, body.model_dump(), draft)
+            with mix.editing(conn) as mixes:
+                mix.remember(mixes, "changing that seam", draft)
+                mix.set_seam(mixes, position, body.model_dump(), draft)
             return mix_payload(conn, draft)
 
     @app.post("/api/mix/{position}/render")
