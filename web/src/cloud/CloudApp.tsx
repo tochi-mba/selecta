@@ -23,6 +23,7 @@ import { CatalogLookups } from './CatalogLookups';
 import { OverviewHeroArt, RailNav } from './CloudRailFeel';
 export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
+import { musicHomeOf, setMusicHome } from '../copy';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, withIdempotencyKey, isOverQuota, lockedTo, messageOf, statusWords, Page, pageShown, planName } from './api';
 import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
@@ -156,6 +157,9 @@ export function CloudApp() {
     return (authSignOut as (...given: unknown[]) => unknown)(...args);
   }) as typeof authSignOut, [authSignOut]);
   const [account, setAccount] = useState<Account | null>(null);
+  // The shared pages' words follow where this account's music lives, before they draw (copy.ts).
+  const home = musicHomeOf(localFirstDecided(account), account?.experience?.hosted !== false);
+  setMusicHome(home === 'none' ? 'cloud_library' : home);
   // ADR-0475 R12: another tab of this browser signed out, or in as someone; and what a sign-out
   // pressed here would stop, said first
   const [elsewhere, setElsewhere] = useState<{ kind: 'out' } | { kind: 'in'; email: string } | null>(null);

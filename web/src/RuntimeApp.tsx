@@ -2,7 +2,7 @@ import { ReactNode, Suspense, useEffect, useState } from 'react';
 import { lazyPage as lazy, SlowToArrive } from './ui/staleBuild';
 import { App } from './App';
 import type { MixData } from './api';
-import { setCopyMode } from './copy';
+import { setCopyPlace } from './copy';
 import { startFeel } from './feel/root';
 import { startPointerLight } from './feel/pointerLight';
 import { setFlags } from './flags';
@@ -53,8 +53,8 @@ export function RuntimeApp() {
         const status = await response.json() as { mode?: string; flags?: Record<string, boolean> };
         if (!current) return;
         const next = status.mode === 'cloud' ? 'cloud' : 'local';
-        // Words like "this PC" follow the server's mode before anything is drawn (src/copy.ts).
-        setCopyMode(next);
+        // Words like "this PC" follow the server's place before anything is drawn (src/copy.ts).
+        setCopyPlace(next === 'cloud' ? 'cloud' : 'desktop');
         if (next === 'local') {
           // The shell and Make a Mix depend on resolved feature flags for their geometry.
           // Apply the already-fetched flags before the first local React tree paints.
@@ -76,7 +76,7 @@ export function RuntimeApp() {
         setTrying(false);
         // cloud.offline_shell: a page Cloud's app-shell worker opened is Cloud, so with no
         // connection it opens from this device (CloudApp says so) instead of this message
-        if (cloudBuild && cloudShellOpened()) { setCopyMode('cloud'); setMode('cloud'); return; }
+        if (cloudBuild && cloudShellOpened()) { setCopyPlace('cloud'); setMode('cloud'); return; }
         setMode('unavailable');
       });
     return () => { current = false; };

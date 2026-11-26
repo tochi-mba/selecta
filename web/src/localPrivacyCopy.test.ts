@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { copy, CopyKey, setCopyMode, words } from './copy';
+import { copy, CopyKey, setCopyPlace, words } from './copy';
 import { FLAG_IDS, setFlags } from './flags';
 import { glossaryOn } from './ui/glossaryTerms';
 
@@ -41,18 +41,18 @@ const pageSources = import.meta.glob('./views/*.tsx', { query: '?raw', import: '
 const allOn = Object.fromEntries(FLAG_IDS.map((id) => [id, true]));
 
 afterEach(() => {
-  setCopyMode('local');
+  setCopyPlace('desktop');
   setFlags(allOn);
 });
 
 describe('local privacy wording (SC-0391-03)', () => {
   it('is word for word what the local app said before the Cloud programme', () => {
-    for (const [key, text] of Object.entries(PRE_CLOUD)) expect([key, copy.local[key as CopyKey]]).toEqual([key, text]);
+    for (const [key, text] of Object.entries(PRE_CLOUD)) expect([key, copy.desktop[key as CopyKey]]).toEqual([key, text]);
   });
 
   it('is what a local page gets, and switching to Cloud and back leaves it alone', () => {
-    setCopyMode('cloud');
-    setCopyMode('local');
+    setCopyPlace('cloud');
+    setCopyPlace('desktop');
     for (const [key, text] of Object.entries(PRE_CLOUD)) expect([key, words()[key as CopyKey]]).toEqual([key, text]);
   });
 
@@ -74,7 +74,7 @@ describe('local privacy wording (SC-0391-03)', () => {
     const withoutLookup = PRE_CLOUD.glossaryPrivacy!
       .replace(' To find lyrics, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB, a public lyrics service.', '')
       .replace('nothing else about', 'nothing about');
-    expect(copy.local.glossaryPrivacyNoLyrics).toBe(withoutLookup);
+    expect(copy.desktop.glossaryPrivacyNoLyrics).toBe(withoutLookup);
     setFlags({ ...allOn, 'lyrics.lookup': false });
     expect(glossaryOn().find((term) => term.id === 'local-only')?.plain).toBe(withoutLookup);
   });

@@ -1,17 +1,24 @@
-/** Words that depend on where Selecta runs (ADR-0392, docs/saas/11-ui-ux.md §11.2).
+/** Words that depend on where SelectaDJ runs and where the music lives (ADR-0392, ADR-0479,
+ * docs/glossary.md).
  *
- * Locally, Selecta runs on the listener's own computer, so the pages say "this PC", point at File
- * Explorer and suggest restarting Selecta. In Cloud none of that is true: the music lives in a
- * private Cloud workspace, there is no folder to copy, and there is nothing for the listener to
- * restart. Every sentence like that lives here, once per mode, so a page asks for `words().key`
- * and gets the right one. `copy.local` is exactly the text the local app always had.
+ * On Desktop, SelectaDJ runs on the listener's own computer, so the pages say "this PC", point at
+ * File Explorer and suggest restarting SelectaDJ. In Cloud none of that is true, and what is true
+ * depends on where the account's music lives: on this device (this browser measures and plays it),
+ * in the cloud library (SelectaDJ's workers measure and render it), or both. A member never meets
+ * a "mode": a page asks for `words().key` and gets the sentence that is true for them.
+ * `copy.desktop` is exactly the text the Desktop app always had.
  *
- * The mode is set once, when `/api/status` says which server this is (`RuntimeApp`), and is local
- * until then, so the local app never shows a Cloud sentence. */
+ * The place is set once, when `/api/status` says which server this is (`RuntimeApp`), and is
+ * Desktop until then, so the Desktop app never shows a Cloud sentence. The music home is set when
+ * the Cloud account is read (`CloudApp`), and is the cloud library until then, as before. */
 
-export type Mode = 'local' | 'cloud';
+/** Where SelectaDJ runs: the app on the person's computer, or the signed-in Cloud. */
+export type Place = 'desktop' | 'cloud';
 
-const local = {
+/** Where a Cloud account's music lives. */
+export type MusicHome = 'device' | 'cloud_library' | 'both';
+
+const desktop = {
   themeMatchSystem: 'Match this computer',
   themeCommand: 'Theme: match this computer',
   glossaryRendered: 'Made into finished audio on this PC, and checked for problems a measurement can find. “Ready” means the audio exists. It doesn’t mean it sounds good: only listening can tell you that.',
@@ -43,16 +50,19 @@ const local = {
   libraryReadyMeaning: 'Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.',
 };
 
-export type CopyKey = keyof typeof local;
+export type CopyKey = keyof typeof desktop;
 
-const cloud: Record<CopyKey, string> = {
+/** The Cloud sentences that change with where the music lives. */
+type HomeKey = 'glossaryRendered' | 'glossaryRender' | 'glossaryStems' | 'glossaryAnalysis' | 'setupAnalysis'
+  | 'startAudioStays' | 'startFolderHelp' | 'sourcesHelp' | 'libraryReadyMeaning';
+
+const LYRICS_LOOKUP = 'For lyric lookup, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file.';
+
+/** Every other Cloud sentence: the same wherever the music lives. */
+const cloudShared: Record<Exclude<CopyKey, HomeKey>, string> = {
   themeMatchSystem: 'Match this device',
   themeCommand: 'Theme: match this device',
-  glossaryRendered: 'Made into finished audio by SelectaDJ Cloud, and checked for problems a measurement can find. “Ready” means the audio exists. It doesn’t mean it sounds good: only listening can tell you that.',
-  glossaryRender: 'Making a transition into audio. SelectaDJ Cloud does it in the background. Your jobs wait their turn within your account, and the current mix always goes first. Drafts and word links being prepared wait behind it.',
-  glossaryStems: 'A song split into four parts: voice, drums, bass and melody (everything else). SelectaDJ Cloud separates them, so a transition can bring parts in and out on their own.',
-  glossaryArrange: 'In the Studio, Let SelectaDJ arrange it and Fine tune mine ask for a proposed set of cells. SelectaDJ Cloud works this out from what it measures in the stems and what you’ve rated. It’s only a proposal: it changes your working copy, and lists each cell it changed.',
-  glossaryAnalysis: 'SelectaDJ Cloud listening to a song to find its tempo, key, beats, bars, sections and energy, and, from its lyrics where they’re found, where the singing is. It never changes your original file.',
+  glossaryArrange: 'In the Studio, Let SelectaDJ arrange it and Fine tune mine ask for a proposed set of cells. SelectaDJ works this out from what it measures in the stems and what you’ve rated. It’s only a proposal: it changes your working copy, and lists each cell it changed.',
   glossaryPrivacy: 'Your library details, mixes, ratings and renders are kept in your private SelectaDJ Cloud workspace. Only you can reach them. Music you upload is stored there too. Music you connect from a device stays on that device, and SelectaDJ keeps only its title, artist and fingerprint. To find lyrics, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB, a public lyrics service. Your audio is never shared, and you can download all of it at any time.',
   glossaryPrivacyNoLyrics: 'Your library details, mixes, ratings and renders are kept in your private SelectaDJ Cloud workspace. Only you can reach them. Music you upload is stored there too. Music you connect from a device stays on that device, and SelectaDJ keeps only its title, artist and fingerprint. Your audio is never shared, and you can download all of it at any time.',
   exportsNeedRestart: 'Exports aren’t available right now. Try again in a few minutes.',
@@ -66,34 +76,109 @@ const cloud: Record<CopyKey, string> = {
   lucyBuiltinAbout: 'Plans with SelectaDJ’s own rules. Nothing goes to an AI provider.',
   lucyKeySavedHere: 'Kept by SelectaDJ and never shown here again.',
   mixesRestartToRefresh: 'This status will refresh shortly.',
-  setupAnalysis: 'Measures each song’s tempo, key, beats and sections, in SelectaDJ Cloud.',
-  startAudioStays: 'Your audio stays private to your workspace.',
-  startFolderHelp: 'Choose your music files or a folder to upload. Your original files on this device are never moved or changed.',
   workshopEstimates: 'Times are estimates, from how long your recent jobs have taken. They’re never a promise.',
   learningStaysHere: 'Rate transitions after you hear them. Your feedback stays private to your workspace.',
   jobsNeedRestart: 'Background jobs can’t be shown right now. Try again in a few minutes.',
-  sourcesHelp: 'Add music by uploading files. Your audio stays private to your workspace. For lyric lookup, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file.',
   diagnosticsStaysHere: 'No paths or song names, and nothing is sent anywhere. It only leaves this device if you copy it somewhere yourself.',
-  libraryReadyMeaning: 'Ready for mixes means a song can play on this device: SelectaDJ works out each transition in your browser as the mix plays, so nothing is measured or rendered ahead.',
 };
 
-export const copy: Record<Mode, Record<CopyKey, string>> = { local, cloud };
+/** The sentences that differ: songs in the cloud library are measured and rendered by SelectaDJ's
+ * workers; songs on this device are worked on by this browser and never uploaded. */
+const cloudByHome: Record<MusicHome, Record<HomeKey, string>> = {
+  cloud_library: {
+    glossaryRendered: 'Made into finished audio by SelectaDJ Cloud, and checked for problems a measurement can find. “Ready” means the audio exists. It doesn’t mean it sounds good: only listening can tell you that.',
+    glossaryRender: 'Making a transition into audio. SelectaDJ Cloud does it in the background. Your jobs wait their turn within your account, and the current mix always goes first. Drafts and word links being prepared wait behind it.',
+    glossaryStems: 'A song split into four parts: voice, drums, bass and melody (everything else). SelectaDJ Cloud separates them, so a transition can bring parts in and out on their own.',
+    glossaryAnalysis: 'SelectaDJ Cloud listening to a song to find its tempo, key, beats, bars, sections and energy, and, from its lyrics where they’re found, where the singing is. It never changes your original file.',
+    setupAnalysis: 'Measures each song’s tempo, key, beats and sections, in SelectaDJ Cloud.',
+    startAudioStays: 'Your audio stays private to your workspace.',
+    startFolderHelp: 'Choose your music files or a folder to upload. Your original files on this device are never moved or changed.',
+    sourcesHelp: `Add music by uploading files. Your audio stays private to your workspace. ${LYRICS_LOOKUP}`,
+    libraryReadyMeaning: 'Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.',
+  },
+  device: {
+    glossaryRendered: 'Made into finished audio in this browser, and checked for problems a measurement can find. “Ready” means the audio exists. It doesn’t mean it sounds good: only listening can tell you that.',
+    glossaryRender: 'Making a transition into audio. For songs on this device, this browser does it, and the audio never leaves the device.',
+    glossaryStems: 'A song split into four parts: voice, drums, bass and melody (everything else). For songs on this device, this browser separates them where the device can, so a transition can bring parts in and out on their own.',
+    glossaryAnalysis: 'SelectaDJ measuring a song in this browser to find its tempo, key, beats, bars, sections and energy. The audio stays on this device, and the file is never changed.',
+    setupAnalysis: 'Measures each song’s tempo, key, beats and sections, in this browser.',
+    startAudioStays: 'Your audio stays on this device.',
+    startFolderHelp: 'Choose a music folder on this device. Your files stay where they are: they are never uploaded, moved or changed.',
+    sourcesHelp: `Add music by choosing a folder on this device. Your audio stays on this device. ${LYRICS_LOOKUP}`,
+    libraryReadyMeaning: 'Ready for mixes means a song can play on this device: SelectaDJ works out each transition in your browser as the mix plays, so nothing is measured or rendered ahead.',
+  },
+  both: {
+    glossaryRendered: 'Made into finished audio, by SelectaDJ Cloud for songs in your cloud library and by this browser for songs on this device, and checked for problems a measurement can find. “Ready” means the audio exists. It doesn’t mean it sounds good: only listening can tell you that.',
+    glossaryRender: 'Making a transition into audio. For songs in your cloud library, SelectaDJ Cloud does it in the background: your jobs wait their turn within your account, and the current mix always goes first. For songs on this device, this browser does it.',
+    glossaryStems: 'A song split into four parts: voice, drums, bass and melody (everything else). SelectaDJ Cloud separates songs in your cloud library, and this browser separates songs on this device where the device can, so a transition can bring parts in and out on their own.',
+    glossaryAnalysis: 'SelectaDJ listening to a song to find its tempo, key, beats, bars, sections and energy: SelectaDJ Cloud for songs in your cloud library, this browser for songs on this device. It never changes your original file.',
+    setupAnalysis: 'Measures each song’s tempo, key, beats and sections, in SelectaDJ Cloud, or in this browser for songs on this device.',
+    startAudioStays: 'Songs you upload stay private to your workspace, and songs on this device stay on it.',
+    startFolderHelp: 'Choose music files or a folder to upload, or a folder that stays on this device. Your original files on this device are never moved or changed.',
+    sourcesHelp: `Add music by uploading files, or by choosing a folder on this device. Uploaded audio stays private to your workspace, and audio on this device stays on it. ${LYRICS_LOOKUP}`,
+    libraryReadyMeaning: 'Ready for mixes means a song can play in a mix. Songs in your cloud library are measured ahead; for songs on this device, SelectaDJ works out each transition in your browser as the mix plays.',
+  },
+};
 
-let mode: Mode = 'local';
+const cloudWords = (home: MusicHome): Record<CopyKey, string> => ({ ...cloudShared, ...cloudByHome[home] });
 
-/** Called once the server has said which mode it runs in. */
-export function setCopyMode(next: Mode) {
-  mode = next;
+export const copy: { desktop: Record<CopyKey, string>; cloud: Record<MusicHome, Record<CopyKey, string>> } = {
+  desktop,
+  cloud: { cloud_library: cloudWords('cloud_library'), device: cloudWords('device'), both: cloudWords('both') },
+};
+
+let place: Place = 'desktop';
+let home: MusicHome = 'cloud_library';
+
+/** Called once the server has said which place this is. */
+export function setCopyPlace(next: Place) {
+  place = next;
 }
 
-export function copyMode(): Mode {
-  return mode;
+export function copyPlace(): Place {
+  return place;
 }
 
-/** This mode's words. */
+/** Called once the Cloud account says where its music lives. */
+export function setMusicHome(next: MusicHome) {
+  home = next;
+}
+
+export function musicHome(): MusicHome {
+  return home;
+}
+
+/** Where an account's music lives, from what it holds: songs on its devices, a cloud library. */
+export function musicHomeOf(onDevice: boolean, inCloudLibrary: boolean): MusicHome | 'none' {
+  if (onDevice && inCloudLibrary) return 'both';
+  if (onDevice) return 'device';
+  return inCloudLibrary ? 'cloud_library' : 'none';
+}
+
+/** The words that are true here. */
 export function words(): Record<CopyKey, string> {
-  return copy[mode];
+  return place === 'desktop' ? copy.desktop : copy.cloud[home];
 }
+
+/** The Cloud start card: how to begin, and what happens to the music, for where it lives. */
+export const MUSIC_HOME_START: Readonly<Record<MusicHome | 'none', { heading: string; privacy: string }>> = {
+  both: {
+    heading: 'Use music on this device or in your cloud library',
+    privacy: 'Music you connect from this device stays on this device. Your cloud library stays available in SelectaDJ.',
+  },
+  device: {
+    heading: 'Use music on this device',
+    privacy: 'Your music stays on this device. SelectaDJ Cloud keeps only the details needed for your library and mixes.',
+  },
+  cloud_library: {
+    heading: 'Use your cloud library',
+    privacy: 'Your cloud library stays available in SelectaDJ.',
+  },
+  none: {
+    heading: 'Connect music to begin',
+    privacy: 'SelectaDJ has not been given access to music for this account.',
+  },
+};
 
 /* ------------------------------------------------------------------------------------------------
  * Playback status, one vocabulary (ADR-0463 BF-0463-03; states from ADR-0457, ADR-0460, ADR-0461).
