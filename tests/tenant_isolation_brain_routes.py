@@ -45,5 +45,4 @@ BRAIN_SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/mix/{position}/lock"): None,
     ("POST", "/api/mix/undo"): None,
     ("POST", "/api/mix/clear"): None,
-    ("PUT", "/api/mix/order"): {"song_ids": [1]},
 }

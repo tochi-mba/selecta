@@ -291,6 +291,9 @@ BUSINESS_SCOPED = {
 # forced on in `test_bf_local_media.py` (Bob cannot read, delete or report availability on
 # Alice's songs), the same arrangement the Business routes have.
 FLAG_DARK = {
+    # The whole order of an account's mix (cloud.account_mixes, off by default); Bob can't reach
+    # Alice's mixes (`test_cloud_brain_mixes.py`).
+    ("PUT", "/api/mix/order"),
     ("POST", "/api/local-media/songs"),
     ("GET", "/api/local-media/songs"),
     ("GET", "/api/local-media/songs/{song_id}"),
