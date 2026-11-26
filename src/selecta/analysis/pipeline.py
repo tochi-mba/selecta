@@ -115,7 +115,7 @@ def analyse_audio(
     if grid is None or grid.bar_starts.size < 4:
         return None
 
-    features = extract(mono_22k, grid.bar_times(), duration)
+    features = extract(mono_22k, grid.bar_times(), duration, grid.beats_per_bar)
     tick = timer.lap("features", tick)
 
     if earlier is not None:
@@ -183,6 +183,10 @@ def analyse_song(
                 energy_bars=features.energy_bars.astype(np.float16),
                 rms_db_bars=features.rms_db_bars.astype(np.float16),
                 low_share_bars=features.low_share_bars.astype(np.float16),
+                # the drum pattern and swing (`features.rhythm_bars`); a file without them is
+                # an older analysis, which the planner reads as no opinion on rhythm
+                pattern_bars=features.pattern_bars.astype(np.float16),
+                swing_bars=features.swing_bars.astype(np.float16),
                 peaks=waveform_peaks(mono),
             )
         replace_when_free(partial, target)

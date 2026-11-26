@@ -136,6 +136,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `planner.arrival` | **Rolls land on arrivals.** A phrase roll promises a drop, so the next song has to arrive on one: a chorus coming in, or its energy stepping up. |  |
 | `planner.motivated_punctuation` | **Motivated punctuation.** An echo, cut or wash needs an audible reason - a line just finished or the song's structure turned - or it scores far lower. |  |
 | `planner.energy_intent` | **No unintended drops.** A punchy move from a hot exit into a much colder landing is refused unless the landing is a chorus. |  |
+| `planner.rhythm_fit` | **One drummer.** When two songs' drum patterns fight (four on the floor over a broken beat, straight over swung), a blend keeps only one song's kick and hats at a time and hands them over on a phrase line. Off until it has been listened to. |  |
+| `planner.calibrated_gates` | **Gates from your ratings.** The planner's limits on tempo gap, key distance, beat grid and overlap length use the values `selecta calibrate --apply` fitted to your Good and Bad clicks, within safe bounds. Off: the hand-set limits. Off until the owner chooses to apply a fit. |  |
 
 ## Requests
 

@@ -8,7 +8,13 @@ In Cloud they arrive from the member's device or from a SelectaDJ worker. Nothin
 - The five bar arrays are one summary per bar (a bar is two seconds or so): its energy (0 to 1),
   its share of energy below 200 Hz, its level in dB, its 12 pitch-class weights, and 13 to 20
   averaged MFCC tone numbers. A bar-long average can't be turned back into the sound it came
-  from, and nothing finer than a beat is accepted.
+  from, and apart from the rhythm pair below, nothing finer than a beat is accepted.
+- Two optional bar arrays describe each bar's drums (`features.rhythm_bars`): `pattern_bars`,
+  32 numbers per bar from 0 to 1 (where in a 16-step bar the low band and the high band get
+  sharply louder, each band scaled to its own strongest step), and `swing_bars`, one number per
+  bar from 0.4 to 0.7 (where the off-beat falls within its beat). A shape of where hits land,
+  normalised per bar, holds nothing of the sound. A body without them is still whole: the
+  planner reads their absence as no opinion on rhythm.
 
 The waveform peaks, raw beats and raw downbeats that the Python analysis also keeps are never
 accepted: the planner doesn't read them, and the peaks are the closest thing to a waveform.
@@ -85,6 +91,11 @@ ARRAY_TYPES: dict[str, str] = {
     "mfcc_bars": "<f4",
 }
 BAR_ARRAYS = ("energy_bars", "low_share_bars", "rms_db_bars", "chroma_bars", "mfcc_bars")
+# Accepted when sent, never needed (`analysis.song.RHYTHM_ARRAYS`), and only as a pair.
+OPTIONAL_ARRAY_TYPES: dict[str, str] = {"pattern_bars": "<f4", "swing_bars": "<f4"}
+PATTERN_WIDTH = 32  # 16 steps of the low band, then 16 of the high band
+SWING_RANGE = (0.4, 0.7)  # features.SWING_LOW and SWING_HIGH
+_RANK_TWO = ("chroma_bars", "mfcc_bars", "pattern_bars")
 
 
 class FactsRefused(ValueError):
@@ -159,22 +170,27 @@ def _refuse(code: str, field: str, message: str) -> FactsRefused:
 
 def decode_arrays(wire: Mapping[str, Any]) -> dict[str, np.ndarray]:
     """The arrays from their wire form: each `{"dtype", "shape", "data"}`, `data` base64 of the
-    little-endian values. Only the planner's arrays, each in its one type."""
-    unknown = sorted(set(wire) - set(ARRAY_TYPES))
+    little-endian values. Only the planner's arrays, each in its one type; the optional rhythm
+    arrays only as a pair."""
+    unknown = sorted(set(wire) - set(ARRAY_TYPES) - set(OPTIONAL_ARRAY_TYPES))
     if unknown:
         raise _refuse("unknown_array", unknown[0], "Only the planner's arrays are accepted.")
     missing = [name for name in ARRAY_TYPES if name not in wire]
     if missing:
         raise _refuse("missing_array", missing[0], "Every planner array is needed.")
+    sent = {name: dtype for name, dtype in OPTIONAL_ARRAY_TYPES.items() if name in wire}
+    if sent and len(sent) != len(OPTIONAL_ARRAY_TYPES):
+        lacking = next(name for name in OPTIONAL_ARRAY_TYPES if name not in wire)
+        raise _refuse("missing_array", lacking, "The drum pattern and swing come together.")
     arrays: dict[str, np.ndarray] = {}
-    for name, dtype in ARRAY_TYPES.items():
+    for name, dtype in {**ARRAY_TYPES, **sent}.items():
         item = wire[name]
         if not isinstance(item, Mapping) or set(item) != {"dtype", "shape", "data"}:
             raise _refuse("bad_array", name, "An array is its dtype, shape and data.")
         if item["dtype"] != dtype:
             raise _refuse("bad_array", name, f"This array is sent as {dtype}.")
         shape = item["shape"]
-        rank_ok = 2 if name in ("chroma_bars", "mfcc_bars") else 1
+        rank_ok = 2 if name in _RANK_TWO else 1
         if (
             not isinstance(shape, list)
             or len(shape) != rank_ok
@@ -195,9 +211,10 @@ def decode_arrays(wire: Mapping[str, Any]) -> dict[str, np.ndarray]:
 
 def encode_array(name: str, values: np.ndarray) -> dict[str, Any]:
     """One array in its wire form (the inverse of `decode_arrays`), for a studio or a test."""
-    data = np.ascontiguousarray(values, dtype=ARRAY_TYPES[name])
+    dtype = ARRAY_TYPES.get(name) or OPTIONAL_ARRAY_TYPES[name]
+    data = np.ascontiguousarray(values, dtype=dtype)
     return {
-        "dtype": ARRAY_TYPES[name],
+        "dtype": dtype,
         "shape": list(data.shape),
         "data": base64.b64encode(data.tobytes()).decode("ascii"),
     }
@@ -243,7 +260,23 @@ def _check_arrays(arrays: dict[str, np.ndarray], duration: float) -> int:
         _within(name, arrays[name], 0.0, 1.0)
     _within("rms_db_bars", arrays["rms_db_bars"], *RMS_DB_RANGE)
     _within("mfcc_bars", arrays["mfcc_bars"], -MFCC_LIMIT, MFCC_LIMIT)
+    if any(name in arrays for name in OPTIONAL_ARRAY_TYPES):
+        _check_rhythm(arrays, bars)
     return bars
+
+
+def _check_rhythm(arrays: dict[str, np.ndarray], bars: int) -> None:
+    for name in OPTIONAL_ARRAY_TYPES:
+        if name not in arrays:
+            raise _refuse("missing_array", name, "The drum pattern and swing come together.")
+        if arrays[name].shape[0] != bars:
+            raise _refuse("bad_length", name, "Every bar array has one entry per bar.")
+    if arrays["pattern_bars"].shape[1] != PATTERN_WIDTH:
+        raise _refuse("bad_array", "pattern_bars", "32 pattern steps per bar.")
+    if arrays["swing_bars"].ndim != 1:
+        raise _refuse("bad_array", "swing_bars", "One swing number per bar.")
+    _within("pattern_bars", arrays["pattern_bars"], 0.0, 1.0)
+    _within("swing_bars", arrays["swing_bars"], *SWING_RANGE)
 
 
 def _check_sections(sections: Any, bars: int) -> None:
@@ -297,9 +330,10 @@ def check(facts: SongFacts, duration: float | None) -> None:
 
 def features_bytes(arrays: Mapping[str, np.ndarray]) -> bytes:
     """The features file the engine store reads (`analysis.pipeline.read_features`): only the
-    planner's arrays, in their checked types."""
+    planner's arrays, in their checked types, with the rhythm pair when it was sent."""
+    names = [*ARRAY_TYPES, *(name for name in OPTIONAL_ARRAY_TYPES if name in arrays)]
     stream = io.BytesIO()
-    np.savez_compressed(stream, **{name: arrays[name] for name in ARRAY_TYPES})
+    np.savez_compressed(stream, **{name: arrays[name] for name in names})
     return stream.getvalue()
 
 
@@ -344,6 +378,7 @@ __all__ = [
     "ARRAY_TYPES",
     "DEVICE",
     "DEVICE_IMPLEMENTATIONS",
+    "OPTIONAL_ARRAY_TYPES",
     "RANK",
     "WORKER",
     "FactsRefused",

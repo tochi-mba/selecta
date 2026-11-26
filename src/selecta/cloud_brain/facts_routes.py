@@ -52,7 +52,9 @@ class FactsRequest(BaseModel):
     peak_db: float
     energy: float
     sections: list[dict[str, Any]] = Field(max_length=song_facts.MAX_SECTIONS)
-    arrays: dict[str, dict[str, Any]] = Field(max_length=len(song_facts.ARRAY_TYPES))
+    arrays: dict[str, dict[str, Any]] = Field(
+        max_length=len(song_facts.ARRAY_TYPES) + len(song_facts.OPTIONAL_ARRAY_TYPES)
+    )
 
 
 class CorrectionRequest(BaseModel):

@@ -26,7 +26,7 @@ import numpy as np
 import sqlalchemy as sa
 
 from selecta.analysis.pipeline import read_features
-from selecta.analysis.song import SONG_ARRAYS, SongInfo, build_song
+from selecta.analysis.song import SongInfo, build_song, song_arrays
 from selecta.engine_store import EngineStore
 from selecta.engine_store.schema import analysis, lyrics, song_overrides, songs
 from selecta.local_media.lyrics_schema import local_song_lyrics
@@ -246,7 +246,7 @@ def load_song(
         song_id,
         row["content_hash"],
         row["version"],
-        SONG_ARRAYS,
+        song_arrays(),
         legacy,
         row["audio_id"],
     )
@@ -308,7 +308,7 @@ def load_songs(
                 song_id,
                 row["content_hash"],
                 row["version"],
-                SONG_ARRAYS,
+                song_arrays(),
                 legacy,
                 row["audio_id"],
             )
