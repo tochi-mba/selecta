@@ -15,6 +15,7 @@ from rich.table import Table
 
 from selecta import db
 from selecta.admin.cli import admin_app as _admin_app
+from selecta.cli_calibrate import calibrate as _calibrate
 from selecta.cli_progress import progress_bar
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, load_settings
 from selecta.persistence import make_engine
@@ -23,6 +24,7 @@ app = typer.Typer(no_args_is_help=True, add_completion=False)
 database_app = typer.Typer(no_args_is_help=True, add_completion=False)
 app.add_typer(database_app, name="db", help="Cloud database schema operations.")
 app.add_typer(_admin_app, name="admin", help="Staff console operations, such as the first Owner.")
+app.command("calibrate")(_calibrate)
 console = Console()
 DEFAULT_MIX_OUTPUT = Path("out/mix.flac")
 DEFAULT_REEL_OUTPUT = Path("reels/reel-1")

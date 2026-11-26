@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
-from selecta.planner.fit import folded_gap
+from selecta.planner.fit import folded_gap, level_step
 
 
 def pair_facts(script) -> dict:
@@ -45,4 +45,17 @@ def pair_facts(script) -> dict:
         "exit_section": a.section_label_at(exit_bar) if exit_bar is not None else None,
         "entry_section": b.section_label_at(entry_bar) if entry_bar is not None else None,
         "vocals_known": [bool(a.vocals_known), bool(b.vocals_known)],
+        # what the tempo-free moves' level gate measured, so `selecta calibrate` can fit it
+        "level_step": _level_step(a, b, exit_bar, entry_bar),
     }
+
+
+def _level_step(a, b, exit_bar, entry_bar) -> float | None:
+    if exit_bar is None or entry_bar is None:
+        return None
+    try:
+        step = level_step(a, b, exit_bar, entry_bar)
+    except (AttributeError, TypeError):
+        # a part known only by its JSON facts has no bar levels to read
+        return None
+    return round(step, 2) if step is not None else None

@@ -21,6 +21,7 @@ from selecta.arrange import (
     why_it_cant,
 )
 from selecta.audit.checks import AuditReport, VocalSpans, audit, audit_facts, beat_offset
+from selecta.calibration import desktop_gates
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner
 from selecta.lyrics.match import LyricLink, SongFacts, discover
@@ -109,7 +110,7 @@ def _why_unavailable(move: str, a: SongInfo, b: SongInfo, has_link: bool) -> str
         )
     if move in WORD_MOVES or move == "auto":
         return None
-    if not enumerate_candidates(a, b, move):
+    if not enumerate_candidates(a, b, move, gates=desktop_gates()):
         if move in {"bass_swap_blend", "filter_sweep"}:
             if gap > 0.08:
                 return f"The songs are {gap:.0%} apart in tempo, too far to play together."
@@ -244,7 +245,9 @@ def _bar_cue_render(
     worked_before: tuple[int, int, int] | None = None,
 ) -> tuple[Rendered, AuditReport, str]:
     recipe = all_recipes()[request.move]
-    pool = enumerate_candidates(a, b, request.move, exits=_exits_after(a, request.leave_after))
+    # the owner's applied calibration, when `planner.calibrated_gates` is on; else today's gates
+    exits = _exits_after(a, request.leave_after)
+    pool = enumerate_candidates(a, b, request.move, exits=exits, gates=desktop_gates())
     if request.bars is not None and recipe.beatmatched:
         narrowed = [c for c in pool if c.bars == request.bars]
         pool = narrowed or pool
