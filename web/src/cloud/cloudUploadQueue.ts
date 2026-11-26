@@ -270,14 +270,18 @@ function claim(): Promise<void> {
 
 // --- running ------------------------------------------------------------------------------------
 
+/** Nudges so far: a wait that began after a look at the device misses none that came between. */
+let nudges = 0;
+
 function nudge(): void {
+  nudges += 1;
   nudgeNow?.();
 }
 
-/** Wait until nudged, `ms` passes or the run stops. */
-function rest(signal: AbortSignal, ms: number): Promise<void> {
+/** Wait until nudged (since `since`), `ms` passes or the run stops. */
+function rest(signal: AbortSignal, ms: number, since = nudges): Promise<void> {
   return new Promise((resolve) => {
-    if (signal.aborted) { resolve(); return; }
+    if (signal.aborted || nudges !== since) { resolve(); return; }
     const done = () => {
       if (timer !== undefined) clearTimeout(timer);
       signal.removeEventListener('abort', done);
@@ -334,10 +338,11 @@ async function loop(own: UploadQueueParts, j: UploadJournal, signal: AbortSignal
     if (!flagOn('cloud.move_to_cloud')) { await stopRun(j, 'grant'); return; }
     const next = j.all().find((row) => row.state !== 'done' && !row.choose);
     if (!next) { await finish(own, j); return; }
+    const since = nudges;
     const wait = await waitFor(own, j);
     if (wait) {
       refresh({ waiting: wait.why, ask: wait.ask ?? null, current: null });
-      await rest(signal, wait.ms);
+      await rest(signal, wait.ms, since);
       continue;
     }
     if (live.waiting || live.ask) refresh({ waiting: null, ask: null });

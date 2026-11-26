@@ -98,7 +98,7 @@
       "routes": ["POST /api/uploads/preview"],
       "requires": ["cloud.uploads"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "storage",
       "cloud_surface_kind": "headless",

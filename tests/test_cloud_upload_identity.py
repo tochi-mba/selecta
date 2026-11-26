@@ -315,7 +315,7 @@ def test_with_the_flag_off_uploads_behave_as_before(world, tmp_path):
     _device_song(world.engine, second, audio=audio)
     stranger = _mp3("Something else", OTHER_FRAMES)
 
-    flags.use(None)  # the build's defaults: storage.upload_identity is off
+    flags.use("-storage.upload_identity")  # turned off (the build ships it on)
     assert not flags.on("storage.upload_identity")
     old = _upload(world, second, song_id=song, sha256=_sha(second))
     ignored = _upload(world, stranger, song_id=song, sha256=_sha(stranger))
@@ -478,7 +478,7 @@ def test_the_workers_facts_replace_the_devices_and_corrections_still_win(world, 
     flags.use("+storage.upload_identity -cloud.brain")
     assert hosted_facts.keep(world.engine, A, [(_sha(second), "k", None)], read_object,
                              artifacts) == 0  # cloud.brain off: nothing read
-    flags.use(None)  # off: a device-measured song under a secondary hash is not picked up
+    flags.use("-storage.upload_identity")  # off: a song under a secondary hash is not picked up
     assert hosted_facts.unmeasured(engine_store, [_sha(second)]) == {}
     flags.use("+storage.upload_identity")
     assert hosted_facts.unmeasured(engine_store, [_sha(second), _sha(first)]) == {

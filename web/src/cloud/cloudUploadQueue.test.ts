@@ -70,7 +70,8 @@ describe('uploading songs from this device', () => {
     expect(previewed(server)).toEqual([[2, 4, 3, 1]]);
     expect(outcomes()).toEqual({ 1: 'uploaded', 2: 'uploaded', 3: 'uploaded', 4: 'uploaded' });
     // every part of every file went once, and each song left this device's list for its record
-    expect(server.puts).toHaveLength(4 * 4);
+    // 'song N bytes' is 12 bytes: three parts of four
+    expect(server.puts).toHaveLength(4 * 3);
     expect(new Set(server.puts.map((put) => put.url)).size).toBe(server.puts.length);
     expect(await store.all()).toEqual([]);
     expect(store.cloudOnlyRecords().map((record) => record.songId).sort()).toEqual([1, 2, 3, 4]);
@@ -118,7 +119,8 @@ describe('uploading songs from this device', () => {
   it('waits for files a browser cannot read twice, matched by name and size and confirmed by hash', async () => {
     const { server } = await setup({}, [{ id: 7, text: 'picked once', ref: 'repick' }, { id: 8, text: 'picked too', ref: 'repick' }]);
     expect(await startUpload({ songIds: [7, 8] })).toEqual({ ok: true, queued: 2, choose: 2 });
-    await vi.waitFor(() => expect(uploadSnapshot().choose.map((one) => one.songId)).toEqual([7, 8]));
+    // newest first: 8 was added after 7
+    await vi.waitFor(() => expect(uploadSnapshot().choose.map((one) => one.songId)).toEqual([8, 7]));
     expect(server.calls).toEqual([]);
     const answer = await chooseFilesAgain([bytesFile('picked once', 'song-7.mp3'), bytesFile('different!!', 'song-8.mp3'), bytesFile('x', 'other.mp3')]);
     expect(answer).toEqual({ matched: 1, changed: 1, unmatched: 1 });
@@ -145,7 +147,8 @@ describe('stopping honestly', () => {
     await startUpload({ songIds: [1, 2, 3, 4] });
     await vi.waitFor(() => expect(uploadSnapshot().phase).toBe('stopped'));
     expect(uploadSnapshot().stop).toBe('quota');
-    expect(outcomes()).toEqual({ 1: 'uploaded', 2: 'uploaded', 3: null, 4: null });
+    // newest first: 4 and 3 fitted, 2 did not, and 1 waits behind it
+    expect(outcomes()).toEqual({ 1: null, 2: null, 3: 'uploaded', 4: 'uploaded' });
     expect(uploadSnapshot().words).toBe('Your cloud library is full. 2 songs uploaded. 2 songs wait.');
     server.setRoom(1_000);
     await resumeUploads();
@@ -277,14 +280,19 @@ describe('pause, resume and cancel', () => {
   });
 
   it('cancels: what has not gone stays on this device, and its holds are let go', async () => {
-    const { server } = await setup({ partSize: 2, putDelay: 15 }, [{ id: 1, text: 'abcd' }, { id: 2, text: 'efgh' }, { id: 3, text: 'ijkl' }]);
+    // the member presses Cancel as the second song's parts are asked for
+    let pressed: Promise<void> | null = null;
+    const { server } = await setup({
+      partSize: 2, putDelay: 15,
+      fail: (method, path) => { if (method === 'POST' && path === '/uploads/s2/parts') pressed ??= cancelUploads(); return null; },
+    }, [{ id: 1, text: 'abcd' }, { id: 2, text: 'efgh' }, { id: 3, text: 'ijkl' }], { mixSongs: () => [1, 2, 3] });
     await startUpload({ songIds: [1, 2, 3] });
-    await vi.waitFor(() => expect(outcomes()[1]).toBe('uploaded'));
-    await cancelUploads();
+    await vi.waitFor(() => expect(pressed).not.toBeNull());
+    await pressed;
     expect(uploadSnapshot().phase).toBe('finished');
     expect(uploadSnapshot().cancelled).toBe(true);
     expect(uploadSnapshot().words).toBe('Uploads cancelled. 1 song uploaded; the rest stay on this device.');
-    await vi.waitFor(() => expect(server.sessions.get('s3')?.status).toBe('cancelled'));
+    await vi.waitFor(() => expect([server.sessions.get('s2')?.status, server.sessions.get('s3')?.status]).toEqual(['cancelled', 'cancelled']));
     expect((await store.all()).map((song) => song.songId).sort()).toEqual([2, 3]);
   });
 });
@@ -317,8 +325,8 @@ describe('carrying on', () => {
 
   it('runs in one tab: another tab follows and takes over when that tab closes', async () => {
     const locks = sharedLocks();
-    const specs = [{ id: 1, text: 'aaaa' }, { id: 2, text: 'bbbb' }, { id: 3, text: 'cccc' }];
-    const { server } = await setup({ partSize: 2, putDelay: 10 }, specs, { pacing: { locks: () => locks } });
+    const specs = [1, 2, 3, 4, 5].map((id) => ({ id, text: `${id}`.repeat(12) }));
+    const { server } = await setup({ partSize: 2, putDelay: 25 }, specs, { pacing: { locks: () => locks } });
     await startUpload({ songIds: [1, 2, 3] });
     await vi.waitFor(() => expect(server.puts.length).toBeGreaterThan(0));
     // a second tab: its own copy of the module, the same IndexedDB and the same locks
@@ -340,7 +348,7 @@ describe('carrying on', () => {
       await endUploadQueue();
       await vi.waitFor(() => expect(other.uploadSnapshot().phase).toBe('finished'), { timeout: 8_000 });
       expect(fromOther.length).toBeGreaterThan(0);
-      expect(Object.fromEntries(other.uploadRows().map((row) => [row.songId, row.outcome]))).toEqual({ 1: 'uploaded', 2: 'uploaded', 3: 'uploaded' });
+      expect(Object.fromEntries(other.uploadRows().map((row) => [row.songId, row.outcome]))).toEqual({ 1: 'uploaded', 2: 'uploaded', 3: 'uploaded', 4: 'uploaded', 5: 'uploaded' });
       expect(new Set(server.puts.map((put) => put.url)).size).toBe(server.puts.length);
     } finally {
       stopOther();

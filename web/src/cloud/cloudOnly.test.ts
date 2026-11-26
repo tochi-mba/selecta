@@ -73,7 +73,8 @@ describe('the record and its undo', () => {
     const store = await MediaStore.open(WS);
     const told: number[] = [];
     const parts = { openStore: async () => store, onAvailabilityChanged: () => { told.push(1); } };
-    await store.put(await songWith(1, 'one'));
+    const first = await songWith(1, 'one');
+    await store.put(first);
     await store.put(await songWith(2, 'two', 'repick'));
     await store.put(await songWith(3, 'three', 'handle', true));
     for (const id of [1, 2, 3]) await store.keepInCloudOnly(id);
@@ -83,7 +84,7 @@ describe('the record and its undo', () => {
     expect(await playFromThisDeviceAgain(3, parts)).toBe('choose_again');
     expect(await playFromThisDeviceAgain(4, parts)).toBe('not_found');
     expect((await store.all()).map((song) => song.songId).sort()).toEqual([1, 2, 3]);
-    expect((await store.get(1))?.sources).toEqual((await songWith(1, 'one')).sources);
+    expect(await store.get(1)).toEqual(first);
     expect(store.cloudOnlyRecords()).toEqual([]);
     expect(told).toHaveLength(3);
     expect(idb.rows(mediaDbName(WS), 'in_cloud_only')).toEqual([]);
