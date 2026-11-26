@@ -256,11 +256,15 @@ def test_the_migration_meets_an_existing_column_and_runs_once(home):
     after = _rows(home.db_path)
     assert {row["workspace_id"] for table in FACTS for row in after[table]} == {"local"}
     assert _hashes(home.db_path) == {1: "kept", 2: None, 3: None}
-    # every column the library migrations add is new and empty (lib0005 adds provenance)
+    # every column the library migrations add is new and empty (lib0005 adds provenance,
+    # lib0012 the set-aside mark)
     added = ("workspace_id", "content_hash", "audio_id", "implementation", "source")
     assert {row.get("source") for row in after["analysis"]} == {None}
     assert {row.get("implementation") for row in after["analysis"]} == {None}
-    assert _rows(home.db_path, added) == before
+    now = _rows(home.db_path, added)
+    # songs keep their own is_music; the new one on song_overrides is empty
+    assert {row.pop("is_music") for row in now["song_overrides"]} <= {None}
+    assert now == before
     schema, rows = _schema(home.db_path), _rows(home.db_path)
     db._CHECKED.clear()  # the full check again, as a new process would
     _start(home.db_path)

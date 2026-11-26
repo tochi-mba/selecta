@@ -107,6 +107,9 @@ song_overrides = sa.Table(
     sa.Column("bpm", sa.Float, nullable=True),
     sa.Column("camelot", sa.Text, nullable=True),
     sa.Column("updated_at", sa.Text, nullable=True),
+    # Cloud: the member's "Is it music?" (false: set aside, kept out of planned mixes; null: no
+    # mark). Desktop keeps it on `songs` and leaves this null (es0479music01, lib0012ismusic).
+    sa.Column("is_music", sa.Boolean, nullable=True),
     _of_a_song("song_overrides"),
 )
 

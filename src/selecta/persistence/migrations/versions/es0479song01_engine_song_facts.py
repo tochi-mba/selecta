@@ -56,9 +56,9 @@ COLUMNS = {
     "song_overrides": ("song_id", "workspace_id", "bpm", "camelot", "updated_at"),
 }
 TABLES = tuple(COLUMNS)
-# Columns a later revision adds where missing (`es0479prov01`). A database built from scratch
-# gets them here with the rest, as `bf0458media01` does for `local_songs`.
-LATER = {"analysis": ("implementation", "source")}
+# Columns a later revision adds where missing (`es0479prov01`, `es0479music01`). A database
+# built from scratch gets them here with the rest, as `bf0458media01` does for `local_songs`.
+LATER = {"analysis": ("implementation", "source"), "song_overrides": ("is_music",)}
 POLICY = "workspace_isolation"
 # No coalesce and no '' branch: an unset or empty workspace matches no row.
 RULE = "(workspace_id = current_setting('app.workspace_id', true))"
