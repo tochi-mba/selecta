@@ -14,13 +14,16 @@ import { withVersions } from './songVersions';
 /** Where CloudShell's songs can play from, and the resolver that plays them (ADR-0465, ADR-0469):
  * the availability sources the request adapter reads, the adapted request itself, and the device
  * first, hosted fallback resolver. Kept out of CloudShell.tsx so the shell stays under the cap. */
-export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, catalogue = false, openStore, lapsed, refreshStatus, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed, book }: {
+export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting: granted, places = false, catalogue = false, openStore, lapsed, refreshStatus, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed, book }: {
   api: Api;
   cloud: Request;
   workspaceId: string;
   on: (id: FlagId) => boolean;
   /** a grandfathered account with stored media readable gets the hosted path */
   coexisting: boolean;
+  /** library.places: the Library answers by place; an account that keeps songs in the cloud
+   * library still plays them when its grant was taken away (the grant gates uploads only) */
+  places?: boolean;
   /** cloud.catalogue_play: a cloud song is found from the catalogue by its id, never by name */
   catalogue?: boolean;
   openStore: () => Promise<MediaStore>;
@@ -44,7 +47,9 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, ca
   const mixableIds = useRef<ReadonlySet<number> | null>(null);
   // cloud.one_mixer: a saved file reads songs through the player's resolver (set below)
   const resolveNow = useRef<(() => Promise<MediaResolver>) | null>(null);
+  const coexisting = granted || places;
   const sources = useMemo<AvailabilitySources>(() => ({
+    places,
     resolver: async () => (await resolveNow.current?.()) ?? null,
     controller: () => controllerLink.current,
     holders: () => whereHeld.current,
@@ -65,7 +70,9 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, ca
       }
       return found;
     },
-    hosted: coexisting && catalogue ? (songs) => catalogueHeld(api, workspaceId, songs) : coexisting ? async (songs) => {
+    // library.places: the songs list says each song's cloud copy, so no upload is listed
+    hosted: places ? async (songs) => new Set(songs.filter((song) => song.cloud).map((song) => song.id))
+      : coexisting && catalogue ? (songs) => catalogueHeld(api, workspaceId, songs) : coexisting ? async (songs) => {
       const listing = cloudLibraryAssets(api, workspaceId); // read again after an upload (cloudLibraryMedia.ts)
       const assets = await listing;
       return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
@@ -93,7 +100,7 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, ca
       })),
       onServed: (from) => onServed(from.cached ? { at: from.at } : null),
     } : undefined,
-  }), [api, cloud, workspaceId, coexisting, catalogue, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
+  }), [api, cloud, workspaceId, coexisting, places, catalogue, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
   const request = useMemo(() => deviceMusicRequest(cloud, sources), [cloud, sources]);
   // the resolver asks the newest adapter for a song's upload (cloud.catalogue_play)
   const latestRequest = useRef<DeviceMusicRequest>(request);
@@ -104,7 +111,7 @@ export function useCloudShellMedia({ api, cloud, workspaceId, on, coexisting, ca
   const resolving = useRef<Promise<MediaResolver> | null>(null);
   const resolverFor = useRef<string | null>(null);
   const resolver = useCallback(async () => {
-    const made = `${workspaceId}:${catalogue}`;
+    const made = `${workspaceId}:${catalogue}:${coexisting}`;
     if (resolverFor.current !== made) { resolverFor.current = made; resolving.current = null; }
     return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
     // any version of the song this device holds plays it (ADR-0469 amendment 2)

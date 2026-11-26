@@ -217,14 +217,15 @@ def install_routes(
                     measuring=places.decided(request, conn, principal, places.STUDIO),
                 )
                 if places.decided(request, conn, principal, places.FLAG)
-                else {}
+                else None
             )
         for song in songs:
             song["available_on"] = counts.get(song["id"], 0)
             if song["id"] in aside:
                 song["set_aside"] = True
-            if song["id"] in cloud:
-                song["cloud"] = cloud[song["id"]]
+            # null says "no copy", so a page never has to list the uploads to find out
+            if cloud is not None:
+                song["cloud"] = cloud.get(song["id"])
         answer: dict[str, Any] = {"songs": songs}
         if next_after is not None:
             answer["next"] = next_after

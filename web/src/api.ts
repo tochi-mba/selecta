@@ -117,6 +117,26 @@ export type Status = {
   scan: { status: string; folder?: string; music?: number; set_aside?: number; error?: string; found?: number; done?: number };
   /** Each feature flag and whether it's on in this build. An older server doesn't say. */
   flags?: Record<string, boolean>;
+  /** library.places, in a Cloud shell with a cloud library: how many songs are kept where. Kept
+   * out of `counts`, whose values are all plain numbers. */
+  places?: PlaceCounts;
+};
+
+/** library.places: songs on this device, in the cloud library, in both, on another of the
+ * member's devices, and in no place at all (no device holds it and there is no cloud copy). */
+export type PlaceCounts = { here: number; cloud: number; both: number; other: number; none: number };
+
+/** library.places: one song's copy in the cloud library, every kept copy of it counted. */
+export type CloudCopy = { asset_id: string; bytes: number; format: string | null; copies: number; measuring?: boolean };
+
+/** library.places: where one song is kept, each place on its own. `device` is this device:
+ * plays, needs permission again, needs choosing again, or not here. `other` names the member's
+ * other devices that hold it (open now, or not), and `devices` is how many devices the server
+ * counts holding it, this one perhaps among them. */
+export type SongPlacesInfo = {
+  device: 'here' | 'reauth' | 'reconnect' | null;
+  cloud: CloudCopy | null;
+  other: { devices: number; online: readonly string[]; before: readonly string[] };
 };
 
 export type SongRow = {
@@ -420,6 +440,8 @@ export type LibrarySong = {
   /** ADR-0469 amendment 2: the files of this one song, when the person has more than one (two
    * folders with the same song, an MP3 and a FLAC). Shown in the song's details; never as rows. */
   versions?: SongVersion[];
+  /** library.places: where the song is kept (this device, the cloud library, other devices). */
+  places?: SongPlacesInfo;
 };
 
 /** One file of a song: its own catalogue id, length and format, whether this device holds it,

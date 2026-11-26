@@ -1,4 +1,5 @@
-import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
+import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status, type CloudCopy } from '../api';
+import { cloudBySong, placeCounts, placeMatches, placeSorter, songPlaces } from './libraryPlaces';
 import { accountMeasured, noteCorrection, sendingOn, type Measured } from './accountFacts';
 import { accountMixes, accountMixesOn, fallsBack } from './accountMixes';
 import { accountOrderPlanner } from './accountOrder';
@@ -50,6 +51,10 @@ export type CatalogueSong = {
   versions?: number[];
   /** The member set it aside (Is it music? answered no): kept out of mixes (T-20261126-3f92). */
   set_aside?: boolean;
+  /** When the catalogue first listed it (epoch seconds), for "Newest first". */
+  created_at?: number;
+  /** library.places: its copy in the cloud library, every kept copy counted; absent with none. */
+  cloud?: CloudCopy | null;
 };
 
 /** The refusal for a route only the SelectaDJ app on a computer answers. */
@@ -98,6 +103,9 @@ export type AvailabilitySources = {
   cloudCopy?: (rows: readonly CatalogueSong[], all: readonly CatalogueSong[]) => Promise<string | null>;
   /** cloud.one_mixer: the player's resolver, so a saved file reads cloud songs as playback does. */
   resolver?: () => Promise<import('../media').MediaResolver | null>;
+  /** library.places: the Library filters, sorts and counts by where songs are kept, and each
+   * row says its places (libraryPlaces.ts). Off or left out: as before. */
+  places?: boolean;
   /** Where browser mixes are kept (BF-0462-05); without it the current mix is empty. */
   recipes?: RecipeStore;
   /** Harmonic matches from key profiles measured on this device (cloud.browser_harmonic);
@@ -139,6 +147,9 @@ export type Availability = {
   /** Tempo, key and energy measured on the member's devices and saved to the account, with
    * their own corrections (cloud.brain and cloud.device_analysis); absent otherwise. */
   facts?: ReadonlyMap<number, Measured>;
+  /** library.places: each song's cloud copy (its versions' summed); present only with the flag,
+   * which is how the Library page and status know to answer by place. */
+  cloud?: ReadonlyMap<number, CloudCopy>;
 };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
@@ -197,6 +208,8 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     : undefined;
   return {
     ...(versions ? { versions } : {}),
+    // library.places: where it is kept, each place on its own
+    ...(known.cloud ? { places: songPlaces(placesOf(song, known), known.cloud.get(song.id) ?? null) } : {}),
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, ...measuredOf(known.facts?.get(song.id)),
     music_override: song.set_aside ? 0 : null, grid_confidence: null, lyric_status: null,
@@ -245,6 +258,9 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
     .filter((song) => {
       if (state === 'all' || state === 'not_yet') return true;
       if (state === 'set_aside') return song.set_aside === true;
+      // library.places: on this device, in the cloud library, on another device, or nowhere
+      const placed = known.cloud ? placeMatches(state, song, placesOf(song, known), !!known.elsewhere) : null;
+      if (placed !== null) return placed;
       const where = availabilityOf(song, known);
       if (song.set_aside && state !== 'attention' && state !== 'missing') return false;
       if (state === 'ready') return where === 'here' || where === 'hosted';
@@ -253,10 +269,10 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
       if (state === 'attention') return where === 'reauth' || where === 'reconnect' || where === 'nowhere';
       return state === 'missing' && where === 'nowhere';
     })
-    .sort((one, other) => {
+    .sort((known.cloud ? placeSorter(sort, (id) => known.cloud?.get(id) ?? null) : null) ?? ((one, other) => {
       const key = sort === 'artist' ? 'artist' : 'title';
       return one[key].localeCompare(other[key]) || one.id - other.id;
-    });
+    }));
   const page = matching.slice(start, start + limit);
   const next = start + limit < matching.length ? String(start + limit) : null;
   return { songs: page.map((song) => asLibrarySong(song, known)), total: matching.length, next };
@@ -269,6 +285,8 @@ export function statusFrom(songs: CatalogueSong[], known: Availability = NO_AVAI
   const setAside = songs.filter((song) => song.set_aside).length;
   return {
     counts: { total: songs.length, music: songs.length - setAside, analysed: 0, ready, lyrics: 0, set_aside: setAside, missing: songs.length - available },
+    // library.places: how many songs are kept where ("missing" is `none` there)
+    ...(known.cloud ? { places: placeCounts(songs.map((song) => ({ song, places: placesOf(song, known) })), !!known.elsewhere) } : {}),
     steering,
     // the browser's moves by name, so the shared views can say which one a seam asks for
     moves: browserMovesOn() ? browserMoveNames() : {},
@@ -415,6 +433,8 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
       loved: await lovedNow(),
       facts: await factsNow(),
       files: { here, rows: new Map(grouping.files.map((file) => [file.id, file])) },
+      // library.places: a grouped song's cloud copy is its versions' copies
+      ...(sources.places ? { cloud: cloudBySong(grouping.files, grouping.primaryOf) } : {}),
     };
   };
   const playable = async (): Promise<PlayableSong[]> => {
