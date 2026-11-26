@@ -24,7 +24,7 @@ test('a grandfathered account sees hosted copies, songs on its other devices and
 
   await expect(chip(page, 'Song 1')).toHaveText('Ready');
   await expect(chip(page, 'Song 1')).toHaveAttribute('title', HOSTED);
-  await expect(chip(page, 'Away song')).toHaveText('Not in this browser yet');
+  await expect(chip(page, 'Away song')).toHaveText('Not in this browser');
   await expect(chip(page, 'Away song')).toHaveAttribute('title', 'Choose your music folder in this browser to play it here.');
   await expect(chip(page, 'Lost song')).toHaveText('Missing');
   await expect(chip(page, 'Lost song')).toHaveAttribute('title', 'It is not on any of your devices right now. Connect it again to play it.');
@@ -81,8 +81,8 @@ test('a new local-first member sees the songs connected on this device as availa
   await expect(chip(page, 'Here song')).toHaveText('Ready');
   await expect(chip(page, 'Here song')).toHaveAttribute('title', 'The file is connected here and can play.');
   // its file no longer opens here, and the seeding device still reports it
-  await expect(chip(page, 'Moved song')).toHaveText('Not in this browser yet');
-  await expect(chip(page, 'Other song')).toHaveText('Not in this browser yet');
+  await expect(chip(page, 'Moved song')).toHaveText('Not in this browser');
+  await expect(chip(page, 'Other song')).toHaveText('Not in this browser');
   // a new member has no hosted copies, so nothing claims one
   await expect(page.locator(`[title="${HOSTED}"]`)).toHaveCount(0);
   // and the row's answer holds once the files have been checked against their fingerprints
