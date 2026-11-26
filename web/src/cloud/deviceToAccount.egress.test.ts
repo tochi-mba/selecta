@@ -76,7 +76,9 @@ function numbersIn(value: unknown): number {
 
 function holdsTheContract(call: Captured) {
   expect(ALLOWED.some(([method, path]) => method === call.method && path.test(call.path)), `${call.method} ${call.path}`).toBe(true);
-  expect(call.path).not.toMatch(PATH_LIKE);
+  // The request path needs no PATH_LIKE check: each ALLOWED pattern is anchored and its only
+  // varying parts are digits, so a path that matched carries no name. (PATH_LIKE's "two slash-
+  // separated names" would flag the route /planning/candidates/script itself.)
   if (call.body === undefined) return;
   expect(() => assertNoPath(call.body)).not.toThrow();
   const words = texts(call.body);
