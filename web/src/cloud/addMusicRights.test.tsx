@@ -19,13 +19,15 @@ import { UploadsPanel } from './Uploads';
 const WORDS = 'I own these files or have the right to store copies of them for my own use. I understand SelectaDJ keeps them privately for my account.';
 const ASKED: UploadRights = { applies: true, reason: null, accepted: false, version: '2026-11-26', statement: WORDS, wording_sha256: 'a'.repeat(64), accepted_at: null };
 
-/** A Cloud API with the rights routes (agreed or not) and a plan that refuses until agreed. */
-function rightsApi(agreed = false) {
+/** A Cloud API with the rights routes (agreed or not) and a plan that refuses until agreed.
+ * `readFails`: the statement cannot be read, so only the refused plan carries it. */
+function rightsApi(agreed = false, readFails = false) {
   const calls: string[] = [];
   let kept = agreed;
   const api = vi.fn(async (path: string, init?: RequestInit) => {
     calls.push(`${init?.method ?? 'GET'} ${path}`);
     if (path === '/uploads/rights' && init?.method === 'POST') { kept = true; return { ...ASKED, accepted: true, accepted_at: 9 }; }
+    if (path === '/uploads/rights' && readFails) throw new Error('offline');
     if (path === '/uploads/rights') return kept ? { ...ASKED, accepted: true, accepted_at: 9 } : ASKED;
     if (path === '/uploads') return { uploads: [] };
     if (path === '/uploads/plan') {
@@ -65,13 +67,7 @@ describe('Add music asks for the statement once', () => {
   it('shows it when the server refuses a plan for it', async () => {
     // the first read failed, so the page learns of the statement from the refused plan
     setAccountFeatures({ 'cloud.move_to_cloud': true });
-    const { api } = rightsApi();
-    const reads = api as unknown as ReturnType<typeof vi.fn>;
-    const real = reads.getMockImplementation()!;
-    reads.mockImplementation(async (path: string, init?: RequestInit) => {
-      if (path === '/uploads/rights' && !init?.method) throw new Error('offline');
-      return real(path, init);
-    });
+    const { api } = rightsApi(false, true);
     panel(api);
     await choose();
     await userEvent.click(screen.getByRole('button', { name: 'Start upload' }));
