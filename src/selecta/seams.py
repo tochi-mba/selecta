@@ -314,7 +314,7 @@ class SeamStore:
         for meta in [*self.root.glob("*/seam.json"), *histories]:
             try:
                 request = json.loads(meta.read_text("utf-8")).get("request") or {}
-            except (OSError, ValueError):
+            except (OSError, ValueError, AttributeError):  # unreadable, or not a record
                 continue
             if song_id in {request.get("a"), request.get("b")}:
                 _unlink_after_readers(meta)
@@ -573,6 +573,8 @@ class SeamStore:
                     )
                 except (OSError, ValueError):
                     continue
+                if not isinstance(state, dict):
+                    continue  # a file that isn't a record must not stop the whole scan
                 records[meta] = (stamp, state)
                 states.setdefault(state.get("key", str(meta)), state)
                 if dev and time.monotonic() - last_report >= 10:
