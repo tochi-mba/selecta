@@ -16,9 +16,10 @@ import soundfile as sf
 from fastapi.testclient import TestClient
 from mutagen.flac import FLAC
 
-from selecta import db
+from selecta import db, flags
 from selecta.api import create_app
 from selecta.config import Settings
+from selecta.engine_store import library_writes
 from selecta.library import scan as scan_module
 from selecta.library.scan import scan_folder
 
@@ -59,11 +60,26 @@ def test_a_restart_part_way_through_writing_leaves_no_duplicates_and_recovers_co
         connection.commit()  # the worst case: what was written before the kill is on disk
         written += 1
 
+    if flags.on("core.engine_store"):
+        # the store's scan saves in short writes: one song per write here, so two are on disk
+        real_store = library_writes._upsert_song
+
+        def store_dies_after_two(connection, store, song):
+            nonlocal written
+            if written == 2:
+                raise Killed
+            real_store(connection, store, song)
+            written += 1
+
+        monkeypatch.setattr(library_writes, "SCAN_BATCH", 1)
+        monkeypatch.setattr(library_writes, "_upsert_song", store_dies_after_two)
     monkeypatch.setattr(scan_module.db, "upsert_song", dies_after_two)
     with pytest.raises(Killed):
         scan_folder(conn, root)
     conn.close()
     monkeypatch.setattr(scan_module.db, "upsert_song", real)
+    if flags.on("core.engine_store"):
+        monkeypatch.setattr(library_writes, "_upsert_song", real_store)
 
     restarted = db.connect(path)
     assert restarted.execute("SELECT COUNT(*) FROM songs").fetchone()[0] == 2
