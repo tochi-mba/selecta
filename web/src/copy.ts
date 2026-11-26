@@ -13,6 +13,8 @@
  * the Cloud account is read (`CloudApp`), and is the cloud library until then, as before. */
 
 /** Where SelectaDJ runs: the app on the person's computer, or the signed-in Cloud. */
+import { flagListed } from './flags';
+
 export type Place = 'desktop' | 'cloud';
 
 /** Where a Cloud account's music lives. */
@@ -82,6 +84,41 @@ const cloudShared: Record<Exclude<CopyKey, HomeKey>, string> = {
   diagnosticsStaysHere: 'No paths or song names, and nothing is sent anywhere. It only leaves this device if you copy it somewhere yourself.',
 };
 
+/* What this device does with its songs before a mix plays depends on two Cloud switches
+ * (docs/engineering/cloud-device-features.md): with cloud.device_analysis it prepares every song
+ * in the background, with cloud.device_render it makes the next transitions ahead of time. */
+type DeviceWork = 'none' | 'songs' | 'transitions' | 'all';
+
+const PLAYS_HERE = 'Ready for mixes means a song can play on this device.';
+const PLAYS_IN_A_MIX = 'Ready for mixes means a song can play in a mix. Songs in your cloud library are prepared ahead of time;';
+
+const DEVICE_WORK: Record<DeviceWork, string> = {
+  none: 'SelectaDJ works out each transition in your browser as the mix plays, so nothing is prepared in advance.',
+  songs: 'SelectaDJ prepares each song in the background on this device, learning its tempo, key and beats, and works out each transition as the mix plays.',
+  transitions: 'While a mix plays, SelectaDJ makes the next transitions on this device ahead of time, so each one is ready before you hear it.',
+  all: 'SelectaDJ prepares each song in the background on this device, learning its tempo, key and beats, and while a mix plays it makes the next transitions ahead of time.',
+};
+
+const BOTH_WORK: Record<DeviceWork, string> = {
+  none: 'for songs on this device, SelectaDJ works out each transition in your browser as the mix plays.',
+  songs: 'songs on this device are prepared in the background right here, and each transition is worked out as the mix plays.',
+  transitions: 'for songs on this device, SelectaDJ makes the next transitions here ahead of time while the mix plays.',
+  all: 'songs on this device are prepared in the background right here, and the next transitions are made ahead of time while the mix plays.',
+};
+
+/** The readiness sentence for music on this device, for what this device does ahead. */
+export function readyMeaning(where: 'device' | 'both', work: DeviceWork): string {
+  return where === 'device' ? `${PLAYS_HERE} ${DEVICE_WORK[work]}` : `${PLAYS_IN_A_MIX} ${BOTH_WORK[work]}`;
+}
+
+function deviceWork(): DeviceWork {
+  const songs = flagListed('cloud.device_analysis');
+  const transitions = flagListed('cloud.device_render');
+  if (songs && transitions) return 'all';
+  if (songs) return 'songs';
+  return transitions ? 'transitions' : 'none';
+}
+
 /** The sentences that differ: songs in the cloud library are measured and rendered by SelectaDJ's
  * workers; songs on this device are worked on by this browser and never uploaded. */
 const cloudByHome: Record<MusicHome, Record<HomeKey, string>> = {
@@ -105,7 +142,7 @@ const cloudByHome: Record<MusicHome, Record<HomeKey, string>> = {
     startAudioStays: 'Your audio stays on this device.',
     startFolderHelp: 'Choose a music folder on this device. Your files stay where they are: they are never uploaded, moved or changed.',
     sourcesHelp: `Add music by choosing a folder on this device. Your audio stays on this device. ${LYRICS_LOOKUP}`,
-    libraryReadyMeaning: 'Ready for mixes means a song can play on this device: SelectaDJ works out each transition in your browser as the mix plays, so nothing is measured or rendered ahead.',
+    libraryReadyMeaning: readyMeaning('device', 'none'),
   },
   both: {
     glossaryRendered: 'Made into finished audio, by SelectaDJ Cloud for songs in your cloud library and by this browser for songs on this device, and checked for problems a measurement can find. “Ready” means the audio exists. It doesn’t mean it sounds good: only listening can tell you that.',
@@ -116,7 +153,7 @@ const cloudByHome: Record<MusicHome, Record<HomeKey, string>> = {
     startAudioStays: 'Songs you upload stay private to your workspace, and songs on this device stay on it.',
     startFolderHelp: 'Choose music files or a folder to upload, or a folder that stays on this device. Your original files on this device are never moved or changed.',
     sourcesHelp: `Add music by uploading files, or by choosing a folder on this device. Uploaded audio stays private to your workspace, and audio on this device stays on it. ${LYRICS_LOOKUP}`,
-    libraryReadyMeaning: 'Ready for mixes means a song can play in a mix. Songs in your cloud library are measured ahead; for songs on this device, SelectaDJ works out each transition in your browser as the mix plays.',
+    libraryReadyMeaning: readyMeaning('both', 'none'),
   },
 };
 
@@ -157,7 +194,10 @@ export function musicHomeOf(onDevice: boolean, inCloudLibrary: boolean): MusicHo
 
 /** The words that are true here. */
 export function words(): Record<CopyKey, string> {
-  return place === 'desktop' ? copy.desktop : copy.cloud[home];
+  if (place === 'desktop') return copy.desktop;
+  if (home === 'cloud_library') return copy.cloud[home];
+  // what this device prepares ahead follows its two switches, so the sentence does too
+  return { ...copy.cloud[home], libraryReadyMeaning: readyMeaning(home, deviceWork()) };
 }
 
 /** The Cloud start card: how to begin, and what happens to the music, for where it lives. */

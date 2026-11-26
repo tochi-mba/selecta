@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { copy, copyPlace, musicHomeOf, setCopyPlace, setMusicHome, words, type MusicHome } from './copy';
+import { setFlags } from './flags';
 import { GLOSSARY } from './ui/glossaryTerms';
 import { THEMES } from './ui/ThemeChoice';
 
@@ -32,8 +33,34 @@ describe('the copy layer', () => {
     for (const [key, text] of own) expect([key, text]).not.toEqual([key, expect.stringMatching(/(?<!not )upload(?!ed)|SelectaDJ Cloud (does|separates|listening)|by SelectaDJ Cloud|in SelectaDJ Cloud\./)]);
   });
 
-  it('never tells a member whose music is in the cloud library that nothing is measured ahead', () => {
-    for (const text of Object.values(copy.cloud.cloud_library)) expect(text).not.toMatch(/nothing is measured or rendered ahead/);
+  it('never tells a member whose music is in the cloud library that nothing is prepared ahead', () => {
+    for (const text of Object.values(copy.cloud.cloud_library)) expect(text).not.toMatch(/nothing is prepared/);
+  });
+
+  it('says what this device prepares ahead, for each of its two switches', () => {
+    setCopyPlace('cloud');
+    setMusicHome('device');
+    const said = (features: Record<string, boolean>) => { setFlags(features); return words().libraryReadyMeaning; };
+    try {
+      const none = said({ 'cloud.device_analysis': false, 'cloud.device_render': false });
+      const songs = said({ 'cloud.device_analysis': true, 'cloud.device_render': false });
+      const transitions = said({ 'cloud.device_analysis': false, 'cloud.device_render': true });
+      const all = said({ 'cloud.device_analysis': true, 'cloud.device_render': true });
+      expect(none).toMatch(/nothing is prepared in advance/);
+      expect(songs).toMatch(/prepares each song in the background/);
+      expect(songs).not.toMatch(/ahead of time|nothing is prepared/);
+      expect(transitions).toMatch(/next transitions on this device ahead of time/);
+      expect(transitions).not.toMatch(/background|nothing is prepared/);
+      expect(all).toMatch(/in the background.*ahead of time/);
+      // a server that has not said leaves both off: nothing is claimed that may not happen
+      expect(said({})).toBe(none);
+      setMusicHome('both');
+      expect(said({ 'cloud.device_analysis': true, 'cloud.device_render': true })).toMatch(/cloud library are prepared ahead of time; songs on this device are prepared in the background/);
+      expect(said({})).toBe(copy.cloud.both.libraryReadyMeaning);
+      for (const text of [none, songs, transitions, all]) expect(text).not.toMatch(/render|measure|flag/i);
+    } finally {
+      setFlags(null);
+    }
   });
 
   it('starts on Desktop and follows the server’s place, then where the music lives', () => {
