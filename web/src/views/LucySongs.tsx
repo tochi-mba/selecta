@@ -169,7 +169,8 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
 
   return (
     <ol className={`lucy-songs ${live ? 'is-compact' : ''}`} ref={list} aria-label="Songs in order, with the transitions between them">
-      {songs.map((song, index) => {
+      {/* one flat list of keyed rows, so a moved song keeps its row (and the focus inside it) */}
+      {songs.flatMap((song, index) => {
         const previous = songs[index - 1];
         const nextSong = songs[index + 1];
         const songSelected = selection?.occurrence === song.occurrence;
