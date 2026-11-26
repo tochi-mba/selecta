@@ -151,6 +151,14 @@
 .library-browser .library-cards .lw-why { display: block; }
 /* I86: the one hint for a song whose devices are all closed is always shown */
 .lw-why[data-hint] { display: block; }
+/* a touch screen shows no tooltip, so what the chip's title says is written under it */
+@media (hover: none) {
+  .lw-why { display: block; }
+}
+/* a finger's target on any touch screen, not only a narrow one */
+@media (pointer: coarse) {
+  .lw-chips button { min-width: var(--control-height); min-height: var(--control-height); }
+}
 .library-browser .library-cards .lw-length { grid-column: 1; grid-row: 3; }
 .library-browser .library-rows.library-cards .lw-row .lw-actions { grid-column: 2; grid-row: 3; }
 
@@ -234,6 +242,13 @@
 .cloud-import-chip .lw-chip-hide { min-width: 32px; min-height: 32px; padding: 0; }
 /* a page that shows the import's own card needs no second notice above it */
 .content:has(> main .lw-import) > .shell-banners > .cloud-import-chip[data-tone='info'] { display: none; }
+/* a phone keeps the progress chip on one line: the words shorten, the buttons stay beside them */
+@media (max-width: 420px) {
+  .cloud-import-chip.banner[data-tone='info'] { flex-wrap: nowrap; }
+  .cloud-import-chip.banner[data-tone='info'] .lw-chip-progress { flex: 1 1 0; }
+  .cloud-import-chip.banner[data-tone='info'] .lw-chip-progress p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cloud-import-chip.banner[data-tone='info'] > button { flex: none; white-space: nowrap; }
+}
 
 @media (max-width: 1100px) {
   .library-browser { --lw-columns: minmax(0, 1fr) 56px minmax(130px, 200px) 150px; }
