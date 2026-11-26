@@ -583,7 +583,24 @@ def _finish_through_store(
             record["is_music"] = int(override)
             record["set_aside_reason"] = None if override else "you set this aside"
 
-    library_writes.save_scanned(store, records, unchanged, settle)
+    def same(record: dict) -> bool:
+        """An unchanged file whose row would be written back exactly as it is: skipped, so a
+        rescan of a settled library writes almost nothing. Its stored choice is applied first;
+        one made since the files were listed is already in the row the person changed."""
+        row = stored.get(record["path"])
+        if row is None or record["path"] not in unchanged:
+            return False
+        settled = dict(record)
+        settle(settled, row.get("music_override"))
+        return all(row.get(key) == value for key, value in settled.items())
+
+    writing = []
+    for record in records:
+        if same(record):
+            settle(record, stored[record["path"]].get("music_override"))
+        else:
+            writing.append(record)
+    library_writes.save_scanned(store, writing, unchanged, settle)
     for record in records:
         if record["is_music"]:
             report.music += 1

@@ -79,6 +79,13 @@ def _change(root: Path) -> None:
     (root / "C" / "seven.flac").rename(root / "C" / "seven moved.flac")
 
 
+def _copy(path: Path, copy: Path) -> None:
+    """A copy of the library as committed: the store's idle connections are closed first, so
+    nothing waits in the write-ahead log beside the file."""
+    library.forget(path)
+    shutil.copy(path, copy)
+
+
 def _schema(path: Path) -> list:
     conn = sqlite3.connect(path)
     try:
@@ -156,7 +163,7 @@ def test_a_scan_through_the_store_writes_the_rows_the_old_path_writes(home, tmp_
     _prepared(home, root)
     _change(root)
     copy = tmp_path / "copy.sqlite"
-    shutil.copy(home.db_path, copy)
+    _copy(home.db_path, copy)
 
     flags.use("")
     old = db.connect(copy)
@@ -186,7 +193,7 @@ def test_a_rescan_with_checkpoints_matches_the_old_path(home, tmp_path):
     _prepared(home, root)
     _change(root)
     copy = tmp_path / "copy.sqlite"
-    shutil.copy(home.db_path, copy)
+    _copy(home.db_path, copy)
     flags.use("")
     old = db.connect(copy)
     scan_folder(old, root, checkpoint=True)
@@ -309,7 +316,7 @@ def test_analysis_and_its_hashes_land_together_or_not_at_all(home, monkeypatch):
 def test_song_writes_through_the_store_match_the_old_path(home, tmp_path):
     song_id = _analysed_library(home)
     copy = tmp_path / "copy.sqlite"
-    shutil.copy(home.db_path, copy)
+    _copy(home.db_path, copy)
 
     def work(conn) -> None:
         db.save_analysis(conn, song_id, VALUES)

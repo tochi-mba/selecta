@@ -16,6 +16,7 @@ them half-cleared.
 
 from __future__ import annotations
 
+import functools
 import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
@@ -50,22 +51,28 @@ JSON_FIELDS = ("sections", "timbre", "timings")
 # ---- songs, as the scanner writes them
 
 
-def _upsert_song(connection: Connection, store: EngineStore, record: Mapping[str, Any]) -> None:
-    """`db.upsert_song` through the store: insert by path, else update every column given."""
-    statement = sqlite.insert(songs).values(workspace_id=store.workspace_id, **record)
+@functools.lru_cache(maxsize=64)
+def _upsert_statement(names: tuple[str, ...]) -> Any:
+    """The upsert for records with these columns, built once: a scan writes thousands of rows
+    with the same few shapes, and building the statement cost more than running it."""
+    statement = sqlite.insert(songs).values({name: sa.bindparam(name) for name in names})
     changing: dict[str, Any] = {
-        name: statement.excluded[name] for name in record if name not in ("path", "workspace_id")
+        name: statement.excluded[name] for name in names if name not in ("path", "workspace_id")
     }
-    if {"size", "mtime"} <= set(record):
+    if {"size", "mtime"} <= set(names):
         moved = sa.or_(
             songs.c.size.is_not(statement.excluded.size),
             songs.c.mtime.is_not(statement.excluded.mtime),
         )
-        for column in sorted(set(HASHES) - set(record)):
+        for column in sorted(set(HASHES) - set(names)):
             changing[column] = sa.case((moved, sa.null()), else_=songs.c[column])
-    connection.execute(
-        statement.on_conflict_do_update(index_elements=["path"], set_=changing)
-    )
+    return statement.on_conflict_do_update(index_elements=["path"], set_=changing)
+
+
+def _upsert_song(connection: Connection, store: EngineStore, record: Mapping[str, Any]) -> None:
+    """`db.upsert_song` through the store: insert by path, else update every column given."""
+    values = {**record, "workspace_id": store.workspace_id}
+    connection.execute(_upsert_statement(tuple(sorted(values))), values)
 
 
 def upsert_songs(store: EngineStore, records: Sequence[Mapping[str, Any]]) -> None:

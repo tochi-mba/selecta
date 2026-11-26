@@ -94,11 +94,21 @@ def load_library(conn: sqlite3.Connection, settings: Settings) -> list[SongInfo]
     before = _LOADED.get(settings.home, {})
     loaded: dict[int, tuple[tuple, SongInfo]] = {}
     songs: list[SongInfo] = []
+    stale = [
+        row[0]
+        for row in rows
+        if before.get(row[0]) is None or before[row[0]][0] != tuple(row)
+    ]
+    together = _load_together(conn, settings, stale)
     for row in rows:
         song_id, stamp = row[0], tuple(row)
         known = before.get(song_id)
         if known is not None and known[0] == stamp:
             song = known[1]
+        elif together is not None:
+            if song_id not in together:
+                continue  # no usable arrays, as a file that can't be read below
+            song = together[song_id]
         else:
             try:
                 song = load_song(conn, settings, song_id)
@@ -110,6 +120,26 @@ def load_library(conn: sqlite3.Connection, settings: Settings) -> list[SongInfo]
         songs.append(song)
     _LOADED[settings.home] = loaded
     return songs
+
+
+def _load_together(conn, settings: Settings, song_ids: list[int]) -> dict | None:
+    """With core.engine_store, the songs that changed read in one store transaction rather than
+    one per song (T-20261125-ecd7); None for the old path, one song at a time."""
+    if not song_ids or not flags.on("core.engine_store"):
+        return None
+    through = getattr(conn, "store", None)
+    if through is None and conn.in_transaction:
+        return None  # writes pending on `conn`: `load_song` reads them through it
+    from selecta.engine_store import library
+    from selecta.engine_store import songs as stored
+
+    found, _missing = stored.load_songs(
+        through or library.store_of(conn),
+        library.artifacts_for(settings),
+        song_ids,
+        legacy=settings.features_dir,
+    )
+    return {song.id: song for song in found}
 
 
 def _fits_style(style: str, a: SongInfo, b: SongInfo, space: TimbreSpace | None = None) -> bool:
