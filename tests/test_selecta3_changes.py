@@ -81,7 +81,7 @@ def test_export_job_keeps_its_original_revision_after_the_mix_changes(
     # The real FLAC check has its own tests (test_export_validation.py); this one is about job
     # state, so record that the final file was checked rather than decoding fake bytes.
     verified = []
-    monkeypatch.setattr(exports, "verify_export", lambda path, _seconds: verified.append(path))
+    monkeypatch.setattr(exports, "verify_export", lambda path, *_: verified.append(path))
     response = client.post("/api/exports/jobs")
     assert response.status_code == 200, response.text
     job = response.json()
@@ -129,7 +129,7 @@ def test_a_job_file_busy_for_a_moment_loses_nothing(client, tmp_path, monkeypatc
     # The real FLAC check has its own tests (test_export_validation.py); this one is about job
     # state, so record that the final file was checked rather than decoding fake bytes.
     verified = []
-    monkeypatch.setattr(exports, "verify_export", lambda path, _seconds: verified.append(path))
+    monkeypatch.setattr(exports, "verify_export", lambda path, *_: verified.append(path))
 
     # what Windows does: the first attempt at each is refused, and the next one works
     real_replace, real_read = exports.os.replace, Path.read_text

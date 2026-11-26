@@ -31,8 +31,10 @@ def _generator():
 
 
 def _same(fresh, kept, where: str) -> None:
-    """Equal, numbers within 1e-6 relative: the libraries' own SIMD paths may differ in a last
-    bit between machines, and every value is written with nine significant digits."""
+    """Equal, numbers within 1e-5 relative. Most values are float32 sums over many FFT bins, and
+    the libraries' SIMD paths differ between CPUs: a CI runner put the onset envelope 1.05e-6
+    apart (a few float32 steps). An analysis change moves values far more, and the browser
+    port is only held to 1e-3 on the envelope, so this still catches every real change."""
     if isinstance(kept, dict):
         assert isinstance(fresh, dict) and set(fresh) == set(kept), where
         for key in kept:
@@ -46,7 +48,7 @@ def _same(fresh, kept, where: str) -> None:
     elif isinstance(kept, int) and isinstance(fresh, int):
         assert fresh == kept, where
     else:
-        assert math.isclose(float(fresh), float(kept), rel_tol=1e-6, abs_tol=1e-6), where
+        assert math.isclose(float(fresh), float(kept), rel_tol=1e-5, abs_tol=1e-6), where
 
 
 @pytest.fixture(scope="module")

@@ -63,7 +63,7 @@ def test_a_ready_file_that_has_gone_is_shown_expired_and_its_link_is_refused(
         return {"seconds": 1}
 
     monkeypatch.setattr(mix, "export_snapshot", write)
-    monkeypatch.setattr(exports, "verify_export", lambda _path, _seconds: None)
+    monkeypatch.setattr(exports, "verify_export", lambda _path, _seconds, _shape=None: None)
     job = client.post("/api/exports/jobs").json()
     ready = _settle(client, job["id"])
     assert ready["state"] == "ready"

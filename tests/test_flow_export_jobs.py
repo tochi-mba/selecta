@@ -58,7 +58,7 @@ def test_cancel_is_offered_only_while_waiting_and_really_stops(client, tmp_path,
 def test_once_the_file_is_being_written_cancel_is_refused(client, tmp_path, monkeypatch):
     _two_songs(tmp_path)
     monkeypatch.setattr(SeamStore, "status", lambda _store, key: {"status": "ready", "key": key})
-    monkeypatch.setattr(exports, "verify_export", lambda _path, _seconds: None)
+    monkeypatch.setattr(exports, "verify_export", lambda _path, _seconds, _shape=None: None)
     started, release = threading.Event(), threading.Event()
 
     def slow_export(_conn, _settings, _store, destination, _songs, _keys):
@@ -118,7 +118,7 @@ def test_a_corrupt_file_or_full_disk_mid_write_is_reported_specifically(
         destination.write_bytes(b"not a flac")
         return {"seconds": 30}
 
-    def bad(_path, _seconds):
+    def bad(_path, _seconds, _shape=None):
         raise ValueError("bad frame")
 
     monkeypatch.setattr(mix, "export_snapshot", corrupt)

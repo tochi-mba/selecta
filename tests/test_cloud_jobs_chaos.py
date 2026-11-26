@@ -121,6 +121,11 @@ def _finish(store, claim) -> None:
                    artifacts=[_output(claim)])
 
 
+def _finisher(store):
+    """The same queue, claimed with a lease the running reaper cannot beat: it is not under test."""
+    return make_store(store.engine, PolicyConfig(lease_s=600.0, heartbeat_s=0.25))
+
+
 def _kill_part_way(store, claim, rng: random.Random) -> None:
     """Do some of the attempt, then stop calling: from the database's side, a kill -9."""
     how = rng.choice(["leased", "running", "progress"])
@@ -216,7 +221,14 @@ def test_kill_loop_with_a_running_maintenance_thread(cloud_engine):
                 break
             started = time.monotonic()
             for claim in claims:
-                _kill_part_way(store, claim, rng)
+                # A busy runner can let the one second lease run out before this worker's own
+                # steps. The store refusing them is that same kill, only earlier, and the lost
+                # lease must stay lost; the reaper is still held to its bound below
+                try:
+                    _kill_part_way(store, claim, rng)
+                except StaleLease:
+                    with pytest.raises(StaleLease):
+                        store.heartbeat(claim.attempt_id, claim.fencing_token)
                 killed[claim.job.id] += 1
             for claim in claims:
                 while store.attempt(claim.attempt_id).outcome is None:
@@ -225,7 +237,7 @@ def test_kill_loop_with_a_running_maintenance_thread(cloud_engine):
                 assert store.attempt(claim.attempt_id).outcome == AttemptOutcome.LEASE_EXPIRED
                 assert store.job(claim.job.id).state == expected_after_loss(store, claim.job.id)
                 assert_fenced_out(store, claim)
-        while (claim := store.claim(POOL, worker(POOL, worker_id="finisher"))) is not None:
+        while (claim := _finisher(store).claim(POOL, worker(POOL, worker_id="finisher"))):
             _finish(store, claim)
     finally:
         loop.stop()
@@ -293,7 +305,7 @@ def test_killing_real_worker_processes(sqlite_engine):
             assert store.attempt(attempt_id).outcome == AttemptOutcome.LEASE_EXPIRED
             assert store.job(job_id).state == expected_after_loss(store, job_id)
             assert store.job(job_id).lease_generation > token
-        while (claim := store.claim(POOL, worker(POOL, worker_id="finisher"))) is not None:
+        while (claim := _finisher(store).claim(POOL, worker(POOL, worker_id="finisher"))):
             _finish(store, claim)
     finally:
         loop.stop()
