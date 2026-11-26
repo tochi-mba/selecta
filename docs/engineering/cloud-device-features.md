@@ -16,17 +16,17 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Library: every song, where it plays, Never play | Works | `cloud.local_first` | |
 | Library rows and Song details: tempo, key, energy | Works for songs the account has measured; others show length only | `cloud.brain`, `cloud.device_analysis` | |
 | Tempo and key corrections | Works: `PUT`/`DELETE /api/song-facts/{id}/correction`, read back from `GET /api/song-facts` | `cloud.brain`, `cloud.device_analysis` | |
-| "Is it music?" | Decision: absent in a browser library; Never play keeps a song out of mixes | | T-20261126-3f92 |
+| "Is it music?" | Absent in a browser library; Never play keeps a song out of mixes. Needs no decision: a set-aside mark kept by the account, built on the engine store's library slice | | T-20261126-3f92 |
 | Analysis priority | Decision: absent; the device measures songs in spare time, one at a time | | |
 | Song measurement (tempo, key, beats) | Works on the device, saved to the account | `cloud.device_analysis`, `cloud.brain` | |
 | Neural beats | Works on a device that passes the Beat This gate; others use the standard beat finder, said in plain words | `cloud.device_analysis` | |
-| Neural key, lyric timing | Decision: the standard key finder reads key; lyrics are not shown in a browser | | T-20261126-2cbe (lyrics) |
+| Neural key, lyric timing | Decision: the standard key finder reads key; lyric timing waits on the owner's lyrics decision | | T-20261126-2cbe (owner: LRCLIB's written answer and legal advice, ADR-0406) |
 | Make a Mix: order from the planner | Works | `cloud.brain`, `cloud.device_analysis` | |
 | Energy shape | Works: sent to the planner with the order | `cloud.brain`, `cloud.device_analysis` | |
 | Idea cards on Make a Mix | Works: the account's cards beside the browser's own, and a card builds its mix with the planner choosing and ordering the songs; planned over at most 60 measured songs that play here | `cloud.brain`, `cloud.device_analysis` | T-20261126-6e24 (more than 60) |
 | Mix language, ending | Works | | |
 | Transition feel | Works: the order is planned in the feel, and each transition of a mix made in it is made on the device in that feel's moves (`language` on `/planning/candidates`); a mix already made keeps its transitions | `cloud.brain`, `cloud.device_analysis` (transitions: `cloud.device_render`) | |
-| Stem moves, stem splitting | Decision: absent; the stem model is not published, so songs play whole | `cloud.browser_stems` when it is | T-20261125-03a3 |
+| Stem moves, stem splitting | Decision: absent; no stem model is published, so songs play whole | `cloud.browser_stems` when it is | T-20261125-03a3 (owner: the clean separator, its licence record and its published weights) |
 | Transitions made ahead, audited and repaired | Works in a worker on the device | `cloud.device_render` | |
 | Good and Bad on a transition | Works | `cloud.brain` | |
 | Choosing a transition's move | Works | `cloud.browser_moves` | |
@@ -41,7 +41,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Lucy | Works from the account | `lucy`, `lucy.cloud_conversation` | |
 | Activity drawer | Works: this device's own work (songs being measured and how many are left, measurements being saved to the account, the transition being prepared and how many wait, the beat finder being downloaded or timed) above the recent changes with Undo; each line shows only with the flag behind that work | `app.activity` (each line: `cloud.device_analysis`, `cloud.brain`, `cloud.device_render`) | |
 | Export of rendered audio | Works: Download audio saves the mix as a checked FLAC on this device, with the same transitions playback plays (made ahead, or made first, n of m shown, cancellable), each song at its playing level; nothing is uploaded | `cloud.local_export` (transitions: `cloud.device_render`) | |
-| Lyrics | Decision: absent (licence, ADR-0406) | | T-20261126-2cbe |
+| Lyrics | Decision: absent (licence, ADR-0406) | | T-20261126-2cbe (owner: LRCLIB's written answer and legal advice on display) |
 
 ## How the decisions are shown
 
