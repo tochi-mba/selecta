@@ -3,7 +3,7 @@ import { LEAVE_AFTER_SECONDS } from '../dsp/seams';
 import { SeamRenderer } from '../dsp/workers/renderSpawn';
 import { accountMeasured, askWithin, type Request } from './accountFacts';
 import { createClipStore } from './clipStore';
-import { DeviceStudio, type CandidatesAnswer, type StudioSong } from './deviceStudio';
+import { DeviceStudio, type Asker, type CandidatesAnswer, type StudioSong } from './deviceStudio';
 import { reportSeam } from './seamReports';
 import { songFacts } from './songFacts';
 
@@ -51,7 +51,7 @@ const studiosChanged = () => { for (const listener of [...studioListeners]) list
 /** Ask this workspace's studio to make the transitions a waiting request's placement needs,
  * pairs of catalogue song ids. Songs whose file is not on this device are skipped: another device
  * makes its own. Returns how many pairs it could ask for. */
-export async function prepareRequestSeams(workspaceId: string, pairs: readonly { a: number; b: number }[]): Promise<number> {
+export async function prepareRequestSeams(workspaceId: string, pairs: readonly { a: number; b: number }[], asker: Asker = 'requests'): Promise<number> {
   const kept = studios.get(workspaceId);
   if (!kept?.songHere) return 0;
   const ids = [...new Set(pairs.flatMap((pair) => [pair.a, pair.b]))];
@@ -65,7 +65,7 @@ export async function prepareRequestSeams(workspaceId: string, pairs: readonly {
     const b = found.get(pair.b);
     return a && b ? [{ a, b }] : [];
   });
-  if (studios.get(workspaceId) === kept) kept.studio.prepareFor(asked);
+  if (studios.get(workspaceId) === kept) kept.studio.prepareFor(asked, asker);
   return asked.length;
 }
 

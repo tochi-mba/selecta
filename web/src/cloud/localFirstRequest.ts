@@ -9,6 +9,7 @@ import { MOVE_OFFER_EVENT, notOnSpeaker, playsOn, speakerHolds, type MoveOffer }
 import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscoveries';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 import { requestsFamily } from './localFirstRequests';
+import { askToMake, forgetRatings, inspectorOn, seamOptions, withInspection } from './seamInspection';
 import { readCached, writeCached } from './offlineCache';
 import { canHeal, classify } from './resilientRequest';
 import { groupVersions, hereBySong, linkBySong, rememberGrouping, setBySong, whereBySong, type Grouping } from './songVersions';
@@ -403,7 +404,22 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);
+  // T-20261126-827e: the Seam Inspector's reads, from the transitions this device made
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {
+    const method = (init?.method ?? 'GET').toUpperCase();
+    const [route, query = ''] = path.split('?');
+    const workspaceId = sources.workspaceId;
+    if (!workspaceId || !inspectorOn()) return answered<T>(path, init);
+    if (method === 'GET' && route === '/mix') return withInspection(await answered<MixData>(path, init), workspaceId, cloud) as Promise<T>;
+    const seamAt = /^\/mix\/(\d+)\/(options|render)$/.exec(route);
+    if (seamAt && method === 'GET' && seamAt[2] === 'options') return seamOptions() as T;
+    if (seamAt && method === 'POST' && seamAt[2] === 'render') {
+      const mix = await answered<MixData>(query ? `/mix?${query}` : '/mix');
+      return askToMake(workspaceId, mix, Number(seamAt[1])) as Promise<T>;
+    }
+    return answered<T>(path, init);
+  };
+  const answered = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const method = (init?.method ?? 'GET').toUpperCase();
     const [route, query = ''] = path.split('?');
     if (method === 'GET' && route === '/library') {
@@ -475,7 +491,10 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     if (route.startsWith('/catalog/')) return cloud<T>(path, init);
     // ADR-0479: a Good or Bad on a transition the account knows, and every one given, are the
     // account's (cloud.brain; the server says when it is off)
-    if ((method === 'POST' && /^\/seams\/[0-9A-Za-z_-]+\/rate$/.test(route)) || (method === 'GET' && route === '/memory/ratings')) return cloud<T>(path, init);
+    if ((method === 'POST' && /^\/seams\/[0-9A-Za-z_-]+\/rate$/.test(route)) || (method === 'GET' && route === '/memory/ratings')) {
+      if (method === 'POST') forgetRatings();
+      return cloud<T>(path, init);
+    }
     const corrected = correct(method, route, init);
     if (corrected) return (await corrected) as T;
     const neverAnswer = setNever(method, route, init);

@@ -30,6 +30,13 @@ export const SEAMS_AHEAD = 2;
 export const SEAM_BUDGET_MS = 120_000;
 /** Seams a waiting request needs (T-20261126-a246), prepared after the play order's own. */
 export const REQUEST_SEAMS = 4;
+/** Clips made in this visit kept to be inspected (T-20261126-827e), newest last. */
+export const BOOK_KEPT = 16;
+
+/** A clip this device holds, with the planner's answer it was made from, for the Seam Inspector. */
+export type Booked = { made: MadeSeam; answer: CandidatesAnswer };
+/** Who asked for seams beyond the play order's own: the request look or the Seam Inspector. */
+export type Asker = 'requests' | 'inspector';
 
 /** With the flag named on by the server, and planning from the account on. */
 export const deviceRenderOn = (): boolean => flagListed('cloud.device_render') && planningOn();
@@ -39,7 +46,7 @@ export const STUDIO_IMPLEMENTATION = `${RENDER_IMPLEMENTATION}+${STRETCH_IMPLEME
 
 type CueJson = [number, number, string, number, number];
 export type OptionJson = { move: string; bars: number; exit_cue: CueJson; entry_cue: CueJson };
-type Entry = { index: number; option: OptionJson; script?: unknown; has_script?: boolean };
+type Entry = { index: number; option: OptionJson; script?: unknown; has_script?: boolean; reasons?: string[] };
 /** `POST /api/planning/candidates`, as far as the studio reads it. */
 export type CandidatesAnswer = { max_repairs?: number; fingerprint?: string; options?: Entry[]; fallback?: Entry | null };
 
@@ -113,7 +120,9 @@ export function rankedFrom(answer: CandidatesAnswer): { options: RankedOption[];
 export class DeviceStudio {
   private wanted: Wanted[] = [];
   private ordered: Wanted[] = [];
+  private readonly asks = new Map<Asker, Wanted[]>();
   private requested: Wanted[] = [];
+  private readonly book = new Map<string, Booked>();
   private made = 0;
   private readonly activity = observable<StudioActivity>({ making: null, waiting: 0, made: 0 });
   /** What the studio is doing now, read by the Activity drawer. */
@@ -161,7 +170,7 @@ export class DeviceStudio {
 
   /** The seams the waiting requests' placements need (T-20261126-a246), made after the play
    * order's own so the music in hand always comes first. Replaces the last list given. */
-  prepareFor(pairs: readonly { a: StudioSong; b: StudioSong }[]): void {
+  prepareFor(pairs: readonly { a: StudioSong; b: StudioSong }[], asker: Asker = 'requests'): void {
     if (this.disposed) return;
     const wanted: Wanted[] = [];
     if (deviceRenderOn() && this.deps.songAudio) {
@@ -171,8 +180,23 @@ export class DeviceStudio {
         if (wanted.length >= REQUEST_SEAMS) break;
       }
     }
-    this.requested = wanted;
+    this.asks.set(asker, wanted);
+    // the inspector's ask (a member waiting on it) before the request look's
+    const all = [...(this.asks.get('inspector') ?? []), ...(this.asks.get('requests') ?? [])];
+    this.requested = all.filter((seam, at) => all.findIndex((one) => one.key === seam.key) === at);
     this.settle();
+  }
+
+  /** The clip this device made or kept for two songs in this visit, with the planner's answer. */
+  madeFor(a: number, b: number): Booked | null {
+    return this.book.get(`${a}>${b}`) ?? null;
+  }
+
+  private keep(pair: { a: number; b: number }, made: MadeSeam, answer: CandidatesAnswer): void {
+    const key = `${pair.a}>${pair.b}`;
+    this.book.delete(key);
+    this.book.set(key, { made, answer });
+    while (this.book.size > BOOK_KEPT) this.book.delete(this.book.keys().next().value as string);
   }
 
   /** Whether this device holds a finished clip for the pair, made in this visit. */
@@ -239,6 +263,8 @@ export class DeviceStudio {
     this.wanted = [];
     this.ordered = [];
     this.requested = [];
+    this.asks.clear();
+    this.book.clear();
     this.running = null;
     this.tell();
   }
@@ -311,6 +337,7 @@ export class DeviceStudio {
       if (stored) {
         this.log(`[studio] ${job.a.songId} > ${job.b.songId}: kept from before, ${stored.move}${stored.passed ? '' : ' (did not pass every check)'}`);
         this.deps.report?.({ a: job.a.songId, b: job.b.songId }, stored, answer);
+        this.keep({ a: job.a.songId, b: job.b.songId }, stored, answer);
         return stored;
       }
       const { options, fallback } = rankedFrom(answer);
@@ -336,6 +363,7 @@ export class DeviceStudio {
       if (outcome.status === 'clip') {
         void this.deps.store?.put(clipKey, outcome);
         this.deps.report?.({ a: job.a.songId, b: job.b.songId }, outcome, answer);
+        this.keep({ a: job.a.songId, b: job.b.songId }, outcome, answer);
       }
       return outcome;
     } catch (problem) {

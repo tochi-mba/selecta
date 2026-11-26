@@ -12,8 +12,9 @@ export const NOT_IN_THE_BROWSER = {
   // Locks: on below when the account keeps the mix (cloud.account_mixes), whose lock route is the
   // app's own; a mix kept in this browser has no lock.
   'editor.locks': false,
-  // The Seam Inspector reads the app's rendered transition files (T-20261126-827e). Each
-  // transition here can still be rated Good or Bad and its move chosen (cloud.browser_moves).
+  // The Seam Inspector: on below when this device makes transitions ahead and the account keeps
+  // them (cloud.device_render with cloud.brain): it shows the clips this device made
+  // (seamInspection.ts). Without, each transition can still be rated and its move chosen.
   seam_inspector: false,
   // The Activity drawer lists the app's own jobs (T-20261126-36c7).
   'app.activity': false,
@@ -41,6 +42,9 @@ export type BrowserReach = {
   measured?: boolean;
   /** cloud.brain and cloud.account_mixes: the account keeps the mix, so locks work here. */
   accountMixes?: boolean;
+  /** cloud.device_render and cloud.brain: this device makes transitions and the account keeps
+   * them, so the Seam Inspector works here. */
+  studio?: boolean;
 };
 
 /** What this shell turns off, with Harmonic matches off too unless the browser's own version
@@ -54,5 +58,6 @@ export function browserFlags(browserHarmonic: boolean, lucyHere = false, reach: 
     delete off['mixes.shaping.energy_arc'];
   }
   if (reach.accountMixes) delete off['editor.locks'];
+  if (reach.studio) delete off.seam_inspector;
   return off;
 }

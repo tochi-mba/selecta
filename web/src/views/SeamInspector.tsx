@@ -368,7 +368,7 @@ export function SeamInspector(props: {
             {state.status === 'ready' ? (
               <>
                 {/* keyed by what was rendered, so a clip from before a change can't be mistaken for this one */}
-                <AudioPreview key={state.key} src={`/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} autoPlay={autoPlay} label={`${previous.title} into ${item.title}`} />
+                <AudioPreview key={state.key} src={state.preview_url ?? `/api/seams/${state.key}/preview`} startAt={Math.max((state.preview_seam ?? 0) - 8, 0)} autoPlay={autoPlay} label={`${previous.title} into ${item.title}`} />
                 {on('ratings') && (
                   <div className="thumbs" role="group" aria-label="Rate this seam">
                     <span>How was it?</span>

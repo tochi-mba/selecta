@@ -17,6 +17,8 @@ export type SeamState = {
   eta?: number;
   tried?: { move: string; why: string }[];
   checks?: { name: string; passed: boolean; text: string; value: string }[];
+  /** Cloud in the browser: the clip this device made, played from memory (seamInspection.ts). */
+  preview_url?: string;
 };
 
 export type SeamSettings = {

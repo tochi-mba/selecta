@@ -53,6 +53,8 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   // and putting a ready one in: song ids, the playing position, an offer's name, the device id
   ['POST', /^\/requests\/consider\?device_id=[A-Za-z0-9_-]{1,64}$/],
   ['POST', /^\/requests\/insert\?device_id=[A-Za-z0-9_-]{1,64}$/],
+  // the Seam Inspector: the Good or Bad of the transitions this device made, by key
+  ['GET', /^\/seams\?keys=[0-9a-f]{20}(,[0-9a-f]{20})*(&device_id=[A-Za-z0-9_-]{1,64})?$/],
 ];
 
 /** The one request that is not to the account: the beat tracker's model file, fetched from
