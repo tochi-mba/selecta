@@ -3,6 +3,7 @@ import type { SeamAbilities } from '../dsp/seamScript';
 import { setFlags } from '../flags';
 import { assertNoPath } from '../media/identity';
 import { forgetAccountMeasured } from './accountFacts';
+import { accountMixes } from './accountMixes';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
@@ -28,6 +29,14 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['POST', /^\/planning\/candidates\/script$/],
   // cloud.device_render with cloud.brain: a report of a clip this device made, never the clip
   ['PUT', /^\/seams\/[0-9a-f]{20}$/],
+  // cloud.account_mixes: the account's mix and draft routes, with catalogue ids and choices only
+  ['GET', /^\/mix(\?draft=\d+)?$/],
+  ['GET', /^\/drafts$/],
+  ['POST', /^\/drafts$/],
+  ['POST', /^\/mix\/songs$/],
+  ['POST', /^\/mix\/move$/],
+  ['PUT', /^\/mix\/order(\?draft=\d+)?$/],
+  ['POST', /^\/mix\/\d+\/seam$/],
 ];
 
 /** The one request that is not to the account: the beat tracker's model file, fetched from
@@ -199,6 +208,39 @@ describe('the seam report', () => {
     } finally {
       localStorage.removeItem('selecta.device.ws-egress');
     }
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('the mixes kept with the account', () => {
+  it('carry catalogue song ids, positions, names and transition choices, never a path or audio', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true });
+    const { calls, request: capture } = capturing();
+    // a new draft answers with its id, as the account's POST /drafts does
+    const request = (async (path: string, init?: RequestInit) => {
+      const answer = await capture(path, init);
+      return path === '/drafts' && init?.method === 'POST' ? { id: 4, name: 'Ocean to Counting the Days' } : answer;
+    }) as typeof capture;
+    const mixes = accountMixes(request);
+    await mixes.install('Ocean to Counting the Days', [3, 1, 2], false);
+    await mixes.install('Ocean to Counting the Days', [3, 1], true);
+    const send = (method: string, route: string, body?: object, query = '') =>
+      mixes.answer(method, route, query, body ? { method, body: JSON.stringify(body) } : { method });
+    await send('GET', '/mix');
+    await send('GET', '/mix', undefined, 'draft=4');
+    await send('GET', '/drafts');
+    await send('POST', '/mix/songs', { song_id: 5, position: 1 });
+    await send('POST', '/mix/move', { source: 0, target: 2 });
+    await send('POST', '/mix/2/seam', { move: 'echo_out' });
+    expect(calls.length).toBe(9);
+    calls.forEach(holdsTheContract);
+    expect(calls[0]).toEqual({ method: 'PUT', path: '/mix/order', body: { song_ids: [3, 1, 2], name: 'Ocean to Counting the Days' } });
+  });
+
+  it('asks nothing of the account while cloud.account_mixes is off or unnamed', () => {
+    setFlags({ 'cloud.brain': true });
+    const { calls, request } = capturing();
+    expect(accountMixes(request).answer('GET', '/mix', '', undefined)).toBeUndefined();
     expect(calls).toHaveLength(0);
   });
 });

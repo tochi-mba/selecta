@@ -231,7 +231,74 @@ sa.Index("ix_seam_verdicts_key", seam_verdicts.c.workspace_id, seam_verdicts.c.k
 
 SEAM_TABLES = (seams, seam_attestations, seam_history, seam_verdicts)
 
-ENGINE_TABLES = (ratings, analysis, song_overrides, *SEAM_TABLES)
+# The mixes slice (`engine_store.mixes`, docs/engineering/engine-store-mixes.md). On Desktop
+# these are the hand-made tables of `db.SCHEMA`, adopted in place by `lib0007mixes`; in Cloud
+# they are created by `es0479mix01`. A Desktop library holds one workspace, so its own keys
+# (`queue.position`, `preferences.key`) stay unique there; Cloud's include the workspace.
+
+# The current mix: one row per song, in `position` order. `seam` is the JSON settings of the seam
+# into this song (null for the first song or Auto); `locked` 1 keeps the song at its place.
+queue = sa.Table(
+    "queue",
+    metadata,
+    sa.Column("workspace_id", Id, primary_key=True),
+    sa.Column("position", sa.Integer, primary_key=True, autoincrement=False),
+    sa.Column("song_id", sa.Integer, nullable=False),
+    # `state`, `transition` and `reason` are kept as the command line's planner writes them
+    sa.Column("state", sa.Text, nullable=False, server_default="planned"),
+    sa.Column("transition", sa.Text, nullable=True),
+    sa.Column("reason", sa.Text, nullable=True),
+    sa.Column("locked", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("seam", sa.Text, nullable=True),
+    _of_a_song("queue"),
+)
+
+# Every other mix. `items` is a JSON list of [song id, seam settings JSON or null, locked], in
+# order; `history` up to `mix.UNDO_DEPTH` earlier versions for Undo; `line` its place in the
+# render line (null when not in it). Times are UTC `YYYY-MM-DD HH:MM:SS`, as SQLite wrote them.
+# A draft's songs are inside `items`, so Cloud checks them on every write, not by foreign key.
+drafts = sa.Table(
+    "drafts",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("name", sa.Text, nullable=False),
+    sa.Column("items", sa.Text, nullable=False, server_default="[]"),
+    sa.Column("history", sa.Text, nullable=False, server_default="[]"),
+    sa.Column("ready_only", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("line", sa.Integer, nullable=True),
+    sa.Column("created_at", sa.Text, nullable=True),
+    sa.Column("updated_at", sa.Text, nullable=True),
+)
+sa.Index("ix_drafts_listed", drafts.c.workspace_id, drafts.c.line, drafts.c.updated_at)
+
+# Named JSON values. The store reads and writes only the mix's own (`mixes.MIX_KEYS`: the current
+# mix's name and Undo, and the drafts kept aside after a delete); Desktop keeps its other settings
+# here too, read on the old path.
+preferences = sa.Table(
+    "preferences",
+    metadata,
+    sa.Column("workspace_id", Id, primary_key=True),
+    sa.Column("key", sa.String(80), primary_key=True),
+    sa.Column("value", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.Text, nullable=True),
+)
+
+# Cloud only: which recipe or Cloud mix became which draft, so an import runs once per mix
+# (`engine_store.mix_import`). Never removed when the draft is, so a deleted draft stays deleted.
+mix_imports = sa.Table(
+    "mix_imports",
+    metadata,
+    sa.Column("workspace_id", Id, primary_key=True),
+    sa.Column("source", sa.String(16), primary_key=True),  # recipe, cloud_mix or current
+    sa.Column("source_id", sa.String(64), primary_key=True),
+    sa.Column("draft_id", sa.Integer, nullable=True),
+    sa.Column("imported_at", sa.Text, nullable=False),
+)
+
+MIX_TABLES = (queue, drafts, preferences, mix_imports)
+
+ENGINE_TABLES = (ratings, analysis, song_overrides, *SEAM_TABLES, *MIX_TABLES)
 """Every engine table Cloud has, for the migrations and the fail-closed policy."""
 
 library_metadata = sa.MetaData()
@@ -269,15 +336,34 @@ lyrics = sa.Table(
     sa.Column("synced", sa.Text, nullable=True),
 )
 
-LIBRARY_TABLES = (songs, lyrics)
+# What a listener skipped and how far in: Desktop only. It was made by its route on the first skip;
+# `lib0007mixes` makes it with the same columns, so the route only writes.
+playback_skips = sa.Table(
+    "playback_skips",
+    library_metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("song_id", sa.Integer, nullable=False),
+    sa.Column("heard_seconds", sa.Float, nullable=False),
+    sa.Column("source_position", sa.Float, nullable=False),
+    sa.Column("created_at", sa.Text, nullable=True),
+)
+
+LIBRARY_TABLES = (songs, lyrics, playback_skips)
 
 __all__ = [
     "ENGINE_TABLES",
     "LIBRARY_TABLES",
+    "MIX_TABLES",
     "SEAM_TABLES",
     "analysis",
+    "drafts",
     "library_metadata",
     "lyrics",
+    "mix_imports",
+    "playback_skips",
+    "preferences",
+    "queue",
     "ratings",
     "seam_attestations",
     "seam_history",

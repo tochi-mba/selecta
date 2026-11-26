@@ -84,6 +84,11 @@ STRICT: tuple[tuple[re.Pattern[str], str | None, Rule], ...] = (
     # A device reports each seam it rendered once, a few ahead of the music (cloud_brain).
     (re.compile(r"^/api/seams/[^/]+$"), "PUT", Rule("seam_reports", 300, 100)),
     (re.compile(r"^/api/seams/[^/]+/rate$"), "POST", Rule("seam_verdicts", 120, 30)),
+    # A Cloud account's mix and draft edits (cloud_brain.mixes_routes): a press each, so room for
+    # a quick run of drags and no more.
+    (re.compile(r"^/api/(mix|drafts)(/|$)"), "POST", Rule("mix_edits", 120, 40)),
+    (re.compile(r"^/api/(mix|drafts)(/|$)"), "PUT", Rule("mix_edits", 120, 40)),
+    (re.compile(r"^/api/(mix|drafts)(/|$)"), "DELETE", Rule("mix_edits", 120, 40)),
 )
 
 WORDS = "That's a lot of requests at once. Wait {seconds} and try again."

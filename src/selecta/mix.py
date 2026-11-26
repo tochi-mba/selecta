@@ -4,22 +4,32 @@ One mix is current: it's what plays, and it renders first. Every other mix is a 
 edited just the same without touching what's playing. A draft can also wait in the render line, so
 it's ready when it's wanted. Every function here takes `draft`, and without one it means the current
 mix.
+
+Every function takes the library connection, or a `Mixes` (`engine_store.mixes`) when it is part
+of a larger operation. Each one that touches the tables is one whole operation through
+`mix_backend.opened`: with `core.engine_store` on, one store transaction (`_writes`) or one look
+at the last commit (`_reads`); off, the old statements on the connection, exactly as before.
+`editing(conn)` holds one write open for several of them, such as remembering a mix for Undo and
+then changing it.
 """
 
 from __future__ import annotations
 
+import functools
 import json
 import math
 import os
 import sqlite3
 from collections.abc import Callable, Sequence
+from typing import Any
 
 import numpy as np
 import soundfile as sf
 
-from selecta import db
 from selecta.analysis.song import load_song
 from selecta.config import SAMPLE_RATE, Settings
+from selecta.engine_store.mixes import Mixes, NoSuchDraft  # noqa: F401  (raised to callers)
+from selecta.mix_backend import LISTED, LISTED_ORDER, opened  # noqa: F401  (read by callers)
 from selecta.render.engine import SongCache
 from selecta.render.setmix import _native, join
 from selecta.seam_kinds import usable_settings
@@ -30,68 +40,59 @@ NAME_LIMIT = 60
 LAST_DELETED = "last_deleted_draft"
 DELETED_DRAFTS = "deleted_drafts"
 KEEP_DELETED = 10
+Conn = Any  # a sqlite3.Connection to the library, or a Mixes inside a larger operation
 
 
-class NoSuchDraft(KeyError):
-    """That draft has been deleted or played, perhaps in another tab."""
+def _writes(fn):
+    @functools.wraps(fn)
+    def whole(conn, *args, **kwargs):
+        with opened(conn, write=True) as mixes:
+            return fn(mixes, *args, **kwargs)
+
+    return whole
 
 
-def _draft_row(conn: sqlite3.Connection, draft: int) -> sqlite3.Row:
-    row = conn.execute("SELECT * FROM drafts WHERE id=?", (draft,)).fetchone()
-    if row is None:
-        raise NoSuchDraft(draft)
-    return row
+def _reads(fn):
+    @functools.wraps(fn)
+    def look(conn, *args, **kwargs):
+        with opened(conn, write=False) as mixes:
+            return fn(mixes, *args, **kwargs)
+
+    return look
 
 
-def _stored(row: sqlite3.Row) -> list[Item]:
+def editing(conn: Conn):
+    """One write for several operations, as `with mix.editing(conn) as mixes:`. With the flag
+    off it is the connection itself, statement for statement."""
+    return opened(conn, write=True)
+
+
+@_reads
+def _draft_row(m: Mixes, draft: int):
+    return m.draft_row(draft)
+
+
+def _stored(row) -> list[Item]:
     return [(item[0], item[1], item[2]) for item in json.loads(row["items"])]
 
 
-def _rows(conn: sqlite3.Connection, draft: int | None = None) -> list:
+@_reads
+def _rows(m: Mixes, draft: int | None = None) -> list:
     if draft is None:
-        return conn.execute(
-            "SELECT q.*, s.artist, s.title, s.duration, s.genre, "
-            "COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, a.energy "
-            "FROM queue q JOIN songs s ON s.id=q.song_id LEFT JOIN analysis a ON a.song_id=s.id "
-            "LEFT JOIN song_overrides o ON o.song_id=s.id "
-            "ORDER BY q.position"
-        ).fetchall()
-    items = _stored(_draft_items(conn, draft))
+        return m.queue_rows()
+    items = _stored({"items": _draft_items(m, draft)})
     if not items:
         return []
-    return _draft_rows(items, _songs_by_id(conn, [item[0] for item in items]))
+    return _draft_rows(items, m.songs_by_id([item[0] for item in items]))
 
 
-def _draft_items(conn: sqlite3.Connection, draft: int) -> sqlite3.Row:
+def _draft_items(m: Mixes, draft: int) -> str:
     """Only the song order. A draft also keeps up to UNDO_DEPTH earlier versions of itself, and
     reading a mix has no use for them."""
-    row = conn.execute("SELECT items FROM drafts WHERE id=?", (draft,)).fetchone()
-    if row is None:
-        raise NoSuchDraft(draft)
-    return row
+    return m.draft_items(draft)
 
 
-SONG_COLUMNS = (
-    "SELECT s.id, s.artist, s.title, s.duration, s.genre, "
-    "COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, a.energy "
-    "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
-    "LEFT JOIN song_overrides o ON o.song_id=s.id WHERE s.id IN "
-)
-IN_CHUNK = 900  # well under SQLite's smallest limit on bound parameters
-
-
-def _songs_by_id(conn: sqlite3.Connection, songs: Sequence[int]) -> dict[int, sqlite3.Row]:
-    wanted = list(dict.fromkeys(songs))
-    known: dict[int, sqlite3.Row] = {}
-    for start in range(0, len(wanted), IN_CHUNK):
-        chunk = wanted[start : start + IN_CHUNK]
-        marks = ",".join("?" * len(chunk))
-        for row in conn.execute(f"{SONG_COLUMNS}({marks})", chunk):  # noqa: S608
-            known[row["id"]] = row
-    return known
-
-
-def _draft_rows(items: list[Item], known: dict[int, sqlite3.Row]) -> list:
+def _draft_rows(items: list[Item], known: dict) -> list:
     # a song that has left the library since just drops out of the draft
     present = [item for item in items if item[0] in known]
     return [
@@ -100,14 +101,15 @@ def _draft_rows(items: list[Item], known: dict[int, sqlite3.Row]) -> list:
     ]
 
 
-def rows_for_drafts(conn: sqlite3.Connection, stored: dict[int, str]) -> dict[int, list]:
+@_reads
+def rows_for_drafts(m: Mixes, stored: dict[int, str]) -> dict[int, list]:
     """Many drafts' rows at once, from each one's stored `items`, with one look at the songs for
     all of them instead of one per draft. Each is exactly what `_rows` gives for that draft."""
     parsed = {
         draft: [(item[0], item[1], item[2]) for item in json.loads(items)]
         for draft, items in stored.items()
     }
-    known = _songs_by_id(conn, [item[0] for items in parsed.values() for item in items])
+    known = m.songs_by_id([item[0] for items in parsed.values() for item in items])
     return {draft: _draft_rows(items, known) for draft, items in parsed.items()}
 
 
@@ -167,7 +169,7 @@ def chain_with_room(
 
 
 def settle_chain(
-    conn: sqlite3.Connection,
+    conn: Conn,
     store: SeamStore,
     draft: int | None = None,
     rows: list | None = None,
@@ -189,8 +191,9 @@ def settle_chain(
     return changed
 
 
+@_writes
 def add_pair(
-    conn: sqlite3.Connection, a: int, b: int, seam: dict, draft: int | None = None
+    conn: Conn, a: int, b: int, seam: dict, draft: int | None = None
 ) -> tuple[int, int]:
     """Two songs and the transition between them, all at once or not at all. Each song goes in
     only if it isn't already there, and they end up next to each other, so a failure part way can't
@@ -217,8 +220,9 @@ def add_pair(
     return order.index(a), into
 
 
+@_reads
 def read_mix(
-    conn: sqlite3.Connection,
+    conn: Conn,
     store: SeamStore,
     draft: int | None = None,
     rows: list | None = None,
@@ -256,30 +260,24 @@ def read_mix(
     return mix
 
 
-def write_order(conn: sqlite3.Connection, items: list[Item], draft: int | None = None) -> None:
+@_writes
+def write_order(conn: Conn, items: list[Item], draft: int | None = None) -> None:
     """Replace the mix with (song, seam settings, locked) tuples."""
     if draft is not None:
         _draft_items(conn, draft)
-        conn.execute(
-            "UPDATE drafts SET items=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
-            (json.dumps([list(item) for item in items]), draft),
-        )
-        conn.commit()
+        conn.write_draft_items(draft, json.dumps([list(item) for item in items]))
         return
-    conn.execute("DELETE FROM queue")
-    conn.executemany(
-        "INSERT INTO queue(position,song_id,seam,locked) VALUES(?,?,?,?)",
-        [(i, song, seam, locked) for i, (song, seam, locked) in enumerate(items)],
-    )
-    conn.commit()
+    conn.write_queue(items)
 
 
-def _items(conn: sqlite3.Connection, draft: int | None = None) -> list[Item]:
+@_reads
+def _items(conn: Conn, draft: int | None = None) -> list[Item]:
     return [(row["song_id"], row["seam"], row["locked"]) for row in _rows(conn, draft)]
 
 
+@_writes
 def add_song(
-    conn: sqlite3.Connection, song_id: int, position: int | None = None, draft: int | None = None
+    conn: Conn, song_id: int, position: int | None = None, draft: int | None = None
 ) -> None:
     items = _items(conn, draft)
     at = len(items) if position is None else max(0, min(position, len(items)))
@@ -287,15 +285,17 @@ def add_song(
     write_order(conn, items, draft)
 
 
-def remove_at(conn: sqlite3.Connection, position: int, draft: int | None = None) -> None:
+@_writes
+def remove_at(conn: Conn, position: int, draft: int | None = None) -> None:
     items = _items(conn, draft)
     if 0 <= position < len(items):
         items.pop(position)
         write_order(conn, items, draft)
 
 
+@_reads
 def locked_in_the_way(
-    conn: sqlite3.Connection, source: int, target: int, draft: int | None = None
+    conn: Conn, source: int, target: int, draft: int | None = None
 ) -> int | None:
     """SF-0220-05: the position of a locked song that moving `source` to `target` would shift.
 
@@ -308,7 +308,8 @@ def locked_in_the_way(
     return next((index for index in shifted if items[index][2]), None)
 
 
-def move_song(conn: sqlite3.Connection, source: int, target: int, draft: int | None = None) -> None:
+@_writes
+def move_song(conn: Conn, source: int, target: int, draft: int | None = None) -> None:
     """Move one song. Its old and new neighbours get fresh seams, since those pairs are new."""
     items = _items(conn, draft)
     if not (0 <= source < len(items) and 0 <= target < len(items)) or source == target:
@@ -327,8 +328,9 @@ def move_song(conn: sqlite3.Connection, source: int, target: int, draft: int | N
     write_order(conn, items, draft)
 
 
+@_writes
 def replace_at(
-    conn: sqlite3.Connection, position: int, song_id: int, draft: int | None = None
+    conn: Conn, position: int, song_id: int, draft: int | None = None
 ) -> None:
     """Swap one song for another. Both seams touching it get reset, since both pairs are new."""
     items = _items(conn, draft)
@@ -341,11 +343,11 @@ def replace_at(
     write_order(conn, items, draft)
 
 
-def set_seam(conn: sqlite3.Connection, position: int, seam: dict, draft: int | None = None) -> None:
+@_writes
+def set_seam(conn: Conn, position: int, seam: dict, draft: int | None = None) -> None:
     cleaned = {key: value for key, value in seam.items() if value not in (None, "")}
     if draft is None:
-        conn.execute("UPDATE queue SET seam=? WHERE position=?", (json.dumps(cleaned), position))
-        conn.commit()
+        conn.set_queue_seam(position, json.dumps(cleaned))
         return
     items = _items(conn, draft)
     if 0 <= position < len(items):
@@ -354,10 +356,10 @@ def set_seam(conn: sqlite3.Connection, position: int, seam: dict, draft: int | N
         write_order(conn, items, draft)
 
 
-def toggle_lock(conn: sqlite3.Connection, position: int, draft: int | None = None) -> None:
+@_writes
+def toggle_lock(conn: Conn, position: int, draft: int | None = None) -> None:
     if draft is None:
-        conn.execute("UPDATE queue SET locked=1-locked WHERE position=?", (position,))
-        conn.commit()
+        conn.toggle_queue_lock(position)
         return
     items = _items(conn, draft)
     if 0 <= position < len(items):
@@ -366,8 +368,9 @@ def toggle_lock(conn: sqlite3.Connection, position: int, draft: int | None = Non
         write_order(conn, items, draft)
 
 
+@_writes
 def merge_with_locks(
-    conn: sqlite3.Connection,
+    conn: Conn,
     planned: list[int],
     seams: dict[int, dict] | None = None,
     draft: int | None = None,
@@ -480,21 +483,21 @@ def _join_to_file(
 UNDO_DEPTH = 20
 
 
-def _history(conn: sqlite3.Connection, draft: int | None) -> list[dict]:
+def _history(conn: Mixes, draft: int | None) -> list[dict]:
     if draft is None:
-        return db.preference(conn, "mix_undo", [])
+        return conn.preference("mix_undo", [])
     return json.loads(_draft_row(conn, draft)["history"])
 
 
-def _set_history(conn: sqlite3.Connection, history: list[dict], draft: int | None) -> None:
+def _set_history(conn: Mixes, history: list[dict], draft: int | None) -> None:
     if draft is None:
-        db.set_preference(conn, "mix_undo", history)
+        conn.set_preference("mix_undo", history)
         return
-    conn.execute("UPDATE drafts SET history=? WHERE id=?", (json.dumps(history), draft))
-    conn.commit()
+    conn.set_draft_history(draft, json.dumps(history))
 
 
-def remember(conn: sqlite3.Connection, label: str, draft: int | None = None) -> None:
+@_writes
+def remember(conn: Conn, label: str, draft: int | None = None) -> None:
     """Keep the mix as it is now, so this next change can be undone. Selecta never asks "are you
     sure?", it just lets you take things back."""
     history = _history(conn, draft)
@@ -508,19 +511,15 @@ def remember(conn: sqlite3.Connection, label: str, draft: int | None = None) -> 
     _set_history(conn, history[-UNDO_DEPTH:], draft)
 
 
-def can_undo(conn: sqlite3.Connection, draft: int | None = None) -> bool:
+@_reads
+def can_undo(conn: Conn, draft: int | None = None) -> bool:
     if draft is None:
         return bool(_history(conn, draft))
-    # whether there is any history, without parsing every revision kept in it
-    row = conn.execute(
-        "SELECT json_array_length(history) > 0 FROM drafts WHERE id=?", (draft,)
-    ).fetchone()
-    if row is None:
-        raise NoSuchDraft(draft)
-    return bool(row[0])
+    return conn.has_history(draft)
 
 
-def undo(conn: sqlite3.Connection, draft: int | None = None) -> str | None:
+@_writes
+def undo(conn: Conn, draft: int | None = None) -> str | None:
     """Put the last remembered mix back, and say what was undone."""
     history = _history(conn, draft)
     if not history:
@@ -534,56 +533,49 @@ def undo(conn: sqlite3.Connection, draft: int | None = None) -> str | None:
     return last["label"]
 
 
-def mix_name(conn: sqlite3.Connection, draft: int | None = None) -> str:
+@_reads
+def mix_name(conn: Conn, draft: int | None = None) -> str:
     if draft is not None:
-        row = conn.execute("SELECT name FROM drafts WHERE id=?", (draft,)).fetchone()
-        if row is None:
-            raise NoSuchDraft(draft)
-        return row["name"]
-    return db.preference(conn, "mix_name", "Your mix")
+        return conn.draft_name(draft)
+    return conn.preference("mix_name", "Your mix")
 
 
-def set_mix_name(conn: sqlite3.Connection, name: str, draft: int | None = None) -> None:
+@_writes
+def set_mix_name(conn: Conn, name: str, draft: int | None = None) -> None:
     if draft is not None:
-        conn.execute(
-            "UPDATE drafts SET name=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (name, draft)
-        )
-        conn.commit()
+        conn.set_draft_name(draft, name)
         return
-    db.set_preference(conn, "mix_name", name)
+    conn.set_preference("mix_name", name)
 
 
 # ---- drafts
 
 
-# Everything a list of drafts shows. Not `history`: each draft keeps up to UNDO_DEPTH earlier
-# versions of itself, which is most of what is stored and none of what is listed.
-LISTED = "id, name, items, ready_only, line, created_at, updated_at"
-LISTED_ORDER = "ORDER BY line IS NULL, line, updated_at DESC, id DESC"
+# Everything a list of drafts shows is `mix_backend.LISTED`, in `LISTED_ORDER`. Not `history`:
+# each draft keeps up to UNDO_DEPTH earlier versions of itself, which is most of what is stored
+# and none of what is listed.
 
 
-def all_drafts(conn: sqlite3.Connection) -> list[sqlite3.Row]:
-    """Whatever's in the render line first, in its order, then the most recently changed. Read
-    in that order straight from the drafts_listed index."""
-    return conn.execute(f"SELECT {LISTED} FROM drafts {LISTED_ORDER}").fetchall()  # noqa: S608
+@_reads
+def all_drafts(conn: Conn) -> list:
+    """Whatever's in the render line first, in its order, then the most recently changed."""
+    return conn.listed_drafts()
 
 
-def draft_names(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+@_reads
+def draft_names(conn: Conn) -> list:
     """Only each draft's id and name, in the same order, for pickers and shortcuts."""
-    return conn.execute(f"SELECT id, name FROM drafts {LISTED_ORDER}").fetchall()  # noqa: S608
+    return conn.draft_names()
 
 
 def _clean_name(name: str) -> str:
     return " ".join(name.split())[:NAME_LIMIT].strip()
 
 
-def unique_name(conn: sqlite3.Connection, wanted: str, ignoring: int | None = None) -> str:
+@_reads
+def unique_name(conn: Conn, wanted: str, ignoring: int | None = None) -> str:
     """Names can't be confused with each other: a second one gets a number."""
-    taken = {
-        row["name"].casefold()
-        for row in conn.execute("SELECT id,name FROM drafts").fetchall()
-        if row["id"] != ignoring
-    }
+    taken = {name.casefold() for draft, name in conn.names() if draft != ignoring}
     if wanted.casefold() not in taken:
         return wanted
     number = 2
@@ -592,48 +584,41 @@ def unique_name(conn: sqlite3.Connection, wanted: str, ignoring: int | None = No
     return f"{wanted} {number}"
 
 
-def _first_free_name(conn: sqlite3.Connection) -> str:
-    taken = {row["name"].casefold() for row in conn.execute("SELECT name FROM drafts").fetchall()}
+def _first_free_name(conn: Mixes) -> str:
+    taken = {name.casefold() for _draft, name in conn.names()}
     number = 1
     while f"draft {number}" in taken:
         number += 1
     return f"Draft {number}"
 
 
-def create_draft(
-    conn: sqlite3.Connection, name: str | None = None, items: list[Item] | None = None
-) -> int:
+@_writes
+def create_draft(conn: Conn, name: str | None = None, items: list[Item] | None = None) -> int:
     """A new draft, always under a name of its own. With no name or songs, an empty draft that's
     already there is used rather than making another, so they can't pile up."""
     clean = _clean_name(name or "")
     if not clean and not items:
-        empty = conn.execute(
-            f"SELECT id FROM drafts WHERE json_array_length(items)=0 {LISTED_ORDER} LIMIT 1"  # noqa: S608
-        ).fetchone()
+        empty = conn.empty_draft()
         if empty is not None:
-            return empty["id"]
+            return empty
     chosen = unique_name(conn, clean) if clean else _first_free_name(conn)
-    cursor = conn.execute(
-        "INSERT INTO drafts(name,items) VALUES(?,?)",
-        (chosen, json.dumps([list(item) for item in items or []])),
-    )
-    conn.commit()
-    return int(cursor.lastrowid)
+    return conn.insert_draft(chosen, json.dumps([list(item) for item in items or []]))
 
 
-def copy_current(conn: sqlite3.Connection, name: str | None = None) -> int:
+@_writes
+def copy_current(conn: Conn, name: str | None = None) -> int:
     """Keep the current mix as it is now, as a draft of its own."""
     return create_draft(conn, name or mix_name(conn), _items(conn))
 
 
-def duplicate_draft(conn: sqlite3.Connection, draft: int) -> int:
-    row = conn.execute("SELECT name, items FROM drafts WHERE id=?", (draft,)).fetchone()
-    if row is None:
-        raise NoSuchDraft(draft)
+@_writes
+def duplicate_draft(conn: Conn, draft: int) -> int:
+    row = conn.draft_row(draft)
     return create_draft(conn, f"{row['name']} copy", _stored(row))
 
 
-def rename_draft(conn: sqlite3.Connection, draft: int, name: str) -> str:
+@_writes
+def rename_draft(conn: Conn, draft: int, name: str) -> str:
     """Rename it, keeping the old name if there's nothing to go on."""
     current = mix_name(conn, draft)
     clean = _clean_name(name)
@@ -644,7 +629,7 @@ def rename_draft(conn: sqlite3.Connection, draft: int, name: str) -> str:
     return chosen
 
 
-def _as_saved(row: sqlite3.Row) -> dict:
+def _as_saved(row) -> dict:
     return {
         "id": row["id"],
         "name": row["name"],
@@ -654,11 +639,8 @@ def _as_saved(row: sqlite3.Row) -> dict:
     }
 
 
-def _put_back(conn: sqlite3.Connection, saved: dict) -> None:
-    conn.execute(
-        "INSERT OR REPLACE INTO drafts(id,name,items,history,line) VALUES(?,?,?,?,?)",
-        (saved["id"], saved["name"], saved["items"], saved["history"], None),
-    )
+def _put_back(conn: Mixes, saved: dict) -> None:
+    conn.put_back(saved)
     if saved["line"] is not None:
         order = line_order(conn)
         order.insert(min(saved["line"], len(order)), saved["id"])
@@ -666,31 +648,33 @@ def _put_back(conn: sqlite3.Connection, saved: dict) -> None:
     conn.commit()
 
 
-def delete_draft(conn: sqlite3.Connection, draft: int) -> str:
+@_writes
+def delete_draft(conn: Conn, draft: int) -> str:
     """Delete a draft and keep it aside, so it can be taken back."""
     row = _draft_row(conn, draft)
     saved = _as_saved(row)
     # the newest also stays where older versions of Selecta look, so going back to one is safe
-    db.set_preference(conn, LAST_DELETED, saved)
+    conn.set_preference(LAST_DELETED, saved)
     kept = [*_deleted_drafts(conn), saved]
-    db.set_preference(conn, DELETED_DRAFTS, kept[-KEEP_DELETED:])
-    conn.execute("DELETE FROM drafts WHERE id=?", (draft,))
+    conn.set_preference(DELETED_DRAFTS, kept[-KEEP_DELETED:])
+    conn.delete_draft_row(draft)
     _set_line(conn, line_order(conn))
     conn.commit()
     return row["name"]
 
 
-def _deleted_drafts(conn: sqlite3.Connection) -> list[dict]:
+def _deleted_drafts(conn: Mixes) -> list[dict]:
     """What can be brought back, oldest first. Something deleted by an older version is only in the
     one place it knew about, and counts as the newest."""
-    kept = db.preference(conn, DELETED_DRAFTS, [])
-    last = db.preference(conn, LAST_DELETED, None)
+    kept = conn.preference(DELETED_DRAFTS, [])
+    last = conn.preference(LAST_DELETED, None)
     if last and all(saved["id"] != last["id"] for saved in kept):
         kept = [*kept, last]
     return kept
 
 
-def restore_draft(conn: sqlite3.Connection, draft: int | None = None) -> int | None:
+@_writes
+def restore_draft(conn: Conn, draft: int | None = None) -> int | None:
     """Bring back the draft named, or the last one deleted. Naming it means deleting another since
     can't bring back the wrong one."""
     kept = _deleted_drafts(conn)
@@ -702,12 +686,13 @@ def restore_draft(conn: sqlite3.Connection, draft: int | None = None) -> int | N
     saved["name"] = unique_name(conn, saved["name"])
     _put_back(conn, saved)
     left = [item for item in kept if item["id"] != saved["id"]]
-    db.set_preference(conn, DELETED_DRAFTS, left)
-    db.set_preference(conn, LAST_DELETED, left[-1] if left else None)
+    conn.set_preference(DELETED_DRAFTS, left)
+    conn.set_preference(LAST_DELETED, left[-1] if left else None)
     return saved["id"]
 
 
-def play_draft(conn: sqlite3.Connection, draft: int) -> str:
+@_writes
+def play_draft(conn: Conn, draft: int) -> str:
     """Make a draft the current mix. The two trade places, so there's only ever one copy of a mix
     and nothing is lost: what was current becomes a draft, unless a draft already has those songs,
     and undoing puts everything back."""
@@ -715,13 +700,12 @@ def play_draft(conn: sqlite3.Connection, draft: int) -> str:
     before, before_name = _items(conn), mix_name(conn)
     coming_in = _items(conn, draft)
     saved = _as_saved(row)
-    conn.execute("DELETE FROM drafts WHERE id=?", (draft,))
+    conn.delete_draft_row(draft)
     _set_line(conn, line_order(conn))
     kept = None
     if before:
         same = json.dumps([list(item) for item in before])
-        already = conn.execute("SELECT 1 FROM drafts WHERE items=? LIMIT 1", (same,)).fetchone()
-        if already is None:
+        if not conn.any_draft_with(same):
             kept = create_draft(conn, before_name, before)
     history = _history(conn, None)
     history.append(
@@ -738,13 +722,13 @@ def play_draft(conn: sqlite3.Connection, draft: int) -> str:
     return row["name"]
 
 
-def _undo_swap(conn: sqlite3.Connection, last: dict) -> None:
+def _undo_swap(conn: Mixes, last: dict) -> None:
     kept = last["swap"]["kept"]
     if kept is not None:
-        row = conn.execute("SELECT items FROM drafts WHERE id=?", (kept,)).fetchone()
+        items = conn.items_of(kept)
         # if it has been changed since, those changes are worth more than a tidy list
-        if row is not None and json.loads(row["items"]) == last["items"]:
-            conn.execute("DELETE FROM drafts WHERE id=?", (kept,))
+        if items is not None and json.loads(items) == last["items"]:
+            conn.delete_draft_row(kept)
     saved = dict(last["swap"]["draft"])
     saved["name"] = unique_name(conn, saved["name"])
     _put_back(conn, saved)
@@ -753,35 +737,30 @@ def _undo_swap(conn: sqlite3.Connection, last: dict) -> None:
 # ---- the render line: mixes to render once the current mix is done, in this order
 
 
-def line_order(conn: sqlite3.Connection) -> list[int]:
-    return [
-        row["id"]
-        for row in conn.execute(
-            "SELECT id FROM drafts WHERE line IS NOT NULL ORDER BY line, id"
-        ).fetchall()
-    ]
+@_reads
+def line_order(conn: Conn) -> list[int]:
+    return conn.line_order()
 
 
-def _set_line(conn: sqlite3.Connection, order: list[int]) -> None:
-    # Only drafts already in line, found by the drafts_in_line index. Clearing every row rewrote
-    # every draft, revisions and all, on each delete, play and move.
-    conn.execute("UPDATE drafts SET line=NULL WHERE line IS NOT NULL")
-    conn.executemany("UPDATE drafts SET line=? WHERE id=?", [(i, d) for i, d in enumerate(order)])
-    conn.commit()
+def _set_line(conn: Mixes, order: list[int]) -> None:
+    conn.set_line(order)
 
 
-def join_line(conn: sqlite3.Connection, draft: int) -> None:
+@_writes
+def join_line(conn: Conn, draft: int) -> None:
     _draft_row(conn, draft)
     order = line_order(conn)
     if draft not in order:
         _set_line(conn, [*order, draft])
 
 
-def leave_line(conn: sqlite3.Connection, draft: int) -> None:
+@_writes
+def leave_line(conn: Conn, draft: int) -> None:
     _set_line(conn, [other for other in line_order(conn) if other != draft])
 
 
-def move_in_line(conn: sqlite3.Connection, draft: int, step: int) -> None:
+@_writes
+def move_in_line(conn: Conn, draft: int, step: int) -> None:
     order = line_order(conn)
     if draft not in order:
         return

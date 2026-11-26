@@ -1,5 +1,5 @@
-"""Song facts, planning and seam routes (`cloud.brain`, ADR-0479) for the tenant isolation matrix
-(tests/test_cloud_tenant_isolation.py), kept apart so that file stays under the length limit.
+"""Song facts, planning, seam and mix routes (`cloud.brain`, ADR-0479) for the tenant isolation
+matrix (tests/test_cloud_tenant_isolation.py), kept apart so that file stays under the length limit.
 
 Each one reads or writes only the caller's own workspace through the engine store, so naming
 another workspace is refused before anything happens. The bodies are valid enough to get past
@@ -28,4 +28,22 @@ BRAIN_SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/seams"): None,
     ("POST", "/api/seams/{key}/rate"): {"rating": "good"},
     ("GET", "/api/memory/ratings"): None,
+    # the account's mixes and drafts (cloud_brain.mixes_routes, cloud.account_mixes)
+    ("GET", "/api/mix"): None,
+    ("GET", "/api/drafts"): None,
+    ("GET", "/api/drafts/names"): None,
+    ("POST", "/api/drafts"): {"name": "Mine"},
+    ("POST", "/api/drafts/restore"): None,
+    ("POST", "/api/drafts/{draft}/name"): {"name": "Mine"},
+    ("POST", "/api/drafts/{draft}/duplicate"): None,
+    ("DELETE", "/api/drafts/{draft}"): None,
+    ("POST", "/api/drafts/{draft}/play"): None,
+    ("POST", "/api/mix/songs"): {"song_id": 1},
+    ("DELETE", "/api/mix/songs/{position}"): None,
+    ("POST", "/api/mix/move"): {"source": 0, "target": 1},
+    ("POST", "/api/mix/{position}/seam"): {"move": "auto"},
+    ("POST", "/api/mix/{position}/lock"): None,
+    ("POST", "/api/mix/undo"): None,
+    ("POST", "/api/mix/clear"): None,
+    ("PUT", "/api/mix/order"): {"song_ids": [1]},
 }

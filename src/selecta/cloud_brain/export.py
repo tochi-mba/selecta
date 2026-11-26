@@ -1,6 +1,7 @@
 """What the account export carries of the engine's tables: song facts, corrections, ratings, the
-other file hashes a song is known by and the seams (records, who rendered them, their history and
-the member's verdicts), plus each song's stored arrays. No clip is in Cloud to export.
+other file hashes a song is known by, the seams (records, who rendered them, their history and
+the member's verdicts) and the mixes (the current mix, drafts, their Undo), plus each song's
+stored arrays. No clip is in Cloud to export.
 
 Called by the account export (`routes/cloud_export.py`) inside its own workspace transaction, so
 the fail-closed policy on the engine tables sees the workspace. Account deletion needs nothing
@@ -26,6 +27,10 @@ def kept(conn: Any, workspace_id: str) -> dict[str, list[dict[str, Any]]]:
     """Every engine row of this workspace, as plain values."""
     from selecta.engine_store.schema import (
         analysis,
+        drafts,
+        mix_imports,
+        preferences,
+        queue,
         ratings,
         seam_attestations,
         seam_history,
@@ -80,6 +85,23 @@ def kept(conn: Any, workspace_id: str) -> dict[str, list[dict[str, Any]]]:
             sa.select(seam_verdicts)
             .where(seam_verdicts.c.workspace_id == workspace_id)
             .order_by(seam_verdicts.c.id)
+        ),
+        # the account's mixes (engine_store.mixes): the current mix, its drafts, its own values
+        "current_mix": rows(
+            sa.select(queue).where(queue.c.workspace_id == workspace_id).order_by(queue.c.position)
+        ),
+        "drafts": rows(
+            sa.select(drafts).where(drafts.c.workspace_id == workspace_id).order_by(drafts.c.id)
+        ),
+        "mix_values": rows(
+            sa.select(preferences)
+            .where(preferences.c.workspace_id == workspace_id)
+            .order_by(preferences.c.key)
+        ),
+        "mix_imports": rows(
+            sa.select(mix_imports)
+            .where(mix_imports.c.workspace_id == workspace_id)
+            .order_by(mix_imports.c.source, mix_imports.c.source_id)
         ),
         "other_file_hashes": rows(
             sa.select(local_song_hashes)

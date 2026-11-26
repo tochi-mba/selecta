@@ -1,4 +1,5 @@
 import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
+import { accountMixes, accountMixesOn, fallsBack } from './accountMixes';
 import { accountOrderPlanner } from './accountOrder';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { linksFamily } from './localFirstLinks';
@@ -361,7 +362,9 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   }
   // the account's planner orders a new mix when it can (accountOrder.ts); otherwise today's order
   const planOrder = sources.workspaceId ? accountOrderPlanner(cloud, sources.workspaceId) : undefined;
-  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder) : null;
+  // cloud.account_mixes: the account's own mix and draft routes answer first (accountMixes.ts)
+  const account = accountMixes(cloud);
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder, account) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
     songs: async () => {
@@ -416,6 +419,19 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     }
     const requestAnswer = requests?.answer(method, route, new URLSearchParams(query), init);
     if (requestAnswer) return (await requestAnswer) as T;
+    // a song added here must play on this device, as the browser's own mixes ask
+    const addsHere = method === 'POST' && route === '/mix/songs';
+    const accountAnswer = addsHere ? undefined : account.answer(method, route, query, init);
+    if (accountAnswer) {
+      try {
+        return (await accountAnswer) as T;
+      } catch (problem) {
+        if (!fallsBack(problem)) throw problem;
+      }
+    } else if (addsHere && sources.recipes) {
+      const added = await addPlayable(init);
+      if (added !== undefined) return added as T;
+    }
     const mixAnswer = mixes?.answer(method, route, new URLSearchParams(query), init);
     if (mixAnswer) return (await mixAnswer) as T;
     const discoveryAnswer = discoveries?.answer(method, route, new URLSearchParams(query), init);
@@ -440,6 +456,20 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     const neverAnswer = setNever(method, route, init);
     if (neverAnswer) return (await neverAnswer) as T;
     throw notHereYet(path);
+  };
+  /** POST /mix/songs through the account (cloud.account_mixes): the song must be one this
+   * device can play, as the browser's own mixes ask. Undefined when the account doesn't answer. */
+  const addPlayable = async (init?: RequestInit): Promise<unknown> => {
+    if (!accountMixesOn()) return undefined;
+    const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number };
+    const song = (await playable()).find((one) => one.id === Number(body.song_id));
+    if (!song || !song.playable) throw new ApiError('Choose a song that plays on this device.', 400, 'not_playable', 'local-first:mix');
+    try {
+      return await account.answer('POST', '/mix/songs', '', init);
+    } catch (problem) {
+      if (!fallsBack(problem)) throw problem;
+      return undefined;
+    }
   };
   /** "Never play" from the Library's row toggle (`/songs/{id}/never`) and its batch actions
    * (`/library/batch`, never and allow), kept for the account (ADR-0475). Priority is an analysis

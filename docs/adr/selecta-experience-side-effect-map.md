@@ -105,7 +105,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | Route | Side effect |
 |---|---|
 | `POST /api/playback/skip` | Records how much of a skipped song was heard (Listen, learning) |
-| `POST /api/drafts` | Creates a draft |
+| `POST /api/drafts` | Creates a draft; in Cloud (`cloud.account_mixes`) the mix and draft routes change the account's own tables the same way (ADR-0479) |
 | `POST /api/drafts/restore` | Restores a deleted draft (Undo) |
 | `POST /api/drafts/{draft}/name` | Renames a draft |
 | `POST /api/drafts/{draft}/duplicate` | Copies a draft |
@@ -301,6 +301,7 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `DELETE /api/local-media/songs/{song_id}` | Soft-deletes a catalogue entry |
 | `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
 | `PUT /api/song-facts/{song_id}` | Saves the facts a device measured for one catalogue song (the `analysis` row and its features artifact), unless a measurement that outranks them is stored (ADR-0479) |
+| `PUT /api/mix/order` | Cloud only (`cloud.account_mixes`): replaces the account's current mix, or a draft, with these catalogue songs in this order, keeping each chosen seam whose two songs stay together, after remembering it for Undo (ADR-0479) |
 | `PUT /api/seams/{key}` | Keeps a transition a device rendered (its pair, option, audit verdict, implementation, clip length and hash; never audio) and that device's attestation (Cloud, ADR-0479) |
 | `PUT /api/song-facts/{song_id}/correction` | Sets the member's tempo and key for a catalogue song (`song_overrides`); both null clears it |
 | `DELETE /api/song-facts/{song_id}/correction` | Clears the member's tempo and key correction for a catalogue song |
