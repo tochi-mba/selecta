@@ -218,10 +218,17 @@ def test_grant_use_revoke_drill(server: Rehearsal):
     store = make_store(r.engine, flags=_Decided(r.engine, [ws]))
     first = store.enqueue(JobSpec(ws, "analyse.song", idempotency_key="drill-granted")).job
     assert first.flag_id == HOSTED
-    claimed = store.claim("cpu-heavy", worker("cpu-heavy"))
-    assert claimed is not None and claimed.job.id == first.id, "a granted hosted job must run"
-    store.start(claimed.attempt_id, claimed.fencing_token)
-    store.complete(claimed.attempt_id, claimed.fencing_token, result={"ok": True})
+    # The upload queued its own analysis too; both are granted hosted work and both run.
+    ran = set()
+    for _ in range(2):
+        claimed = store.claim("cpu-heavy", worker("cpu-heavy"))
+        if claimed is None:
+            break
+        assert claimed.job.workspace_id == ws and claimed.job.flag_id == HOSTED, claimed.job
+        ran.add(claimed.job.id)
+        store.start(claimed.attempt_id, claimed.fencing_token)
+        store.complete(claimed.attempt_id, claimed.fencing_token, result={"ok": True})
+    assert first.id in ran, "a granted hosted job must run"
 
     # A second upload is mid-flight (one part in R2, not completed) and a second job is queued.
     big = _wav(r, 40.0)

@@ -16,8 +16,9 @@ import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 from mutagen.flac import FLAC, Picture
-from mutagen.id3 import APIC, ID3
+from mutagen.id3 import APIC
 from mutagen.oggvorbis import OggVorbis
+from mutagen.wave import WAVE
 
 from selecta import db, flags
 from selecta.api import create_app
@@ -98,10 +99,13 @@ def test_the_front_cover_wins_over_a_back_cover(tmp_path):
 
 def test_an_id3_picture_is_read_and_its_real_type_sniffed(tmp_path):
     path = _tone(tmp_path / "music" / "song.wav")
-    tags = ID3()
+    # an ID3 tag in the WAV's own "id3 " chunk, where taggers put it (a tag written in front of
+    # the RIFF header makes the file read as a broken MP3)
+    audio = WAVE(path)
+    audio.add_tags()
     # the tag says jpeg, the bytes are a png: the bytes are believed
-    tags.add(APIC(encoding=3, mime="image/jpeg", type=3, desc="", data=PNG))
-    tags.save(path)
+    audio.tags.add(APIC(encoding=3, mime="image/jpeg", type=3, desc="", data=PNG))
+    audio.save()
     assert art.read_picture(path) == (PNG, "image/png")
 
 
@@ -276,4 +280,6 @@ def test_the_route_refuses_a_moving_picture_kept_before_the_rule(client, tmp_pat
 
 def test_the_route_is_gone_with_the_flag_off(client):
     flags.use("-library.art_embedded")
-    assert client.get("/api/songs/1/art").status_code == 404
+    # the flag guard answers for the route before it runs, as for every flagged local route
+    answer = client.get("/api/songs/1/art")
+    assert answer.status_code == 403 and answer.json()["flag"] == "library.art_embedded"
