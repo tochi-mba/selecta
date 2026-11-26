@@ -186,6 +186,7 @@ def test_a_room_offers_one_row_per_song_held_through_any_version(party, local_me
 READS_BY_ID_OR_HASH = {
     "src/selecta/local_media/schema.py": "declares the table",
     "src/selecta/local_media/lyrics_schema.py": "foreign key",
+    "src/selecta/local_media/hashes_schema.py": "foreign key from a song's other file hashes",
     "src/selecta/local_media/__init__.py": "re-exports the schema",
     "src/selecta/local_media/store.py": "registration, by-id reads, the file list",
     "src/selecta/local_media/versions.py": "the grouping itself and listed_songs",
@@ -210,6 +211,9 @@ READS_BY_ID_OR_HASH = {
     "src/selecta/business/rooms/ports.py": "by id",
     "src/selecta/business/upload_rights.py": "by id",
     "src/selecta/business/workspace_routes.py": "by content hash",
+    "src/selecta/engine_store/schema.py": "foreign key from a song's facts",
+    "src/selecta/engine_store/songs.py": "one song's facts, by id",
+    "src/selecta/engine_store/song_hashes.py": "mentions the table in a comment",
 }
 
 

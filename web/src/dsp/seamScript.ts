@@ -98,6 +98,10 @@ export interface ScriptRequest {
   /** Bars into A where the overlap starts, and into B where it enters (the seam settings). */
   exitBar?: number | null;
   entryBar?: number | null;
+  /** The same two points in seconds on each song's own beat grid (the account's planner,
+   * cloud/accountSeams.ts). They win over the bars. */
+  exitSeconds?: number | null;
+  entrySeconds?: number | null;
   abilities: SeamAbilities;
   leaveAfterSeconds?: number;
   /** The moves this account has on (the `move.*` flags); 'auto' picks only among these, and a
@@ -272,8 +276,8 @@ export function scriptSeam(request: ScriptRequest): SeamSchedule {
     degraded.push({ wanted: move, instead: 'auto', reason: 'that move is off for this account' });
     move = 'auto';
   }
-  const entryWanted = beatAtBar(b, request.entryBar) ?? 0;
-  const exitAsked = beatAtBar(a, request.exitBar);
+  const entryWanted = request.entrySeconds ?? beatAtBar(b, request.entryBar) ?? 0;
+  const exitAsked = request.exitSeconds ?? beatAtBar(a, request.exitBar);
   const exitWanted = (window: number) => Math.max(exitAsked ?? phraseExit(a, window, leaveAfter), leaveAfter);
   const fade = (at: number, wanted: string, reason: string) => {
     degraded.push({ wanted, instead: 'fade', reason });

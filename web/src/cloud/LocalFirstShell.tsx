@@ -67,6 +67,7 @@ import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
 import { profilesBySong, provenHashes, startTonalProfiler, tonalStore } from './tonalProfiles';
+import { startFactsUploader } from './factsUploader';
 import { waveformBook } from './sharedWaveforms';
 import { withVersions } from './songVersions';
 import { onReconnect } from './connection';
@@ -488,6 +489,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     if (!browserHarmonic) return undefined;
     return startTonalProfiler({ store: tonal, openMedia: openStore, resolve: deviceTrack, playing: () => playingNow.current() });
   }, [browserHarmonic, tonal, openStore, deviceTrack]);
+  // the measurements made here go to the account when both flags say so (factsUploader.ts)
+  useEffect(() => startFactsUploader({ request: cloud, workspaceId, openMedia: openStore }), [cloud, workspaceId, openStore]);
   // a song the engine has not decoded yet (the strip's first song, say) is decoded from its own file
   const waveformOf = useCallback((songId: number) => waveforms.of(songId, {
     resolve: resolveTrack, openStore, shared: sharedDerived,

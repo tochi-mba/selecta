@@ -31,6 +31,10 @@ class SongFeatures:
     chroma_profile: np.ndarray
     energy: float
     sections: list[dict] = field(default_factory=list)
+    pattern_bars: np.ndarray | None = None
+    """Each bar's drum pattern: 16 steps of low-band onsets, then 16 of high-band onsets."""
+    swing_bars: np.ndarray | None = None
+    """Where each bar's off-beat hits land within the beat: 0.5 straight, about 0.67 swung."""
 
 
 def _bar_frames(bar_times: np.ndarray, duration: float) -> np.ndarray:
@@ -53,7 +57,9 @@ def _scale(values: np.ndarray, low: float, high: float) -> np.ndarray:
     return np.clip((values - low) / (high - low), 0.0, 1.0)
 
 
-def extract(mono_22k: np.ndarray, bar_times: np.ndarray, duration: float) -> SongFeatures:
+def extract(
+    mono_22k: np.ndarray, bar_times: np.ndarray, duration: float, beats_per_bar: int = 4
+) -> SongFeatures:
     power = np.abs(librosa.stft(mono_22k, n_fft=N_FFT, hop_length=HOP)) ** 2
     frequencies = librosa.fft_frequencies(sr=FEATURE_SR, n_fft=N_FFT)
 
@@ -103,7 +109,87 @@ def extract(mono_22k: np.ndarray, bar_times: np.ndarray, duration: float) -> Son
         energy=energy,
     )
     features.sections = find_sections(features)
+    # worked out last, from the same spectrum, so none of the other arrays' values move
+    features.pattern_bars, features.swing_bars = rhythm_bars(
+        power, frequencies, bar_times, duration, beats_per_bar
+    )
     return features
+
+
+PATTERN_STEPS = 16
+PATTERN_LOW_HZ = 200.0
+"""The kick's band: the same split as `low_share_bars` and the renderer's low band."""
+PATTERN_HIGH_HZ = 2500.0
+"""Hats and the snare's crack: the renderer's high band (`render.dsp.HIGH_SPLIT_HZ`)."""
+SWING_LOW, SWING_HIGH = 0.40, 0.70
+"""Where an off-beat may sit within its beat: a straight eighth at 0.5, a triplet swing at
+0.67. The next sixteenth (0.75) is left out, so straight sixteenths never read as swing."""
+SWING_PHASES = 48
+ONSET_LEAD_SECONDS = 0.03
+QUIET_OFFBEAT = 0.1
+"""An off-beat peak below this share of the beat's strongest hit isn't heard as one."""
+
+
+def _band_onsets(power: np.ndarray, rows: np.ndarray) -> np.ndarray:
+    """How sharply one band gets louder at each frame, in dB, rises only."""
+    level = 10.0 * np.log10(np.maximum(power[rows].sum(axis=0), 1e-10))
+    return np.maximum(np.diff(level, prepend=level[:1]), 0.0)
+
+
+def rhythm_bars(
+    power: np.ndarray,
+    frequencies: np.ndarray,
+    bar_times: np.ndarray,
+    duration: float,
+    beats_per_bar: int = 4,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Each bar's 16-step onset pattern, low band then high band (bars by 32; each band scaled
+    so its strongest step is 1, a band with no rise at all is 0), and its swing: where the high
+    band's off-beat peak sits within the beat, 0.5 when no off-beat is heard. A bar-long shape of
+    where hits fall, normalised, so nothing of the sound itself can be read back from it."""
+    bands = (
+        _band_onsets(power, frequencies < PATTERN_LOW_HZ),
+        _band_onsets(power, frequencies >= PATTERN_HIGH_HZ),
+    )
+    frame_seconds = HOP / FEATURE_SR
+    # a centred 2048-point frame starts rising about 30 ms before the hit it hears (measured on
+    # the synthetic grooves: straight eighths read 0.44 of a beat and triplets 0.60 without this)
+    lead = ONSET_LEAD_SECONDS / frame_seconds
+    frames = power.shape[1]
+    edges = np.concatenate((bar_times, [duration]))
+    patterns = np.zeros((bar_times.size, 2 * PATTERN_STEPS), dtype=np.float32)
+    swing = np.full(bar_times.size, 0.5, dtype=np.float32)
+    phases = np.arange(SWING_PHASES) / SWING_PHASES
+    window = (phases >= SWING_LOW) & (phases <= SWING_HIGH)
+    beats = max(int(beats_per_bar), 1)
+    for bar in range(bar_times.size):
+        start, end = float(edges[bar]), float(edges[bar + 1])
+        step = (end - start) / PATTERN_STEPS
+        if step <= frame_seconds * 0.5:
+            continue
+        for band, onsets in enumerate(bands):
+            row = np.zeros(PATTERN_STEPS)
+            for k in range(PATTERN_STEPS):
+                # one step's window, centred on the step, so a hit a little early still counts
+                centre = start + k * step
+                lo = max(int(np.floor((centre - step / 2) / frame_seconds - lead)), 0)
+                hi = min(int(np.ceil((centre + step / 2) / frame_seconds - lead)), frames)
+                if hi > lo:
+                    row[k] = onsets[lo:hi].max()
+            peak = float(row.max())
+            if peak > 1e-6:
+                patterns[bar, band * PATTERN_STEPS : (band + 1) * PATTERN_STEPS] = row / peak
+        beat = (end - start) / beats
+        times = start + beat * (np.arange(beats)[:, None] + phases[None, :])
+        profile = np.interp(times / frame_seconds - lead, np.arange(frames), bands[1]).mean(axis=0)
+        # only a real peak counts: the rising edge of the next sixteenth at the window's end
+        # would otherwise read as a late off-beat
+        peaks = window & (profile >= np.roll(profile, 1)) & (profile >= np.roll(profile, -1))
+        top = float(profile.max())
+        if top > 1e-6 and peaks.any() and float(profile[peaks].max()) >= QUIET_OFFBEAT * top:
+            found = np.flatnonzero(peaks)
+            swing[bar] = float(phases[found[int(np.argmax(profile[found]))]])
+    return patterns, swing
 
 
 def _length_penalty(length: int) -> float:

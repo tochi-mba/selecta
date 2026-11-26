@@ -33,7 +33,7 @@ from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from selecta import flags, ratelimit
+from selecta import cloud_brain, flags, ratelimit
 from selecta.admin import guard as admin_guard
 from selecta.admin import wiring as admin_wiring
 from selecta.admin.state import EmergencyCache
@@ -826,6 +826,11 @@ def create_cloud_app(
     # Portable recipes over that catalogue (BF-0462-05); refused while cloud.local_media is off.
     local_recipe_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # Song facts in, planning out, over that catalogue (ADR-0479); refused while cloud.brain is off
+    cloud_brain.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        object_client_factory=storage_api.r2_client, buckets=storage_api.buckets(),
     )
     # Word connections over that catalogue's cached LRCLIB lyrics; refused while
     # discover.word_links is off (dark in Cloud until lyrics.display is cleared, SC-0406-03).

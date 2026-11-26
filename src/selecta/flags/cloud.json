@@ -245,6 +245,29 @@
       "kind": "release",
       "owner": "platform"
     },
+    "cloud.brain": {
+      "label": "Planning from song facts",
+      "about": "SelectaDJ's planner runs in Cloud from the facts a member's device measured for their songs (ADR-0479, docs/engineering/cloud-planning.md): a device saves a song's measurements (tempo, beats and bars, sections, key, loudness, per-bar energy and tone numbers; never audio or paths) and the member's tempo and key corrections, and Cloud answers with the ranked transitions between two songs and their scripts, the repair rule's next step, a mix's order and the idea cards. Off: these routes answer flag_off and nothing is saved or planned.",
+      "routes": [
+        "PUT /api/song-facts/{song_id}",
+        "GET /api/song-facts",
+        "PUT /api/song-facts/{song_id}/correction",
+        "DELETE /api/song-facts/{song_id}/correction",
+        "POST /api/planning/candidates",
+        "POST /api/planning/candidates/script",
+        "POST /api/planning/next-step",
+        "POST /api/planning/take-step",
+        "POST /api/planning/order",
+        "POST /api/planning/ideas"
+      ],
+      "requires": ["cloud.local_media"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Routes a device and a studio call; with cloud.device_analysis on, the browser sends its measurements and plays the planner's order and transitions, which changes no screen"
+    },
     "cloud.local_media": {
       "label": "Local media catalogue",
       "about": "The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458).",
@@ -515,6 +538,28 @@
       "default": true,
       "kind": "release",
       "owner": "playback"
+    },
+    "cloud.device_analysis": {
+      "label": "Whole-song facts measured on this device",
+      "about": "In a browser library, the background measuring that makes key profiles also measures each song whole, the way the Desktop does: its beat grid, bars, energy, chroma, tone, key, sections and loudness, kept in this browser. With cloud.brain also on, those numbers (never audio, paths or file names) are saved to the account, and the account's planner orders new browser mixes and chooses each transition from them (docs/engineering/device-to-account.md). Off by default until the browser has the Desktop's beat tracker: until then its beats come from a lighter estimate. Off: songs get their key profile only, nothing is sent, and mixes are ordered and blended as before.",
+      "requires": ["cloud.browser_dsp", "cloud.browser_harmonic"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Measured and sent in the background; it changes the order and transitions of browser mixes, not any screen"
+    },
+    "cloud.device_render": {
+      "label": "Transitions rendered on this device",
+      "about": "The browser's own rendering of transitions: it plays each transition the account's planner describes into a short clip ahead of time, the way the Desktop does, measures it with the Desktop's checks and follows the Desktop's repair rule (docs/engineering/device-render.md). With it on, with cloud.brain on and both songs measured, a playing mix prepares its next two transitions this way and plays each finished clip between the two songs, keeping clips on this device; a transition not ready in time, or in any doubt, plays live as before (docs/engineering/device-studio-playback.md). The Listening Room then compares the planner's choice made ahead with the other two ways. Its time-stretch is the browser's own, not the Desktop's Rubber Band. Off: no transition is rendered on this device and mixes blend live as before.",
+      "requires": ["cloud.device_analysis"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Renders in a background worker and changes how transitions sound, not any screen; the Listening Room's comparison is behind its own flag"
     },
     "cloud.browser_stems": {
       "label": "Browser stem moves",

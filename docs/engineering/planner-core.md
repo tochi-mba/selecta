@@ -20,6 +20,8 @@ member's browser) renders, audits and runs the loop, asking the core what to try
 | `memory` | `SeamMemory`, what past renders and ratings say, and `RULES_VERSION` |
 | `moods`, `arc` | Lyric themes and energy shapes |
 | `harmony` | The roughness kernel and `HARMONY_LIMIT`, shared with the audit's harmony check |
+| `rhythm` | One drummer: how alike two songs' stored drum patterns are over an overlap (`rhythm_fit`, `one_drummer`), behind `planner.rhythm_fit` |
+| `calibrate` | The gates re-fitted from rated seam records passed in as data (`calibrate`, `overrides_from`); `fit.Gates` carries the result into `enumerate_candidates(gates=...)` (docs/engineering/calibration.md) |
 | `moves`, `names` | Which moves this build has on (`move_on`, `sense_on`), and how artists compare (`clean_artist`) |
 
 Every name that moved is still importable from its old home. The modules that moved whole
@@ -108,9 +110,9 @@ those out, and then the allowance goes.
 
 ## What is next
 
-- Planning routes in Cloud over the engine store: build `SongInfo` from stored facts, build
-  `SeamMemory` from stored seam records, and call `plan_set` / `build_vibe` /
-  `enumerate_candidates` in the Cloud API.
+- Planning routes in Cloud over the engine store are built (`cloud.brain`,
+  docs/engineering/cloud-planning.md), with an empty `SeamMemory`; building it from stored seam
+  records waits for the seams slice.
 - The device job route: send the ranked candidates as scripts plus the rule's `Option`s to the
   member's browser, which renders, audits and posts `AuditFacts` back (or runs a port of
   `next_step` against the shared fixtures).

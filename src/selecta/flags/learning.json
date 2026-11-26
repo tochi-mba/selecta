@@ -26,7 +26,7 @@
       ],
       "surfaces": ["listening", "workshop.learning", "overlay.palette"],
       "words": ["Blind listening study", "Listening study"],
-      "cli": ["listening-import", "listening-report"]
+      "cli": ["listening-import", "listening-report", "move-trial"]
     },
     "listening_study.skip_and_stop": {
       "label": "Skip and stop in the listening study",

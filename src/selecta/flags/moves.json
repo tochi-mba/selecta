@@ -33,6 +33,16 @@
       "label": "Tempo ramp",
       "about": "Both songs drift to a shared speed for a short overlap."
     },
+    "move.loop_room": {
+      "label": "Loop and blend",
+      "about": "When a song leaves no clean bars to blend over, its last clean phrase loops so the next song can still come in slowly. Off until it has been listened to.",
+      "default": false
+    },
+    "move.tempo_bridge": {
+      "label": "Tempo bridge",
+      "about": "Songs too far apart in tempo to blend: the first is stripped to its beat and walked to the next one's speed over sixteen bars, then the next comes in untouched. Off until it has been listened to.",
+      "default": false
+    },
     "move.echo_out": {
       "label": "Echo out",
       "about": "The last beat rings on as the next song lands under it."
@@ -129,6 +139,16 @@
     "planner.energy_intent": {
       "label": "No unintended drops",
       "about": "A punchy move from a hot exit into a much colder landing is refused unless the landing is a chorus."
+    },
+    "planner.rhythm_fit": {
+      "label": "One drummer",
+      "about": "When two songs' drum patterns fight (four on the floor over a broken beat, straight over swung), a blend keeps only one song's kick and hats at a time and hands them over on a phrase line. Off until it has been listened to.",
+      "default": false
+    },
+    "planner.calibrated_gates": {
+      "label": "Gates from your ratings",
+      "about": "The planner's limits on tempo gap, key distance, beat grid and overlap length use the values `selecta calibrate --apply` fitted to your Good and Bad clicks, within safe bounds. Off: the hand-set limits. Off until the owner chooses to apply a fit.",
+      "default": false
     }
   }
 }

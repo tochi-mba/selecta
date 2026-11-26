@@ -43,10 +43,10 @@ LADDER_ONLY = {SHORT_CROSSFADE: "Short crossfade", CLEAN_CUT: "Clean cut"}
 TECHNIQUES = (*MOVES, *LADDER_ONLY)
 
 MAX_KEY_STEPS = 2
-HARMONIC_MOVES = {"bass_swap_blend", "vocal_ride", "stem_intertwine", *WORD_MOVES}
+HARMONIC_MOVES = {"bass_swap_blend", "loop_room", "vocal_ride", "stem_intertwine", *WORD_MOVES}
 BEAT_MOVES = {
     "bass_swap_blend", "filter_sweep", "tempo_ramp", "cut_on_one", "echo_out", "delay_throw",
-    "vocal_ride", "stem_arrange", "stem_intertwine", *WORD_MOVES,
+    "vocal_ride", "stem_arrange", "stem_intertwine", "loop_room", "tempo_bridge", *WORD_MOVES,
 }
 NO_OVERLAP = {CLEAN_CUT, "cut_on_one"}
 

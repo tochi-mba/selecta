@@ -75,6 +75,9 @@ export function moveWords(move: string): { label: string; about: string } | unde
  * song drifts (local mode's tempo ramp moves both), so it says that. */
 const SCHEDULED_ONLY_WORDS: Record<string, { label: string; about: string }> = {
   tempo_ramp: { label: 'Tempo ramp', about: 'The next song starts at this song’s speed and eases back to its own.' },
+  // planner moves only the rendered path plays (cloud/plannerMoves.ts), named as local mode names them
+  loop_room: { label: 'Loop and blend', about: 'A’s last clean bars loop, so B can still come in slowly over them.' },
+  tempo_bridge: { label: 'Tempo bridge', about: 'A, stripped to its beat, walks to B’s speed over sixteen bars, then B comes in untouched.' },
 };
 
 /** The stem moves this account has on: the stems flag (registered and on), local's `stems`, and

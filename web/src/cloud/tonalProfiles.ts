@@ -7,6 +7,9 @@ import { seamWorkIdle } from '../dsp/seamWork';
 import { flagOn } from '../flags';
 import { importSnapshot } from './importSession';
 import { setTonalActivity } from './tonalActivity';
+import { factsVersion } from '../dsp/analysis/deviceAnalysisIds';
+import type { AnalysisTask } from '../dsp/workers/analysisWorker';
+import { deviceFactsStore, type FactsStore } from './songFacts';
 
 /** Browser tonal profiles and harmonic-match answers (cloud.browser_harmonic).
  *
@@ -47,6 +50,11 @@ const BUSY_POLL_MS = 5_000;
 const PROFILER_LOCK = 'selecta-tonal-profiler';
 /** Samples mixed down per slice before the page is handed back (a few milliseconds each). */
 const MIX_SLICE = 1 << 19;
+/** With cloud.device_analysis, songs are decoded at the rate the Desktop decodes them to
+ * (`selecta.config.SAMPLE_RATE`), in stereo, and measured whole (cloud/songFacts.ts). */
+const FACTS_RATE = 44100;
+/** A whole song's facts take longer than its profile, most of all on a phone. */
+const FACTS_TIMEOUT_MS = 300_000;
 
 export type ProfileRecord =
   | { sha: string; implementation: string; profile: TonalProfile }
@@ -246,7 +254,19 @@ async function decodeMono(bytes: ArrayBuffer): Promise<Float32Array> {
   return mono;
 }
 
-type ProfilerLocks = { request(name: string, options: { ifAvailable: boolean }, run: (lock: unknown) => Promise<void>): Promise<unknown> };
+/** Two channels at FACTS_RATE, each in an array made only for the worker (so it is moved), as
+ * the Desktop decodes (ffmpeg to stereo at 44.1 kHz): a mono file is the same channel twice,
+ * and a file with more than two channels keeps its first two. The decoded buffer is dropped on
+ * return, so one song's audio is held at a time. */
+async function decodeStereo(bytes: ArrayBuffer): Promise<Float32Array[]> {
+  const decoded = await new OfflineAudioContext(2, 1, FACTS_RATE).decodeAudioData(bytes);
+  const first = decoded.getChannelData(0).slice();
+  await breathe();
+  const second = decoded.numberOfChannels > 1 ? decoded.getChannelData(1).slice() : first.slice();
+  return [first, second];
+}
+
+type ProfilerLocks ={ request(name: string, options: { ifAvailable: boolean }, run: (lock: unknown) => Promise<void>): Promise<unknown> };
 
 /** Run one pass holding the browser-wide profiler lock, or skip it (another tab is measuring).
  * Without Web Locks every tab measures, as before. */
@@ -265,11 +285,19 @@ export type ProfilerOptions = {
   /** Told after each song is measured, so an open page can show it. */
   onProfiled?: () => void;
   workerFactory?: () => Worker;
+  /** Where song facts are kept with cloud.device_analysis on; the device-wide derived store
+   * when not given. Off, facts are never measured and this is never read. */
+  facts?: FactsStore;
 };
 
+/** What one song still needs: its profile, and (cloud.device_analysis) its facts, with the
+ * store they go to. */
+type Needs = { profile: boolean; facts: FactsStore | null };
+
 /** Measure, one song at a time in spare time, every song on this device without a current
- * profile. Returns the stop function. Nothing here runs on the audio path: decoding is the
- * browser's own, the measurement is the analysis worker's, and both wait for idle time. */
+ * profile (and, with cloud.device_analysis, without current facts). Returns the stop function.
+ * Nothing here runs on the audio path: decoding is the browser's own, the measurement is the
+ * analysis worker's, and both wait for idle time. */
 export function startTonalProfiler(options: ProfilerOptions): () => void {
   let stopped = false;
   let worker = null as Worker | null;
@@ -278,8 +306,9 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
   const unreachable = new Set<number>();
   // a song the worker failed on twice is set aside as unreadable rather than retried forever
   const failures = new Map<string, number>();
+  let factsStore: FactsStore | null = null;
 
-  const measure = async (songId: number, sha: string) => {
+  const measure = async (songId: number, sha: string, needs: Needs) => {
     const track = await options.resolve(songId).catch(() => null);
     if (!track) { unreachable.add(songId); return; }
     let bytes: ArrayBuffer;
@@ -290,9 +319,44 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
     const run = options.store.exclusive ?? (<T,>(_sha: string, work: () => Promise<T>) => work());
     await run(sha, async () => {
       // another account (or tab) on this browser measured these bytes already: reuse it
-      if (await options.store.lookup?.(sha)) return;
-      await measureBytes(sha, bytes);
+      const profiled = !needs.profile || Boolean(await options.store.lookup?.(sha));
+      const facts = needs.facts;
+      if (!facts) {
+        if (!profiled) await measureBytes(sha, bytes);
+        return;
+      }
+      await withHashLock('analysis', sha, async () => {
+        if (await facts.has(sha)) {
+          if (!profiled) await measureBytes(sha, bytes);
+          return;
+        }
+        await measureFacts(sha, bytes, facts, !profiled);
+      });
     });
+  };
+
+  /** One decode at the Desktop's rate for the facts and, when it is still needed, the profile.
+   * Nothing is kept until the whole song is measured, so a tab closed mid-song leaves nothing
+   * behind and the song is measured again next time. */
+  const measureFacts = async (sha: string, bytes: ArrayBuffer, facts: FactsStore, withProfile: boolean) => {
+    const version = factsVersion();
+    const tonal = { sha, implementation: TONAL_PROFILE_IMPLEMENTATION };
+    const unreadable = async (reason: 'too_large' | 'too_long' | 'undecodable') => {
+      if (withProfile) await options.store.put({ ...tonal, unreadable: reason });
+      await facts.put({ sha, version, unreadable: reason });
+    };
+    if (bytes.byteLength > MAX_BYTES) { await unreadable('too_large'); return; }
+    let channels: Float32Array[];
+    try { channels = await decodeStereo(bytes); } catch { await unreadable('undecodable'); return; }
+    if (channels[0].length / FACTS_RATE > MAX_SECONDS) { await unreadable('too_long'); return; }
+    if (stopped) return;
+    worker ??= (options.workerFactory ?? spawnAnalysisWorker)();
+    const tasks: AnalysisTask[] = withProfile ? ['song', 'profile'] : ['song'];
+    const answer = await analyseInWorker(worker, new Float32Array(0), FACTS_RATE, tasks, { owned: true, timeoutMs: FACTS_TIMEOUT_MS, channels });
+    if (withProfile) {
+      await options.store.put(answer.profile && !answer.error ? { ...tonal, profile: answer.profile } : { ...tonal, unreadable: 'undecodable' });
+    }
+    await facts.put(answer.facts && !answer.error ? { sha, version, facts: answer.facts } : { sha, version, unreadable: 'undecodable' });
   };
 
   const measureBytes = async (sha: string, bytes: ArrayBuffer) => {
@@ -321,8 +385,16 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
   const pass = async () => {
     const media = await options.openMedia();
     const known = await options.store.records();
-    const waiting = (await media.all()).filter((song) => !known.has(song.identity.content_sha256) && !unreachable.has(song.songId));
-    for (const song of waiting) {
+    // with cloud.device_analysis a song also waits for its facts; off, only for its profile
+    const facts = flagOn('cloud.device_analysis') ? (factsStore ??= options.facts ?? deviceFactsStore()) : null;
+    const waiting: Array<{ song: StoredSong; needs: Needs }> = [];
+    for (const song of await media.all()) {
+      if (unreachable.has(song.songId)) continue;
+      const profile = !known.has(song.identity.content_sha256);
+      const needsFacts = facts !== null && !(await facts.has(song.identity.content_sha256));
+      if (profile || needsFacts) waiting.push({ song, needs: { profile, facts: needsFacts ? facts : null } });
+    }
+    for (const { song, needs } of waiting) {
       await spareTime(IDLE_GAP_MS, isStopped);
       // a transition being prepared comes first: wait for it before reading the next song
       if (flagOn('cloud.seam_lead')) await seamWorkIdle();
@@ -330,7 +402,7 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
       if (stopped) break;
       setTonalActivity('measuring');
       try {
-        await measure(song.songId, song.identity.content_sha256);
+        await measure(song.songId, song.identity.content_sha256, needs);
         options.onProfiled?.();
       } catch {
         // a worker that timed out or failed is replaced; this song is tried again next pass
@@ -339,8 +411,10 @@ export function startTonalProfiler(options: ProfilerOptions): () => void {
         const sha = song.identity.content_sha256;
         const times = (failures.get(sha) ?? 0) + 1;
         failures.set(sha, times);
-        if (times >= 2) await options.store.put({ sha, implementation: TONAL_PROFILE_IMPLEMENTATION, unreadable: 'undecodable' });
-        else unreachable.add(song.songId);
+        if (times >= 2) {
+          if (needs.profile) await options.store.put({ sha, implementation: TONAL_PROFILE_IMPLEMENTATION, unreadable: 'undecodable' });
+          await needs.facts?.put({ sha, version: factsVersion(), unreadable: 'undecodable' });
+        } else unreachable.add(song.songId);
       }
     }
   };

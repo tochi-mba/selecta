@@ -55,6 +55,8 @@ STEADY_JOBS = {
     "bass_swap_blend",
     "filter_sweep",
     "tempo_ramp",
+    "loop_room",
+    "tempo_bridge",
     "stem_studio",
 }
 """Jobs whose time says how busy the PC is. A word move takes 50 s with its stems ready and 330 s
@@ -97,6 +99,8 @@ GUESSES = {
     "bass_swap_blend": 40.0,
     "filter_sweep": 30.0,
     "tempo_ramp": 30.0,
+    "loop_room": 30.0,
+    "tempo_bridge": 60.0,
     "vocal_ride": 35.0,
     "word_blend": 70.0,
     "word_exchange": 80.0,

@@ -21,6 +21,7 @@ from selecta.arrange import (
     why_it_cant,
 )
 from selecta.audit.checks import AuditReport, VocalSpans, audit, audit_facts, beat_offset
+from selecta.calibration import desktop_gates
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner
 from selecta.lyrics.match import LyricLink, SongFacts, discover
@@ -35,6 +36,7 @@ from selecta.planner.wordreel import (
     ride_lengths,
     ride_lines,
 )
+from selecta.planner_core.choose import exits_after
 from selecta.planner_core.repair import TIGHTEN, closer, take_step
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.render.intertwine import can_intertwine, intertwine_windows, render_intertwined
@@ -108,7 +110,7 @@ def _why_unavailable(move: str, a: SongInfo, b: SongInfo, has_link: bool) -> str
         )
     if move in WORD_MOVES or move == "auto":
         return None
-    if not enumerate_candidates(a, b, move):
+    if not enumerate_candidates(a, b, move, gates=desktop_gates()):
         if move in {"bass_swap_blend", "filter_sweep"}:
             if gap > 0.08:
                 return f"The songs are {gap:.0%} apart in tempo, too far to play together."
@@ -117,6 +119,16 @@ def _why_unavailable(move: str, a: SongInfo, b: SongInfo, has_link: bool) -> str
             if gap < 0.05:
                 return "The tempos are already close, so a normal blend does this better."
             return f"A {gap:.0%} tempo gap is too wide, or a vocal or key would clash."
+        if move == "loop_room":
+            if gap > 0.045:
+                return f"The songs are {gap:.0%} apart in tempo, too far to play together."
+            return "A already has clean bars to blend over, or none clean enough to loop."
+        if move == "tempo_bridge":
+            if gap <= 0.045:
+                return "The tempos are close enough for a normal blend."
+            if gap > 0.08:
+                return f"A {gap:.0%} tempo gap is too wide to walk without it being heard."
+            return "A has no clean, steady phrase to carry the walk, or a key would clash."
         if folded_gap(a, b) > MAX_FOLDED_GAP:
             return f"The songs are {folded_gap(a, b):.0%} apart in tempo, too far to cut across."
         return "B has no strong place to land at a level that matches A."
@@ -217,12 +229,8 @@ def _stem_audit(rendered: Rendered, cache: SongCache) -> tuple[Rendered, AuditRe
     return tighten_beats(rendered, cache, spans)
 
 
-def _exits_after(a: SongInfo, leave_after: float | None) -> list | None:
-    """Every place A could finish once it has played for long enough, or None for no limit."""
-    if leave_after is None:
-        return None
-    found = [cue for cue in a.exit_cues() if a.bar_time(cue.bar) >= leave_after]
-    return found or a._exit_cues_after(leave_after, True)
+# in the planner core, so Cloud planning narrows A's exits the same way
+_exits_after = exits_after
 
 
 def _too_soon(script: TransitionScript, request: SeamRequest) -> bool:
@@ -237,7 +245,9 @@ def _bar_cue_render(
     worked_before: tuple[int, int, int] | None = None,
 ) -> tuple[Rendered, AuditReport, str]:
     recipe = all_recipes()[request.move]
-    pool = enumerate_candidates(a, b, request.move, exits=_exits_after(a, request.leave_after))
+    # the owner's applied calibration, when `planner.calibrated_gates` is on; else today's gates
+    exits = _exits_after(a, request.leave_after)
+    pool = enumerate_candidates(a, b, request.move, exits=exits, gates=desktop_gates())
     if request.bars is not None and recipe.beatmatched:
         narrowed = [c for c in pool if c.bars == request.bars]
         pool = narrowed or pool

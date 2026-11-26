@@ -115,6 +115,14 @@
       "modes": ["cloud"],
       "routes": ["POST /api/catalog/art", "GET /api/catalog/art/{art_id}/{size}", "GET /api/catalog/songs/{song_id}/candidates", "PUT /api/catalog/songs/{song_id}/choice", "GET /api/catalog/settings", "PUT /api/catalog/settings"],
       "requires": ["library.art_embedded"]
+    },
+    "library.audio_identity": {
+      "label": "Songs known by their audio",
+      "about": "A song is known by a hash of its audio alone (docs/engineering/audio-identity.md), so editing a tag, adding artwork or a rating written by another player keeps it the same song with its measurements and corrections. Desktop stores it with the hash job and analysis (it needs core.engine_store for the column); Cloud stores it when a device registers a song and keeps a re-tagged file as the same song. Off: no audio id is computed, sent, stored or matched, and nothing visible changes.",
+      "kind": "release",
+      "owner": "library",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Song identity underneath the library; it adds no page or control of its own."
     }
   }
 }

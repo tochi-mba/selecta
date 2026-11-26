@@ -20,6 +20,8 @@ OVERLAPPING = {
     "bass_swap_blend",
     "filter_sweep",
     "tempo_ramp",
+    "loop_room",
+    "tempo_bridge",
     "vocal_ride",
     "word_blend",
     "word_exchange",

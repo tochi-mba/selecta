@@ -1,6 +1,7 @@
 import { ApiError, MixData, SongRow, Status, Suggestion, VibeCard } from '../api';
 import { browserMovesAllowed, browserMovesOn } from './browserMoves';
 import { asMixData, copyName, RecipeStore, WORKED_OUT_LIVE } from './recipeStore';
+import type { OrderPlanner } from './accountOrder';
 import { currentGrouping } from './songVersions';
 
 /** The mix route family of the local-first adapter (ADR-0462 "one adapter per route family",
@@ -89,7 +90,9 @@ export type MixFamily = {
 export type SongPlace = (songId: number, playableHere: boolean) => { rank: number; where: string | null };
 
 /** `lovedInRooms` (ADR-0488): song id to how many rooms loved it, from the account's crowd marks. */
-export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace, lovedInRooms?: () => Promise<Map<number, number>>): MixFamily {
+/** `planOrder` (docs/engineering/device-to-account.md): the account's planner orders the chosen
+ * songs when it can; null from it, or none given, keeps today's order. */
+export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false, placeOf?: SongPlace, lovedInRooms?: () => Promise<Map<number, number>>, planOrder?: OrderPlanner): MixFamily {
   const current = async (): Promise<MixData | null> => {
     const id = store.current();
     if (!id) return null;
@@ -110,10 +113,15 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     const target = store.steering().target;
     // what rooms loved is a soft lean on which songs make the mix; with none known it changes nothing
     const loved = lovedInRooms ? await lovedInRooms().catch(() => undefined) : undefined;
-    const ids = chooseSongs(all, count, { start, end: target ? Number(target) : null, loved });
-    if (ids.length < BROWSER_MIX_NEEDS) {
+    const chosen = chooseSongs(all, count, { start, end: target ? Number(target) : null, loved });
+    if (chosen.length < BROWSER_MIX_NEEDS) {
       throw refuse(`A mix needs at least ${BROWSER_MIX_NEEDS} songs you can play on this device. Connect more music first.`, 'not_enough_songs');
     }
+    // the same songs, ordered by the account's planner when it can (a song set to Never play that
+    // the person chose as the start or ending keeps its place; the planner would leave it out)
+    const never = new Set(all.filter((song) => song.never).map((song) => song.id));
+    const choices = { start, end: target ? Number(target) : null, steering: store.steering(), never };
+    const ids = (planOrder ? await planOrder(chosen, choices).catch(() => null) : null) ?? chosen;
     const recipe = await store.create(mixNameFor(all, ids), ids, all);
     // Save draft keeps it in My Mixes without touching what's playing, as local mode's does
     if (asDraft) return { id: 0, mix_id: recipe.mix_id, name: recipe.name, count: ids.length };

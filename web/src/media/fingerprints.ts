@@ -1,6 +1,7 @@
 import { TONAL_PROFILE_IMPLEMENTATION } from '../dsp/analysis/tonalProfile';
 import { derivedStore, MEMO_VERSION, withHashLock, type DerivedStore } from './derived';
 import { beginFingerprintRun, finishFingerprintRun, logFingerprint, logRegistered, logSampleCheck, type HashHow } from './fingerprintLog';
+import { fileIdentity } from './audioIdentity';
 import { bytesSha256, fileSha256 } from './identity';
 import type { MediaStore } from './store';
 
@@ -38,7 +39,16 @@ export const FACTS_VERSION = 'facts-v1';
 /** Waveform peaks as `dsp/waveform.ts` draws them (400 bins). */
 export const WAVEFORM_VERSION = 'waveform-v1-400';
 
-export type Identified = { sha: string; how: HashHow; ms: number; bytesRead: number };
+export type Identified = {
+  sha: string; how: HashHow; ms: number; bytesRead: number;
+  /** `library.audio_identity`: the file's audio id, null for a file that has none, absent when
+   * it wasn't asked for or isn't known from bytes in hand. */
+  audioId?: string | null;
+};
+
+/** The audio id rules' version (docs/engineering/audio-identity.md); kept beside the file hash. */
+export const AUDIO_ID_VERSION = 'a1';
+type AudioRecord = { audio_id: string | null };
 
 export type ImportReuse = {
   /** Songs recognised from this browser: fingerprint not read again. */
@@ -87,7 +97,7 @@ export class ImportFingerprints {
   /** The file's SHA-256: remembered where this browser hashed the same file before, else read
    * and remembered now. One tab at a time per file, so two tabs importing the same folder hash
    * each file once. */
-  async identify(file: File, place: string, name: string, open: () => Promise<File>, signal?: AbortSignal): Promise<Identified> {
+  async identify(file: File, place: string, name: string, open: () => Promise<File>, signal?: AbortSignal, audio = false): Promise<Identified> {
     const identity = await memoIdentity(place, file.size, file.lastModified);
     return withHashLock('fp', identity, async () => {
       const started = now();
@@ -97,7 +107,17 @@ export class ImportFingerprints {
         list.push({ name, identity, sha: hit.sha, open });
         this.remembered.set(hit.sha, list);
         this.recognisedCount += 1;
-        return { sha: hit.sha, how: 'memo' as const, ms: Math.round(now() - started), bytesRead: 0 };
+        const found = { sha: hit.sha, how: 'memo' as const, ms: Math.round(now() - started), bytesRead: 0 };
+        return audio ? { ...found, ...(await this.keptAudio(hit.sha)) } : found;
+      }
+      if (audio) {
+        // one read gives both, where the file fits in memory (audioIdentity.fileIdentity)
+        const both = await fileIdentity(file, { signal });
+        this.computed.add(both.sha);
+        this.analysedCount += 1;
+        await this.derived.memoPut(identity, both.sha);
+        await this.derived.put('audio', AUDIO_ID_VERSION, both.sha, { audio_id: both.audioId } satisfies AudioRecord);
+        return { sha: both.sha, how: 'computed' as const, ms: Math.round(now() - started), bytesRead: file.size, audioId: both.audioId };
       }
       const sha = await fileSha256(file, { signal });
       const ms = Math.round(now() - started);
@@ -106,6 +126,14 @@ export class ImportFingerprints {
       await this.derived.memoPut(identity, sha);
       return { sha, how: 'computed' as const, ms, bytesRead: file.size };
     });
+  }
+
+  /** The audio id of a remembered file, when this browser kept one beside its hash. A remembered
+   * file is never read for it (the memo's whole point); one without a kept id goes without, and
+   * gets it the next time its bytes are really hashed. */
+  private async keptAudio(sha: string): Promise<{ audioId?: string | null }> {
+    const kept = await this.derived.get<AudioRecord>('audio', AUDIO_ID_VERSION, sha);
+    return kept ? { audioId: kept.audio_id } : {};
   }
 
   /** True when this run only has the memo's word for `sha` (no file with these bytes was read). */
