@@ -291,6 +291,25 @@ describe('what the local-first shell mounts', () => {
     expect(await screen.findByLabelText('Cutover notice')).toHaveTextContent('notice for user-1');
   });
 
+  it('with cloud.page_layout off the notices draw as before: no stack, and the root has no layout mark', async () => {
+    account = { ...withExperience(true, true, true), features: { 'cloud.local_first': true, 'cloud.hosted_media': true, 'cloud.page_layout': false } };
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    render(<CloudApp />);
+    await screen.findByLabelText('Cutover notice');
+    expect(document.querySelector('[data-notice-mark], [data-notice-expanded]')).toBeNull();
+    expect(document.documentElement.dataset.pageLayout).toBeUndefined();
+  });
+
+  it('with cloud.page_layout on the notices are one stack with one open, and pages take the frame', async () => {
+    account = { ...withExperience(true, true, true), features: { 'cloud.local_first': true, 'cloud.hosted_media': true, 'cloud.page_layout': true } };
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    render(<CloudApp />);
+    await screen.findByLabelText('Cutover notice');
+    expect(document.querySelectorAll('[data-notice-mark]')).toHaveLength(5);
+    await waitFor(() => expect(document.querySelectorAll('[data-notice-expanded]')).toHaveLength(1));
+    expect(document.documentElement.dataset.pageLayout).toBe('frame');
+  });
+
   it('never shows a local-first member the upload surface', async () => {
     account = withExperience(true, false, true);
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
