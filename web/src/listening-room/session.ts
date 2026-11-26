@@ -21,8 +21,12 @@ export const SECONDS_PER_TRIAL = 150;
 export type Label = 'A' | 'B';
 export const LABELS: readonly Label[] = ['A', 'B'];
 
+/** Who picks the transition: this device as before the account planned (the default), the
+ * account's planner played live, or the planner's choice made ahead on this device and checked
+ * (cloud.device_render). */
+export type Chooser = 'device' | 'planner_live' | 'planner_made';
 /** The browser engine plays the transition here with these options (cloud.seam_lead's three). */
-export type LiveVariant = { kind: 'live'; id: string; name: string; planAhead: boolean; levels: boolean; patient: boolean };
+export type LiveVariant = { kind: 'live'; id: string; name: string; planAhead: boolean; levels: boolean; patient: boolean; chooser?: Chooser };
 /** A finished recording of the transition at an address. Not played by version 1. */
 export type ClipVariant = { kind: 'clip'; id: string; name: string; url: string; transitionAt?: number };
 export type Variant = LiveVariant | ClipVariant;
@@ -31,6 +35,14 @@ export type Variant = LiveVariant | ClipVariant;
 export const BEFORE: LiveVariant = { kind: 'live', id: 'before', name: 'Before', planAhead: false, levels: false, patient: false };
 /** With cloud.seam_lead: planned as the song starts, one level for every song, patient analysis. */
 export const AFTER: LiveVariant = { kind: 'live', id: 'after', name: 'After', planAhead: true, levels: true, patient: true };
+
+/** The three ways of choosing a transition, every one planned early at one level for every song,
+ * so only the choice and how it is played differ. The room's trials hold two variants each, so the
+ * three are compared in pairs: made ahead against each of the other two. */
+export const DEVICE_CHOICE: LiveVariant = { ...AFTER, id: 'device', name: 'This device’s choice', chooser: 'device' };
+export const PLANNER_LIVE: LiveVariant = { ...AFTER, id: 'planner_live', name: 'The planner’s choice, played live', chooser: 'planner_live' };
+export const PLANNER_MADE: LiveVariant = { ...AFTER, id: 'planner_made', name: 'The planner’s choice, made ahead', chooser: 'planner_made' };
+export const MADE_AHEAD_PAIRS: readonly (readonly [Variant, Variant])[] = [[PLANNER_MADE, DEVICE_CHOICE], [PLANNER_MADE, PLANNER_LIVE]];
 
 export type SongRef = { songId: number; position: number; title: string; artist: string; duration: number };
 export type Trial = {
@@ -79,6 +91,8 @@ export type Played = {
   levels?: { from?: number; to?: number };
   /** The first song's level arrived after the engine stopped waiting for it, so it began at 1. */
   levelLate?: boolean;
+  /** The transition played was made ahead on this device: its move and how its checks went. */
+  madeAhead?: { move: string; passed: boolean; nearMiss: boolean; fellBack: boolean };
   at: number;
 };
 
@@ -195,18 +209,22 @@ export type NewSession = {
   now?: number;
   flags?: Record<string, boolean>;
   variants?: readonly [Variant, Variant];
+  /** Each transition heard as several trials, one per pair (MADE_AHEAD_PAIRS), instead of once. */
+  pairs?: readonly (readonly [Variant, Variant])[];
   id?: string;
 };
 
 /** A new session over the mix, or null when it has no transition that plays here. */
 export function createSession(options: NewSession): Session | null {
-  const chosen = chooseTransitions(options.mix, options.playable);
+  const pairs = options.pairs?.length ? options.pairs : [options.variants ?? [BEFORE, AFTER] as const];
+  const chosen = chooseTransitions(options.mix, options.playable, Math.max(1, Math.floor(MAX_TRIALS / pairs.length)));
   if (!chosen.length) return null;
   const seed = options.seed ?? newSeed();
   const now = options.now ?? Date.now();
-  const variants = options.variants ?? [BEFORE, AFTER] as const;
-  const labels = dealLabels(seed, chosen.map(() => [variants[0].id, variants[1].id] as const));
-  const trials: Trial[] = chosen.map((position, index) => ({
+  // every transition once per pair, in mix order
+  const heard = chosen.flatMap((position) => pairs.map((variants) => ({ position, variants })));
+  const labels = dealLabels(seed, heard.map(({ variants }) => [variants[0].id, variants[1].id] as const));
+  const trials: Trial[] = heard.map(({ position, variants }, index) => ({
     id: `t${index + 1}-${options.mix[position].song_id}-${options.mix[position + 1].song_id}`,
     from: songRef(options.mix, position),
     to: songRef(options.mix, position + 1),
@@ -324,10 +342,17 @@ export function outcomeOf(trial: Trial, answer: Answer): Outcome {
   }
 }
 
+/** Every variant the session compares, in the order its trials first name them. */
+export function sessionVariants(session: Session): Variant[] {
+  const seen = new Map<string, Variant>();
+  for (const trial of session.trials) for (const variant of trial.variants) if (!seen.has(variant.id)) seen.set(variant.id, variant);
+  return [...seen.values()];
+}
+
 export type Tally = { wins: Record<string, number>; same: number; bothBad: number; cantJudge: number; open: number; votes: number };
 export function tally(session: Session): Tally {
   const wins: Record<string, number> = {};
-  for (const variant of session.trials[0]?.variants ?? []) wins[variant.id] = 0;
+  for (const variant of sessionVariants(session)) wins[variant.id] = 0;
   const counted: Tally = { wins, same: 0, bothBad: 0, cantJudge: 0, open: 0, votes: 0 };
   for (const trial of session.trials) {
     const outcome = outcomeOf(trial, answerOf(session, trial.id));
@@ -406,6 +431,11 @@ const styleWords = (style?: string) => {
 /** What played, in plain words. */
 export function playedWords(played: Played | undefined): string {
   if (!played) return 'Not played';
+  if (played.kind === 'seam_schedule' && played.madeAhead) {
+    const made = played.madeAhead;
+    const checks = made.passed ? 'it passed every check' : made.nearMiss ? 'it only just missed a check' : 'it did not pass every check';
+    return `${styleWords(made.move)}, made ahead on this device: ${checks}${made.fellBack ? ', the planner’s plain cut after its other choices fell short' : ''}`;
+  }
   switch (played.kind) {
     case 'seam_schedule':
       if (played.seamKind === 'beatmatch') {
@@ -480,10 +510,18 @@ const verdictWords = (verdict: Verdict | null) => VERDICTS.find((item) => item.i
 const reasonWords = (reasons: readonly Reason[]) => reasons.map((reason) => REASONS.find((item) => item.id === reason)?.words ?? reason).join(', ');
 const nameOf = (trial: Trial, id: string) => trial.variants.find((variant) => variant.id === id)?.name ?? id;
 
+/** What the session compared, in plain words, for the reveal. */
+export function comparisonWords(session: Session): string {
+  if (sessionVariants(session).some((variant) => variant.kind === 'live' && variant.chooser)) {
+    return 'Each transition was heard twice: the planner’s choice made ahead on this device and checked before it played, against this device’s own choice, and against the planner’s choice played live. Every song played at one level in all three.';
+  }
+  return 'Before is the browser player as it was: each transition planned 45 seconds from the end, every song at its own level. After plans each transition as its song starts, plays every song at one level and waits for slow analysis.';
+}
+
 /** The results as plain text to paste anywhere. */
 export function resultsText(session: Session, meta: ResultsMeta): string {
   const counted = tally(session);
-  const names = session.trials[0]?.variants ?? [];
+  const names = sessionVariants(session);
   const lines = [
     `SelectaDJ Listening Room: ${session.mixName || 'current mix'}`,
     `Session ${session.id}, seed ${session.seed}${meta.build ? `, build ${meta.build}` : ''}`,

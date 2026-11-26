@@ -1,5 +1,8 @@
 import { releaseAudio, takeAudio } from '../audio/focus';
+import { accountSeamPlanner, type AccountSeamAnswer, type AccountSeamAsk } from '../cloud/accountSeams';
 import { browserMovesAllowed, browserMovesOn } from '../cloud/browserMoves';
+import type { DeviceStudio } from '../cloud/deviceStudio';
+import { makeDeviceStudio, planningAccess } from '../cloud/studioWiring';
 import { mediaDeviceId } from '../cloud/ConnectMusic';
 import { recallCalibration, rememberCalibration } from '../cloud/localFirstPlayer';
 import * as provider from '../dsp/seamProvider';
@@ -9,7 +12,7 @@ import { createEngine, type BrowserSpeaker, type Engine, type EngineContext } fr
 import { createLevels, type Levels } from '../engine/level';
 import { FIRST_LEVEL_WAIT_MS, LOAD_NEXT_WITHIN, type SeamRequest, type Transition } from '../engine/scheduler';
 import type { MediaResolver } from '../media';
-import type { Label, LiveVariant, Played } from './session';
+import type { Chooser, Label, LiveVariant, Played, Variant } from './session';
 
 /** Playing one Listening Room audition on this device's own engine (tools.listening_room).
  *
@@ -32,6 +35,10 @@ import type { Label, LiveVariant, Played } from './session';
  *   (with the impatient provider) is used. When it starts earlier, the scheduler asks the
  *   impatient provider live at 45 s left, exactly as the old player did, so a transition that
  *   starts more than 45 s before the end really is prepared too late and falls back to a fade.
+ * - A variant that names who chooses (session.ts Chooser) is planned by that chooser when the
+ *   trial is prepared: this device, the account's planner played live, or the planner's choice
+ *   made ahead on this device (cloud.device_render). Each audition starts LEAD_SECONDS before its
+ *   own variant's transition, and every one plays the songs at the same measured levels.
  */
 
 export const LEAD_SECONDS = 15;
@@ -64,7 +71,7 @@ export type Progress = {
 export type AuditionEnd = { played: Played; interrupted: boolean; problem: string | null };
 
 type Plan = { schedule: SeamSchedule; record: SeamRecord | null };
-type Prepared = { startSeconds: number; fromDuration: number; toDuration: number; after: Plan; before: Plan | null };
+type Prepared = { startSeconds: number; fromDuration: number; toDuration: number; after: Plan; before: Plan | null; byChooser: Partial<Record<Chooser, Plan>> };
 
 type Token = {
   variant: LiveVariant | null;
@@ -82,7 +89,10 @@ type Token = {
 export function playedFrom(transition: Transition | null, record: SeamRecord | null, extra: { levels?: Played['levels']; levelLate?: boolean } = {}, at = Date.now()): Played {
   if (!transition) return { kind: 'not_reached', at, ...extra };
   const schedule = transition.kind === 'seam_schedule' ? record?.schedule : undefined;
+  // the clip made ahead really played only when the engine names its implementation
+  const studio = schedule?.rendered && schedule.studio && transition.implementation === schedule.rendered.implementation ? schedule.studio : null;
   return {
+    ...(studio ? { madeAhead: { move: studio.move, passed: studio.passed, nearMiss: studio.nearMiss, fellBack: studio.fellBack } } : {}),
     kind: transition.kind,
     seamKind: transition.seamKind,
     style: schedule?.style,
@@ -112,8 +122,9 @@ export type AuditionRoom = {
   /** Open the sound from inside a press; a sentence when this device cannot. */
   open(): Promise<string | null>;
   /** Decode both songs, measure their levels and plan the transition once. */
-  prepare(pair: Pair): Promise<{ startSeconds: number }>;
-  play(pair: Pair, variant: LiveVariant, label: Label, onProgress: (progress: Progress) => void): Promise<AuditionEnd>;
+  prepare(pair: Pair, variants?: readonly Variant[]): Promise<{ startSeconds: number }>;
+  /** `variants`: the trial's, so its preparation is the one shared with the other label. */
+  play(pair: Pair, variant: LiveVariant, label: Label, onProgress: (progress: Progress) => void, variants?: readonly Variant[]): Promise<AuditionEnd>;
   levelCheck(song: PairSong, onProgress: (progress: Progress) => void): Promise<AuditionEnd>;
   /** Pause or carry on; true when it is now playing. */
   togglePause(): boolean;
@@ -138,6 +149,10 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
   let volume = 1;
   let settingsNow: SeamSettingsLike | null = null;
   let lastRecord: SeamRecord | null = null;
+  // the pair being planned, for the account planner's song lookup
+  let pairNow: Pair | null = null;
+  let planners: Partial<Record<Chooser, WorkerSeamProvider>> = {};
+  let studio: DeviceStudio | null = null;
   let active: Token | null = null;
   let finish: ((interrupted: boolean, problem?: string | null) => void) | null = null;
   const decoded = new Map<number, Promise<AudioBuffer>>();
@@ -171,7 +186,26 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
     return found;
   };
 
-  const makeProvider = (calm: boolean, deviceId: string, calibration: ReturnType<typeof recallCalibration>, roster: () => ReturnType<Engine['roster']>) => provider.makeWorkerSeamProvider({
+  /** The account's planner for the pair being planned, made ahead on this device or not. */
+  const plannerHook = (madeAhead: boolean): ((ask: AccountSeamAsk) => Promise<AccountSeamAnswer>) | undefined => {
+    const request = planningAccess(workspaceId);
+    if (!request) return undefined;
+    const songAt = (index: number) => (index === 0 ? pairNow?.from.songId : index === 1 ? pairNow?.to.songId : undefined) ?? null;
+    if (madeAhead) {
+      studio ??= makeDeviceStudio({
+        request, workspaceId, level: (buffer) => levelOf(buffer),
+        decodedAt: async (index) => { const id = songAt(index); return id === null ? null : decode(id).catch(() => null); },
+      });
+    }
+    return accountSeamPlanner({
+      request, workspaceId, fileOf: songAt,
+      shaOf: async (songId) => (await resolve(songId).catch(() => null))?.held?.sha ?? null,
+      studio: madeAhead ? studio : null,
+    });
+  };
+
+  const makeProvider = (calm: boolean, deviceId: string, calibration: ReturnType<typeof recallCalibration>, roster: () => ReturnType<Engine['roster']>, planned?: ReturnType<typeof plannerHook>) => provider.makeWorkerSeamProvider({
+    planned,
     settingsFor: () => settingsNow,
     sourceOf: () => 'device',
     allowed: () => (browserMovesOn() ? browserMovesAllowed() : undefined),
@@ -183,8 +217,10 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
     onPlanned: (record) => { lastRecord = record; },
   });
 
-  const ask = async (which: WorkerSeamProvider, request: { fromIndex: number; from: AudioBuffer; toIndex: number; to: AudioBuffer }, settings: SeamSettingsLike | null): Promise<Plan> => {
+  const ask = async (which: WorkerSeamProvider, request: SeamRequest, pair: Pair): Promise<Plan> => {
+    const settings = pair.settings;
     settingsNow = settings;
+    pairNow = pair;
     lastRecord = null;
     const schedule = await which(request);
     return { schedule, record: lastRecord };
@@ -195,16 +231,20 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
     const mine = active;
     if (!mine?.variant || !patient || !hasty) return null;
     const ready = mine.prepared;
-    const already = mine.variant.planAhead
-      ? ready?.after
-      : ready && mine.offset > ready.fromDuration - LOAD_NEXT_WITHIN ? ready.before : null;
-    const plan = already ?? await ask(mine.variant.patient ? patient : hasty, request, mine.pair.settings);
+    const chooser = mine.variant.chooser;
+    const own = chooser && chooser !== 'device' ? planners[chooser] : undefined;
+    const already = own
+      ? ready?.byChooser[chooser!]
+      : mine.variant.planAhead
+        ? ready?.after
+        : ready && mine.offset > ready.fromDuration - LOAD_NEXT_WITHIN ? ready.before : null;
+    const plan = already ?? await ask(own ?? (mine.variant.patient ? patient : hasty), request, mine.pair);
     if (mine === active) {
       mine.record = plan.record;
       mine.planned = true;
     }
     return plan.schedule;
-  }, { dispose: () => { patient?.dispose(); hasty?.dispose(); } });
+  }, { dispose: () => { patient?.dispose(); hasty?.dispose(); for (const one of Object.values(planners)) one?.dispose(); studio?.dispose(); } });
 
   const open = (): Promise<string | null> => {
     if (disposed) return Promise.resolve('The Listening Room has closed its sound.');
@@ -228,6 +268,13 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
       const rosters = { calm: made.roster({ probe, workerBudget: evidence, stretch }), hasty: made.roster({ probe, workerBudget: evidence, stretch }) };
       patient = makeProvider(true, deviceId, calibration, () => rosters.calm);
       hasty = makeProvider(false, deviceId, calibration, () => rosters.hasty);
+      // the planner's two ways, when this account plans from its measurements
+      const liveHook = plannerHook(false);
+      const madeHook = plannerHook(true);
+      planners = {
+        ...(liveHook ? { planner_live: makeProvider(true, deviceId, calibration, () => rosters.calm, liveHook) } : {}),
+        ...(madeHook ? { planner_made: makeProvider(true, deviceId, calibration, () => rosters.calm, madeHook) } : {}),
+      };
       audio = opened;
       engine = made;
       speaker = made.createSpeaker({
@@ -267,8 +314,9 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
     return opening;
   };
 
-  const prepare = (pair: Pair): Promise<Prepared> => {
-    const key = pairKey(pair);
+  const prepare = (pair: Pair, variants: readonly Variant[] = []): Promise<Prepared> => {
+    const choosers = [...new Set(variants.flatMap((variant) => (variant.kind === 'live' && variant.chooser && variant.chooser !== 'device' ? [variant.chooser] : [])))];
+    const key = `${pairKey(pair)}|${choosers.join(',')}`;
     let found = prepared.get(key);
     if (!found) {
       found = (async () => {
@@ -276,14 +324,21 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
         if (problem) throw new Error(problem);
         const [from, to] = await Promise.all([decode(pair.from.songId), decode(pair.to.songId)]);
         // each song's level is measured now, as a whole mix would have long before this transition
-        await Promise.all([levelOf(from), levelOf(to)]);
-        const request = { fromIndex: 0, from, toIndex: 1, to };
-        const after = await ask(patient!, request, pair.settings);
+        const [fromLevel, toLevel] = await Promise.all([levelOf(from), levelOf(to)]);
+        // the levels go with the request, so a transition made ahead is made at them
+        const request: SeamRequest = { fromIndex: 0, from, toIndex: 1, to, fromLevel, toLevel };
+        const after = await ask(patient!, request, pair);
         const startSeconds = after.schedule.startSeconds;
         const offset = Math.max(0, startSeconds - LEAD_SECONDS);
         // the old player would already have planned this one before the audition starts
-        const before = offset > from.duration - LOAD_NEXT_WITHIN ? await ask(hasty!, request, pair.settings) : null;
-        return { startSeconds, fromDuration: from.duration, toDuration: to.duration, after, before };
+        const before = offset > from.duration - LOAD_NEXT_WITHIN ? await ask(hasty!, request, pair) : null;
+        const byChooser: Prepared['byChooser'] = { device: after };
+        for (const chooser of choosers) {
+          const own = planners[chooser];
+          if (!own) throw new Error('The planner’s choice could not be asked for from this device');
+          byChooser[chooser] = await ask(own, request, pair);
+        }
+        return { startSeconds, fromDuration: from.duration, toDuration: to.duration, after, before, byChooser };
       })();
       prepared.set(key, found);
       found.catch(() => prepared.delete(key));
@@ -378,18 +433,21 @@ export function createAuditionRoom({ workspaceId, resolve }: { workspaceId: stri
 
   return {
     open,
-    async prepare(pair) {
-      const made = await prepare(pair);
+    async prepare(pair, variants) {
+      const made = await prepare(pair, variants);
       return { startSeconds: made.startSeconds };
     },
-    async play(pair, variant, label, onProgress) {
+    async play(pair, variant, label, onProgress, variants) {
       let ready: Prepared;
       try {
-        ready = await prepare(pair);
+        ready = await prepare(pair, variants ?? [variant]);
       } catch (problem) {
         return { played: playedFrom(null, null), interrupted: false, problem: words(problem) };
       }
-      return run(pair, variant, label, ready, Math.max(0, ready.startSeconds - LEAD_SECONDS), onProgress);
+      // each variant starts the same lead before its own transition
+      const own = variant.chooser ? ready.byChooser[variant.chooser] : undefined;
+      const mine = own ? { ...ready, startSeconds: own.schedule.startSeconds } : ready;
+      return run(pair, variant, label, mine, Math.max(0, mine.startSeconds - LEAD_SECONDS), onProgress);
     },
     async levelCheck(song, onProgress) {
       const problem = await open();

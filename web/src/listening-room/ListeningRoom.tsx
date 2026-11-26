@@ -5,10 +5,11 @@ import type { MediaResolver } from '../media';
 import { navigate } from '../router';
 import { announce } from '../ui/controls';
 import { Skeleton } from '../ui/Skeleton';
+import { deviceRenderOn } from '../cloud/deviceStudio';
 import { createAuditionRoom, type AuditionEnd, type Pair, type Progress } from './audition';
 import { RevealScreen } from './RevealScreen';
 import {
-  answerOf, chooseVerdict, countReplay, createSession, goTo, leaveSession, loadSession, nextOpen, recordFailure, recordPlayed,
+  answerOf, chooseVerdict, countReplay, createSession, MADE_AHEAD_PAIRS, goTo, leaveSession, loadSession, nextOpen, recordFailure, recordPlayed,
   recordPrepared, saveSession, setNote, toggleReason, variantOf, type Label, type MixSong, type Session, type StorageLike, type Trial,
 } from './session';
 import { StartScreen } from './StartScreen';
@@ -37,7 +38,7 @@ export type ListeningRoomProps = {
 };
 
 /** The flags the session is about, kept with it for the export. */
-const FLAGS = ['tools.listening_room', 'cloud.seam_lead', 'cloud.browser_dsp', 'cloud.browser_moves'] as const;
+const FLAGS = ['tools.listening_room', 'cloud.seam_lead', 'cloud.browser_dsp', 'cloud.browser_moves', 'cloud.brain', 'cloud.device_render'] as const;
 const VOLUME_KEY = 'selecta.listeningRoom.volume';
 const storage = (): StorageLike | null => {
   try {
@@ -116,7 +117,8 @@ export default function ListeningRoom(props: ListeningRoomProps) {
   // a new session over the current mix when none was saved here
   useEffect(() => {
     if (session || !playable) return;
-    const made = createSession({ workspaceId, mixId, mixName, mix, playable: (id) => playable.has(id), flags: Object.fromEntries(FLAGS.map((id) => [id, flagOn(id)])) });
+    // with transitions made ahead on, the planner made ahead is heard against the other two ways
+    const made = createSession({ workspaceId, mixId, mixName, mix, playable: (id) => playable.has(id), flags: Object.fromEntries(FLAGS.map((id) => [id, flagOn(id)])), pairs: deviceRenderOn() ? MADE_AHEAD_PAIRS : undefined });
     if (made) {
       latest.current = made;
       setSession(made);
@@ -133,12 +135,12 @@ export default function ListeningRoom(props: ListeningRoomProps) {
     const pair = pairOf(trial, mix);
     const known = answerOf(session, trial.id);
     setListening((now) => ({ ...now, preparing: known.startSeconds === null && !known.failed }));
-    room.prepare(pair).then(({ startSeconds }) => {
+    room.prepare(pair, trial.variants).then(({ startSeconds }) => {
       if (!live) return;
       setListening((now) => ({ ...now, preparing: false }));
       update((kept) => recordPrepared(kept, trial.id, startSeconds));
       const after = latest.current?.trials[latest.current.position + 1];
-      if (after) void room.prepare(pairOf(after, mix)).catch(() => undefined);
+      if (after) void room.prepare(pairOf(after, mix), after.variants).catch(() => undefined);
     }, (error: unknown) => {
       if (!live) return;
       setListening((now) => ({ ...now, preparing: false }));
@@ -188,7 +190,7 @@ export default function ListeningRoom(props: ListeningRoomProps) {
         announce(`${label}: the transition is starting`);
       }
       setListening((state) => (state.label === label ? { ...state, progress } : state));
-    }).then((end: AuditionEnd) => {
+    }, now.variants).then((end: AuditionEnd) => {
       setListening((state) => (state.label === label ? { ...state, label: null, progress: null, last: label } : state));
       if (end.played.kind !== 'not_reached') update((held) => recordPlayed(held, now.id, label, end.played));
       else if (end.problem && !end.interrupted) update((held) => recordFailure(held, now.id, end.problem!));

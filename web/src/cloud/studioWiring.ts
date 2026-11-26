@@ -25,7 +25,13 @@ export type StudioWiring = {
   facts?(sha: string): Promise<SongFacts | null>;
 };
 
+// the account's request for each workspace whose player made a studio, so the Listening Room can
+// hear the planner's choices without being handed the account by the shell
+const access = new Map<string, Request>();
+export const planningAccess = (workspaceId: string): Request | null => access.get(workspaceId) ?? null;
+
 export function makeDeviceStudio(wiring: StudioWiring): DeviceStudio {
+  access.set(wiring.workspaceId, wiring.request);
   const renderer = new SeamRenderer();
   const factsOf = wiring.facts ?? ((sha: string) => songFacts(sha));
   const post = <T,>(path: string, body: unknown) => askWithin<T>(wiring.request, path, {

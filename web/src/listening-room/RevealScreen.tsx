@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { buildMark } from '../support';
-import { answerOf, LABELS, levelWords, playedWords, REASONS, resultsJson, resultsText, tally, VERDICTS, type Session } from './session';
+import { answerOf, comparisonWords, LABELS, levelWords, playedWords, REASONS, resultsJson, resultsText, sessionVariants, tally, VERDICTS, type Session } from './session';
 
 /** The reveal (tools.listening_room): only here is it said which of A and B was which, what each
  * really played, and how the votes fell. The results copy as text or download as versioned JSON. */
 export function RevealScreen({ session, onBack, onNew }: { session: Session; onBack(): void; onNew(): void }) {
   const [said, setSaid] = useState('');
   const counted = tally(session);
-  const variants = session.trials[0]?.variants ?? [];
+  const variants = sessionVariants(session);
   const build = buildMark();
   const name = (id: string) => variants.find((variant) => variant.id === id)?.name ?? id;
 
@@ -44,7 +44,7 @@ export function RevealScreen({ session, onBack, onNew }: { session: Session; onB
         <div><dt>Both bad</dt><dd>{counted.bothBad}</dd></div>
         <div><dt>Can’t judge</dt><dd>{counted.cantJudge}</dd></div>
       </dl>
-      <p className="lr-hint">Before is the browser player as it was: each transition planned 45 seconds from the end, every song at its own level. After plans each transition as its song starts, plays every song at one level and waits for slow analysis.</p>
+      <p className="lr-hint">{comparisonWords(session)}</p>
 
       <ol className="lr-results">
         {session.trials.map((trial) => {
