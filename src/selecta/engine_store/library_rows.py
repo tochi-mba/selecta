@@ -240,10 +240,17 @@ def writing(conn: Any) -> Iterator[Any]:
         yield Rows(connection, store)
 
 
+def fetch(conn: Any, sql: str, params: Any = ()) -> list:
+    """Every row of one statement, read through the store with the flag on (`reading`)."""
+    with reading(conn) as source:
+        return source.execute(sql, params).fetchall()
+
+
 __all__ = [
     "REVISION",
     "Record",
     "Rows",
+    "fetch",
     "plain_errors",
     "read",
     "reading",

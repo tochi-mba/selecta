@@ -161,7 +161,9 @@ def rows(conn: sqlite3.Connection, limit: int | None = None) -> Iterable[sqlite3
     )
     if limit is not None:
         query += f" LIMIT {int(limit)}"
-    return conn.execute(query)
+    from selecta.engine_store import library_rows
+
+    return library_rows.fetch(conn, query)
 
 
 def _stood_in_for_skey(row: sqlite3.Row) -> bool:

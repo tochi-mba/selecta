@@ -251,7 +251,10 @@ def _crash_leftovers(settings: Settings, kept: _Kept, now: float, swept: Swept) 
 
 
 def _song_ids(conn: sqlite3.Connection) -> set[int]:
-    return {int(row[0]) for row in conn.execute("SELECT id FROM songs")}
+    from selecta.engine_store import library_rows
+
+    with library_rows.reading(conn) as source:
+        return {int(row[0]) for row in source.execute("SELECT id FROM songs")}
 
 
 def _orphans(
@@ -339,8 +342,12 @@ def _old_covers(settings: Settings, conn: sqlite3.Connection, now: float, swept:
     markers, pictures = root / "files", root / "pictures"
     if not markers.is_dir() and not pictures.is_dir():
         return
+    from selecta.engine_store import library_rows
+
     live: set[str] = set()
-    for song_path, size, mtime in conn.execute("SELECT path, size, mtime FROM songs"):
+    with library_rows.reading(conn) as source:
+        recorded = source.execute("SELECT path, size, mtime FROM songs").fetchall()
+    for song_path, size, mtime in recorded:
         with contextlib.suppress(TypeError, ValueError):
             live.add(art.file_key(song_path, int(size), float(mtime)))
         try:

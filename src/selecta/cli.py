@@ -18,6 +18,7 @@ from selecta.admin.cli import admin_app as _admin_app
 from selecta.cli_calibrate import calibrate as _calibrate
 from selecta.cli_progress import progress_bar
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, load_settings
+from selecta.engine_store import library_rows
 from selecta.persistence import make_engine
 from selecta.storage_cli import storage_app as _storage_app
 
@@ -231,10 +232,10 @@ def analyse(
 def timings() -> None:
     """Report measured analysis timings, and project them across the library."""
     _, conn = _open()
-    rows = conn.execute(
-        "SELECT a.timings, s.duration FROM analysis a JOIN songs s ON s.id = a.song_id "
+    rows = library_rows.fetch(
+        conn, "SELECT a.timings, s.duration FROM analysis a JOIN songs s ON s.id = a.song_id "
         "WHERE a.timings IS NOT NULL"
-    ).fetchall()
+    )
     if not rows:
         console.print("No timings yet. Run `selecta analyse --limit 10 --sample` first.")
         return
@@ -267,13 +268,14 @@ def library(
 ) -> None:
     """Show analysed songs."""
     _, conn = _open()
-    rows = conn.execute(
+    rows = library_rows.fetch(
+        conn,
         "SELECT s.id, s.artist, s.title, a.bpm, a.camelot, a.key_agrees_chroma, a.grid_confidence, "
         "a.constant_tempo, a.energy, a.lufs, a.error FROM songs s "
         "JOIN analysis a ON a.song_id = s.id "
         "WHERE s.title LIKE ? OR s.artist LIKE ? ORDER BY a.grid_confidence DESC LIMIT ?",
         (f"%{text}%", f"%{text}%", limit),
-    ).fetchall()
+    )
     table = Table()
     for heading in ("id", "Artist", "Title", "BPM", "Key", "Grid", "Steady", "Energy", "LUFS"):
         table.add_column(heading, overflow="ellipsis", max_width=28)
@@ -311,19 +313,19 @@ def lyrics(limit: int = typer.Option(0, help="Stop after this many songs. 0 mean
 
         counts = fetch_all(conn, limit, progress)
     console.print(counts)
-    rows = conn.execute("SELECT status, COUNT(*) AS n FROM lyrics GROUP BY status").fetchall()
+    rows = library_rows.fetch(conn, "SELECT status, COUNT(*) AS n FROM lyrics GROUP BY status")
     console.print({row["status"]: row["n"] for row in rows})
 
 
 def _find_song(conn, text: str) -> int:
     if text.isdigit():
         return int(text)
-    rows = conn.execute(
-        "SELECT s.id, s.artist, s.title FROM songs s JOIN analysis a ON a.song_id = s.id "
+    rows = library_rows.fetch(
+        conn, "SELECT s.id, s.artist, s.title FROM songs s JOIN analysis a ON a.song_id = s.id "
         "WHERE a.error IS NULL AND (s.title LIKE ? OR s.artist || ' ' || s.title LIKE ?) "
         "ORDER BY LENGTH(s.title)",
         (f"%{text}%", f"%{text}%"),
-    ).fetchall()
+    )
     if not rows:
         console.print(f"No analysed song matches {text!r}.")
         raise typer.Exit(1)
@@ -754,10 +756,10 @@ def plan(
     from selecta.planner.beam import plan_set
 
     settings, conn = _open()
-    rows = conn.execute(
-        "SELECT song_id FROM analysis WHERE version=? AND error IS NULL ORDER BY song_id",
+    rows = library_rows.fetch(
+        conn, "SELECT song_id FROM analysis WHERE version=? AND error IS NULL ORDER BY song_id",
         (ANALYSIS_VERSION,),
-    ).fetchall()
+    )
     songs = [load_song(conn, settings, row["song_id"]) for row in rows]
     from selecta.session import get_steering
 
@@ -769,12 +771,13 @@ def plan(
         mix_language=steering.mix_language,
         stems=steering.stems,
     )
-    conn.execute("DELETE FROM queue")
-    conn.executemany(
-        "INSERT INTO queue(position,song_id,transition,reason) VALUES(?,?,?,?)",
-        [(i, item.song.id, item.transition, item.reason) for i, item in enumerate(planned)],
-    )
-    conn.commit()
+    with library_rows.writing(conn) as source:  # one write with core.engine_store
+        source.execute("DELETE FROM queue")
+        source.executemany(
+            "INSERT INTO queue(position,song_id,transition,reason) VALUES(?,?,?,?)",
+            [(i, item.song.id, item.transition, item.reason) for i, item in enumerate(planned)],
+        )
+        source.commit()
     console.print(f"Planned {len(planned)} songs. Open them with `selecta web`.")
 
 
@@ -797,12 +800,12 @@ def discover(
     if not flags.on("discover.harmonic"):
         console.print(f"Found {lyric_count} lyric links. Harmonic matches are turned off.")
         return
-    rows = conn.execute(
-        "SELECT a.song_id FROM analysis a JOIN songs s ON s.id=a.song_id "
+    rows = library_rows.fetch(
+        conn, "SELECT a.song_id FROM analysis a JOIN songs s ON s.id=a.song_id "
         "WHERE a.version=? AND a.error IS NULL AND s.is_music=1 "
         "AND s.duplicate_of IS NULL ORDER BY a.song_id",
         (ANALYSIS_VERSION,),
-    ).fetchall()
+    )
     songs = [load_song(conn, settings, row["song_id"]) for row in rows]
     if exhaustive:
         from selecta.discovery.sweep import sweep
@@ -925,9 +928,9 @@ def set_mix(
         rows = [{"song_id": song_id} for song_id in song_ids]
         count = len(rows)
     else:
-        rows = conn.execute(
-            "SELECT song_id FROM queue ORDER BY position LIMIT ?", (count,)
-        ).fetchall()
+        rows = library_rows.fetch(
+            conn, "SELECT song_id FROM queue ORDER BY position LIMIT ?", (count,)
+        )
     if len(rows) < count:
         raise typer.BadParameter(f"the queue has only {len(rows)} songs; run `selecta plan` first")
     songs = [load_song(conn, settings, row["song_id"]) for row in rows]

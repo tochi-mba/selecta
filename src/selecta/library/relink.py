@@ -12,6 +12,7 @@ import sqlite3
 from pathlib import Path
 
 from selecta import db, flags
+from selecta.engine_store import library_rows
 from selecta.library.relevance import normalize_music
 from selecta.library.scan import library_folders, read_file
 
@@ -59,7 +60,8 @@ def _references(conn: sqlite3.Connection, ids: set[int]) -> dict[str, int]:
         from selecta.engine_store import library
         from selecta.engine_store import ratings as stored
 
-        rated = stored.count_touching(library.store_of(conn), ids)
+        # a store connection handed down (library_rows.Rows) names its own store
+        rated = stored.count_touching(getattr(conn, "store", None) or library.store_of(conn), ids)
     else:
         rated = count(
             f"SELECT COUNT(*) FROM ratings WHERE song_a IN ({marks}) OR song_b IN ({marks})",  # noqa: S608
@@ -109,6 +111,11 @@ def preview_relink(
     assumed to be the same one. It is shown with what differs, and only a person's explicit yes for
     that exact song ID lets it through. Missing, unsafe, unreadable or colliding files never
     can be."""
+    with library_rows.reading(conn) as source:
+        return _preview(source, old, new, confirmed)
+
+
+def _preview(conn, old: str, new: str, confirmed: list[int] | None) -> dict:
     yes = {int(song) for song in confirmed or []}
     old_root = _local_root(old, must_exist=False)
     new_root = _local_root(new, must_exist=True)
@@ -211,10 +218,18 @@ def commit_relink(
     old_root = Path(preview["from"])
     new_root = Path(preview["to"])
     # Check inside the write transaction too, so no concurrent library scan
-    # can change recorded paths or IDs between preview and commit.
+    # can change recorded paths or IDs between preview and commit. With core.engine_store that
+    # transaction is one store write.
+    with library_rows.writing(conn) as source:
+        _commit(source, source is conn, old, new, token, confirmed, old_root, new_root)
+    return {"moved": preview["verified"], "folder": str(new_root), "status": "relinked"}
+
+
+def _commit(conn, begin: bool, old, new, token, confirmed, old_root: Path, new_root: Path) -> None:
     try:
-        conn.execute("BEGIN IMMEDIATE")
-        refreshed = preview_relink(conn, old, new, confirmed)
+        if begin:
+            conn.execute("BEGIN IMMEDIATE")
+        refreshed = _preview(conn, old, new, confirmed)
         if refreshed["token"] != token:
             raise RelinkError("The library changed. Preview it again.")
         for row in conn.execute("SELECT id,path FROM songs").fetchall():
@@ -242,4 +257,3 @@ def commit_relink(
     except Exception:
         conn.rollback()
         raise
-    return {"moved": preview["verified"], "folder": str(new_root), "status": "relinked"}
