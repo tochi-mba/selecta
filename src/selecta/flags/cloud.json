@@ -552,14 +552,14 @@
     },
     "cloud.device_render": {
       "label": "Transitions rendered on this device",
-      "about": "The browser's own rendering of transitions: it plays each transition the account's planner describes into a short clip ahead of time, the way the Desktop does, and measures it with the Desktop's checks (docs/engineering/device-render.md). Built and measured against the Desktop's renderer, but not yet what plays: on or off, mixes still blend live as before; on only lets the render worker run when asked. Its time-stretch is the browser's own, not the Desktop's Rubber Band. Off: no transition is rendered on this device.",
+      "about": "The browser's own rendering of transitions: it plays each transition the account's planner describes into a short clip ahead of time, the way the Desktop does, measures it with the Desktop's checks and follows the Desktop's repair rule (docs/engineering/device-render.md). With it on, with cloud.brain on and both songs measured, a playing mix prepares its next two transitions this way and plays each finished clip between the two songs, keeping clips on this device; a transition not ready in time, or in any doubt, plays live as before (docs/engineering/device-studio-playback.md). The Listening Room then compares the planner's choice made ahead with the other two ways. Its time-stretch is the browser's own, not the Desktop's Rubber Band. Off: no transition is rendered on this device and mixes blend live as before.",
       "requires": ["cloud.device_analysis"],
       "modes": ["cloud"],
       "default": false,
       "kind": "release",
       "owner": "playback",
       "cloud_surface_kind": "headless",
-      "cloud_surface_reason": "Renders in a background worker; nothing on any screen changes, and playback does not use its clips yet"
+      "cloud_surface_reason": "Renders in a background worker and changes how transitions sound, not any screen; the Listening Room's comparison is behind its own flag"
     },
     "cloud.browser_stems": {
       "label": "Browser stem moves",
