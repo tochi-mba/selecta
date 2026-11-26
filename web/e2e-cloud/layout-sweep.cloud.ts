@@ -102,7 +102,8 @@ async function longUpload(page: Page, state: 'progress' | 'result' = 'progress')
   // every Add music page has the picker; over the storage limit it waits, disabled
   await expect(picker).toBeAttached();
   if (!(await picker.isEnabled())) return;
-  await picker.setInputFiles({ name: LONG_FILE, mimeType: 'audio/wav', buffer: wav() });
+  // other bytes for the result, so it is planned afresh rather than carried on from the held one
+  await picker.setInputFiles({ name: LONG_FILE, mimeType: 'audio/wav', buffer: wav(state === 'result' ? 2 : 1) });
   await page.getByRole('button', { name: 'Start upload' }).click();
   const shown = state === 'result' ? page.locator('.cloud-upload-list li') : page.getByText(LONG_FILE);
   await expect(shown.first()).toBeVisible({ timeout: 10_000 }).catch(() => undefined);
