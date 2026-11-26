@@ -1,4 +1,4 @@
-import { APIRequestContext, expect, Page, test } from '@playwright/test';
+import { APIRequestContext, expect, Page, test, TestInfo } from '@playwright/test';
 import { rewriteJson } from '../e2e/helpers';
 import { LONG_FILE, LONG_TITLE, sweep, verdict } from '../e2e/layoutSweep';
 import { listener } from './cloud';
@@ -91,17 +91,37 @@ async function amend(page: Page, { localFirst, layout }: { localFirst: boolean; 
   })));
 }
 
-/** Add music with a long unbroken file name in its progress line: the upload's parts never answer,
- * so the line stays while the page is measured (T-20261125-3d9f). */
-async function longUpload(page: Page) {
-  await page.route('**/api/uploads/*/parts', () => { /* held, so "Uploading ..." stays on screen */ });
+/** Add music with a long unbroken file name: `progress`, the upload's parts never answer, so
+ * "Uploading {name}" stays while the page is measured (T-20261125-3d9f); `result`, they are refused,
+ * so the file's own line in the results list carries the name. */
+async function longUpload(page: Page, state: 'progress' | 'result' = 'progress') {
+  await page.route('**/api/uploads/*/parts', (route) => (state === 'result' ? route.abort() : undefined));
   const picker = page.getByLabel(/Choose music files/);
   if (!(await picker.count()) || !(await picker.isEnabled())) return;
   await picker.setInputFiles({ name: LONG_FILE, mimeType: 'audio/wav', buffer: wav() });
   await page.getByRole('button', { name: 'Start upload' }).click();
-  // the progress line, or the file's own result line when the plan answers at once
-  await expect(page.getByText(LONG_FILE).first()).toBeVisible({ timeout: 10_000 }).catch(() => undefined);
+  const shown = state === 'result' ? page.locator('.cloud-upload-list li') : page.getByText(LONG_FILE);
+  await expect(shown.first()).toBeVisible({ timeout: 10_000 }).catch(() => undefined);
 }
+
+/** Sweep Add music in both of its long-name states. */
+async function sweepUploads(page: Page, testInfo: TestInfo, id: string, options: { frame?: boolean; label?: string }) {
+  await longUpload(page, 'progress');
+  const problems = await sweep(page, testInfo, id, options);
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.reload();
+  await longUpload(page, 'result');
+  return [...problems, ...(await sweep(page, testInfo, `${id} results`, options))];
+}
+
+/** A menu opened at each width (`opener` finds its button): menus sit against the right edge. */
+const withMenu = (page: Page, opener: string) => ({
+  prepare: async () => {
+    const button = page.locator(opener).first();
+    if (await button.isVisible().catch(() => false)) await button.click();
+  },
+  after: async () => { await page.keyboard.press('Escape'); },
+});
 
 async function opened(page: Page, path: string, heading?: string | RegExp) {
   await page.goto(path);
@@ -134,8 +154,14 @@ for (const layout of [false, true]) {
     test(`${id} ${path} in the local-first shell, cloud.page_layout ${layout ? 'on' : 'off'}`, async ({ page, request }, testInfo) => {
       await localFirstMember(page, request, `sweep-${label}`, layout);
       await opened(page, path, heading);
-      if (path === '/upload') await longUpload(page);
-      await verdict(testInfo, await sweep(page, testInfo, id, { frame: layout && id !== 'cloud.local.missing', label }));
+      const options = { frame: layout && id !== 'cloud.local.missing', label };
+      if (path === '/upload') return verdict(testInfo, await sweepUploads(page, testInfo, id, options));
+      const problems = await sweep(page, testInfo, id, options);
+      if (path === '/library') {
+        problems.push(...(await sweep(page, testInfo, `${id} connect menu`, { ...options, ...withMenu(page, '.lw-connect-menu > button') })));
+        problems.push(...(await sweep(page, testInfo, `${id} song menu`, { ...options, ...withMenu(page, '.library-rows .lw-actions .menu > button') })));
+      }
+      await verdict(testInfo, problems);
     });
   }
 
@@ -155,7 +181,7 @@ for (const layout of [false, true]) {
       await page.addInitScript((who) => localStorage.setItem('selecta-e2e-user', who), user);
       await amend(page, { localFirst: false, layout });
       await opened(page, path);
-      if (path === '/upload') await longUpload(page);
+      if (path === '/upload') return verdict(testInfo, await sweepUploads(page, testInfo, id, { frame: layout, label }));
       await verdict(testInfo, await sweep(page, testInfo, id, { frame: layout, label }));
     });
   }
@@ -169,8 +195,8 @@ test('the legacy rail pages', async ({ page, request }, testInfo) => {
   const problems: string[] = [];
   for (const [id, path] of LEGACY) {
     await opened(page, path);
-    if (path === '/upload') await longUpload(page);
-    problems.push(...(await sweep(page, testInfo, id)));
+    if (path === '/upload') problems.push(...(await sweepUploads(page, testInfo, id, {})));
+    else problems.push(...(await sweep(page, testInfo, id)));
   }
   await verdict(testInfo, problems);
 });
@@ -190,7 +216,7 @@ test('a new local-first member’s onboarding', async ({ page, request }, testIn
   await verdict(testInfo, problems);
 });
 
-test('Rooms and devices on the harness, the gallery, the business harness, the guest page and the display', async ({ browser, page }, testInfo) => {
+test('Rooms and devices on the harness, the gallery and the business harness', async ({ page }, testInfo) => {
   test.setTimeout(300_000);
   await endRooms(page);
   const problems: string[] = [];
@@ -203,6 +229,13 @@ test('Rooms and devices on the harness, the gallery, the business harness, the g
   await page.goto('/business-harness.html');
   await expect(page.getByRole('heading', { level: 1, name: /SelectaDJ for Business/ })).toBeVisible();
   problems.push(...(await sweep(page, testInfo, 'site.business.harness')));
+  await verdict(testInfo, problems);
+});
+
+test('the guest page and the room display', async ({ browser, page }, testInfo) => {
+  test.setTimeout(300_000);
+  await endRooms(page);
+  const problems: string[] = [];
   const { context, joinPath } = await hostWithRoom(browser);
   try {
     await page.goto(joinPath);

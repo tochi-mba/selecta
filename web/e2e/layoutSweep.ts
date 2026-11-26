@@ -56,7 +56,8 @@ export async function measure(page: Page, frame: boolean): Promise<Measured> {
       const box = element.getBoundingClientRect();
       if (box.width <= 1 || box.height <= 1 || box.right <= room + 1) continue;
       const style = getComputedStyle(element);
-      if (style.visibility === 'hidden' || style.position === 'fixed' || element.closest('[aria-hidden="true"], [inert]')) continue;
+      // fixed things count too: a menu or a toast past the edge is cut off, though nothing scrolls
+      if (style.visibility === 'hidden' || element.closest('[aria-hidden="true"], [inert]')) continue;
       if (!held(element)) out.push(element);
     }
     // the deepest ones say what is too wide; their boxes around them only follow
@@ -86,13 +87,15 @@ export async function measure(page: Page, frame: boolean): Promise<Measured> {
 }
 
 /** Draw the surface open on `page` at every width, measure it and save a screenshot of each.
+ * `prepare` runs at each width before measuring (to open a menu, say) and `after` once measured.
  * Returns what is wrong, one line per problem, empty when nothing is. */
-export async function sweep(page: Page, testInfo: TestInfo, id: string, { frame = false, label = '' }: { frame?: boolean; label?: string } = {}): Promise<string[]> {
+export async function sweep(page: Page, testInfo: TestInfo, id: string, { frame = false, label = '', prepare, after }: { frame?: boolean; label?: string; prepare?: () => Promise<void>; after?: () => Promise<void> } = {}): Promise<string[]> {
   const problems: string[] = [];
   for (const view of WIDTHS) {
     await page.setViewportSize({ width: view.width, height: view.height });
     // two frames for the layout to settle after the resize
     await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+    await prepare?.();
     const found = await measure(page, frame);
     const where = `${id}${label ? ` ${label}` : ''} at ${view.name}`;
     if (found.overflow > 0) problems.push(`${where}: the page scrolls sideways by ${found.overflow} px`);
@@ -102,6 +105,7 @@ export async function sweep(page: Page, testInfo: TestInfo, id: string, { frame 
     const shot = testInfo.outputPath(`${id.replace(/[^\w.-]+/g, '_')}${label ? `-${label}` : ''}-${view.name}.png`);
     await page.screenshot({ path: shot });
     await testInfo.attach(`${id}${label ? ` ${label}` : ''} ${view.name}`, { path: shot, contentType: 'image/png' });
+    await after?.();
   }
   await page.setViewportSize({ width: 1280, height: 900 });
   return problems;

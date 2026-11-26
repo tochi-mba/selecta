@@ -56,7 +56,15 @@ for (const [id, path] of ROUTES) {
     await page.goto(path);
     await expect(page.locator('main h1, main [role="heading"][aria-level="1"]').first()).toBeVisible();
     await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined);
-    await verdict(testInfo, await sweep(page, testInfo, id));
+    const problems = await sweep(page, testInfo, id);
+    // a song's menu sits against the right edge of the window
+    if (id === 'route.library') {
+      problems.push(...(await sweep(page, testInfo, `${id} song menu`, {
+        prepare: async () => { const opener = page.locator('.library-rows .menu > button').first(); if (await opener.isVisible().catch(() => false)) await opener.click(); },
+        after: async () => { await page.keyboard.press('Escape'); },
+      })));
+    }
+    await verdict(testInfo, problems);
   });
 }
 
