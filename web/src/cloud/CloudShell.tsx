@@ -19,7 +19,9 @@ import { playedByPair } from './playedSeams';
 import { peaksFrom } from '../dsp/waveform';
 import { RequestsContext, RequestsPanel, useRequests, type RequestRow } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
-import { planName, type Account, type Api } from './api';
+import { holdsHostedStorage, planName, type Account, type Api } from './api';
+import { useLibraryPlaces } from './libraryPlacesChrome';
+import { LibraryPlacesContext } from '../views/LibraryPlaces';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
 import { forgetCloudLibraryAssets, LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { isHostedAccount } from './deviceMusicGate';
@@ -116,6 +118,9 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
   const coexisting = isHostedAccount(account) && on('cloud.stored_media');
+  // library.places: the Library says where songs are kept, for an account with a cloud library
+  // (the grant, or songs still stored after it was taken away); nothing new for anyone else
+  const placesOn = on('library.places') && on('cloud.stored_media') && holdsHostedStorage(account);
   // cloud.catalogue_play: cloud songs found by catalogue id, and counted on every device
   const cataloguePlay = coexisting && flagListed('cloud.catalogue_play');
   // BF-0462-04: the Library says where each song can play from, against this device's own
@@ -211,7 +216,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   const roomsHere = on('rooms') && !account.feature_locks.rooms;
   // where each song can play from, the adapted request and the resolver (cloudShellMedia.ts)
   const { sources, request, media, resolver, programme, controllerLink, whereHeld, mixableIds } = useCloudShellMedia({
-    api, cloud, workspaceId, on, coexisting, catalogue: cataloguePlay, openStore, lapsed, refreshStatus: refreshStatusRef, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed: setServedFrom, book,
+    api, cloud, workspaceId, on, coexisting, places: placesOn, catalogue: cataloguePlay, openStore, lapsed, refreshStatus: refreshStatusRef, recipes, browserHarmonic, tonal, offlineShell, roomsHere, onServed: setServedFrom, book,
   });
   mediaRef.current = media;
 
@@ -720,6 +725,11 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // cloud.move_to_cloud: the upload queue carries on after a reload; the current mix goes first
   useCloudUploadQueue({ on: on('cloud.move_to_cloud'), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
   const connect =<ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
+  // library.places: what the Library knows about where songs are kept (views/LibraryPlaces.tsx)
+  const libraryPlaces = useLibraryPlaces({
+    on: placesOn, cloud, workspaceId, accountId: account.user.id, canUpload: isHostedAccount(account) && on('cloud.uploads'),
+    offline: servedFrom !== null || offlineReadOnly, otherDevices: !!holdings.devices?.some((one) => one.device_id !== playback.device?.id),
+  });
 
   return (
     <RequestContext.Provider value={request}>
@@ -753,12 +763,12 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
         playerNote={on('cloud.page_layout') && route.page !== 'listen' ? otherTabNote(playback, () => void shellPlayer.togglePause()) : undefined}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
-        <HolderContext.Provider value={holderValue}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}><CloudShellPages at={{
+        <HolderContext.Provider value={holderValue}><LibraryPlacesContext.Provider value={libraryPlaces}><Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}><CloudShellPages at={{
           api, cloud, request, media, workspaceId, on, route, moreItems, more, shared, status, statusProblem, setStatusProblem, refreshStatus, refreshMix,
           data, mixProblem, setMixData, shellPlayer, now, playback, refusal, output, notify, openStore, connect, sweepLapsed, stems, recipes, deviceTrack, book,
           lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive,
           remote, playWays, holdings, where, followsHere, newest, songOrder, playOn,
-        }} /></Section></HolderContext.Provider>
+        }} /></Section></LibraryPlacesContext.Provider></HolderContext.Provider>
         <footer className="cloud-footer">{footerWords(coexisting, on('cloud.move_to_cloud'))}</footer>
       </Shell>
       {requesting && on('requests') && (
