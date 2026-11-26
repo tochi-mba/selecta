@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import re
 
-from cloud_party import CAROL, auth
+from cloud_helpers import grant_hosted_media
+from cloud_party import ALICE, CAROL, auth
 from fastapi.routing import APIRoute
 
 from selecta import flags
@@ -77,6 +78,26 @@ def test_upload_writes_refuse_every_audio_payload_shape_without_the_grant(party)
         ),
     )
     for answer in attempts:
+        assert answer.status_code == 403, answer.text
+        assert answer.json()["detail"]["code"] == "flag_off"
+
+
+def test_the_upload_dry_run_is_refused_without_the_grant_even_with_its_flag_on(party):
+    """`storage.upload_identity` needs `cloud.uploads`, which needs the grant: an account
+    without it can't ask what an upload would do, exactly as it can't plan one."""
+    flags.use("+storage.upload_identity")
+    carol = party.client.get("/api/account", headers=auth(CAROL)).json()["user"]["id"]
+    # everyone else has the grant, so the refusal below is Carol's alone
+    grant_hosted_media(party.engine, party.app,
+                       Rule(RuleKind.USERS, {"ids": [carol], "on": False}))
+    body = {"files": [{"name": "song.mp3", "size": 10, "sha256": "a" * 64}]}
+    granted = party.client.post("/api/uploads/preview", headers=auth(ALICE), json=body)
+    assert granted.status_code == 200, granted.text
+    assert granted.json()["files"][0]["status"] == "ok"
+    for answer in (
+        party.client.post("/api/uploads/preview", headers=auth(CAROL), json=body),
+        party.client.post("/api/uploads/plan", headers=auth(CAROL), json=body),
+    ):
         assert answer.status_code == 403, answer.text
         assert answer.json()["detail"]["code"] == "flag_off"
 
