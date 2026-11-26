@@ -10,8 +10,10 @@ the repair rule (docs/engineering/cloud-planning.md). The Desktop's own calls ar
   songs the member hasn't ruled out, with their traits.
 - `ideas` is the Desktop's idea cards (`GET /api/vibes`).
 
-Cloud keeps no seam history yet (it moves with the seams slice), so `SeamMemory` is empty here,
-and no word links are known (`phrases` is empty), exactly as a Desktop library with neither.
+`order` learns from the workspace's own seams and the member's Good and Bad verdicts, as the
+Desktop's mix build learns from its seam history (`SeamMemory`, built by the route from the seam
+tables, docs/engineering/engine-store-seams.md). No word links are known (`phrases` is empty),
+exactly as a Desktop library without them.
 """
 
 from __future__ import annotations
@@ -181,9 +183,10 @@ def order(
     stems: str = "sometimes",
     energy_arc: Sequence[float] | None = None,
     seed: int | None = None,
+    memory: SeamMemory | None = None,
 ) -> dict[str, Any]:
     """The order of a mix from these songs, as the Desktop's idea build makes it, and the move
-    planned into each song after the first."""
+    planned into each song after the first. `memory` is what the workspace's seams taught."""
     vibe = resolve_vibe(idea)
     if vibe is None:
         raise PlanningRefused("unknown_idea", "There's no mix idea by that name.")
@@ -206,7 +209,7 @@ def order(
             min(int(count), MAX_COUNT),
             start,
             seed=seed,
-            memory=SeamMemory(),
+            memory=(memory or SeamMemory()).read_taste(songs),
             mix_language=language if language != "balanced" else None,
             end_id=end,
             stems=stems,

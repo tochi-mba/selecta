@@ -255,13 +255,17 @@ def attest(
 
 def attested(store: EngineStore, key: str, studio_id: str) -> dict | None:
     with store.read() as connection:
-        row = connection.execute(
-            sa.select(seam_attestations).where(
-                store.mine(seam_attestations),
-                seam_attestations.c.key == key,
-                seam_attestations.c.studio_id == studio_id,
+        row = (
+            connection.execute(
+                sa.select(seam_attestations).where(
+                    store.mine(seam_attestations),
+                    seam_attestations.c.key == key,
+                    seam_attestations.c.studio_id == studio_id,
+                )
             )
-        ).mappings().first()
+            .mappings()
+            .first()
+        )
         return None if row is None else dict(row)
 
 
@@ -274,6 +278,14 @@ def unattest(store: EngineStore, key: str, studio_id: str) -> None:
                 seam_attestations.c.studio_id == studio_id,
             )
         )
+
+
+def record_of_in(connection: Connection, store: EngineStore, key: str) -> dict | None:
+    """`record_of` inside a caller's transaction."""
+    text = connection.execute(
+        sa.select(seams.c.record).where(store.mine(seams), seams.c.key == key)
+    ).scalar()
+    return None if text is None else json.loads(text)
 
 
 def record_of(store: EngineStore, key: str) -> dict | None:
@@ -479,6 +491,7 @@ __all__ = [
     "ready_records",
     "record_hash",
     "record_of",
+    "record_of_in",
     "records",
     "row_of",
     "songs_of",

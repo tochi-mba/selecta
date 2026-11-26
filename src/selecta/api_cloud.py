@@ -831,6 +831,7 @@ def create_cloud_app(
     cloud_brain.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         object_client_factory=storage_api.r2_client, buckets=storage_api.buckets(),
+        rules=rule_cache,
     )
     # Word connections over that catalogue's cached LRCLIB lyrics; refused while
     # discover.word_links is off (dark in Cloud until lyrics.display is cleared, SC-0406-03).

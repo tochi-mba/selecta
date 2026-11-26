@@ -247,7 +247,7 @@
     },
     "cloud.brain": {
       "label": "Planning from song facts",
-      "about": "SelectaDJ's planner runs in Cloud from the facts a member's device measured for their songs (ADR-0479, docs/engineering/cloud-planning.md): a device saves a song's measurements (tempo, beats and bars, sections, key, loudness, per-bar energy and tone numbers; never audio or paths) and the member's tempo and key corrections, and Cloud answers with the ranked transitions between two songs and their scripts, the repair rule's next step, a mix's order and the idea cards. Off: these routes answer flag_off and nothing is saved or planned.",
+      "about": "SelectaDJ's planner runs in Cloud from the facts a member's device measured for their songs (ADR-0479, docs/engineering/cloud-planning.md): a device saves a song's measurements (tempo, beats and bars, sections, key, loudness, per-bar energy and tone numbers; never audio or paths) and the member's tempo and key corrections, and Cloud answers with the ranked transitions between two songs and their scripts, the repair rule's next step, a mix's order and the idea cards. A device reports each seam it rendered (the pair, the option, the audit's verdict, who rendered it, the clip's length and hash; never the clip), any device can see which seams exist for a pair, and the member's Good and Bad on them (POST /api/seams/{key}/rate, GET /api/memory/ratings, which also need this flag) teach the planner. Off: these routes answer flag_off and nothing is saved or planned.",
       "routes": [
         "PUT /api/song-facts/{song_id}",
         "GET /api/song-facts",
@@ -258,7 +258,9 @@
         "POST /api/planning/next-step",
         "POST /api/planning/take-step",
         "POST /api/planning/order",
-        "POST /api/planning/ideas"
+        "POST /api/planning/ideas",
+        "PUT /api/seams/{key}",
+        "GET /api/seams"
       ],
       "requires": ["cloud.local_media"],
       "modes": ["cloud"],

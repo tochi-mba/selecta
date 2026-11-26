@@ -10,8 +10,10 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import defaultdict
+from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 from selecta.analysis.key import camelot_distance
 from selecta.homes import DATABASE, old_homes
@@ -102,8 +104,15 @@ def read_rated(home: Path) -> list[Rated]:
         state = _record(meta)
         if state is not None:
             states.setdefault(state.get("key", str(meta)), state)
+    return rated_from(states.values(), songs, str(home))
+
+
+def rated_from(states: Iterable[dict], songs: Mapping[int, Any], home: str) -> list[Rated]:
+    """The rated seams among these records. `songs` maps a song id to its `artist`, `title`,
+    `bpm`, `camelot` and `grid_confidence` (a listener's corrections already applied). Cloud
+    passes its workspace's seam records and catalogue songs (`cloud_brain.seams_routes`)."""
     found = []
-    for state in states.values():
+    for state in states:
         if state.get("rating") not in {"good", "bad"}:
             continue
         request = state.get("request") or {}
@@ -137,7 +146,7 @@ def read_rated(home: Path) -> list[Rated]:
                     "grid", min(a["grid_confidence"] or 0.0, b["grid_confidence"] or 0.0)
                 ),
                 note=state.get("note") or "",
-                home=str(home),
+                home=home,
                 folded_gap=pair.get("folded_gap"),
                 energy_step=pair.get("energy_step"),
                 entry_section=pair.get("entry_section"),
