@@ -26,6 +26,7 @@ from selecta.lucy import (
     proposal_ops,
     proposals,
     readiness,
+    runs,
     schema,
 )
 from selecta.lucy import settings as lucy_settings
@@ -203,8 +204,7 @@ def add_routes(app, ctx) -> None:
                                                      ctx.library_now(conn)[0])
             proposal = {"id": convo["proposal_id"], "current": current,
                         "history": proposals.history(conn, convo["proposal_id"])}
-        run = conn.execute("SELECT * FROM lucy_runs WHERE conversation_id=? ORDER BY started_at "
-                           "DESC LIMIT 1", (conversation,)).fetchone()
+        run = runs.latest_of_conversation(conn, conversation)
         return {
             "conversation": convo,
             "messages": conversations.messages(conn, conversation),
@@ -224,9 +224,7 @@ def add_routes(app, ctx) -> None:
     def cards(conn, conversation: str, keep: int = 120) -> list[dict]:
         """Fold step events into each card's latest state: the same answer a live client
         reaches by replaying them (LU-303-07)."""
-        rows = conn.execute(
-            "SELECT * FROM lucy_events WHERE conversation_id=? AND type LIKE 'step.%' "
-            "ORDER BY id", (conversation,)).fetchall()
+        rows = runs.step_events(conn, conversation)
         folded: dict[tuple[str, str], dict] = {}
         for row in rows:
             payload = json.loads(row["payload"])
@@ -269,11 +267,7 @@ def add_routes(app, ctx) -> None:
             message = conversations.message_by_id(conn, body.message)
             revision = message["revision"]
             if revision is None and source["proposal_id"]:
-                row = conn.execute(
-                    "SELECT revision_id FROM lucy_messages WHERE conversation_id=? AND seq<=? AND "
-                    "revision_id IS NOT NULL ORDER BY seq DESC LIMIT 1",
-                    (conversation, message["seq"])).fetchone()
-                revision = row["revision_id"] if row else None
+                revision = runs.revision_before(conn, conversation, message["seq"])
             if revision is not None:
                 old = proposals.get_revision(conn, revision)
                 proposal = proposals.ensure_proposal(conn, created["id"])
@@ -303,9 +297,7 @@ def add_routes(app, ctx) -> None:
                     fail(429, "That's a lot of messages at once. Wait a moment.", "rate_limited")
                 run = agent.RUNNER.start(ctx, conn, conversation, turn)
             else:
-                row = conn.execute("SELECT id FROM lucy_runs WHERE turn_id=? ORDER BY "
-                                   "started_at DESC LIMIT 1", (turn["id"],)).fetchone()
-                run = row["id"] if row else None
+                run = runs.latest_of_turn(conn, turn["id"])
             return {"turn": {"id": turn["id"], "seq": turn["seq"], "status": turn["status"]},
                     "new": new, "run": run}
 
@@ -320,16 +312,11 @@ def add_routes(app, ctx) -> None:
             turn = conversations.turn_by_id(conn, body.turn)
             if turn["conversation"] != conversation:
                 fail(404, "That message isn't in this conversation.", "missing")
-            latest = conn.execute("SELECT id FROM lucy_turns WHERE conversation_id=? ORDER BY "
-                                  "seq DESC LIMIT 1", (conversation,)).fetchone()
-            if latest["id"] != turn["id"]:
+            if runs.latest_turn(conn, conversation) != turn["id"]:
                 fail(409, "Only the latest message can be retried.", "superseded")
             if turn["status"] not in {"failed", "interrupted", "cancelled"}:
                 fail(409, "That message isn't stuck, so there's nothing to retry.", "not_failed")
-            attempts = conn.execute("SELECT COUNT(*) FROM lucy_runs WHERE turn_id=?",
-                                    (turn["id"],)).fetchone()[0]
-            conn.execute("UPDATE lucy_turns SET status='queued' WHERE id=?", (turn["id"],))
-            conn.commit()
+            attempts = runs.requeue(conn, turn["id"])
             run = agent.RUNNER.start(ctx, conn, conversation, turn, attempt=attempts + 1)
             return {"turn": {"id": turn["id"], "seq": turn["seq"], "status": "queued"},
                     "new": True, "run": run}
@@ -424,16 +411,14 @@ def add_routes(app, ctx) -> None:
     def publish(conn, revision: dict, outcome, expected: str | None) -> dict:
         if outcome.status != "ok":
             fail(409, outcome.message or "That change can't be made.", outcome.status)
-        conversation = conn.execute("SELECT conversation_id FROM lucy_proposals WHERE id=?",
-                                    (revision["proposal"],)).fetchone()["conversation_id"]
+        conversation = proposals.conversation_of(conn, revision["proposal"])
         created, _ = proposal_ops.publish(conn, conversation, outcome, "revise", expected)
         return revision_with_ledger(conn, created["id"])
 
     def editable(conn, revision_id: str, expected: str | None) -> dict:
         writable(conn)
         revision = proposals.get_revision(conn, revision_id)
-        current = conn.execute("SELECT current_revision FROM lucy_proposals WHERE id=?",
-                               (revision["proposal"],)).fetchone()["current_revision"]
+        current = proposals.current_id(conn, revision["proposal"])
         if expected != current:
             raise proposals.StaleRevision(expected, current)
         return revision
@@ -464,8 +449,7 @@ def add_routes(app, ctx) -> None:
             outcome = proposal_ops.restore_snapshot(conn, ctx, old)
             if outcome.status != "ok":
                 fail(409, outcome.message, outcome.status)
-            conversation = conn.execute("SELECT conversation_id FROM lucy_proposals WHERE id=?",
-                                        (old["proposal"],)).fetchone()["conversation_id"]
+            conversation = proposals.conversation_of(conn, old["proposal"])
             created, _ = proposal_ops.publish(conn, conversation, outcome, "restore",
                                               body.expected)
             return revision_with_ledger(conn, created["id"])
@@ -577,13 +561,7 @@ def add_routes(app, ctx) -> None:
     def lucy_diagnostics(limit: int = 30) -> dict:
         """Run traces without message text, lyrics, paths or keys (LU-333-04)."""
         with connect() as conn:
-            rows = conn.execute(
-                "SELECT id,conversation_id,state,provider,cycles,steps,tokens_in,tokens_out,"
-                "usage,error,started_at,ended_at FROM lucy_runs ORDER BY started_at DESC "
-                "LIMIT ?", (max(1, min(limit, 200)),)).fetchall()
-            failures = conn.execute(
-                "SELECT type, COUNT(*) n FROM lucy_events WHERE type IN ('step.failed','error',"
-                "'run.limit') GROUP BY type").fetchall()
+            rows, failures = runs.diagnostics(conn, max(1, min(limit, 200)))
             return {
                 "runs": [{**{k: row[k] for k in row.keys() if k != "usage"},
                           "usage": json.loads(row["usage"])} for row in rows],

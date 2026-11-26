@@ -76,13 +76,23 @@ def get(conn: sqlite3.Connection, conversation: str) -> dict:
     return _shaped(row, last["content"] if last else None)
 
 
-def field(conn: sqlite3.Connection, conversation: str, name: str) -> Any:
-    """One value of a conversation's (`scope` read as JSON), or None when it isn't there."""
-    try:
-        found = get(conn, conversation)
-    except NotFound:
-        return None
-    return found[name]
+COLUMNS = ("scope", "proposal_id")
+
+
+def column(conn: sqlite3.Connection, conversation: str, name: str) -> Any:
+    """One stored value of a conversation (`scope` as its JSON text), or None when the
+    conversation isn't there."""
+    if name not in COLUMNS:
+        raise ValueError(name)
+    store = backing.store_of(conn)
+    if store is not None:
+        with backing.reading(store) as tx:
+            row = stored.row(tx, conversation)
+        return None if row is None else row[name]
+    row = conn.execute(
+        f"SELECT {name} FROM lucy_conversations WHERE id=?", (conversation,)  # noqa: S608
+    ).fetchone()
+    return None if row is None else row[name]
 
 
 def _shaped(row: Any, last: str | None) -> dict:

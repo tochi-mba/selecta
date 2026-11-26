@@ -195,9 +195,8 @@ def _guarded(run, make: Any, kind: str) -> dict:
 
 
 def _current(ctx) -> dict | None:
-    row = ctx.conn.execute("SELECT proposal_id FROM lucy_conversations WHERE id=?",
-                           (ctx.conversation,)).fetchone()
-    return proposals.current(ctx.conn, row["proposal_id"]) if row and row["proposal_id"] else None
+    proposal = conversations.column(ctx.conn, ctx.conversation, "proposal_id")
+    return proposals.current(ctx.conn, proposal) if proposal else None
 
 
 def _plan(run) -> dict:

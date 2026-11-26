@@ -43,7 +43,9 @@ def load(conn: sqlite3.Connection, app: Any) -> Library:
     store = app.store
     remembered = store.remembered().read_taste(songs)
     years: dict[int, int | None] = {}
-    for row in conn.execute("SELECT id, year FROM songs"):
+    from selecta.engine_store import library_rows
+
+    for row in library_rows.fetch(conn, "SELECT id, year FROM songs"):
         text = str(row["year"] or "")[:4]
         years[row["id"]] = int(text) if text.isdigit() else None
     enabled = taste.history_enabled(conn)

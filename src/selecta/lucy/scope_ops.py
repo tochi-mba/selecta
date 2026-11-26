@@ -13,16 +13,15 @@ from weftai import value
 from weftai.schema.spec import any_schema, object_schema
 
 from selecta import mix
-from selecta.lucy import planning, readiness
+from selecta.lucy import conversations, planning, readiness
 from selecta.lucy.ids import new_id
 from selecta.lucy.planning import Outcome
 from selecta.lucy.tools import ProposalSong, ProposalSongs, define
 
 
 def scope_of(ctx) -> dict:
-    row = ctx.conn.execute("SELECT scope FROM lucy_conversations WHERE id=?",
-                           (ctx.conversation,)).fetchone()
-    return json.loads(row["scope"]) if row else {}
+    scope = conversations.column(ctx.conn, ctx.conversation, "scope")
+    return json.loads(scope) if scope is not None else {}
 
 
 def _items(ctx) -> tuple[list[dict], str]:

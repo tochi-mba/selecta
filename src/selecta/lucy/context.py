@@ -117,7 +117,9 @@ def dynamic(conn: sqlite3.Connection, app: Any, conversation: str, selection: di
             _line(policy.as_data("note", f["label"]), "this conversation") for f in session[:8]
         ]))
     live = [_line(f"{lib_count} mix-ready songs", "library")] if lib_count is not None else []
-    row = conn.execute("SELECT COUNT(*) FROM queue").fetchone()
+    from selecta.engine_store import library_rows
+
+    row = library_rows.fetch(conn, "SELECT COUNT(*) FROM queue")[0]
     live.append(_line(f"The current mix has {row[0]} songs; you never change it", "mix"))
     sections.append(("Live facts", live))
     inferred = [f for f in memory.facts(conn, conversation) if f["kind"] == "inferred"]
