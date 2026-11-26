@@ -68,9 +68,11 @@ function holdsTheContract(call: { method: string; path: string; body: unknown })
   // its kind from it), as every upload always has
   expect(text).not.toContain('Private Folder');
   expect(text).not.toContain('Sub Dir');
-  expect(text).not.toMatch(/[\\/]/);
   for (const file of (call.body as { files?: Record<string, unknown>[] }).files ?? []) {
     for (const key of Object.keys(file)) expect(SPEC_KEYS.has(key), key).toBe(true);
+    // a name with no slash in it, and a kind of file such as audio/flac
+    expect(String(file.name)).not.toMatch(/[\\/]/);
+    if (file.content_type !== undefined) expect(String(file.content_type)).toMatch(/^audio\/[\w.+-]+$/);
   }
 }
 
@@ -79,11 +81,11 @@ describe('what the upload queue sends', () => {
     const { server, reports } = await bound(() => true);
     await startUpload({ songIds: [1, 2] });
     await vi.waitFor(() => expect(uploadSnapshot().phase).toBe('finished'));
+    // the availability report goes through the shell's own reporter, never from here
+    await vi.waitFor(() => expect(reports.length).toBeGreaterThan(0));
     expect(server.calls.length).toBeGreaterThan(0);
     server.calls.forEach(holdsTheContract);
     for (const put of server.puts) expect(put.url).toMatch(PRESIGNED);
-    // the availability report goes through the shell's own reporter, never from here
-    expect(reports.length).toBeGreaterThan(0);
   });
 
   it('sends nothing before the member agreed to the statement', async () => {
@@ -131,7 +133,7 @@ const pathOf = node.getBuiltinModule('node:path') as { resolve(...parts: string[
 const SRC = pathOf.resolve(node.cwd(), 'src');
 
 /** The upload modules a device-to-account module must never reach. */
-const UPLOAD_MODULES = ['cloud/cloudUploadQueue.ts', 'cloud/cloudUploadJournal.ts', 'cloud/cloudUploadPacing.ts', 'cloud/cloudUploadWords.ts', 'cloud/uploadQueueWiring.ts', 'cloud/UploadChip.tsx', 'cloud/uploadParts.ts', 'cloud/uploadConsent.ts'];
+const UPLOAD_MODULES = ['cloud/cloudUploadQueue.ts', 'cloud/cloudUploadJournal.ts', 'cloud/cloudUploadPacing.ts', 'cloud/cloudUploadWords.ts', 'cloud/uploadQueueWiring.ts', 'cloud/UploadChip.tsx', 'cloud/uploadParts.ts', 'cloud/uploadConsent.ts', 'cloud/uploadEntry.tsx', 'cloud/UploadToCloudSheet.tsx'];
 /** The device-to-account modules (deviceToAccount.egress.test.ts). */
 const DEVICE_TO_ACCOUNT = ['accountFacts', 'accountMixes', 'accountRequests', 'accountPlacements', 'accountIdeas', 'accountOrder', 'accountSeams', 'recipeStore', 'deviceMusicRequest', 'deviceMusicRequests', 'accountDiscoveries', 'seamReports', 'studioWiring', 'factsUploader'];
 

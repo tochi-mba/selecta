@@ -128,6 +128,11 @@ export class UploadJournal {
   private db: IDBDatabase | null = null;
   private rows = new Map<number, UploadRow>();
   private run: UploadMeta = { ...EMPTY_META };
+  /** Writes of this tab still on their way, by song id (and for the run's answers): a reload
+   * that lands meanwhile keeps what this tab already holds for them. */
+  private writing = new Map<number, number>();
+  private metaWriting = 0;
+  private clearing = 0;
 
   private constructor(workspaceId: string) {
     this.workspaceId = workspaceId;
@@ -147,9 +152,29 @@ export class UploadJournal {
     const db = this.db;
     if (!db) return;
     const rows = await readAll<UploadRow>(db, SONGS);
-    this.rows = new Map(rows.map((row) => [row.songId, row]));
     const [meta] = await readAll<UploadMeta>(db, META);
-    this.run = { ...EMPTY_META, ...(meta ?? {}) };
+    if (this.clearing) return;
+    const next = new Map(rows.map((row) => [row.songId, row]));
+    for (const id of this.writing.keys()) {
+      const mine = this.rows.get(id);
+      if (mine) next.set(id, mine);
+      else next.delete(id);
+    }
+    this.rows = next;
+    if (!this.metaWriting) this.run = { ...EMPTY_META, ...(meta ?? {}) };
+  }
+
+  private async writingRows<T>(ids: readonly number[], work: () => Promise<T>): Promise<T> {
+    for (const id of ids) this.writing.set(id, (this.writing.get(id) ?? 0) + 1);
+    try {
+      return await work();
+    } finally {
+      for (const id of ids) {
+        const left = (this.writing.get(id) ?? 1) - 1;
+        if (left > 0) this.writing.set(id, left);
+        else this.writing.delete(id);
+      }
+    }
   }
 
   /** Every song, in queue order. */
@@ -176,12 +201,14 @@ export class UploadJournal {
     for (const row of rows) this.rows.set(row.songId, row);
     const db = this.db;
     if (!db || !rows.length) return;
-    try {
-      await write(db, SONGS, (store) => { for (const row of rows) store.put(row); });
-    } catch {
-      // kept in memory: this visit carries on, a reload starts those songs again
-      this.degraded = true;
-    }
+    await this.writingRows(rows.map((row) => row.songId), async () => {
+      try {
+        await write(db, SONGS, (store) => { for (const row of rows) store.put(row); });
+      } catch {
+        // kept in memory: this visit carries on, a reload starts those songs again
+        this.degraded = true;
+      }
+    });
   }
 
   async setMeta(change: Partial<Omit<UploadMeta, 'key'>>): Promise<UploadMeta> {
@@ -189,7 +216,8 @@ export class UploadJournal {
     const db = this.db;
     if (db) {
       const next = this.run;
-      try { await write(db, META, (store) => { store.put(next); }); } catch { this.degraded = true; }
+      this.metaWriting += 1;
+      try { await write(db, META, (store) => { store.put(next); }); } catch { this.degraded = true; } finally { this.metaWriting -= 1; }
     }
     return this.run;
   }
@@ -199,7 +227,9 @@ export class UploadJournal {
     for (const id of songIds) this.rows.delete(id);
     const db = this.db;
     if (!db || !songIds.length) return;
-    try { await write(db, SONGS, (store) => { for (const id of songIds) store.delete(id); }); } catch { this.degraded = true; }
+    await this.writingRows(songIds, async () => {
+      try { await write(db, SONGS, (store) => { for (const id of songIds) store.delete(id); }); } catch { this.degraded = true; }
+    });
   }
 
   /** Start afresh: every song and the run's answers go. */
@@ -208,11 +238,14 @@ export class UploadJournal {
     this.run = { ...EMPTY_META };
     const db = this.db;
     if (!db) return;
+    this.clearing += 1;
     try {
       await write(db, SONGS, (store) => { store.clear(); });
       await write(db, META, (store) => { store.clear(); });
     } catch {
       this.degraded = true;
+    } finally {
+      this.clearing -= 1;
     }
   }
 

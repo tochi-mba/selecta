@@ -264,9 +264,17 @@ function claim(): Promise<void> {
         if (parts === own) await runHeld(own);
       });
     } catch { /* stopped waiting: the shell went away */ }
-  })().finally(() => { claiming = null; claimStop = null; });
+  })().finally(() => {
+    claiming = null;
+    claimStop = null;
+    // songs that arrived as the run was ending (files chosen again, say) get a run of their own
+    if (again && parts === own) { again = false; void claim(); }
+  });
   return claiming;
 }
+
+/** Set when a run ended with songs still to do that were not stopped, paused or cancelled. */
+let again = false;
 
 // --- running ------------------------------------------------------------------------------------
 
@@ -309,12 +317,17 @@ async function runHeld(own: UploadQueueParts): Promise<void> {
     holdScreen(pace()),
     watchDevice(pace(), nudge),
   ];
+  let ended = false;
   try {
     await loop(own, j, controller.signal);
+    ended = true;
   } catch {
     // every song settles its own trouble; anything else simply ends this run
   } finally {
     for (const stop of stops) stop();
+    const meta = j.meta;
+    again = ended && parts === own && !controller.signal.aborted && !meta.stopped && !meta.cancelled && !meta.paused
+      && j.all().some((row) => row.state !== 'done' && !row.choose);
     running = null;
     try { line?.close(); } catch { /* closed */ }
     line = null;

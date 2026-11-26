@@ -75,7 +75,8 @@ describe('uploading songs from this device', () => {
     expect(new Set(server.puts.map((put) => put.url)).size).toBe(server.puts.length);
     expect(await store.all()).toEqual([]);
     expect(store.cloudOnlyRecords().map((record) => record.songId).sort()).toEqual([1, 2, 3, 4]);
-    expect(reports.length).toBeGreaterThan(0);
+    // a fresh availability report as the run ends
+    await vi.waitFor(() => expect(reports.length).toBeGreaterThan(0));
     expect(uploadSnapshot().words).toBe('Uploaded 4 songs to your cloud library.');
   });
 
@@ -122,7 +123,7 @@ describe('uploading songs from this device', () => {
     // newest first: 8 was added after 7
     await vi.waitFor(() => expect(uploadSnapshot().choose.map((one) => one.songId)).toEqual([8, 7]));
     expect(server.calls).toEqual([]);
-    const answer = await chooseFilesAgain([bytesFile('picked once', 'song-7.mp3'), bytesFile('different!!', 'song-8.mp3'), bytesFile('x', 'other.mp3')]);
+    const answer = await chooseFilesAgain([bytesFile('picked once', 'song-7.mp3'), bytesFile('PICKED TOO', 'song-8.mp3'), bytesFile('x', 'other.mp3')]);
     expect(answer).toEqual({ matched: 1, changed: 1, unmatched: 1 });
     await finished();
     expect(outcomes()).toEqual({ 7: 'uploaded', 8: 'changed' });
@@ -327,7 +328,7 @@ describe('carrying on', () => {
     const locks = sharedLocks();
     const specs = [1, 2, 3, 4, 5].map((id) => ({ id, text: `${id}`.repeat(12) }));
     const { server } = await setup({ partSize: 2, putDelay: 25 }, specs, { pacing: { locks: () => locks } });
-    await startUpload({ songIds: [1, 2, 3] });
+    await startUpload({ songIds: specs.map((spec) => spec.id) });
     await vi.waitFor(() => expect(server.puts.length).toBeGreaterThan(0));
     // a second tab: its own copy of the module, the same IndexedDB and the same locks
     vi.resetModules();
