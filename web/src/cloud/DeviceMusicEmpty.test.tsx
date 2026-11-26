@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { MixesEmpty } from './LocalFirstEmpty';
+import { MixesEmpty } from './DeviceMusicEmpty';
 
 describe('MixesEmpty library-check count (BF-0463-04)', () => {
   it('updates the count silently: no live region, so milestones stay with the import announcer', () => {

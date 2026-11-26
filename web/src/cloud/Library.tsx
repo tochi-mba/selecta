@@ -5,7 +5,7 @@ import { Skeleton } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
 import { countOf, Truncate } from '../ui/format';
-import { EmptyState } from './LocalFirstEmpty';
+import { EmptyState } from './DeviceMusicEmpty';
 import { Account, Api, Asset, bytes, holdsHostedStorage, Page } from './api';
 import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from './libraryState';
 import { unfinishedUploads } from './uploadParts';

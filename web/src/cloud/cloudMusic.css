@@ -1,6 +1,6 @@
 /* The music pages as the browser-first Cloud shell draws them: Listen, Make a Mix, My Mixes and
    the editor. Every rule is scoped to `.shell[data-mode='cloud']`, so the local app, which shares
-   these views, is untouched. Loaded by the Cloud-only components (SoundCheck, LocalFirstEmpty,
+   these views, is untouched. Loaded by the Cloud-only components (SoundCheck, DeviceMusicEmpty,
    SavedBrowserMixes, QuickMix). Values come from styles/tokens.css. */
 
 /* ---------- Cover tiles ---------- */

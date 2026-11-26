@@ -1,7 +1,7 @@
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { listener } from './cloud';
 
-// BF-0467-05: the Labs opt-in card (web/src/cloud/labs/LocalFirstLabs.tsx) in Cloud settings,
+// BF-0467-05: the Labs opt-in card (web/src/cloud/labs/DeviceMusicLabs.tsx) in Cloud settings,
 // against the real routes (src/selecta/routes/local_first_labs.py) on a server whose build turns
 // `cloud.local_first` and `cloud.local_first_labs` on (playwright.labs.config.ts, `pnpm e2e:labs`).
 // `cloud.local_first`'s rules end with a 0% catch-all, the cutover shape, so nobody has the

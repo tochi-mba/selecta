@@ -37,7 +37,7 @@ import { CloudWorkspace } from './CloudWorkspace';
 import { CurrentMix } from '../views/CurrentMix';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { lucyTransport as currentLucyTransport, setLucyTransport } from '../lucy/client';
-import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './LocalFirstEmpty';
+import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './DeviceMusicEmpty';
 import { useLocalFirstPlayer } from './deviceMusicPlayer';
 import { BROWSER_MIX_NEEDS } from './deviceMusicMixes';
 import { EMPTY_MIX, deviceMusicRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './deviceMusicRequest';

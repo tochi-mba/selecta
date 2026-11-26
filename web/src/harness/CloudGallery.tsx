@@ -16,7 +16,7 @@ import '../cloud/cloud.css';
 import '../rooms/rooms.css';
 import '../devices/devices.css';
 import { AccountProblemNote, NotFound, SuspendedPanel } from '../cloud/CloudStates';
-import { CannotPlayHere, EmptyState, NotOnThisAccount } from '../cloud/LocalFirstEmpty';
+import { CannotPlayHere, EmptyState, NotOnThisAccount } from '../cloud/DeviceMusicEmpty';
 import { BrandMark } from '../ui/BrandMark';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Action, LiveRegion, Problem, Skeleton, Status } from '../ui/controls';

@@ -211,7 +211,7 @@
   box-shadow: var(--shadow-lift), var(--edge-light), var(--glow-accent);
 }
 
-/* ---------- Empty and missing pages (cloud/LocalFirstEmpty.tsx, cloud/CloudStates.tsx) ---------- */
+/* ---------- Empty and missing pages (cloud/DeviceMusicEmpty.tsx, cloud/CloudStates.tsx) ---------- */
 
 /* The step the person is on in the three-step strip is lit, and pops in once the card has
    arrived. */

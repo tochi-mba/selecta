@@ -15,7 +15,7 @@ import { checkedWords, formatCount } from './ImportStatus';
 import { useImportSession } from './importSession';
 import { useResumeOffer } from './importResume';
 import { bytes } from './api';
-import { OnlyOnYourComputer } from './LocalFirstEmpty';
+import { OnlyOnYourComputer } from './DeviceMusicEmpty';
 import { readPersistState, subscribePersist, type PersistState } from './persistence';
 import { StorageCard } from './StorageCard';
 import { MusicFolders } from './MusicFolders';

@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { MixesEmpty } from '../cloud/LocalFirstEmpty';
+import { MixesEmpty } from '../cloud/DeviceMusicEmpty';
 import { JOINS_BY_HAND } from '../cloud/deviceMusicRequests';
 import { setFlags } from '../flags';
 import { SetPlayer } from '../player';

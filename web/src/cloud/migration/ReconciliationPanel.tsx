@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Skeleton, Status } from '../../ui/controls';
 import { Truncate } from '../../ui/format';
 import { navigate } from '../../router';
-import { EmptyState } from '../LocalFirstEmpty';
+import { EmptyState } from '../DeviceMusicEmpty';
 
 /** The migration reconciliation (ADR-0465 BF-0465-02): the member's hosted uploads side by side
  * with the songs added on their devices, matched by content hash and nothing else (ADR-0458:

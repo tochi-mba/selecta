@@ -50,7 +50,7 @@ import { WorkspaceNameOffer } from './WorkspaceNameOffer';
 import { setProblemReporter, SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './deviceMusicGate';
-import { LocalFirstLabs } from './labs/LocalFirstLabs';
+import { DeviceMusicLabs } from './labs/DeviceMusicLabs';
 import { ReconciliationPanel } from './migration/ReconciliationPanel';
 import { navigate, useLocationText } from '../router';
 import { Action, LiveRegion, Section } from '../ui/controls';
@@ -742,7 +742,7 @@ export function CloudApp() {
       showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />,
     ]}
     advanced={[
-      labsShown && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />,
+      labsShown && <DeviceMusicLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />,
       showsDeviceCheck(account.features) && <DeviceCheck />,
       flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>,
       venueSetup && <VenueSetup api={api} workspaceId={account.workspace.id} />,

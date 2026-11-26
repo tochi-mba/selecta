@@ -31,7 +31,7 @@ function keepDraft(text: string) {
   } catch { /* this visit only */ }
 }
 
-export function LocalFirstLabs({ request, onChanged }: { request: Request; onChanged?: () => void }) {
+export function DeviceMusicLabs({ request, onChanged }: { request: Request; onChanged?: () => void }) {
   const [status, setStatus] = useState<LabsStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');

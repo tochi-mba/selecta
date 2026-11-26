@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { LABS_DRAFT_KEY, LocalFirstLabs, type LabsStatus } from './LocalFirstLabs';
+import { LABS_DRAFT_KEY, DeviceMusicLabs, type LabsStatus } from './DeviceMusicLabs';
 
 afterEach(() => sessionStorage.removeItem(LABS_DRAFT_KEY));
 
@@ -20,10 +20,10 @@ function server(initial: LabsStatus) {
 
 const OPEN: LabsStatus = { enrolled: false, on: false, reason: 'rule_off', labs_open: true };
 
-describe('LocalFirstLabs', () => {
+describe('DeviceMusicLabs', () => {
   it('renders nothing when Labs is closed and the member is not in', async () => {
     const { request, calls } = server({ ...OPEN, labs_open: false });
-    const { container } = render(<LocalFirstLabs request={request} />);
+    const { container } = render(<DeviceMusicLabs request={request} />);
     await waitFor(() => expect(calls.length).toBe(1));
     expect(container).toBeEmptyDOMElement();
   });
@@ -31,7 +31,7 @@ describe('LocalFirstLabs', () => {
   it('joins, tells the member, and refreshes the account', async () => {
     const { request, calls } = server(OPEN);
     const onChanged = vi.fn();
-    render(<LocalFirstLabs request={request} onChanged={onChanged} />);
+    render(<DeviceMusicLabs request={request} onChanged={onChanged} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Join Labs' }));
     expect(await screen.findByRole('button', { name: 'Leave Labs' })).toBeInTheDocument();
     expect(calls.some((call) => call.path.endsWith('/join') && call.init?.method === 'POST')).toBe(true);
@@ -41,7 +41,7 @@ describe('LocalFirstLabs', () => {
 
   it('sends feedback as the member wrote it', async () => {
     const { request, calls } = server({ ...OPEN, enrolled: true, on: true });
-    render(<LocalFirstLabs request={request} />);
+    render(<DeviceMusicLabs request={request} />);
     fireEvent.change(await screen.findByLabelText('Tell us what you noticed'), { target: { value: ' Fast library ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send feedback' }));
     await waitFor(() => expect(calls.some((call) => call.path.endsWith('/feedback'))).toBe(true));
@@ -52,7 +52,7 @@ describe('LocalFirstLabs', () => {
 
   it('still offers leaving after Labs closes, and says when the experience is paused', async () => {
     const { request } = server({ enrolled: true, on: false, reason: 'rule_off', labs_open: false });
-    render(<LocalFirstLabs request={request} />);
+    render(<DeviceMusicLabs request={request} />);
     expect(await screen.findByRole('button', { name: 'Leave Labs' })).toBeInTheDocument();
     expect(screen.getByText(/paused for your account/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Tell us what you noticed')).toBeNull();
@@ -60,7 +60,7 @@ describe('LocalFirstLabs', () => {
 
   it('asks before leaving, and focus lands on the button that replaces Leave', async () => {
     const { request, calls } = server({ ...OPEN, enrolled: true, on: true });
-    render(<LocalFirstLabs request={request} />);
+    render(<DeviceMusicLabs request={request} />);
     await userEvent.click(await screen.findByRole('button', { name: 'Leave Labs' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Leave Labs?' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Stay in Labs' }));
@@ -78,13 +78,13 @@ describe('LocalFirstLabs', () => {
       if (path.endsWith('/feedback') && fail) throw new Error('The note service is busy.');
       return (path.endsWith('local-first') ? { ...OPEN, enrolled: true, on: true } : {}) as never;
     }) as unknown as <T>(path: string, init?: RequestInit) => Promise<T>;
-    const view = render(<LocalFirstLabs request={request} />);
+    const view = render(<DeviceMusicLabs request={request} />);
     fireEvent.change(await screen.findByLabelText('Tell us what you noticed'), { target: { value: 'Loud seams' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send feedback' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Your note did not send.');
     expect(screen.queryByRole('status')).toBeNull();
     view.unmount();
-    render(<LocalFirstLabs request={request} />);
+    render(<DeviceMusicLabs request={request} />);
     expect(await screen.findByLabelText('Tell us what you noticed')).toHaveValue('Loud seams');
     fail = false;
     fireEvent.click(screen.getByRole('button', { name: 'Send feedback' }));

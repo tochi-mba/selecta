@@ -186,7 +186,7 @@ const RETIRED_BF = /\bBF\b(?!-\d)/;
 /** Identifiers that must keep the old words, each with why. The fragment is taken out of the
  * string before the check, so prose around it is still read. */
 const IDENTIFIERS: ReadonlyArray<[string, string, string]> = [
-  ['cloud/labs/LocalFirstLabs.tsx', '/labs/local-first', 'a deployed API route; renaming it breaks a client already in a member\'s browser'],
+  ['cloud/labs/DeviceMusicLabs.tsx', '/labs/local-first', 'a deployed API route; renaming it breaks a client already in a member\'s browser'],
 ];
 
 function retired(file: string, source: string): string[] {
@@ -207,8 +207,8 @@ describe('no retired names in SelectaDJ (ADR-0479)', () => {
     expect(retired('x.ts', "const b = 'Join BF today';")).toHaveLength(1);
     expect(retired('x.ts', "const c = 'Checked under BF-0463-03';")).toEqual([]);
     expect(retired('x.ts', "const d = 'bf-tier3-beat-this';")).toEqual([]);
-    expect(retired('cloud/labs/LocalFirstLabs.tsx', "const e = '/account/labs/local-first';")).toEqual([]);
-    expect(retired('cloud/labs/LocalFirstLabs.tsx', "const f = 'Labs: local-first Cloud';")).toHaveLength(1);
+    expect(retired('cloud/labs/DeviceMusicLabs.tsx', "const e = '/account/labs/local-first';")).toEqual([]);
+    expect(retired('cloud/labs/DeviceMusicLabs.tsx', "const f = 'Labs: local-first Cloud';")).toHaveLength(1);
   });
 
   it('every allowed identifier is still there, so the list never goes stale', () => {
