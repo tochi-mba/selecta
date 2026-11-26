@@ -58,6 +58,32 @@ def test_hosted_processing_never_reaches_another_accounts_songs(world):  # noqa:
     assert not set(world["objects"].touched) & world["alice_keys"]
 
 
+def test_stored_exports_list_only_the_callers_own(world):  # noqa: F811
+    """Alice's finished export is listed, with a link, for Alice alone: Bob's list is empty
+    and nothing of hers is signed or changed (T-20261125-d37b)."""
+    from selecta.storage.keys import derived_key
+    from selecta.work.schema import artifacts
+
+    client = world["client"]
+    key = derived_key(world["alice_ws"], "export", "a" * 64, new_id(), "mix.flac")
+    with transaction(world["engine"], world["alice_ws"]) as conn:
+        now = db_now(conn)
+        conn.execute(artifacts.insert().values(
+            id=new_id(), workspace_id=world["alice_ws"], kind="export", input_hash="a" * 64,
+            keys=[key], checksum="b" * 64, size_bytes=1234, provenance={"inputs": {}},
+            created_at=now, last_used_at=now))
+    mine = client.get("/api/stored/exports", headers=_auth(ALICE))
+    assert mine.status_code == 200, mine.text
+    [export] = mine.json()["exports"]  # the positive control
+    assert export["size_bytes"] == 1234 and export["url"]
+    before = _rows_of(world["engine"], world["alice_ws"])
+    world["objects"].touched.clear()
+    theirs = client.get("/api/stored/exports", headers=_auth(BOB))
+    assert (theirs.status_code, theirs.json()) == (200, {"exports": []})
+    assert _rows_of(world["engine"], world["alice_ws"]) == before
+    assert key not in set(world["objects"].touched)
+
+
 def _alice_catalogued_song(world) -> int:  # noqa: F811
     """Alice's library song, matched to a release with a stored cover, lookups on."""
     from selecta.catalog import match, service

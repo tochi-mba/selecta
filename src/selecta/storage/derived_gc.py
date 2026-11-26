@@ -334,6 +334,8 @@ def collect_workspace(engine: Engine, objects: ObjectClient, bucket: str, worksp
             break
     if page:
         settle()
+    if finished and report.deleted >= budget.max_delete:
+        report.stopped, finished = "delete", False  # some may be left: carry on next run
     if removed:
         _record(engine, workspace_id, removed,
                 report, "Would delete" if report.dry_run else "Deleted")

@@ -285,6 +285,10 @@ def _make_paid(engine: Engine, work: Work, spec: JobSpec, job, kind: str,
         return _make(work, spec, job)[1], False
     taken, why = hosted_caps.take(engine, spec.workspace_id, kind, amount)
     if taken is None:
+        with transaction(engine, spec.workspace_id) as conn:
+            other = _latest_job(conn, spec.workspace_id, spec.type, spec.idempotency_key)
+        if other is not None and str(other["state"]) not in hosted_status.TERMINAL:
+            return None, False  # another tab made this very job a moment ago and paid for it
         return why, True
     try:
         job_id, refused, created = work.submit_new(spec)
