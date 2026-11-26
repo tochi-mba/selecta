@@ -4,9 +4,8 @@
  * reflows, rather than present and dead. The command palette and the keyboard shortcuts stay:
  * this shell offers their server-free subset (serverFreeControls.tsx). */
 export const NOT_IN_THE_BROWSER = {
-  // A request joins when the member adds it (localFirstRequests.ts). Bridge songs between a
-  // request and the mix are chosen by the app's request planner (T-20261126-a246 covers the
-  // browser making a request's transitions; bridges are T-20261126-ae4f).
+  // A request joins when the member adds it, or by itself where the account placed it and this
+  // device made its transitions (accountPlacements.ts). Bridge songs: T-20261126-ae4f.
   'requests.bridges': false,
   // The energy horizon draws the app's measured energy along a mix (T-20261126-bfec).
   'editor.energy_horizon': false,

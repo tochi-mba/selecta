@@ -88,9 +88,12 @@ by the device that made it (`playable_here`). So:
 5. `insert` makes the same look again: the offer must still name the same placement against the
    same mix (a hash of the mix, the request and the plan, since Cloud keeps no offers in memory).
 
-Filed as to-do T-20261126-a246: the browser rendering `seams_needed` ahead and joining through
-`insert`. Worker-rendered seams for uploaded music count only when the hosted session's studio id
-is the one asked about.
+The browser does this (web/src/cloud/accountPlacements.ts, T-20261126-a246): with
+`cloud.device_render` too, its request look is the account's, with this device's id; the device
+studio makes each `seams_needed` pair after the mix's own (`DeviceStudio.prepareFor`, the songs
+decoded by id through the playing context) and reports it; a ready placement joins through
+`insert`, and Add next still works. Worker-rendered seams for uploaded music count only when the
+hosted session's studio id is the one asked about.
 
 ## The browser
 

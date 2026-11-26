@@ -34,7 +34,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Locks | Works when the account keeps the mix; a mix kept in this browser has no lock | `cloud.brain`, `cloud.account_mixes` | |
 | Energy horizon in the editor | Decision: absent | | T-20261126-bfec |
 | Request a song | Works, kept with the account; the member adds it | `requests`, `cloud.account_mixes` | |
-| A request placed by its planned transitions | Decision: the member adds a request by hand (Add next) | | T-20261126-a246 |
+| A request placed by its planned transitions | Works: the account plans the place, this device makes its transitions after the mix's own, and it joins by itself (`/requests/consider` and `/requests/insert` with the device id); Add next still plays it right away | `cloud.brain`, `cloud.account_mixes`, `cloud.device_render`, `requests` | |
 | Bridge songs for a request | Decision: absent | | T-20261126-ae4f |
 | Harmonic matches | Works from key profiles measured on the device | `cloud.browser_harmonic` | |
 | Lucy | Works from the account | `lucy`, `lucy.cloud_conversation` | |
