@@ -85,6 +85,12 @@ analysis = sa.Table(
     # why analysis gave up, when it did
     sa.Column("error", sa.Text, nullable=True),
     sa.Column("analysed_at", sa.Text, nullable=True),
+    # Provenance (`es0479prov01`, `lib0005provenance`): which implementation measured these
+    # facts, such as `python-beatthis-3` or a device's `web-dsp-1`, and whether a SelectaDJ
+    # worker or the member's device sent them. Null on a row the Desktop's own Python analysis
+    # wrote: `python-beatthis-{version}`, measured by SelectaDJ itself (`engine_store.facts`).
+    sa.Column("implementation", sa.Text, nullable=True),
+    sa.Column("source", sa.Text, nullable=True),
     _of_a_song("analysis"),
 )
 

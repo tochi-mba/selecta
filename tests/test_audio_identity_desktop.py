@@ -93,7 +93,9 @@ def test_the_migration_meets_an_existing_column_and_runs_once(home):
     flags.use(BOTH)
     _start(home)
     assert _row(home)["audio_id"] == "kept"
-    assert library.bring_forward(home.db_path) == library.head() == "lib0004audioid"
+    # a later revision (lib0005provenance) may sit on top; this one must be in the chain
+    assert library.bring_forward(home.db_path) == library.head()
+    assert "lib0004audioid" in library.known()
     conn = sqlite3.connect(home.db_path)
     try:
         names = [row[1] for row in conn.execute("PRAGMA table_info(songs)")]

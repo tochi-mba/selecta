@@ -56,6 +56,9 @@ COLUMNS = {
     "song_overrides": ("song_id", "workspace_id", "bpm", "camelot", "updated_at"),
 }
 TABLES = tuple(COLUMNS)
+# Columns a later revision adds where missing (`es0479prov01`). A database built from scratch
+# gets them here with the rest, as `bf0458media01` does for `local_songs`.
+LATER = {"analysis": ("implementation", "source")}
 POLICY = "workspace_isolation"
 # No coalesce and no '' branch: an unset or empty workspace matches no row.
 RULE = "(workspace_id = current_setting('app.workspace_id', true))"
@@ -63,7 +66,10 @@ RULE = "(workspace_id = current_setting('app.workspace_id', true))"
 
 def _tables():
     mine = tuple(table for table in schema.ENGINE_TABLES if table.name in COLUMNS)
-    declared = {table.name: tuple(table.c.keys()) for table in mine}
+    declared = {
+        table.name: tuple(name for name in table.c.keys() if name not in LATER.get(table.name, ()))
+        for table in mine
+    }
     if declared != COLUMNS or tuple(declared) != TABLES:
         raise RuntimeError("The engine store schema changed; add a new migration")
     return mine
