@@ -24,7 +24,7 @@ page is a record of what was found and fixed, not the proof of the rest.
 | | Files |
 |---|---|
 | Ran to the end flag-on | 246 |
-| Timed out at 280 s even alone, left to CI (slow with the flag off too; `test_mix.py` passed its first 39 of 50) | 4: `test_mix.py`, `test_mix_mixes.py`, `test_mix_render.py`, `test_s2_mix_presets.py` |
+| Timed out at 280 s even alone, then run flag-on test by test in groups (below, "Second pass") | 4: `test_mix.py`, `test_mix_mixes.py`, `test_mix_render.py`, `test_s2_mix_presets.py` |
 | Not run locally (the sweep stopped when CI took over) | 34, listed below |
 
 First flag-on run of the 246: about 3,180 tests passed and 16 failed. 13 failed only with the
@@ -74,13 +74,67 @@ Tests that bypassed or measured the old path, corrected to say what they mean wi
 batched song read), `test_r8d_backend_speed` (watches the store's features read),
 `test_s4_snapshot_export_model` and `test_s4_scope_model` (`library.forget` before deleting).
 
-Failing both ways, not the flag's: `test_flow_export_jobs` (2) and `test_s2_export_edges` (1).
+Failing both ways, not the flag's: `test_flow_export_jobs` (2) and `test_s2_export_edges` (1),
+fixed since by 3f0edc5c (fakes of `verify_export` take the outline argument).
 Failing only with the flag off: in `test_my_mixes_scale`, opening and changing one draft
-(T-20261126-9842).
+(T-20261126-9842, fixed in 1b7c3c52, below).
 
 Opened: T-20261126-3582 (each store call re-probes the connection's file and stamp: 71 probes
 when opening one draft), T-20261126-6a7f (a stamped library whose table is re-made by the
-hand-made schema fails every store read, loudly), T-20261126-9842.
+hand-made schema fails every store read, loudly), T-20261126-9842 (closed).
+
+## Second pass, 2026-11-26 evening
+
+What ran, each command held to 280 s:
+
+- **The programme's own files, flag off**: 154 files (export, flow, s2, s4, Lucy, mixes, requests,
+  restart, scan, seams, upgrade, workflows and the rest the one-brain work touched), in batches
+  of 5 to 12; the four slow mix files ran flag-on instead (below). One failure:
+  `test_my_mixes_scale`'s duplicate-draft case (T-20261126-9842). Everything else passed.
+- **The CI failures, reproduced flag-on**: the 8 flag-on failures of run 45873068110
+  (`test_cloud_jobs_chaos` kill loop, `test_flow_export_jobs` 2, `test_s2_export_edges`,
+  `test_selecta3_changes` 2, `test_r8d_backend_speed`, the device-analysis golden fixtures) were
+  already fixed on main (3f0edc5c, cb23f95f, c097f686, 1bb86d6d): 55 passed, 1 skipped (the
+  PostgreSQL case). Run 45884099942 (main at 8eef0f03): flag-on shard 2 green; shard 1 failed 2,
+  both fixed below; both plain shards were cut off at their 60-minute limit (also in 45830041205,
+  45865325569 and 45873068110), so `verify` could not pass on main. Web was green.
+- **The four slow files, flag-on**, listed with `--collect-only` and run in groups of 4 to 8, a
+  group that ran out of time split to single tests:
+
+| File | Tests | Result flag-on |
+|---|---|---|
+| `test_mix.py` | 51 | all passed |
+| `test_mix_mixes.py` | 45 | all passed; one (below) took 354 s alone, with a longer limit |
+| `test_mix_render.py` | 42 | 34 passed; `test_a_render_is_remembered` is over 280 s here; 7 not reached |
+| `test_s2_mix_presets.py` | 31 | not reached |
+
+Nothing in them failed with the flag on: most never open a library (0 to 230 store transactions
+a group); they are slow because each builds a library of synthetic FLAC files, and two vocal ride
+tests fall back through `stem_arrange`, which runs demucs (T-20261126-cbbc). Left to CI, which runs
+them flag-on in `python-store-on`: `test_a_render_is_remembered`, the 7 of `test_mix_render.py` not
+reached (`test_the_memory_route_reports_what_it_knows` and the six from
+`test_a_clean_effect_beats_a_near_miss_blend` to `test_rolls_only_go_where_they_were_liked`), and
+all of `test_s2_mix_presets.py`.
+
+Found and fixed, a real bug first:
+
+1. **A vocal ride loaded the word aligner it never uses** (f69b4cc7). `SeamStore` built the
+   wav2vec2 aligner, a speech model of about 360 MB, for every stem move; on a fresh models folder
+   that meant a download first, and offline it failed the ride with an error unrelated to it. Only
+   the four word moves look for words, so only they load it. `test_a_seam_says_what_was_tried...`
+   hung on that download here, flag on and off; it now refuses to load the aligner.
+2. **Duplicating a draft read its revisions** (1b7c3c52, T-20261126-9842): both backends now read
+   only its name and songs. The scale test passes with the flag on and off.
+3. **The sign-out stream test raced its own revocation** (63a471a3, CI shard 1 of 45884099942, 401
+   where the stream should open). With the flag on, the flag middleware resolves the account on
+   every request, so on a slow runner both checks before the stream opens outlasted the test's
+   guessed half second. The revocation now waits for the stream's first fetch. With the sign-in
+   check slowed by a second, the old timing failed all three cases; the new one passes them.
+4. **The device-analysis golden check was stricter than float32** (48fed28c, the same shard): an
+   MFCC near 0 beside one of 188 came out 1.03e-6 apart on a runner. A number in a list now also
+   gets 1e-6 of the list's largest; the browser port is held to 1e-2 on MFCCs.
+5. **The Windows Python jobs outgrew their hour** (7e2b024c): `python` and `python-store-on` run in
+   three shards now.
 
 ## The whole library
 
