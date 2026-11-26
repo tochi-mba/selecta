@@ -14,6 +14,8 @@ Each route keeps its Desktop flag as owner and also needs `cloud.brain` and `clo
 for the account (refused as `flag_off` otherwise), except `PUT /api/mix/order`, which Desktop has
 no route for and `cloud.account_mixes` owns. The first use in a workspace brings its recipes and
 its uploaded-music Cloud mixes (`/cloud-mixes`) in as drafts (`engine_store.mix_import`), once.
+A change of which mix is current (a new order, playing a draft, Undo, clearing) is sent to every
+open device as `mix.current` (`cloud_brain.mix_current`).
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from selecta import flags, mix
 from selecta.authz.roles import WorkspaceAction
+from selecta.cloud_brain import mix_current
 from selecta.engine_store import EngineStore
 from selecta.engine_store.mixes import StoreMixes
 from selecta.identity.tokens import Claims
@@ -170,6 +173,11 @@ def _check_order(mixes: StoreMixes, request: Request, draft: int | None) -> None
 def _room_for(mixes: StoreMixes, draft: int | None, more: int) -> None:
     if len(mix._items(mixes, draft)) + more > MOST_SONGS:
         raise HTTPException(409, f"A mix holds at most {MOST_SONGS} songs.")
+
+
+def _told(mixes: StoreMixes, request: Request, answer: dict) -> dict:
+    """Every open device hears that the current mix is now `answer`'s."""
+    return mix_current.told(mixes, answer, request.headers.get(mix_current.DEVICE_HEADER))
 
 
 def _a_new_draft(mixes: StoreMixes) -> None:
@@ -361,7 +369,7 @@ def install(
             if not mix._rows(mixes, draft):
                 raise HTTPException(400, "Add a song to this draft first.")
             mix.play_draft(mixes, draft)
-            return payload(mixes)
+            return _told(mixes, request, payload(mixes))
 
     @app.post("/api/mix/songs")
     def add_song(
@@ -450,7 +458,9 @@ def install(
     ) -> dict:
         with writing(request, claims) as mixes:
             undone = mix.undo(mixes, draft)
-            return {**payload(mixes, draft), "undone": undone}
+            answer = {**payload(mixes, draft), "undone": undone}
+            # Undo of the current mix brings back the one before, on every device
+            return _told(mixes, request, answer) if draft is None and undone else answer
 
     @app.post("/api/mix/clear")
     def clear_mix(
@@ -462,7 +472,7 @@ def install(
             mix.remember(mixes, "clearing the mix")
             mix.write_order(mixes, [])
             mix.set_mix_name(mixes, "Your mix")
-            return payload(mixes)
+            return _told(mixes, request, payload(mixes))
 
     @app.put("/api/mix/order")
     def set_order(
@@ -485,7 +495,8 @@ def install(
                     mix.set_mix_name(mixes, mix._clean_name(body.name))
                 else:
                     mix.rename_draft(mixes, draft, body.name)
-            return payload(mixes, draft)
+            answer = payload(mixes, draft)
+            return answer if draft is not None else _told(mixes, request, answer)
 
 
 class _Open:
