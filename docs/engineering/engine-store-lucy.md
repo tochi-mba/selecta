@@ -95,7 +95,9 @@ It proves: the migration's DDL equals `ensure`'s; flag off leaves the schema unc
 stamp; the migration keeps every row; every Lucy operation (about seventy calls) gives the same
 answers and rows through the store as the old path on a copy, with one ticking clock and
 counted ids; a cut-off reply is closed whole; a save is all or nothing; backup carries the
-tables. The API and agent tests also pass with the flag on for every test (checked locally).
+tables. The API and agent tests also pass with the flag on for every test (checked locally);
+five ready-only tests in `test_lucy_ready.py` fail with the flag on whichever path Lucy
+takes, so not from her tables (to-do T-20261126-e67b).
 
 ## Backup, restore and account data
 
