@@ -5,6 +5,8 @@ import type { LibraryPlacesChrome, RemovedFromCloud } from '../views/LibraryPlac
 import { forgetCloudLibraryAssets, LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { CATALOGUE_CHANGED_EVENT } from './deviceMusicRequest';
 import { groupingFor } from './songVersions';
+import { songUploadActions } from './uploadEntry';
+import type { MediaStore } from '../media/store';
 
 /** library.places in CloudShell: the Library's places chrome, and removing songs from the cloud
  * library (`POST /api/assets/remove`, catalogue ids only: no path, file or audio leaves). */
@@ -41,7 +43,7 @@ export async function removeFromCloud(cloud: Request, workspaceId: string, songI
 }
 
 /** The chrome the Library reads, or null when library.places is off for this account. */
-export function useLibraryPlaces({ on, cloud, workspaceId, accountId, canUpload, offline, otherDevices }: {
+export function useLibraryPlaces({ on, cloud, workspaceId, accountId, canUpload, offline, otherDevices, fromDevice }: {
   /** library.places, with stored media readable and a cloud library to show */
   on: boolean;
   cloud: Request;
@@ -50,10 +52,16 @@ export function useLibraryPlaces({ on, cloud, workspaceId, accountId, canUpload,
   canUpload: boolean;
   offline: boolean;
   otherDevices: boolean;
+  /** cloud.move_to_cloud: what a song's details need to upload it from this device (full /api
+   * paths, as ConnectMusic's request), or null */
+  fromDevice?: { request: Request; openStore: () => Promise<MediaStore> } | null;
 }): LibraryPlacesChrome | null {
+  const media = fromDevice?.request;
+  const openStore = fromDevice?.openStore;
   return useMemo(() => (on ? {
     accountId, otherDevices, canUpload, offline,
     removeFromCloud: (songIds: readonly number[]) => removeFromCloud(cloud, workspaceId, songIds),
     upload: () => navigate('/upload'),
-  } : null), [on, cloud, workspaceId, accountId, canUpload, offline, otherDevices]);
+    ...(media && openStore ? { uploadActions: songUploadActions({ request: media, openStore }) } : {}),
+  } : null), [on, cloud, workspaceId, accountId, canUpload, offline, otherDevices, media, openStore]);
 }

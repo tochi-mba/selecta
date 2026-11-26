@@ -66,7 +66,7 @@ export function useUploadToCloud({ request, openStore, onStarted }: {
       setProblem('SelectaDJ could not read this device’s songs. Try again.');
     }
   }, [available, openStore]);
-  const sheet = available && start && songs
+  const sheet = available && songs
     ? <UploadToCloudSheet request={request} songs={songs} start={start} onClose={() => setSongs(null)} onStarted={onStarted} />
     : null;
   return { available, open, sheet, problem };

@@ -729,6 +729,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   const libraryPlaces = useLibraryPlaces({
     on: placesOn, cloud, workspaceId, accountId: account.user.id, canUpload: isHostedAccount(account) && on('cloud.uploads'),
     offline: servedFrom !== null || offlineReadOnly, otherDevices: !!holdings.devices?.some((one) => one.device_id !== playback.device?.id),
+    // cloud.move_to_cloud: a song's details offer "Upload to your cloud library"
+    fromDevice: on('cloud.move_to_cloud') ? { request: media, openStore } : null,
   });
 
   return (
