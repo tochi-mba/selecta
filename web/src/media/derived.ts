@@ -27,8 +27,9 @@ const DB_VERSION = 1;
 const DERIVATIONS = 'derivations';
 const MEMO = 'memo';
 
-/** The kinds this store holds. Each is a pure function of the bytes. */
-export type DerivedKind = 'tonal' | 'waveform' | 'facts' | 'audio';
+/** The kinds this store holds. Each is a pure function of the bytes. `analysis` is a song's
+ * whole-song facts measured on this device (cloud/songFacts.ts, cloud.device_analysis). */
+export type DerivedKind = 'tonal' | 'waveform' | 'facts' | 'audio' | 'analysis';
 
 /** The fingerprint memo's own version: bumped if what the identity key covers ever changes. */
 export const MEMO_VERSION = 'fp-v1';

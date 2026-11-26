@@ -7,6 +7,7 @@
  * its beats, so facts from this source can be told from neural ones and measured again later.
  */
 
+import { BROWSER_BEATS_IMPLEMENTATION } from './deviceAnalysisIds';
 import { onsetEnvelope, ONSET_HOP_TIME, ONSET_SR } from './onsetEnvelope';
 import { resample } from './resample';
 import { estimateTempo } from './tempo';
@@ -28,8 +29,7 @@ export interface BeatSource {
   beats(samples: Float32Array, sampleRate: number, hints?: { onsetEnvelope?: Float32Array }): BeatEstimate;
 }
 
-/** The interim source: whole-song autocorrelation tempo and a comb phase on the onset envelope. */
-export const BROWSER_BEATS_IMPLEMENTATION = 'web-onset-comb-beats-1';
+export { BROWSER_BEATS_IMPLEMENTATION };
 
 const PHASE_STEP = 0.25;
 

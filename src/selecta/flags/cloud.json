@@ -539,6 +539,17 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.device_analysis": {
+      "label": "Whole-song facts measured on this device",
+      "about": "In a browser library, the background measuring that makes key profiles also measures each song whole, the way the Desktop does: its beat grid, bars, energy, chroma, tone, key, sections and loudness, kept in this browser only and sent nowhere. Off by default until the browser has the Desktop's beat tracker: until then its beats come from a lighter estimate. Off: songs get their key profile only, as before.",
+      "requires": ["cloud.browser_dsp", "cloud.browser_harmonic"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Measured in the background and kept in this browser; no Cloud screen reads these facts yet"
+    },
     "cloud.browser_stems": {
       "label": "Browser stem moves",
       "about": "Splitting songs into voice, drums, bass and melody on this device, only around each transition, for vocal ride, strip and land and intertwined stems in browser mixes (ADR-0459 Tier 3). Each device reports unsupported until the stem model's licence review and that device's evidence record pass.",

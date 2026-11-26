@@ -10,7 +10,8 @@
  * Pure: no DOM, no Web Audio, nothing sent anywhere. Runs in the analysis worker.
  */
 
-import { BROWSER_BEATS_IMPLEMENTATION, type BeatEstimate, type BeatSource } from './beatSource';
+import type { BeatEstimate, BeatSource } from './beatSource';
+import { DEVICE_ANALYSIS_IMPLEMENTATION, PYTHON_ANALYSIS_VERSION } from './deviceAnalysisIds';
 import { extractFeatures, FEATURE_SR, frameFeatures, type SongFeatures } from './features';
 import { barTimes, buildGrid, type BeatGrid } from './grid';
 import { roundHalfEven, pyRound } from './numeric';
@@ -20,11 +21,7 @@ import type { Section } from './sections';
 import { camelotOfKey, CHROMA_KEY_CONFIDENCE, chromaKey } from './songKey';
 import { pyloudnormIntegrated, samplePeakDecibels } from './songLoudness';
 
-/** The server keeps an allowlist of implementation ids (engine_store/facts.py). Bump this when
- * any measurement here changes what it returns. */
-export const DEVICE_ANALYSIS_IMPLEMENTATION = 'web-dsp-1';
-/** The Desktop recipe this port follows (`selecta.config.ANALYSIS_VERSION`). */
-export const PYTHON_ANALYSIS_VERSION = 3;
+export { DEVICE_ANALYSIS_IMPLEMENTATION, PYTHON_ANALYSIS_VERSION };
 /** Bins in the whole-song waveform strip (`features.PEAK_BINS`). */
 export const PEAK_BINS = 1600;
 
@@ -189,8 +186,3 @@ export function measureSong(channels: Float32Array[], sampleRate: number, source
   return analyseSong(channels, sampleRate, beats, prepared, envelope);
 }
 
-/** The id a stored measurement is keyed by: the analysis and the beat source together, so a
- * new beat source (Beat This in the browser) measures every song again. */
-export function factsVersion(beatSource = BROWSER_BEATS_IMPLEMENTATION): string {
-  return `${DEVICE_ANALYSIS_IMPLEMENTATION}+${beatSource}`;
-}
