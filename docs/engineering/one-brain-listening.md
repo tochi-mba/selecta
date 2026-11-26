@@ -35,6 +35,25 @@ Open `/listening-room` (`tools.listening_room`). It runs blind trials at matched
 | Song order and each transition's exit, entry, move and length come from the planner | `cloud.brain` with `cloud.device_analysis` | brain on, analysis off | Each seam's record says whether the account or the device chose it |
 | Transitions rendered ahead of time, checked, then played as a finished clip | `cloud.device_render` | off | The Listening Room pairs each transition twice: made ahead against the device's own choice, and made ahead against the planner's choice played live |
 
+## Cloud, uploaded music
+
+Run the dev cloud stack (`dev.cmd cloud`), give the seeded account hosted media (the console's
+storage switch), upload at least six songs and press Make a mix on the hosted card. Then turn
+the flag on for the stack (`SELECTA_FLAGS="+cloud.hosted_brain"`), restart it and press Make
+another mix with the same songs. A seam made with the flag on has its own key (`"brain":
+"core"` in its job), so nothing rendered with the flag off is played back as if it were new.
+
+| What changed | Flag | Default | How to hear it |
+|---|---|---|---|
+| A hosted mix is ordered by the planner core from the songs' stored facts, and each transition is the core's own ranked choice, rendered, checked and repaired by the Desktop's rule (at most 5 takes and a cut) | `cloud.hosted_brain` | off | The same uploads, one mix with the flag off and one with it on. Each hand-off on the card names its move; the job result says `engine: planner-core` |
+
+With no lyrics and no stems (Cloud runs no separator), the flag off still renders blends first
+and the audit refuses them (hosted-mode-walkthrough.md section 2.3), so it ends on an echo out
+or a cut after minutes of work. With the flag on such a pair is offered only a cut, an echo out
+or a reverb wash, picked by rank, and a song whose lyrics a device found can earn an 8 or 16 bar
+blend. Listen for
+whether the cuts land on phrase lines and whether the echo tails feel as long as the Desktop's.
+
 ## What limits the Cloud rows today
 
 - The neural beat tracker is built for the browser but is not hosted and its licence record is
@@ -44,6 +63,8 @@ Open `/listening-room` (`tools.listening_room`). It runs blind trials at matched
   is not the same audio as the Desktop would make, and blends over 60 seconds of stretched
   song are not rendered on the device.
 - Stem moves and the delay throw are not played on the device.
+- Uploaded music has no stems and no ears for voices on the server, so its blends need lyrics
+  a device found (to-do T-20261126-fdde says what a stems handler must provide).
 
 ## What to listen for
 
