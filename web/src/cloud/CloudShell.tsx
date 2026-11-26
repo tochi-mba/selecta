@@ -13,7 +13,6 @@ import { useMediaKeys } from '../shell/useMediaKeys';
 import { ControllerNotices } from '../devices/ControllerNotices';
 import { setJobsSource } from '../state/jobs';
 import { Drawer, Section, Skeleton } from '../ui/controls';
-import { countOf } from '../ui/format';
 import { showToast } from '../ui/toasts';
 import { Links } from '../views/Links';
 import { Mix } from '../views/Mix';
@@ -50,7 +49,7 @@ import { ControllerListen } from '../devices/ControllerListen';
 import { tabLog } from '../devices/audioTab';
 import { movedFrom, soundAllowedHere, usePlayOn, type StartAsk, type StartResult } from '../devices/playOn';
 import { ROOM_REQUEST_EVENT } from './deviceMusicRequests';
-import { useRoomRounds, addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
+import { useRoomRounds, addable, askWords, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
 import { SoundCheck } from './SoundCheck';
@@ -88,6 +87,7 @@ import { inspectorOn } from './seamInspection';
 import { DeviceActivityDrawer } from './DeviceActivity';
 import { localExportOn } from './localExport';
 import { placingOn } from './accountPlacements';
+import { RoomOpenLine } from './RoomOpenLine';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -941,16 +941,7 @@ export function CloudShell({ api, account, more, notices, feedback, onSignOut, o
         mode="cloud"
         more={moreItems}
         account={onSignOut ? { email: account.user.email, plan: planName(account), onSignOut } : undefined}
-        status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? (
-          <a className="room-open-line" role="status" data-testid="room-open-line" href={roomsPlace.path} title={`${roomLine(room)}. Open Rooms.`} onClick={(event) => { event.preventDefault(); navigate(roomsPlace.path); }}>
-            <b>{roomLine(room)}</b>
-            <span>{countOf(room.guestsHere, 'guest')} here</span>
-            {roomWaiting > 0 && <span className="room-open-waiting">{countOf(roomWaiting, 'request')} to approve</span>}
-            {roomAdd.ready > 0 && <span className="room-open-waiting">{countOf(roomAdd.ready, 'request')} to add</span>}
-            {roomAdd.onTheWay > 0 && <span className="room-open-waiting">{countOf(roomAdd.onTheWay, 'request')} on the way</span>}
-            {roomAdd.onDevice > 0 && <span className="room-open-waiting" data-testid="room-on-device" title={`${countOf(roomAdd.onDevice, 'request')} waiting on another device`}>{roomAdd.onDevice} waiting on a device</span>}
-          </a>
-        ) : undefined}
+        status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? <RoomOpenLine room={room} path={roomsPlace.path} waiting={roomWaiting} add={roomAdd} /> : undefined}
         banner={<>{playback.view?.speaker === 'here' && <ChangedFromLine change={playback.changedFrom} nameOf={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null} />}{askedBanner}{accountMix.banner}{where.picker}{where.notice && !(route.page === 'listen' && (remote || !followsHere)) && <PlayNoticeLine notice={where.notice} onDismiss={where.clearNotice} />}{(playback.otherTab || playback.carryOn) && <OtherTabLine gone={playback.carryOn} onPlayHere={() => void shellPlayer.togglePause()} />}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} storedBytes={account.entitlement.storage_used_bytes} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
