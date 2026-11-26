@@ -34,7 +34,7 @@ What each cap costs at most, at the repo's cpu-heavy rate ($0.24 an hour, 4 vCPU
 
 Analysis at $0.002 to $0.006 a song (walkthrough section 5): Free 150 songs is at most $0.90 a
 day, Standard 1,500 is $9, Premium 5,000 is $30. These are the owner's to confirm
-(T-20261126-a7c1); an unknown plan gets Free's.
+(T-20261126-9223); an unknown plan gets Free's.
 """
 
 from __future__ import annotations
