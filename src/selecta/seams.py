@@ -870,11 +870,11 @@ class SeamStore:
         if request.move == "stem_arrange":
             return _arranged(self.settings, request, a, b, self.memory, self._cache)
         if request.move in STEM_MOVES:
-            if request.move == "stem_intertwine":
-                return _stem_render(self.settings, None, request, a, b, self._cache)
-            if self._aligner is None:
+            # only the word moves look for words, so only they load the aligner's model
+            if request.move in WORD_MOVES and self._aligner is None:
                 self._aligner = Aligner(str(self.settings.models_dir))
-            return _stem_render(self.settings, self._aligner, request, a, b, self._cache)
+            aligner = self._aligner if request.move in WORD_MOVES else None
+            return _stem_render(self.settings, aligner, request, a, b, self._cache)
         if request.move in MOVES:
             place = self.memory.placements.get((a.id, b.id, request.move))
             return _bar_cue_render(request, a, b, self._cache, place)
