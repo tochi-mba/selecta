@@ -71,9 +71,22 @@ describe('P0048 the library and progress stay open while songs are prepared', ()
     expect(screen.getByRole('link', { name: 'See progress' })).toHaveAttribute('href', '/workshop');
     expect(screen.queryByRole('link', { name: 'Make my first mix' })).toBeNull();
     expect(screen.getByText('Analysing now')).toBeInTheDocument();
-    // the status line says it; under the feel the Music found meter carries the same words (ADR-0477)
+    // the status line says it; while the folder's size is unknown no ring guesses at it (ADR-0477)
     const reading = screen.getAllByText(/Still reading your folder/);
     expect(reading.some((node) => node.closest('p[role="status"]'))).toBe(true);
-    expect(screen.getByRole('progressbar', { name: 'Music found' })).toHaveAttribute('aria-valuetext', 'Still reading your folder');
+    expect(screen.queryByRole('progressbar', { name: 'Music found' })).toBeNull();
+  });
+
+  it('fills the Music found ring from the files really looked at, once the server knows how many', async () => {
+    const { Preparing } = await import('./Setup');
+    fakeBackend({});
+    render(<Preparing status={status({ analysis_running: true, counts: { total: 9, music: 9, set_aside: 0, analysed: 2, ready: 1, lyrics: 1 }, scan: { status: 'running', folder: 'D:\Music', found: 40, done: 10 } as never })} onAnalyse={() => {}} />);
+    const ring = screen.queryByRole('progressbar', { name: 'Music found' });
+    // drawn only while the feel is on in this test environment; when drawn, it says the real count
+    if (ring) {
+      expect(ring).toHaveAttribute('aria-valuenow', '10');
+      expect(ring).toHaveAttribute('aria-valuemax', '40');
+      expect(ring).toHaveAttribute('aria-valuetext', '10 of 40 files looked at');
+    }
   });
 });

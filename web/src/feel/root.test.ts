@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setFlags } from '../flags';
 import { reloadPrefs, setPrefs } from '../state/prefs';
-import { feelCalm, feelOn, feelParts, onFeelChange, resetFeel, startFeel } from './root';
+import { feelCalm, feelNeutral, feelOn, feelParts, holdNeutral, onFeelChange, resetFeel, startFeel } from './root';
 
 /** FL-0477-01 and FL-0477-05: `<html data-feel>` is the one switchboard. Its words follow the
  * flags and the motion choice, and every calm setting takes the moving parts away. */
@@ -148,6 +148,31 @@ describe('FL-0477-01 startFeel and onFeelChange', () => {
     off();
     setPrefs({ motion: 'still' });
     expect(heard).toHaveBeenCalledTimes(1);
+    stop();
+  });
+});
+
+describe('ADR-0477 rule 11: a neutral page', () => {
+  it('takes away the music, the ambient tint and celebrations, and gives them back on release', () => {
+    setPrefs({ motion: 'expressive' });
+    const stop = startFeel();
+    const heard = vi.fn();
+    const off = onFeelChange(heard);
+    const release = holdNeutral();
+    expect(feelNeutral()).toBe(true);
+    expect(words()).toEqual(['motion', 'depth', 'pointer']);
+    for (const part of ['music', 'ambient', 'moments'] as const) expect(feelOn(part)).toBe(false);
+    expect(heard).toHaveBeenCalledTimes(1);
+    // a second holder keeps it neutral until both let go
+    const again = holdNeutral();
+    release();
+    release();
+    expect(words()).toEqual(['motion', 'depth', 'pointer']);
+    again();
+    expect(feelNeutral()).toBe(false);
+    expect(words()).toEqual(['motion', 'depth', 'pointer', 'music', 'ambient', 'moments']);
+    expect(heard).toHaveBeenCalledTimes(2);
+    off();
     stop();
   });
 });

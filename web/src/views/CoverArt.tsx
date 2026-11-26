@@ -35,7 +35,8 @@ export function CoverArt({ seed, songId, size = 'row', songKey, artUrl, artHue }
   // the rungs below the device's own copy, each asked only while everything above has no picture:
   // the local app's server reading the file (FL-0478-02), then Cloud's catalogue (FL-0478-04)
   const ownAny = own.small ?? own.large;
-  const served = useServerArt(artUrl || ownAny ? null : songId);
+  // redrawn at display size, first frame only (T-20261125-4054)
+  const served = useServerArt(artUrl || ownAny ? null : songId, hero ? 'large' : 'small');
   const catalog = useCatalogArt(artUrl || ownAny || served ? null : songId);
   const full = artUrl ?? (hero ? own.large : own.small) ?? served ?? catalog?.url ?? null;
   // blur-up: on the hero, the small picture stretched (soft by nature) shows while the large decodes
@@ -50,22 +51,28 @@ export function CoverArt({ seed, songId, size = 'row', songKey, artUrl, artHue }
     <span className="cover-art" data-size={size} style={style} aria-hidden="true" {...(full ? { 'data-art': '' } : {})}>
       {songId !== undefined ? <SongMotif songId={songId} /> : <Icon name="music" />}
       {preview && preview !== full ? <ArtLayer src={preview} layer="preview" /> : null}
-      {full ? <ArtLayer key={full} src={full} layer="full" /> : null}
+      {full ? <ArtLayer key={full} src={full} layer="full" onBroken={catalog && full === catalog.url ? catalog.failed : undefined} /> : null}
     </span>
   );
 }
 
 /** One picture over the tile: decoded off-screen first, then faded in (`--motion-reveal`). A
- * picture that will not decode is simply not shown, leaving the tile. */
-function ArtLayer({ src, layer }: { src: string; layer: 'preview' | 'full' }) {
+ * picture that will not decode is simply not shown, leaving the tile. `onBroken` tells the
+ * catalogue's answer book, so every cover of that image drops to the tile (T-20261125-7375). */
+function ArtLayer({ src, layer, onBroken }: { src: string; layer: 'preview' | 'full'; onBroken?: () => void }) {
   const [state, setState] = useState<'loading' | 'ready' | 'broken'>('loading');
+  const brokenRef = useRef(onBroken);
+  useEffect(() => { brokenRef.current = onBroken; }, [onBroken]);
   useEffect(() => {
     let live = true;
     setState('loading');
     const probe = new Image();
     probe.decoding = 'async';
     probe.src = src;
-    const settle = (next: 'ready' | 'broken') => { if (live) setState(next); };
+    const settle = (next: 'ready' | 'broken') => {
+      if (next === 'broken') brokenRef.current?.();
+      if (live) setState(next);
+    };
     if (typeof probe.decode === 'function') probe.decode().then(() => settle('ready'), () => settle('broken'));
     else {
       probe.onload = () => settle('ready');

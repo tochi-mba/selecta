@@ -64,8 +64,37 @@ function returnedFromCheckout(): 'success' | 'cancelled' | null {
   return value === 'success' || value === 'cancelled' ? value : null;
 }
 
+/** The plan this tab held when it left for Stripe. Kept in the tab's session store, because the
+ * webhook can land before the redirect comes back, so the first account read after the return may
+ * already be the new plan; without it a paid account cannot tell a real upgrade from an old
+ * `?checkout=success` address reopened from history. */
+const PLAN_BEFORE_KEY = 'selecta.checkout.planBefore';
+
+/** Called just before the redirect to Stripe. */
+export function rememberPlanBeforeCheckout(plan: string) {
+  try { sessionStorage.setItem(PLAN_BEFORE_KEY, plan); } catch { /* no storage: the first plan read on return stands in */ }
+}
+
+function planBeforeCheckout(): string | null {
+  try { return sessionStorage.getItem(PLAN_BEFORE_KEY); } catch { return null; }
+}
+
+/** The return is dealt with: forget the plan before, and leave the address clean so a reload or a
+ * trip back through history doesn't start confirming again. Only Stripe's own two parameters go:
+ * anything else in the address, and its hash, stays. */
+function returnHandled() {
+  try { sessionStorage.removeItem(PLAN_BEFORE_KEY); } catch { /* nothing kept */ }
+  const query = new URLSearchParams(window.location.search);
+  query.delete('checkout');
+  query.delete('session_id');
+  const rest = query.toString();
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
+}
+
 /** Where a return from Stripe stands. While confirming it asks the server again every `everyMs`
- * (an `entitlement.changed` event makes it ask sooner), and gives up saying so after `tries`. */
+ * (an `entitlement.changed` event makes it ask sooner), and gives up saying so after `tries`.
+ * 'confirmed' means the plan really changed in this visit from the one held before checkout; an
+ * old success address on an account that was already paid settles quietly to 'idle'. */
 export function useCheckoutReturn(account: Account | null, refresh: () => Promise<unknown>, { everyMs = 2000, tries = 30 } = {}): CheckoutPhase {
   const [phase, setPhase] = useState<CheckoutPhase>(() => {
     const returned = returnedFromCheckout();
@@ -73,19 +102,23 @@ export function useCheckoutReturn(account: Account | null, refresh: () => Promis
   });
   const latest = useRef(refresh);
   latest.current = refresh;
+  const before = useRef<string | null | undefined>(undefined);
+  if (before.current === undefined) before.current = planBeforeCheckout();
+  const firstSeen = useRef<string | null>(null);
 
   useEffect(() => {
     // 'slow' too: the page promised to show the new plan as soon as it's confirmed.
     if ((phase !== 'confirming' && phase !== 'slow') || !account) return;
-    if (account.entitlement.plan !== 'free') {
+    const plan: string = account.entitlement.plan;
+    if (firstSeen.current === null) firstSeen.current = plan;
+    const was = before.current ?? firstSeen.current;
+    if (plan !== 'free' && plan !== was) {
       setPhase('confirmed');
-      // Leave the address clean, so a reload doesn't start confirming again. Only Stripe's own two
-      // parameters go: anything else in the address, and its hash, stays.
-      const query = new URLSearchParams(window.location.search);
-      query.delete('checkout');
-      query.delete('session_id');
-      const rest = query.toString();
-      window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
+      returnHandled();
+    } else if (plan !== 'free' && before.current === null) {
+      // paid from the first read with no record of leaving for Stripe from this tab: nothing changed
+      setPhase('idle');
+      returnHandled();
     }
   }, [phase, account]);
 

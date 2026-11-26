@@ -26,6 +26,7 @@ import { Strip, StripPlaceholder } from './NowStrip';
 import { CoverArt } from './CoverArt';
 import { setBeatGrid } from '../feel/beatBus';
 import { handoverProgress } from '../feel/hue';
+import { outputDelayMs } from '../feel/outputDelay';
 import { tick } from '../feel/haptics';
 import { ListenHero } from './ListenHero';
 import { LiveBlend, nearSeam } from './LiveBlend';
@@ -184,7 +185,8 @@ function TransitionCountdown({
     return <section className="handoff pending"><span className="eyebrow">Next transition</span><b>Preparing the hand-off</b><span>{nextTitle}</span><i className="pending-line" /></section>;
   }
   if (inSeam) {
-    const progress = handoverProgress(time, seamAt, switchAt);
+    // as heard: on Bluetooth or AirPlay the clock runs ahead of the speakers (0 where unreported)
+    const progress = handoverProgress(time - outputDelayMs() / 1000, seamAt, switchAt);
     return (
       <section className="handoff active" aria-label={`Transition into ${nextTitle} is playing`}>
         <div className="handoff-title"><span className="eyebrow">Transition in progress</span><b>{nextTitle}</b></div>
