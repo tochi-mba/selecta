@@ -156,7 +156,7 @@ export class DeviceStudio {
     if (!job) {
       if (waitMs <= 0) return null;
       // the seam that plays next comes first: whatever renders further ahead gives way
-      if (this.running && this.running.key !== key) this.running.controller.abort();
+      this.running?.controller.abort();
       job = this.start(key, ask.a, ask.b, { from: ask.from, to: ask.to, levels: ask.levels });
     }
     const outcome = job.done ?? await Promise.race([job.result, wait(waitMs)]);

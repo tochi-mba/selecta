@@ -83,7 +83,7 @@ of that missing, nothing here runs and playback is exactly as before.
 | Maker | clip wrong length, too loud, near silent | no clip | |
 | Provider | no clip by the wait's end | the live plan, then the device | 90 s or 12 s before the exit |
 | Provider | clip does not fit these songs | the live plan, then the device | at once |
-| Scheduler | clip would start late, or before A's own entry ended | the live plan it carries, else the short fade | at once |
+| Scheduler | clip would start late, or before A's own entry ended | the live plan it carries (one needing a stretched entry fades: its stretch was never made), else the short fade | at once |
 | Member | skips, seeks or reorders | that seam is dropped; playback as today, instantly | never waits |
 
 A clip is refused (renderedSeam.ts `renderedProblem`) when: its rate is not the context's and the
