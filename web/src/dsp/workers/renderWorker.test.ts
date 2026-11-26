@@ -24,9 +24,13 @@ const fixture = JSON.parse(files['../golden/device-render/cut-on-one.json']) as 
 };
 const scriptText = JSON.stringify(fixture.script);
 
+// Making the synthetic songs takes seconds on a slow machine, so it happens once per file.
+let made: ReturnType<typeof goldenProvider> | null = null;
+
 /** Only the windows the script reads, cut from the synthetic songs, as a page would send them. */
 function windows(): RenderSeamSource[] {
-  const provider = goldenProvider(songs);
+  made ??= goldenProvider(songs);
+  const provider = made;
   return neededWindows(scriptFromDict(fixture.script)).map(({ ref, from, to }) => {
     const whole = provider.samples(ref);
     return {
