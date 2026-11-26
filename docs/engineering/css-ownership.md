@@ -86,6 +86,18 @@ A drift guard that compares the guest and display blocks with `tokens.css` is AD
 - **No new specificity fights.** Win by order or by a scoped class, not by `#id` or `!important`.
 - **Exceptions are listed.** A `!important` is allowed only where the cascade cannot express the intent (a user or OS preference that must beat every component, or the HTML `hidden` attribute). Each one is in the table below with its reason; the test fails on any that is not.
 
+## Layout rules
+
+Nothing may push a page sideways on a phone. These hold for every sheet:
+
+- **Children of flex and grid containers get `min-width: 0`** when they hold text, so a long word shrinks the child instead of widening the row.
+- **Phone grids use `minmax(0, 1fr)`**, never a bare `1fr`: a bare `1fr` track will not shrink below its content.
+- **No fixed width of 200px or more outside a min-width query.** Use `min(Npx, 100%)`, or put the width in a `@media (min-width: ...)` block.
+- **Member strings wrap or truncate.** Titles, file names, device names and emails get `overflow-wrap: anywhere` or the `Truncate` component.
+- **Wide content scrolls inside its own box** (`.studio-grid` in `styles/polish.css` is the model). Never clip or hide overflow on the page itself.
+
+`web/src/styles/layoutRules.test.ts` holds the second and third rules as a ratchet: the rules that broke them when it was written are in `layoutRules.allow.json`, a new one fails, and a fixed one must leave that list. The layout sweeps (`web/e2e/layout-sweep.e2e.ts`, `web/e2e-cloud/layout-sweep.cloud.ts`) draw every route and Cloud surface from 320 to 1920px and name whatever pokes past the window, and `web/src/shell/layoutSweepCoverage.test.ts` fails when a route has no sweep entry or written reason.
+
 ## `!important` exceptions
 
 | Sheet | Count | Why |
