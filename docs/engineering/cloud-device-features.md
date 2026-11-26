@@ -28,7 +28,7 @@ switches anything on. With any of them off, or on any failure, the page is as it
 | Neural key, lyric timing | Decision: the standard key finder reads key; lyric timing waits on the owner's lyrics decision | | T-20261126-2cbe (owner: LRCLIB's written answer and legal advice, ADR-0406) |
 | Make a Mix: order from the planner | Works | `cloud.brain`, `cloud.device_analysis` | |
 | Energy shape | Works: sent to the planner with the order | `cloud.brain`, `cloud.device_analysis` | |
-| Idea cards on Make a Mix | Works: the account's cards beside the browser's own, and a card builds its mix with the planner choosing and ordering the songs; planned over at most 60 measured songs that play here | `cloud.brain`, `cloud.device_analysis` | T-20261126-6e24 (more than 60) |
+| Idea cards on Make a Mix | Works: the account's cards beside the browser's own, and a card builds its mix with the planner choosing and ordering the songs. The cards read every measured song that plays here (up to 5,000, numbers only, about 1 s for 2,000); a build plans over the 60 that suit the idea best, as the card ranks them | `cloud.brain`, `cloud.device_analysis` | |
 | Mix language, ending | Works | | |
 | Transition feel | Works: the order is planned in the feel, and each transition of a mix made in it is made on the device in that feel's moves (`language` on `/planning/candidates`); a mix already made keeps its transitions | `cloud.brain`, `cloud.device_analysis` (transitions: `cloud.device_render`) | |
 | Stem moves, stem splitting | Decision: absent; no stem model is published, so songs play whole | `cloud.browser_stems` when it is | T-20261125-03a3 (owner: the clean separator, its licence record and its published weights) |
