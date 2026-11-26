@@ -11,10 +11,10 @@
  * `renderSeam` is a pure function so tests run the exact code the worker runs.
  */
 
-import { audit, auditFacts, type AuditReport, type VocalSpans } from '../render/audit';
+import { audit, auditFacts, beatOffset, type AuditReport, type VocalSpans } from '../render/audit';
 import { renderScript, type SourceAudio, type SourceProvider } from '../render/engine';
 import { RENDER_IMPLEMENTATION } from '../render/ids';
-import type { AuditFacts } from '../render/repair';
+import { BEAT_CHECK, type AuditFacts } from '../render/repair';
 import { SAMPLE_RATE, type SourceRef } from '../render/script';
 import { readSourceRef, scriptFromJson } from '../render/scriptJson';
 import { type Stretcher, wsolaStretcher } from '../render/warpStretch';
@@ -51,6 +51,9 @@ export type RenderSeamResponse =
       report: AuditReport;
       facts: AuditFacts;
       driftMs: { a: number; b: number; nudge: number };
+      /** Seconds to delay B by to line the beats up (`audit.beat_offset`), measured only when the
+       * beat check failed, for the second take `seam_making.tighten_beats` renders; else null. */
+      beatOffset: number | null;
     }
   | { id: number; status: 'unsupported_here'; implementation: string; reason: string }
   | { id: number; status: 'off' | 'error'; implementation: string; reason: string };
@@ -87,8 +90,10 @@ export function renderSeam(request: RenderSeamRequest, stretcher: Stretcher = ws
     if (rendered.status !== 'ready') return { response: { id, status: 'unsupported_here', implementation, reason: rendered.reason }, transfer: [] };
     const report = audit(rendered, request.vocalSpans ?? {});
     const clip = rendered.audio;
+    const facts = auditFacts(report);
+    const offset = facts.failures.some((check) => check.name === BEAT_CHECK) ? beatOffset(rendered) : null;
     return {
-      response: { id, status: 'ready', implementation: rendered.implementation, sampleRate: SAMPLE_RATE, clip, report, facts: auditFacts(report), driftMs: rendered.driftMs },
+      response: { id, status: 'ready', implementation: rendered.implementation, sampleRate: SAMPLE_RATE, clip, report, facts, driftMs: rendered.driftMs, beatOffset: offset },
       transfer: clip.map((channel) => channel.buffer as ArrayBuffer),
     };
   } catch (problem) {
