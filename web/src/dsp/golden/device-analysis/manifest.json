@@ -1,0 +1,176 @@
+{
+ "analysisVersion": 3,
+ "featureRate": 22050,
+ "resampler": {
+  "zeros": 24,
+  "rolloff": 0.92,
+  "beta": 8.0
+ },
+ "versions": {
+  "librosa": "1.0.0",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "soxr": "1.1.0",
+  "pyloudnorm": "0.2.0"
+ },
+ "songs": [
+  {
+   "name": "house-120-a-minor",
+   "file": "house-120-a-minor.json",
+   "sampleRate": 44100,
+   "resamplerEffect": {
+    "lufs": 0.0,
+    "peakDb": 0.0,
+    "envelope": 0.7230796999999995,
+    "bpm": 0.0,
+    "beatsMs": 0.0,
+    "confidence": 0.0,
+    "barStartsEqual": true,
+    "energyBarsRelative": 0.0011093508578580824,
+    "chromaBarsCosineMin": 0.9999999985259201,
+    "keyEqual": true,
+    "sectionStartsPort": [
+     0,
+     8,
+     12
+    ],
+    "sectionStartsDesktop": [
+     0,
+     8,
+     12
+    ]
+   }
+  },
+  {
+   "name": "swing-93-c-then-d-major",
+   "file": "swing-93-c-then-d-major.json",
+   "sampleRate": 44100,
+   "resamplerEffect": {
+    "lufs": 0.0,
+    "peakDb": 0.0,
+    "envelope": 0.8094748999999997,
+    "bpm": 0.0,
+    "beatsMs": 0.0,
+    "confidence": 0.0,
+    "barStartsEqual": true,
+    "energyBarsRelative": 0.001724586947188481,
+    "chromaBarsCosineMin": 0.9999999181131976,
+    "keyEqual": true,
+    "sectionStartsPort": [
+     0,
+     12
+    ],
+    "sectionStartsDesktop": [
+     0,
+     12
+    ]
+   }
+  },
+  {
+   "name": "break-174-f-minor",
+   "file": "break-174-f-minor.json",
+   "sampleRate": 44100,
+   "resamplerEffect": {
+    "lufs": 0.0,
+    "peakDb": 0.0,
+    "envelope": 0.8240013199999998,
+    "bpm": 0.0,
+    "beatsMs": 0.0,
+    "confidence": 0.0,
+    "barStartsEqual": true,
+    "energyBarsRelative": 0.0033778334833359986,
+    "chromaBarsCosineMin": 0.9999020064351858,
+    "keyEqual": true,
+    "sectionStartsPort": [
+     0
+    ],
+    "sectionStartsDesktop": [
+     0
+    ]
+   }
+  },
+  {
+   "name": "waltz-132-g-major",
+   "file": "waltz-132-g-major.json",
+   "sampleRate": 44100,
+   "resamplerEffect": {
+    "lufs": 0.0,
+    "peakDb": 0.0,
+    "envelope": 0.4423141500000014,
+    "bpm": 0.0,
+    "beatsMs": 0.0,
+    "confidence": 0.0,
+    "barStartsEqual": true,
+    "energyBarsRelative": 0.0009715629019548099,
+    "chromaBarsCosineMin": 0.9999999788471114,
+    "keyEqual": true,
+    "sectionStartsPort": [
+     0
+    ],
+    "sectionStartsDesktop": [
+     0
+    ]
+   }
+  },
+  {
+   "name": "beatless-pad-e-major",
+   "file": "beatless-pad-e-major.json",
+   "sampleRate": 44100,
+   "resamplerEffect": {
+    "lufs": 0.0,
+    "peakDb": 0.0,
+    "envelope": 0.0
+   }
+  },
+  {
+   "name": "house-124-d-minor-48k",
+   "file": "house-124-d-minor-48k.json",
+   "sampleRate": 48000,
+   "resamplerEffect": {
+    "lufs": 0.0028828997221470587,
+    "peakDb": 0.00017909805572813298,
+    "envelope": 0.5764885,
+    "bpm": 0.0,
+    "beatsMs": 0.0,
+    "confidence": 0.0,
+    "barStartsEqual": true,
+    "energyBarsRelative": 0.002304316959740778,
+    "chromaBarsCosineMin": 0.9998325565310029,
+    "keyEqual": true,
+    "sectionStartsPort": [
+     0,
+     6,
+     8
+    ],
+    "sectionStartsDesktop": [
+     0,
+     6,
+     8
+    ]
+   }
+  },
+  {
+   "name": "live-drift-98-106-e-minor",
+   "file": "live-drift-98-106-e-minor.json",
+   "sampleRate": 44100,
+   "resamplerEffect": {
+    "lufs": 0.0,
+    "peakDb": 0.0,
+    "envelope": 0.5543250999999998,
+    "bpm": 0.0,
+    "beatsMs": 0.0,
+    "confidence": 0.0,
+    "barStartsEqual": true,
+    "energyBarsRelative": 0.0007590529094251305,
+    "chromaBarsCosineMin": 0.9996839807043666,
+    "keyEqual": true,
+    "sectionStartsPort": [
+     0
+    ],
+    "sectionStartsDesktop": [
+     0
+    ]
+   }
+  }
+ ]
+}
