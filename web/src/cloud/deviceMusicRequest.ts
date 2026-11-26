@@ -96,6 +96,8 @@ export type AvailabilitySources = {
   /** cloud.catalogue_play: the upload in the cloud library that is a song, from its rows (best
    * version first) and the whole list; null when it has none. */
   cloudCopy?: (rows: readonly CatalogueSong[], all: readonly CatalogueSong[]) => Promise<string | null>;
+  /** cloud.one_mixer: the player's resolver, so a saved file reads cloud songs as playback does. */
+  resolver?: () => Promise<import('../media').MediaResolver | null>;
   /** Where browser mixes are kept (BF-0462-05); without it the current mix is empty. */
   recipes?: RecipeStore;
   /** Harmonic matches from key profiles measured on this device (cloud.browser_harmonic);
@@ -489,6 +491,11 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     cloud,
     studio: exportStudio(sources.workspaceId, cloud),
     mix: (draft) => adapted<MixData>(draft === null ? '/mix' : `/mix?draft=${draft}`),
+    // cloud.one_mixer: cloud songs read as the player reads them, the device holding a song
+    // left out by name, and which songs the cloud library has
+    resolve: sources.resolver,
+    heldBy: (songId) => { const where = holdersNow()?.(songId); return where?.online[0] ?? where?.before[0] ?? null; },
+    inCloud: sources.hosted ? async () => (await cloudSongs()).ids : undefined,
   }) : null;
   // T-20261126-827e: the Seam Inspector's reads, from the transitions this device made
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {
