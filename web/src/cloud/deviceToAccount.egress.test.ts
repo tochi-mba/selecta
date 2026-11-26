@@ -6,6 +6,7 @@ import { forgetAccountMeasured } from './accountFacts';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
+import { planningCalls } from './studioWiring';
 import { BETWEEN_SONGS_MS, startFactsUploader } from './factsUploader';
 import { heldSong, measuredSong, PRIVATE_WORDS, shaOf } from './testAccountFacts';
 
@@ -20,6 +21,8 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['PUT', /^\/song-facts\/\d+$/],
   ['POST', /^\/planning\/order$/],
   ['POST', /^\/planning\/candidates$/],
+  // cloud.device_render: one more option's script, by index; the clips themselves never leave
+  ['POST', /^\/planning\/candidates\/script$/],
 ];
 
 /** A path in any of its shapes: a drive, a backslash, two or more slash-separated names, or an
@@ -124,5 +127,17 @@ describe('what the device-to-account requests carry', () => {
     expect(calls.map((call) => `${call.method} ${call.path.split('?')[0]}`)).toEqual(['GET /song-facts', 'POST /planning/order', 'POST /planning/candidates']);
     calls.forEach(holdsTheContract);
     expect(Object.keys(calls[2].body as object).sort()).toEqual(['a', 'b', 'leave_after', 'scripts']);
+  });
+
+  it('the device studio\'s requests: song ids, the settle rule and an option\'s index, never audio or a clip', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true, 'cloud.device_render': true });
+    const { calls, request } = capturing();
+    const studio = planningCalls(request);
+    await studio.candidates(1, 2);
+    await studio.script(1, 2, 9, 'f'.repeat(64));
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(['POST /planning/candidates', 'POST /planning/candidates/script']);
+    calls.forEach(holdsTheContract);
+    expect(calls[0].body).toEqual({ a: 1, b: 2, leave_after: 30, scripts: 8 });
+    expect(calls[1].body).toEqual({ a: 1, b: 2, leave_after: 30, option: 9, fingerprint: 'f'.repeat(64) });
   });
 });
