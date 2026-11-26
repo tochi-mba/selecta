@@ -8,6 +8,8 @@ import { exportFamily, forgetExports, type ExportDeps } from './localExport';
 import { catalogueCopy, catalogueHeld, cloudLibraryAssets, cloudLibraryResolver, forgetCloudLibraryAssets, serverSaysCopies } from './cloudLibraryMedia';
 import { deviceMusicRequest, type CatalogueSong } from './deviceMusicRequest';
 import { removeFromCloud } from './libraryPlacesChrome';
+import { CloudSeams } from './cloudSeams';
+import { cloudExportParts } from './cloudExport';
 
 // The cloud library's requests from the browser: every request this code makes is one of the
 // routes listed here, and no body carries audio, a file or folder name, or a path. Extend ALLOWED
@@ -29,7 +31,12 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['GET', /^\/assets\/[A-Za-z0-9][A-Za-z0-9_-]{0,63}\/playback-url$/],
   // library.places: removing songs from the cloud library, by catalogue song ids alone
   ['POST', /^\/assets\/remove$/],
+  // cloud.studio_seams: one transition by its two catalogue song ids, its planned move and a lane
+  ['POST', /^\/hosted\/seams$/],
 ];
+
+/** The body keys each request may carry, and nothing else. */
+const BODY_KEYS: Record<string, string[]> = { '/assets/remove': ['song_ids'], '/hosted/seams': ['a', 'b', 'move', 'lane'] };
 
 const FLAGS = { 'cloud.local_export': true, 'cloud.one_mixer': true, 'cloud.hosted_render': true, 'cloud.device_render': false };
 const item = (song_id: number, position: number): MixItem => ({ position, song_id, artist: 'Rex', title: `Song ${song_id}`, duration: 120, bpm: null, key: null, locked: false, seam: null });
@@ -54,7 +61,7 @@ function heldTo(sent: readonly Sent[]) {
     expect(one.body).not.toMatch(/\.(mp3|flac|wav|m4a|aiff?)\b|Users|Music/i);
     if (!one.body) continue;
     assertNoPath(JSON.parse(one.body));
-    expect(Object.keys(JSON.parse(one.body))).toEqual([one.path === '/assets/remove' ? 'song_ids' : 'songs']);
+    expect(Object.keys(JSON.parse(one.body))).toEqual(BODY_KEYS[one.path] ?? ['songs']);
   }
 }
 
@@ -193,5 +200,73 @@ describe('the cloud library’s requests (library.places)', () => {
     heldTo(sent);
     // the answer is the songs the Library shows, a grouped song's versions folded into it
     expect(answer.songs).toEqual([{ id: 7, found: true, removed: 1, left_nowhere: false }, { id: 9, found: true, removed: 0, left_nowhere: false }]);
+  });
+});
+
+// cloud.studio_seams (Phase 5): playing and saving a mix whose transitions are made in the cloud
+// asks the seams route by catalogue song ids, a move and a lane, and fetches only the signed links
+// it answers with, sending nothing: no audio from this device, no file name, no path.
+describe('the cloud library’s requests (cloud.studio_seams)', () => {
+  const fetched: { url: string; init?: RequestInit }[] = [];
+  const answer = {
+    state: 'ready', move: 'blend', passed: true, fell_back: false, levels: { a_gain_db: -3, b_gain_db: -2 },
+    files: { a: { url: 'https://r2.test/a?X-Amz-Signature=1', sha256: 'a'.repeat(64), sample_rate: 48_000, seconds: 120 }, b: { url: 'https://r2.test/b?X-Amz-Signature=1', sha256: 'b'.repeat(64), sample_rate: 44_100, seconds: 120 } },
+    clip: { url: 'https://r2.test/clip?X-Amz-Signature=1', sha256: 'c'.repeat(64), a_source_start: 100, b_source_end: 4, seconds: 6, sample_rate: 44_100, switch_at: 3, b_warp: null },
+  };
+  beforeEach(() => {
+    fetched.length = 0;
+    setFlags({ ...FLAGS, 'cloud.studio_seams': true });
+    vi.stubGlobal('fetch', vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => { fetched.push({ url: String(url), init }); return new Response(new ArrayBuffer(8)); }));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const watchedSeams = () => {
+    const sent: Sent[] = [];
+    const cloud = (async (path: string, init?: RequestInit) => {
+      sent.push({ method: (init?.method ?? 'GET').toUpperCase(), path, body: typeof init?.body === 'string' ? init.body : '' });
+      return answer;
+    }) as Request;
+    return { sent, cloud };
+  };
+  const audio = { duration: 6, sampleRate: 44_100, numberOfChannels: 2, getChannelData: () => new Float32Array(6 * 44_100) };
+  const anyHash = async (bytes: ArrayBuffer) => (bytes.byteLength === 8 ? 'c'.repeat(64) : '');
+
+  it('playing: the next two seams by catalogue ids, then the clip and the songs’ files from their links', async () => {
+    const { sent, cloud } = watchedSeams();
+    const seams = new CloudSeams({ request: cloud, decode: async () => audio, on: () => true, sha256: anyHash, sleep: async () => undefined });
+    seams.follow([{ a: 7, b: 8, move: null }, { a: 8, b: 9, move: 'echo_out' }, { a: 9, b: 10, move: null }], 0);
+    const track = await seams.songAt(1, 8, async () => null);
+    await vi.waitFor(() => expect(fetched.filter((one) => one.url.includes('clip'))).toHaveLength(2));
+    await track!.data().catch(() => undefined);
+    seams.dispose();
+    expect(sent.map((one) => JSON.parse(one.body))).toEqual([
+      { a: 7, b: 8, move: null, lane: 'interactive' },
+      { a: 8, b: 9, move: 'echo_out', lane: 'interactive' },
+    ]);
+    heldTo(sent);
+    // the bytes come down from the signed links alone, with nothing sent up
+    expect(fetched.every((one) => one.url.startsWith('https://r2.test/') && one.init === undefined)).toBe(true);
+  });
+
+  it('saving as a file: the file’s cloud seams on the standard lane, and the links it answers with', async () => {
+    const { sent, cloud } = watchedSeams();
+    const parts = await cloudExportParts([{ song_id: 7 }, { song_id: 8 }, { song_id: 9 }], {
+      request: cloud, inCloud: async () => new Set([7, 8]), decode: async () => audio as unknown as AudioBuffer,
+      usual: async () => new ArrayBuffer(4), sha256: anyHash, connection: null,
+    }, new AbortController().signal);
+    await parts.songs.get(0)?.data();
+    expect(sent.map((one) => JSON.parse(one.body))).toEqual([{ a: 7, b: 8, move: null, lane: 'standard' }]);
+    heldTo(sent);
+    expect(fetched.every((one) => one.url.startsWith('https://r2.test/') && one.init === undefined)).toBe(true);
+  });
+
+  it('asks nothing with the flag off', async () => {
+    setFlags({ ...FLAGS, 'cloud.studio_seams': false });
+    const { sent, cloud } = watchedSeams();
+    const parts = await cloudExportParts([{ song_id: 7 }, { song_id: 8 }], { request: cloud, inCloud: async () => new Set([7, 8]), decode: async () => audio as unknown as AudioBuffer, usual: async () => new ArrayBuffer(4) }, new AbortController().signal);
+    const seams = new CloudSeams({ request: cloud, decode: async () => audio });
+    seams.follow([{ a: 7, b: 8, move: null }], 0);
+    expect(await seams.songAt(0, 7, async () => null)).toBeNull();
+    expect(parts.clips.size + sent.length + fetched.length).toBe(0);
   });
 });

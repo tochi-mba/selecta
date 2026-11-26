@@ -333,8 +333,8 @@ export function withMeasured(mix: MixData, measured: ReadonlyMap<number, Measure
  * (cloud.catalogue_play): a song's upload by catalogue id, and every file of a song with one. */
 export type DeviceMusicRequest = Request & {
   cloudAssetOf: (songId: number) => Promise<string | null>;
-  /** The song's own upload, never a version's (cloud.studio_seams). */
-  cloudOwnCopy: (songId: number) => Promise<string | null>;
+  /** Of these songs, those with their own upload, never a version's (cloud.studio_seams). */
+  cloudOwnCopies: (songIds: readonly number[]) => Promise<ReadonlySet<number>>;
   cloudSongs: () => Promise<CloudSongs>;
 };
 /** The songs in the cloud library: every file id of each, and how many songs. */
@@ -714,13 +714,10 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     const rows = ids.flatMap((id) => grouping.files.filter((file) => file.id === id));
     return rows.length ? sources.cloudCopy(rows, grouping.files) : null;
   };
-  // cloud.studio_seams: the song's OWN upload, from its own row alone, as the seams route finds it
-  const cloudOwnCopy = async (songId: number): Promise<string | null> => {
-    if (!sources.cloudCopy) return null;
-    const grouping = await grouped();
-    const rows = grouping.files.filter((file) => file.id === songId);
-    return rows.length ? sources.cloudCopy(rows, grouping.files) : null;
-  };
+  // cloud.studio_seams: the songs with their OWN upload, the rule the seams route finds them by
+  const cloudOwnCopies = async (songIds: readonly number[]): Promise<ReadonlySet<number>> => (
+    sources.hosted ? ownCloudCopies((await grouped()).files, songIds, sources.cloudCopy) : new Set()
+  );
   // every file of each song with a cloud copy, so a mix naming any version is matched; and how
   // many songs that is
   const cloudSongs = async (): Promise<CloudSongs> => {
@@ -728,7 +725,7 @@ export function deviceMusicRequest(cloud: Request, sources: AvailabilitySources 
     const hosted = setBySong(grouping, (await sources.hosted?.(grouping.files).catch(() => null)) ?? new Set());
     return { ids: new Set(grouping.files.filter((file) => hosted.has(grouping.primaryOf(file.id))).map((file) => file.id)), songs: hosted.size };
   };
-  return Object.assign(adapted as Request, { cloudAssetOf, cloudOwnCopy, cloudSongs });
+  return Object.assign(adapted as Request, { cloudAssetOf, cloudOwnCopies, cloudSongs });
 }
 
 /** The media importer asks with full `/api/...` paths (web/src/media); the Cloud client adds

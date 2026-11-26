@@ -30,6 +30,9 @@ export const NOT_IN_HOSTED = {
   'cloud.local_first': false,
   // this is the shell an account gets with cloud.one_shell off (an old server never names it)
   'cloud.one_shell': false,
+  // these older pages know nothing of places (the Cloud shell's Library has them), so Add music
+  // keeps its name here
+  'library.places': false,
   // the browser Workspace belongs to browser-first Cloud, so the hosted rail has none
   'cloud.workspace': false,
   requests: false,

@@ -23,6 +23,9 @@ of that missing, nothing here runs and playback is exactly as before.
 | `web/src/cloud/accountSeams.ts` | Asks the studio first, keeps the live plan as what plays instead |
 | `web/src/engine/renderedSeam.ts` | The join arithmetic and the checks a clip must pass to play |
 | `web/src/engine/scheduler.ts` | Plays the third seam kind (checks moved to `schedulerChecks.ts`) |
+| `web/src/cloud/studioPlan.ts` | `cloud.studio_seams`: which studio makes each seam, and which songs play lossless |
+| `web/src/cloud/cloudSeams.ts` | Asks the cloud studio for the next two, its clips as rendered seams |
+| `web/src/cloud/cloudExport.ts` | The same clips joined into a mix saved as a file |
 
 ## The life of a seam
 
@@ -162,3 +165,73 @@ trials with the usual keys (Q, W, E, R, T). All three play every song at one lev
 starts 15 s before its own transition. After the reveal, a transition made ahead says its move and
 whether it passed every check, only just missed one, or did not pass. An existing session keeps
 its Before and After comparison; start a new one to hear these.
+
+## Transitions made in the cloud
+
+Two-places plan Phase 5, flag `cloud.studio_seams` (off, with `cloud.seam_lead`). The server half
+is docs/engineering/cloud-library-walkthrough.md section 14. A clip made by the cloud studio plays
+exactly as a clip made here: the same third seam kind, join arithmetic, level rule and checks.
+
+**Which studio** (`studioPlan.ts`, pure). For each seam of the mix: `cloud` when both songs have
+their own upload in the cloud library (`ownCloudCopies`, the rule the route finds them by: a
+version's copy does not count), even when they are on this device too (ADR-0479); else `device`
+when both are here and the device studio is on; else `live`. A transition whose cue points the
+member chose, or the same song twice, is `live`. With Data Saver or mobile data
+(`navigator.connection`: `saveData`, `type` `cellular`) no seam is `cloud` and no lossless file is
+read; the device studio fetches no audio, so it carries on.
+
+**Asked** (`cloudSeams.ts`). Each time the position or the mix changes, the player hands the
+cloud's seams to `CloudSeams.follow`; the next two are asked for with `POST /api/hosted/seams`
+`{a, b, move, lane: 'interactive'}` (catalogue song ids; `move` is the seam's named move, or null
+for `auto`), and every other is dropped, its asking stopped, so an edited mix keeps no stale clip
+(a seam is known by its two songs and its move). While the answer is `queued`, `running` or
+`waiting_for_analysis` it is asked again after 2, 4, 8, 15, then every 30 s, for at most 15
+minutes; four failed asks in a row, a 404 (`no_cloud_copy`), a 400 or 403, `failed` or `refused`
+end it with a reason. A ready answer's clip is fetched from its signed link, checked against its
+SHA-256 and decoded by the playing context (`decodedSource`), so it is at the context's rate.
+
+**The songs** (`songAt`, called by the player's resolver before the usual one). A song next to a
+cloud seam plays from the lossless file the route names (`files.a` or `files.b`), under its own
+track id (`cloud:` and the file's hash, so the decode cache never mixes it with the original), at
+`level = 10^(dB / 20)` of the route's `levels` (the server sends them once both songs' loudness is
+known, also while the clip is queued or running, so a song starts at the level its next clip will
+be made at). It waits at most 2.5 s for the seam's first answer; without a usable one the song
+plays from where it would have, at its measured level. The level rides on `ResolvedTrack.level`;
+the speaker passes it in `LoadedTrack.level` and the scheduler's `levelOf` plays it as given,
+nothing else sets it. A link older than 12 minutes, or one storage refuses (400, 401, 403), is
+signed again by asking the route once more. Bytes that cannot be had or fail their hash are read
+the usual way, and that decode is never paired with a cloud clip.
+
+**Planned.** `withCloudSeams` asks the cloud first for its seams, the account's planner otherwise.
+The provider waits for a clip still coming at most `RENDER_WAIT_MS` (90 s), and never past 75 s
+before the first song ends less the 8 s late guard and 4 s (`cloudWaitMs`). The clip plays only
+when both decoded songs are the files the clip was made from (the speaker tells the player each
+decode's track id), its decoded length is the stated `seconds` within 50 ms, and it starts more
+than 8 s ahead. It becomes a `RenderedClip` at the decode's rate `r`: `aStartSample =
+round(a_source_start r)` and `bEndSample = round(b_source_end r)`, half to even, so a 48 kHz file
+played at 44.1 kHz is counted at 44,100 and at a 48 kHz context at 48,000; levels from the same
+`gainOf`; `switch_at`, or the clip's middle for an older seam; `b_warp`, or B straight across the
+clip, ending at `b_source_end`. The seam provider then checks it (`settleRendered`), still works
+out this device's own choice and keeps it as `instead` (a cloud clip has no live plan of its own),
+and the scheduler checks it again with its clock. The record says `chosenBy: {by: 'cloud'}`,
+`why` "Prepared in your cloud library.", and `studio` with the route's move, passed and fell back.
+
+**Every fallback.** A clip not ready in time, arriving later (dropped), between other files than
+those playing, of the wrong length, starting too soon, at another level (`renderedProblem`), or
+refused by the scheduler: the live plan plays. A used-up allowance (`code: allowance_used`) plays
+live and the seam info says once for that transition "Today’s prepared transitions are used up;
+the rest are worked out as the mix plays." (`playedSeams.ts`, from `chosenBy.note`), never a card.
+
+**Saving as a file** (`cloudExport.ts`). With the flag on, each cloud seam of the file's songs is
+asked for on the standard lane and waited for as playback's are (Cancel ends the waits at once),
+its clip decoded by the export's decode, and joined by `render.ts` with the same `renderedJoins`;
+songs next to a ready clip are read from their lossless files at the clip's level, and seams
+touching them are never the device studio's.
+
+**Requests.** Only `POST /api/hosted/seams` with catalogue ids, a move and a lane, and GETs of the
+signed links it answers with; nothing from this device (`cloudLibrary.egress.test.ts`).
+
+**Limits.** A song next to a cloud seam plays its lossless file, so its other seam, when that one
+is the device studio's, plays live (the device studio renders only from this device's own files).
+A whole lossless file is downloaded and decoded per song: larger than the original. The Listening
+Room has no trial for cloud clips (to-do T-20261126-f3d4).
