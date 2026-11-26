@@ -164,9 +164,10 @@ Beat This is not ported here: its model must be exported and licensed first (ADR
 then `beatSource.ts::browserBeatSource` stands in: the browser's autocorrelation tempo
 (`tempo.ts`) over the whole song's onset envelope, the phase that puts the most onset strength
 on the beats, and downbeats every fourth beat from the strongest bar phase. It assumes 4/4, so
-a waltz measured this way reads as 4/4, and it does not follow tempo changes. The facts carry
-its id, so the account can tell them from neural ones, and the stored version names it, so
-Beat This in the browser measures every song again.
+a waltz measured this way reads as 4/4, and it does not follow tempo changes. The stored
+version names it, so Beat This in the browser measures every song again; the account's allowlist
+takes only `web-dsp-1`, so what is sent does not name it yet (to-do "The account cannot tell
+measurements from the interim beat source").
 
 ## Implementation ids
 
@@ -194,5 +195,5 @@ full spectrogram never held. No timing was measured in this change.
 ## Next
 
 1. Beat This in ONNX (export, licence review, per-device benchmark), as a `BeatSource`.
-2. Sending the facts to the account through the device route, as `web-dsp-1`; then a listening
-   check of plans from device facts against Desktop facts for the same songs.
+2. A listening check of plans from device facts against Desktop facts for the same songs. The
+   facts are now sent (docs/engineering/device-to-account.md).
