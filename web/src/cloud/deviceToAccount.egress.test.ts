@@ -28,7 +28,7 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
 /** A path in any of its shapes: a drive, a backslash, two or more slash-separated names, or an
  * audio file's name. Base64 array data (which may hold slashes) is checked apart. */
 const PATH_LIKE = /[A-Za-z]:\\|\\|\b[\w .-]+\/[\w .-]+\/|\.(mp3|flac|wav|m4a|aac|ogg|opus|aiff?)\b/i;
-const ROUTE_LEAK = /[A-Za-z]:\\|\\|\.(mp3|flac|wav|m4a|aac|ogg|opus|aiff?)b/i;
+const ROUTE_LEAK = /[A-Za-z]:\\|\\|\.(mp3|flac|wav|m4a|aac|ogg|opus|aiff?)\b/i;
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 /** More numbers than a beat grid could ever have: a second of audio at 8 kHz. */
 const AUDIO_SIZED = 8_000;
