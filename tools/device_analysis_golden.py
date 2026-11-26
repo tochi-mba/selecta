@@ -59,9 +59,9 @@ OUTPUT = (
 
 # --- The browser's resampler, in numpy: the shared contract with resample.ts -------------------
 
-RESAMPLE_ZEROS = 24
-RESAMPLE_ROLLOFF = 0.92
-RESAMPLE_BETA = 8.0
+RESAMPLE_ZEROS = 28
+RESAMPLE_ROLLOFF = 0.97
+RESAMPLE_BETA = 9.0
 
 
 def bessel_i0(x: float) -> float:

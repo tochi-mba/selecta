@@ -12,9 +12,9 @@
  * most positive, as the numpy reference sums, and rounded to float32 once.
  */
 
-export const RESAMPLE_ZEROS = 24;
-export const RESAMPLE_ROLLOFF = 0.92;
-export const RESAMPLE_BETA = 8.0;
+export const RESAMPLE_ZEROS = 28;
+export const RESAMPLE_ROLLOFF = 0.97;
+export const RESAMPLE_BETA = 9.0;
 
 function gcd(a: number, b: number): number {
   while (b) [a, b] = [b, a % b];
@@ -82,8 +82,10 @@ export function resampledLength(length: number, from: number, to: number): numbe
   return Math.floor((length * up + down - 1) / down);
 }
 
-/** Resample a float32 signal. O(output length times taps): about 107 taps from 44.1 kHz and
- * 115 from 48 kHz, so a four-minute song is some 600 million multiply-adds. */
+/** Resample a float32 signal. O(output length times taps): 117 taps from 44.1 kHz and 127 from
+ * 48 kHz, so a four-minute song is some 620 million multiply-adds. The settings (28 zero
+ * crossings, passband to 0.97 of the lower Nyquist, Kaiser beta 9) were chosen as the closest
+ * of those tried to soxr HQ on the fixtures' bar features. */
 export function resample(signal: Float32Array, from: number, to: number): Float32Array {
   if (!Number.isInteger(from) || !Number.isInteger(to) || from <= 0 || to <= 0) {
     throw new Error('resample needs positive whole sample rates.');
