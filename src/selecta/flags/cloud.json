@@ -108,7 +108,8 @@
       "surfaces": ["cloud.library", "cloud.listen"],
       "modes": ["cloud"],
       "kind": "release",
-      "owner": "storage"
+      "owner": "storage",
+      "cli": ["storage"]
     },
     "cloud.hosted_render": {
       "label": "Hosted processing",
