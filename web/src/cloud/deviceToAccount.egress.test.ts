@@ -44,6 +44,10 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['POST', /^\/mix\/songs$/],
   ['POST', /^\/mix\/move$/],
   ['PUT', /^\/mix\/order(\?draft=\d+)?$/],
+  // a change of which mix is current names this device, so the others hear which one it was
+  ['PUT', /^\/mix\/order\?device_id=[A-Za-z0-9_-]{1,64}$/],
+  ['POST', /^\/drafts\/\d+\/play(\?device_id=[A-Za-z0-9_-]{1,64})?$/],
+  ['POST', /^\/mix\/(undo|clear)(\?(device_id=[A-Za-z0-9_-]{1,64}|draft=\d+))?$/],
   ['POST', /^\/mix\/\d+\/seam$/],
   // locks, with the account keeping the mix: a position, and no body at all
   ['POST', /^\/mix\/\d+\/lock$/],
@@ -266,6 +270,29 @@ describe('the mixes kept with the account', () => {
     expect(calls.length).toBe(9);
     calls.forEach(holdsTheContract);
     expect(calls[0]).toEqual({ method: 'PUT', path: '/mix/order', body: { song_ids: [3, 1, 2], name: 'Ocean to Counting the Days' } });
+  });
+
+  it('a change of which mix is current adds only this device’s id; a draft’s own changes add nothing', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.account_mixes': true });
+    localStorage.setItem('selecta.device.ws-egress', 'dev-1');
+    try {
+      const { calls, request } = capturing();
+      const mixes = accountMixes(request, 'ws-egress');
+      await mixes.install('Friday', [3, 1, 2], false);
+      await mixes.answer('POST', '/drafts/4/play', '', { method: 'POST' });
+      await mixes.answer('POST', '/mix/undo', '', { method: 'POST' });
+      await mixes.answer('POST', '/mix/clear', '', { method: 'POST' });
+      await mixes.answer('PUT', '/mix/order', 'draft=4', { method: 'PUT', body: JSON.stringify({ song_ids: [3] }) });
+      await mixes.answer('POST', '/mix/undo', 'draft=4', { method: 'POST' });
+      calls.forEach(holdsTheContract);
+      expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+        'PUT /mix/order?device_id=dev-1', 'POST /drafts/4/play?device_id=dev-1', 'POST /mix/undo?device_id=dev-1',
+        'POST /mix/clear?device_id=dev-1', 'PUT /mix/order?draft=4', 'POST /mix/undo?draft=4',
+      ]);
+      expect(calls[0].body).toEqual({ song_ids: [3, 1, 2], name: 'Friday' });
+    } finally {
+      localStorage.removeItem('selecta.device.ws-egress');
+    }
   });
 
   it('asks nothing of the account while cloud.account_mixes is off or unnamed', () => {
