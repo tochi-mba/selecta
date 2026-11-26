@@ -295,7 +295,7 @@ def install_routes(
                 upload_rights.require_batch(conn, workspace_id,
                                             request.headers.get(upload_rights.HEADER),
                                             len(body.files))
-                # cloud.move_to_cloud: a workspace that is not a business agrees once first
+                # cloud.move_to_cloud: a personal workspace agrees once first
                 rights_needed = personal_rights.needed(conn, workspace_id)
         except upload_rights.AttestationRequired as error:
             raise HTTPException(status_code=403, detail={

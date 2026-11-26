@@ -70,11 +70,16 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   const asksRights = useFlag('cloud.move_to_cloud') && flagListed('cloud.move_to_cloud');
   const rightsRequest = useMemo(() => ((path: string, init?: RequestInit) => api(path.replace(/^\/api(?=\/)/, ''), init, workspaceId)) as RightsRequest, [api, workspaceId]);
   const [statement, setStatement] = useState<UploadRights | null>(null);
+  // Start upload waits for the answer, so a first upload never races the statement
+  const [rightsKnown, setRightsKnown] = useState(!asksRights);
   const [statementChanged, setStatementChanged] = useState(false);
   useEffect(() => {
-    if (!asksRights) return undefined;
+    if (!asksRights) { setRightsKnown(true); return undefined; }
     let live = true;
-    void readUploadRights(rightsRequest).then((found) => { if (live) setStatement(found.applies && !found.accepted ? found : null); }, () => undefined);
+    setRightsKnown(false);
+    // a failed read lets the upload go: a refused plan then shows the statement (rights_needed)
+    void readUploadRights(rightsRequest).then((found) => { if (live) setStatement(found.applies && !found.accepted ? found : null); }, () => undefined)
+      .finally(() => { if (live) setRightsKnown(true); });
     return () => { live = false; };
   }, [asksRights, rightsRequest]);
   const agree = async () => {
@@ -134,7 +139,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   };
 
   const begin = async () => {
-    if (!files.length || blocked || statement) return;
+    if (!files.length || blocked || statement || !rightsKnown) return;
     setUploading(true); setError(''); setNotice(''); setItems([]);
     const next: Item[] = [];
     const chosen = files.map((file) => file.name);
@@ -240,7 +245,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   const rightsFirst = statement && <RightsStatement rights={statement} changed={statementChanged} onAgree={agree} />;
   const actions = (
     <div className="cloud-upload-actions">
-      <button className="primary" disabled={!files.length || uploading || Boolean(blocked) || Boolean(statement)} onClick={() => void begin()}>{uploading ? 'Uploading…' : 'Start upload'}</button>
+      <button className="primary" disabled={!files.length || uploading || Boolean(blocked) || Boolean(statement) || !rightsKnown} onClick={() => void begin()}>{uploading ? 'Uploading…' : 'Start upload'}</button>
       {progress && <span role="status">{progress}</span>}
     </div>
   );

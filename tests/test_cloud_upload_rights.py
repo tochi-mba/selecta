@@ -147,7 +147,7 @@ def test_a_business_workspace_keeps_its_own_statement_and_is_never_asked_this_on
     assert refused.status_code == 403, refused.text
     assert refused.json()["detail"]["code"] == "business_statement"
     assert _rows(rights, business) == []
-    assert personal_rights.applies("personal") and personal_rights.applies("team")
+    assert personal_rights.applies("personal") and not personal_rights.applies("team")
 
 
 def test_one_workspace_confirming_says_nothing_about_another(rights):

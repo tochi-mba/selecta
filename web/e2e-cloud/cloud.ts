@@ -72,3 +72,15 @@ export async function accessible(page: Page, where: string) {
   await page.emulateMedia({ colorScheme: 'light' });
   expect(found).toEqual([]);
 }
+
+/** cloud.move_to_cloud: a personal workspace agrees to the upload statement once, before its
+ * first upload. Add music holds Start upload until it knows; call after choosing the files. */
+export async function agreeIfAsked(page: Page): Promise<void> {
+  const agree = page.getByRole('button', { name: 'I agree' });
+  const start = page.getByRole('button', { name: 'Start upload' });
+  await expect.poll(async () => (await agree.isVisible()) || (await start.isEnabled()), { timeout: 15_000 }).toBe(true);
+  if (await agree.isVisible()) {
+    await agree.click();
+    await expect(agree).toBeHidden();
+  }
+}

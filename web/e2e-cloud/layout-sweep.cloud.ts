@@ -1,6 +1,6 @@
 import { Browser, BrowserContext, expect, Page, test, TestInfo } from '@playwright/test';
 import { LONG_FILE, sweep, verdict } from '../e2e/layoutSweep';
-import { listener } from './cloud';
+import { agreeIfAsked, listener } from './cloud';
 import { endRooms } from './helpers';
 import { seeded } from './localFirst';
 import { amend, localFirstMember, opened } from './sweepMembers';
@@ -77,6 +77,7 @@ async function longUpload(page: Page, state: 'progress' | 'result' = 'progress')
   if (!(await picker.isEnabled())) return;
   // other bytes for the result, so it is planned afresh rather than carried on from the held one
   await picker.setInputFiles({ name: LONG_FILE, mimeType: 'audio/wav', buffer: wav(state === 'result' ? 2 : 1) });
+  await agreeIfAsked(page);
   await page.getByRole('button', { name: 'Start upload' }).click();
   const shown = state === 'result' ? page.locator('.cloud-upload-list li') : page.getByText(LONG_FILE);
   await expect(shown.first()).toBeVisible({ timeout: 10_000 }).catch(() => undefined);

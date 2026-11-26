@@ -1,4 +1,4 @@
-"""The upload rights statement, for workspaces that are not a business (ADR-0489, plan "two
+"""The upload rights statement, for personal workspaces (ADR-0489, plan "two
 places" 6c): `GET` and `POST /api/uploads/rights`, behind `cloud.move_to_cloud`.
 
 Before a member's first upload from this device to the cloud library, the member reads one
@@ -48,6 +48,7 @@ STATEMENT = (
 )
 WORDING_SHA256 = hashlib.sha256(STATEMENT.encode("utf-8")).hexdigest()
 BUSINESS = "business"
+PERSONAL = "personal"
 
 
 class AcceptRights(BaseModel):
@@ -59,8 +60,9 @@ class AcceptRights(BaseModel):
 
 
 def applies(kind: str) -> bool:
-    """Every workspace but a business one confirms this statement."""
-    return kind != BUSINESS
+    """A personal workspace confirms this statement (the owner's decision: before a personal
+    account's first upload). A business keeps its own; a team workspace is not asked."""
+    return kind == PERSONAL
 
 
 def current(conn: Connection, workspace_id: str) -> dict[str, Any] | None:
@@ -90,8 +92,8 @@ def _on() -> bool:
 
 def needed(conn: Connection, workspace_id: str) -> bool:
     """Whether an upload plan for this workspace waits for the statement: the flag is on for the
-    account, the workspace is not a business, and the current wording is not confirmed. With the
-    flag off, plans are exactly as before."""
+    account, the workspace is personal, and the current wording is not confirmed. With the flag
+    off, plans are exactly as before."""
     if not _on():
         return False
     from selecta.identity.schema import workspaces
@@ -124,7 +126,8 @@ def record(conn: Connection, workspace_id: str, user_id: str, *, now: float) -> 
 def state(conn: Connection, workspace_id: str, kind: str) -> dict[str, Any]:
     """What `GET /api/uploads/rights` answers."""
     if not applies(kind):
-        return {"applies": False, "reason": "business_statement", "accepted": False,
+        reason = "business_statement" if kind == BUSINESS else "personal_only"
+        return {"applies": False, "reason": reason, "accepted": False,
                 "version": None, "statement": None, "wording_sha256": None,
                 "accepted_at": None}
     found = current(conn, workspace_id)
