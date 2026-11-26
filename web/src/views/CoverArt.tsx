@@ -85,6 +85,20 @@ function ArtLayer({ src, layer, onBroken }: { src: string; layer: 'preview' | 'f
   return <img className="cover-art-image" data-layer={layer} data-ready={state === 'ready' ? '' : undefined} src={src} alt="" loading="lazy" decoding="async" draggable={false} />;
 }
 
+/** Whether a song's own picture really decodes: the local app serves an empty answer for a file
+ * without one. Kept here, the one file that may load images (ufTruthfulImagery.test.tsx). */
+export function decodes(src: string): Promise<boolean> {
+  if (typeof Image === 'undefined') return Promise.resolve(false);
+  const probe = new Image();
+  probe.decoding = 'async';
+  probe.src = src;
+  if (typeof probe.decode === 'function') return probe.decode().then(() => true, () => false);
+  return new Promise((resolve) => {
+    probe.onload = () => resolve(true);
+    probe.onerror = () => resolve(false);
+  });
+}
+
 export type SongArt = { small: string | null; large: string | null; hue: number | null };
 const NO_ART: SongArt = { small: null, large: null, hue: null };
 

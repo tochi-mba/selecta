@@ -24,6 +24,11 @@ function show() {
 
 afterEach(() => window.history.pushState({}, '', '/'));
 
+
+// Search marks the matched words in their own element, so a name can span several nodes: this
+// finds the innermost element whose whole text is exactly `words`.
+const wholeText = (words: string) => (_: string, element: Element | null) =>
+  element?.textContent === words && ![...element.children].some((child) => child.textContent === words);
 describe('GP-0251-07 honest search explanations', () => {
   it('an exact match and an approximate one each say how they matched', async () => {
     window.history.pushState({}, '', '/library?q=Bohemian%20Rapsody');
@@ -32,7 +37,7 @@ describe('GP-0251-07 honest search explanations', () => {
     expect(await screen.findByLabelText('Search match: Approximate match - check the recording')).toBeInTheDocument();
     expect(screen.getByLabelText('Search match: Title and artist words')).toBeInTheDocument();
     // the stored names are shown exactly, never the normalised search form
-    expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+    expect(screen.getByText(wholeText('Bohemian Rhapsody'))).toBeInTheDocument();
   });
 
   it('nothing matching says so and offers to clear the search, not to add music', async () => {

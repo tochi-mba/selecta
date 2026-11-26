@@ -87,7 +87,8 @@ describe('a song the new revision took out', () => {
     expect(slots[1]).toHaveAttribute('aria-hidden', 'true');
     expect(slots[1].querySelector('[data-occ]')).toBeNull();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
-    fireEvent.animationEnd(slots[1]);
+    // jsdom has no AnimationEvent, so React listens for the prefixed name a browser without it uses
+    fireEvent(slots[1], new Event('webkitAnimationEnd', { bubbles: true }));
     expect(container.querySelectorAll('.lucy-song-slot')).toHaveLength(2);
   });
 

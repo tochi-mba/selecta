@@ -108,7 +108,8 @@ describe('CI-0178-05 first-seam earned-reward moment', () => {
   it('counts a hand-over heard earlier in the visit, and one worked out live in Cloud', () => {
     heard({ seamKey: null, fromIndex: 1, intoIndex: 2, fromSongId: 2, intoSongId: 3 });
     render(<FirstHandoff mix={mix} />);
-    expect(screen.getByText(/Song 2 into Song 3/)).toBeInTheDocument();
+    // each title sits in its own dir="auto" span, so the words are read across them
+    expect(screen.getByRole('status', { name: 'Your first hand-off' })).toHaveTextContent('Song 2 into Song 3');
   });
 
   it('Got it dismisses it for good', () => {

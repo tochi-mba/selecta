@@ -83,7 +83,7 @@ describe('your drafts', () => {
   it('plays, and opens for editing, from the list', async () => {
     const { playDraft, openDraft } = show(list([draft(1)]));
     fireEvent.click(await screen.findByRole('button', { name: 'Play Draft 1' }));
-    expect(playDraft).toHaveBeenCalledWith(1);
+    expect(playDraft).toHaveBeenCalledWith(1, 0, expect.any(Element));
     fireEvent.click(screen.getAllByRole('button', { name: 'Edit Draft 1' })[0]);
     expect(openDraft).toHaveBeenCalledWith(1);
   });

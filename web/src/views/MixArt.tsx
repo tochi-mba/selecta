@@ -3,7 +3,7 @@ import { useFlag } from '../flags';
 import { hasArt, songKeyFor, subscribeArt } from '../media/artStore';
 import { useCatalogArt } from '../media/catalogArt';
 import { serverArtUrl } from '../media/serverArt';
-import { CoverArt } from './CoverArt';
+import { CoverArt, decodes } from './CoverArt';
 import { useFeelOn } from './feelPieces';
 
 /** A song a mix's face can be drawn from: its library id, and its content hash where it is known. */
@@ -64,19 +64,6 @@ let watchingArt = false;
 /** The songs a face is drawn from, as one string, so the same songs are only looked at once. */
 export function faceKey(songs: readonly FaceSong[]): string {
   return songs.slice(0, FACE_CANDIDATES).map((song) => `${song.song_id}:${song.sha256 ?? ''}`).join('|');
-}
-
-/** Whether a picture really decodes: the local app serves an empty answer for a file without one. */
-function decodes(src: string): Promise<boolean> {
-  if (typeof Image === 'undefined') return Promise.resolve(false);
-  const probe = new Image();
-  probe.decoding = 'async';
-  probe.src = src;
-  if (typeof probe.decode === 'function') return probe.decode().then(() => true, () => false);
-  return new Promise((resolve) => {
-    probe.onload = () => resolve(true);
-    probe.onerror = () => resolve(false);
-  });
 }
 
 /** The songs among the mix's opening ones whose file has its own picture, in mix order: kept on

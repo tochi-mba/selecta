@@ -52,6 +52,8 @@ function recorded() {
 }
 
 const images = (container: HTMLElement) => [...container.querySelectorAll<HTMLImageElement>('.cover-art img')];
+// the song's own covers, not the candidates' thumbnails in the open "Wrong cover?" picker
+const songCovers = (container: HTMLElement) => images(container).filter((image) => !image.closest('.song-catalog-picker'));
 
 beforeEach(() => {
   resetArtStoreForTests();
@@ -96,7 +98,7 @@ describe('FL-0478-04 catalogue covers and "Wrong cover?"', () => {
     expect(screen.getByRole('button', { name: /Live at the Garage/ })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: /^Weezer/ })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(tile);
-    await waitFor(() => expect(images(container)).toHaveLength(0));
+    await waitFor(() => expect(songCovers(container)).toHaveLength(0));
     expect(calls.find((call) => call.method === 'PUT')).toEqual({ method: 'PUT', path: '/catalog/songs/4/choice', body: { choice: 'generated', release_id: null } });
     expect(notify).toHaveBeenCalledWith('This song shows its generated tile now.');
     await waitFor(() => expect(screen.getByRole('button', { name: /The generated tile/ })).toHaveAttribute('aria-pressed', 'true'));
