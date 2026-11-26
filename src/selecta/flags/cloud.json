@@ -230,6 +230,15 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.page_layout": {
+      "label": "Cloud pages fill the frame",
+      "about": "Every Cloud page uses the full width of the frame, with text kept to a readable line length; account, billing and onboarding pages stay narrow and centred; Add music shows its storage beside the uploads on wide screens. Notices above the page show one at a time, with the rest folded into one line. Off, pages are drawn as before.",
+      "surfaces": ["cloud.home", "cloud.listen", "cloud.library", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.progressive_import": {
       "label": "Import continues in the background",
       "about": "A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02).",
