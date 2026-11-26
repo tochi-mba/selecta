@@ -14,6 +14,7 @@ contains "path", as defence in depth behind the API models' `extra="forbid"`.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
@@ -21,6 +22,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.local_media import versions
+from selecta.local_media.hashes_schema import local_song_hashes
 from selecta.local_media.schema import local_song_availability, local_songs
 from selecta.persistence import db_now
 
@@ -64,17 +66,28 @@ def _song_json(row: Any) -> dict[str, Any]:
 
 
 def register_songs(
-    conn: Connection, workspace_id: str, songs: Sequence[Mapping[str, Any]]
+    conn: Connection,
+    workspace_id: str,
+    songs: Sequence[Mapping[str, Any]],
+    *,
+    audio_ids: bool = False,
 ) -> list[dict[str, Any]]:
     """Upsert each song by `(workspace_id, content_sha256)` and answer, in order, with
     `{"song_id", "content_sha256"}` plus `"duplicate_of"` where the file is a version of a song
     already here (same normalised title and artist, length within a few seconds). Identical
     bytes are always the same entry. Re-registering a soft-deleted hash restores it.
 
+    With `audio_ids` (`library.audio_identity`), a song may carry a checked `audio_id`, and a
+    file hash is also found among a song's other known hashes (`local_song_hashes`). A new file
+    hash whose audio id exactly one live song has is that song with new bytes (`_same_audio`);
+    anything less certain is a new song, as before. Without it, `audio_id` is ignored entirely.
+
     Two devices importing the same file at once both land on the one entry: a losing insert is
     rolled back to its savepoint and read again, so the request never fails on the unique key."""
     for song in songs:
         _refuse_paths(song)
+    if audio_ids:
+        _take_turn(conn, workspace_id)
     now = db_now(conn)
     groups = versions.primaries(conn, workspace_id)
     answers: list[dict[str, Any]] = []
@@ -82,7 +95,12 @@ def register_songs(
         sha = str(song["content_sha256"]).lower()
         title, artist = str(song["title"]), str(song["artist"])
         fields = {name: song.get(name) for name in OPTIONAL_FIELDS}
+        audio = (song.get("audio_id") or None) if audio_ids else None
         existing = _by_hash(conn, workspace_id, sha)
+        if existing is None and audio_ids:
+            existing = _by_known_hash(conn, workspace_id, sha)
+            if existing is None and audio is not None:
+                existing = _same_audio(conn, workspace_id, audio, sha, now)
         if existing is None:
             duration = song.get("duration_s")
             duplicate_of = groups.match(title, artist, duration)
@@ -98,6 +116,7 @@ def register_songs(
                             created_at=now,
                             updated_at=now,
                             **fields,
+                            **({"audio_id": audio} if audio is not None else {}),
                         )
                     )
             except sa.exc.IntegrityError:
@@ -109,11 +128,16 @@ def register_songs(
                 if duplicate_of is None:
                     groups.add(song_id, title, artist, duration)
         if existing is not None:
+            # an older song learns its audio id the next time a device registers it; one it
+            # already has is never replaced by a device's claim
+            fill = {"audio_id": audio} if audio is not None and existing.audio_id is None else {}
             conn.execute(
                 local_songs.update()
                 .where(local_songs.c.workspace_id == workspace_id)
                 .where(local_songs.c.id == existing.id)
-                .values(title=title, artist=artist, deleted_at=None, updated_at=now, **fields)
+                .values(
+                    title=title, artist=artist, deleted_at=None, updated_at=now, **fields, **fill
+                )
             )
             song_id, duplicate_of = int(existing.id), existing.duplicate_of
         answer = {"song_id": song_id, "content_sha256": sha}
@@ -123,12 +147,83 @@ def register_songs(
     return answers
 
 
+_ROW = (local_songs.c.id, local_songs.c.duplicate_of, local_songs.c.audio_id)
+
+
 def _by_hash(conn: Connection, workspace_id: str, sha: str) -> Any:
     return conn.execute(
-        sa.select(local_songs.c.id, local_songs.c.duplicate_of)
+        sa.select(*_ROW)
         .where(local_songs.c.workspace_id == workspace_id)
         .where(local_songs.c.content_sha256 == sha)
     ).first()
+
+
+def _by_known_hash(conn: Connection, workspace_id: str, sha: str) -> Any:
+    """The song an earlier registration already recorded this file hash for."""
+    return conn.execute(
+        sa.select(*_ROW)
+        .select_from(
+            local_song_hashes.join(
+                local_songs,
+                sa.and_(
+                    local_songs.c.workspace_id == local_song_hashes.c.workspace_id,
+                    local_songs.c.id == local_song_hashes.c.song_id,
+                ),
+            )
+        )
+        .where(local_song_hashes.c.workspace_id == workspace_id)
+        .where(local_song_hashes.c.content_sha256 == sha)
+    ).first()
+
+
+def _same_audio(conn: Connection, workspace_id: str, audio_id: str, sha: str, now: float) -> Any:
+    """The one live song of this workspace with this audio id, now also known by `sha`; None
+    when there is no such song, more than one, or the only one was deleted. A wrong merge loses
+    a member's data and a missed one only costs a re-measure, so only an exact single match
+    merges. The song's own hash stays: an uploaded copy is stored under it, and shared
+    measurements are keyed by the hash the server verified (docs/engineering/audio-identity.md)."""
+    rows = conn.execute(
+        sa.select(*_ROW, local_songs.c.deleted_at)
+        .where(local_songs.c.workspace_id == workspace_id)
+        .where(local_songs.c.audio_id == audio_id)
+        .limit(2)
+    ).all()
+    if len(rows) != 1 or rows[0].deleted_at is not None:
+        return None
+    try:
+        with conn.begin_nested():
+            conn.execute(
+                local_song_hashes.insert().values(
+                    workspace_id=workspace_id,
+                    content_sha256=sha,
+                    song_id=int(rows[0].id),
+                    created_at=now,
+                )
+            )
+    except sa.exc.IntegrityError:
+        # another registration recorded it first; that one is the answer
+        return _by_known_hash(conn, workspace_id, sha)
+    return rows[0]
+
+
+def _take_turn(conn: Connection, workspace_id: str) -> None:
+    """Registrations of one workspace take turns, so "is this hash known, as a song's own or as
+    one of its others?" and the write that follows can't interleave with another device's. On
+    PostgreSQL a transaction lock per workspace; SQLite's writers already queue."""
+    if conn.dialect.name != "postgresql":
+        return
+    digest = hashlib.sha256(f"local_songs.register:{workspace_id}".encode()).digest()
+    key = int.from_bytes(digest[:8], "big", signed=True)
+    conn.execute(sa.text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+
+
+def song_for_hash(conn: Connection, workspace_id: str, sha: str, *, audio_ids: bool) -> Any:
+    """The song row (id, duplicate_of, audio_id) this file hash names in this workspace, as its
+    own hash or, with `audio_ids`, one of its others; None when it names none."""
+    found = _by_hash(conn, workspace_id, sha)
+    if found is None and audio_ids:
+        found = _by_known_hash(conn, workspace_id, sha)
+    return found
 
 
 def list_songs(
@@ -379,4 +474,5 @@ __all__ = [
     "replace_device_availability",
     "set_availability",
     "soft_delete",
+    "song_for_hash",
 ]

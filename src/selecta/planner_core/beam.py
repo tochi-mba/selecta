@@ -52,6 +52,8 @@ MOVE_NAMES = {
     "bass_swap_blend": "blend",
     "filter_sweep": "filter sweep",
     "tempo_ramp": "tempo ramp",
+    "loop_room": "loop and blend",
+    "tempo_bridge": "tempo bridge",
     "word_blend": "word blend",
     "word_exchange": "call and response",
     "phrase_roll": "phrase roll",

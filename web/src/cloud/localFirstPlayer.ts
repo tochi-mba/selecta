@@ -26,6 +26,9 @@ import type { SchedulerClock } from '../engine/scheduler';
 import { seamShown } from './blendState';
 import { handoffWatcher, noteHandoffHeard, pageOnScreen } from '../audio/handoffHeard';
 import { saveSongLength } from './songLength';
+import { accountSeamPlanner, type AccountSeamAnswer, type AccountSeamAsk } from './accountSeams';
+import { deviceRenderOn, type StudioSong } from './deviceStudio';
+import { makeDeviceStudio } from './studioWiring';
 
 /** The shell player for local-first Cloud (ADR-0462 BF-0462-06): the browser engine's speaker
  * (ADR-0457 BrowserSpeaker) driven through the ADR-0415 playback session (usePlaybackDevice),
@@ -406,6 +409,8 @@ export type SeamWiring = {
   workerCalibration?: WorkerCalibration | null;
   /** Must be the same stable local identity used when the calibration was recorded. */
   deviceId?: string | null;
+  /** The account's planner for each transition (accountSeams.ts); without it this device chooses. */
+  planned?: (ask: AccountSeamAsk) => Promise<AccountSeamAnswer>;
 };
 
 /** Opens the engine from a press and makes this device's speaker. Injectable for tests. */
@@ -562,6 +567,20 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     return () => { gone = true; };
   }, [workspaceId]);
   const sources = useRef(new Map<number, MusicSource>());
+  // the file on this device each position plays from, for planning from the account
+  const held = useRef(new Map<number, { songId: number; sha: string }>());
+  const speakerNow = useRef<BrowserSpeaker | null>(null);
+  speakerNow.current = speaker;
+  const apiNow = useRef(api);
+  apiNow.current = api;
+  // cloud.device_render: transitions rendered ahead in play order, from the speaker's own decodes
+  const studio = useMemo(() => makeDeviceStudio({
+    request: (path, init) => apiNow.current(path, init, workspaceId),
+    workspaceId,
+    decodedAt: async (index) => (await speakerNow.current?.decodedAt(index)) ?? null,
+    level: (buffer) => (seamLeadOn() ? songLevels().of(buffer) : Promise.resolve(1)),
+  }), [workspaceId]);
+  useEffect(() => () => studio.dispose(), [studio]);
   // The stem prefetcher (cloud.browser_stems): splits the windows the next transitions need while
   // this song plays. Only with the flag on, the stem model's licence cleared and a model published.
   const prefetcher = useMemo(() => {
@@ -601,7 +620,18 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     onPlanned: (record) => setSeams((kept) => [...kept, { ...record, pair: [songs.current[record.fromIndex]?.song_id ?? null, songs.current[record.toIndex]?.song_id ?? null] as const }].slice(-SEAMS_KEPT)),
     allowed: () => (browserMovesOn() ? browserMovesAllowed() : undefined),
     stems: stemReading,
-  }), [stemReading]);
+    planned: accountSeamPlanner({
+      request: (path, init) => apiNow.current(path, init, workspaceId),
+      workspaceId,
+      fileOf: (index) => held.current.get(index)?.songId ?? null,
+      shaOf: async (songId) => [...held.current.values()].find((one) => one.songId === songId)?.sha ?? null,
+      heard: () => {
+        const at = speakerNow.current?.position();
+        return at ? { index: at.song_index, seconds: at.offset_ms / 1000 } : null;
+      },
+      studio,
+    }),
+  }), [stemReading, workspaceId, studio]);
 
   useEffect(() => speaker?.onState(setEngine), [speaker]);
   // the clock moves while playing: redraw the position twice a second, never faster
@@ -615,6 +645,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     const found = songId === undefined ? null : await (await resolver())?.(songId);
     if (found) sources.current.set(index, found.source ?? 'device');
     else sources.current.delete(index);
+    if (found?.held && (found.source ?? 'device') === 'device') held.current.set(index, found.held);
+    else held.current.delete(index);
     return found ? { id: found.id, data: found.data } : null;
   }, [resolver]);
 
@@ -727,6 +759,18 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   useEffect(() => {
     prefetcher?.plan(mix.map((item) => ({ songId: item.song_id, durationS: item.duration })), position);
   }, [prefetcher, position, mix]);
+  // the next two transitions rendered ahead, from the songs this device holds (deviceStudio.ts)
+  useEffect(() => {
+    if (!speaker || !deviceRenderOn()) return studio.follow([], position);
+    let live = true;
+    const ahead = [position, position + 1, position + 2].filter((index) => index < mix.length);
+    void Promise.all(ahead.map((index) => resolve(index).then(() => held.current.get(index) ?? null, () => null))).then((songs) => {
+      const order: (StudioSong | null)[] = [];
+      ahead.forEach((index, at) => { order[index] = songs[at]; });
+      if (live) studio.follow(order, position);
+    });
+    return () => { live = false; };
+  }, [studio, speaker, position, mix, resolve]);
   const prefetch: Observable<PrefetchState> | null = prefetcher?.state ?? null;
   // T-20261125-8ab8: the song the engine decoded has a length the catalogue lacks; keep it there
   const playingSong = here ? mix[here.song_index] : undefined;

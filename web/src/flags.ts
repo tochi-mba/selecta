@@ -103,6 +103,12 @@ export function flagOn(id: FlagId): boolean {
   return decidedOn(current, id) && decidedOn(account, id);
 }
 
+/** On, and named as on by a source that has spoken. For new work that sends something: a server
+ * too old to know the flag mentions nothing, which `flagOn` reads as on. */
+export function flagListed(id: FlagId): boolean {
+  return flagOn(id) && (current?.[id] === true || account?.[id] === true);
+}
+
 /** The account source of the one read (BF-0462-03): what this account's plan and rules decide,
  * without what the open shell can run here. For a Cloud page that describes the account (plan
  * cards, allowance meters) or is handed an account snapshot: pass that snapshot's `features`, or

@@ -77,6 +77,10 @@ STRICT: tuple[tuple[re.Pattern[str], str | None, Rule], ...] = (
     (re.compile(r"^/api/hosted/songs/(prepare|[^/]+/retry)$"), "POST",
      Rule("hosted_prepare", 30, 10)),
     (re.compile(r"/search(/|$)"), None, Rule("search", 120, 30)),
+    # Planning is CPU work on the API process (cloud_brain); a studio asks once per seam.
+    (re.compile(r"^/api/planning/"), "POST", Rule("planning", 60, 20)),
+    # A device sends each song's facts once, as it measures them.
+    (re.compile(r"^/api/song-facts/\d+$"), "PUT", Rule("song_facts", 300, 100)),
 )
 
 WORDS = "That's a lot of requests at once. Wait {seconds} and try again."

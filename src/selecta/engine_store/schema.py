@@ -85,6 +85,12 @@ analysis = sa.Table(
     # why analysis gave up, when it did
     sa.Column("error", sa.Text, nullable=True),
     sa.Column("analysed_at", sa.Text, nullable=True),
+    # Provenance (`es0479prov01`, `lib0005provenance`): which implementation measured these
+    # facts, such as `python-beatthis-3` or a device's `web-dsp-1`, and whether a SelectaDJ
+    # worker or the member's device sent them. Null on a row the Desktop's own Python analysis
+    # wrote: `python-beatthis-{version}`, measured by SelectaDJ itself (`engine_store.facts`).
+    sa.Column("implementation", sa.Text, nullable=True),
+    sa.Column("source", sa.Text, nullable=True),
     _of_a_song("analysis"),
 )
 
@@ -124,6 +130,9 @@ songs = sa.Table(
     # SHA-256 of the file's bytes, as Cloud's catalogue keys a song. Filled in the background
     # (`engine_store.song_hashes`); not a key on Desktop, where two copies may share it.
     sa.Column("content_hash", sa.String(64), nullable=True),
+    # A hash of the audio alone (`library.audio_identity`, docs/engineering/audio-identity.md):
+    # the same after a tag edit. Filled beside `content_hash`; null for a format it can't place.
+    sa.Column("audio_id", sa.String(67), nullable=True),
 )
 
 lyrics = sa.Table(

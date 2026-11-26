@@ -7,6 +7,7 @@ import numpy as np
 from selecta.analysis.song import Cue, SongInfo
 from selecta.planner_core.fit import fold_ratio
 from selecta.planner_core.recipes.timing import BlendTiming, blend_timing, tempo_gap
+from selecta.planner_core.rhythm import one_drummer
 from selecta.render.script import Curve, Part, TransitionScript, fade_in, fade_out, sweep
 
 _FADE_SHARE = 0.65
@@ -61,17 +62,50 @@ def bass_swap_blend(
     start, end = timing.overlap_start, timing.overlap_end
     span = (end - start) * _FADE_SHARE
     swap_at = _swap_position(a, b, exit_cue.bar, entry_cue.bar) if swap_at is None else swap_at
+    drummer = one_drummer(a, b, exit_cue.bar, entry_cue.bar, bars)
+    if drummer:
+        swap_at = _phrase_swap(bars, swap_at)
     swap = _swap_time(timing, bars, a.beats_per_bar, swap_at)
     a_low, b_low = _low_curves(swap, timing.master_period)
+    meta = {"bars": bars, "swap": swap, "swap_at": swap_at, "period": timing.master_period}
+    a_part = Part(song=a, warp=timing.a_warp, gain=fade_out(end - span, end), low=a_low)
+    b_part = Part(song=b, warp=timing.b_warp, gain=fade_in(start, start + span), low=b_low)
+    if drummer:
+        # one drummer: B's highs (hats, the snare's crack) wait with its kick, and A's go with
+        # its kick, all on the phrase line. Without stems this is by frequency band, so the
+        # snare's body in the mids still overlaps.
+        a_part.high, b_part.high = _high_curves(swap, timing.master_period)
+        meta["one_drummer"] = True
     return TransitionScript(
         style="bass_swap_blend",
         duration=timing.duration,
-        a=Part(song=a, warp=timing.a_warp, gain=fade_out(end - span, end), low=a_low),
-        b=Part(song=b, warp=timing.b_warp, gain=fade_in(start, start + span), low=b_low),
+        a=a_part,
+        b=b_part,
         overlap=(start, end),
         expects_beats_aligned=True,
-        meta={"bars": bars, "swap": swap, "swap_at": swap_at, "period": timing.master_period},
+        meta=meta,
     )
+
+
+ONE_DRUMMER_HIGH_DOWN = 0.1
+"""How far the waiting song's high band sits, -20 dB: its hats gone, its top end not dead."""
+PHRASE_BARS = 4
+
+
+def _phrase_swap(bars: int, swap_at: float) -> float:
+    """The swap moved to the nearest 4-bar line inside the overlap, so the drums change hands
+    where a phrase turns. An overlap too short for one stays where it was."""
+    if bars < 2 * PHRASE_BARS:
+        return swap_at
+    line = PHRASE_BARS * round(bars * swap_at / PHRASE_BARS)
+    return min(max(line, PHRASE_BARS), bars - PHRASE_BARS) / bars
+
+
+def _high_curves(swap: float, beat: float) -> tuple[Curve, Curve]:
+    down = ONE_DRUMMER_HIGH_DOWN
+    a_high = Curve([(swap - beat / 2, 1.0), (swap + beat / 2, down)])
+    b_high = Curve([(swap - beat / 2, down), (swap + beat / 2, 1.0)])
+    return a_high, b_high
 
 
 def tempo_ramp(

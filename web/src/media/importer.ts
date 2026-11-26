@@ -1,4 +1,6 @@
 import { assertNoPath, fileSha256, normalise } from './identity';
+import { AUDIO_ID_PATTERN, fileIdentity } from './audioIdentity';
+import { flagOn } from '../flags';
 import { readFileTags } from './tags';
 import { captureArt } from './art';
 import { isQuotaError, MediaStore } from './store';
@@ -36,6 +38,8 @@ export type SongRegistration = {
   duration_s?: number;
   codec?: string;
   sample_rate?: number;
+  /** `library.audio_identity`: a hash of the audio alone (docs/engineering/audio-identity.md). */
+  audio_id?: string;
 };
 
 export type RegisteredSong = { song_id: number; content_sha256: string; duplicate_of?: number };
@@ -316,10 +320,14 @@ export async function registrationOf(
   reuse?: { fingerprints: ImportFingerprints; candidate: Pick<Candidate, 'place' | 'open'> },
 ): Promise<SongRegistration> {
   const fingerprints = reuse?.fingerprints;
+  // `library.audio_identity`: the audio id comes from the same read as the file hash
+  const audio = flagOn('library.audio_identity');
   const found = fingerprints
-    ? await fingerprints.identify(file, reuse.candidate.place, name, reuse.candidate.open, signal)
+    ? await fingerprints.identify(file, reuse.candidate.place, name, reuse.candidate.open, signal, audio)
     : null;
-  const content_sha256 = found ? found.sha : await fileSha256(file, { signal });
+  const direct = found || !audio ? null : await fileIdentity(file, { signal });
+  const content_sha256 = found ? found.sha : direct ? direct.sha : await fileSha256(file, { signal });
+  const audioId = audio ? (found ? found.audioId : direct?.audioId) : undefined;
   // `library.art_embedded`: the file's own picture becomes its cover later, at idle, on this
   // device only. Queued, never awaited, and it can never fail or slow this import.
   captureArt(file, content_sha256);
@@ -360,6 +368,8 @@ export async function registrationOf(
       : {}),
     ...(codec ? { codec } : {}),
     ...(tags.sample_rate ? { sample_rate: tags.sample_rate } : {}),
+    // a hash, like the file hash: no audio, path or name leaves the device
+    ...(audioId && AUDIO_ID_PATTERN.test(audioId) ? { audio_id: audioId } : {}),
   };
 }
 

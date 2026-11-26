@@ -14,6 +14,8 @@ MOVE_FLAGS = {
     "vocal_ride": "move.vocal_ride",
     "filter_sweep": "move.filter_sweep",
     "tempo_ramp": "move.tempo_ramp",
+    "tempo_bridge": "move.tempo_bridge",
+    "loop_room": "move.loop_room",
     "echo_out": "move.echo_out",
     "delay_throw": "move.delay_throw",
     "reverb_wash": "move.reverb_wash",

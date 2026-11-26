@@ -7,11 +7,12 @@ a pairing like that, so these checks come first.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 import numpy as np
 
+from selecta import flags
 from selecta.analysis.song import SongInfo
 
 MAX_FOLDED_GAP = 0.16
@@ -36,6 +37,58 @@ MIN_OVERLAP_BARS = 8
 ROLL_MAX_GAP = 0.15
 ROLL_MAX_KEYS = 3
 """Rolls within 15% tempo and 3 keys were liked 4 times in 5; outside that, 4 in 14."""
+
+# How far `selecta calibrate --apply` may move each gate (`planner.calibrated_gates`), so no fit
+# on a handful of ratings can turn a gate off or shut a move out entirely.
+CLOSE_TEMPO_RANGE = (0.02, 0.08)
+FAR_KEYS_RANGE = (3, 7)
+STEADY_GRID_RANGE = (0.6, 0.95)
+MIN_OVERLAP_BARS_RANGE = (5, 16)
+MAX_FOLDED_GAP_RANGE = (0.08, 0.2)
+MAX_LEVEL_STEP_RANGE = (2.5, 6.0)
+
+
+@dataclass(frozen=True)
+class Gates:
+    """The limits the move planner (`choose.enumerate_candidates`) applies to a pair. The
+    defaults are the hand-set values above; a calibration can move them within their ranges."""
+
+    tempo: float = CLOSE_TEMPO
+    keys: int = FAR_KEYS
+    grid: float = STEADY_GRID
+    overlap: int = MIN_OVERLAP_BARS
+    tempo_free_gap: float = MAX_FOLDED_GAP
+    level_step: float = MAX_LEVEL_STEP_DB
+
+    @classmethod
+    def with_overrides(cls, overrides: Mapping[str, float] | None) -> Gates:
+        """Today's gates with `overrides` applied, each held inside its range. Honoured only
+        with `planner.calibrated_gates` on; a name or value that doesn't fit is ignored. The
+        planner core never reads the file these come from: the Desktop passes them in."""
+        if not overrides or not flags.on("planner.calibrated_gates"):
+            return DEFAULT_GATES
+        moved = {}
+        for name, value in overrides.items():
+            bounds = GATE_RANGES.get(name)
+            if bounds is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+                continue
+            if not np.isfinite(value):
+                continue
+            held = min(max(float(value), bounds[0]), bounds[1])
+            moved[name] = int(round(held)) if name in WHOLE_GATES else held
+        return cls(**moved) if moved else DEFAULT_GATES
+
+
+DEFAULT_GATES = Gates()
+GATE_RANGES: dict[str, tuple[float, float]] = {
+    "tempo": CLOSE_TEMPO_RANGE,
+    "keys": FAR_KEYS_RANGE,
+    "grid": STEADY_GRID_RANGE,
+    "overlap": MIN_OVERLAP_BARS_RANGE,
+    "tempo_free_gap": MAX_FOLDED_GAP_RANGE,
+    "level_step": MAX_LEVEL_STEP_RANGE,
+}
+WHOLE_GATES = frozenset({"keys", "overlap"})
 
 _TIMBRE_COEFFICIENTS = slice(1, 14)
 _TIMBRE_WIDTH = _TIMBRE_COEFFICIENTS.stop

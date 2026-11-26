@@ -35,6 +35,15 @@ SONG_ARRAYS = (
     "rms_db_bars",
     "mfcc_bars",
 )
+RHYTHM_ARRAYS = ("pattern_bars", "swing_bars")
+"""Each bar's drum pattern and swing (`features.rhythm_bars`). Songs analysed before these
+existed don't have them, and nothing re-analyses a library for them: an absent pattern is no
+opinion on rhythm. Read only with `planner.rhythm_fit` on, so with it off nothing more is read."""
+
+
+def song_arrays() -> tuple[str, ...]:
+    """The arrays a `SongInfo` is built from in this build."""
+    return SONG_ARRAYS + RHYTHM_ARRAYS if flags.on("planner.rhythm_fit") else SONG_ARRAYS
 
 Family = Literal["hiphop", "rnb", "dance", "afro", "latin", "rock", "pop", "other"]
 
@@ -95,6 +104,8 @@ class SongInfo:
     chroma_bars: np.ndarray | None = None
     rms_db_bars: np.ndarray | None = None
     mfcc_bars: np.ndarray | None = None
+    pattern_bars: np.ndarray | None = None
+    swing_bars: np.ndarray | None = None
     _line_index: tuple | None = field(default=None, repr=False, compare=False)
     _phrases: dict[int, float] | None = field(default=None, repr=False, compare=False)
 
@@ -362,6 +373,10 @@ def _at_corrected_tempo(features: dict, sections: list[dict], found: float, righ
     isn't half or double only changes what the tempo is called, since there's no way to know where
     those beats would fall."""
     ratio = right / found if found else 1.0
+    if abs(ratio - 2.0) < 0.1 or abs(ratio - 0.5) < 0.05:
+        # a bar's 16 steps don't survive halving or doubling the bar, so the corrected song's
+        # rhythm is unknown rather than wrong
+        features = {k: v for k, v in features.items() if k not in RHYTHM_ARRAYS}
     beats = features["beats"]
     bar_arrays = ("energy_bars", "low_share_bars", "chroma_bars", "rms_db_bars", "mfcc_bars")
     if abs(ratio - 2.0) < 0.1:
@@ -420,7 +435,11 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
     ).fetchone()
     if row is None:
         raise KeyError(f"song {song_id} hasn't been analysed")
-    features = dict(load_features(settings, song_id, SONG_ARRAYS, from_file=True))
+    if flags.on("core.engine_store"):
+        # reached with writes pending on `conn`: read this file, not the store, as the rows are
+        features = dict(load_features(settings, song_id, song_arrays(), from_file=True))
+    else:
+        features = dict(load_features(settings, song_id, song_arrays()))
     lyric = conn.execute("SELECT * FROM lyrics WHERE song_id = ?", (song_id,)).fetchone()
     corrected = conn.execute(
         "SELECT bpm, camelot FROM song_overrides WHERE song_id = ?", (song_id,)
@@ -484,4 +503,16 @@ def build_song(row, features: dict, lyric, corrected) -> SongInfo:
         chroma_bars=features["chroma_bars"].astype(np.float32),
         rms_db_bars=features["rms_db_bars"].astype(np.float32),
         mfcc_bars=features["mfcc_bars"].astype(np.float32),
+        **_rhythm(features, bar_starts.size),
     )
+
+
+def _rhythm(features: dict, bars: int) -> dict:
+    """The drum pattern and swing, when both are here and fit the song's bars; otherwise none,
+    which the planner reads as no opinion."""
+    pattern, swing = features.get("pattern_bars"), features.get("swing_bars")
+    if pattern is None or swing is None:
+        return {}
+    if pattern.ndim != 2 or pattern.shape != (bars, 32) or swing.shape != (bars,):
+        return {}
+    return {"pattern_bars": pattern.astype(np.float32), "swing_bars": swing.astype(np.float32)}

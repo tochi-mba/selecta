@@ -295,13 +295,16 @@ def upsert_song(conn: sqlite3.Connection, song: dict[str, Any]) -> None:
     columns = list(song)
     placeholders = ", ".join(f":{c}" for c in columns)
     updates = ", ".join(f"{c}=excluded.{c}" for c in columns if c != "path")
-    if {"size", "mtime"} <= set(song) and "content_hash" not in song and _hashes_songs(conn):
+    hashed = _hash_columns(conn) if {"size", "mtime"} <= set(song) else set()
+    for column in sorted(hashed - set(song)):
         # a file that changed is other bytes, so the hash it had (core.engine_store) goes; the
         # hash job or the next analysis fills it again. Kept even with the flag off, so a hash
-        # never outlives its file whichever way the flag was when the file changed.
+        # never outlives its file whichever way the flag was when the file changed. The audio id
+        # (library.audio_identity) goes too: the job reads it again, and a tag edit gives back
+        # the same one, so the song's features are found under the same key.
         updates += (
-            ", content_hash=CASE WHEN songs.size IS NOT excluded.size "
-            "OR songs.mtime IS NOT excluded.mtime THEN NULL ELSE songs.content_hash END"
+            f", {column}=CASE WHEN songs.size IS NOT excluded.size "
+            f"OR songs.mtime IS NOT excluded.mtime THEN NULL ELSE songs.{column} END"
         )
     conn.execute(
         f"INSERT INTO songs ({', '.join(columns)}) VALUES ({placeholders}) "
@@ -312,7 +315,14 @@ def upsert_song(conn: sqlite3.Connection, song: dict[str, Any]) -> None:
 
 def _hashes_songs(conn: sqlite3.Connection) -> bool:
     """Whether this library has `songs.content_hash`, added by the engine store's migration."""
-    return any(row[1] == "content_hash" for row in conn.execute("PRAGMA table_info(songs)"))
+    return "content_hash" in _hash_columns(conn)
+
+
+def _hash_columns(conn: sqlite3.Connection) -> set[str]:
+    """Which of the engine store's per-file hashes this library has (`lib0003songs`,
+    `lib0004audioid`): each describes the bytes, so each goes when the file changes."""
+    names = {row[1] for row in conn.execute("PRAGMA table_info(songs)")}
+    return names & {"content_hash", "audio_id"}
 
 
 def known_files(conn: sqlite3.Connection) -> dict[str, tuple[int, float]]:

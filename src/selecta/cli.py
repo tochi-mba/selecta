@@ -15,6 +15,7 @@ from rich.table import Table
 
 from selecta import db
 from selecta.admin.cli import admin_app as _admin_app
+from selecta.cli_calibrate import calibrate as _calibrate
 from selecta.cli_progress import progress_bar
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, load_settings
 from selecta.persistence import make_engine
@@ -25,6 +26,7 @@ database_app = typer.Typer(no_args_is_help=True, add_completion=False)
 app.add_typer(database_app, name="db", help="Cloud database schema operations.")
 app.add_typer(_admin_app, name="admin", help="Staff console operations, such as the first Owner.")
 app.add_typer(_storage_app, name="storage", help="Cloud storage upkeep (derived files).")
+app.command("calibrate")(_calibrate)
 console = Console()
 DEFAULT_MIX_OUTPUT = Path("out/mix.flac")
 DEFAULT_REEL_OUTPUT = Path("reels/reel-1")
@@ -840,6 +842,20 @@ def listening_report(study: str) -> None:
 
     _, conn = _open()
     console.print_json(data=study_summary(conn, study))
+
+
+@app.command("move-trial")
+def move_trial(
+    move: str = typer.Argument(..., help="loop_room or tempo_bridge."),
+    count: int = typer.Option(6, help="How many pairs to render."),
+    register: bool = typer.Option(False, help="Add them to the Workshop's blind listening."),
+) -> None:
+    """Render a move still behind its flag against what the planner would otherwise choose."""
+    from selecta.listening_trials import move_trials
+
+    settings, conn = _open()
+    made = move_trials(conn, settings, move, count, register, log=console.print)
+    console.print(f"{len(made)} trials written to {settings.home / 'move-trials' / move}.")
 
 
 @app.command("gather-data")

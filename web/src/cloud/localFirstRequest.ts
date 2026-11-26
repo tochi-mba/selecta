@@ -1,4 +1,5 @@
 import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
+import { accountOrderPlanner } from './accountOrder';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { linksFamily } from './localFirstLinks';
 import { mixFamily, type PlayableSong, type SongPlace } from './localFirstMixes';
@@ -358,7 +359,9 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     }
     return lovedKept;
   }
-  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms) : null;
+  // the account's planner orders a new mix when it can (accountOrder.ts); otherwise today's order
+  const planOrder = sources.workspaceId ? accountOrderPlanner(cloud, sources.workspaceId) : undefined;
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.(), placeOf, lovedInRooms, planOrder) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
     songs: async () => {

@@ -14,10 +14,15 @@ import { estimateKey, type KeyEstimate } from '../analysis/key';
 import { estimateTempo, type TempoEstimate } from '../analysis/tempo';
 import { integratedLoudness, samplePeakDb } from '../loudness';
 import { tonalProfile, type TonalProfile } from '../analysis/tonalProfile';
+import { browserBeatSource } from '../analysis/beatSource';
+import { FEATURE_SR } from '../analysis/features';
+import { measureSong, type SongFacts } from '../analysis/song';
 
 /** `profile` (whole-song tonal profile, cloud.browser_harmonic) is only run when asked for. */
 /** `loudness` (the whole song's level, cloud.seam_lead) reads `channels`, not `pcm`. */
-export type AnalysisTask = 'onsets' | 'tempo' | 'key' | 'profile' | 'loudness';
+/** `song` (whole-song facts, cloud.device_analysis) reads `channels` at `sampleRate`; asked
+ * with `profile` and an empty `pcm`, the profile is made from the same signal. */
+export type AnalysisTask = 'onsets' | 'tempo' | 'key' | 'profile' | 'loudness' | 'song';
 
 export interface AnalysisRequest {
   id: number;
@@ -26,7 +31,7 @@ export interface AnalysisRequest {
   pcm: Float32Array;
   /** Which estimates to run; onsets, tempo and key when omitted. */
   tasks?: AnalysisTask[];
-  /** Every channel of the song, for `loudness`; transferred, not copied. */
+  /** Every channel of the song, for `loudness` and `song`; transferred, not copied. */
   channels?: Float32Array[];
 }
 
@@ -39,6 +44,8 @@ export interface AnalysisResponse {
   /** Integrated loudness (BS.1770) and sample peak of `channels`. */
   lufs?: number;
   peakDb?: number;
+  /** The whole song's facts (`song`). */
+  facts?: SongFacts;
   error?: string;
 }
 
@@ -63,7 +70,15 @@ export function analyse(request: AnalysisRequest): AnalysisResponse {
       response.lufs = integratedLoudness(request.channels, request.sampleRate);
       response.peakDb = samplePeakDb(request.channels);
     }
-    if (tasks.has('profile')) {
+    if (tasks.has('song') && request.channels?.length) {
+      const measured = measureSong(request.channels, request.sampleRate, browserBeatSource);
+      response.facts = measured.facts;
+      // the profile from the same 22,050 Hz signal, so a song is decoded once for both
+      if (tasks.has('profile') && request.pcm.length === 0) {
+        response.profile = tonalProfile(measured.detail.mono22k, FEATURE_SR);
+      }
+    }
+    if (tasks.has('profile') && !response.profile) {
       response.profile = tonalProfile(request.pcm, request.sampleRate);
     }
   } catch (problem) {

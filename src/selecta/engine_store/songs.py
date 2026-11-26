@@ -26,7 +26,7 @@ import numpy as np
 import sqlalchemy as sa
 
 from selecta.analysis.pipeline import read_features
-from selecta.analysis.song import SONG_ARRAYS, SongInfo, build_song
+from selecta.analysis.song import SongInfo, build_song, song_arrays
 from selecta.engine_store import EngineStore
 from selecta.engine_store.schema import analysis, lyrics, song_overrides, songs
 from selecta.local_media.lyrics_schema import local_song_lyrics
@@ -48,6 +48,21 @@ def features_key(workspace_id: str, content_hash: str, version: int) -> str:
     return derived_key(workspace_id, FEATURES_KIND, digest, FEATURES_ATTEMPT, FEATURES_NAME)
 
 
+def audio_features_key(workspace_id: str, audio_id: str, version: int) -> str:
+    """Where a song with an audio id keeps its arrays (`library.audio_identity`): the same audio
+    and analysis version, the same key, so a tag edit that changes the file's hash still finds
+    them. Read first; `features_key` and the old file stay as fallbacks and are never deleted."""
+    inputs = {"audio_id": audio_id, "analysis_version": int(version)}
+    digest = input_hash(workspace_id, FEATURES_KIND, inputs)
+    return derived_key(workspace_id, FEATURES_KIND, digest, FEATURES_ATTEMPT, FEATURES_NAME)
+
+
+def _audio_ids_on() -> bool:
+    from selecta import flags
+
+    return flags.on("library.audio_identity")
+
+
 @dataclass(frozen=True)
 class _Songs:
     """Where a workspace's songs and lyrics are, and what each identity column is called."""
@@ -55,6 +70,7 @@ class _Songs:
     table: sa.Table
     id: Any
     content_hash: Any
+    audio_id: Any
     artist: Any
     title: Any
     genre: Any
@@ -68,6 +84,7 @@ _LIBRARY = _Songs(
     table=songs,
     id=songs.c.id,
     content_hash=songs.c.content_hash,
+    audio_id=songs.c.audio_id,
     artist=songs.c.artist,
     title=songs.c.title,
     genre=songs.c.genre,
@@ -81,6 +98,7 @@ _CATALOGUE = _Songs(
     table=local_songs,
     id=local_songs.c.id,
     content_hash=local_songs.c.content_sha256,
+    audio_id=local_songs.c.audio_id,
     artist=local_songs.c.artist,
     title=local_songs.c.title,
     # the catalogue keeps no genre, and no path: nothing about the device leaves it
@@ -96,7 +114,13 @@ def _songs(store: EngineStore) -> _Songs:
     return _LIBRARY if store.library else _CATALOGUE
 
 
-def _facts(store: EngineStore, connection: sa.Connection, song_id: int):
+def _audio_column(where: _Songs) -> Any:
+    # with the flag off the column is never read, so a store behaves exactly as before it
+    return where.audio_id if _audio_ids_on() else sa.null()
+
+
+def _facts_query(store: EngineStore):
+    """A song's identity joined with its analysis, for this workspace's live songs."""
     where = _songs(store)
     joined = where.table.join(
         analysis,
@@ -106,33 +130,35 @@ def _facts(store: EngineStore, connection: sa.Connection, song_id: int):
         ),
     )
     return (
-        connection.execute(
-            sa.select(
-                where.id.label("id"),
-                where.path.label("path"),
-                where.artist.label("artist"),
-                where.title.label("title"),
-                where.genre.label("genre"),
-                where.duration.label("duration"),
-                where.content_hash.label("content_hash"),
-                analysis.c.version,
-                analysis.c.bpm,
-                analysis.c.constant_tempo,
-                analysis.c.grid_confidence,
-                analysis.c.beats_per_bar,
-                analysis.c.camelot,
-                analysis.c.key_confidence,
-                analysis.c.lufs,
-                analysis.c.peak_db,
-                analysis.c.energy,
-                analysis.c.sections,
-            )
-            .select_from(joined)
-            .where(store.mine(where.table), where.id == song_id, where.live)
+        sa.select(
+            where.id.label("id"),
+            where.path.label("path"),
+            where.artist.label("artist"),
+            where.title.label("title"),
+            where.genre.label("genre"),
+            where.duration.label("duration"),
+            where.content_hash.label("content_hash"),
+            _audio_column(where).label("audio_id"),
+            analysis.c.version,
+            analysis.c.bpm,
+            analysis.c.constant_tempo,
+            analysis.c.grid_confidence,
+            analysis.c.beats_per_bar,
+            analysis.c.camelot,
+            analysis.c.key_confidence,
+            analysis.c.lufs,
+            analysis.c.peak_db,
+            analysis.c.energy,
+            analysis.c.sections,
         )
-        .mappings()
-        .first()
+        .select_from(joined)
+        .where(store.mine(where.table), where.live)
     )
+
+
+def _facts(store: EngineStore, connection: sa.Connection, song_id: int):
+    where = _songs(store)
+    return connection.execute(_facts_query(store).where(where.id == song_id)).mappings().first()
 
 
 def _lyric(store: EngineStore, connection: sa.Connection, song_id: int):
@@ -176,10 +202,17 @@ def _arrays(
     version: int | None,
     names: tuple[str, ...] | None,
     legacy: Path | None,
+    audio_id: str | None = None,
 ) -> dict[str, np.ndarray]:
     old = None if legacy is None else Path(legacy) / f"{song_id}.npz"
-    if content_hash and version is not None:
-        key = features_key(store.workspace_id, content_hash, version)
+    keys: list[str] = []
+    if version is not None:
+        # by audio first (library.audio_identity), then by the file's bytes, then the old file
+        if audio_id:
+            keys.append(audio_features_key(store.workspace_id, audio_id, version))
+        if content_hash:
+            keys.append(features_key(store.workspace_id, content_hash, version))
+    for key in keys:
         try:
             with artifacts.open_input(key) as path:
                 # A song analysed again while core.engine_store was off rewrote only the old
@@ -208,9 +241,82 @@ def load_song(
     if row["duration"] is None:
         raise KeyError(f"song {song_id} has no known duration yet")
     features = _arrays(
-        store, artifacts, song_id, row["content_hash"], row["version"], SONG_ARRAYS, legacy
+        store,
+        artifacts,
+        song_id,
+        row["content_hash"],
+        row["version"],
+        song_arrays(),
+        legacy,
+        row["audio_id"],
     )
     return build_song(row, features, lyric, corrected)
+
+
+def load_songs(
+    store: EngineStore,
+    artifacts: ArtifactStore,
+    song_ids: list[int],
+    *,
+    legacy: Path | None = None,
+) -> tuple[list[SongInfo], list[int]]:
+    """Many songs at once, read in one transaction rather than one per song: the `SongInfo` of
+    each analysed song, in the order asked, and the ids that have no usable facts (not in this
+    workspace's library, never measured, no known duration, or no stored arrays)."""
+    wanted = list(dict.fromkeys(int(song_id) for song_id in song_ids))
+    if not wanted:
+        return [], []
+    where = _songs(store)
+    lyric_table = where.lyrics
+    with store.read() as connection:
+        rows = {
+            int(row["id"]): row
+            for row in connection.execute(_facts_query(store).where(where.id.in_(wanted)))
+            .mappings()
+            .all()
+        }
+        lyrics_of = {
+            int(row["song_id"]): row
+            for row in connection.execute(
+                sa.select(lyric_table.c.song_id, lyric_table.c.status, lyric_table.c.synced).where(
+                    store.mine(lyric_table), lyric_table.c.song_id.in_(list(rows))
+                )
+            )
+            .mappings()
+            .all()
+        }
+        corrections = {
+            int(row["song_id"]): row
+            for row in connection.execute(
+                sa.select(song_overrides.c.song_id, song_overrides.c.bpm, song_overrides.c.camelot)
+                .where(store.mine(song_overrides), song_overrides.c.song_id.in_(list(rows)))
+            )
+            .mappings()
+            .all()
+        }
+    found: list[SongInfo] = []
+    missing: list[int] = []
+    for song_id in wanted:
+        row = rows.get(song_id)
+        if row is None or row["duration"] is None:
+            missing.append(song_id)
+            continue
+        try:
+            features = _arrays(
+                store,
+                artifacts,
+                song_id,
+                row["content_hash"],
+                row["version"],
+                song_arrays(),
+                legacy,
+                row["audio_id"],
+            )
+        except ArtifactMissing:
+            missing.append(song_id)
+            continue
+        found.append(build_song(row, features, lyrics_of.get(song_id), corrections.get(song_id)))
+    return found, missing
 
 
 def load_features(
@@ -225,7 +331,7 @@ def load_features(
     where = _songs(store)
     with store.read() as connection:
         found = connection.execute(
-            sa.select(where.content_hash, analysis.c.version)
+            sa.select(where.content_hash, analysis.c.version, _audio_column(where))
             .select_from(
                 where.table.outerjoin(
                     analysis,
@@ -237,8 +343,15 @@ def load_features(
             )
             .where(store.mine(where.table), where.id == song_id, where.live)
         ).first()
-    content_hash, version = (found[0], found[1]) if found is not None else (None, None)
-    return _arrays(store, artifacts, song_id, content_hash, version, names, legacy)
+    content_hash, version, audio_id = found if found is not None else (None, None, None)
+    return _arrays(store, artifacts, song_id, content_hash, version, names, legacy, audio_id)
 
 
-__all__ = ["FEATURES_KIND", "features_key", "load_features", "load_song"]
+__all__ = [
+    "FEATURES_KIND",
+    "audio_features_key",
+    "features_key",
+    "load_features",
+    "load_song",
+    "load_songs",
+]

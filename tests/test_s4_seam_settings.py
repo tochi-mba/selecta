@@ -23,7 +23,7 @@ from test_api_contracts import (  # noqa: F401 - pytest fixtures shared with the
 )
 
 from selecta.routes.edit import MOST_OVERLAP_BARS
-from selecta.seam_kinds import MOVES, NOT_IN_THE_CHOOSER
+from selecta.seam_kinds import MOVES, NOT_IN_THE_CHOOSER, moves_on
 from selecta.seams import seam_options
 
 # The chooser at base 9b663f9f (before PR #29), name -> label. Its descriptions were the same.
@@ -64,7 +64,8 @@ def test_every_move_offered_before_4_is_still_offered_with_its_words(tmp_path, b
     a.id, b.id = 1, 2
     offered = {move["name"]: move for move in seam_options(a, b)["moves"]}
     assert {name: offered[name]["label"] for name in BEFORE_4} == BEFORE_4
-    assert set(offered) == set(MOVES) - NOT_IN_THE_CHOOSER
+    # every move this build has on; a move still off by default (move.loop_room) is not offered
+    assert set(offered) == set(moves_on()) - NOT_IN_THE_CHOOSER
     for name, move in offered.items():
         assert move["description"] == MOVES[name][1]
         # nothing is greyed out without saying why, and nothing with a reason can be chosen

@@ -2,7 +2,8 @@
 
 The ZIP holds every original (checked against its stored size and SHA-256), `settings.json` (the
 account, workspace, plan, feature opt-outs, Lucy choices and signed-in devices), `assets.json`,
-`mixes.json` and a manifest. Cloud doesn't store mix revisions yet, so `mixes.json` says so and
+`mixes.json`, `song-facts.json` with each song's stored arrays (`cloud_brain.export`) and a
+manifest. Cloud doesn't store mix revisions yet, so `mixes.json` says so and
 carries what Cloud does keep about mixes: the workspace's playback session.
 """
 
@@ -26,6 +27,7 @@ from starlette.background import BackgroundTask
 
 from selecta.ai.usage_schema import lucy_usage_ledger
 from selecta.billing import plans, stripe_sync
+from selecta.cloud_brain import export as song_facts_export
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
 from selecta.lucy import cloud_settings as lucy_cloud
@@ -34,7 +36,7 @@ from selecta.lucy.cloud_schema import lucy_cloud_conversations, lucy_cloud_turns
 from selecta.persistence import transaction
 from selecta.playback.default_speaker_schema import playback_default_speakers
 from selecta.playback.schema import devices, playback_sessions
-from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets
+from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets, R2ArtifactStore
 from selecta.storage.keys import Bucket, original_key
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.storage.schema import assets, upload_sessions
@@ -228,6 +230,8 @@ def install_routes(
                 .first()
             )
             kept = _kept_library(conn, workspace.id)
+            # ADR-0479: song facts, corrections, ratings and the other hashes a song is known by
+            engine_rows = song_facts_export.kept(conn, workspace.id)
 
         temp_dir = Path(tempfile.mkdtemp(prefix="selecta-account-export-"))
         archive_path = temp_dir / "selectadj-account-export.zip"
@@ -304,6 +308,19 @@ def install_routes(
                         }
                     )
 
+                try:
+                    features = song_facts_export.write_features(
+                        archive,
+                        lambda: R2ArtifactStore(object_client_factory(), buckets),
+                        workspace.id,
+                        engine_rows["measurements"],
+                    )
+                except R2Error as error:
+                    raise HTTPException(
+                        status_code=503,
+                        detail={"code": "asset_export_unavailable", "retryable": error.retryable},
+                    ) from error
+
                 settings = {
                     "schema_version": 1,
                     "account": {
@@ -359,6 +376,10 @@ def install_routes(
                     },
                     "library": f"{len(kept['songs'])} songs in library.json (details, never "
                     "the files on your devices)",
+                    "song_facts": f"{len(engine_rows['measurements'])} songs' measurements, "
+                    f"{len(engine_rows['corrections'])} corrections and "
+                    f"{len(engine_rows['ratings'])} ratings in song-facts.json; {features} "
+                    "songs' per-bar numbers in song-facts/features/",
                     "rooms": f"{len(kept['rooms']['recaps'])} room recaps and "
                     f"{len(kept['rooms']['crowd_marks'])} crowd marks in rooms.json (totals "
                     "only, no guest)",
@@ -369,6 +390,9 @@ def install_routes(
                 archive.writestr("mixes.json", json.dumps(mixes, indent=2, default=str))
                 archive.writestr("library.json", json.dumps(kept["songs"], indent=2, default=str))
                 archive.writestr("rooms.json", json.dumps(kept["rooms"], indent=2, default=str))
+                archive.writestr(
+                    song_facts_export.FACTS_FILE, json.dumps(engine_rows, indent=2, default=str)
+                )
                 # ADR-0476: this person's Lucy conversations, as they read them
                 archive.writestr("lucy-conversations.json", json.dumps(lucy_talk, indent=2))
                 archive.writestr("lucy-usage.json", json.dumps(lucy_usage, indent=2, default=str))

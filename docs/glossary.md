@@ -38,6 +38,7 @@ transitions.
 | Say | Means |
 |---|---|
 | **Song facts** | Measurements of a song: tempo, beat and bar positions, sections, key, loudness, per-bar energy and tone numbers, when singing happens. Never audio |
+| **Audio id** | A fingerprint of a song's sound alone, leaving out its tags and artwork, so editing a title keeps it the same song. A hash, never audio; the same recording as MP3 and as FLAC has two (`library.audio_identity`, docs/engineering/audio-identity.md) |
 | **Planner** | The Python code that chooses the song order, where to leave and enter, the move and its length. It runs on Desktop or on the Cloud server, never in a browser |
 | **Script** | A transition described as data (`render/script.py` `TransitionScript`), which any studio can render |
 | **Seam** | The stretch where one song hands over to the next. Members read "transition" |

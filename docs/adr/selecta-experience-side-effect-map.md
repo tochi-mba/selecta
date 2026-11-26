@@ -299,6 +299,15 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/local-media/songs/never` | Sets or clears Never play on a batch of the workspace's catalogue songs, all or none |
 | `DELETE /api/local-media/songs/{song_id}` | Soft-deletes a catalogue entry |
 | `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
+| `PUT /api/song-facts/{song_id}` | Saves the facts a device measured for one catalogue song (the `analysis` row and its features artifact), unless a measurement that outranks them is stored (ADR-0479) |
+| `PUT /api/song-facts/{song_id}/correction` | Sets the member's tempo and key for a catalogue song (`song_overrides`); both null clears it |
+| `DELETE /api/song-facts/{song_id}/correction` | Clears the member's tempo and key correction for a catalogue song |
+| `POST /api/planning/candidates` | None: ranks the transitions between two of the account's songs and builds their scripts; nothing is stored |
+| `POST /api/planning/candidates/script` | None: builds one more ranked option's script; nothing is stored |
+| `POST /api/planning/next-step` | None: the repair rule's next step for the options and attempts sent; reads and stores nothing |
+| `POST /api/planning/take-step` | None: the repair rule's per-take step for the audits sent; reads and stores nothing |
+| `POST /api/planning/order` | None: plans a mix's order from the account's measured songs; nothing is stored |
+| `POST /api/planning/ideas` | None: the idea cards the account's measured songs support; nothing is stored |
 | `POST /api/local-media/recipes` | Saves a new portable recipe (a mix over catalogue songs) as its first immutable revision |
 | `POST /api/local-media/recipes/{mix_id}/revisions` | Saves the next immutable revision of a recipe, refused when made from a stale one |
 | `POST /api/local-media/recipes/{mix_id}/duplicate` | Copies the latest recipe revision into a new recipe with a fresh identity |
