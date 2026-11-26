@@ -62,7 +62,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `cloud/libraryWorkspace.css` | the Cloud Library and Workspace: connect music, import progress, the song list toolbar and the storage card | `cloud/CloudLibrary.tsx`, `cloud/CloudWorkspace.tsx`, `cloud/ConnectMusic.tsx`, `cloud/ImportChip.tsx`, `cloud/MusicFolders.tsx`, `cloud/StorageCard.tsx` |
 | `cloud/makeCloudMix.css` | Cloud mix creation interface layout and controls | `cloud/MakeCloudMix.tsx` |
 | `cloud/hosted/hostedMix.css` | The server-rendered hosted mix card on Make a Mix (cloud.hosted_render) | `cloud/hosted/HostedMix.tsx` |
-| `cloud/uploadToCloud.css` | The "Upload to your cloud library" sheet: what a batch would do, the rights statement and the choice once uploaded (cloud.move_to_cloud) | `cloud/UploadToCloudSheet.tsx` |
+| `cloud/uploadToCloud.css` | The "Upload to your cloud library" sheet: what a batch would do, the rights statement (also on Add music) and the choice once uploaded (cloud.move_to_cloud) | `cloud/UploadToCloudSheet.tsx`, `cloud/RightsStatement.tsx` |
 | `cloud/connection.css` | the connection banner and the buttons that wait for the server while offline | `cloud/ConnectionBanner.tsx`, `rooms/RoomPanel.tsx` |
 | `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
 | `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |

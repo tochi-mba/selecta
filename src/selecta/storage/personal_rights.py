@@ -6,7 +6,9 @@ short statement and confirms it. The confirmation is kept per workspace with the
 version, the SHA-256 of its exact words, who confirmed it and when (`rights_schema`). It holds
 until the wording changes: a new wording has a new version and a new hash, and every workspace
 confirms again. The upload queue on the device asks `GET` and refuses to start until the current
-wording is confirmed (web/src/cloud/uploadConsent.ts).
+wording is confirmed (web/src/cloud/uploadConsent.ts), and `POST /api/uploads/plan` refuses a plan
+without it (409 `rights_needed`, `needed`), so Add music's uploads ask too. The dry run stays
+open before it: it sends no audio, and the sheet shows its answer beside the statement.
 
 This is the consumer counterpart of the business attestation (`business.upload_rights`, ADR-0449).
 A business workspace confirms its own statement for each upload batch and is never asked this
@@ -32,6 +34,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
+from selecta import flags
 from selecta.billing.schema import insert_ignore
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, new_id, transaction
@@ -72,6 +75,38 @@ def current(conn: Connection, workspace_id: str) -> dict[str, Any] | None:
 
 def accepted(conn: Connection, workspace_id: str) -> bool:
     return current(conn, workspace_id) is not None
+
+
+FLAG = "cloud.move_to_cloud"
+RIGHTS_NEEDED = "rights_needed"
+
+
+def _on() -> bool:
+    try:
+        return flags.on(FLAG)
+    except KeyError:
+        return False
+
+
+def needed(conn: Connection, workspace_id: str) -> bool:
+    """Whether an upload plan for this workspace waits for the statement: the flag is on for the
+    account, the workspace is not a business, and the current wording is not confirmed. With the
+    flag off, plans are exactly as before."""
+    if not _on():
+        return False
+    from selecta.identity.schema import workspaces
+
+    kind = conn.execute(sa.select(workspaces.c.kind).where(workspaces.c.id == workspace_id)
+                        ).scalar()
+    return applies(kind or "") and not accepted(conn, workspace_id)
+
+
+def refusal() -> HTTPException:
+    """409 `rights_needed`, with the words to show, for `POST /api/uploads/plan`."""
+    return HTTPException(status_code=409, detail={
+        "code": RIGHTS_NEEDED,
+        "message": "Agree to the upload statement before your first upload.",
+        "version": STATEMENT_VERSION, "statement": STATEMENT, "wording_sha256": WORDING_SHA256})
 
 
 def record(conn: Connection, workspace_id: str, user_id: str, *, now: float) -> bool:
@@ -149,5 +184,6 @@ def install(app: FastAPI, *, engine: Engine, current_claims: Callable[..., Claim
             return {**state(conn, workspace.id, workspace.kind), "recorded": recorded}
 
 
-__all__ = ["STATEMENT", "STATEMENT_VERSION", "WORDING_SHA256", "accepted", "applies",
-           "current", "export_rows", "install", "record", "state"]
+__all__ = ["RIGHTS_NEEDED", "STATEMENT", "STATEMENT_VERSION", "WORDING_SHA256", "accepted",
+           "applies", "current", "export_rows", "install", "needed", "record", "refusal",
+           "state"]

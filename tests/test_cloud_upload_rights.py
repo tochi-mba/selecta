@@ -4,7 +4,9 @@
 workspace that is not a business confirms the statement once per wording, kept with its version,
 the hash of its words, who and when. A new wording asks again; a business workspace is never
 asked; the account export carries the record and account deletion sweeps it; one workspace's
-record is never another's; an account without the cloud library grant is refused.
+record is never another's; an account without the cloud library grant is refused. An upload
+plan waits for the statement (409 `rights_needed`) and goes ahead once it is agreed; the dry run
+does not wait, a business plans without it, and with the flag off plans are as before.
 
 `cloud_engine` runs each test on migrated SQLite, and on PostgreSQL where
 `SELECTA_TEST_POSTGRES_URL` is set.
@@ -21,11 +23,13 @@ import pytest
 import sqlalchemy as sa
 from cloud_helpers import grant_hosted_media
 from cloud_party import ALICE, BOB, CAROL, auth
+from test_cloud_storage_fakes import FakeS3
 
 from selecta import flags
 from selecta.flags.matching import Rule, RuleKind
 from selecta.identity.schema import workspace_members, workspaces
 from selecta.persistence import db_now, metadata, new_id, transaction
+from selecta.storage import api as storage_api
 from selecta.storage import personal_rights
 from selecta.storage.rights_schema import upload_rights
 
@@ -178,6 +182,54 @@ def test_with_the_flag_off_the_routes_are_refused(rights):
         assert answer.status_code == 403, answer.text
         assert _code(answer) == "flag_off"
     assert _rows(rights, rights.workspaces[ALICE]) == []
+
+
+PLAN = "/api/uploads/plan"
+FILES = {"files": [{"name": "song.flac", "size": 10, "sha256": "b" * 64}]}
+
+
+@pytest.fixture
+def objects(monkeypatch):
+    """A fake object store behind the upload routes, as the tenant matrix uses."""
+    found = FakeS3()
+    for name in ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY"):
+        monkeypatch.setenv(f"SELECTA_R2_{name}", "test")
+    monkeypatch.setattr(storage_api, "R2Client", lambda *_args, **_kwargs: found)
+    return found
+
+
+def test_a_first_upload_plan_waits_for_the_statement_and_goes_ahead_once_agreed(rights, objects):
+    refused = rights.client.post(PLAN, headers=auth(ALICE), json=FILES)
+    assert refused.status_code == 409, refused.text
+    detail = refused.json()["detail"]
+    assert detail["code"] == "rights_needed"
+    assert detail["statement"] == personal_rights.STATEMENT
+    assert detail["version"] == personal_rights.STATEMENT_VERSION
+    assert detail["wording_sha256"] == personal_rights.WORDING_SHA256
+    assert objects.count("create_multipart_upload") == 0
+    # the dry run stays open before it: it sends no audio, and the sheet shows it with the words
+    assert rights.client.post("/api/uploads/preview", headers=auth(ALICE), json=FILES
+                              ).status_code == 200
+    assert rights.client.post(PATH, headers=auth(ALICE), json=_current()).status_code == 200
+    planned = rights.client.post(PLAN, headers=auth(ALICE), json=FILES)
+    assert planned.status_code == 201, planned.text
+    assert planned.json()["uploads"][0]["session"] is not None
+
+
+def test_a_business_workspace_plans_without_this_statement(rights, objects):
+    business = _business_workspace(rights, ALICE)
+    planned = rights.client.post(PLAN, headers=auth(ALICE, business), json=FILES)
+    # whatever else a business plan meets (its own statement, its storage), never this one
+    assert planned.status_code != 409 and "rights_needed" not in planned.text, planned.text
+    with transaction(rights.engine, business) as conn:
+        assert personal_rights.needed(conn, business) is False
+
+
+def test_with_the_flag_off_a_plan_is_as_before(rights, objects):
+    flags.use("+storage.upload_identity -cloud.move_to_cloud")
+    rights.app.state.flag_rules.invalidate()
+    planned = rights.client.post(PLAN, headers=auth(ALICE), json=FILES)
+    assert planned.status_code == 201, planned.text
 
 
 def test_the_account_export_carries_the_record(rights):

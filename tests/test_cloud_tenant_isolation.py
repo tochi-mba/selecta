@@ -31,6 +31,7 @@ from selecta.api_cloud import create_cloud_app
 from selecta.identity.tokens import BadSignature, Claims
 from selecta.persistence import db_now, make_engine, metadata, migrate, new_id, transaction
 from selecta.storage import api as storage_api
+from selecta.storage import personal_rights
 from selecta.storage.keys import derived_key, original_key
 from selecta.storage.objects import ObjectHead
 from selecta.storage.schema import assets
@@ -642,6 +643,12 @@ def world(tmp_path, monkeypatch):
             assert answer.status_code == 201, answer.text
             workspace[token] = answer.json()["workspace_id"]
         alice_ws, bob_ws = workspace[ALICE], workspace[BOB]
+        # cloud.move_to_cloud: each agrees to the upload statement before a first upload
+        for token in (ALICE, BOB):
+            agreed = client.post("/api/uploads/rights", headers=_auth(token), json={
+                "version": personal_rights.STATEMENT_VERSION,
+                "wording_sha256": personal_rights.WORDING_SHA256})
+            assert agreed.status_code == 200, agreed.text
 
         planned = client.post(
             "/api/uploads/plan", headers=_auth(ALICE), json=SCOPED[("POST", "/api/uploads/plan")]

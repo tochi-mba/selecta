@@ -295,12 +295,16 @@ def install_routes(
                 upload_rights.require_batch(conn, workspace_id,
                                             request.headers.get(upload_rights.HEADER),
                                             len(body.files))
+                # cloud.move_to_cloud: a workspace that is not a business agrees once first
+                rights_needed = personal_rights.needed(conn, workspace_id)
         except upload_rights.AttestationRequired as error:
             raise HTTPException(status_code=403, detail={
                 "code": error.code, "message": str(error),
                 "statement": terms.UPLOAD_STATEMENT,
                 "statement_version": terms.CURRENT_UPLOAD_STATEMENT_VERSION,
             }) from error
+        if rights_needed:
+            raise personal_rights.refusal()
         # Read before the plan's transaction: on SQLite a second one would wait on the first.
         uploaded_by = uploader(request, claims)
         try:
