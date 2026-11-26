@@ -1,5 +1,6 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError } from '../api';
+import { holdNeutral } from '../feel/root';
 import { useApi } from '../requestContext';
 import { operationId } from '../state/async';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
@@ -56,6 +57,10 @@ export function Listening() {
   const [stopped, setStopped] = useState(false);
   const players = { a: useRef<HTMLAudioElement>(null), b: useRef<HTMLAudioElement>(null) };
   const trial = trials?.[index];
+  // ADR-0477 rule 11: opening the study only pauses the mix, so without this its tint, the beat
+  // chrome and any celebration or install offer would sit behind a listener judging two clips.
+  // Before paint, so the tint never shows for a frame; leaving the page brings it all back.
+  useLayoutEffect(() => holdNeutral(), []);
   useEffect(() => {
     if (!progressKey || !trials) return;
     try { sessionStorage.setItem(progressKey, JSON.stringify({ ids: trials.map((row) => row.id), index, quality, heard, answered, skipped })); } catch { /* current answers remain in memory */ }

@@ -5,8 +5,9 @@ import { useSyncExternalStore } from 'react';
 // so main.tsx calls captureInstallPrompt() at app start and the event is kept here for an Install
 // button to use later. Safari on iPad and iPhone has no such event: the person installs through
 // Share, then Add to Home Screen, so those browsers get guidance instead of a button. Which one
-// applies is decided by the browser's own APIs (`navigator.standalone` exists only in Safari on
-// iOS and iPadOS), never by reading the user agent. Installing needs no service worker (current
+// applies is decided by the browser's own APIs (`navigator.standalone` exists only in WebKit on
+// iOS and iPadOS); the user agent is read for one thing only, to keep the Safari words out of
+// browsers built into other apps, which expose the same API (inAppBrowser). Installing needs no service worker (current
 // Chromium installs a site with a manifest alone); the app-shell worker that lets Cloud open
 // offline is separate, behind `cloud.offline_shell` (offlineShell.ts).
 
@@ -25,7 +26,7 @@ export type InstallState = 'installed' | 'prompt' | 'home_screen' | 'none';
 
 export type InstallEnv = {
   matchMedia?: (query: string) => { matches: boolean };
-  navigator?: { standalone?: boolean } & object;
+  navigator?: { standalone?: boolean; userAgent?: string } & object;
 };
 
 let deferred: InstallPromptEvent | null = null;
@@ -52,9 +53,26 @@ export function isStandalone(env: InstallEnv = defaultEnv()): boolean {
   return env.navigator?.standalone === true;
 }
 
-/** Safari on iOS or iPadOS: the only browser that exposes `navigator.standalone`. */
+/** The browsers built into other apps (Instagram, Facebook, TikTok, the Google app, LINE and the
+ * like), by the tokens they add to the user agent. */
+const IN_APP_TOKENS = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|musical_ly|BytedanceWebview|LinkedInApp|Snapchat|Pinterest|Twitter|\bLine\/|\bGSA\//;
+
+/** A browser inside another app on iPhone or iPad. These are WebKit views that expose
+ * `navigator.standalone` like Safari but have no Share, then Add to Home Screen, so they must not
+ * be told to use it. The API cannot tell them apart, so this one question reads the user agent,
+ * and it reads it conservatively: a known app's token, or an iOS web view that leaves out Safari's
+ * own token (Safari, Chrome and Firefox on iOS all carry it). Anything unsure counts as a browser. */
+export function inAppBrowser(env: InstallEnv = defaultEnv()): boolean {
+  const agent = env.navigator?.userAgent ?? '';
+  if (!agent) return false;
+  if (IN_APP_TOKENS.test(agent)) return true;
+  return /\b(iPhone|iPad|iPod)\b/.test(agent) && /AppleWebKit/.test(agent) && !/Safari\//.test(agent);
+}
+
+/** Safari on iOS or iPadOS (the browsers that expose `navigator.standalone`), but not a browser
+ * inside another app, which has nothing to offer: no words beat words it cannot follow. */
 export function addsToHomeScreen(env: InstallEnv = defaultEnv()): boolean {
-  return !!env.navigator && 'standalone' in env.navigator;
+  return !!env.navigator && 'standalone' in env.navigator && !inAppBrowser(env);
 }
 
 /** The install state from the facts, pure so tests can drive every branch. */

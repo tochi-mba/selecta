@@ -13,7 +13,6 @@ import { feelOn, onFeelChange } from '../feel/root';
 import { INDICATOR_CLASS, useSlidingIndicator } from '../feel/indicator';
 import { NumberRoll } from '../feel/numberRoll';
 import { Moment } from '../feel/moment';
-import { success } from '../feel/haptics';
 
 // Plan & billing (docs/saas/11-ui-ux.md §11.1): the current plan, the usage meters, and the way
 // to change plan, each in its own titled card. A free account picks a plan, ticks the three UK
@@ -380,8 +379,10 @@ let upgradeCelebrated = false;
 
 /** The upgrade moment (ADR-0477): when the return from Stripe really reports the plan confirmed
  * (useCheckoutReturn only says 'confirmed' after the server's entitlement changed), the current plan
- * card gets one equalizer burst, its lines arrive and tick again, and a phone gets the success buzz.
- * Nothing plays while the payment is still being confirmed or when it was cancelled. */
+ * card gets one equalizer burst and its lines arrive and tick again. Nothing plays while the
+ * payment is still being confirmed or when it was cancelled. No buzz: the return from Stripe is a
+ * redirect, not a press, so a phone refuses to vibrate here (feel/haptics.ts), and saving one for
+ * a later press would buzz for something else. */
 function useUpgradeMoment(phase: CheckoutPhase) {
   const [round, setRound] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -390,7 +391,6 @@ function useUpgradeMoment(phase: CheckoutPhase) {
     upgradeCelebrated = true;
     setRound((value) => value + 1);
     setPlaying(true);
-    success();
   }, [phase]);
   return { round, playing, done: () => setPlaying(false) };
 }

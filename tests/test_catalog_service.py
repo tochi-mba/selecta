@@ -277,3 +277,145 @@ def test_the_job_handler_needs_a_database_and_a_key(monkeypatch):
     monkeypatch.delenv("SELECTA_DATABASE_URL", raising=False)
     assert service.handle_job(Job(), None) == {"skipped": "no_database"}
     assert service.handlers() == {service.JOB_TYPE: service.handle_job}
+
+
+# --- consent at the moment of sending (T-20261125-c9ae) ----------------------------------------
+
+
+def queued_job(engine, user_id: str):
+    """The one lookup job the person queued, as the worker would see it."""
+    from selecta.work.store import JobStore
+
+    with transaction(engine) as conn:
+        job_id = conn.execute(sa.select(jobs.c.id).where(
+            jobs.c.type == service.JOB_TYPE, jobs.c.created_by == user_id)).scalar_one()
+    return JobStore(engine).job(job_id)
+
+
+def asker_of(job) -> service.Asker:
+    return service.Asker(job.workspace_id, job.created_by, float(job.created_at))
+
+
+def run_as(engine, key: str, replay: Replay, asker: service.Asker | None) -> dict:
+    with musicbrainz(replay) as mb:
+        return service.run_lookup(engine, key, musicbrainz=mb, objects=FakeS3(), bucket=BUCKET,
+                                  asker=asker)
+
+
+def test_a_queued_job_sends_nothing_once_the_person_turns_lookups_off(cloud_engine):
+    user, ws = person(cloud_engine, "alice")
+    key = ask(cloud_engine, user, ws, add_song(cloud_engine, ws))
+    job = queued_job(cloud_engine, user)
+    with transaction(cloud_engine) as conn:
+        service.set_allowed(conn, user, False)
+    replay = isrc_replay()
+
+    assert run_as(cloud_engine, key, replay, asker_of(job)) == {"skipped": "no_consent"}
+    assert run_as(cloud_engine, key, replay, None) == {"skipped": "no_consent"}
+    assert replay.requests == [], "no song details left the server"
+    row = lookup_row(cloud_engine, key)
+    assert row.outcome == "pending" and row.attempts == 0, "the key is left for a later ask"
+
+
+def test_turning_lookups_off_cancels_the_persons_queued_jobs(cloud_engine):
+    from selecta.work.model import JobState
+
+    user, ws = person(cloud_engine, "alice")
+    other, other_ws = person(cloud_engine, "bob")
+    ask(cloud_engine, user, ws, add_song(cloud_engine, ws))
+    ask(cloud_engine, other, other_ws, add_song(cloud_engine, other_ws, title="Other Song"))
+    with transaction(cloud_engine) as conn:
+        service.set_allowed(conn, user, False)
+
+    assert service.cancel_lookups(cloud_engine, user) == 1
+    assert queued_job(cloud_engine, user).state == JobState.CANCELLED
+    assert queued_job(cloud_engine, other).state != JobState.CANCELLED, "only that person's"
+    assert service.cancel_lookups(cloud_engine, user) == 0, "safe to repeat"
+
+
+def test_a_retry_after_turning_lookups_off_sends_nothing(cloud_engine):
+    user, ws = person(cloud_engine, "alice")
+    key = ask(cloud_engine, user, ws, add_song(cloud_engine, ws), isrc=None)
+    asker = asker_of(queued_job(cloud_engine, user))
+    broken = Replay({"/ws/2/": lambda _r: httpx.Response(500)})
+    assert run_as(cloud_engine, key, broken, asker)["outcome"] == "error"
+    asked = len(broken.requests)
+    make_due(cloud_engine, key)
+    with transaction(cloud_engine) as conn:
+        service.set_allowed(conn, user, False)
+
+    assert run_as(cloud_engine, key, broken, asker) == {"skipped": "no_consent"}
+    assert len(broken.requests) == asked
+    assert lookup_row(cloud_engine, key).attempts == 1
+
+
+def test_nothing_is_sent_for_a_deleted_song(cloud_engine):
+    from selecta.local_media.schema import local_songs
+
+    user, ws = person(cloud_engine, "alice")
+    song = add_song(cloud_engine, ws)
+    key = ask(cloud_engine, user, ws, song)
+    asker = asker_of(queued_job(cloud_engine, user))
+    with transaction(cloud_engine, ws) as conn:
+        conn.execute(local_songs.update().where(local_songs.c.id == song)
+                     .values(deleted_at=db_now(conn)))
+    replay = isrc_replay()
+
+    assert run_as(cloud_engine, key, replay, asker) == {"skipped": "no_consent"}
+    assert replay.requests == []
+
+
+def test_nothing_is_sent_for_a_deleted_or_signed_out_account(cloud_engine):
+    from selecta.identity.schema import users
+
+    user, ws = person(cloud_engine, "alice")
+    key = ask(cloud_engine, user, ws, add_song(cloud_engine, ws))
+    asker = asker_of(queued_job(cloud_engine, user))
+    replay = isrc_replay()
+    with transaction(cloud_engine) as conn:
+        accounts.revoke_sessions(conn, user)
+    assert run_as(cloud_engine, key, replay, asker) == {"skipped": "no_consent"}, "signed out"
+
+    with transaction(cloud_engine) as conn:
+        conn.execute(users.update().where(users.c.id == user).values(deleted_at=db_now(conn)))
+    assert run_as(cloud_engine, key, replay, None) == {"skipped": "no_consent"}, "deleted"
+    assert replay.requests == []
+
+
+def test_a_job_runs_on_its_askers_consent_not_someone_elses(cloud_engine):
+    alice, alice_ws = person(cloud_engine, "alice")
+    bob, bob_ws = person(cloud_engine, "bob")
+    key = ask(cloud_engine, alice, alice_ws, add_song(cloud_engine, alice_ws))
+    assert ask(cloud_engine, bob, bob_ws, add_song(cloud_engine, bob_ws)) == key
+    alices_job = asker_of(queued_job(cloud_engine, alice))
+    with transaction(cloud_engine) as conn:
+        service.set_allowed(conn, alice, False)
+    replay = isrc_replay()
+
+    assert run_as(cloud_engine, key, replay, alices_job) == {"skipped": "no_consent"}
+    assert replay.requests == []
+    bobs_job = asker_of(queued_job(cloud_engine, bob))
+    assert run_as(cloud_engine, key, replay, bobs_job)["outcome"] == "matched"
+
+
+def test_a_picked_release_cover_is_fetched_only_with_consent(cloud_engine):
+    user, ws = person(cloud_engine, "alice")
+    song = add_song(cloud_engine, ws)
+    key = ask(cloud_engine, user, ws, song)
+    run = Run(cloud_engine, isrc_replay())
+    run(key)
+    with transaction(cloud_engine, ws) as conn:
+        assert service.set_choice(conn, ws, song, user, choice="release",
+                                  release_id=SINGLE) == SINGLE
+        service.set_allowed(conn, user, False)
+
+    assert service.queue_cover_fetch(cloud_engine, ws, user, SINGLE) is False
+    with transaction(cloud_engine) as conn:
+        assert not conn.execute(sa.select(jobs.c.id).where(
+            jobs.c.idempotency_key == f"cover:{SINGLE}")).first()
+    asked = len(run.replay.requests)
+    with musicbrainz(run.replay) as mb:
+        assert not service.fetch_release_cover(
+            cloud_engine, SINGLE, musicbrainz=mb, objects=run.objects, bucket=BUCKET,
+            asker=service.Asker(ws, user))
+    assert len(run.replay.requests) == asked

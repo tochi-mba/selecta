@@ -24,9 +24,44 @@ from selecta.api import create_app
 from selecta.config import Settings
 from selecta.library import art
 
-JPEG = b"\xff\xd8\xff\xe0" + b"front-cover" * 20
-BACK = b"\xff\xd8\xff\xe0" + b"back-cover" * 20
-PNG = b"\x89PNG\r\n\x1a\n" + b"png-cover" * 20
+
+# Pictures are made here, header bytes by hand: only the header is ever read (T-20261125-4054).
+def _jpeg_bytes(width: int = 64, height: int = 64, filler: bytes = b"front-cover") -> bytes:
+    app0 = b"\xff\xe0" + (16).to_bytes(2, "big") + b"JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+    sof = (b"\xff\xc0" + (17).to_bytes(2, "big") + b"\x08" + height.to_bytes(2, "big")
+           + width.to_bytes(2, "big") + b"\x03\x01\x22\x00\x02\x11\x01\x03\x11\x01")
+    return b"\xff\xd8" + app0 + sof + filler * 20 + b"\xff\xd9"
+
+
+def _chunk(kind: bytes, body: bytes) -> bytes:
+    return len(body).to_bytes(4, "big") + kind + body + b"\x00\x00\x00\x00"
+
+
+def _png_bytes(width: int = 64, height: int = 64, *, animated: bool = False) -> bytes:
+    ihdr = width.to_bytes(4, "big") + height.to_bytes(4, "big") + b"\x08\x06\x00\x00\x00"
+    actl = _chunk(b"acTL", (4).to_bytes(4, "big") + b"\x00" * 4) if animated else b""
+    return (b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", ihdr) + actl
+            + _chunk(b"IDAT", b"png-cover" * 20) + _chunk(b"IEND", b""))
+
+
+def _gif_bytes(frames: int) -> bytes:
+    edge = (10).to_bytes(2, "little")
+    frame = b"\x2c" + b"\x00" * 4 + edge + edge + b"\x00\x02\x02\x4c\x01\x00"
+    return b"GIF89a" + edge + edge + b"\x00\x00\x00" + frame * frames + b"\x3b"
+
+
+def _webp_bytes(*, animated: bool) -> bytes:
+    edge = (63).to_bytes(3, "little")
+    vp8x = b"VP8X" + (10).to_bytes(4, "little") + (b"\x02" if animated else b"\x00") \
+        + b"\x00" * 3 + edge + edge
+    anim = b"ANIM" + (6).to_bytes(4, "little") + b"\x00" * 6 if animated else b""
+    body = b"WEBP" + vp8x + anim
+    return b"RIFF" + len(body).to_bytes(4, "little") + body
+
+
+JPEG = _jpeg_bytes()
+BACK = _jpeg_bytes(filler=b"back-cover")
+PNG = _png_bytes()
 RATE = 22_050
 
 
@@ -97,6 +132,44 @@ def test_a_picture_past_the_cap_is_skipped(tmp_path, monkeypatch):
     monkeypatch.setattr(art, "MAX_PICTURE_BYTES", 64)
     path = _flac(tmp_path, (3, JPEG))
     assert art.read_picture(path) is None
+
+
+def test_the_header_gives_size_and_motion_without_decoding():
+    assert art.picture_header(JPEG) == art.Header(64, 64, False)
+    assert art.picture_header(_jpeg_bytes(1200, 900)) == art.Header(1200, 900, False)
+    assert art.picture_header(PNG) == art.Header(64, 64, False)
+    assert art.picture_header(_png_bytes(animated=True)).animated is True
+    assert art.picture_header(_gif_bytes(1)) == art.Header(10, 10, False)
+    assert art.picture_header(_gif_bytes(3)).animated is True
+    assert art.picture_header(_webp_bytes(animated=False)) == art.Header(64, 64, False)
+    assert art.picture_header(_webp_bytes(animated=True)).animated is True
+    assert art.picture_header(b"not a picture at all") is None
+    assert art.picture_header(PNG[:20]) is None
+    assert art.picture_header(_gif_bytes(1)[:-8]) is None, "cut short: frames unknown"
+
+
+def test_a_giant_or_moving_picture_is_no_cover(tmp_path):
+    giant = _jpeg_bytes(30_000, 30_000)
+    assert len(giant) < 1024, "a tiny file declaring 900 megapixels"
+    refused = {
+        "giant.flac": giant,
+        "giant-png.flac": _png_bytes(20_000, 20_000),
+        "zero.flac": _jpeg_bytes(0, 0),
+        "gif.flac": _gif_bytes(3),
+        "apng.flac": _png_bytes(animated=True),
+        "webp.flac": _webp_bytes(animated=True),
+    }
+    for name, data in refused.items():
+        assert not art.servable(data), name
+        assert art.read_picture(_flac(tmp_path, (3, data), name=name)) is None, name
+    still = _gif_bytes(1)
+    assert art.read_picture(_flac(tmp_path, (3, still), name="still.flac")) == (still, "image/gif")
+    assert art.servable(_webp_bytes(animated=False))
+
+
+def test_a_refused_picture_falls_back_to_the_next_one(tmp_path):
+    path = _flac(tmp_path, (3, _gif_bytes(3)), (0, JPEG), name="two.flac")
+    assert art.read_picture(path) == (JPEG, "image/jpeg")
 
 
 def test_one_album_keeps_its_cover_once_and_a_file_is_read_once(tmp_path, monkeypatch):
@@ -189,6 +262,16 @@ def test_the_route_says_no_content_for_a_file_with_no_cover_and_404_for_no_song(
     assert plain.status_code == 204
     assert plain.content == b""
     assert client.get("/api/songs/99/art").status_code == 404
+
+
+def test_the_route_refuses_a_moving_picture_kept_before_the_rule(client, tmp_path):
+    first = client.get("/api/songs/1/art")
+    assert first.status_code == 200
+    [kept] = list((tmp_path / "home" / "art" / "v1" / "pictures").iterdir())
+    kept.write_bytes(_gif_bytes(3))
+    again = client.get("/api/songs/1/art", headers={"If-None-Match": first.headers["etag"]})
+    assert again.status_code == 204, "not a 304 that keeps the old picture looping"
+    assert again.content == b""
 
 
 def test_the_route_is_gone_with_the_flag_off(client):

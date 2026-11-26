@@ -87,32 +87,55 @@ describe('FL-0477-04 publishAmbientHue', () => {
 });
 
 describe('FL-0477-04 travelAmbient', () => {
-  it('writes on the ambient layer only, never on the page root', () => {
+  const incoming = () => document.querySelector<HTMLElement>('.ambient-layer[data-ambient="travel"] + .ambient-layer');
+
+  it('writes on the ambient layers only, never on the page root', () => {
     publishAmbientHue(100);
     const rootWrites = vi.spyOn(html.style, 'setProperty');
     travelAmbient(100, 200, 0.5, 1000);
-    expect(layer()!.style.getPropertyValue('--ambient-hue')).toBe('150');
+    expect(incoming()!.style.getPropertyValue('--ambient-hue')).toBe('200');
     expect(rootWrites).not.toHaveBeenCalled();
     expect(html.style.getPropertyValue('--ambient-hue')).toBe('100');
+  });
+
+  it('T-20261125-fec9: cross-fades two layers tinted once, so only opacity changes step to step', () => {
+    publishAmbientHue(0);
+    travelAmbient(0, 100, 0.25, 1000);
+    const base = layer()!;
+    const next = incoming()!;
+    expect(base.style.getPropertyValue('--ambient-hue')).toBe('0');
+    expect(next.style.getPropertyValue('--ambient-hue')).toBe('100');
+    expect([base.style.opacity, next.style.opacity]).toEqual(['0.75', '0.25']);
+    const baseWrites = vi.spyOn(base.style, 'setProperty');
+    const nextWrites = vi.spyOn(next.style, 'setProperty');
+    travelAmbient(0, 100, 0.75, 1000 + TRAVEL_STEP_MS);
+    expect([base.style.opacity, next.style.opacity]).toEqual(['0.25', '0.75']);
+    // no colour is written again during the hand-over
+    expect(baseWrites).not.toHaveBeenCalledWith('--ambient-hue', expect.anything());
+    expect(nextWrites).not.toHaveBeenCalledWith('--ambient-hue', expect.anything());
   });
 
   it('writes at most once every TRAVEL_STEP_MS', () => {
     publishAmbientHue(0);
     travelAmbient(0, 100, 0.1, 1000);
     travelAmbient(0, 100, 0.5, 1000 + TRAVEL_STEP_MS - 1);
-    expect(layer()!.style.getPropertyValue('--ambient-hue')).toBe('10');
+    expect(incoming()!.style.opacity).toBe('0.1');
     travelAmbient(0, 100, 0.5, 1000 + TRAVEL_STEP_MS);
-    expect(layer()!.style.getPropertyValue('--ambient-hue')).toBe('50');
+    expect(incoming()!.style.opacity).toBe('0.5');
   });
 
-  it('hands the layer back to the published hue when the hand-over ends', () => {
+  it('hands the room back to the published hue when the hand-over ends', () => {
     publishAmbientHue(0);
     travelAmbient(0, 100, 0.5, 5000);
     endTravel();
+    expect(document.querySelectorAll('.ambient-layer')).toHaveLength(1);
     expect(layer()!.style.getPropertyValue('--ambient-hue')).toBe('');
+    expect(layer()!.style.opacity).toBe('');
+    // the new hue is taken at once, not eased again after the fade showed it
+    expect(layer()!.dataset.ambient).toBe('settle');
     travelAmbient(0, 100, 0.8, 5001);
     // the throttle starts over after a hand-over ends
-    expect(layer()!.style.getPropertyValue('--ambient-hue')).toBe('80');
+    expect(incoming()!.style.opacity).toBe('0.8');
   });
 
   it('does nothing with ambient off', () => {

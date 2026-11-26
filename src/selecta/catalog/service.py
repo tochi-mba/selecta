@@ -21,6 +21,14 @@ is wanted. A sweep would spend the shared MusicBrainz allowance on songs nobody 
 would ask on behalf of people who may have turned lookups off since (`allowed` is checked at each
 ask, with the person present).
 
+**Consent is checked again at the moment of sending (T-20261125-c9ae).** A job can wait in the
+queue, or be retried by the work system, long after the person asked. So the job checks, in the
+same transaction that claims the key and before anything leaves, that the person who queued it
+still allows lookups, still has a live account, has not signed out everywhere since, and still
+has a live (not deleted) song linked to that key in that workspace (`consented`). The cover of a
+release picked in "Wrong cover?" is checked the same way. Turning the setting off also cancels
+that person's unfinished lookup jobs (`cancel_lookups`), so they do not even wait in the queue.
+
 **Reading.** `art_for_songs` answers the page: per song, the cover's URLs on our own origin, its
 sizes, hue and confidence, and the details as suggestions. A person's choice ("Wrong cover?":
 another release, or the generated tile) always wins over the lookup. A hidden image is never
@@ -35,6 +43,7 @@ import io
 import os
 import tempfile
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -53,6 +62,7 @@ from selecta.catalog.schema import (
     song_catalog_links,
 )
 from selecta.flags.rules import user_flag_preferences
+from selecta.identity.schema import session_revocations, users, workspace_members
 from selecta.local_media.schema import local_songs
 from selecta.persistence import db_now, new_id, transaction
 from selecta.usage.schema import insert_ignore, upsert
@@ -101,6 +111,78 @@ def set_allowed(conn: Connection, user_id: str, on: bool) -> bool:
         )
     )
     return on
+
+
+@dataclass(frozen=True)
+class Asker:
+    """Who queued a job, and when: the person whose consent the job runs on."""
+
+    workspace_id: str
+    user_id: str | None
+    since: float | None = None
+
+
+def consented(conn: Connection, *, key: str | None = None, release_id: str | None = None,
+              asker: Asker | None = None) -> bool:
+    """Whether a lookup for `key` (or the cover of a release picked in "Wrong cover?") may send
+    anything now. It needs a live song linked to it, in a workspace where a live member allows
+    lookups. With an `asker`, that member must be the person who queued the job, in that
+    workspace, and must not have signed out everywhere since queuing it, because the job runs on
+    their say-so and nobody else's. Without one (a direct call), any consenting member counts."""
+    links = song_catalog_links
+    prefs = user_flag_preferences
+    query = (
+        sa.select(sa.literal(1))
+        .select_from(
+            links.join(local_songs, sa.and_(local_songs.c.workspace_id == links.c.workspace_id,
+                                            local_songs.c.id == links.c.song_id))
+            .join(workspace_members, workspace_members.c.workspace_id == links.c.workspace_id)
+            .join(users, users.c.id == workspace_members.c.user_id)
+            .join(prefs, sa.and_(prefs.c.user_id == users.c.id, prefs.c.flag_id == SETTING_ID))
+        )
+        # A suspended account is treated like a closed one: staff stopped it acting.
+        .where(local_songs.c.deleted_at.is_(None), users.c.deleted_at.is_(None),
+               users.c.suspended_at.is_(None), prefs.c.enabled == sa.true())
+        .limit(1)
+    )
+    if key is not None:
+        query = query.where(links.c.lookup_key == key)
+    elif release_id is not None:
+        query = query.where(links.c.choice == "release", links.c.chosen_release_id == release_id)
+    else:
+        return False
+    if asker is not None:
+        query = query.where(links.c.workspace_id == asker.workspace_id)
+        if asker.user_id is not None:
+            query = query.where(users.c.id == asker.user_id)
+        if asker.user_id is not None and asker.since is not None:
+            signed_out = sa.select(session_revocations.c.user_id).where(
+                session_revocations.c.user_id == asker.user_id,
+                session_revocations.c.revoked_before >= asker.since)
+            query = query.where(~sa.exists(signed_out))
+    return conn.execute(query).first() is not None
+
+
+def cancel_lookups(engine: Engine, user_id: str) -> int:
+    """Cancel the unfinished lookup jobs this person queued (they turned lookups off). The job
+    checks consent again anyway; this only stops them waiting in the queue. Returns how many."""
+    from selecta.work.model import TERMINAL, JobState
+    from selecta.work.schema import jobs
+    from selecta.work.store import JobStore
+
+    done = [str(state) for state in TERMINAL] + [str(JobState.CANCEL_REQUESTED)]
+    with transaction(engine) as conn:
+        found = list(conn.execute(sa.select(jobs.c.id, jobs.c.workspace_id).where(
+            jobs.c.type == JOB_TYPE, jobs.c.created_by == user_id, jobs.c.state.notin_(done))))
+    store = JobStore(engine)
+    cancelled = 0
+    for job_id, workspace_id in found:
+        try:
+            store.cancel(workspace_id, job_id)
+            cancelled += 1
+        except Exception:  # noqa: BLE001 - a job that finished meanwhile needs no cancelling
+            continue
+    return cancelled
 
 
 # --- asking -----------------------------------------------------------------------------------
@@ -240,7 +322,10 @@ def palette_hue(data: bytes) -> int | None:
     return best * 10 + 5 if weights[best] > 0 else None
 
 
-def _claim(engine: Engine, key: str) -> dict | None:
+def _claim(engine: Engine, key: str, asker: Asker | None) -> dict:
+    """Claim the key, or answer why not with a `skipped` reason. Consent is checked under the
+    same lock, so nothing is claimed (or later sent) for a person who no longer allows it; the
+    row is left as it was, so a person who does allow it can ask again on their next view."""
     with transaction(engine) as conn:
         row = conn.execute(
             persistence.lock_rows(sa.select(catalog_lookups).where(catalog_lookups.c.key == key))
@@ -250,7 +335,9 @@ def _claim(engine: Engine, key: str) -> dict | None:
         if row is None or not (fresh or _due(row, now)):
             if row is not None:
                 _copy_result(conn, key, now)
-            return None
+            return {"skipped": "not_due"}
+        if not consented(conn, key=key, asker=asker):
+            return {"skipped": "no_consent"}
         conn.execute(catalog_lookups.update().where(catalog_lookups.c.key == key).values(
             outcome="running", attempts=row.attempts + 1, updated_at=now))
         return {"query": dict(row.query), "attempts": row.attempts + 1}
@@ -367,13 +454,16 @@ def run_lookup(
     musicbrainz: MusicBrainz | None = None,
     objects=None,
     bucket: str | None = None,
+    asker: Asker | None = None,
 ) -> dict[str, Any]:
-    """The `catalog.lookup` job for one key (module notes). Returns a small summary."""
+    """The `catalog.lookup` job for one key (module notes). Returns a small summary. Only the
+    first requests carry song details (the ISRC, or artist, title and length); consent is
+    checked just before them, at the claim, on every run including retries."""
     if not flags.on(FLAG):
         return {"skipped": "flag_off"}
-    claimed = _claim(engine, key)
-    if claimed is None:
-        return {"skipped": "not_due"}
+    claimed = _claim(engine, key, asker)
+    if "skipped" in claimed:
+        return claimed
     sent = claimed["query"]
     query = match.Query(sent.get("artist") or "", sent.get("title") or "", sent.get("album"),
                         sent.get("duration_s"), sent.get("isrc"))
@@ -420,24 +510,36 @@ def handle_job(job, _context) -> dict[str, Any]:
         return {"skipped": "no_database"}
     if url not in _engines:
         _engines[url] = persistence.make_engine(url)
+    # The job row says who queued it and when; every run, retries included, is checked against
+    # that person's consent as it stands now.
+    created_at = getattr(job, "created_at", None)
+    asker = Asker(str(job.workspace_id), getattr(job, "created_by", None),
+                  float(created_at) if created_at is not None else None)
     if isinstance(release_id, str) and len(release_id) == 36:
         if not flags.on(FLAG):
             return {"skipped": "flag_off"}
         use_global_limit(_engines[url])
-        return {"cover": fetch_release_cover(_engines[url], release_id)}
+        return {"cover": fetch_release_cover(_engines[url], release_id, asker=asker)}
     if not isinstance(key, str) or len(key) != 64:
         return {"skipped": "no_key"}
-    return run_lookup(_engines[url], key)
+    return run_lookup(_engines[url], key, asker=asker)
 
 
-def queue_cover_fetch(engine: Engine, workspace_id: str, user_id: str, release_id: str) -> None:
-    """Queue the cover of a release the person picked, when it isn't stored yet."""
+def queue_cover_fetch(engine: Engine, workspace_id: str, user_id: str, release_id: str) -> bool:
+    """Queue the cover of a release the person picked, when it isn't stored yet. Nothing is
+    queued while the flag is off or the person does not allow lookups. Returns whether queued."""
     from selecta.work.enqueue import JobSpec
     from selecta.work.store import JobStore
 
+    if not flags.on(FLAG):
+        return False
+    with transaction(engine) as conn:
+        if not allowed(conn, user_id):
+            return False
     JobStore(engine).enqueue(JobSpec(
         workspace_id=workspace_id, type=JOB_TYPE, idempotency_key=f"cover:{release_id}",
         input_ref={"release_id": release_id}, created_by=user_id))
+    return True
 
 
 def handlers() -> dict[str, Callable[..., Any]]:
@@ -579,11 +681,14 @@ def set_choice(conn: Connection, workspace_id: str, song_id: int, user_id: str, 
 
 
 def fetch_release_cover(engine: Engine, release_id: str, *, musicbrainz=None, objects=None,
-                        bucket: str | None = None) -> bool:
-    """Fetch one release's cover (a person picked it in "Wrong cover?"). Idempotent."""
+                        bucket: str | None = None, asker: Asker | None = None) -> bool:
+    """Fetch one release's cover (a person picked it in "Wrong cover?"). Idempotent. Nothing is
+    sent unless a live song still has that release chosen by consenting people (`consented`)."""
     with transaction(engine) as conn:
         release = conn.execute(sa.select(catalog_releases).where(
             catalog_releases.c.id == release_id)).first()
+        if release is not None and not consented(conn, release_id=release_id, asker=asker):
+            return False
     if release is None:
         return False
     if objects is None or bucket is None:
@@ -691,16 +796,20 @@ __all__ = [
     "FLAG",
     "JOB_TYPE",
     "STAFF_SEARCH_LIMIT",
+    "Asker",
     "allowed",
     "art_bytes",
     "art_for_songs",
+    "cancel_lookups",
     "candidates_for_song",
+    "consented",
     "enqueue_for_song",
     "enqueue_for_songs",
     "fetch_release_cover",
     "handle_job",
     "handlers",
     "palette_hue",
+    "queue_cover_fetch",
     "read_art",
     "staff_art_search",
     "run_lookup",
