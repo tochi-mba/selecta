@@ -513,7 +513,11 @@ limited in its own bucket (`hosted_seams`, 90 a minute, as the render route). `l
 - `files: {a, b}`, each `{url, sha256, sample_rate, seconds}` (signed for 15 minutes) or null
   while its playback file is made;
 - only when ready, `clip: {url, sha256, a_source_start, b_source_end, seconds, sample_rate,
-  switch_at, b_warp}` and `levels: {a_gain_db, b_gain_db}`.
+  switch_at, b_warp}`;
+- `levels: {a_gain_db, b_gain_db}` when ready, and while queued or running once both songs'
+  loudness is known (worked out from it as below), so the player can start a song at the level
+  its next clip will be made at, before that clip exists. The browser half is
+  docs/engineering/device-studio-playback.md, "Transitions made in the cloud".
 
 Refusals: 404 `no_cloud_copy` with `sides` (`a`, `b` or both); 400 `invalid_songs`,
 `invalid_move` or `invalid_lane`; 403 `flag_off` with the flag off or no grant; 503
