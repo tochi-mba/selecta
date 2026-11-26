@@ -25,6 +25,7 @@ import { runningTime } from '../lib';
 import type { Api } from './api';
 import { CloudLibrary } from './CloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
+import { UploadEverything } from './uploadEntry';
 import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './DeviceMusicEmpty';
 import type { useLocalFirstPlayer } from './deviceMusicPlayer';
 import { BROWSER_MIX_NEEDS } from './deviceMusicMixes';
@@ -164,6 +165,8 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
         savedMixes={savedMixes}
         fileCheck={fileCheck}
         playback={{ refusal, speaker: playback.view?.speaker ?? null, phase: now.phase }}
+        // cloud.move_to_cloud: draws nothing while the flag is off or no upload queue can run
+        uploadAll={on('cloud.move_to_cloud') ? <UploadEverything request={media} openStore={openStore} songsHere={shared.status.counts.ready ?? null} /> : undefined}
       />
     );
   }

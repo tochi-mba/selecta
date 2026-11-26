@@ -63,7 +63,7 @@ function connectAs(connect: ReactNode, variant: 'card' | 'status', ref: Ref<Conn
   return isValidElement(connect) ? cloneElement(connect as ReactElement<{ variant?: string; ref?: Ref<ConnectMusicHandle>; doneWords?: (summary: ImportSummary) => string }>, { variant, ref, doneWords }) : connect;
 }
 
-export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, stems, stemsShown, measuringKeys, savedMixes, fileCheck, playback }: {
+export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, stems, stemsShown, measuringKeys, savedMixes, fileCheck, playback, uploadAll }: {
   tab: WorkshopTab;
   status: AppStatus;
   workspaceId: string;
@@ -80,6 +80,9 @@ export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, s
   /** The sweep that checks which connected files this browser can still open. */
   fileCheck: FileCheck;
   playback: PlaybackFacts;
+  /** cloud.move_to_cloud: "Upload everything on this device" (uploadEntry.tsx), drawn by the
+   * shell, or nothing; Sources shows it under the songs open here. */
+  uploadAll?: ReactNode;
 }) {
   const on = useFlags();
   const [degraded, setDegraded] = useState(false);
@@ -104,7 +107,7 @@ export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, s
       </header>
       <LinkTabs label="Workspace" items={TABS} current={here} />
       {tab === 'overview' && <Overview status={status} workspaceId={workspaceId} connect={connect} degraded={degraded} savedMixes={savedMixes} fileCheck={fileCheck} stemsShown={stemsShown} measuringKeys={measuringKeys} />}
-      {tab === 'sources' && <Sources status={status} workspaceId={workspaceId} connect={connect} />}
+      {tab === 'sources' && <Sources status={status} workspaceId={workspaceId} connect={connect} uploadAll={uploadAll} />}
       {tab === 'storage' && (
         <div className="lw-stack">
           <StorageCard degraded={degraded} />
@@ -295,7 +298,7 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
 
 /** Where music comes from in this browser: the way to add more, the folder this browser remembers,
  * and how much of the library is open here. */
-function Sources({ status, workspaceId, connect }: { status: AppStatus; workspaceId: string; connect: ReactNode }) {
+function Sources({ status, workspaceId, connect, uploadAll }: { status: AppStatus; workspaceId: string; connect: ReactNode; uploadAll?: ReactNode }) {
   const handle = useRef<ConnectMusicHandle>(null);
   const [folder, setFolder] = useState<StoredFolderHandle | null | undefined>(undefined);
   const [access, setAccess] = useState<string | null>(null);
@@ -334,6 +337,7 @@ function Sources({ status, workspaceId, connect }: { status: AppStatus; workspac
         {connectAs(connect, 'status', handle, status)}
         <MusicFolders workspaceId={workspaceId} variant="full" onAddFolder={() => handle.current?.chooseFolder()} onChooseSongs={() => handle.current?.chooseSongs()} />
         {openHere && <section className="ui-card" aria-label="Songs open here"><ul className="lw-sources">{openHere}</ul></section>}
+        {uploadAll}
       </div>
     );
   }
@@ -368,6 +372,7 @@ function Sources({ status, workspaceId, connect }: { status: AppStatus; workspac
         )}
         {folder === null && songs > 0 && <p className="hint">No folder is remembered in this browser. Choose a folder above and it is remembered, so adding music can carry on after an interruption.</p>}
       </section>
+      {uploadAll}
     </div>
   );
 }

@@ -503,6 +503,12 @@
    "owner": "web/src/cloud/DeviceActivity.tsx"
   },
   {
+   "id": "site.overlay.cloud.upload_to_cloud",
+   "title": "Upload to your cloud library",
+   "kind": "sheet",
+   "owner": "web/src/cloud/UploadToCloudSheet.tsx"
+  },
+  {
    "id": "site.overlay.business.add-venue",
    "title": "Add a venue",
    "kind": "dialog",
