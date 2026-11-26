@@ -4,7 +4,8 @@ import type { MediaStore, StoredSong } from '../media';
 import type { AnalysisRequest, AnalysisResponse } from '../dsp/workers/analysisWorker';
 import type { TonalProfile } from '../dsp/analysis/tonalProfile';
 import type { SongFacts } from '../dsp/analysis/song';
-import { factsVersion } from '../dsp/analysis/deviceAnalysisIds';
+import { factsVersion, NEURAL_BEATS_IMPLEMENTATION } from '../dsp/analysis/deviceAnalysisIds';
+import { readBeatCalibration, type BeatSourceChoice } from '../dsp/analysis/beatThis/gate';
 import { startTonalProfiler, type ProfileRecord, type TonalStore } from './tonalProfiles';
 import type { FactsRecord, FactsStore } from './songFacts';
 
@@ -39,7 +40,7 @@ function factsStore(present = false): FactsStore & { has: ReturnType<typeof vi.f
   return store;
 }
 
-function fakeWorker() {
+function fakeWorker(extra: Partial<AnalysisResponse> = {}) {
   const listeners = new Map<string, Set<(event: unknown) => void>>();
   const requests: AnalysisRequest[] = [];
   const worker = {
@@ -55,6 +56,7 @@ function fakeWorker() {
         id: request.id,
         ...(tasks.includes('profile') ? { profile } : {}),
         ...(tasks.includes('song') ? { facts: measuredFacts } : {}),
+        ...extra,
       };
       setTimeout(() => listeners.get('message')?.forEach((listener) => listener({ data: answer })), 0);
     },
@@ -88,10 +90,11 @@ async function until(done: () => boolean, withinMs = 10_000) {
   while (!done() && Date.now() - started < withinMs) await new Promise((resolve) => setTimeout(resolve, 20));
 }
 
-function run(store: TonalStore, facts: FactsStore, worker: Worker) {
+function run(store: TonalStore, facts: FactsStore, worker: Worker, chooseBeats?: () => Promise<BeatSourceChoice>) {
   return startTonalProfiler({
     store,
     facts,
+    chooseBeats,
     openMedia: async () => media,
     resolve: async () => ({ id: 7, data: async () => new ArrayBuffer(16) }),
     playing: () => false,
@@ -172,5 +175,53 @@ describe('the profiler with cloud.device_analysis on', () => {
     expect(requests).toEqual([]);
     expect(decodedAt).toEqual([]);
     expect(facts.put).not.toHaveBeenCalled();
+  }, 20_000);
+});
+
+describe('the profiler with the neural beat tracker chosen', () => {
+  const neuralVersion = factsVersion(NEURAL_BEATS_IMPLEMENTATION);
+  const neural: BeatSourceChoice = { kind: 'neural', implementation: NEURAL_BEATS_IMPLEMENTATION, sha256: 'e'.repeat(64), calibrated: false };
+  const neuralFacts = { implementation: 'web-dsp-1', beat_source: NEURAL_BEATS_IMPLEMENTATION, row: null, arrays: null } as unknown as SongFacts;
+  beforeEach(() => {
+    setFlags({ 'cloud.device_analysis': true });
+    localStorage.clear();
+  });
+
+  /** Measured with the interim source already: has() answers only for that version. */
+  function interimOnly(): FactsStore & { puts: FactsRecord[]; asked: string[] } {
+    const puts: FactsRecord[] = [];
+    const asked: string[] = [];
+    return {
+      puts, asked,
+      has: async (_sha: string, version?: string) => { asked.push(version ?? factsVersion()); return version !== neuralVersion || puts.length > 0; },
+      put: async (record: FactsRecord) => { puts.push(record); },
+    };
+  }
+
+  it('measures an interim song again with the tracker, keeps it under the tracker, and times the device', async () => {
+    const store = tonalStore([{ sha, implementation: 'tonal-profile-v1', profile }]);
+    const facts = interimOnly();
+    const { worker, requests } = fakeWorker({ facts: neuralFacts, beatMs: 9_000 });
+    const stop = run(store, facts, worker, async () => neural);
+    await until(() => facts.puts.length > 0);
+    stop();
+    expect(facts.asked[0]).toBe(neuralVersion);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].beatModel).toEqual({ sha256: 'e'.repeat(64) });
+    expect(facts.puts).toEqual([{ sha, version: neuralVersion, facts: neuralFacts }]);
+    // the fake song is two seconds long: 4,500 ms of tracking per second of audio, too slow
+    expect(readBeatCalibration()?.msPerAudioSecond).toBe(4_500);
+  }, 20_000);
+
+  it('keeps a fallback under the source that really measured, so the song waits for the tracker', async () => {
+    const store = tonalStore([{ sha, implementation: 'tonal-profile-v1', profile }]);
+    const facts = interimOnly();
+    const interimFacts = { implementation: 'web-dsp-1', beat_source: 'web-onset-comb-beats-1', row: null, arrays: null } as unknown as SongFacts;
+    const { worker } = fakeWorker({ facts: interimFacts, beatFallback: 'the beat model is not in this browser\'s storage' });
+    const stop = run(store, facts, worker, async () => neural);
+    await until(() => facts.puts.length > 0);
+    stop();
+    expect(facts.puts).toEqual([{ sha, version: factsVersion(), facts: interimFacts }]);
+    expect(readBeatCalibration()).toBeNull();
   }, 20_000);
 });
