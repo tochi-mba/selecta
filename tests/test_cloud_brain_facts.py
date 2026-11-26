@@ -16,7 +16,7 @@ import json
 import numpy as np
 import pytest
 import sqlalchemy as sa
-from brain_helpers import facts_body, sha_for, song_info
+from brain_helpers import arrays_for, facts_body, scalars, sha_for, song_info
 
 from selecta.cloud_brain.facts_routes import parse_facts
 from selecta.engine_store import EngineStore, facts_store
@@ -142,7 +142,7 @@ def _check_refusal(world, facts) -> str:
         ("energy", 2.0, "out_of_range"),
         ("beats_per_bar", 40, "out_of_range"),
         ("key", "H minor", "bad_key"),
-        ("camelot", "9A", "bad_key"),
+        ("camelot", "3B", "bad_key"),  # seed 1 is E minor, 9A
     ],
 )
 def test_every_scalar_out_of_range_is_refused_never_clamped(world, field, value, code):
@@ -278,10 +278,10 @@ def test_a_second_workspace_cannot_read_or_write_the_firsts_facts(world):
 def test_a_correction_wins_over_the_measurement_and_clears(world):
     facts, sha, _ = _facts(1)
     _save(world, facts, sha)
-    facts_store.set_correction(world["store"], world["song_id"], None, "9A")
-    assert stored.load_song(world["store"], world["artifacts"], world["song_id"]).camelot == "9A"
+    facts_store.set_correction(world["store"], world["song_id"], None, "10A")
+    assert stored.load_song(world["store"], world["artifacts"], world["song_id"]).camelot == "10A"
     facts_store.set_correction(world["store"], world["song_id"], None, None)
-    assert stored.load_song(world["store"], world["artifacts"], world["song_id"]).camelot == "8A"
+    assert stored.load_song(world["store"], world["artifacts"], world["song_id"]).camelot == "9A"
     with pytest.raises(song_facts.FactsRefused):
         facts_store.set_correction(world["store"], world["song_id"], 900.0, None)
 
@@ -300,3 +300,44 @@ def test_postgres_keeps_one_workspaces_facts_from_another(postgres_engine, tmp_p
     with transaction(postgres_engine, a) as conn:
         row = conn.execute(sa.select(analysis.c.implementation, analysis.c.source)).one()
     assert tuple(row) == ("web-dsp-1", "device")
+
+
+BAR_ARRAYS = ("chroma_bars", "mfcc_bars", "energy_bars", "rms_db_bars", "low_share_bars")
+
+
+def _hosted_analysis(path, seed: int) -> None:
+    """An analysis file as the hosted worker writes it (`engine_handlers.analyse`)."""
+    arrays, sections = arrays_for(seed, 120.0, 200.0)
+    summary = {**scalars(seed, 120.0), "sections": sections, "duration": 200.0}
+    summary["constant_tempo"] = int(summary.pop("constant_tempo"))
+    summary.pop("key_agrees_chroma")
+    np.savez_compressed(
+        path,
+        beats=arrays["beats"],
+        bar_starts=arrays["bar_starts"],
+        raw_beats=arrays["beats"].astype(np.float32),
+        raw_downbeats=arrays["beats"][::4].astype(np.float32),
+        peaks=np.zeros(64, dtype=np.uint8),
+        summary=np.array(json.dumps(summary)),
+        **{name: arrays[name].astype(np.float16) for name in BAR_ARRAYS},
+    )
+
+
+def test_a_workers_hosted_analysis_becomes_the_same_songs_facts(world, tmp_path):
+    path = tmp_path / "analysis.npz"
+    _hosted_analysis(path, 1)
+    found = facts_store.record_worker_analysis(
+        world["store"], world["artifacts"], sha_for(1), path
+    )
+    assert found == world["song_id"]
+    page = facts_store.measured(world["store"])["songs"]
+    assert [(s["implementation"], s["source"]) for s in page] == [
+        (song_facts.python_implementation(), "worker")
+    ]
+    loaded = stored.load_song(world["store"], world["artifacts"], world["song_id"])
+    assert loaded.bpm == 120.0 and loaded.camelot == "9A"
+    # no catalogue song has these bytes: nothing is written
+    missing = facts_store.record_worker_analysis(
+        world["store"], world["artifacts"], sha_for(9), path
+    )
+    assert missing is None
