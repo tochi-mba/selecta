@@ -8,7 +8,13 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 MOST_LINES = 1000
 # written by tools, not people, and nobody reads or edits them
-GENERATED = {"uv.lock", "web/pnpm-lock.yaml"}
+GENERATED = {
+    "uv.lock",
+    "web/pnpm-lock.yaml",
+    # measured data the tests compare against, each written by a tool named in its test
+    "tests/fixtures/rhythm_calibration_baseline.json",  # the earlier planner, run on a table
+    "web/src/dsp/golden/device-render/repair.json",  # tools/device_render_golden.py
+}
 # not text anyone keeps lines of
 BINARY = {".png", ".jpg", ".ico", ".flac", ".wav", ".mp3"}
 
