@@ -8,7 +8,7 @@ Two older Cloud mix models fold into the Desktop's model, one way:
   (`local_current_mix`) becomes the current mix, once, and only when the current mix is empty.
 - **Cloud mixes** (`cloud_mixes`, `/cloud-mixes`, uploaded music): each one's latest revision
   becomes a draft whose songs are the catalogue songs with the same content hash. Written and
-  tested; nothing calls it yet (to-do T-20261126-b7c1).
+  tested; nothing calls it yet (to-do T-20261126-1105).
 
 The rule: `mix_imports` records each source once, so running again changes nothing, and a draft
 that was deleted is never brought back. Nothing here changes or deletes a recipe or a Cloud mix

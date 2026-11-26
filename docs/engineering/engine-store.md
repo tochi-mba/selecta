@@ -168,8 +168,11 @@ one transaction (docs/engineering/cloud-planning.md).
 
 ## Not moved yet
 
-- The other hand-made tables: `preferences`, `seam_book`, `drafts`, `queue`.
+- The other hand-made table: `seam_book`; and `preferences` beyond the mix's own keys.
 - Seams moved in Phase 7 step 1: [engine-store-seams.md](engine-store-seams.md) has the tables,
   the import, the two writers and what still reads the files.
+- Mixes moved in Phase 7 steps 2 and 3 (`queue`, `drafts`, the mix's `preferences`, the request
+  tables' DDL): [engine-store-mixes.md](engine-store-mixes.md) has the tables, how an edit is one
+  write, the Cloud routes and the recipe import.
 - Whole-file tools that copy rows between library files (`homes.py`, `recovery.py`) and the
   backup's own read-only checks keep using `sqlite3`: they work on files, not on a workspace.
