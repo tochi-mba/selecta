@@ -17,11 +17,13 @@ Each song is measured twice:
 
 The neural beat tracker is not imported: the songs are generated, so their beat times are known,
 and they go in where Beat This would (rounded to its 20 ms frames, as it reports them). Nothing
-here downloads anything or touches the network.
+here downloads anything or touches the network. With ``--beat-this`` the real tracker runs too
+(``device_analysis_beat_this.py``) and its fixtures go to ``beat-this/``; the files above are
+written exactly as without it.
 
 Script only - run by hand when the Python analysis or the port's recipe changes:
 
-    python tools/device_analysis_golden.py [--out FOLDER]
+    python tools/device_analysis_golden.py [--out FOLDER] [--beat-this]
 """
 
 from __future__ import annotations
@@ -666,8 +668,18 @@ def measure(song: dict) -> dict:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, default=OUTPUT)
-    folder = parser.parse_args(argv).out
+    parser.add_argument(
+        "--beat-this",
+        action="store_true",
+        help="also write beat-this/: the real tracker's beats (needs torch and the checkpoint)",
+    )
+    args = parser.parse_args(argv)
+    folder = args.out
     folder.mkdir(parents=True, exist_ok=True)
+    if args.beat_this:
+        from device_analysis_beat_this import write_beat_this
+
+        write_beat_this(folder / "beat-this", songs(), render, analyse, sinc_resample)
     entries, playback = [], []
     for song in songs():
         result = measure(song)

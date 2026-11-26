@@ -1,0 +1,95 @@
+{
+ "checkpoint": "small0",
+ "postprocessor": "minimal",
+ "fps": 50,
+ "versions": {
+  "beat_this": "1.1.0",
+  "torch": "2.15.0+cpu"
+ },
+ "songs": [
+  {
+   "name": "house-120-a-minor",
+   "file": "house-120-a-minor.json",
+   "resamplerEffect": {
+    "beatsMs": 479.9999999999969,
+    "downbeatsMs": 0.0,
+    "beatCounts": [
+     44,
+     45
+    ]
+   }
+  },
+  {
+   "name": "swing-93-c-then-d-major",
+   "file": "swing-93-c-then-d-major.json",
+   "resamplerEffect": {
+    "beatsMs": 0.0,
+    "downbeatsMs": 0.0,
+    "beatCounts": [
+     56,
+     56
+    ]
+   }
+  },
+  {
+   "name": "break-174-f-minor",
+   "file": "break-174-f-minor.json",
+   "resamplerEffect": {
+    "beatsMs": 19.999999999999574,
+    "downbeatsMs": 0.0,
+    "beatCounts": [
+     70,
+     70
+    ]
+   }
+  },
+  {
+   "name": "waltz-132-g-major",
+   "file": "waltz-132-g-major.json",
+   "resamplerEffect": {
+    "beatsMs": 0.0,
+    "downbeatsMs": 0.0,
+    "beatCounts": [
+     66,
+     66
+    ]
+   }
+  },
+  {
+   "name": "beatless-pad-e-major",
+   "file": "beatless-pad-e-major.json",
+   "resamplerEffect": {
+    "beatsMs": 0.0,
+    "downbeatsMs": 0.0,
+    "beatCounts": [
+     2,
+     2
+    ]
+   }
+  },
+  {
+   "name": "house-124-d-minor-48k",
+   "file": "house-124-d-minor-48k.json",
+   "resamplerEffect": {
+    "beatsMs": 0.0,
+    "downbeatsMs": 0.0,
+    "beatCounts": [
+     29,
+     29
+    ]
+   }
+  },
+  {
+   "name": "live-drift-98-106-e-minor",
+   "file": "live-drift-98-106-e-minor.json",
+   "resamplerEffect": {
+    "beatsMs": 0.0,
+    "downbeatsMs": 0.0,
+    "beatCounts": [
+     51,
+     51
+    ]
+   }
+  }
+ ]
+}
