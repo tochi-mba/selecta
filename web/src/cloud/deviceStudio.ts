@@ -64,6 +64,9 @@ export type StudioDeps = {
   log?: (line: string) => void;
   /** Called once when the studio is disposed (ends the render worker). */
   stop?: () => void;
+  /** Told of each clip accepted, made now or kept from before, to tell the account about it in
+   * the background (seamReports.ts). Never awaited. */
+  report?: (pair: { a: number; b: number }, made: MadeSeam, answer: CandidatesAnswer) => void;
 };
 
 type Job = {
@@ -228,6 +231,7 @@ export class DeviceStudio {
       const stored = await this.deps.store?.get(clipKey).catch(() => null);
       if (stored) {
         this.log(`[studio] ${job.a.songId} > ${job.b.songId}: kept from before, ${stored.move}${stored.passed ? '' : ' (did not pass every check)'}`);
+        this.deps.report?.({ a: job.a.songId, b: job.b.songId }, stored, answer);
         return stored;
       }
       const { options, fallback } = rankedFrom(answer);
@@ -250,7 +254,10 @@ export class DeviceStudio {
       this.log(outcome.status === 'clip'
         ? `[studio] ${job.a.songId} > ${job.b.songId}: ${outcome.move}${outcome.fellBack ? ' (the fallback cut)' : ''}, ${outcome.passed ? 'passed' : outcome.nearMiss ? 'near miss' : 'did not pass'}, ${outcome.attempts.length} tried, ${outcome.tookMs} ms, ${outcome.implementation}`
         : `[studio] ${job.a.songId} > ${job.b.songId}: no clip, ${outcome.reason}, ${outcome.tookMs} ms`);
-      if (outcome.status === 'clip') void this.deps.store?.put(clipKey, outcome);
+      if (outcome.status === 'clip') {
+        void this.deps.store?.put(clipKey, outcome);
+        this.deps.report?.({ a: job.a.songId, b: job.b.songId }, outcome, answer);
+      }
       return outcome;
     } catch (problem) {
       return none(problem instanceof Error ? problem.message : String(problem));

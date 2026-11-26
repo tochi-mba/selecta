@@ -4,12 +4,14 @@ import { SeamRenderer } from '../dsp/workers/renderSpawn';
 import { accountMeasured, askWithin, type Request } from './accountFacts';
 import { createClipStore } from './clipStore';
 import { DeviceStudio, type CandidatesAnswer, type StudioSong } from './deviceStudio';
+import { reportSeam } from './seamReports';
 import { songFacts } from './songFacts';
 
 /** The device studio as the shell's player wires it (cloud.device_render): the planner's answers
  * from the account, songs decoded by the playing speaker, one render worker, clips kept on the
- * device. The only requests are the planning routes the account already answers; no audio and no
- * clip ever leaves the device (deviceToAccount.egress.test.ts). */
+ * device. The only requests are the planning routes and, with cloud.brain on, a report of each
+ * clip made (its facts, length and hash); no audio and no clip ever leaves the device
+ * (deviceToAccount.egress.test.ts). */
 
 /** Options sent with their scripts: the rule renders at most five takes (cloud-planning.md). */
 export const STUDIO_SCRIPTS = 8;
@@ -62,5 +64,7 @@ export function makeDeviceStudio(wiring: StudioWiring): DeviceStudio {
     store: createClipStore(),
     log: import.meta.env.DEV ? (line) => console.info(line) : undefined,
     stop: () => renderer.end(),
+    // after the clip is in hand, off the path the music takes
+    report: (pair, made, answer) => { setTimeout(() => void reportSeam(wiring.request, wiring.workspaceId, made, pair, answer), 0); },
   });
 }

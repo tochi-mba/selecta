@@ -6,7 +6,9 @@ import { forgetAccountMeasured } from './accountFacts';
 import { accountOrderPlanner } from './accountOrder';
 import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
+import { reportSeam } from './seamReports';
 import { planningCalls } from './studioWiring';
+import type { MadeSeam } from '../dsp/render/seamMaker';
 import { BETWEEN_SONGS_MS, startFactsUploader } from './factsUploader';
 import { heldSong, measuredSong, PRIVATE_WORDS, shaOf } from './testAccountFacts';
 import { beatModelManager } from '../dsp/analysis/beatThis/model';
@@ -24,6 +26,8 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['POST', /^\/planning\/candidates$/],
   // cloud.device_render: one more option's script, by index; the clips themselves never leave
   ['POST', /^\/planning\/candidates\/script$/],
+  // cloud.device_render with cloud.brain: a report of a clip this device made, never the clip
+  ['PUT', /^\/seams\/[0-9a-f]{20}$/],
 ];
 
 /** The one request that is not to the account: the beat tracker's model file, fetched from
@@ -147,6 +151,55 @@ describe('what the device-to-account requests carry', () => {
     calls.forEach(holdsTheContract);
     expect(calls[0].body).toEqual({ a: 1, b: 2, leave_after: 30, scripts: 8 });
     expect(calls[1].body).toEqual({ a: 1, b: 2, leave_after: 30, option: 9, fingerprint: 'f'.repeat(64) });
+  });
+});
+
+describe('the seam report', () => {
+  it('names the clip by its length and hash and carries nothing of its audio, path or name', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true, 'cloud.device_render': true });
+    localStorage.setItem('selecta.device.ws-egress', 'device-1');
+    const { calls, request } = capturing();
+    // ten seconds of stereo audio: far more numbers than any report may carry
+    const channels = [new Float32Array(441_000).fill(0.25), new Float32Array(441_000).fill(-0.25)];
+    const made = {
+      status: 'clip', move: 'bass_swap_blend', option: 2, passed: true, nearMiss: false, fellBack: false, beatsAligned: true,
+      facts: { passed: true, failures: [] }, attempts: [], tookMs: 900, implementation: 'web-render-1+wsola-stretch-v1',
+      rendered: { channels, sampleRate: 44_100, aStartSample: 4_410_000, bEndSample: 441_000, levels: { a: 1, b: 1 }, switchAt: 5, bWarp: { output: [0], source: [0] }, implementation: 'web-render-1+wsola-stretch-v1' },
+    } as unknown as MadeSeam;
+    const option = { move: 'bass_swap_blend', bars: 8, exit_cue: [64, 120, 'phrase', 1, 0], entry_cue: [8, 15, 'phrase', 1, 0] } as const;
+    const answer = { fingerprint: 'a'.repeat(64), options: [{ index: 2, option: { ...option, exit_cue: [...option.exit_cue], entry_cue: [...option.entry_cue] } }] } as never;
+    try {
+      const key = await reportSeam(request, 'ws-egress', made, { a: 1, b: 2 }, answer);
+      expect(key).toMatch(/^[0-9a-f]{20}$/);
+      // sent once: the same clip again sends nothing
+      expect(await reportSeam(request, 'ws-egress', made, { a: 1, b: 2 }, answer)).toBeNull();
+    } finally {
+      localStorage.removeItem('selecta.device.ws-egress');
+      localStorage.removeItem('selecta.seams.reported.ws-egress');
+    }
+    expect(calls).toHaveLength(1);
+    calls.forEach(holdsTheContract);
+    const body = calls[0].body as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual([
+      'a', 'a_source_start', 'audit', 'b', 'b_source_end', 'bars', 'clip_seconds', 'clip_sha256', 'device_id', 'entry_bar', 'exit_bar',
+      'fell_back', 'fingerprint', 'implementation', 'move', 'near_miss', 'option', 'passed', 'tried',
+    ]);
+    expect(body.clip_seconds).toBe(10);
+    expect(body.clip_sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(body).length).toBeLessThan(2_000);
+  });
+
+  it('is not sent with cloud.brain off', async () => {
+    setFlags({ 'cloud.device_analysis': true, 'cloud.device_render': true });
+    localStorage.setItem('selecta.device.ws-egress', 'device-1');
+    const { calls, request } = capturing();
+    const made = { option: 0, rendered: { channels: [new Float32Array(4)], sampleRate: 44_100 } } as unknown as MadeSeam;
+    try {
+      expect(await reportSeam(request, 'ws-egress', made, { a: 1, b: 2 }, { fingerprint: 'a'.repeat(64) })).toBeNull();
+    } finally {
+      localStorage.removeItem('selecta.device.ws-egress');
+    }
+    expect(calls).toHaveLength(0);
   });
 });
 

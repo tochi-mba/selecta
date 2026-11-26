@@ -44,6 +44,7 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.workspace.<user>` | local | `web/src/business/workspace.ts` | Last chosen workspace for each signed-in account, restored only for that account | Cloud workspace switcher |
 | `selecta.workspace.tab` | session | `web/src/business/workspace.ts` | Workspace chosen in this tab, scoped to the signed-in account | Cloud workspace switcher |
 | `selecta.device.<workspace>` | local | `web/src/devices/usePlaybackDevice.ts`, `web/src/devices/DevicesPanel.tsx` | This browser's playback device id (Cloud) | Cloud playback |
+| `selecta.seams.reported.<workspace>` | local | `web/src/cloud/seamReports.ts` | The keys of transitions this device rendered and already told the account about, so each is sent once (Cloud, last 500) | Listen |
 | `selecta.cloud.last-event-id` | session | `web/src/cloud/events.ts` | The last Cloud event seen, to resume the stream (Cloud) | Cloud |
 | `selecta.guest.room.<code>` | local | `web/src/guest/main.ts` (through `store` in `web/src/rooms/dom.ts`) | The guest's room id for a party code (Cloud) | Requests (guest rooms) |
 | `selecta.cutover-notice.<account>` | local | `web/src/cloud/migration/CutoverNotice.tsx` | That this account dismissed the hosted-media cutover notice on this browser (Cloud, ADR-0465) | Cloud |
@@ -97,7 +98,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/mix/render` | Queues every unfinished transition |
 | `POST /api/mix/export` | Starts the older one-shot export (Export) |
 | `POST /api/seams` | Renders a transition audition between two songs (Discovery) |
-| `POST /api/seams/{key}/rate` | Saves a Good/Bad rating for one exact render key (Discovery, learning) |
+| `POST /api/seams/{key}/rate` | Saves a Good/Bad rating for one exact render key (Discovery, learning); in Cloud, into the account's seam record and verdict log (ADR-0479) |
 
 ### Mixes and drafts (`src/selecta/routes/mixes.py`) - My Mixes, Make a Mix
 
@@ -300,6 +301,7 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `DELETE /api/local-media/songs/{song_id}` | Soft-deletes a catalogue entry |
 | `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
 | `PUT /api/song-facts/{song_id}` | Saves the facts a device measured for one catalogue song (the `analysis` row and its features artifact), unless a measurement that outranks them is stored (ADR-0479) |
+| `PUT /api/seams/{key}` | Keeps a transition a device rendered (its pair, option, audit verdict, implementation, clip length and hash; never audio) and that device's attestation (Cloud, ADR-0479) |
 | `PUT /api/song-facts/{song_id}/correction` | Sets the member's tempo and key for a catalogue song (`song_overrides`); both null clears it |
 | `DELETE /api/song-facts/{song_id}/correction` | Clears the member's tempo and key correction for a catalogue song |
 | `POST /api/planning/candidates` | None: ranks the transitions between two of the account's songs and builds their scripts; nothing is stored |
