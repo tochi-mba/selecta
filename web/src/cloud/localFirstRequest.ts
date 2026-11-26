@@ -14,6 +14,9 @@ import { askToMake, forgetRatings, inspectorOn, seamOptions, withInspection } fr
 import { exportFamily, exportStudio } from './localExport';
 import { readCached, writeCached } from './offlineCache';
 import { canHeal, classify } from './resilientRequest';
+import { libraryFamily } from './localFirstLibrary';
+import { isFirst } from './measuringControl';
+import { flagListed } from '../flags';
 import { groupVersions, hereBySong, linkBySong, rememberGrouping, setBySong, whereBySong, type Grouping } from './songVersions';
 
 /** The local-first shell's request adapter (ADR-0462 "one adapter per route family").
@@ -164,7 +167,8 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, ...measuredOf(known.facts?.get(song.id)),
     music_override: null, grid_confidence: null, lyric_status: null,
-    never: song.never === true, priority: false, availability,
+    // priority: this device measures it before the others (measuringControl.ts)
+    never: song.never === true, priority: isFirst(song.id), availability,
     // the availability line says where it is; readiness only says how far analysis has got
     // in a browser mix a song that plays here is ready: its transitions are worked out from the
     // audio as the mix plays, so nothing has to be measured first (BF-0462-05)
@@ -427,6 +431,11 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);
+  // T-20261126-ed4c: the Desktop's song search, and measuring first or paused on this device
+  const library = libraryFamily({
+    rows: async () => { const list = await songs(); const known = await availability(list); return list.map((song) => asLibrarySong(song, known)); },
+    measuring: () => flagListed('cloud.browser_harmonic'),
+  });
   // T-20261126-96d3: a mix saved as a file on this device, with the transitions playback plays
   const exports = sources.workspaceId ? exportFamily({
     workspaceId: sources.workspaceId,
@@ -492,6 +501,8 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
         return { position, song_id: id, artist: found?.artist ?? '', title: found?.title ?? 'A song', duration: found?.duration_s ?? 0, bpm: null, key: null, locked: false, seam: null };
       }) } as T;
     }
+    const libraryAnswer = library.answer(method, route, new URLSearchParams(query), init);
+    if (libraryAnswer) return (await libraryAnswer) as T;
     const requestAnswer = requests?.answer(method, route, new URLSearchParams(query), init);
     if (requestAnswer) return (await requestAnswer) as T;
     // a song added here must play on this device, as the browser's own mixes ask

@@ -5,7 +5,7 @@ import { RemoteSelection } from './RemoteSelection';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { answerWithin, ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
 import { useApi } from '../requestContext';
-import { Gate, useFlags, visible } from '../flags';
+import { flagListed, Gate, useFlags, visible } from '../flags';
 import { analysisWords, askedToAnalyse } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
@@ -489,7 +489,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   };
   const setPriority = async (song: LibrarySong) => {
     await post(`/songs/${song.id}/priority?priority=${song.priority ? 0 : 100}`);
-    notify(song.priority ? `${song.title} moved to background processing.` : `${song.title} moved to the priority list.`);
+    if (browser) notify(song.priority ? `${song.title} is measured in turn.` : `${song.title} is measured next on this device.`);
+    else notify(song.priority ? `${song.title} moved to background processing.` : `${song.title} moved to the priority list.`);
     await load();
   };
   // A recording link may refer to an ID outside the current filtered or paginated rows.
@@ -618,6 +619,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const compact = preferences.density === 'compact';
   const on = useFlags();
   const cardLayout = preferences.libraryLayout === 'cards' && on('library.card_view');
+  // a browser that measures songs itself can measure one first (localFirstLibrary.ts)
+  const measuresFirst = (song: LibrarySong) => !!browser && flagListed('cloud.browser_harmonic') && song.detected_bpm === null && song.availability === 'here';
   // batch actions need at least one thing they can do
   const batch = on('library.batch') && (on('library.priority') || on('library.never_play'));
   // List and cards trade places by gliding the rows on screen; with motion off it just changes
@@ -808,7 +811,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}
             current={now.phase !== 'idle' && mix[now.position]?.song_id === song.id}
             linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
-            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable || song.bpm !== null} browser={!!browser}
+            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && (analysisAvailable || measuresFirst(song))} neverFlag={on('library.never_play')} measured={analysisAvailable || song.bpm !== null} browser={!!browser}
             art={on('library.art_embedded')} mark={marking && query ? query : ''} />
         ))}
       </ul>
