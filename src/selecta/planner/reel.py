@@ -266,6 +266,8 @@ _STYLE_NAMES = {
     "bass_swap_blend": "Bass swap blend",
     "filter_sweep": "Filter sweep",
     "tempo_ramp": "Tempo ramp",
+    "loop_room": "Loop and blend",
+    "tempo_bridge": "Tempo bridge",
     "word_cut": "Word cut",
     "word_blend": "Word blend",
     "word_exchange": "Call and response",

@@ -109,6 +109,8 @@ chooses as before. docs/engineering/device-studio-playback.md has the whole life
 | `reverb_wash` | `reverb_wash` | Same two-beat wash |
 | `tempo_ramp` | skipped | Rides both songs to a shared tempo; the live engine never changes A's speed |
 | `delay_throw` | skipped | Throws A's last word; the browser knows no word timing |
+| `loop_room` | skipped | Loops A's last clean bars under B; the live engine can't loop a playing song, the rendered path plays the script |
+| `tempo_bridge` | skipped | Walks A's tempo to B's over 16 bars; the live engine never changes A's speed, the rendered path plays the script |
 | anything else | skipped | Not a move this table knows |
 
 A move the device can't do (no EQ, no echo returns, no stretch for the tempo gap) degrades in

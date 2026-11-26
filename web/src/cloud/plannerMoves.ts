@@ -22,6 +22,12 @@ export const PLANNER_MOVES: Readonly<Record<string, { live: SeamMove; beatmatche
   tempo_ramp: null,
   // exits.py throws A's last sung word into a delay; the browser knows no word timing
   delay_throw: null,
+  // loop.py repeats A's last clean bars under B (move.loop_room); the live engine cannot loop a
+  // playing song, so only the rendered path (dsp/render/) plays it, from the planner's script
+  loop_room: null,
+  // bridge.py walks A's tempo to B's over sixteen bars (move.tempo_bridge); the live engine never
+  // changes the playing song's speed, so only the rendered path plays it, from the script
+  tempo_bridge: null,
 };
 
 /** The live move for a planner move, or null when it has none. */

@@ -43,6 +43,14 @@ MOVES: dict[str, tuple[str, str]] = {
     ),
     "filter_sweep": ("Filter sweep", "A filters away upward as B opens up."),
     "tempo_ramp": ("Tempo ramp", "Both songs drift to a shared speed for a short overlap."),
+    "loop_room": (
+        "Loop and blend",
+        "A's last clean bars loop, so B can still come in slowly over them.",
+    ),
+    "tempo_bridge": (
+        "Tempo bridge",
+        "A, stripped to its beat, walks to B's speed over sixteen bars, then B comes in untouched.",
+    ),
     "word_blend": ("Word blend", "A vocal ride that hands over on a phrase both songs share."),
     "word_exchange": (
         "Call and response",
