@@ -301,13 +301,9 @@ def analyse_links(
     log: Callable[[str], None] = print,
 ) -> int:
     """Analyse only the songs these links need, which beats waiting for the whole library."""
-    finished = {
-        row[0]
-        for row in conn.execute(
-            "SELECT song_id FROM analysis WHERE error IS NULL AND version = ?",
-            (ANALYSIS_VERSION,),
-        )
-    }
+    from selecta.engine_store import library_reads
+
+    finished = library_reads.analysed_ids(conn, ANALYSIS_VERSION)
     needed = sorted({song for link in links for song in (link.song_a, link.song_b)} - finished)
     if not needed:
         return 0
@@ -316,8 +312,9 @@ def analyse_links(
     log(f"Analysing {len(needed)} songs these links need.")
     analysers = Analysers.load(settings)
     for song_id in needed:
-        song = conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
-        analyse_song(conn, settings, song, analysers)
+        from selecta import db
+
+        analyse_song(conn, settings, db.song_by_id(conn, song_id), analysers)
     return len(needed)
 
 

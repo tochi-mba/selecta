@@ -81,12 +81,15 @@ def store_of(conn):
 
 def lyric_links(conn: sqlite3.Connection, limit: int = 200_000) -> list[LyricLink]:
     """Search every song with timed lyrics. Takes seconds, since only line ends and starts link."""
-    rows = conn.execute(
-        "SELECT s.id,s.artist,s.title,s.duration,l.synced FROM songs s "
-        "JOIN lyrics l ON l.song_id=s.id "
-        "WHERE l.status='synced' AND l.synced IS NOT NULL "
-        "AND s.is_music=1 AND s.duplicate_of IS NULL"
-    ).fetchall()
+    from selecta.engine_store import library_rows
+
+    with library_rows.reading(conn) as source:
+        rows = source.execute(
+            "SELECT s.id,s.artist,s.title,s.duration,l.synced FROM songs s "
+            "JOIN lyrics l ON l.song_id=s.id "
+            "WHERE l.status='synced' AND l.synced IS NOT NULL "
+            "AND s.is_music=1 AND s.duplicate_of IS NULL"
+        ).fetchall()
     return discover(
         {r["id"]: parse_lrc(r["synced"], r["duration"]) for r in rows},
         limit,

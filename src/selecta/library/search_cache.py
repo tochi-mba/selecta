@@ -61,9 +61,12 @@ class RankedSearches:
                     conn.execute("BEGIN")
                 try:
                     self._names = conn.execute(NAMES).fetchone()[0] or ""
-                    cursor = conn.cursor()
-                    cursor.row_factory = None  # plain tuples: 20,000 named rows cost far more
-                    self._songs = cursor.execute(SONGS).fetchall()
+                    if hasattr(conn, "tuples"):  # a store read (engine_store.library_rows)
+                        self._songs = conn.tuples(SONGS)
+                    else:
+                        cursor = conn.cursor()
+                        cursor.row_factory = None  # plain tuples: 20,000 named rows cost more
+                        self._songs = cursor.execute(SONGS).fetchall()
                 finally:
                     if own:
                         conn.commit()

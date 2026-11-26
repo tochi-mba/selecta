@@ -23,6 +23,7 @@ from selecta.arrange import (
 )
 from selecta.discovery.hearing import STEPS, audition_folder, make_audition
 from selecta.discovery.search import spread_out, store_of
+from selecta.engine_store import library_rows
 from selecta.eta import combine, still_to_go
 from selecta.routes.files import audio_file
 from selecta.seams import STUDIO_SESSION
@@ -269,10 +270,11 @@ def add_routes(app, ctx) -> None:
         text = q.casefold()
         with connect() as conn:
             unique, library, space = ranked_links(conn)
-            names = {
-                row["id"]: (row["artist"], row["title"])
-                for row in conn.execute("SELECT id,artist,title FROM songs")
-            }
+            with library_rows.reading(conn) as source:
+                names = {
+                    row["id"]: (row["artist"], row["title"])
+                    for row in source.execute("SELECT id,artist,title FROM songs")
+                }
         shown = []
         prepared = 0
         # r8d: one look at what's been rendered, rather than asking the disk about every move of

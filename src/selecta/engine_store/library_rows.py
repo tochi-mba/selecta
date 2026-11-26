@@ -137,8 +137,10 @@ class Rows:
     # already inside the store's own transaction: nothing above may begin or end another
     in_transaction = True
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, connection: Connection, store: EngineStore | None = None) -> None:
         self.connection = connection
+        # the store this connection belongs to, for a read that opens its own (`load_song`)
+        self.store = store
 
     def execute(self, sql: str, params: Any = ()) -> Cursor:
         try:
@@ -159,6 +161,10 @@ class Rows:
             if isinstance(problem.orig, sqlite3.Error):
                 raise problem.orig from None
             raise
+
+    def tuples(self, sql: str, params: Any = ()) -> list[tuple]:
+        """Plain tuples, for a read of many thousands of rows where names cost too much."""
+        return [tuple(row) for row in self.connection.exec_driver_sql(sql, _parameters(params))]
 
     def commit(self) -> None:
         """The store commits when the block ends."""
@@ -186,14 +192,40 @@ def store_path(conn: Any) -> EngineStore | None:
 
 
 @contextlib.contextmanager
+def plain_errors() -> Iterator[None]:
+    """A database error raised as the `sqlite3` error it is, as the library's callers expect:
+    a watcher that catches `sqlite3.Error` to try again later must not stop for good."""
+    try:
+        yield
+    except sa.exc.DBAPIError as problem:
+        if isinstance(problem.orig, sqlite3.Error):
+            raise problem.orig from None
+        raise
+
+
+@contextlib.contextmanager
+def read(store: EngineStore) -> Iterator[Connection]:
+    """`store.read()`, with its errors as `sqlite3` errors."""
+    with plain_errors(), store.read() as connection:
+        yield connection
+
+
+@contextlib.contextmanager
+def write(store: EngineStore) -> Iterator[Connection]:
+    """`store.write()`, with its errors as `sqlite3` errors."""
+    with plain_errors(), store.write() as connection:
+        yield connection
+
+
+@contextlib.contextmanager
 def reading(conn: Any) -> Iterator[Any]:
     """`conn` for reading: a `Rows` over `store.read()` with the flag on, else `conn`."""
     store = store_path(conn)
     if store is None:
         yield conn
         return
-    with store.read() as connection:
-        yield Rows(connection)
+    with read(store) as connection:
+        yield Rows(connection, store)
 
 
 @contextlib.contextmanager
@@ -204,8 +236,18 @@ def writing(conn: Any) -> Iterator[Any]:
     if store is None:
         yield conn
         return
-    with store.write() as connection:
-        yield Rows(connection)
+    with write(store) as connection:
+        yield Rows(connection, store)
 
 
-__all__ = ["REVISION", "Record", "Rows", "reading", "store_path", "writing"]
+__all__ = [
+    "REVISION",
+    "Record",
+    "Rows",
+    "plain_errors",
+    "read",
+    "reading",
+    "store_path",
+    "write",
+    "writing",
+]

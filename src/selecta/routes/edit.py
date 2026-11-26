@@ -24,6 +24,7 @@ from selecta.api_common import (
     RateRequest,
     SeamSettings,
 )
+from selecta.engine_store import library_reads, library_rows
 from selecta.flags.guard import refusal
 from selecta.routes.files import audio_file
 from selecta.seam_kinds import MOVE_FLAGS, move_on
@@ -54,9 +55,7 @@ def add_routes(app, ctx) -> None:
             if not 0 < position < len(rows):
                 raise HTTPException(404, "That transition isn't in the mix any more.")
             settings_now = json.loads(rows[position][1] or "{}")
-            song = conn.execute(
-                "SELECT duration FROM songs WHERE id=?", (rows[position - 1][0],)
-            ).fetchone()
+            song = library_reads.song_fields(conn, rows[position - 1][0], "duration")
             later = float(math.ceil(body.after + TIME_TO_MAKE_ANOTHER))
             pinned = settings_now.get("exit_bar") is not None or settings_now.get("shape")
             if song is None or pinned or later > song["duration"] - mix.LAST_EXIT:
@@ -76,9 +75,7 @@ def add_routes(app, ctx) -> None:
         """Two songs and the transition between them, into whichever mix is meant, all at once."""
         with connect() as conn:
             for song in (body.a, body.b):
-                row = conn.execute(
-                    "SELECT is_music,duplicate_of FROM songs WHERE id=?", (song,)
-                ).fetchone()
+                row = library_reads.song_fields(conn, song, "is_music", "duplicate_of")
                 if row is None or not row["is_music"] or row["duplicate_of"] is not None:
                     raise HTTPException(409, "One of those songs is no longer in your library.")
             seam = {
@@ -191,13 +188,14 @@ def add_routes(app, ctx) -> None:
             ]
             waiting = []
             if text:
-                rows = conn.execute(
-                    "SELECT s.id,s.artist,s.title,s.duration FROM songs s "
-                    "LEFT JOIN analysis a ON a.song_id=s.id "
-                    "WHERE s.is_music=1 AND s.duplicate_of IS NULL AND a.song_id IS NULL "
-                    f"AND {db.SEARCHING_NAMES} ORDER BY s.artist,s.title LIMIT 8",
-                    (db.containing(q.strip()), db.containing(q.strip())),
-                ).fetchall()
+                with library_rows.reading(conn) as source:
+                    rows = source.execute(
+                        "SELECT s.id,s.artist,s.title,s.duration FROM songs s "
+                        "LEFT JOIN analysis a ON a.song_id=s.id "
+                        "WHERE s.is_music=1 AND s.duplicate_of IS NULL AND a.song_id IS NULL "
+                        f"AND {db.SEARCHING_NAMES} ORDER BY s.artist,s.title LIMIT 8",
+                        (db.containing(q.strip()), db.containing(q.strip())),
+                    ).fetchall()
                 waiting = [
                     {
                         "song_id": row["id"],

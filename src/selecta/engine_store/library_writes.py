@@ -24,7 +24,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.engine import Connection
 
-from selecta.engine_store import EngineStore, upsert
+from selecta.engine_store import EngineStore, library_rows, upsert
 from selecta.engine_store.mixes import now
 from selecta.engine_store.schema import (
     analysis,
@@ -71,7 +71,7 @@ def _upsert_song(connection: Connection, store: EngineStore, record: Mapping[str
 def upsert_songs(store: EngineStore, records: Sequence[Mapping[str, Any]]) -> None:
     """Save scanned songs, `SCAN_BATCH` per write."""
     for start in range(0, len(records), SCAN_BATCH):
-        with store.write() as connection:
+        with library_rows.write(store) as connection:
             for record in records[start : start + SCAN_BATCH]:
                 _upsert_song(connection, store, record)
 
@@ -80,7 +80,7 @@ def scanned_rows(store: EngineStore, paths: Iterable[str]) -> dict[str, dict[str
     """The stored rows of these paths, by path, read at one moment (the scan's unchanged files)."""
     wanted = list(paths)
     found: dict[str, dict[str, Any]] = {}
-    with store.read() as connection:
+    with library_rows.read(store) as connection:
         for start in range(0, len(wanted), 500):
             rows = connection.execute(
                 sa.select(songs).where(
@@ -114,7 +114,7 @@ def save_scanned(
     `settle(record, override)` applies the scanner's rule before the row is written."""
     for start in range(0, len(records), SCAN_BATCH):
         batch = records[start : start + SCAN_BATCH]
-        with store.write() as connection:
+        with library_rows.write(store) as connection:
             overrides = music_overrides(
                 connection, store, [song["path"] for song in batch if song["path"] in unchanged]
             )
@@ -162,7 +162,7 @@ def _forget(connection: Connection, store: EngineStore, path: str) -> None:
 def forget_songs(store: EngineStore, paths: Sequence[str]) -> None:
     """Remove songs whose files have gone, `SCAN_BATCH` per write."""
     for start in range(0, len(paths), SCAN_BATCH):
-        with store.write() as connection:
+        with library_rows.write(store) as connection:
             for path in paths[start : start + SCAN_BATCH]:
                 _forget(connection, store, path)
 
@@ -170,7 +170,7 @@ def forget_songs(store: EngineStore, paths: Sequence[str]) -> None:
 def mark_duplicates(store: EngineStore, choose: Callable[[list], list[tuple[int, int]]]) -> int:
     """Clear every duplicate mark and set them again, in one write. `choose(rows)` gives
     (duplicate, kept) pairs from the music rows. Returns how many were marked."""
-    with store.write() as connection:
+    with library_rows.write(store) as connection:
         rows = connection.execute(
             sa.select(
                 songs.c.id,
@@ -214,7 +214,7 @@ def save_analysis(
     """A song's analysis and, when given, the file hash and audio id it was made from, in ONE
     write: the row naming the version and the hashes that key its features land together."""
     record = analysis_values(song_id, values)
-    with store.write() as connection:
+    with library_rows.write(store) as connection:
         if hashes is not None:
             content_hash, audio_id = hashes
             change: dict[str, Any] = {"content_hash": content_hash}
@@ -236,7 +236,7 @@ def save_lyrics(
     store: EngineStore, song_id: int, status: str, synced: str | None, plain: str | None
 ) -> None:
     """A song's lyrics as looked up, with the time they were fetched."""
-    with store.write() as connection:
+    with library_rows.write(store) as connection:
         upsert(
             connection,
             lyrics,
@@ -268,7 +268,7 @@ def correct(
     """The correction route's write: None when there is no such song, else the tempo and key now
     held and whether they changed. Both None removes the correction."""
     clear = set(clear)
-    with store.write() as connection:
+    with library_rows.write(store) as connection:
         there = connection.execute(
             sa.select(songs.c.id).where(store.mine(songs), songs.c.id == song_id)
         ).first()
@@ -323,7 +323,7 @@ def correct(
 
 def set_priority(store: EngineStore, song_id: int, priority: int) -> bool:
     """Set one song's processing priority; False when there is no such song."""
-    with store.write() as connection:
+    with library_rows.write(store) as connection:
         changed = connection.execute(
             sa.update(songs)
             .where(store.mine(songs), songs.c.id == song_id)
@@ -336,7 +336,7 @@ def set_priority(store: EngineStore, song_id: int, priority: int) -> bool:
 
 
 def preference(store: EngineStore, key: str, default: Any = None) -> Any:
-    with store.read() as connection:
+    with library_rows.read(store) as connection:
         text = connection.execute(
             sa.select(preferences.c.value).where(
                 store.mine(preferences), preferences.c.key == key
@@ -362,12 +362,12 @@ def put_preference(connection: Connection, store: EngineStore, key: str, value: 
 
 
 def set_preference(store: EngineStore, key: str, value: Any) -> None:
-    with store.write() as connection:
+    with library_rows.write(store) as connection:
         put_preference(connection, store, key, value)
 
 
 def forget_preference(store: EngineStore, key: str) -> None:
-    with store.write() as connection:
+    with library_rows.write(store) as connection:
         connection.execute(
             sa.delete(preferences).where(store.mine(preferences), preferences.c.key == key)
         )

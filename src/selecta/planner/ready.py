@@ -52,11 +52,14 @@ def current_recordings(conn: sqlite3.Connection, songs: list[Any]) -> dict[int, 
     """Only existing, unchanged, eligible sources with current analysis can enter the graph."""
     by_id = {song.id: song for song in songs}
     valid = {}
-    rows = conn.execute(
-        "SELECT s.id,s.path,s.size,s.mtime,a.version FROM songs s "
-        "JOIN analysis a ON a.song_id=s.id "
-        "WHERE s.is_music=1 AND s.duplicate_of IS NULL AND a.error IS NULL"
-    )
+    from selecta.engine_store import library_rows
+
+    with library_rows.reading(conn) as source:
+        rows = source.execute(
+            "SELECT s.id,s.path,s.size,s.mtime,a.version FROM songs s "
+            "JOIN analysis a ON a.song_id=s.id "
+            "WHERE s.is_music=1 AND s.duplicate_of IS NULL AND a.error IS NULL"
+        ).fetchall()
     for row in rows:
         song = by_id.get(row["id"])
         if song is None or row["version"] != ANALYSIS_VERSION:
