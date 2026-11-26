@@ -245,6 +245,29 @@
       "kind": "release",
       "owner": "platform"
     },
+    "cloud.brain": {
+      "label": "Planning from song facts",
+      "about": "SelectaDJ's planner runs in Cloud from the facts a member's device measured for their songs (ADR-0479, docs/engineering/cloud-planning.md): a device saves a song's measurements (tempo, beats and bars, sections, key, loudness, per-bar energy and tone numbers; never audio or paths) and the member's tempo and key corrections, and Cloud answers with the ranked transitions between two songs and their scripts, the repair rule's next step, a mix's order and the idea cards. Off: these routes answer flag_off and nothing is saved or planned.",
+      "routes": [
+        "PUT /api/song-facts/{song_id}",
+        "GET /api/song-facts",
+        "PUT /api/song-facts/{song_id}/correction",
+        "DELETE /api/song-facts/{song_id}/correction",
+        "POST /api/planning/candidates",
+        "POST /api/planning/candidates/script",
+        "POST /api/planning/next-step",
+        "POST /api/planning/take-step",
+        "POST /api/planning/order",
+        "POST /api/planning/ideas"
+      ],
+      "requires": ["cloud.local_media"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Routes a device and a studio call; no Cloud page reads them until the browser measures songs and renders their scripts"
+    },
     "cloud.local_media": {
       "label": "Local media catalogue",
       "about": "The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458).",
