@@ -29,6 +29,14 @@ Member copy that differs by where the music lives comes from one place, `web/src
 `words()` gives the Desktop set on Desktop, and in Cloud the set for the account's music home
 (on this device, in the cloud library, or both), with everything that does not differ shared.
 
+Putting a song from this device into the cloud library (owner's decision, 2026-11-26):
+
+| Say | Means | Never say |
+|---|---|---|
+| **Upload to your cloud library** | The song's file is copied to the cloud library and lands on the same song, so its mixes, ratings and corrections stay | "Move": the file on this device is never moved, changed or deleted |
+| **Play it from your cloud library only** | After the upload is checked, the song plays from the cloud library on every device and leaves this device's song list; folder checks do not add it back | "Remove", "delete" |
+| **Play from this device again** | Undo for one song: this device's copy is used again | |
+
 ## Where the audio work happens
 
 A **studio** does the audio work: measuring songs, splitting stems, rendering and checking
