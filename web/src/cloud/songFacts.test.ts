@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeIndexedDb } from '../media/fakeIndexedDb';
 import { assertMachineDerived, DerivedStore, resetDerivedStoreForTests } from '../media/derived';
-import { BROWSER_BEATS_IMPLEMENTATION, DEVICE_ANALYSIS_IMPLEMENTATION, factsVersion } from '../dsp/analysis/deviceAnalysisIds';
+import { BROWSER_BEATS_IMPLEMENTATION, DEVICE_ANALYSIS_IMPLEMENTATION, factsVersion, NEURAL_BEATS_IMPLEMENTATION } from '../dsp/analysis/deviceAnalysisIds';
 import type { SongFacts } from '../dsp/analysis/song';
-import { deviceFactsStore, songFacts } from './songFacts';
+import { deviceFactsStore, FACTS_READ_ORDER, songFacts } from './songFacts';
 
 // Song facts measured on this device (cloud.device_analysis): kept in the device-wide derived
 // store under kind `analysis`, keyed by content hash and by the analysis and beat-source ids.
@@ -91,5 +91,18 @@ describe('song facts in the derived store', () => {
 
   it('answers only a well-formed content hash', async () => {
     expect(await songFacts('not-a-hash')).toBeNull();
+  });
+
+  it('asks for a record at the beat source this device measures with, and reads the neural one first', async () => {
+    const store = deviceFactsStore();
+    const neural = factsVersion(NEURAL_BEATS_IMPLEMENTATION);
+    await store.put({ sha, version: factsVersion(), facts: facts() });
+    // measured with the interim source: with Beat This chosen, the song waits to be measured again
+    expect(await store.has(sha, neural)).toBe(false);
+    expect((await songFacts(sha))?.beat_source).toBe(BROWSER_BEATS_IMPLEMENTATION);
+    await store.put({ sha, version: neural, facts: { ...facts(), beat_source: NEURAL_BEATS_IMPLEMENTATION } });
+    expect(await store.has(sha, neural)).toBe(true);
+    expect((await songFacts(sha))?.beat_source).toBe(NEURAL_BEATS_IMPLEMENTATION);
+    expect(FACTS_READ_ORDER).toEqual(['web-dsp-1+web-beatthis-small0-1', 'web-dsp-1+web-onset-comb-beats-1']);
   });
 });

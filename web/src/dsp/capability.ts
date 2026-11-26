@@ -261,7 +261,9 @@ export function registerBrowserDspCapabilities(
   for (const feature of TIER3_FEATURES) {
     if (feature !== 'stem_separation' && feature !== 'neural_beats') registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_REASON);
   }
-  const beats = evidence.neuralBeats === undefined ? neuralBeatsState(undefined, evidence.now ?? Date.now()) : evidence.neuralBeats ?? { supported: false as const, reason: BEATS_NOT_HERE };
+  const given = evidence.neuralBeats === undefined ? neuralBeatsState(undefined, evidence.now ?? Date.now()) : evidence.neuralBeats ?? { supported: false as const, reason: BEATS_NOT_HERE };
+  // the record comes first, whatever the device showed: without it the tracker is off everywhere
+  const beats = !BEATS_LICENCE_RECORD || !PASSED_TIER3_RECORDS.includes(BEATS_LICENCE_RECORD) ? neuralBeatsState(undefined, evidence.now ?? Date.now(), null) : given;
   if (beats.supported) registry.register({ feature: 'neural_beats', tier: 3, implementation: BEAT_MODEL_IMPLEMENTATION, status: 'ready' }, beats);
   else registry.markUnsupported('neural_beats', 3, BEAT_MODEL_IMPLEMENTATION, beats.reason);
   const stems = stemSeparationEvidenceState(evidence.stems, { now: evidence.now });

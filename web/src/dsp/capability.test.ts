@@ -19,6 +19,8 @@ import { LIMITER_IMPLEMENTATION } from './limiter';
 import { TRUE_PEAK_IMPLEMENTATION } from './loudness';
 import { WORKER_CALIBRATION_IMPLEMENTATION, WORKER_CALIBRATION_MAX_AGE_MS, type WorkerBudgetEvidence } from './budget';
 import { STRETCH_PLAYBACK_INTEGRATION } from './stretchLimits';
+import { BEATS_NOT_SIGNED_REASON } from './analysis/beatThis/gate';
+import { BEAT_MODEL_IMPLEMENTATION, BEATS_LICENCE_RECORD } from './analysis/beatThis/model';
 
 const CALIBRATION_NOW = 1_700_000_000_000;
 const TEST_DEVICE = 'device-capability-test';
@@ -244,5 +246,23 @@ describe('capability registry', () => {
         confidence: 1.5,
       })
     ).toThrow(CapabilityError);
+  });
+});
+
+describe('neural beats (Beat This in the browser)', () => {
+  it('is unsupported_here on every device while its Tier 3 record is open, whatever the device showed', () => {
+    expect(BEATS_LICENCE_RECORD).toBeNull();
+    const registry = registerBrowserDspCapabilities(new CapabilityRegistry(), {
+      probe: { ok: true }, workerBudget: workerEvidence(), now: CALIBRATION_NOW, neuralBeats: { supported: true },
+    });
+    expect(registry.get('neural_beats')).toMatchObject({
+      tier: 3, status: 'unsupported_here', implementation: BEAT_MODEL_IMPLEMENTATION, reason: BEATS_NOT_SIGNED_REASON,
+    });
+  });
+
+  it('refuses a ready record without a passed record', () => {
+    expect(() => new CapabilityRegistry().register(
+      { feature: 'neural_beats', tier: 3, implementation: BEAT_MODEL_IMPLEMENTATION, status: 'ready' }, { supported: true },
+    )).toThrow(CapabilityError);
   });
 });
