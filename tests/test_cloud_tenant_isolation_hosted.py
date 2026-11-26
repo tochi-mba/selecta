@@ -47,7 +47,8 @@ def test_hosted_processing_never_reaches_another_accounts_songs(world):  # noqa:
     assert theirs.status_code == 404
     assert (theirs.status_code, theirs.json()) == (missing.status_code, missing.json())
     planned = client.post("/api/hosted/mixes/plan", headers=_auth(BOB), json={"count": 4})
-    assert planned.json() == {"songs": []}
+    # nothing of Alice's is planned or even counted for Bob
+    assert planned.json() == {"songs": [], "considered": 0, "analysed": 0}
     theirs = client.get(f"/api/hosted/exports/{alice_jobs[0].id}", headers=_auth(BOB))
     missing = client.get(f"/api/hosted/exports/{made_up}", headers=_auth(BOB))
     assert theirs.status_code == 404
