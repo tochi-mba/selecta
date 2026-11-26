@@ -58,6 +58,8 @@ export const MEDIA_PATTERNS: RegExp[] = [
   /new\s+Audio\s*\(/g,
   /new\s+(?:window\.)?(?:webkit)?AudioContext\s*\(/g,
   /window\.AudioContext\b/g,
+  // the constructor read off a cast globalThis, `(globalThis as ...).AudioContext`
+  /\)\.AudioContext\b/g,
   /createElement\(\s*['"](?:audio|video)['"]/g,
 ];
 

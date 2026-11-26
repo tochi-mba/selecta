@@ -328,6 +328,20 @@
    "gap": "The redesigned staff console needs a seeded privileged admin session; it is walked with Playwright against the local stack (doc 07b) and checked by Vitest in web/src/admin/AdminArea.test.tsx; automated axe coverage is still pending."
   },
   {
+   "id": "site.admin.covers",
+   "site": "admin",
+   "path": "/admin/covers",
+   "owner": [
+    "web/src/admin/CoversPage.tsx"
+   ],
+   "states": [
+    "initial"
+   ],
+   "denominator": 1,
+   "axe": null,
+   "gap": "Shown only with library.art_lookup on, which the cloud e2e stack does not turn on for staff; checked by Vitest in web/src/admin/AdminArea.test.tsx; the axe walk is to-do T-20261126-8456."
+  },
+  {
    "id": "site.admin.emergency",
    "site": "admin",
    "path": "/admin/emergency",

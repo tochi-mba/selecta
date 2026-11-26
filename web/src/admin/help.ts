@@ -160,6 +160,7 @@ export const TOURS: Record<AdminPage, TourStep[]> = {
   ],
   covers: [
     { target: 'covers-search', title: 'Find a cover', text: 'By song, release, artist, art id or release id. Hidden covers are listed too.' },
+    { target: 'covers-list', title: 'What each row says', text: 'The image, its release, where it came from, when it was stored, and whether it is shown or hidden, with the reason.' },
     { target: 'covers-list', title: 'Hide or unhide', text: 'Each change needs a reason and goes in the audit log. Browsers may keep a hidden cover for up to an hour.', needs: 'legal.takedowns.manage' },
   ],
   emergency: [

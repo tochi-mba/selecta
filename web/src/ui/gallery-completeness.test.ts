@@ -28,6 +28,13 @@ const NOT_SHOWN: Record<string, string> = {
   // ui/ConfirmDialog.tsx
   CONFIRM_COPY: 'the default words; every ConfirmDialog specimen without its own labels shows them',
   // ui/controls.tsx
+  ACTION_LIMIT_MS: 'how long an action button waits for an answer', TOO_LONG: 'the words it then shows',
+  // ui/keycaps.ts: keycaps light while held inside an open dialog (ADR-0477), started once by the app
+  keyNames: 'key name matching', capNames: 'key name matching', startKeycaps: 'document listeners started once by the app',
+  // ui/sheetDrag.ts: drag a phone sheet down to close it (ADR-0477); behaviour on sheets, no look of its own
+  PHONE_SHEET: 'the phone layout query', CLOSE_AFTER: 'drag tuning', FLICK: 'drag tuning', sheetOffset: 'drag arithmetic', sheetCloses: 'drag arithmetic', dragToClose: 'attaches the drag to a sheet',
+  // ui/useVisiblePoll.ts
+  STALLED_READ_MS: 'polling tuning',
   // ui/exitMotion.ts
   motionMs: 'reads a motion token; drives every exit shown here', playExit: 'drives the toast exit shown here', exitGhost: 'drives the overlay exits shown here', usePresence: 'drives the menu, popover and tooltip exits shown here',
   // ui/focusReturn.ts
@@ -66,6 +73,7 @@ const NOT_SHOWN: Record<string, string> = {
   dateWords: 'a date formatter, used by the billing notices',
   // ui/staleBuild.tsx: a deploy under an open tab, tested in staleBuild.test.tsx
   UPDATED_WORDS: 'the words of the updated panel', isChunkLoadError: 'error classification', markStale: 'sets the stale state', isStale: 'reads the stale state', reloadedBefore: 'reload-loop guard', reloadForUpdate: 'reloads the tab', lazyPage: 'React.lazy with a retry', listenForStaleBuilds: 'started once by main.tsx', useStale: 'a stale-state hook', StaleBuildPanel: 'shown only when a page file is gone after a deploy', VERSION_CHECK_MS: 'polling interval', useNewVersion: 'a new-build hook', UpdateLine: 'mounted once by main.tsx, shown only when a newer build is live',
+  SLOW_PAGE_MS: 'how long a page file may stall', SlowToArrive: 'inside a page loading fallback, shown only after a page file stalls for 30 seconds',
 };
 
 /** Every value export of a module: functions, constants, classes and re-exported names. Types are not specimens. */
