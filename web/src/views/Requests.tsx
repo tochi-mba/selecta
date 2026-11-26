@@ -801,7 +801,7 @@ export function RequestsPanel() {
   const roomLive = useRoomLive();
   const browser = !!requests?.some((row) => row.browser_note) || !!roomLive;
   const waitingCount = browser ? countWaiting(roomLive, requests) : waitingRequestCount(requests);
-  const browserList = { rows: requests && requests.map((request) => ({ request, stage: stageOf(request, playback) })), live: playingNow(playback), playback, send: state.request ?? provided, refresh: state.refresh, onAdd: addAnyway, onDismiss: (request: RequestRow) => { box.current?.focus(); return cancel(request); } };
+  const browserList = { rows: requests && requests.map((request) => ({ request, stage: stageOf(request, playback) })), live: playingNow(playback), playback, send: state.request ?? provided, refresh: state.refresh, onAdd: addAnyway, onBridge: chooseBridge, onDismiss: (request: RequestRow) => { box.current?.focus(); return cancel(request); } };
   // the list stays open, so a few songs can be asked for from one search
   const pick = (song: SongRow) => { void add(song); box.current?.focus(); };
   const finish = () => { setQuery(''); box.current?.focus(); };

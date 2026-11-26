@@ -4,7 +4,8 @@ import { setFlags } from '../flags';
 import type { RequestRow } from '../views/Requests';
 import type { PlayableSong } from './localFirstMixes';
 import { ACCOUNT_OFFER, accountPlacements, placingOn } from './accountPlacements';
-import { making, requestsFamily } from './localFirstRequests';
+import { bridgeWords, making, NO_BRIDGES, requestsFamily } from './localFirstRequests';
+import { browserFlags } from './browserFlags';
 
 // T-20261126-a246: the account plans where a request joins; this device makes the transitions it
 // needs and, once the account calls it ready here, the request joins through /requests/insert.
@@ -17,7 +18,7 @@ vi.mock('./studioWiring', () => ({
   },
 }));
 
-const ON = { 'cloud.brain': true, 'cloud.account_mixes': true, 'cloud.device_render': true, 'cloud.device_analysis': true };
+const ON = { 'cloud.brain': true, 'cloud.account_mixes': true, 'cloud.device_render': true, 'cloud.device_analysis': true, 'requests.bridges': true };
 const SONGS: PlayableSong[] = [1, 2, 3, 9].map((id) => ({ id, title: `Song ${id}`, artist: 'Rex', duration: 200, playable: true }));
 const PLAYBACK = { order: [1, 2, 3], position: 0, phase: 'playing', seconds_left: 90 };
 const OFFER = 'b'.repeat(64);
@@ -41,6 +42,7 @@ function rig(placement: Record<string, unknown>) {
     if (path === '/requests' && !init?.method) return { requests: [{ id: 41, song_id: 9, available: 1 }] };
     if (path.startsWith('/requests/consider')) return { requests: [{ id: 41, song_id: 9, ...placement }], settled: [] };
     if (path.startsWith('/requests/insert')) return mix;
+    if (/^\/requests\/41\/bridge$/.test(path)) return { requests: [{ id: 41, song_id: 9, available: 1 }] };
     throw new Error(`unexpected ${path}`);
   }) as Request;
   const send = (async () => mix) as Request;
@@ -91,5 +93,34 @@ describe('a request the account found a place for', () => {
     const cloud = vi.fn(async () => ({})) as unknown as Request;
     expect(await accountPlacements(cloud, 'ws-1').look({ ...PLAYBACK, phase: 'stopped' })).toBeNull();
     expect(cloud).not.toHaveBeenCalled();
+  });
+});
+
+describe('a bridge the account found for a request (T-20261126-ae4f)', () => {
+  const ROUTE = [{ id: 3, title: 'Song 3', artist: 'Rex' }, { id: 9, title: 'Song 9', artist: 'Rex' }];
+
+  it('is offered to agree to when every song of it plays here, and the answer goes to the account', async () => {
+    const { consider, family, calls } = rig({ stage: 'approve', ready: false, offer: OFFER, needs_approval: true, after: 'Song 1', route: ROUTE, seams_needed: [] });
+    const [row] = await consider();
+    expect(row).toMatchObject({ needs_approval: true, route: ROUTE, where_note: bridgeWords(ROUTE, 'Song 1') });
+    // nothing is made ahead before the member agrees
+    expect(prepared.calls).toEqual([{ workspaceId: 'ws-1', pairs: [] }]);
+    const answer = await family.answer('POST', `/requests/${row.id}/bridge`, new URLSearchParams(), { method: 'POST', body: JSON.stringify({ allow: true, songs: [3, 9] }) }) as { requests: RequestRow[] };
+    expect(calls.at(-2)).toEqual({ path: '/requests/41/bridge', body: { allow: true, songs: [3, 9] } });
+    // the list comes back in this browser's numbering
+    expect(answer.requests[0].id).toBe(row.id);
+  });
+
+  it('is not offered when a bridge song does not play on this device', async () => {
+    const { consider } = rig({ stage: 'approve', needs_approval: true, route: [{ id: 7, title: 'Song 7' }, { id: 9, title: 'Song 9' }], seams_needed: [] });
+    const [row] = await consider();
+    expect(row.needs_approval).toBeFalsy();
+  });
+
+  it('searching every song for one stays the app\'s, and the flag comes with the account placing requests', async () => {
+    const { family } = rig({});
+    await expect(family.answer('POST', '/requests/1/bridges', new URLSearchParams(), { method: 'POST' })).rejects.toMatchObject({ message: NO_BRIDGES });
+    expect(browserFlags(false)['requests.bridges']).toBe(false);
+    expect(browserFlags(false, false, { placing: true })['requests.bridges']).toBeUndefined();
   });
 });

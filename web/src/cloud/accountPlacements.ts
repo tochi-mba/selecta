@@ -32,6 +32,9 @@ export type Placement = {
   needs_approval?: boolean;
   after?: string;
   seams_needed?: { a: number; b: number }[];
+  /** The songs in the order they would join: a bridge song (or two), then the request. */
+  route?: { id: number; title: string; artist?: string | null }[];
+  bridge_choice?: boolean | null;
 };
 
 export type Look = { requests: Placement[]; settled: string[] };

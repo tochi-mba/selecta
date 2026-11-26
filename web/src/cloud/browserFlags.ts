@@ -5,7 +5,8 @@
  * this shell offers their server-free subset (serverFreeControls.tsx). */
 export const NOT_IN_THE_BROWSER = {
   // A request joins when the member adds it, or by itself where the account placed it and this
-  // device made its transitions (accountPlacements.ts). Bridge songs: T-20261126-ae4f.
+  // device made its transitions (accountPlacements.ts). On below with that: a bridge the account
+  // found with a request's place is offered to agree to; searching every song for one is the app's.
   'requests.bridges': false,
   // The energy horizon: on below when the account keeps measurements; the mix's rows carry each
   // song's measured energy from the account (localFirstRequest.ts withMeasured).
@@ -48,6 +49,9 @@ export type BrowserReach = {
   studio?: boolean;
   /** cloud.local_export: a mix can be saved as a file on this device. */
   localExport?: boolean;
+  /** The account places requests and this device makes their transitions (accountPlacements.ts),
+   * so a bridge the account found can be agreed to here. */
+  placing?: boolean;
 };
 
 /** What this shell turns off, with Harmonic matches off too unless the browser's own version
@@ -65,5 +69,6 @@ export function browserFlags(browserHarmonic: boolean, lucyHere = false, reach: 
   if (reach.accountMixes) delete off['editor.locks'];
   if (reach.studio) delete off.seam_inspector;
   if (reach.localExport) delete off.export;
+  if (reach.placing) delete off['requests.bridges'];
   return off;
 }

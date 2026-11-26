@@ -43,7 +43,7 @@ export function startMixWith(send: Request, playback: Playback | undefined, refr
   };
 }
 
-export function BrowserRequests({ part = 'own', rows, live, playback, send, refresh, onAdd, onDismiss }: {
+export function BrowserRequests({ part = 'own', rows, live, playback, send, refresh, onAdd, onDismiss, onBridge }: {
   part?: 'room' | 'own';
   /** null while the list is loading */
   rows: Row[] | null;
@@ -55,6 +55,8 @@ export function BrowserRequests({ part = 'own', rows, live, playback, send, refr
   refresh?: () => Promise<unknown> | void;
   onAdd: (request: RequestRow) => Promise<unknown>;
   onDismiss: (request: RequestRow) => Promise<unknown> | void;
+  /** Yes or no to a bridge SelectaDJ found for a request (with the account planning). */
+  onBridge?: (request: RequestRow, allow: boolean) => Promise<unknown>;
 }) {
   const onStart = startMixWith(send, playback, refresh);
   if (part === 'room') {
@@ -79,7 +81,10 @@ export function BrowserRequests({ part = 'own', rows, live, playback, send, refr
         const label = start ? 'Start a mix with this song' : live ? 'Add next' : 'Add to mix';
         return (
           <AskRow key={request.id} title={title} artist={request.artist} note={stage === 'adding' ? '' : why || request.where_note} stage={stage}>
-            {!why && <Action className="primary" aria-label={`${label}: ${title}`} run={() => (start ? onStart(request) : onAdd(request))} working="Working…">{label}</Action>}
+            {!why && request.needs_approval && request.bridge_choice == null && onBridge && (
+              <Action className="primary" aria-label={`Play the bridge, then ${title}`} run={() => onBridge(request, true)} working="Saving…">Use the bridge</Action>
+            )}
+            {!why && <Action className={request.needs_approval && request.bridge_choice == null && onBridge ? undefined : 'primary'} aria-label={`${label}: ${title}`} run={() => (start ? onStart(request) : onAdd(request))} working="Working…">{label}</Action>}
             {why && request.connect_here && <button type="button" className="quiet" onClick={() => navigate('/library')}>Connect music here</button>}
             <button className="quiet" disabled={request.id < 0} aria-label={`Dismiss: ${title}`} onClick={() => { void onDismiss(request); }}>Dismiss</button>
           </AskRow>

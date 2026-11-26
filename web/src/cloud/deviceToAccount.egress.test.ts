@@ -53,6 +53,8 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   // and putting a ready one in: song ids, the playing position, an offer's name, the device id
   ['POST', /^\/requests\/consider\?device_id=[A-Za-z0-9_-]{1,64}$/],
   ['POST', /^\/requests\/insert\?device_id=[A-Za-z0-9_-]{1,64}$/],
+  // yes or no to a bridge the account found for one of its requests: song ids only
+  ['POST', /^\/requests\/\d+\/bridge$/],
   // the Seam Inspector: the Good or Bad of the transitions this device made, by key
   ['GET', /^\/seams\?keys=[0-9a-f]{20}(,[0-9a-f]{20})*(&device_id=[A-Za-z0-9_-]{1,64})?$/],
 ];
