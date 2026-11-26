@@ -12,6 +12,7 @@ import { accountSeamPlanner } from './accountSeams';
 import { DEFAULT_STEERING } from './recipeStore';
 import { localFirstRequest } from './localFirstRequest';
 import { requestsFamily } from './localFirstRequests';
+import { ACCOUNT_BASE, accountDiscoveries } from './accountDiscoveries';
 import { reportSeam } from './seamReports';
 import { planningCalls } from './studioWiring';
 import type { MadeSeam } from '../dsp/render/seamMaker';
@@ -61,6 +62,10 @@ const ALLOWED: ReadonlyArray<[string, RegExp]> = [
   ['POST', /^\/requests\/\d+\/bridge$/],
   // Find a bridge: the mix's order and position, and the ids of the songs that play here
   ['POST', /^\/requests\/\d+\/bridges$/],
+  // the account's harmonic discovery: a sweep names song ids and a pair limit; a review, a verdict
+  ['POST', /^\/discoveries\/sweep$/],
+  ['GET', /^\/discoveries\?limit=\d+$/],
+  ['POST', /^\/discoveries\/\d+\/review$/],
   // the Seam Inspector: the Good or Bad of the transitions this device made, by key
   ['GET', /^\/seams\?keys=[0-9a-f]{20}(,[0-9a-f]{20})*(&device_id=[A-Za-z0-9_-]{1,64})?$/],
 ];
@@ -377,6 +382,23 @@ describe('Find a bridge', () => {
     search.forEach(holdsTheContract);
     expect(search[0].body).toEqual({ order: [1, 2], position: 0, songs: [1, 2, 9] });
     localStorage.clear();
+  });
+});
+
+describe('the account harmonic discovery', () => {
+  it('sends song ids and a pair limit to sweep, and a verdict to review, nothing about files', async () => {
+    setFlags({ 'cloud.brain': true, 'cloud.device_analysis': true, 'discover.harmonic': true });
+    const { calls, request } = capturing();
+    const found = accountDiscoveries(request, 'ws-1');
+    found.sweepSoon([1, 2, 3].map((id) => ({ id, title: `Song ${id}`, artist: 'Rex', playable: true })));
+    for (let turn = 0; turn < 5; turn += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+    await found.list([]);
+    await found.review(ACCOUNT_BASE + 4, 'rejected');
+    const sweep = calls.find((call) => call.path === '/discoveries/sweep');
+    expect(sweep?.body).toEqual({ song_ids: [1, 2, 3], pair_limit: 200 });
+    expect(calls.find((call) => call.path === '/discoveries/4/review')?.body).toEqual({ verdict: 'rejected' });
+    expect(calls.some((call) => call.path === '/discoveries?limit=40')).toBe(true);
+    calls.forEach(holdsTheContract);
   });
 });
 
