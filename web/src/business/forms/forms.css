@@ -68,7 +68,7 @@
 @media (max-width: 599px) {
   .bzf-block-time, .bzf-block-energy { display: none; }
   .bzf-daypart-list thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .bzf-daypart-list tr { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); padding-block: var(--space-2); }
+  .bzf-daypart-list tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-2); padding-block: var(--space-2); }
   .bzf-daypart-list td { display: block; border: 0; padding: 0; }
   .bzf-daypart-list td:first-child { grid-column: 1 / -1; }
 }

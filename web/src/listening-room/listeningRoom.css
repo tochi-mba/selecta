@@ -72,7 +72,7 @@
 .lr-level-words { display: block; }
 
 @media (max-width: 640px) {
-  .lr-plays { grid-template-columns: 1fr; }
+  .lr-plays { grid-template-columns: minmax(0, 1fr); }
   .lr-play { min-block-size: 88px; }
   .lr-keys { display: none; }
   .lr-nav .primary { margin-inline-start: 0; flex: 1 1 100%; }

@@ -129,7 +129,7 @@
   position: absolute;
   right: 8%;
   top: 12%;
-  width: 220px;
+  width: min(220px, 100%);
   height: 220px;
   border: var(--separator) solid color-mix(in srgb, var(--motif) 45%, transparent);
   border-radius: 50%;
@@ -656,7 +656,7 @@
   .cloud-library-player { align-items: flex-start; flex-direction: column; }
   .cloud-plan-grid,
   .cloud-upload-list li,
-  .cloud-reconcile-list li { grid-template-columns: 1fr; }
+  .cloud-reconcile-list li { grid-template-columns: minmax(0, 1fr); }
   .cloud-upload-list b { grid-row: 2; }
   .cloud-upload-list small { grid-row: 3; }
   .cloud-library-heading > div:last-child,

@@ -14,7 +14,7 @@
 .lw-connect-menu > button { display: inline-flex; align-items: center; gap: var(--icon-gap); }
 .lw-connect-menu.lw-primary > button { background: var(--primary-fill); border-color: var(--primary-edge); color: var(--primary-ink); font-weight: var(--weight-strong); }
 .lw-connect-menu.lw-primary > button:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-fill) 88%, var(--primary-ink)); }
-.lw-connect-menu .menu-list { inset-inline: auto 0; min-width: 220px; }
+.lw-connect-menu .menu-list { inset-inline: auto 0; min-width: min(220px, calc(100vw - 2 * var(--gutter))); }
 .lw-connect-menu .menu-list button { display: flex; align-items: center; gap: var(--icon-gap); }
 .page-header-actions > .status { min-height: 40px; }
 

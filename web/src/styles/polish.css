@@ -156,7 +156,7 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-vibes .skeleton-unit { border: 1px solid var(--border); padding: var(--space-5); border-radius: var(--radius); min-height: 286px; grid-template-rows: auto auto 1fr auto; }
 .skeleton-vibes .skeleton-action { width: 100%; height: 48px; }
 @media (max-width: 1040px) { .skeleton-vibes .skeleton-content { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .skeleton-vibes .skeleton-content { grid-template-columns: 1fr; } .skeleton-vibes .skeleton-unit:nth-child(n + 4) { display: none; } }
+@media (max-width: 620px) { .skeleton-vibes .skeleton-content { grid-template-columns: minmax(0, 1fr); } .skeleton-vibes .skeleton-unit:nth-child(n + 4) { display: none; } }
 /* P0033: the Library placeholder follows the loaded rows' own grid (operations.css .library-rows .song-row):
    name, facts, readiness and actions side by side over 1024px, facts under the name below that, and each
    unit stands at the same median row height (--library-row-estimate) in both densities. */
@@ -254,7 +254,7 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-rows .skeleton-row { grid-template-columns: minmax(150px, 220px) 1fr; gap: var(--space-1) var(--space-3); align-items: center; min-height: 24px; }
 .skeleton-row .skeleton-title { width: 70%; height: 16px; }
 .skeleton-row .skeleton-detail { width: min(320px, 100%); height: 20px; border-radius: var(--radius-pill); }
-@media (max-width: 560px) { .skeleton-rows .skeleton-row { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .skeleton-rows .skeleton-row { grid-template-columns: minmax(0, 1fr); } }
 @keyframes skeleton-reveal { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 760px) {
   .page { padding-top: var(--space-5); }
@@ -424,7 +424,7 @@ button[aria-disabled='true'] { cursor: progress; }
    assistant above, or in the way of, one-tap Quick Play. */
 .mixes .mix-paths {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  grid-template-columns: minmax(0, 1.4fr) minmax(min(260px, 100%), 0.8fr);
   gap: var(--space-4);
   align-items: stretch;
   margin-block: var(--space-5);

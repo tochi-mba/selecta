@@ -490,7 +490,7 @@ button[data-working]::after {
 @media (max-width: 760px) { .overlay-workspace { padding: 0; } .overlay-workspace .overlay-panel { border-radius: 0; } }
 
 /* the timeline, with whatever's selected beside it */
-.edit-layout.has-inspector { display: grid; grid-template-columns: minmax(420px, 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
+.edit-layout.has-inspector { display: grid; grid-template-columns: minmax(min(420px, 100%), 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
 .inspector-column { position: relative; min-width: 0; align-self: stretch; }
 .inspector-resize {
   position: absolute;
@@ -557,7 +557,7 @@ button.song-open:hover { text-decoration: underline; }
 .job-list, .job-failures, .folder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .job-list li { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; }
 .job-list .status { white-space: normal; }
-@media (max-width: 560px) { .job-list li { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .job-list li { grid-template-columns: minmax(0, 1fr); } }
 .folder-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
 .folder-list b { overflow-wrap: anywhere; }
 .folder-list .status { white-space: normal; }

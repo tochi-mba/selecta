@@ -35,7 +35,7 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
   position: absolute;
   z-index: var(--layer-sheet);
   margin-top: var(--space-1);
-  min-width: 240px;
+  min-width: min(240px, calc(100vw - 2 * var(--gutter)));
   max-width: min(360px, 80vw);
   padding: var(--space-3);
   background: var(--surface-overlay);

@@ -45,7 +45,7 @@
   font-size: var(--text-xs);
   font-weight: 650;
 }
-.library-column-head span:last-child { text-align: end; min-width: 200px; }
+.library-column-head span:last-child { text-align: end; min-width: min(200px, 100%); }
 /* MP-0272 D-01: one track that can shrink. Rows skip layout off screen (content-visibility) and keep
    their last width, so an auto track held a 1280px layout's width after the window narrowed. */
 .library-rows { gap: var(--row-gap); grid-template-columns: minmax(0, 1fr); }

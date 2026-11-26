@@ -87,7 +87,7 @@
 :where(:root[data-cloud='on']) .field > label { font-size: var(--text-sm); font-weight: var(--weight-label); }
 :where(:root[data-cloud='on']) .field-help { margin: 0; color: var(--text-soft); font: var(--type-caption); }
 :where(:root[data-cloud='on']) .field > .warn { margin: 0; color: var(--danger); font-size: var(--text-sm); }
-:where(:root[data-cloud='on']) .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); align-items: start; }
+:where(:root[data-cloud='on']) .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-4); align-items: start; }
 
 /* ---- page header: title, one line, the page's actions ---- */
 :where(:root[data-cloud='on']) .page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); margin: 0 0 var(--space-5); min-width: 0; }
@@ -209,7 +209,7 @@
 }
 
 /* ---- menus and popovers ---- */
-:where(:root[data-cloud='on']) .menu-list { min-width: 200px; padding: var(--space-1); border-radius: var(--radius); }
+:where(:root[data-cloud='on']) .menu-list { min-width: min(200px, calc(100vw - 2 * var(--gutter))); padding: var(--space-1); border-radius: var(--radius); }
 :where(:root[data-cloud='on']) .menu-list button { min-height: 36px; padding: var(--space-dense) var(--space-3); border: 0; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 500; }
 :where(:root[data-cloud='on']) .popover-panel { border-radius: var(--radius); padding: var(--space-4); }
 
