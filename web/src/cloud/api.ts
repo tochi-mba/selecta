@@ -56,7 +56,7 @@ export type MusicHomeCopy = {
 export function musicHomeCopy(account: (Pick<Account, 'experience'> & Partial<Pick<Account, 'features'>>) | null): MusicHomeCopy {
   const source = musicHomeOf(account?.experience?.local_first === true, account?.experience?.hosted === true);
   // cloud.move_to_cloud (it needs the cloud library grant): uploads from this device are copies
-  return { ...musicHomeStart(source, accountFlagOn('cloud.move_to_cloud', account?.features)), source };
+  return { ...musicHomeStart(source, account?.features?.['cloud.move_to_cloud'] === true), source };
 }
 export type Asset = { id: string; name: string; size: number; sha256: string | null; format: string | null; duration_seconds: number | null; sample_rate: number | null; channels: number | null; created_at: number };
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;

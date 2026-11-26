@@ -1,6 +1,6 @@
 import { ChangeEvent, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { Request } from '../api';
-import { flagOn, useFlag } from '../flags';
+import { flagListed, flagOn, useFlag } from '../flags';
 import { dirPicker, directoryInput, findLapsed, forgetFolder, listWatchedFolders, recallFolder, refreshDeviceAvailability, rememberFolder, runImport } from '../media';
 import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome, StoredFolderHandle } from '../media';
 import { importSummaryWords, useImportAnnouncer } from './importAnnouncer';
@@ -114,7 +114,7 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   const progressive = useFlag('cloud.progressive_import');
   const resilient = useFlag('cloud.resilient_import');
   // the account can upload songs from this device to its cloud library (it needs the grant)
-  const uploading = useFlag('cloud.move_to_cloud');
+  const uploading = useFlag('cloud.move_to_cloud') && flagListed('cloud.move_to_cloud');
   const [problem, setProblem] = useState('');
   const [lapsed, setLapsed] = useState<LapsedItem[]>([]);
   const [regranted, setRegranted] = useState<Record<number, string>>({});

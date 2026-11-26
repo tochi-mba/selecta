@@ -161,7 +161,7 @@ export function CloudApp() {
   const home = musicHomeOf(deviceMusicDecided(account), account?.experience?.hosted !== false);
   setMusicHome(home === 'none' ? 'cloud_library' : home);
   // cloud.move_to_cloud (it needs the cloud library grant): uploads from this device are copies
-  setUploadsFromDevice(accountFlagOn('cloud.move_to_cloud', account?.features ?? null));
+  setUploadsFromDevice(account?.features?.['cloud.move_to_cloud'] === true);
   // ADR-0475 R12: another tab of this browser signed out, or in as someone; and what a sign-out
   // pressed here would stop, said first
   const [elsewhere, setElsewhere] = useState<{ kind: 'out' } | { kind: 'in'; email: string } | null>(null);
