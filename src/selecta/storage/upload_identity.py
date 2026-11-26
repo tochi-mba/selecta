@@ -31,7 +31,6 @@ from sqlalchemy.engine import Connection
 from selecta.local_media.hashes_schema import local_song_hashes
 from selecta.local_media.schema import local_songs
 from selecta.persistence import db_now
-from selecta.storage.schema import assets
 
 log = logging.getLogger(__name__)
 
@@ -145,29 +144,13 @@ def accept_refusal(conn: Connection, workspace_id: str, song_id: int, sha: str,
     return None if _is(conn, workspace_id, song, sha, audio_id) else MISMATCH_WORDS
 
 
-def song_hashes(conn: Connection, workspace_id: str, song_id: int) -> sa.Select:
-    """Every file hash this song is known by: its own and the others recorded for it."""
-    own = sa.select(local_songs.c.content_sha256.label("sha")).where(
-        local_songs.c.workspace_id == workspace_id, local_songs.c.id == int(song_id))
-    others = sa.select(local_song_hashes.c.content_sha256.label("sha")).where(
-        local_song_hashes.c.workspace_id == workspace_id,
-        local_song_hashes.c.song_id == int(song_id))
-    return sa.union(own, others)
-
-
 def cloud_copy(conn: Connection, workspace_id: str, song_id: int) -> str | None:
-    """A live upload of this workspace whose file hash is one of the song's, or None. Venue
-    uploads are a business's own and never count."""
-    hashes = song_hashes(conn, workspace_id, song_id).subquery()
-    return conn.execute(
-        sa.select(assets.c.id)
-        .where(assets.c.workspace_id == workspace_id,
-               assets.c.deleted_at.is_(None),
-               assets.c.venue_id.is_(None),
-               assets.c.sha256.in_(sa.select(hashes.c.sha)))
-        .order_by(assets.c.created_at, assets.c.id)
-        .limit(1)
-    ).scalar()
+    """A live upload of this workspace whose file hash is one of the song's, or None
+    (`store.cloud_copies`: venue uploads are a business's own and never count)."""
+    from selecta.local_media import store
+
+    found = store.cloud_copies(conn, workspace_id, [int(song_id)]).get(int(song_id))
+    return None if found is None else str(found["asset_id"])
 
 
 def song_of(conn: Connection, workspace_id: str, sha: str | None) -> int | None:
@@ -274,5 +257,5 @@ def register(conn: Connection, workspace_id: str, *, sha: str, new: dict[str, An
 
 __all__ = [
     "FLAG", "MISMATCH", "MISMATCH_WORDS", "accept_refusal", "audio_id_of", "clean_audio_id",
-    "cloud_copy", "cloud_copy_of_hash", "on", "plan_song", "register", "song_hashes", "song_of",
+    "cloud_copy", "cloud_copy_of_hash", "on", "plan_song", "register", "song_of",
 ]

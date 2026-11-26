@@ -30,6 +30,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta import hosted_caps, hosted_limits
 from selecta.identity.tokens import Claims
+from selecta.local_media import store
 from selecta.persistence import transaction
 from selecta.storage import upload_identity
 from selecta.storage.names import display_name, sha256_hex
@@ -64,15 +65,15 @@ def _extension(name: str) -> str:
     return extension.lower() if dot and stem else ""
 
 
-def _in_cloud(conn: Connection, workspace_id: str, sha: str, song_id: int | None) -> bool:
-    """Whether the song (any of its file hashes), or else this very file, is uploaded."""
+def _uploaded_files(conn: Connection, workspace_id: str, hashes: list[str]) -> set[str]:
+    """Which of these file hashes this workspace already holds as a live upload of its own."""
     import sqlalchemy as sa
 
-    if song_id is not None:
-        return upload_identity.cloud_copy(conn, workspace_id, song_id) is not None
-    return conn.execute(sa.select(assets.c.id).where(
-        assets.c.workspace_id == workspace_id, assets.c.sha256 == sha,
-        assets.c.deleted_at.is_(None), assets.c.venue_id.is_(None)).limit(1)).first() is not None
+    if not hashes:
+        return set()
+    return set(conn.execute(sa.select(assets.c.sha256).where(
+        assets.c.workspace_id == workspace_id, assets.c.sha256.in_(sorted(set(hashes))),
+        assets.c.deleted_at.is_(None), assets.c.venue_id.is_(None))).scalars())
 
 
 def _refusal(item: PreviewFile, limits: PlanLimits) -> str | None:
@@ -111,18 +112,23 @@ def preview(conn: Connection, workspace_id: str, files: list[PreviewFile],
     answers: list[dict[str, Any]] = []
     needed = fit = 0
     full = False  # like the upload queue, the first file that won't fit stops the rest
-    for index, item in enumerate(files):
+    found: list[tuple[str, int | None, str | None]] = []
+    for item in files:
         sha = sha256_hex(item.sha256)
-        song_id = upload_identity.song_of(conn, workspace_id, sha)
-        reason = None
-        if item.song_id is not None:
-            song_id = upload_identity.plan_song(conn, workspace_id, item.song_id, sha,
-                                                upload_identity.clean_audio_id(item.audio_id))
-            reason = None if song_id is not None else upload_identity.MISMATCH
+        if item.song_id is None:
+            found.append((sha, upload_identity.song_of(conn, workspace_id, sha), None))
+            continue
+        song_id = upload_identity.plan_song(conn, workspace_id, item.song_id, sha,
+                                            upload_identity.clean_audio_id(item.audio_id))
+        found.append((sha, song_id, None if song_id is not None else upload_identity.MISMATCH))
+    # one read for every song's cloud copy, under any of its hashes (`store.cloud_copies`)
+    copies = store.cloud_copies(conn, workspace_id, [song for _sha, song, _r in found if song])
+    uploaded = _uploaded_files(conn, workspace_id, [sha for sha, song, _r in found if not song])
+    for index, (item, (sha, song_id, reason)) in enumerate(zip(files, found, strict=True)):
         answer: dict[str, Any] = {"index": index, "name": display_name(item.name),
                                   "song_id": song_id, "status": OK, "reason": None, "notes": []}
         answers.append(answer)
-        if reason is None and _in_cloud(conn, workspace_id, sha, song_id):
+        if reason is None and (song_id in copies if song_id else sha in uploaded):
             answer["status"] = IN_CLOUD
             continue
         reason = reason or _refusal(item, limits)
