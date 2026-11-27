@@ -92,6 +92,7 @@ export function AccountDraftEditor({ draftId, shared, request, actions }: { draf
         mixName={data.name}
         canUndo={data.can_undo}
         mixEta={data.eta}
+        renderReview={data.render_review}
         draftPlace={null}
         refreshMix={refresh}
         setMixData={setDraftMix}

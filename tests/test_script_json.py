@@ -229,3 +229,23 @@ def test_concrete_render_identity_uses_verified_sources_and_placement(pair):
     a.id, b.id = 303, 404
     remapped_script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
     assert concrete_render_key(remapped_script, remapped, runtime_version="test-v1") == original
+
+def test_persistent_render_attempt_preserves_audit_inputs(pair, tmp_path, monkeypatch):
+    from selecta.render import attempt_cache
+    from selecta.render.attempt_cache import RenderAttemptCache
+
+    a, b = pair
+    hashes = {a.id: "a" * 64, b.id: "b" * 64}
+    script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
+    directory = tmp_path / "cache"
+    cold = RenderAttemptCache(directory, hashes, "test-v1")(script, SongCache())
+
+    def unexpected(*args):
+        pytest.fail("a second worker rendered an already cached attempt")
+
+    monkeypatch.setattr(attempt_cache, "render", unexpected)
+    warm = RenderAttemptCache(directory, hashes, "test-v1")(script, SongCache())
+    for name in ("audio", "a_dry", "b_dry"):
+        np.testing.assert_array_equal(getattr(cold, name), getattr(warm, name))
+    assert warm.drift_ms == cold.drift_ms
+    assert warm.script is script

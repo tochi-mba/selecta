@@ -29,7 +29,7 @@ export type BillingStanding = {
 };
 export type Account = {
   user: { id: string; email: string; email_verified: boolean; suspended?: boolean; staff?: boolean; timezone?: string };
-  workspace: { id: string; name: string; role: string };
+  workspace: { id: string; name: string; role: string; kind?: string };
   entitlement: { plan: string; plan_label?: string; plan_version: number; snapshot_version?: number | null; storage_limit_bytes: number; storage_used_bytes: number; storage_state: string };
   usage?: Usage;
   /** `checkout_available` false: this site cannot start a payment (no Stripe key or prices). Left
