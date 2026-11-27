@@ -249,3 +249,49 @@ def test_persistent_render_attempt_preserves_audit_inputs(pair, tmp_path, monkey
         np.testing.assert_array_equal(getattr(cold, name), getattr(warm, name))
     assert warm.drift_ms == cold.drift_ms
     assert warm.script is script
+
+def test_worker_cache_serialises_same_render_and_bounds_storage(pair, tmp_path, monkeypatch):
+    import os
+    import threading
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from selecta.render import attempt_cache
+    from selecta.render.engine import Rendered
+
+    a, b = pair
+    hashes = {a.id: "a" * 64, b.id: "b" * 64}
+    directory = tmp_path / "cache"
+    script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
+    calls = []
+    ready = threading.Barrier(2)
+
+    def synthetic_render(spec, _songs):
+        calls.append(spec)
+        time.sleep(0.2)
+        audio = np.zeros((round(spec.duration * attempt_cache.SAMPLE_RATE), 2), np.float32)
+        return Rendered(spec, audio, audio, audio)
+
+    monkeypatch.setattr(attempt_cache, "render", synthetic_render)
+
+    def request():
+        ready.wait(timeout=5)
+        return attempt_cache.RenderAttemptCache(directory, hashes, "v1")(script, SongCache())
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: request(), range(2)))
+    assert len(calls) == 1
+    np.testing.assert_array_equal(results[0].audio, results[1].audio)
+
+    original, = directory.glob("*.npz")
+    size = original.stat().st_size
+    old = directory / ("b" * 64 + ".npz")
+    old.touch()
+    expired = time.time() - attempt_cache.MAX_IDLE_SECONDS - 1
+    os.utime(old, (expired, expired))
+    monkeypatch.setattr(attempt_cache, "MAX_CACHE_BYTES", size)
+    attempt_cache.RenderAttemptCache(directory, hashes, "v2")(script, SongCache())
+    remaining, = directory.glob("*.npz")
+    assert remaining != original
+    assert remaining.stat().st_size <= size
+    assert not old.exists()

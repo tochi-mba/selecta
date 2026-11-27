@@ -125,12 +125,14 @@ export function RestoreCloudLibrary({ api, workspaceId, request, openStore, refr
         ? 'Some originals still need attention. Choose the same folder to retry without downloading verified files again.'
         : `${files.length} originals verified and connected on this device.`);
     } catch (error) {
-      if (!signal.aborted && !(error instanceof DOMException && error.name === 'AbortError')) {
+      if (signal.aborted) {
+        setStatus('Restore paused. Choose the same folder to continue with the remaining originals.');
+      } else if (!(error instanceof DOMException && error.name === 'AbortError')) {
         setStatus('The restore could not finish. Choose the same folder to pick up where you left off.');
       }
     } finally {
       operation.current = null;
-      if (!signal.aborted) setBusy(false);
+      setBusy(false);
     }
   };
 
@@ -141,6 +143,7 @@ export function RestoreCloudLibrary({ api, workspaceId, request, openStore, refr
     {assets.length > 0 && (dirPicker().supported
       ? <button type="button" onClick={() => void restore()} disabled={busy}>Choose where to save music</button>
       : <p>Use Download my data in account settings, extract the original files, then choose Connect music in the Library.</p>)}
+    {busy && <button type="button" onClick={() => operation.current?.abort()}>Pause restore</button>}
     {status && <p role="status">{status}</p>}
     {failed.length > 0 && <details><summary>{failed.length} originals need attention</summary>
       <ul>{failed.map((message, index) => <li key={index}>{message}</li>)}</ul>
