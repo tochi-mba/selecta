@@ -14,11 +14,12 @@ from selecta.config import ANALYSIS_VERSION
 from selecta.persistence import db_now, new_id, transaction
 from selecta.storage import shared_derivations
 from selecta.storage.keys import Bucket, derived_key, derived_prefix, validate_key, workspace_of
+from selecta.storage.objects import R2NotFound
 from selecta.work import provenance
 from selecta.work.schema import artifacts
 
 log = logging.getLogger(__name__)
-KIND = "hosted_analysis_artifact"
+KIND = shared_derivations.HOSTED_ANALYSIS_ARTIFACT
 MAX_BYTES = 16 * 1024 * 1024
 
 
@@ -147,10 +148,16 @@ def materialize(engine, workspace_id: str, sha: str, digest: str) -> bool:
         try:
             with tempfile.TemporaryDirectory(prefix="selecta-analysis-cache-") as folder:
                 path = Path(folder) / "analysis.npz"
-                if client.head_object(bucket, source).size != size:
-                    return False
-                downloaded = client.get_object(bucket, source, path)
-                if downloaded.size != size or downloaded.sha256 != checksum:
+                try:
+                    head = client.head_object(bucket, source)
+                    downloaded = (
+                        client.get_object(bucket, source, path) if head.size == size else None
+                    )
+                except R2NotFound:
+                    downloaded = None
+                if downloaded is None or downloaded.size != size or downloaded.sha256 != checksum:
+                    with transaction(engine, workspace_id) as connection:
+                        shared_derivations.drop_analysis_pointers(connection, [source])
                     return False
                 written = client.put_object(bucket, destination, path)
                 try:

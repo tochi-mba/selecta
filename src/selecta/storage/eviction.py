@@ -35,6 +35,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta import persistence
 from selecta.playback.schema import playback_sessions
+from selecta.storage.shared_derivations import drop_analysis_pointers
 from selecta.usage import quota
 from selecta.work.schema import artifacts, revision_artifacts
 
@@ -209,6 +210,7 @@ def evict(
             stored = row._mapping["keys"]
             keys += stored if isinstance(stored, list) else [stored]
         if removed:
+            drop_analysis_pointers(connection, keys)
             connection.execute(artifacts.delete().where(artifacts.c.id.in_(removed)))
             connection.execute(
                 revision_artifacts.delete().where(

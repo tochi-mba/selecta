@@ -173,6 +173,37 @@ def write_shared(
     return True
 
 
+HOSTED_ANALYSIS_ARTIFACT = "hosted_analysis_artifact"
+
+
+def drop_analysis_pointers(conn: Connection, object_keys: list[str]) -> int:
+    """Forget exact object keys removed by the owning workspace's retention policy."""
+    keys = sorted({key for key in object_keys if isinstance(key, str) and key})
+    if not keys:
+        return 0
+    return (
+        conn.execute(
+            sa.delete(shared_derivations).where(
+                shared_derivations.c.kind == HOSTED_ANALYSIS_ARTIFACT,
+                shared_derivations.c.payload["object_key"].as_string().in_(keys),
+            )
+        ).rowcount
+        or 0
+    )
+
+
+def drop_workspace_analysis_pointers(conn: Connection, workspace_id: str) -> None:
+    """Forget pointers whose entire workspace object prefix was erased."""
+    conn.execute(
+        sa.delete(shared_derivations).where(
+            shared_derivations.c.kind == HOSTED_ANALYSIS_ARTIFACT,
+            shared_derivations.c.payload["object_key"]
+            .as_string()
+            .startswith(f"w/{workspace_id}/", autoescape=True),
+        )
+    )
+
+
 def content_references(conn: Connection, sha256: str) -> int:
     """How many live assets, across every workspace, hold these bytes: the reference count for
     content-addressed storage, derived from the assets table rather than kept as a counter, so a
