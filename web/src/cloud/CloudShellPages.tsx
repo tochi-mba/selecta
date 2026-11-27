@@ -129,7 +129,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   const devicesHere = at.devicesHere !== false;
   // cloud.one_mixer: the shared mixer for every account, and its file made in the cloud library
   // (and always in the cloud-only profile, musicHomes.ts)
-  const oneMixer = oneMixerOn();
+  const oneMixer = !devicesHere || oneMixerOn();
   // cloud.one_shell, cloud only: songs come from Upload music, never a folder on this device
   const uploadPlace = devicesHere ? null : moreItems.find((place) => place.id === 'uploads')?.path ?? null;
   const cloudOnly = devicesHere ? undefined : { upload: uploadPlace };
@@ -182,13 +182,13 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   switch (route.page) {
     case 'library':
       // I84: on a remote, the Library's Play next follows the speaker's music, not this device's
-      if (!devicesHere) return <CloudOnlyLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} upload={uploadPlace} />;
+      if (!devicesHere) return <CloudOnlyLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} upload={uploadPlace} uploadPanel={uploadPlace ? more('uploads') : undefined} />;
       return <CloudLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} cloudStorage={coexisting} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
     case 'mixes':
       if (route.tab === 'mine' && drafts) return <><MyMixes {...shared} {...drafts} />{localExport}</>;
       if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
       // R8: a device with little music mixes the songs R1's device holds; hosted: HostedMakeAMix.tsx
-      { const mixer = mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
+      { const mixer = mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} studioLayout={coexisting && oneMixer} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
         <MixesEmpty
           current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
           connected={connected}

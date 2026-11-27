@@ -7,7 +7,7 @@ import type { StudioActivity } from './deviceStudio';
 // makes is the current mix; the separate cloud library card stays only with the flag off. The
 // mixers themselves are stood in by markers, so this file tests only which one the page draws.
 
-vi.mock('../views/Mixes', () => ({ Mixes: () => <section aria-label="Shared mixer" /> }));
+vi.mock('../views/Mixes', () => ({ Mixes: ({ studioLayout }: { studioLayout?: boolean }) => <section aria-label="Shared mixer">{studioLayout ? "Full Studio" : "Quick Mix"}</section> }));
 vi.mock('./hosted/HostedMakeAMix', () => ({
   HostedMakeAMix: ({ browserMixer }: { browserMixer: unknown }) => <section aria-label="Cloud library card">{browserMixer ? 'with the browser mixer a press away' : ''}</section>,
 }));
@@ -21,14 +21,14 @@ const { CloudShellPages } = await import('./CloudShellPages');
 const { gettingReady } = await import('./TransitionsGettingReady');
 type Context = Parameters<typeof CloudShellPages>[0]['at'];
 
-function page(route: Context['route'], { coexisting = true, hostedRender = true } = {}) {
+function page(route: Context['route'], { coexisting = true, hostedRender = true, devicesHere = true } = {}) {
   const at = {
     api: vi.fn(), cloud: vi.fn(), request: vi.fn(), workspaceId: 'ws-1', route,
     on: (id: string) => (id === 'cloud.hosted_render' ? hostedRender : true),
     shared: { status: { counts: { ready: 4 } }, setView: () => {} },
     data: { mix: [], name: 'Current mix', can_undo: false }, mixProblem: false,
     now: { phase: 'idle' }, shellPlayer: { togglePause: vi.fn() }, playback: { view: null },
-    newMember: false, lucyHere: false, coexisting, mixReady: 4, connected: 4, localExport: null,
+    newMember: false, lucyHere: false, coexisting, devicesHere, moreItems: [], mixReady: 4, connected: 4, localExport: null,
     importLive: { phase: 'idle' }, setSpine: vi.fn(), setSpineAsked: vi.fn(),
   } as unknown as Context;
   return render(<>{CloudShellPages({ at })}</>);
@@ -51,6 +51,13 @@ describe('Make a Mix for an account with songs in both places', () => {
     setFlags({ 'cloud.one_mixer': true, 'cloud.hosted_render': true });
     page({ page: 'mixes', tab: 'browse' });
     expect(screen.getByRole('region', { name: 'Shared mixer' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Cloud library card' })).toBeNull();
+  });
+
+  it('uses the full Studio in a Cloud storage workspace with no device music', () => {
+    setFlags({ 'cloud.one_mixer': false, 'cloud.hosted_render': true });
+    page({ page: 'mixes', tab: 'browse' }, { devicesHere: false });
+    expect(screen.getByRole('region', { name: 'Shared mixer' })).toHaveTextContent('Full Studio');
     expect(screen.queryByRole('region', { name: 'Cloud library card' })).toBeNull();
   });
 

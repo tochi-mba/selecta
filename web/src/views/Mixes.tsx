@@ -47,7 +47,7 @@ function rememberLength(songs: number) {
 }
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED, analysisAvailable = true, transitionEditingAvailable = true, startedAMix, playOn }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED, analysisAvailable = true, transitionEditingAvailable = true, startedAMix, playOn, studioLayout = analysisAvailable }: ViewProps & { studioLayout?: boolean }) {
   // ADR-0462: this page's own reads and writes go through the injected request, never the local client.
   const via = useRequest(request);
   const { get, post } = useApi(via);
@@ -224,7 +224,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   return (
     <main className="page mixes" id="main">
       {firstMix && analysisAvailable && <SetupSteps stage="listen" />}
-      {analysisAvailable ? <h1 className="display small">Make a Mix</h1> : (
+      {studioLayout ? <h1 className="display small">Make a Mix</h1> : (
         <header className="page-header">
           <div className="page-header-text">
             <h1 className="display small">Make a Mix</h1>
@@ -237,7 +237,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       {/* in a browser the page is short (one pick, no feelings), so Play leads and the guide follows it */}
       {on('mixes.intent_language') && !firstMix && analysisAvailable && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix={false} />}
 
-      {!analysisAvailable && (
+      {!studioLayout && (
         <QuickMix
           hero={hero} pending={!cards && !cardsFailed} playable={readyCount} total={counts.music} songs={songs} onSongs={setSongs}
           building={building.startsWith('pick')} blocked={!!building && !building.startsWith('pick')}
@@ -248,9 +248,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           playOn={playOn}
         />
       )}
-      {!analysisAvailable && on('lucy') && <p className="quick-mix-more"><PageLink to="/mixes/lucy" className="button">Plan a mix with Lucy</PageLink></p>}
+      {!studioLayout && on('lucy') && <p className="quick-mix-more"><PageLink to="/mixes/lucy" className="button">Plan a mix with Lucy</PageLink></p>}
       {!analysisAvailable && mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} analysisAvailable={false} />}
-      {analysisAvailable && <div className="mix-paths" role="group" aria-label="Ways to make a mix">
+      {studioLayout && <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
         {/* MP-0282-07: on the first run the notice under Play already says the library is ready */}
         {!firstMix && <p className="eyebrow">Quick Play · Tap and play</p>}
@@ -265,7 +265,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             <span>About {length(hero.seconds)} of matching source songs</span>
           </p>
         )}
-        <p className="lede">{hero?.blurb ?? 'The strongest run it can find through your whole library, with a word hand-off or two.'}</p>
+        <p className="lede">{hero?.blurb ?? (analysisAvailable ? 'The strongest run it can find through your whole library, with a word hand-off or two.' : 'SelectaDJ builds a mix from the songs ready in your library.')}</p>
         <div className="row wrap">
           <Action
             className="primary big"
@@ -276,7 +276,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             title={replacing ? (analysisAvailable ? `Replaces ${current}; you can undo that` : `Replaces ${current}, which stays in My Mixes`) : undefined}
             run={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
           >
-            Play
+            {playOn?.now && !playOn.ask ? `Play on ${playOn.name}` : 'Play'}
           </Action>
           <div className="chips" role="group" aria-label="How long, roughly">
             {SET_LENGTHS.map((option) => (
@@ -315,7 +315,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       )}
       </div>}
 
-      {problem && analysisAvailable && <p className="warn" role="alert">{problem}</p>}
+      {problem && studioLayout && <p className="warn" role="alert">{problem}</p>}
       {on('mixes.intent_language') && !firstMix && !analysisAvailable && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix />}
 
       {/* Loaded and empty reflows away: a header with no feelings under it promises nothing

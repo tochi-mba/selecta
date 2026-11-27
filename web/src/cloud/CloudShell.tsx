@@ -477,6 +477,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   const moreRoute = moreRouteOf(path);
   const route: ShellRoute = (moreRoute && !(workspacePage && moreRoute.id === 'workspace') ? moreRoute : null) ?? parseRoute(path);
   const moreItems = moreDestinationsFor({ mode: 'cloud', feature: on, experience }).filter((place) => !(workspacePage && place.id === 'workspace'));
+  const navigationMoreItems = moreItems.filter((place) => devicesHere || place.id !== 'uploads');
   const connected = status?.counts.music ?? 0;
   // Finish later is remembered on this browser: the spine then opens only when asked for
   const [spine, setSpine] = useState(() => !onboardingFinished(workspaceId) && !onboardingPutOff(workspaceId));
@@ -728,7 +729,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // subset); the media keys and what the OS shows as playing drive the browser player.
   const places = [
     ...destinationsFor({ mode: 'cloud', feature: on, experience }),
-    ...moreItems,
+    ...navigationMoreItems,
   ].map((place) => ({ id: place.id, label: place.label, path: place.path, about: place.id === 'workspace' && 'icon' in place ? 'Your library at a glance, connecting music, this browser’s storage and diagnostics' : place.about }));
   const controls = useServerFreeControls({ places, player: shellPlayer, now, hasMix: data.mix.length > 0, hasNext: data.mix.length > now.position + 1 });
   const currentMix = useCallback(() => data.mix, [data.mix]);
@@ -777,7 +778,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
         onHelp={controls.onHelp}
         onCommands={controls.onCommands}
         mode="cloud"
-        more={moreItems}
+        more={navigationMoreItems}
         account={onSignOut ? { email: account.user.email, plan: planName(account), onSignOut } : undefined}
         status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? <RoomOpenLine room={room} path={roomsPlace.path} waiting={roomWaiting} add={roomAdd} /> : undefined}
         banner={<CloudShellNotices account={account} workspaceId={workspaceId} on={on} playback={playback} deviceName={(id) => holdings.devices?.find((one) => one.device_id === id)?.name ?? null}
