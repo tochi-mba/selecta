@@ -26,11 +26,11 @@ export type IdeasPlanner = {
 export const IDEAS_MOST = 5_000;
 
 /** The songs an idea is planned over: playable here, not set to Never play, measured in the
- * account, by title, at most `IDEAS_MOST`. */
+ * account, in stable catalogue order, at most `IDEAS_MOST`. */
 export function ideaSongs(songs: readonly PlayableLike[], measured: ReadonlyMap<number, unknown>): number[] {
   return songs
     .filter((song) => song.playable && !song.never && measured.has(song.id))
-    .sort((one, other) => one.title.localeCompare(other.title) || one.id - other.id)
+    .sort((one, other) => one.id - other.id)
     .slice(0, IDEAS_MOST)
     .map((song) => song.id);
 }
@@ -62,9 +62,11 @@ export function accountIdeas(request: Request, workspaceId: string, within = ORD
       try {
         const { ids, left } = await sample(songs, Date.now());
         if (ids.length < ORDER_NEEDS || left <= 0) return null;
+        if ((choices.start !== null && !ids.includes(choices.start)) || (choices.end !== null && !ids.includes(choices.end))) return null;
         const body = { ...orderBody(ids, choices), idea: key, count: Math.max(2, Math.min(count, 100)) };
         const answer = await post<{ order?: number[]; name?: string }>('/planning/order', body, left);
         if (!Array.isArray(answer?.order) || answer.order.length < 2) return null;
+        if ((choices.start !== null && answer.order[0] !== choices.start) || (choices.end !== null && answer.order.at(-1) !== choices.end)) return null;
         rememberFeel(workspaceId, answer.order, choices.steering.mix_language);
         return { ids: answer.order, name: typeof answer.name === 'string' && answer.name ? answer.name : key };
       } catch {
