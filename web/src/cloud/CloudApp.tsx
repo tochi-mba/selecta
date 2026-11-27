@@ -104,6 +104,8 @@ type Operation = 'onboarding' | 'checkout' | 'portal' | 'everywhere' | 'delete';
  * read. The hosted shell reads `cloud.local_first` as off while it is open (it is not the
  * local-first shell), which must not keep a member who has just joined Labs out of it. */
 function deviceMusicDecided(account: Account | null): boolean {
+  const mode = account?.experience?.music_storage?.mode;
+  if (mode) return mode === 'device';
   return account?.experience?.local_first === true && accountFlagOn('cloud.local_first', account.features);
 }
 
@@ -162,7 +164,7 @@ export function CloudApp() {
   const home = musicHomeOf(deviceMusicDecided(account), account?.experience?.hosted !== false);
   setMusicHome(home === 'none' ? 'cloud_library' : home);
   // cloud.move_to_cloud (it needs the cloud library grant): uploads from this device are copies
-  setUploadsFromDevice(account?.features?.['cloud.move_to_cloud'] === true);
+  setUploadsFromDevice(account?.experience?.music_storage?.mode !== 'device' && account?.features?.['cloud.move_to_cloud'] === true);
   // ADR-0475 R12: another tab of this browser signed out, or in as someone; and what a sign-out
   // pressed here would stop, said first
   const [elsewhere, setElsewhere] = useState<{ kind: 'out' } | { kind: 'in'; email: string } | null>(null);
@@ -610,7 +612,7 @@ export function CloudApp() {
   const localFirst = account !== null && deviceMusicDecided(account);
   // `cloud.one_shell`: every account in the Cloud shell, with music on devices only where it is
   // decided on; `cloud.local_first` off then means cloud only, never the older pages
-  const oneShell = account !== null && oneShellFor(account);
+  const oneShell = account !== null && (oneShellFor(account) || Boolean(account.experience?.music_storage?.mode));
   const cloudShell = localFirst || oneShell;
   // `cloud.hosted_shell`: every other account's pages in the shared shell, which routes them itself.
   // The server decides every registry flag in the account's snapshot; this one moves the whole

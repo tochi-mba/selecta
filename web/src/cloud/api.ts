@@ -37,7 +37,7 @@ export type Account = {
   billing?: { consent_version: string; checkout_available?: boolean; standing?: BillingStanding | null };
   lucy?: { tier: string };
   /** One server-decided answer for the two independent Cloud grants (BF-0455-03). */
-  experience?: { local_first: boolean; hosted: boolean };
+  experience?: { local_first: boolean; hosted: boolean; music_storage?: { mode: 'device' | 'cloud' | null; revision: number } };
   features: Record<string, boolean>;
   feature_locks: Record<string, string>;
 };

@@ -116,7 +116,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // said while drawing, as Lucy's transport is, so request code reads the same profile
   setShellHomes(musicHomes ?? null);
   useEffect(() => () => setShellHomes(null), []);
-  const experience = musicHomes ? { local_first: musicHomes.device, hosted: account.experience?.hosted === true } : account.experience ?? null;
+  const deviceOnly = account.experience?.music_storage?.mode === 'device';
+  const experience = musicHomes ? { local_first: musicHomes.device, hosted: !deviceOnly && account.experience?.hosted === true } : account.experience ?? null;
   const cloud = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, workspaceId), [api, workspaceId]) as Request;
   // One song index per workspace (ADR-0469): a different account in this browser opens its own.
   const store = useRef<{ workspaceId: string; opened: Promise<MediaStore> } | null>(null);
@@ -129,10 +130,10 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
   // (cloud only: the cloud library is the account's one place, so its songs always play from it)
-  const coexisting = (devicesHere ? isHostedAccount(account) : musicHomes?.cloud === true) && on('cloud.stored_media');
+  const coexisting = (devicesHere ? !deviceOnly && isHostedAccount(account) : musicHomes?.cloud === true) && on('cloud.stored_media');
   // library.places: the Library says where songs are kept, for an account with a cloud library
   // (the grant, or songs still stored after it was taken away); nothing new for anyone else
-  const placesOn = on('library.places') && on('cloud.stored_media') && holdsHostedStorage(account);
+  const placesOn = !deviceOnly && on('library.places') && on('cloud.stored_media') && holdsHostedStorage(account);
   // cloud.catalogue_play: cloud songs found by catalogue id, and counted on every device; cloud
   // only, always, since a name or this device's files can never find them
   const cataloguePlay = coexisting && (flagListed('cloud.catalogue_play') || !devicesHere);
@@ -746,14 +747,14 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // (cloud only: no folders to watch and no import to carry on)
   useImportCarryOn({ request: media, openStore, workspaceId, enabled: devicesHere, watch: { onAvailabilityChanged: () => sweepLapsed(true), playing: () => playingNow.current() } });
   // cloud.move_to_cloud: the upload queue carries on after a reload; the current mix goes first
-  useCloudUploadQueue({ on: devicesHere && on('cloud.move_to_cloud'), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
+  useCloudUploadQueue({ on: devicesHere && !deviceOnly && on('cloud.move_to_cloud'), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
   const connect = devicesHere ? <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} /> : null;
   // library.places: what the Library knows about where songs are kept (views/LibraryPlaces.tsx)
   const libraryPlaces = useLibraryPlaces({
-    on: placesOn, cloud, workspaceId, accountId: account.user.id, canUpload: isHostedAccount(account) && on('cloud.uploads'),
+    on: placesOn, cloud, workspaceId, accountId: account.user.id, canUpload: !deviceOnly && isHostedAccount(account) && on('cloud.uploads'),
     offline: servedFrom !== null || offlineReadOnly, otherDevices: !!holdings.devices?.some((one) => one.device_id !== playback.device?.id),
     // cloud.move_to_cloud: a song's details offer "Upload to your cloud library"
-    fromDevice: devicesHere && on('cloud.move_to_cloud') ? { request: media, openStore } : null,
+    fromDevice: devicesHere && !deviceOnly && on('cloud.move_to_cloud') ? { request: media, openStore } : null,
   });
 
   return (
@@ -794,7 +795,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
           lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive,
           remote, playWays, holdings, where, followsHere, newest, songOrder, playOn, devicesHere,
         }} /></Section></LibraryPlacesContext.Provider></HolderContext.Provider>
-        <footer className="cloud-footer">{devicesHere ? footerWords(coexisting, flagListed('cloud.move_to_cloud')) : CLOUD_ONLY_FOOTER}</footer>
+        <footer className="cloud-footer">{devicesHere ? footerWords(coexisting, !deviceOnly && flagListed('cloud.move_to_cloud')) : CLOUD_ONLY_FOOTER}</footer>
       </Shell>
       {requesting && on('requests') && (
         <Drawer title="Requests" onClose={() => setRequesting(false)}>
