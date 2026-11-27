@@ -45,10 +45,11 @@ function useStart(): StartUploads | null {
 
 /** Opens the sheet for some songs (or every song on this device) and draws it. `available` is
  * false while the flag is off or no queue can run; then `open` does nothing. */
-export function useUploadToCloud({ request, openStore, onStarted }: {
+export function useUploadToCloud({ request, openStore, onStarted, retainDeviceFiles }: {
   request: Request;
   openStore: () => Promise<MediaStore>;
   onStarted?: (count: number) => void;
+  retainDeviceFiles?: boolean;
 }): { available: boolean; open: (songIds?: readonly number[]) => Promise<void>; sheet: ReactNode; problem: string } {
   const on = useFlag('cloud.move_to_cloud');
   const start = useStart();
@@ -67,7 +68,7 @@ export function useUploadToCloud({ request, openStore, onStarted }: {
     }
   }, [available, openStore]);
   const sheet = available && songs
-    ? <UploadToCloudSheet request={request} songs={songs} start={start} onClose={() => setSongs(null)} onStarted={onStarted} />
+    ? <UploadToCloudSheet request={request} songs={songs} start={start} onClose={() => setSongs(null)} onStarted={onStarted} retainDeviceFiles={retainDeviceFiles} />
     : null;
   return { available, open, sheet, problem };
 }
