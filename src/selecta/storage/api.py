@@ -40,6 +40,7 @@ from selecta.storage.r2 import R2Client
 from selecta.storage.sandbox import probe_in_sandbox
 from selecta.storage.schema import assets, upload_sessions
 from selecta.storage.uploads import (
+    sessions_to_fence,
     BatchTooLarge,
     FileSpec,
     InvalidState,
@@ -251,6 +252,21 @@ def install_routes(
             if callable(close):
                 close()
 
+    def fence_uploads(conn, workspace_id: str) -> None:
+        sessions = sessions_to_fence(conn, workspace_id)
+        if not sessions:
+            return
+        try:
+            with service() as (uploads, _client):
+                uploads.fence_workspace_uploads(conn, sessions)
+        except R2Error as error:
+            raise HTTPException(status_code=503, detail={
+                "code": "storage_cutover_unavailable",
+                "message": "Selecta couldn't close the outstanding uploads. Try the switch again.",
+            }) from error
+
+    app.state.fence_music_uploads = fence_uploads
+
     def workspace(request: Request, claims: Claims):
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         return principal.workspace.id
@@ -273,7 +289,7 @@ def install_routes(
             )
 
     def require_audio_storage(conn, workspace_id: str) -> None:
-        if music_storage.snapshot(conn, workspace_id)["mode"] == "device":
+        if music_storage.snapshot(conn, workspace_id, lock=True)["mode"] == "device":
             raise HTTPException(
                 status_code=403,
                 detail={
@@ -405,7 +421,7 @@ def install_routes(
                     session = uploads.get(conn, session_id, workspace_id=workspace_id)
                     if session.status.value == "planned":
                         session = uploads.start(conn, session_id, workspace_id=workspace_id)
-                urls = uploads.presign_parts(session, body.part_numbers)
+                    urls = uploads.presign_parts(session, body.part_numbers)
         except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
             raise map_error(error) from error
         if urls:
@@ -463,6 +479,7 @@ def install_routes(
                         return _outcome_json(outcome, rejection_code=code)
                     audio_id = upload_identity.audio_id_of(staged_path)
                     with transaction(engine, workspace_id) as conn:
+                        require_audio_storage(conn, workspace_id)
                         outcome = uploads.accept(
                             conn,
                             session_id,
