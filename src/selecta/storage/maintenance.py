@@ -148,6 +148,11 @@ def drain_physical_deletions(
     with transaction(engine) as conn:
         pending = due_physical(conn, limit=limit)
 
+    from selecta.storage.shared_derivations import (
+        drop_analysis_pointers,
+        drop_workspace_analysis_pointers,
+    )
+
     completed = failed = objects_deleted = 0
     for deletion in pending:
         targets = physical_targets(deletion)
@@ -178,6 +183,10 @@ def drain_physical_deletions(
         with transaction(engine, deletion.workspace_id) as conn:
             # the rows go with the objects they named, in the transaction that records the purge
             _forget(conn, deletion.workspace_id, list(derived))
+            if targets.prefixes.get(Bucket.DERIVED):
+                drop_workspace_analysis_pointers(conn, deletion.workspace_id)
+            else:
+                drop_analysis_pointers(conn, targets.keys.get(Bucket.DERIVED, []))
             mark_physical_done(conn, deletion.id)
         completed += 1
     return PurgeReport(len(pending), completed, failed, objects_deleted)

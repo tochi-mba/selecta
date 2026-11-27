@@ -61,6 +61,7 @@ from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Context
 from selecta.flags.rules import RulesCache
 from selecta.identity import accounts as identity_accounts
+from selecta.identity import music_storage
 from selecta.identity import routes as identity_routes
 from selecta.identity.tokens import (
     Claims,
@@ -95,8 +96,10 @@ from selecta.routes import cloud_mixes as cloud_mix_routes
 from selecta.routes import cloud_proxy as cloud_proxy_routes
 from selecta.routes import local_first_labs as local_first_labs_routes
 from selecta.storage import api as storage_api
+from selecta.storage import personal_rights
 from selecta.storage import playback_api as playback_api
 from selecta.usage import meters, quota
+from selecta.work import outbox
 from selecta.work.fanout import OutboxFanout
 from selecta.work.schema import outbox_events
 
@@ -205,6 +208,11 @@ class CloudSettings:
 
 
 OnboardingRequest = identity_routes.OnboardingRequest
+
+
+class MusicStorageChange(BaseModel):
+    mode: music_storage.StorageMode
+    revision: int
 
 
 class LabPreference(BaseModel):
@@ -399,6 +407,15 @@ def create_cloud_app(
                     conn, principal, "cloud.local_first", rule_cache
                 ).on
                 cohort = "browser_first" if local_first else "hosted"
+                if request.method == "POST" and flag_id in {"cloud.uploads", "cloud.hosted_render"}:
+                    if music_storage.snapshot(conn, principal.workspace.id)["mode"] == "device":
+                        return cohort, HTTPException(
+                            status_code=403,
+                            detail={
+                                "code": "device_music_storage",
+                                "message": "This workspace keeps audio on the device.",
+                            },
+                        )
                 if route_is_self_gated:
                     return cohort, None
                 try:
@@ -630,6 +647,36 @@ def create_cloud_app(
             },
         )
 
+    @app.put("/api/account/music-storage")
+    def change_music_storage(
+        body: MusicStorageChange,
+        request: Request,
+        claims: Claims = Depends(current_claims),
+    ):
+        principal = _principal(engine, claims, request.headers.get("x-workspace-id"))
+        if principal.workspace_role.value != "owner" or principal.workspace.kind != "personal":
+            raise HTTPException(status_code=403, detail="Only a personal workspace owner can switch music storage.")
+        with transaction(engine, principal.workspace.id) as conn:
+            current = music_storage.snapshot(conn, principal.workspace.id, lock=True)
+            if current["revision"] != body.revision:
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "storage_mode_changed", "message": "Refresh the current music storage settings."},
+                )
+            if current["mode"] == body.mode:
+                return current
+            if body.mode == "cloud":
+                cloud_gate.require(conn, principal, "cloud.hosted_media", rule_cache)
+                if not personal_rights.accepted(conn, principal.workspace.id):
+                    raise personal_rights.refusal()
+            else:
+                app.state.fence_music_uploads(conn, principal.workspace.id)
+            state = music_storage.switch(conn, principal.workspace.id, body.mode, body.revision)
+            if state is None:
+                raise RuntimeError("Music storage revision changed while the workspace was locked.")
+            outbox.emit(conn, "music_storage.changed", principal.workspace.id, state, db_now(conn))
+            return state
+
     @app.get("/api/account")
     def get_account(
         request: Request,
@@ -654,6 +701,7 @@ def create_cloud_app(
                 now=now,
                 lock_plans=plans.unlocking_plans(),
             )
+            storage_mode = music_storage.snapshot(conn, principal.workspace.id)
             # The meter and the shell read one hosted decision (BF-0456-06, BF-0464-02).
             hosted = decisions.snapshot().get("cloud.hosted_media") is not False
             usage = meters.meters(
@@ -673,6 +721,7 @@ def create_cloud_app(
             "workspace": {
                 "id": principal.workspace.id,
                 "name": principal.workspace.name,
+                "kind": principal.workspace.kind,
                 "role": principal.workspace_role.value,
             },
             "entitlement": {
@@ -697,6 +746,7 @@ def create_cloud_app(
             "experience": {
                 "local_first": decisions.snapshot().get("cloud.local_first") is not False,
                 "hosted": hosted,
+                "music_storage": storage_mode,
             },
             "feature_locks": dict(decisions.locks),
             "feature_rule_version": decisions.version,

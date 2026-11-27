@@ -23,7 +23,7 @@ from sqlalchemy.engine import Connection
 from selecta.engine_store import EngineStore, insert_returning_id
 from selecta.engine_store.schema import analysis, drafts, preferences, queue, song_overrides
 
-MIX_KEYS = frozenset({"mix_name", "mix_undo", "deleted_drafts", "last_deleted_draft"})
+MIX_KEYS = frozenset({"mix_name", "mix_undo", "deleted_drafts", "last_deleted_draft", "mix_render_reviews"})
 """The named values that belong to the mix; the store reads and writes no others."""
 IN_CHUNK = 900
 

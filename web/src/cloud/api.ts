@@ -29,7 +29,7 @@ export type BillingStanding = {
 };
 export type Account = {
   user: { id: string; email: string; email_verified: boolean; suspended?: boolean; staff?: boolean; timezone?: string };
-  workspace: { id: string; name: string; role: string };
+  workspace: { id: string; name: string; role: string; kind?: string };
   entitlement: { plan: string; plan_label?: string; plan_version: number; snapshot_version?: number | null; storage_limit_bytes: number; storage_used_bytes: number; storage_state: string };
   usage?: Usage;
   /** `checkout_available` false: this site cannot start a payment (no Stripe key or prices). Left
@@ -37,7 +37,7 @@ export type Account = {
   billing?: { consent_version: string; checkout_available?: boolean; standing?: BillingStanding | null };
   lucy?: { tier: string };
   /** One server-decided answer for the two independent Cloud grants (BF-0455-03). */
-  experience?: { local_first: boolean; hosted: boolean };
+  experience?: { local_first: boolean; hosted: boolean; music_storage?: { mode: 'device' | 'cloud' | null; revision: number } };
   features: Record<string, boolean>;
   feature_locks: Record<string, string>;
 };

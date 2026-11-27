@@ -17,6 +17,8 @@ export function oneShellFor(account: Pick<Account, 'features'> | null): boolean 
 /** The homes for an account in the one shell: device music only where it is decided on, and the
  * cloud library whenever there is no device music (the account's only place to keep songs). */
 export function musicHomesFor(account: Pick<Account, 'experience'>, deviceMusic: boolean): MusicHomes {
+  const mode = account.experience?.music_storage?.mode;
+  if (mode) return { device: mode === 'device', cloud: mode === 'cloud' };
   return { device: deviceMusic, cloud: !deviceMusic || isHostedAccount(account) };
 }
 

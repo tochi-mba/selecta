@@ -1,4 +1,4 @@
-import { cleanup, configure, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAccountFeatures, setFlags } from '../flags';
 import { cloudAccount } from '../test/cloudAccount';
@@ -129,7 +129,7 @@ describe('with cloud.one_shell on, every account opens the Cloud shell', () => {
     for (const label of ['Listen', 'Make a Mix', 'My Mixes', 'Library']) expect(nav.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
     expect(link(nav, 'Workspace')).toBeNull();
     expect(link(nav, 'This device')).toBeNull();
-    expect(link(nav, 'Upload music')).toHaveAttribute('href', '/upload');
+    expect(link(nav, 'Upload music')).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Cloud workspace' })).toBeNull();
     expect(screen.queryByRole('heading', { level: 1, name: 'Overview' })).toBeNull();
     expect(await screen.findByText(CLOUD_ONLY_FOOTER)).toBeInTheDocument();
@@ -172,15 +172,18 @@ describe('with cloud.one_shell off, the routing is exactly as before', () => {
 });
 
 describe('the cloud-only profile', () => {
-  it('never sweeps this device, watches folders or offers Connect music, and adds music by uploading', async () => {
+  it('connects by uploading without sweeping this device or watching folders', async () => {
     account = member({ device: false, cloud: true, workspace: 'ws-cloud' });
     window.history.replaceState({}, '', '/library');
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'Upload your first songs' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Connect your first songs' })).toBeInTheDocument();
     const main = screen.getByRole('main');
-    expect(within(main).getByRole('link', { name: 'Upload music' })).toHaveAttribute('href', '/upload');
+    const connect = within(main).getByRole('button', { name: 'Connect music' });
+    expect(connect).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(connect);
+    expect(connect).toHaveAttribute('aria-expanded', 'true');
+    expect(await within(main).findByText('Choose music files')).toBeInTheDocument();
     await settle();
-    expect(screen.queryByText(/Connect music/)).toBeNull();
     expect(screen.queryByText(/Choose (a|your music) folder/)).toBeNull();
     expect(screen.queryByRole('region', { name: 'Onboarding' })).toBeNull();
     expect(sweptFor('ws-cloud')).toBe(0);
@@ -206,7 +209,7 @@ describe('the cloud-only profile', () => {
     expect(screen.queryByTestId('library-here')).toBeNull();
     expect(screen.queryByRole('button', { name: 'On this device' })).toBeNull();
     expect(screen.queryByText(/on this device/i)).toBeNull();
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Upload music' })).toHaveAttribute('href', '/upload');
+    expect(within(screen.getByRole('main')).getByRole('button', { name: 'Connect music' })).toBeInTheDocument();
   });
 
   it('says to upload on an empty Make a Mix and Listen, never to connect a folder', async () => {
@@ -254,7 +257,6 @@ describe('the Labs switch, music on your devices', () => {
     expect(screen.getByRole('navigation', { name: 'Main' })).toBe(nav);
     expect(screen.queryByRole('navigation', { name: 'Cloud workspace' })).toBeNull();
     expect(await screen.findByText(CLOUD_ONLY_FOOTER)).toBeInTheDocument();
-    expect(screen.queryByText(/Connect music/)).toBeNull();
   });
 
   it('is the contrast: with cloud.one_shell off, leaving swaps the frame', async () => {

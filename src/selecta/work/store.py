@@ -475,6 +475,10 @@ class JobStore:
         )
         if problem is not None:
             raise problem
+        if job.type == "analyse.song":
+            from selecta.hosted_analysis_cache import capture_completion
+
+            capture_completion(self, job)
         return job
 
     def fail(

@@ -98,6 +98,7 @@ function MixView(props: ViewProps) {
   const { post, del } = useApi(request);
   const draftId = useContext(MixScope);
   const inDraft = draftId !== null;
+  const firstReviewTransition = props.renderReview?.transitions.find((index) => Number.isInteger(index) && index > 0 && index < mix.length);
   const selectionScope = inDraft ? `draft:${draftId}` : 'current';
   const at = useMixPath();
   const line = status.analysing ?? [];
@@ -874,6 +875,18 @@ function MixView(props: ViewProps) {
         viewName={EDITOR_MODES.find((option) => option.id === mode)?.label}
         saving={movingKey !== null}
       />
+      {props.renderReview && (
+        <div className="notice" role="status">
+          <p>Some transitions in this mix may sound different after rendering. Listen through before playing it live.</p>
+          {firstReviewTransition !== undefined && flagOn('seam_inspector') && (
+            <button type="button" onClick={() => {
+              setHearNow(false);
+              setInspectorTab('listen');
+              selectSeamAt(firstReviewTransition);
+            }}>Review affected transitions</button>
+          )}
+        </div>
+      )}
       {renameForm}
       {deleteConfirmation}
       {clearConfirmation}

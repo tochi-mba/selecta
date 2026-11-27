@@ -111,6 +111,32 @@ def test_a_finished_upload_analysis_becomes_its_songs_facts_once(world):
     assert world.reads == []
 
 
+def test_verified_uploads_reuse_current_planner_facts(world):
+    from selecta.storage.keys import derived_key, original_key
+    from selecta.storage.schema import assets
+
+    other = new_id()
+    seed = 42
+    sha = sha_for(seed)
+    source_path = _analysis_file(world.tmp / "shared.npz", seed)
+    for workspace in (world.workspace, other):
+        _catalogue_song(world.engine, workspace, seed)
+        asset_id = new_id()
+        with transaction(world.engine, workspace) as connection:
+            connection.execute(sa.insert(assets).values(
+                id=asset_id, workspace_id=workspace, original_key=original_key(workspace, asset_id),
+                size=100, sha256=sha, format="mp3", created_at=1.0,
+            ))
+
+        key = derived_key(workspace, "analysis", hosted_render.analysis_hash(sha),
+                          new_id(), "analysis.npz")
+        world.files[key] = source_path
+        with flags.bound({hosted_facts.FLAG: True, "cloud.hosted_dedupe": True}):
+            assert hosted_facts.keep(world.engine, workspace, [(sha, key, None)],
+                                     world.read_object, world.artifacts) == 1
+    assert len(world.reads) == 1
+
+
 def test_the_backfill_is_bounded_and_carries_on_where_it_stopped(world):
     for seed in (1, 2, 3):
         _catalogue_song(world.engine, world.workspace, seed)
@@ -312,3 +338,25 @@ def test_a_rendered_hosted_seam_is_kept_with_a_worker_attestation(world):
     # once: the next poll writes nothing
     assert hosted_brain.keep_seams(world.engine, world.workspace, [item]) == 0
     assert stored.record_of(EngineStore(world.engine, new_id()), key) is None
+
+def test_cached_attempts_keep_the_same_selection_and_repair_order(fake_studio):
+    a, b = _pair()
+    fake_studio.verdicts.extend((False, True))
+    cold = engine_core.core_seam(a, b)
+    expected = fake_studio.taken[:]
+
+    replayed = []
+
+    def cache_hit(script, _songs):
+        replayed.append(script)
+        return SimpleNamespace(script=script, seconds=10.0, audio=None)
+
+    fake_studio.taken.clear()
+    fake_studio.verdicts.extend((False, True))
+    warm = engine_core.core_seam(a, b, render_attempt=cache_hit)
+
+    from selecta.render.script_json import to_json
+
+    assert [to_json(script) for script in replayed] == [to_json(script) for script in expected]
+    assert (warm.move, warm.fell_back, warm.tried) == (cold.move, cold.fell_back, cold.tried)
+    assert not fake_studio.taken

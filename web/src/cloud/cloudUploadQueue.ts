@@ -41,6 +41,7 @@ const PLAN_AGAIN_MAX = 4;
 export const LONG_UPLOAD_MS = 60_000;
 
 export type UploadQueueParts = {
+  storageRevision?: number;
   workspaceId: string;
   api: Api;
   openStore: () => Promise<MediaStore>;
@@ -118,6 +119,10 @@ let reportTimer: ReturnType<typeof setTimeout> | null = null;
 let startedAt = 0;
 
 const pace = (): Pacing => ({ ...browserPacing, ...(parts?.pacing ?? {}) });
+function queueScope(own: UploadQueueParts): string {
+  return own.storageRevision === undefined ? own.workspaceId : `${own.workspaceId}/${own.storageRevision}`;
+}
+
 const lockName = (workspaceId: string) => `selecta-cloud-uploads:${workspaceId}`;
 
 export function uploadSnapshot(): UploadSnapshot {
@@ -209,7 +214,7 @@ function share(next: UploadSnapshot): void {
 function post(message: Message): void {
   const own = parts;
   if (!own) return;
-  const out = openLine(own.workspaceId);
+  const out = openLine(queueScope(own));
   try { out?.postMessage(message); } catch { /* closed */ }
   try { out?.close(); } catch { /* closed */ }
 }
@@ -236,7 +241,7 @@ function stopFollowing(): void {
 
 /** The runner's ears: a follower's press, files chosen there, songs it added. */
 function hear(own: UploadQueueParts): void {
-  line = openLine(own.workspaceId);
+  line = openLine(queueScope(own));
   if (!line) return;
   line.onmessage = (event: MessageEvent<Message>) => {
     const message = event.data;
@@ -257,9 +262,9 @@ function claim(): Promise<void> {
     if (!manager) { await runHeld(own); return; }
     const stop = new AbortController();
     claimStop = stop;
-    if (await heldElsewhere(manager, lockName(own.workspaceId))) follow(own.workspaceId);
+    if (await heldElsewhere(manager, lockName(queueScope(own)))) follow(queueScope(own));
     try {
-      await manager.request(lockName(own.workspaceId), { signal: stop.signal }, async () => {
+      await manager.request(lockName(queueScope(own)), { signal: stop.signal }, async () => {
         stopFollowing();
         if (parts === own) await runHeld(own);
       });
@@ -716,6 +721,7 @@ export async function startUpload(options: { songIds: readonly number[]; keepHer
   if (!(await own.hasUploadConsent(own.workspaceId).catch(() => false))) return { ok: false, why: 'consent' };
   const j = journal;
   await j.reload();
+  if (parts !== own || journal !== j) return { ok: false, why: 'not_ready' };
   // a run that ended starts afresh; songs still waiting stay where they are
   if (!j.all().some((row) => row.state !== 'done') || j.meta.cancelled) await j.clear();
   const store = await own.openStore();
@@ -879,20 +885,20 @@ function watchTitle(): () => void {
 
 /** Bind the queue to the signed-in workspace: opens its journal and carries on a queue a reload
  * or a closed tab left part way. The returned function lets go (sign-out, account switch). */
-export function bindUploadQueue(given: UploadQueueParts): () => void {
+export function bindUploadQueue(given: UploadQueueParts): () => Promise<void> {
   parts = given;
   bindCloudOnly({ openStore: given.openStore, onAvailabilityChanged: given.onAvailabilityChanged });
   title ??= watchTitle();
   let gone = false;
-  void UploadJournal.open(given.workspaceId).then((opened) => {
+  void UploadJournal.open(given.workspaceId, given.storageRevision).then((opened) => {
     if (gone || parts !== given) { opened.close(); return; }
     journal = opened;
     refresh();
     if (flagOn('cloud.move_to_cloud') && opened.all().some((row) => row.state !== 'done' && !row.choose) && !opened.meta.stopped && !opened.meta.cancelled) void claim();
   });
-  return () => {
+  return async () => {
     gone = true;
-    if (parts === given) void endUploadQueue();
+    if (parts === given) await endUploadQueue();
   };
 }
 

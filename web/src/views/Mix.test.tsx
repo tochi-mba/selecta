@@ -14,7 +14,7 @@ import { MixScope } from './mixScope';
 import { RequestsContext, RequestsState } from './Requests';
 import { feelOff } from '../test/feel';
 
-function Harness({ start, state = status(), notify = () => {}, refreshMix = () => {} }: { start: MixItem[]; state?: Status; notify?: (m: string) => void; refreshMix?: () => void }) {
+function Harness({ start, state = status(), notify = () => {}, refreshMix = () => {}, renderReview }: { start: MixItem[]; state?: Status; notify?: (m: string) => void; refreshMix?: () => void; renderReview?: MixData["render_review"] }) {
   const [mix, setMix] = useState(start);
   const refs = { mix };
   const player = new SetPlayer(() => refs.mix, () => {});
@@ -23,6 +23,7 @@ function Harness({ start, state = status(), notify = () => {}, refreshMix = () =
       status={state}
       mix={mix}
       mixName="Test mix"
+      renderReview={renderReview}
       canUndo={false}
       refreshMix={refreshMix}
       setMixData={(data: MixData) => setMix(data.mix)}
@@ -36,6 +37,14 @@ function Harness({ start, state = status(), notify = () => {}, refreshMix = () =
     />
   );
 }
+
+it('shows a listening notice when the saved render is marked for review', () => {
+  const mix = songs(seam('ready', 'a'));
+  const { rerender } = render(<Harness start={mix} />);
+  expect(screen.queryByText(/Some transitions in this mix may sound different/)).toBeNull();
+  rerender(<Harness start={mix} renderReview={{ transitions: [1] }} />);
+  expect(screen.getByText(/Some transitions in this mix may sound different/)).toBeInTheDocument();
+});
 
 describe('rendering every seam', () => {
   it('keeps song blocks distinct from seam links in the timeline', () => {

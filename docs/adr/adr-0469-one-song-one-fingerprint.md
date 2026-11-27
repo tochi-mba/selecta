@@ -141,6 +141,35 @@ The owner's library on staging held several chart folders with the same songs. S
 
 **File names.** A file whose artist tag is missing or a placeholder ("Unknown Artist", "<unknown>", "Various Artists") and whose title tag or file name reads "Artist - Title" is split into artist and title. Songs registered before this keep their old names until the folder is connected again (the fingerprint memo makes that quick); registering the same bytes again updates the names.
 
+## Hosted transition attempts
+
+The hosted planner-core worker may reuse the rendered audio and dry audit buffers for an exact
+transition script after the planner selects that candidate. Both original files must be fetched
+through the job's workspace-scoped input permissions and checksum-verified. The cache key includes
+the ordered verified sources, the concrete script and the renderer and deployment versions.
+Attempts using private grid corrections or lyrics, or using stem files, stay outside the shared
+cache. The requesting mix runs its own audit and repair loop and publishes through its usual
+workspace-scoped output slot. This means a cached failed attempt costs less to retry without
+changing which candidate the planner tries first.
+
+A worker deployment can opt in with the workspace flag `cloud.hosted_dedupe`, a private directory
+in `SELECTA_HOSTED_TRANSITION_CACHE` and a deployment version in
+`SELECTA_HOSTED_TRANSITION_CACHE_RUNTIME`. All workers sharing the directory must use a filesystem
+that enforces cross-worker locks and atomic same-directory replacement. Set the runtime version
+from the deployed image or equivalent dependency fingerprint so decoder and DSP changes invalidate
+old entries. The cache allows at most 2 GiB of completed entries, 64 MiB per entry and seven days
+of idle reuse. Writes prune expired and least recently used entries. The directory should be
+dedicated to this cache and accessible only to the hosted workers that use it.
+
+The Modal deployment in `infra/modal/selecta_workers.py` has no shared directory configured.
+Its workers use signed workspace-scoped input and attempt-scoped output URLs and receive no R2
+credentials. Cross-host sharing through R2 remains a deployment gap. It needs a private cache
+namespace and gateway signing tied to a live hosted transition attempt, with the ordered pair taken
+from its job inputs and both source assets checked for current possession before issuing links.
+Keep those objects outside workspace artifact publication, bound retention independently and prevent
+browser delivery of shared cache objects. The existing signing endpoints continue to serve the
+originals and ordinary published outputs.
+
 ## Checklist
 
 - [x] Device song index is one IndexedDB database per workspace; callers pass the workspace. Implemented (66506d6b)

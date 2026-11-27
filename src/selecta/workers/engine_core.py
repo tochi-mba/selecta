@@ -32,6 +32,7 @@ from typing import Any
 import numpy as np
 
 from selecta.analysis.song import SongInfo
+from selecta.render.attempt_cache import RenderAttemptCache
 from selecta.render.engine import SongCache
 from selecta.seam_kinds import MOVES, STEM_MOVES
 from selecta.workers.context import InputInvalid
@@ -112,7 +113,8 @@ def _all_flags_with(changes: Mapping[str, bool]) -> dict[str, bool]:
 
 
 def core_seam(
-    a: SongInfo, b: SongInfo, style: str | None = None, *, cache: SongCache | None = None
+    a: SongInfo, b: SongInfo, style: str | None = None, *, cache: SongCache | None = None,
+    render_attempt: RenderAttemptCache | None = None,
 ) -> Take:
     """The planner core's choice for this pair (module notes). `style` narrows the candidates
     to one move, as the Desktop's `choose_transition(a, b, style)` does, when it names a move
@@ -126,7 +128,7 @@ def core_seam(
         asked = style if style in all_recipes() else None
         if asked is not None and not enumerate_candidates(a, b, asked):
             asked = None
-        choice = choose_transition(a, b, asked, cache=cache)
+        choice = choose_transition(a, b, asked, cache=cache, render_attempt=render_attempt)
     tried = [
         {"move": attempt.candidate.recipe.name,
          "why": "no script there" if attempt.report is None

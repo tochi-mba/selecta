@@ -69,7 +69,7 @@ function PreviewLines({ preview }: { preview: UploadPreview }) {
   );
 }
 
-export function UploadToCloudSheet({ request, songs, start, onClose, onStarted }: {
+export function UploadToCloudSheet({ request, songs, start, onClose, onStarted, retainDeviceFiles = false }: {
   /** Full /api paths, as ConnectMusic's request. */
   request: Request;
   /** The songs on this device to upload, as `candidatesFrom` lists them. */
@@ -79,6 +79,7 @@ export function UploadToCloudSheet({ request, songs, start, onClose, onStarted }
   onClose: () => void;
   /** After the queue has started. */
   onStarted?: (count: number) => void;
+  retainDeviceFiles?: boolean;
 }) {
   const [rights, setRights] = useState<UploadRights | null>(null);
   const [rightsProblem, setRightsProblem] = useState('');
@@ -116,7 +117,7 @@ export function UploadToCloudSheet({ request, songs, start, onClose, onStarted }
   const go = async () => {
     if (!ready) return;
     // the order the dry run listed them in: what fits first
-    await start(sendable, { keepHere });
+    await start(sendable, { keepHere: retainDeviceFiles || keepHere });
     onStarted?.(sendable.length);
     onClose();
   };
@@ -140,7 +141,7 @@ export function UploadToCloudSheet({ request, songs, start, onClose, onStarted }
         {rightsProblem && <div className="banner" data-tone="danger" role="alert"><p>{rightsProblem}</p><button type="button" onClick={() => { setRights(null); setAttempt((n) => n + 1); }}>Try again</button></div>}
         {needsConsent && <RightsStatement rights={rights} changed={changed} onAgree={accept} />}
         {agreed && rights?.accepted && <p className="hint" role="status">Thank you. You won’t be asked again unless the statement changes.</p>}
-        <fieldset className="upload-sheet-choice">
+        {!retainDeviceFiles && <fieldset className="upload-sheet-choice">
           <legend>Once each song is uploaded</legend>
           <label>
             <input type="radio" name={choiceName} checked={!keepHere} onChange={() => setKeepHere(false)} />
@@ -150,7 +151,7 @@ export function UploadToCloudSheet({ request, songs, start, onClose, onStarted }
             <input type="radio" name={choiceName} checked={keepHere} onChange={() => setKeepHere(true)} />
             <span><b>Keep playing them from this device too</b><span className="hint">They stay on this device’s list as well.</span></span>
           </label>
-        </fieldset>
+        </fieldset>}
       </div>
     </Sheet>
   );

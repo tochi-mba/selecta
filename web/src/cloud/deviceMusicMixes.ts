@@ -116,20 +116,25 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     const count = Math.max(BROWSER_MIX_NEEDS, Number(query.get('count') ?? 0) || 20);
     const start = query.get('start') ? Number(query.get('start')) : null;
     const target = store.steering().target;
-    // what rooms loved is a soft lean on which songs make the mix; with none known it changes nothing
-    const loved = lovedInRooms ? await lovedInRooms().catch(() => undefined) : undefined;
-    const chosen = chooseSongs(all, count, { start, end: target ? Number(target) : null, loved });
-    if (chosen.length < BROWSER_MIX_NEEDS) {
-      throw refuse(`A mix needs at least ${BROWSER_MIX_NEEDS} songs you can play on this device. Connect more music first.`, 'not_enough_songs');
-    }
-    // the same songs, ordered by the account's planner when it can (a song set to Never play that
-    // the person chose as the start or ending keeps its place; the planner would leave it out)
     const never = new Set(all.filter((song) => song.never).map((song) => song.id));
     const choices = { start, end: target ? Number(target) : null, steering: store.steering(), never };
-    // an idea card of the account's: the planner picks and orders its songs, as the Desktop builds one
-    const planned = idea !== 'pick' && ideas ? await ideas.order(idea, all, choices, count).catch(() => null) : null;
-    const ids = planned?.ids ?? (planOrder ? await planOrder(chosen, choices).catch(() => null) : null) ?? chosen;
-    const name = planned?.name ?? mixNameFor(all, ids);
+    let ids: number[];
+    let name: string;
+    if (ideas) {
+      const planned = await ideas.order(idea, all, choices, count);
+      if (!planned) {
+        throw refuse('Couldn’t plan a mix from the ready songs. Check the Library for songs still preparing, or try again.', 'planning_unavailable', 409);
+      }
+      ({ ids, name } = planned);
+    } else {
+      const loved = await lovedInRooms?.().catch(() => undefined);
+      const chosen = chooseSongs(all, count, { ...choices, loved });
+      if (chosen.length < BROWSER_MIX_NEEDS) {
+        throw refuse(`A mix needs at least ${BROWSER_MIX_NEEDS} songs you can play on this device. Connect more music first.`, 'not_enough_songs');
+      }
+      ids = (await planOrder?.(chosen, choices).catch(() => null)) ?? chosen;
+      name = mixNameFor(all, ids);
+    }
     if (account && accountMixesOn()) {
       try {
         return await account.install(name, ids, asDraft);

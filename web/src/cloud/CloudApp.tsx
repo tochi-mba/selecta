@@ -46,6 +46,7 @@ import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
 import { LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { WorkspaceNameOffer } from './WorkspaceNameOffer';
+import { MusicStorageSettings } from './MusicStorageSettings';
 import { setProblemReporter, SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './deviceMusicGate';
@@ -104,6 +105,8 @@ type Operation = 'onboarding' | 'checkout' | 'portal' | 'everywhere' | 'delete';
  * read. The hosted shell reads `cloud.local_first` as off while it is open (it is not the
  * local-first shell), which must not keep a member who has just joined Labs out of it. */
 function deviceMusicDecided(account: Account | null): boolean {
+  const mode = account?.experience?.music_storage?.mode;
+  if (mode) return mode === 'device';
   return account?.experience?.local_first === true && accountFlagOn('cloud.local_first', account.features);
 }
 
@@ -162,7 +165,7 @@ export function CloudApp() {
   const home = musicHomeOf(deviceMusicDecided(account), account?.experience?.hosted !== false);
   setMusicHome(home === 'none' ? 'cloud_library' : home);
   // cloud.move_to_cloud (it needs the cloud library grant): uploads from this device are copies
-  setUploadsFromDevice(account?.features?.['cloud.move_to_cloud'] === true);
+  setUploadsFromDevice(account?.experience?.music_storage?.mode !== 'device' && account?.features?.['cloud.move_to_cloud'] === true);
   // ADR-0475 R12: another tab of this browser signed out, or in as someone; and what a sign-out
   // pressed here would stop, said first
   const [elsewhere, setElsewhere] = useState<{ kind: 'out' } | { kind: 'in'; email: string } | null>(null);
@@ -435,7 +438,7 @@ export function CloudApp() {
     // around anything now off (ADR-0414), or opens up around anything back on.
     // `session.revoked`: the server ended this stream because the sign-in was revoked; asking
     // for the account hears `session_revoked` and shows "You were signed out" (SC-0400-08).
-    if (event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.') || event.topic.startsWith('session.')) void refreshAccount();
+    if (event.topic === 'music_storage.changed' || event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.') || event.topic.startsWith('session.')) void refreshAccount();
     // ADR-0461: commands reach the speaker hook (usePlaybackDevice), which checks and acks them.
     if (event.topic === 'playback.command') window.dispatchEvent(new CustomEvent(PLAYBACK_COMMAND_EVENT, { detail: event.payload }));
     // ADR-0475 R2: one device asking another to start, and what it answered (devices/playOn.ts)
@@ -610,7 +613,7 @@ export function CloudApp() {
   const localFirst = account !== null && deviceMusicDecided(account);
   // `cloud.one_shell`: every account in the Cloud shell, with music on devices only where it is
   // decided on; `cloud.local_first` off then means cloud only, never the older pages
-  const oneShell = account !== null && oneShellFor(account);
+  const oneShell = account !== null && (oneShellFor(account) || Boolean(account.experience?.music_storage?.mode));
   const cloudShell = localFirst || oneShell;
   // `cloud.hosted_shell`: every other account's pages in the shared shell, which routes them itself.
   // The server decides every registry flag in the account's snapshot; this one moves the whole
@@ -742,6 +745,7 @@ export function CloudApp() {
     ]}
     lucy={[lucySettings && <LucyCloudSettings request={workspaceRequest} features={account.features} />]}
     data={[
+      <MusicStorageSettings key={account.workspace.id} account={account} request={workspaceRequest} onChanged={async () => { await refreshAccount(); }} />,
       <AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} withAudio={holdsHostedStorage(account)} />,
       localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />,
       localFirst && flagOn('cloud.local_media') && !flagOn('cloud.workspace') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />,

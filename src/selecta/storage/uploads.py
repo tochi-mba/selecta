@@ -223,6 +223,26 @@ def _minutes_text(seconds: float) -> str:
     return f"{minutes} minute" + ("" if minutes == 1 else "s")
 
 
+def sessions_to_fence(conn: Connection, workspace_id: str) -> list[UploadSession]:
+    """Find active and recently ended sessions whose part URLs could still work."""
+    recent = db_now(conn) - MAX_URL_TTL
+    rows = conn.execute(
+        sa.select(upload_sessions)
+        .where(
+            upload_sessions.c.workspace_id == workspace_id,
+            sa.or_(
+                upload_sessions.c.status.in_([status.value for status in ACTIVE]),
+                sa.and_(
+                    upload_sessions.c.status.in_([Status.ABORTED.value, Status.EXPIRED.value, Status.REJECTED.value]),
+                    upload_sessions.c.updated_at >= recent,
+                ),
+            ),
+        )
+        .with_for_update()
+    ).mappings().all()
+    return [UploadSession.from_row(row) for row in rows]
+
+
 class Uploads:
     """The upload protocol for one R2 account. Share one per process."""
 
@@ -598,6 +618,18 @@ class Uploads:
             return Outcome(session)
         return self._finish(conn, session, Status.ABORTED, reason)
 
+    def fence_workspace_uploads(self, conn: Connection, sessions: Sequence[UploadSession]) -> None:
+        """Revoke outstanding part URLs before the caller commits a device-mode switch."""
+        for session in sessions:
+            if session.status in ENDED:
+                # A previous best-effort abort may have failed while its URL was live.
+                self._discard(session, strict=True)
+            else:
+                self._finish(
+                    conn, session, Status.ABORTED, "Music storage switched to this device.",
+                    strict=True,
+                )
+
     # -- maintenance ------------------------------------------------------------------------
 
     def expire_sessions(
@@ -677,16 +709,17 @@ class Uploads:
         return started
 
     def _finish(
-        self, conn: Connection, session: UploadSession, status: Status, reason: str
+        self, conn: Connection, session: UploadSession, status: Status, reason: str, *,
+        strict: bool = False,
     ) -> Outcome:
         """End a session that won't become an asset: discard staged data, release its bytes."""
-        self._discard(session)
+        self._discard(session, strict=strict)
         if session.reservation_id:
             self.quota.release(conn, session.reservation_id)
         session = self._update(conn, session, status=status, error=reason[:MAX_ERROR_LENGTH])
         return Outcome(session)
 
-    def _discard(self, session: UploadSession) -> None:
+    def _discard(self, session: UploadSession, *, strict: bool = False) -> None:
         """Abort the multipart upload and delete the staged object. Best effort: if R2 is down,
         the staging bucket's lifecycle rules remove both within two days."""
         if not session.upload_id:
@@ -695,6 +728,8 @@ class Uploads:
         try:
             self.client.abort_multipart_upload(bucket, key, session.upload_id)
         except R2Error as exc:
+            if strict and exc.code != "NoSuchUpload":
+                raise
             log.warning("Couldn't abort upload %s: %s", session.id, exc.code or exc.status)
         self._delete_staged(session)
 

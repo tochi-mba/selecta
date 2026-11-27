@@ -32,6 +32,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta import flags
+from selecta.billing.schema import insert_ignore
 from selecta.persistence import db_now
 from selecta.storage.schema import assets, shared_derivations
 
@@ -156,25 +157,51 @@ def write_shared(
         raise NotShareable(
             "The server does not hold these bytes, so the result cannot be verified."
         )
-    exists = conn.execute(
-        sa.select(shared_derivations.c.content_sha256).where(
-            shared_derivations.c.content_sha256 == sha256,
-            shared_derivations.c.kind == kind,
-            shared_derivations.c.analysis_version == analysis_version,
-        )
-    ).first()
-    if exists is None:
-        conn.execute(
-            sa.insert(shared_derivations).values(
-                content_sha256=sha256,
-                kind=kind,
-                analysis_version=analysis_version,
-                payload=dict(payload),
-                source=source,
-                created_at=db_now(conn),
-            )
-        )
+    insert_ignore(
+        conn,
+        shared_derivations,
+        {
+            "content_sha256": sha256,
+            "kind": kind,
+            "analysis_version": analysis_version,
+            "payload": dict(payload),
+            "source": source,
+            "created_at": db_now(conn),
+        },
+        ("content_sha256", "kind", "analysis_version"),
+    )
     return True
+
+
+HOSTED_ANALYSIS_ARTIFACT = "hosted_analysis_artifact"
+
+
+def drop_analysis_pointers(conn: Connection, object_keys: list[str]) -> int:
+    """Forget exact object keys removed by the owning workspace's retention policy."""
+    keys = sorted({key for key in object_keys if isinstance(key, str) and key})
+    if not keys:
+        return 0
+    return (
+        conn.execute(
+            sa.delete(shared_derivations).where(
+                shared_derivations.c.kind == HOSTED_ANALYSIS_ARTIFACT,
+                shared_derivations.c.payload["object_key"].as_string().in_(keys),
+            )
+        ).rowcount
+        or 0
+    )
+
+
+def drop_workspace_analysis_pointers(conn: Connection, workspace_id: str) -> None:
+    """Forget pointers whose entire workspace object prefix was erased."""
+    conn.execute(
+        sa.delete(shared_derivations).where(
+            shared_derivations.c.kind == HOSTED_ANALYSIS_ARTIFACT,
+            shared_derivations.c.payload["object_key"]
+            .as_string()
+            .startswith(f"w/{workspace_id}/", autoescape=True),
+        )
+    )
 
 
 def content_references(conn: Connection, sha256: str) -> int:

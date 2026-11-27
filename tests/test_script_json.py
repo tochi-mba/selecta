@@ -207,3 +207,91 @@ def test_audit_with_spans_separates_nothing_and_matches_sensing(monkeypatch, pai
     assert [vars(c) for c in given.checks] == [vars(c) for c in today.checks]
     overlap = given.value("vocal overlap")
     assert overlap is not None and overlap > 0
+
+def test_concrete_render_identity_uses_verified_sources_and_placement(pair):
+    from selecta.render.cache_key import concrete_render_key
+
+    a, b = pair
+    hashes = {a.id: "a" * 64, b.id: "b" * 64}
+    script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
+    original = concrete_render_key(script, hashes, runtime_version="test-v1")
+    assert original is not None
+    assert concrete_render_key(script, {a.id: hashes[a.id]}, runtime_version="test-v1") is None
+    assert concrete_render_key(script, hashes, runtime_version="test-v2") != original
+    assert concrete_render_key(
+        bass_swap_blend(a, b, _cue(a, 32), _cue(b, 8), 8), hashes, runtime_version="test-v1"
+    ) != original
+    assert concrete_render_key(
+        script, {a.id: hashes[b.id], b.id: hashes[a.id]}, runtime_version="test-v1"
+    ) != original
+
+    remapped = {303: hashes[a.id], 404: hashes[b.id]}
+    a.id, b.id = 303, 404
+    remapped_script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
+    assert concrete_render_key(remapped_script, remapped, runtime_version="test-v1") == original
+
+def test_persistent_render_attempt_preserves_audit_inputs(pair, tmp_path, monkeypatch):
+    from selecta.render import attempt_cache
+    from selecta.render.attempt_cache import RenderAttemptCache
+
+    a, b = pair
+    hashes = {a.id: "a" * 64, b.id: "b" * 64}
+    script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
+    directory = tmp_path / "cache"
+    cold = RenderAttemptCache(directory, hashes, "test-v1")(script, SongCache())
+
+    def unexpected(*args):
+        pytest.fail("a second worker rendered an already cached attempt")
+
+    monkeypatch.setattr(attempt_cache, "render", unexpected)
+    warm = RenderAttemptCache(directory, hashes, "test-v1")(script, SongCache())
+    for name in ("audio", "a_dry", "b_dry"):
+        np.testing.assert_array_equal(getattr(cold, name), getattr(warm, name))
+    assert warm.drift_ms == cold.drift_ms
+    assert warm.script is script
+
+def test_worker_cache_serialises_same_render_and_bounds_storage(pair, tmp_path, monkeypatch):
+    import os
+    import threading
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from selecta.render import attempt_cache
+    from selecta.render.engine import Rendered
+
+    a, b = pair
+    hashes = {a.id: "a" * 64, b.id: "b" * 64}
+    directory = tmp_path / "cache"
+    script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
+    calls = []
+    ready = threading.Barrier(2)
+
+    def synthetic_render(spec, _songs):
+        calls.append(spec)
+        time.sleep(0.2)
+        audio = np.zeros((round(spec.duration * attempt_cache.SAMPLE_RATE), 2), np.float32)
+        return Rendered(spec, audio, audio, audio)
+
+    monkeypatch.setattr(attempt_cache, "render", synthetic_render)
+
+    def request():
+        ready.wait(timeout=5)
+        return attempt_cache.RenderAttemptCache(directory, hashes, "v1")(script, SongCache())
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: request(), range(2)))
+    assert len(calls) == 1
+    np.testing.assert_array_equal(results[0].audio, results[1].audio)
+
+    original, = directory.glob("*.npz")
+    size = original.stat().st_size
+    old = directory / ("b" * 64 + ".npz")
+    old.touch()
+    expired = time.time() - attempt_cache.MAX_IDLE_SECONDS - 1
+    os.utime(old, (expired, expired))
+    monkeypatch.setattr(attempt_cache, "MAX_CACHE_BYTES", size)
+    attempt_cache.RenderAttemptCache(directory, hashes, "v2")(script, SongCache())
+    remaining, = directory.glob("*.npz")
+    assert remaining != original
+    assert remaining.stat().st_size <= size
+    assert not old.exists()

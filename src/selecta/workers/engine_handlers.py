@@ -367,7 +367,27 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
     b = _song(ctx, ref.get("b"), "b", 2, ffmpeg, core)
     ctx.progress(1, 2)
     if core:
-        take, engine_name = engine_core.core_seam(a, b, style), engine_core.ENGINE
+        import os
+
+        from selecta import flags
+        from selecta.render.attempt_cache import RenderAttemptCache
+        from selecta.storage.shared_derivations import FLAG
+
+        directory = os.environ.get("SELECTA_HOSTED_TRANSITION_CACHE")
+        runtime = os.environ.get("SELECTA_HOSTED_TRANSITION_CACHE_RUNTIME")
+        render_attempt = None
+        if directory and runtime and flags.on(FLAG) and not any(
+            value
+            for side in (ref["a"], ref["b"])
+            for value in engine_core.facts_of(side).values()
+        ):
+            # _song already downloaded and checksum-verified both workspace assets.
+            render_attempt = RenderAttemptCache(
+                Path(directory), {a.id: ref["a"]["source_sha256"], b.id: ref["b"]["source_sha256"]},
+                runtime,
+            )
+        take = engine_core.core_seam(a, b, style, render_attempt=render_attempt)
+        engine_name = engine_core.ENGINE
     else:
         # The local app's own move choice (engine_seams): blends and effects placed and
         # beat-tightened as the local app places them, falling back to a clean cut.

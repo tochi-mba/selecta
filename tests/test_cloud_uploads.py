@@ -36,6 +36,7 @@ from selecta.storage.uploads import (
     Uploads,
     _minutes_text,
     _size_text,
+    sessions_to_fence,
 )
 
 WS = "ws-a"
@@ -800,3 +801,22 @@ def test_plan_limits_come_from_the_workspace_each_time(cloud_engine, fake, quota
     plan(cloud_engine, uploads, FileSpec("a", 1), FileSpec("b", 1))
     plan(cloud_engine, uploads, FileSpec("c", 1), workspace=OTHER)
     assert asked == [WS, OTHER]
+
+
+
+def test_storage_cutover_requires_successful_multipart_abort(cloud_engine, uploads, fake):
+    session = one(cloud_engine, uploads, FileSpec("song.wav", 100))
+    urls = uploads.presign_parts(session, [1])
+    assert urls[1]
+    assert session.upload_id in fake.uploads
+    fake.fail_next("abort_multipart_upload", R2Error("down", status=503))
+
+    with pytest.raises(R2Error), transaction(cloud_engine, WS) as conn:
+        uploads.fence_workspace_uploads(conn, sessions_to_fence(conn, WS))
+    with transaction(cloud_engine, WS) as conn:
+        assert uploads.get(conn, session.id, workspace_id=WS).status is Status.UPLOADING
+        uploads.fence_workspace_uploads(conn, sessions_to_fence(conn, WS))
+
+    assert session.upload_id not in fake.uploads
+    with transaction(cloud_engine, WS) as conn:
+        assert uploads.get(conn, session.id, workspace_id=WS).status is Status.ABORTED

@@ -53,6 +53,8 @@ export type MixData = {
   undone?: string | null;
   eta?: MixEta;
   draft?: { id: number; place: number | null };
+  /** Set when a saved render was replaced. Transition indices identify the incoming song in mix order. */
+  render_review?: { transitions: number[] };
 };
 
 export type DraftInfo = {

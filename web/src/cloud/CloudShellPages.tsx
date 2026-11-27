@@ -24,6 +24,7 @@ import { NOTHING_PLAYABLE_NOTICE } from '../engine/scheduler';
 import { runningTime } from '../lib';
 import type { Api } from './api';
 import { CloudLibrary } from './CloudLibrary';
+import { RestoreCloudLibrary } from './RestoreCloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
 import { UploadEverything } from './uploadEntry';
 import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './DeviceMusicEmpty';
@@ -105,6 +106,7 @@ export type CloudShellPagesContext = {
   connected: number;
   mixReady: number;
   localExport: ReactNode;
+  storageMigration?: ReactNode;
   importLive: ReturnType<typeof useImportShellView>;
   remote: ReturnType<typeof useRemote>;
   playWays: ComponentProps<typeof RemoteListen>['ways'];
@@ -116,6 +118,7 @@ export type CloudShellPagesContext = {
   playOn: ReturnType<typeof usePlayOn>;
   /** cloud.one_shell: false with no music on this account's devices (the cloud-only profile) */
   devicesHere: boolean;
+  musicStorageMode?: 'device' | 'cloud' | null;
 };
 
 /** The page CloudShell shows for its route. Moved out of CloudShell.tsx unchanged, so the shell
@@ -129,7 +132,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
   const devicesHere = at.devicesHere !== false;
   // cloud.one_mixer: the shared mixer for every account, and its file made in the cloud library
   // (and always in the cloud-only profile, musicHomes.ts)
-  const oneMixer = oneMixerOn();
+  const oneMixer = !devicesHere || oneMixerOn();
   // cloud.one_shell, cloud only: songs come from Upload music, never a folder on this device
   const uploadPlace = devicesHere ? null : moreItems.find((place) => place.id === 'uploads')?.path ?? null;
   const cloudOnly = devicesHere ? undefined : { upload: uploadPlace };
@@ -175,20 +178,20 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
         fileCheck={fileCheck}
         playback={{ refusal, speaker: playback.view?.speaker ?? null, phase: now.phase }}
         // cloud.move_to_cloud: draws nothing while the flag is off or no upload queue can run
-        uploadAll={on('cloud.move_to_cloud') ? <UploadEverything request={media} openStore={openStore} songsHere={shared.status.counts.ready ?? null} /> : undefined}
+        uploadAll={coexisting && on('cloud.move_to_cloud') ? <UploadEverything request={media} openStore={openStore} songsHere={shared.status.counts.ready ?? null} /> : undefined}
       />
     );
   }
   switch (route.page) {
     case 'library':
       // I84: on a remote, the Library's Play next follows the speaker's music, not this device's
-      if (!devicesHere) return <CloudOnlyLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} upload={uploadPlace} />;
-      return <CloudLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} cloudStorage={coexisting} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
+      if (!devicesHere) return <CloudOnlyLibrary key={workspaceId} shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} upload={uploadPlace} uploadPanel={uploadPlace ? more('uploads') : undefined} storageMigration={at.storageMigration} />;
+      return <>{at.musicStorageMode === 'device' && <RestoreCloudLibrary key={workspaceId} api={api} workspaceId={workspaceId} request={media} openStore={openStore} refresh={() => sweepLapsed(true)} />}<CloudLibrary shared={remote ? { ...shared, now: remote.now } : shared} connected={connected} cloudStorage={coexisting} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} /></>;
     case 'mixes':
       if (route.tab === 'mine' && drafts) return <><MyMixes {...shared} {...drafts} />{localExport}</>;
       if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={playback.view?.speaker === 'here' || !on('devices.remote_control') ? now.phase : 'idle'} currentSeconds={runningTime(data.mix)} />}</MyMixes>{localExport}</>;
       // R8: a device with little music mixes the songs R1's device holds; hosted: HostedMakeAMix.tsx
-      { const mixer = mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
+      { const mixer = mixReady >= BROWSER_MIX_NEEDS ? <Mixes {...shared} studioLayout={coexisting && oneMixer} status={{ ...shared.status, counts: { ...shared.status.counts, ready: mixReady } }} /> : (
         <MixesEmpty
           current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
           connected={connected}
@@ -228,7 +231,7 @@ export function CloudShellPages({ at }: { at: CloudShellPagesContext }): ReactNo
       if (route.draft !== null) return <OnlyOnYourComputer title="Editing a saved draft" nearest={{ label: 'My Mixes', path: '/mixes/mine' }} />;
       if (mixProblem && !data.mix.length) return <MixProblem onRetry={refreshMix} />;
       // cloud.one_mixer: the Export panel may also make the file in the cloud library
-      return <ExportElsewhere.Provider value={cloudFile ? CloudFileOffer : null}><Mix {...shared} {...(drafts ?? {})} key="current" /></ExportElsewhere.Provider>;
+      return <ExportElsewhere.Provider value={cloudFile ? CloudFileOffer : null}><Mix {...shared} {...(drafts ?? {})} renderReview={data.render_review} key="current" /></ExportElsewhere.Provider>;
     case 'missing':
       return <PageNotFound />;
     case 'discover':

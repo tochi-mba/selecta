@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 describe('the account\'s idea cards', () => {
-  it('are asked over the playable measured songs, by title, and the browser keeps its own pick card', async () => {
+  it('are asked over the playable measured songs, and the browser keeps its own pick card', async () => {
     const calls: { path: string; body: unknown }[] = [];
     const cards = await accountIdeas(account(calls), 'ws-1').cards(SONGS, 'seamless');
     expect(cards.map((one) => one.key)).toEqual(['late']);
@@ -42,6 +42,21 @@ describe('the account\'s idea cards', () => {
     expect(asked?.body).toEqual({ songs: ideaSongs(SONGS, new Map(SONGS.map((song) => [song.id, {}]))), language: 'seamless' });
     // not playable here: never sent
     expect((asked?.body as { songs: number[] }).songs).not.toContain(8);
+  });
+
+  it('asks the picker to select from the eligible library with the requested opener', async () => {
+    const calls: unknown[] = [];
+    const request = (async (path: string, init?: RequestInit) => {
+      if (path.startsWith('/song-facts')) return account([])(path);
+      calls.push(JSON.parse(String(init?.body)));
+      return { name: 'SelectaDJ's pick', order: [2, 1] };
+    }) as Request;
+    const choices = { start: 2, end: null, steering: DEFAULT_STEERING };
+    const planner = accountIdeas(request, 'ws-1');
+    expect(await planner.order('pick', SONGS, choices, 2)).toMatchObject({ ids: [2, 1] });
+    const renamed = SONGS.map((song) => ({ ...song, title: String(song.id) }));
+    expect(await planner.order('pick', renamed, choices, 2)).toMatchObject({ ids: [2, 1] });
+    expect(calls).toEqual(Array(2).fill({ songs: [1, 2, 3, 4, 5, 6, 7], idea: 'pick', count: 2, start: 2 }));
   });
 
   it('build a mix the planner picks and orders, named after the idea, with its feel kept', async () => {

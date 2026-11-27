@@ -345,6 +345,7 @@ def _best_suited(
     """Of a big library, the `MAX_ORDER_SONGS` songs that suit the idea best, as its card ranks
     them (`Vibe.belongs`), and the chosen first and last songs: the songs a build plans over.
     Also every measured song named, and those kept out of mixes."""
+    from selecta.planner_core.beam import rank_candidates
     from selecta.planner_core.vibes import eligible, resolve_vibe, traits_of
 
     vibe = resolve_vibe(idea)
@@ -356,10 +357,17 @@ def _best_suited(
     out = _never(store, ids) | facts_store.set_aside(store, ids)
     found = [song for song in found if song.id not in out]
     traits = traits_of(found, {})
-    ranked = sorted(
-        eligible(vibe, found, traits), key=lambda s: (-vibe.belongs(s, traits[s.id]), s.id)
-    )
-    wanted = [song for song in keep if song is not None and song in set(ids)]
+    candidates = sorted(eligible(vibe, found, traits), key=lambda song: song.id)
+    membership = {song.id: vibe.belongs(song, traits[song.id]) for song in candidates}
+    available = {song.id: song for song in found}
+    before, after = (available.get(song) if song is not None else None for song in keep)
+    wanted = list(dict.fromkeys(song.id for song in (before, after) if song is not None))
+    if wanted:
+        ranked = [item.song for item in rank_candidates(
+            before, after, candidates, set(wanted), belongs=membership
+        )]
+    else:
+        ranked = sorted(candidates, key=lambda song: -membership[song.id])
     best = [song.id for song in ranked if song.id not in wanted]
     return [*wanted, *best[: planning.MAX_ORDER_SONGS - len(wanted)]], set(ids), out
 
