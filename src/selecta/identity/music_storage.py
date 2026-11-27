@@ -11,11 +11,15 @@ from selecta.identity.schema import workspaces
 StorageMode = Literal["device", "cloud"]
 
 
-def snapshot(conn: Connection, workspace_id: str) -> dict:
-    mode, revision = conn.execute(
-        sa.select(workspaces.c.music_storage_mode, workspaces.c.music_storage_revision)
-        .where(workspaces.c.id == workspace_id)
-    ).one()
+def snapshot(conn: Connection, workspace_id: str, *, lock: bool = False) -> dict:
+    query = sa.select(workspaces.c.music_storage_mode, workspaces.c.music_storage_revision).where(
+        workspaces.c.id == workspace_id
+    )
+    # PostgreSQL serializes cutover with upload operations on this row. SQLite's
+    # write transaction already takes an exclusive writer reservation.
+    if lock:
+        query = query.with_for_update()
+    mode, revision = conn.execute(query).one()
     return {"mode": mode, "revision": revision}
 
 
