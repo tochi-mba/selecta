@@ -8,6 +8,7 @@ export type View = 'Mixes' | 'Now' | 'Edit' | 'Library' | 'Words' | 'Workshop';
 export type Undo = boolean | (() => Promise<void>);
 
 export type ViewProps = {
+  renderReview?: { transitions: number[] };
   status: Status;
   mix: MixItem[];
   mixName: string;
