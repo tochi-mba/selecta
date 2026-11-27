@@ -338,3 +338,25 @@ def test_a_rendered_hosted_seam_is_kept_with_a_worker_attestation(world):
     # once: the next poll writes nothing
     assert hosted_brain.keep_seams(world.engine, world.workspace, [item]) == 0
     assert stored.record_of(EngineStore(world.engine, new_id()), key) is None
+
+def test_cached_attempts_keep_the_same_selection_and_repair_order(fake_studio):
+    a, b = _pair()
+    fake_studio.verdicts.extend((False, True))
+    cold = engine_core.core_seam(a, b)
+    expected = fake_studio.taken[:]
+
+    replayed = []
+
+    def cache_hit(script, _songs):
+        replayed.append(script)
+        return SimpleNamespace(script=script, seconds=10.0, audio=None)
+
+    fake_studio.taken.clear()
+    fake_studio.verdicts.extend((False, True))
+    warm = engine_core.core_seam(a, b, render_attempt=cache_hit)
+
+    from selecta.render.script_json import to_json
+
+    assert [to_json(script) for script in replayed] == [to_json(script) for script in expected]
+    assert (warm.move, warm.fell_back, warm.tried) == (cold.move, cold.fell_back, cold.tried)
+    assert not fake_studio.taken

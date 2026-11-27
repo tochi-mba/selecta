@@ -11,7 +11,7 @@ from test_cloud_jobs_support import Flags, make_store, worker
 from selecta import flags, hosted_analysis_cache, hosted_render
 from selecta.config import ANALYSIS_VERSION
 from selecta.persistence import new_id, transaction
-from selecta.storage import api
+from selecta.storage import api, eviction, shared_derivations
 from selecta.storage.keys import derived_key, original_key
 from selecta.storage.schema import assets
 from selecta.work.ports import ArtifactOutput
@@ -20,7 +20,7 @@ from selecta.work.schema import artifacts
 
 
 def test_verified_analysis_reuse_is_workspace_local_and_bypasses_queue(sqlite_engine, monkeypatch):
-    source, target, denied = new_id(), new_id(), new_id()
+    source, target, denied, later = new_id(), new_id(), new_id(), new_id()
     sha = "1" * 64
     digest = hosted_render.analysis_hash(sha)
     data = b"engine output"
@@ -51,7 +51,7 @@ def test_verified_analysis_reuse_is_workspace_local_and_bypasses_queue(sqlite_en
     monkeypatch.setattr(hosted_render, "_queue_analysis", lambda *args: queued.append(args))
     originals = {}
     with transaction(sqlite_engine) as conn:
-        for workspace in (source, target):
+        for workspace in (source, target, later):
             asset_id = new_id()
             originals[workspace] = asset_id
             conn.execute(
@@ -91,7 +91,15 @@ def test_verified_analysis_reuse_is_workspace_local_and_bypasses_queue(sqlite_en
         assert not hosted_analysis_cache.materialize(sqlite_engine, denied, sha, digest)
         objects[key] = b"bad checksum!"
         assert not hosted_analysis_cache.materialize(sqlite_engine, target, sha, digest)
+        with transaction(sqlite_engine, target) as conn:
+            assert (
+                shared_derivations.read_shared(
+                    conn, target, sha, hosted_analysis_cache.KIND, str(ANALYSIS_VERSION)
+                )
+                is None
+            )
         objects[key] = data
+        store.complete(claim.attempt_id, claim.fencing_token)
         assert hosted_render.prepare_songs(sqlite_engine, None, target)["ready"] == 1
     assert not queued
     with transaction(sqlite_engine, target) as conn:
@@ -99,3 +107,19 @@ def test_verified_analysis_reuse_is_workspace_local_and_bypasses_queue(sqlite_en
     assert local.checksum == checksum
     assert local.keys[0].startswith(f"w/{target}/")
     assert objects[local.keys[0]] == data
+
+    eviction.evict(
+        sqlite_engine,
+        source,
+        SimpleNamespace(delete=lambda object_key: objects.pop(object_key)),
+        budget_bytes=0,
+    )
+    with flags.bound({"cloud.hosted_dedupe": True, "cloud.hosted_media": True}):
+        with transaction(sqlite_engine, later) as conn:
+            assert (
+                shared_derivations.read_shared(
+                    conn, later, sha, hosted_analysis_cache.KIND, str(ANALYSIS_VERSION)
+                )
+                is None
+            )
+    assert key not in objects and objects[local.keys[0]] == data
