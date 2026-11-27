@@ -29,20 +29,28 @@ async function restoreFile(asset: CloudLibraryAsset, folder: Destination, api: A
     if (candidate !== name && /[\\/]/.test(candidate)) continue;
     const existing = await existingFile(folder, candidate);
     if (existing && await fileSha256(await existing.getFile(), { signal }) === hash) return existing;
-    if (existing && candidate === name) throw new Error('A different file already uses the restore filename.');
+    if (existing && candidate === name && (await existing.getFile()).size > 0) throw new Error('A different file already uses the restore filename.');
   }
   const { url } = await api<{ url: string }>(`/assets/${encodeURIComponent(asset.id)}/playback-url`, { signal }, workspace);
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error('The original could not be downloaded.');
-  const file = new File([await response.blob()], name);
-  if (await fileSha256(file, { signal }) !== hash) throw new Error('The downloaded file failed verification.');
+  if (!response.body) throw new Error('The browser could not stream the original.');
+  const { sha256 } = await import('@noble/hashes/sha2.js');
+  const digest = sha256.create();
   signal.throwIfAborted();
-  if (await existingFile(folder, name)) throw new Error('A file already uses the restore filename.');
+  const occupied = await existingFile(folder, name);
+  if (occupied && (await occupied.getFile()).size > 0) throw new Error('A file already uses the restore filename.');
   const handle = await folder.getFileHandle(name, { create: true });
   const writer = await handle.createWritable();
   try {
-    signal.throwIfAborted();
-    await writer.write(file);
+    await response.body.pipeTo(new WritableStream<Uint8Array>({
+      async write(chunk) {
+        digest.update(chunk);
+        await writer.write(Uint8Array.from(chunk));
+      },
+    }), { signal });
+    const actual = Array.from(digest.digest(), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    if (actual !== hash) throw new Error('The downloaded file failed verification.');
     signal.throwIfAborted();
     await writer.close();
   } catch (error) {
