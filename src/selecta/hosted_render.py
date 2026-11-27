@@ -38,7 +38,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
-from selecta import hosted_brain, hosted_caps, hosted_limits, hosted_status
+from selecta import hosted_analysis_cache, hosted_brain, hosted_caps, hosted_limits, hosted_status
 from selecta.config import ANALYSIS_VERSION
 from selecta.persistence import db_now, transaction
 from selecta.scheduling.policy import Lane
@@ -222,13 +222,15 @@ def prepare_songs(engine: Engine, work: Work, workspace_id: str, ids: Sequence[s
     made = {"queued": 0, "ready": 0, "running": 0, "failed": 0, "refused": 0, "replaced": 0,
             "allowance": 0, "too_long": 0}
     with transaction(engine, workspace_id) as conn:
-        wanted, seen = [], set()
+        wanted, reusable, seen = [], [], set()
         for song in _songs(conn, workspace_id, ids):
             digest = analysis_hash(song["sha256"])
             if digest in seen:
                 continue
             seen.add(digest)
             found = _artifact(conn, workspace_id, "analysis", digest)
+            if found is not None and hosted_analysis_cache.enabled():
+                reusable.append((song, digest, found))
             if found is None and hosted_limits.too_long(song["duration_s"]):
                 made["too_long"] += 1  # never a job that would run into its limit and fail
                 continue
@@ -242,7 +244,14 @@ def prepare_songs(engine: Engine, work: Work, workspace_id: str, ids: Sequence[s
             state = _state(found, job)["state"]
             made["ready" if state == "ready" else "failed" if state == "failed"
                  else "running"] += 1
+    for song, digest, found in reusable:
+        hosted_analysis_cache.remember(engine, workspace_id, song, digest, found)
     for song, job in wanted:
+        if job is None and hosted_analysis_cache.materialize(
+            engine, workspace_id, song["sha256"], analysis_hash(song["sha256"])
+        ):
+            made["ready"] += 1
+            continue
         made[_queue_analysis(engine, work, workspace_id, song, job, created_by)] += 1
     return made
 

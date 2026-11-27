@@ -96,6 +96,7 @@ from selecta.routes import cloud_mixes as cloud_mix_routes
 from selecta.routes import cloud_proxy as cloud_proxy_routes
 from selecta.routes import local_first_labs as local_first_labs_routes
 from selecta.storage import api as storage_api
+from selecta.storage import personal_rights
 from selecta.storage import playback_api as playback_api
 from selecta.usage import meters, quota
 from selecta.work.fanout import OutboxFanout
@@ -655,14 +656,23 @@ def create_cloud_app(
         if principal.workspace_role.value != "owner" or principal.workspace.kind != "personal":
             raise HTTPException(status_code=403, detail="Only a personal workspace owner can switch music storage.")
         with transaction(engine, principal.workspace.id) as conn:
-            if body.mode == "cloud":
-                cloud_gate.require(conn, principal, "cloud.hosted_media", rule_cache)
-            state = music_storage.switch(conn, principal.workspace.id, body.mode, body.revision)
-            if state is None:
+            current = music_storage.snapshot(conn, principal.workspace.id, lock=True)
+            if current["revision"] != body.revision:
                 raise HTTPException(
                     status_code=409,
                     detail={"code": "storage_mode_changed", "message": "Refresh the current music storage settings."},
                 )
+            if current["mode"] == body.mode:
+                return current
+            if body.mode == "cloud":
+                cloud_gate.require(conn, principal, "cloud.hosted_media", rule_cache)
+                if not personal_rights.accepted(conn, principal.workspace.id):
+                    raise personal_rights.refusal()
+            else:
+                app.state.fence_music_uploads(conn, principal.workspace.id)
+            state = music_storage.switch(conn, principal.workspace.id, body.mode, body.revision)
+            if state is None:
+                raise RuntimeError("Music storage revision changed while the workspace was locked.")
             return state
 
     @app.get("/api/account")
@@ -709,6 +719,7 @@ def create_cloud_app(
             "workspace": {
                 "id": principal.workspace.id,
                 "name": principal.workspace.name,
+                "kind": principal.workspace.kind,
                 "role": principal.workspace_role.value,
             },
             "entitlement": {
