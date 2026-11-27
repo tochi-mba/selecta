@@ -99,6 +99,7 @@ from selecta.storage import api as storage_api
 from selecta.storage import personal_rights
 from selecta.storage import playback_api as playback_api
 from selecta.usage import meters, quota
+from selecta.work import outbox
 from selecta.work.fanout import OutboxFanout
 from selecta.work.schema import outbox_events
 
@@ -673,6 +674,7 @@ def create_cloud_app(
             state = music_storage.switch(conn, principal.workspace.id, body.mode, body.revision)
             if state is None:
                 raise RuntimeError("Music storage revision changed while the workspace was locked.")
+            outbox.emit(conn, "music_storage.changed", principal.workspace.id, state, db_now(conn))
             return state
 
     @app.get("/api/account")

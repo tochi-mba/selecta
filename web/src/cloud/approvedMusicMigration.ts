@@ -8,8 +8,7 @@ const approvalKey = (workspaceId: string) => `selecta.music-migration.${encodeUR
 
 export function approveMusicMigration(workspaceId: string, revision: number): void {
   const key = approvalKey(workspaceId);
-  memory.set(key, revision);
-  try { localStorage.setItem(key, String(revision)); } catch { /* keep approval for this visit */ }
+  try { localStorage.setItem(key, String(revision)); memory.delete(key); } catch { memory.set(key, revision); }
 }
 
 function approved(key: string, revision: number): boolean {
@@ -45,10 +44,17 @@ export function useApprovedMusicMigration(
       const answer = await startUpload({ songIds: songs.map((song) => song.songId), keepHere: true });
       if (answer.ok || answer.why === 'nothing') consumeApproval(key, revision);
     };
-    const pending = typeof navigator.locks?.request === 'function'
-      ? navigator.locks.request(key, enqueue)
-      : enqueue();
-    void pending.catch(() => undefined);
-    return () => { active = false; };
+    const attempt = () => {
+      const pending = typeof navigator.locks?.request === 'function'
+        ? navigator.locks.request(key, enqueue)
+        : enqueue();
+      void pending.catch(() => undefined);
+    };
+    attempt();
+    window.addEventListener('online', attempt);
+    return () => {
+      active = false;
+      window.removeEventListener('online', attempt);
+    };
   }, [workspaceId, revision, openStore, queue.workspaceId, queue.phase]);
 }

@@ -438,7 +438,7 @@ export function CloudApp() {
     // around anything now off (ADR-0414), or opens up around anything back on.
     // `session.revoked`: the server ended this stream because the sign-in was revoked; asking
     // for the account hears `session_revoked` and shows "You were signed out" (SC-0400-08).
-    if (event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.') || event.topic.startsWith('session.')) void refreshAccount();
+    if (event.topic === 'music_storage.changed' || event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.') || event.topic.startsWith('session.')) void refreshAccount();
     // ADR-0461: commands reach the speaker hook (usePlaybackDevice), which checks and acks them.
     if (event.topic === 'playback.command') window.dispatchEvent(new CustomEvent(PLAYBACK_COMMAND_EVENT, { detail: event.payload }));
     // ADR-0475 R2: one device asking another to start, and what it answered (devices/playOn.ts)
