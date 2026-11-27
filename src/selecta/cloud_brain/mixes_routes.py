@@ -31,7 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from selecta import flags, mix
 from selecta.authz.roles import WorkspaceAction
 from selecta.cloud_brain import mix_current
-from selecta.engine_store import EngineStore
+from selecta.engine_store import EngineStore, mix_render_reviews
 from selecta.engine_store.mixes import StoreMixes
 from selecta.identity.tokens import Claims
 
@@ -122,6 +122,9 @@ def payload(mixes: StoreMixes, draft: int | None = None) -> dict:
         "name": mix.mix_name(mixes, draft),
         "can_undo": mix.can_undo(mixes, draft),
     }
+    review = mix_render_reviews.review(mixes, draft, items)
+    if review is not None:
+        answer["render_review"] = review
     if draft is not None:
         answer["draft"] = {"id": draft, "place": None}
     return answer
