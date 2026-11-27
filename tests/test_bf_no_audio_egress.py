@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import re
 
+import sqlalchemy as sa
+
 from cloud_helpers import grant_hosted_media
 from cloud_party import ALICE, CAROL, auth
 from fastapi.routing import APIRoute
@@ -26,6 +28,7 @@ from selecta import flags
 from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Rule, RuleKind
 from selecta.persistence import transaction
+from selecta.work.schema import outbox_events
 
 pytest_plugins = ("cloud_party",)
 
@@ -151,6 +154,14 @@ def test_explicit_device_mode_blocks_uploads_even_with_hosted_grant(party):
     state = answer.json()
     assert state == {"mode": "device", "revision": before["revision"] + 1}
     assert party.client.get("/api/account", headers=headers).json()["experience"]["music_storage"] == state
+    with transaction(party.engine, party.workspaces[ALICE]) as conn:
+        payload = conn.execute(
+            sa.select(outbox_events.c.payload).where(
+                outbox_events.c.workspace_id == party.workspaces[ALICE],
+                outbox_events.c.topic == "music_storage.changed",
+            )
+        ).scalar_one()
+    assert payload == state
 
     blocked = party.client.post(
         "/api/uploads/plan", headers=_audio_headers(ALICE), content=AUDIO_BYTES
