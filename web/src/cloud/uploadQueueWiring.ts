@@ -13,8 +13,11 @@ export function uploadConsentFrom(api: Api): (workspaceId: string) => Promise<bo
   return uploadConsentCheck((workspaceId) => ((path: string, init?: RequestInit) => api(path.replace(/^\/api(?=\/)/, ''), init, workspaceId)) as Request);
 }
 
+let queueCleanup: Promise<void> = Promise.resolve();
+
 export function useCloudUploadQueue(given: {
   on: boolean;
+  storageRevision?: number;
   workspaceId: string;
   api: Api;
   openStore: () => Promise<MediaStore>;
@@ -26,20 +29,31 @@ export function useCloudUploadQueue(given: {
   // read when used, never as an effect dependency, so a new function each render costs nothing
   const latest = useRef(given);
   latest.current = given;
-  const { on, workspaceId, api, openStore } = given;
+  const { on, workspaceId, api, openStore, storageRevision } = given;
   useEffect(() => {
     if (!on) return undefined;
-    const unbind = bindUploadQueue({
-      workspaceId, api, openStore,
-      hasUploadConsent: uploadConsentFrom(api),
-      mixSongs: () => latest.current.mixSongs(),
-      playing: () => latest.current.playing(),
-      onAvailabilityChanged: () => latest.current.onAvailabilityChanged(),
+    let active = true;
+    let unbind: (() => Promise<void>) | undefined;
+    const binding = queueCleanup.then(() => {
+      if (!active) return;
+      unbind = bindUploadQueue({
+        workspaceId, api, openStore, storageRevision,
+        hasUploadConsent: uploadConsentFrom(api),
+        mixSongs: () => latest.current.mixSongs(),
+        playing: () => latest.current.playing(),
+        onAvailabilityChanged: () => latest.current.onAvailabilityChanged(),
+      });
+      bindUploadStart(async (songs, choice) => {
+        const result = await startUpload({ songIds: songs.map((song) => song.songId), keepHere: choice.keepHere });
+        if (!result.ok) throw new Error(result.why === 'nothing'
+          ? 'These songs are already queued or no longer available on this device.'
+          : 'SelectaDJ could not start this upload. Check your storage settings and try again.');
+      });
     });
-    bindUploadStart(async (songs, choice) => { await startUpload({ songIds: songs.map((song) => song.songId), keepHere: choice.keepHere }); });
     return () => {
+      active = false;
       bindUploadStart(null);
-      unbind();
+      queueCleanup = binding.then(() => unbind?.()).catch(() => undefined);
     };
-  }, [on, workspaceId, api, openStore]);
+  }, [on, workspaceId, api, openStore, storageRevision]);
 }

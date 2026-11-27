@@ -138,9 +138,10 @@ export class UploadJournal {
     this.workspaceId = workspaceId;
   }
 
-  static async open(workspaceId: string): Promise<UploadJournal> {
+  static async open(workspaceId: string, storageRevision?: number): Promise<UploadJournal> {
     const journal = new UploadJournal(workspaceId);
-    journal.db = await openDb(uploadJournalName(workspaceId));
+    const base = uploadJournalName(workspaceId);
+    journal.db = await openDb(storageRevision === undefined ? base : `${base}/${storageRevision}`);
     if (!journal.db) journal.degraded = true;
     else journal.db.onversionchange = () => journal.close();
     await journal.reload();
