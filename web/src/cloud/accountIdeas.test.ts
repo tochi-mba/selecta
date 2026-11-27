@@ -49,7 +49,7 @@ describe('the account\'s idea cards', () => {
     const request = (async (path: string, init?: RequestInit) => {
       if (path.startsWith('/song-facts')) return account([])(path);
       calls.push(JSON.parse(String(init?.body)));
-      return { name: 'SelectaDJ's pick', order: [2, 1] };
+      return { name: "SelectaDJ's pick", order: [2, 1] };
     }) as Request;
     const choices = { start: 2, end: null, steering: DEFAULT_STEERING };
     const planner = accountIdeas(request, 'ws-1');
