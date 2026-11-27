@@ -7,6 +7,7 @@ numbers to the rule and does what it says. Everything the core decides stays imp
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 
 from selecta.analysis.song import Cue, SongInfo
@@ -39,6 +40,7 @@ from selecta.planner_core.choose import (
 )
 from selecta.planner_core.repair import ACCEPT, MAX_REPAIRS, TRY, Attempted, Option, next_step
 from selecta.render.engine import Rendered, SongCache, render
+from selecta.render.script import TransitionScript
 
 __all__ = [
     "BLEND_MAX_GAP",
@@ -94,8 +96,12 @@ def choose_transition(
     cache: SongCache | None = None,
     max_repairs: int = MAX_REPAIRS,
     exits: list[Cue] | None = None,
+    *,
+    render_attempt: Callable[[TransitionScript, SongCache], Rendered] | None = None,
 ) -> Choice:
     cache = cache or SongCache()
+    # Rendering may reuse a completed attempt. Ordering and audit still run here.
+    render_take = render_attempt or render
     pool = enumerate_candidates(a, b, style, exits=exits)
     options = [Option.of(candidate) for candidate in pool]
     attempts: list[Attempt] = []
@@ -110,7 +116,7 @@ def choose_transition(
             attempts.append(Attempt(candidate, None))
             heard.append(Attempted(step.option))
         else:
-            rendered = render(script, cache)
+            rendered = render_take(script, cache)
             report = audit(rendered)
             attempts.append(Attempt(candidate, report))
             heard.append(Attempted(step.option, audit_facts(report)))
@@ -120,6 +126,6 @@ def choose_transition(
 
     safe = fallback_candidate(a, b)
     script = safe.recipe.make(a, b, safe.exit_cue, safe.entry_cue, safe.bars)
-    rendered = render(script, cache)
+    rendered = render_take(script, cache)
     report = audit(rendered)
     return Choice(rendered, report, replace(safe), attempts, fell_back=True)

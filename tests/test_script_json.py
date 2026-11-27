@@ -207,3 +207,25 @@ def test_audit_with_spans_separates_nothing_and_matches_sensing(monkeypatch, pai
     assert [vars(c) for c in given.checks] == [vars(c) for c in today.checks]
     overlap = given.value("vocal overlap")
     assert overlap is not None and overlap > 0
+
+def test_concrete_render_identity_uses_verified_sources_and_placement(pair):
+    from selecta.render.cache_key import concrete_render_key
+
+    a, b = pair
+    hashes = {a.id: "a" * 64, b.id: "b" * 64}
+    script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
+    original = concrete_render_key(script, hashes, runtime_version="test-v1")
+    assert original is not None
+    assert concrete_render_key(script, {a.id: hashes[a.id]}, runtime_version="test-v1") is None
+    assert concrete_render_key(script, hashes, runtime_version="test-v2") != original
+    assert concrete_render_key(
+        bass_swap_blend(a, b, _cue(a, 32), _cue(b, 8), 8), hashes, runtime_version="test-v1"
+    ) != original
+    assert concrete_render_key(
+        script, {a.id: hashes[b.id], b.id: hashes[a.id]}, runtime_version="test-v1"
+    ) != original
+
+    remapped = {303: hashes[a.id], 404: hashes[b.id]}
+    a.id, b.id = 303, 404
+    remapped_script = bass_swap_blend(a, b, _cue(a, 30), _cue(b, 8), 8)
+    assert concrete_render_key(remapped_script, remapped, runtime_version="test-v1") == original
