@@ -64,6 +64,7 @@ import { CloudShellPages } from './CloudShellPages';
 import { CloudShellNotices, otherTabNote } from './CloudShellNotices';
 import type { NoticeGroups } from './NoticeStack';
 import { useCloudUploadQueue } from './uploadQueueWiring';
+import { CloudStorageMigration } from './CloudStorageMigration';
 import { CLOUD_ONLY_FOOTER, NOT_WITHOUT_DEVICE_MUSIC, setShellHomes, type MusicHomes } from './musicHomes';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
@@ -747,7 +748,8 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
   // (cloud only: no folders to watch and no import to carry on)
   useImportCarryOn({ request: media, openStore, workspaceId, enabled: devicesHere, watch: { onAvailabilityChanged: () => sweepLapsed(true), playing: () => playingNow.current() } });
   // cloud.move_to_cloud: the upload queue carries on after a reload; the current mix goes first
-  useCloudUploadQueue({ on: devicesHere && !deviceOnly && on('cloud.move_to_cloud'), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
+  const migrateToCloud = account.experience?.music_storage?.mode === 'cloud' && on('cloud.move_to_cloud') && on('cloud.uploads') && !offlineReadOnly;
+  useCloudUploadQueue({ on: migrateToCloud || (devicesHere && !deviceOnly && on('cloud.move_to_cloud')), workspaceId, api, openStore, mixSongs: () => data.mix.map((item) => item.song_id), playing: () => playingNow.current(), onAvailabilityChanged: () => sweepLapsed(true) });
   const connect = devicesHere ? <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} /> : null;
   // library.places: what the Library knows about where songs are kept (views/LibraryPlaces.tsx)
   const libraryPlaces = useLibraryPlaces({
@@ -793,7 +795,7 @@ export function CloudShell({ api, account, more, notices, accountNotices, feedba
           api, cloud, request, media, workspaceId, on, route, moreItems, more, shared, status, statusProblem, setStatusProblem, refreshStatus, refreshMix,
           data, mixProblem, setMixData, shellPlayer, now, playback, refusal, output, notify, openStore, connect, sweepLapsed, stems, recipes, deviceTrack, book,
           lucyHere, offlineShell, browserHarmonic, workspacePage, coexisting, newMember, spineDeps, setSpine, setSpineAsked, savedMixes, fileCheck, connected, mixReady, localExport, importLive,
-          remote, playWays, holdings, where, followsHere, newest, songOrder, playOn, devicesHere,
+          remote, playWays, holdings, where, followsHere, newest, songOrder, playOn, devicesHere, musicStorageMode: account.experience?.music_storage?.mode, storageMigration: migrateToCloud ? <CloudStorageMigration key={workspaceId} workspaceId={workspaceId} request={media} openStore={openStore} /> : undefined,
         }} /></Section></LibraryPlacesContext.Provider></HolderContext.Provider>
         <footer className="cloud-footer">{devicesHere ? footerWords(coexisting, !deviceOnly && flagListed('cloud.move_to_cloud')) : CLOUD_ONLY_FOOTER}</footer>
       </Shell>

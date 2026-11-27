@@ -6,11 +6,12 @@ import type { ViewProps } from '../views/shared';
 import './libraryWorkspace.css';
 
 /** The shared Library with an uploader when the workspace uses Cloud storage. */
-export function CloudOnlyLibrary({ shared, connected, upload, uploadPanel }: {
+export function CloudOnlyLibrary({ shared, connected, upload, uploadPanel, storageMigration }: {
   shared: ViewProps;
   connected: number;
   upload: string | null;
   uploadPanel?: ReactNode;
+  storageMigration?: ReactNode;
 }) {
   const [connectOpen, setConnectOpen] = useState(false);
   const [hasOpenedUploader, setHasOpenedUploader] = useState(false);
@@ -27,6 +28,7 @@ export function CloudOnlyLibrary({ shared, connected, upload, uploadPanel }: {
       {uploadPanel && <section id="library-connect-music" aria-label="Connect music" hidden={!connectOpen}>
         {hasOpenedUploader && uploadPanel}
       </section>}
+      {storageMigration}
       {connected === 0 && !connectOpen && (
         <section className="empty-state boxed lw-hero" aria-labelledby="library-upload-first">
           <span className="empty-state-icon" aria-hidden="true"><Icon name="cloud" /></span>

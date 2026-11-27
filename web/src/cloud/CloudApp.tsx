@@ -46,6 +46,7 @@ import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { BillingStandingNotice } from './BillingStanding';
 import { LIBRARY_CHANGED_EVENT } from './cloudLibraryMedia';
 import { WorkspaceNameOffer } from './WorkspaceNameOffer';
+import { MusicStorageSettings } from './MusicStorageSettings';
 import { setProblemReporter, SUPPORT_EMAIL } from '../support';
 import { UploadsPanel } from './Uploads';
 import { isHostedAccount } from './deviceMusicGate';
@@ -744,6 +745,7 @@ export function CloudApp() {
     ]}
     lucy={[lucySettings && <LucyCloudSettings request={workspaceRequest} features={account.features} />]}
     data={[
+      <MusicStorageSettings key={account.workspace.id} account={account} request={workspaceRequest} onChanged={async () => { await refreshAccount(); }} />,
       <AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} withAudio={holdsHostedStorage(account)} />,
       localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />,
       localFirst && flagOn('cloud.local_media') && !flagOn('cloud.workspace') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />,
