@@ -135,7 +135,7 @@ _CACHE_KIND = "hosted_planner_facts"
 _FACT_FIELDS = tuple(
     field.name
     for field in fields(SongFacts)
-    if field.name not in {"arrays", "implementation", "source"}
+    if field.name not in {"arrays", "implementation", "sections", "source"}
 )
 
 
@@ -152,6 +152,7 @@ def _cached_facts(engine, workspace_id: str, sha: str) -> tuple[SongFacts, float
             return None
         facts = SongFacts(
             **{name: payload["facts"][name] for name in _FACT_FIELDS},
+            sections=[{**section, "label": kind} for kind, section in payload["sections"]],
             arrays=decode_arrays(payload["arrays"]),
             implementation=version,
             source=WORKER,
@@ -190,6 +191,14 @@ def _share_facts(engine, workspace_id: str, sha: str, facts: SongFacts, duration
                 source="server",
                 payload={
                     "facts": {name: getattr(facts, name) for name in _FACT_FIELDS},
+                    # The worker's validated section labels are machine categories.
+                    "sections": [
+                        (
+                            section["label"],
+                            {key: value for key, value in section.items() if key != "label"},
+                        )
+                        for section in facts.sections
+                    ],
                     "arrays": {
                         name: encode_array(name, values) for name, values in facts.arrays.items()
                     },
