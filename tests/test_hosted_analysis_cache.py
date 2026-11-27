@@ -6,6 +6,7 @@ import hashlib
 from types import SimpleNamespace
 
 import sqlalchemy as sa
+from test_cloud_jobs_support import Flags, make_store, worker
 
 from selecta import flags, hosted_analysis_cache, hosted_render
 from selecta.config import ANALYSIS_VERSION
@@ -13,6 +14,7 @@ from selecta.persistence import new_id, transaction
 from selecta.storage import api
 from selecta.storage.keys import derived_key, original_key
 from selecta.storage.schema import assets
+from selecta.work.ports import ArtifactOutput
 from selecta.work.provenance import build
 from selecta.work.schema import artifacts
 
@@ -21,10 +23,9 @@ def test_verified_analysis_reuse_is_workspace_local_and_bypasses_queue(sqlite_en
     source, target, denied = new_id(), new_id(), new_id()
     sha = "1" * 64
     digest = hosted_render.analysis_hash(sha)
-    key = derived_key(source, "analysis", digest, new_id(), "analysis.npz")
     data = b"engine output"
     checksum = hashlib.sha256(data).hexdigest()
-    objects = {key: data}
+    objects = {}
 
     def receipt(value):
         return SimpleNamespace(size=len(value), sha256=hashlib.sha256(value).hexdigest())
@@ -48,9 +49,11 @@ def test_verified_analysis_reuse_is_workspace_local_and_bypasses_queue(sqlite_en
     monkeypatch.setattr(api, "_buckets", lambda: SimpleNamespace(derived="derived"))
     queued = []
     monkeypatch.setattr(hosted_render, "_queue_analysis", lambda *args: queued.append(args))
+    originals = {}
     with transaction(sqlite_engine) as conn:
         for workspace in (source, target):
             asset_id = new_id()
+            originals[workspace] = asset_id
             conn.execute(
                 sa.insert(assets).values(
                     id=asset_id,
@@ -63,24 +66,28 @@ def test_verified_analysis_reuse_is_workspace_local_and_bypasses_queue(sqlite_en
                     created_at=1.0,
                 )
             )
-        conn.execute(
-            sa.insert(artifacts).values(
-                id=new_id(),
-                workspace_id=source,
-                kind="analysis",
-                input_hash=digest,
-                keys=[key],
-                checksum=checksum,
-                size_bytes=len(data),
-                job_id=new_id(),
-                attempt_id=new_id(),
-                provenance=build({"source": sha}, {"analysis": ANALYSIS_VERSION}),
-                created_at=1.0,
-                last_used_at=1.0,
-            )
-        )
+    store = make_store(sqlite_engine, flags=Flags())
+    spec = hosted_render._analysis_spec(source, {"id": originals[source], "sha256": sha}, None)
+    store.enqueue(spec)
+    claim = store.claim("cpu-heavy", worker())
+    assert claim is not None
+    key = derived_key(source, "analysis", digest, claim.attempt_id, "analysis.npz")
+    objects[key] = data
+    store.complete(
+        claim.attempt_id,
+        claim.fencing_token,
+        artifacts=(
+            ArtifactOutput(
+                "analysis",
+                digest,
+                [key],
+                checksum,
+                len(data),
+                build({"source": sha}, {"analysis": ANALYSIS_VERSION}),
+            ),
+        ),
+    )
     with flags.bound({"cloud.hosted_dedupe": True, "cloud.hosted_media": True}):
-        assert hosted_render.prepare_songs(sqlite_engine, None, source)["ready"] == 1
         assert not hosted_analysis_cache.materialize(sqlite_engine, denied, sha, digest)
         objects[key] = b"bad checksum!"
         assert not hosted_analysis_cache.materialize(sqlite_engine, target, sha, digest)

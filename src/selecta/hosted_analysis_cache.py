@@ -6,6 +6,8 @@ import logging
 import tempfile
 from pathlib import Path
 
+import sqlalchemy as sa
+
 from selecta import flags
 from selecta.billing.schema import insert_ignore
 from selecta.config import ANALYSIS_VERSION
@@ -73,6 +75,56 @@ def remember(engine, workspace_id: str, song: dict, digest: str, artifact) -> No
             )
     except Exception:  # A cache failure cannot stop preparation of a library.
         log.warning("Could not index a completed hosted analysis", exc_info=True)
+
+
+def capture_completion(store, job) -> None:
+    """Index only persisted, successfully completed hosted analysis objects."""
+    if job.type != "analyse.song" or str(job.state) != "succeeded":
+        return
+    try:
+        from selecta.hosted_render import analysis_hash
+        from selecta.storage.schema import assets
+
+        workspace_id = job.workspace_id
+        switches = {
+            flag: store.flags.is_on(workspace_id, flag)
+            for flag in ("cloud.hosted_media", shared_derivations.FLAG)
+        }
+        if not all(switches.values()):
+            return
+        ref = job.input_ref
+        sha, key = ref["source_sha256"], ref["source_key"]
+        digest = analysis_hash(sha)
+        with transaction(store.engine, workspace_id) as connection:
+            song = (
+                connection.execute(
+                    sa.select(assets.c.id, assets.c.sha256).where(
+                        assets.c.workspace_id == workspace_id,
+                        assets.c.sha256 == sha,
+                        assets.c.original_key == key,
+                        assets.c.deleted_at.is_(None),
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            artifact = (
+                connection.execute(
+                    sa.select(artifacts).where(
+                        artifacts.c.workspace_id == workspace_id,
+                        artifacts.c.kind == "analysis",
+                        artifacts.c.input_hash == digest,
+                        artifacts.c.job_id == job.id,
+                    )
+                )
+                .mappings()
+                .first()
+            )
+        if song is not None and artifact is not None:
+            with flags.bound(switches):
+                remember(store.engine, workspace_id, song, digest, artifact)
+    except Exception:
+        log.warning("Could not index hosted analysis after completion", exc_info=True)
 
 
 def materialize(engine, workspace_id: str, sha: str, digest: str) -> bool:
