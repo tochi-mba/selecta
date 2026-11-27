@@ -164,3 +164,17 @@ def test_explicit_device_mode_blocks_uploads_even_with_hosted_grant(party):
         json={"mode": "cloud", "revision": before["revision"]},
     )
     assert stale.status_code == 409, stale.text
+
+
+def test_cloud_storage_activation_waits_for_current_rights(party):
+    grant_hosted_media(party.engine, party.app)
+    headers = auth(ALICE)
+    before = party.client.get("/api/account", headers=headers).json()["experience"]["music_storage"]
+    response = party.client.put(
+        "/api/account/music-storage",
+        headers=headers,
+        json={"mode": "cloud", "revision": before["revision"]},
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"]["code"] == "rights_needed"
+    assert party.client.get("/api/account", headers=headers).json()["experience"]["music_storage"] == before
