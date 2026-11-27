@@ -233,7 +233,7 @@ def sessions_to_fence(conn: Connection, workspace_id: str) -> list[UploadSession
             sa.or_(
                 upload_sessions.c.status.in_([status.value for status in ACTIVE]),
                 sa.and_(
-                    upload_sessions.c.status.in_([Status.ABORTED.value, Status.EXPIRED.value]),
+                    upload_sessions.c.status.in_([Status.ABORTED.value, Status.EXPIRED.value, Status.REJECTED.value]),
                     upload_sessions.c.updated_at >= recent,
                 ),
             ),

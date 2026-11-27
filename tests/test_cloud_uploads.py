@@ -808,6 +808,7 @@ def test_storage_cutover_requires_successful_multipart_abort(cloud_engine, uploa
     session = one(cloud_engine, uploads, FileSpec("song.wav", 100))
     urls = uploads.presign_parts(session, [1])
     assert urls[1]
+    assert session.upload_id in fake.uploads
     fake.fail_next("abort_multipart_upload", R2Error("down", status=503))
 
     with pytest.raises(R2Error), transaction(cloud_engine, WS) as conn:
@@ -816,5 +817,6 @@ def test_storage_cutover_requires_successful_multipart_abort(cloud_engine, uploa
         assert uploads.get(conn, session.id, workspace_id=WS).status is Status.UPLOADING
         uploads.fence_workspace_uploads(conn, sessions_to_fence(conn, WS))
 
+    assert session.upload_id not in fake.uploads
     with transaction(cloud_engine, WS) as conn:
         assert uploads.get(conn, session.id, workspace_id=WS).status is Status.ABORTED
