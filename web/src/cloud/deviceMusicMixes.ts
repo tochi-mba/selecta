@@ -55,7 +55,7 @@ export function mixNameFor(songs: readonly PlayableSong[], ids: readonly number[
   if (!first || !last) return PICK_NAME;
   const name = first === last ? first : `${first} to ${last}`;
   // The recipe store keeps at most 60 characters (local_media/api.py).
-  return name.length > MIX_NAME_MAX ? `${name.slice(0, MIX_NAME_MAX - 1).trimEnd()}.` : name;
+  return name.length > MIX_NAME_MAX ? `${name.slice(0, MIX_NAME_MAX - 1).trimEnd()}…` : name;
 }
 
 /** Which songs a browser mix plays, in order: `start` first, the chosen ending last. */
@@ -123,7 +123,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     if (ideas) {
       const planned = await ideas.order(idea, all, choices, count);
       if (!planned) {
-        throw refuse('Couldn't plan a mix from the ready songs. Check the Library for songs still preparing, or try again.', 'planning_unavailable', 409);
+        throw refuse('Couldn’t plan a mix from the ready songs. Check the Library for songs still preparing, or try again.', 'planning_unavailable', 409);
       }
       ({ ids, name } = planned);
     } else {
@@ -202,7 +202,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     const body = JSON.parse(String(init?.body ?? '{}')) as { move?: string };
     const move = body.move ?? 'auto';
     if (!(browserMovesAllowed() as string[]).includes(move)) {
-      throw refuse('SelectaDJ in your browser can't play that move. Choose another, or let SelectaDJ pick.', 'move_unavailable');
+      throw refuse('SelectaDJ in your browser can’t play that move. Choose another, or let SelectaDJ pick.', 'move_unavailable');
     }
     const id = store.current();
     if (!id) throw refuse('There is no current browser mix to change. Press Play on Make a Mix first.', 'no_mix', 404);
@@ -211,7 +211,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     if (expected !== null && expected !== recipe.songs.map((song) => currentGrouping().primaryOf(song.song_id)).join(',')) {
       throw refuse('The mix changed under this press, so nothing happened. It has been redrawn.', 'mix_changed', 409);
     }
-    if (!(position >= 1 && position < recipe.songs.length)) throw refuse('That transition isn't in this mix any more.', 'mix_changed', 409);
+    if (!(position >= 1 && position < recipe.songs.length)) throw refuse('That transition isn’t in this mix any more.', 'mix_changed', 409);
     return asMixData(await store.edit(id, recipe.revision, { seamMoves: { [position]: move === 'auto' ? null : move } }));
   };
 
@@ -236,7 +236,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     if (!body.copy_current) throw refuse('In a browser, Save a copy copies the current mix. Make a Mix starts a new one.', 'flag_off', 404);
     const id = store.current();
     if (!id) throw refuse('There is no current browser mix to copy. Press Play on Make a Mix first.', 'no_mix', 404);
-    // a tidy ". copy" name from the current one; if it cannot be read, the server names the copy
+    // a tidy "… copy" name from the current one; if it cannot be read, the server names the copy
     const name = body.name?.trim() || await store.read(id).then((mix) => copyName(mix.name), () => undefined);
     const made = await store.duplicate(id, name);
     return { name: made.name };
@@ -275,7 +275,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
           const source = Number(body.source);
           const target = Number(body.target);
           if (!Number.isInteger(source) || !Number.isInteger(target) || source < 0 || source >= ids.length || target < 0 || target >= ids.length) {
-            throw refuse('That position isn't in this mix any more.', 'mix_changed', 409);
+            throw refuse('That position isn’t in this mix any more.', 'mix_changed', 409);
           }
           const next = [...ids];
           const [moved] = next.splice(source, 1);
@@ -300,7 +300,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
       if (method === 'DELETE' && /^\/mix\/songs\/\d+$/.test(route)) {
         const position = Number(route.split('/').pop());
         return editCurrent(init, (ids) => {
-          if (position < 0 || position >= ids.length) throw refuse('That position isn't in this mix any more.', 'mix_changed', 409);
+          if (position < 0 || position >= ids.length) throw refuse('That position isn’t in this mix any more.', 'mix_changed', 409);
           return ids.filter((_, at) => at !== position);
         });
       }
@@ -312,7 +312,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
           const wanted = (body.song_ids ?? []).map(Number);
           const all = await songs();
           const missing = wanted.find((id) => !all.some((one) => one.id === id && one.playable));
-          if (missing !== undefined) throw refuse('One of those songs doesn't play on this device.', 'not_playable');
+          if (missing !== undefined) throw refuse('One of those songs doesn’t play on this device.', 'not_playable');
           return editCurrent(init, () => wanted);
         })();
       }
