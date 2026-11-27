@@ -93,6 +93,8 @@ workspaces = sa.Table(
     sa.Column("pilot_until", Epoch, nullable=True),
     # A business organisation's registered name, for invoices and terms (ADR-0442).
     sa.Column("legal_name", sa.String(200), nullable=True),
+    sa.Column("music_storage_mode", sa.String(16), nullable=True),
+    sa.Column("music_storage_revision", sa.Integer(), nullable=False, server_default="0"),
     sa.CheckConstraint(_one_of("kind", WORKSPACE_KINDS), name="kind"),
     sa.Index("ix_workspaces_owner_user_id", "owner_user_id"),
     sa.Index(

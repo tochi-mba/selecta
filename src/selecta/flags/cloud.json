@@ -5,7 +5,7 @@
       "label": "Account and sessions",
       "about": "Read account settings and end sign-in sessions.",
       "core": "People must be able to view their account and sign out.",
-      "routes": ["GET /api/account", "POST /api/account/sign-out-everywhere", "POST /api/account/problem-report"],
+      "routes": ["GET /api/account", "PUT /api/account/music-storage", "POST /api/account/sign-out-everywhere", "POST /api/account/problem-report"],
       "modes": ["cloud"],
       "owner": "identity"
     },

@@ -32,6 +32,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta import flags
+from selecta.billing.schema import insert_ignore
 from selecta.persistence import db_now
 from selecta.storage.schema import assets, shared_derivations
 
@@ -156,24 +157,19 @@ def write_shared(
         raise NotShareable(
             "The server does not hold these bytes, so the result cannot be verified."
         )
-    exists = conn.execute(
-        sa.select(shared_derivations.c.content_sha256).where(
-            shared_derivations.c.content_sha256 == sha256,
-            shared_derivations.c.kind == kind,
-            shared_derivations.c.analysis_version == analysis_version,
-        )
-    ).first()
-    if exists is None:
-        conn.execute(
-            sa.insert(shared_derivations).values(
-                content_sha256=sha256,
-                kind=kind,
-                analysis_version=analysis_version,
-                payload=dict(payload),
-                source=source,
-                created_at=db_now(conn),
-            )
-        )
+    insert_ignore(
+        conn,
+        shared_derivations,
+        {
+            "content_sha256": sha256,
+            "kind": kind,
+            "analysis_version": analysis_version,
+            "payload": dict(payload),
+            "source": source,
+            "created_at": db_now(conn),
+        },
+        ("content_sha256", "kind", "analysis_version"),
+    )
     return True
 
 

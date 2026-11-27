@@ -18,6 +18,7 @@ from selecta.admin import state as emergency_state
 from selecta.billing import plans, stripe_sync
 from selecta.business import terms, upload_rights
 from selecta.business.content.store import record_upload_tag
+from selecta.identity import music_storage
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 from selecta.storage import personal_rights, upload_identity, upload_preview
@@ -271,6 +272,16 @@ def install_routes(
                         "message": "Uploads are suspended for this account."},
             )
 
+    def require_audio_storage(conn, workspace_id: str) -> None:
+        if music_storage.snapshot(conn, workspace_id)["mode"] == "device":
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "device_music_storage",
+                    "message": "This workspace keeps audio on the device.",
+                },
+            )
+
     def map_error(error: Exception) -> HTTPException:
         if isinstance(error, SessionNotFound):
             return HTTPException(status_code=404, detail=dict(UPLOAD_NOT_FOUND))
@@ -310,6 +321,7 @@ def install_routes(
         try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
+                    require_audio_storage(conn, workspace_id)
                     venue_id = _own_venue(conn, workspace_id, body.venue_id)
                     results = uploads.plan_batch(
                         conn,
@@ -363,6 +375,7 @@ def install_routes(
         try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
+                    require_audio_storage(conn, workspace_id)
                     session = uploads.get(conn, session_id, workspace_id=workspace_id)
                     if session.status.value == "planned":
                         session = uploads.start(conn, session_id, workspace_id=workspace_id)
@@ -415,6 +428,7 @@ def install_routes(
         try:
             with service() as (uploads, client):
                 with transaction(engine, workspace_id) as conn:
+                    require_audio_storage(conn, workspace_id)
                     outcome = uploads.complete(conn, session_id, workspace_id=workspace_id)
                     if outcome.status.value != "completed":
                         return _outcome_json(outcome)

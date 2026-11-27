@@ -135,3 +135,32 @@ def test_no_body_taking_route_outside_the_uploads_set_accepts_audio_for_that_acc
     # The sweep really covered the upload writes; an empty sweep would prove nothing.
     assert "POST /api/uploads/plan" in swept
     assert "POST /api/uploads/{session_id}/parts" in swept
+
+
+def test_explicit_device_mode_blocks_uploads_even_with_hosted_grant(party):
+    grant_hosted_media(party.engine, party.app)
+    headers = auth(ALICE)
+    account = party.client.get("/api/account", headers=headers).json()
+    before = account["experience"]["music_storage"]
+    answer = party.client.put(
+        "/api/account/music-storage",
+        headers=headers,
+        json={"mode": "device", "revision": before["revision"]},
+    )
+    assert answer.status_code == 200, answer.text
+    state = answer.json()
+    assert state == {"mode": "device", "revision": before["revision"] + 1}
+    assert party.client.get("/api/account", headers=headers).json()["experience"]["music_storage"] == state
+
+    blocked = party.client.post(
+        "/api/uploads/plan", headers=_audio_headers(ALICE), content=AUDIO_BYTES
+    )
+    assert blocked.status_code == 403, blocked.text
+    assert blocked.json()["detail"]["code"] == "device_music_storage"
+
+    stale = party.client.put(
+        "/api/account/music-storage",
+        headers=headers,
+        json={"mode": "cloud", "revision": before["revision"]},
+    )
+    assert stale.status_code == 409, stale.text

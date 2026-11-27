@@ -111,6 +111,32 @@ def test_a_finished_upload_analysis_becomes_its_songs_facts_once(world):
     assert world.reads == []
 
 
+def test_verified_uploads_reuse_current_planner_facts(world):
+    from selecta.storage.keys import derived_key, original_key
+    from selecta.storage.schema import assets
+
+    other = new_id()
+    seed = 42
+    sha = sha_for(seed)
+    source_path = _analysis_file(world.tmp / "shared.npz", seed)
+    for workspace in (world.workspace, other):
+        _catalogue_song(world.engine, workspace, seed)
+        asset_id = new_id()
+        with transaction(world.engine, workspace) as connection:
+            connection.execute(sa.insert(assets).values(
+                id=asset_id, workspace_id=workspace, original_key=original_key(workspace, asset_id),
+                size=100, sha256=sha, format="mp3", created_at=1.0,
+            ))
+
+        key = derived_key(workspace, "analysis", hosted_render.analysis_hash(sha),
+                          new_id(), "analysis.npz")
+        world.files[key] = source_path
+        with flags.bound({hosted_facts.FLAG: True, "cloud.hosted_dedupe": True}):
+            assert hosted_facts.keep(world.engine, workspace, [(sha, key, None)],
+                                     world.read_object, world.artifacts) == 1
+    assert len(world.reads) == 1
+
+
 def test_the_backfill_is_bounded_and_carries_on_where_it_stopped(world):
     for seed in (1, 2, 3):
         _catalogue_song(world.engine, world.workspace, seed)
