@@ -300,11 +300,15 @@ describe('Lucy on the plan cards with the usage read model (ADR-0484 rule 4, ADR
   const local = (plan: string, lucyWindows?: typeof LUCY_WINDOWS) => ({ ...cloudAccount({ plan, lucyWindows }), experience: { local_first: true, hosted: false } });
   const show = (account: ReturnType<typeof local>) => render(<Billing account={account} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
 
-  it('keeps the cards’ Lucy words exactly as they were while the server does not send the new figures', () => {
+  it('describes Lucy by level, with no turns, counts or model names, while the server does not send the new figures', () => {
     const absent = show(local('free'));
     const words = [lucyLine(planCard('Standard')).textContent, lucyLine(planCard('Premium')).textContent];
-    expect(words[0]).toContain('400 everyday turns');
-    expect(words[1]).toContain('25 deep plans');
+    expect(words[0]).toBe('Lucy Standard: more of Lucy than Free.');
+    expect(words[1]).toBe('Lucy Advanced: the most of Lucy of any plan.');
+    for (const line of words) {
+      expect(line).not.toMatch(NEVER_SHOWN);
+      expect(line).not.toMatch(/\d/);
+    }
     const before = sameAs(absent.container.innerHTML);
     absent.unmount();
     const account = local('free');

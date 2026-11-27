@@ -42,7 +42,7 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
     headline: 'More from Lucy',
     eyebrow: 'For everyday mixing',
     axes: [
-      { name: 'Lucy', words: 'Standard: 400 everyday turns and 40 planning turns a month, usually answered by Claude Sonnet (a very heavy month moves to a lighter model).', flag: 'lucy' },
+      { name: 'Lucy', words: 'Standard: more of Lucy than Free.', flag: 'lucy' },
       { name: 'Discovery', words: 'Scheduled discovery sweeps for new links between your songs.' },
       { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
     ],
@@ -52,7 +52,7 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
     eyebrow: 'For hosting',
     axes: [
       { name: 'Rooms', words: 'Open a room for up to 100 guests, for up to 12 hours, with song requests.', flag: 'rooms' },
-      { name: 'Lucy', words: 'Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use, usually answered by Claude Opus (a very heavy month moves to a lighter model).', flag: 'lucy' },
+      { name: 'Lucy', words: 'Advanced: the most of Lucy of any plan.', flag: 'lucy' },
       { name: 'Discovery', words: 'Larger scheduled discovery sweeps.' },
       { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
     ],
@@ -60,8 +60,10 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
 };
 
 /** Lucy on each plan in level words only (ADR-0484 rule 4, ADR-0483 rule 9): no counts and no
- * names of what answers. Used once the server sends the usage read model; until then the cards
- * keep the words above. Each is drawn after the bold "Lucy", as the axes are. */
+ * names of what answers. Used once the server sends the usage read model, which is when the
+ * session and week are known; until then the cards use the plainer level words above, which say
+ * no period at all, so they stay true whichever allowance the account is on. Lucy is never sold
+ * in turns or by model name. Each is drawn after the bold "Lucy", as the axes are. */
 export const LUCY_LEVEL_WORDS: Record<'free' | Paid, string> = {
   free: 'Basic: a small share of Lucy each week. Once a session’s share is used, a simpler built-in planner answers until the session ends.',
   standard: 'Standard: more of Lucy each week than Free, with a lighter Lucy for the rest of a session once its share is used.',
